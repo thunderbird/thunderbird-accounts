@@ -27,13 +27,6 @@ Run the following and follow the terminal prompts:
 ./manage.py runserver 0.0.0.0:5173
 ```
 
-## API Routing
-
-Thunderbird Accounts uses [django-ninja](https://django-ninja.dev/) for API routing. 
-It provides a familiar developer-experience to FastAPI which is used for the majority of Python backend applications we use at Thunderbird. 
-
-
-
 ## Creating additional apps
 
 Apps are feature of django we can use to create re-usable modules with. We mostly just use them to separate out and organize components. 
