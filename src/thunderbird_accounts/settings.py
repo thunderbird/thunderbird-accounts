@@ -9,24 +9,33 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-lg=cq*q+%o2s-8sadu1c8k47r5p8fcw6&odx9*db^(xgux2g2e'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+if DEBUG:
+    load_dotenv()
 
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.getenv('SECRET_KEY')
+
+FXA_OPEN_ID_CONFIG: str = os.getenv('https://accounts.stage.mozaws.net/.well-known/openid-configuration')
+FXA_CLIENT_ID: str = os.getenv('FXA_CLIENT_ID')
+FXA_SECRET: str = os.getenv('FXA_SECRET')
+FXA_CALLBACK: str = os.getenv('FXA_CALLBACK')
+FXA_OAUTH_SERVER_URL: str = os.getenv('FXA_OAUTH_SERVER_URL')
+FXA_PROFILE_SERVER_URL: str = os.getenv('FXA_PROFILE_SERVER_URL')
+
+ALLOWED_HOSTS = []
 
 # Application definition
 
@@ -37,6 +46,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Internal
+    'thunderbird_accounts.authentication',
+    'thunderbird_accounts.client',
+    'thunderbird_accounts.subscription',
+    'thunderbird_accounts.utils',
+
+    # Third party
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -69,7 +87,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'thunderbird_accounts.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -79,7 +96,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -99,6 +115,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ]
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
@@ -111,7 +134,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
@@ -121,3 +143,5 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTH_USER_MODEL = "authentication.User"

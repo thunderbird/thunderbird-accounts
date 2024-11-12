@@ -58,3 +58,5 @@ override.tf.json
 terraform.rc
 
 db.sqlite3
+
+.env
