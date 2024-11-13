@@ -1,0 +1,20 @@
+{% extends "admin/login.html" %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        #content {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+        }
+
+    </style>
+{% endblock %}
+
+{% block content %}
+    <section class="alternative-login-section">
+      <a href="{% url 'fxa_login' redirect_to='/admin/'|urlencode:'' %}">Log in with Mozilla Accounts 🔗</a>
+    </section>
+{% endblock %}

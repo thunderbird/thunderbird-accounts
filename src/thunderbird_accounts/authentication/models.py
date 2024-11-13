@@ -1,4 +1,6 @@
 import uuid
+
+from django.conf import settings
 from django.db import models
 
 # Create your models here.
@@ -29,3 +31,9 @@ class User(AbstractUser, BaseModel):
             *BaseModel.Meta.indexes,
             models.Index(fields=['timezone']),
         ]
+
+    def has_usable_password(self):
+        """Disable passwords for fxa"""
+        if settings.AUTH_SCHEME == 'fxa':
+            return False
+        return super(User).has_usable_password()

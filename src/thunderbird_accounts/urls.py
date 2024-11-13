@@ -21,9 +21,13 @@ from thunderbird_accounts.authentication import views as auth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('auth/', auth_views.fxa_start),
+    path('auth/logout', auth_views.fxa_logout, name='fxa_logout'),
+
+
+    path('auth/?redirect_to=<str:redirect_to>', auth_views.fxa_start, name='fxa_login'),
+
     # This will be auth/callback in the future.
-    path('fxa', auth_views.fxa_callback),
+    path('fxa', auth_views.fxa_callback, name='fxa_callback'),
 ]
 
 if settings.DEBUG:

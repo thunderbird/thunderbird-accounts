@@ -1,0 +1,44 @@
+services:
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./.env:/app/.env
+      - ./src/thunderbird_accounts:/app/thunderbird_accounts
+
+  postgres:
+    image: postgres:17
+    volumes:
+      - db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=accounts
+      - POSTGRES_USER=accounts
+      - POSTGRES_PASSWORD=accounts
+    # set shared memory limit when using docker-compose
+    shm_size: 128mb
+
+  redis:
+    image: redis/redis-stack
+    volumes:
+      - cache:/data
+    ports:
+      - "6379:6379" # Redis exposed on port 6379
+      - "8070:8001" # Insights exposed on port 8070
+
+  mailpit:
+    image: axllent/mailpit
+    environment:
+      - MP_SMTP_AUTH_ALLOW_INSECURE=true
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1024" # SMTP
+
+volumes:
+  db: {}
+  cache: {}

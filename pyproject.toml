@@ -13,6 +13,7 @@ dependencies = [
     "pyfxa>=0.7.9",
     "pyjwt>=2.9.0",
     "python-dotenv>=1.0.1",
+    "psycopg>=3.2.3",
 ]
 description = "Accounts hub for Thunderbird sync and services."
 readme = "README.md"
