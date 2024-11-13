@@ -29,7 +29,6 @@ if DEBUG:
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
 
-FXA_OPEN_ID_CONFIG: str = os.getenv('https://accounts.stage.mozaws.net/.well-known/openid-configuration')
 FXA_CLIENT_ID: str = os.getenv('FXA_CLIENT_ID')
 FXA_SECRET: str = os.getenv('FXA_SECRET')
 FXA_CALLBACK: str = os.getenv('FXA_CALLBACK')

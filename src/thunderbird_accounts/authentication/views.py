@@ -38,7 +38,7 @@ def fxa_start(request: HttpRequest, redirect_to: str|None = None):
 def fxa_logout(request: HttpRequest):
     """Logout of fxa"""
     logout(request)
-    
+
     return HttpResponseRedirect('/')
 
 
