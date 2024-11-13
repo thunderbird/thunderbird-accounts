@@ -70,30 +70,11 @@ def fxa_callback(request: HttpRequest):
     profile_client = ProfileClient(settings.FXA_PROFILE_SERVER_URL)
     profile = profile_client.get_profile(token.get('access_token'))
 
-    # First look-up by fxa uid
-    try:
-        user = User.objects.get(fxa_id=profile.get('uid'))
-        if user.email != profile.get('email'):
-            user.last_used_email = user.email
-            user.email = profile.get('email')
-            user.save()
-
-    except User.DoesNotExist:
-        user = None
-
-    # If that doesn't work, look up by email
-    if user is None:
-        try:
-            user = User.objects.get(email=profile.get('email'))
-            user.fxa_id = profile.get('uid')
-            user.avatar_url = profile.get('avatar', user.avatar_url)
-            user.display_name = profile.get('displayName', profile.get('email').split('@')[0])
-            user.save()
-
-        except User.DoesNotExist:
-            user = None
+    # Try to authenticate with fxa id and email
+    user = authenticate(fxa_id=profile.get('uid'), email=profile.get('email'))
 
     if user is None:
+        # New user flow:
         user = User.objects.create(
             fxa_id=profile.get('uid'),
             email=profile.get('email'),
@@ -103,10 +84,17 @@ def fxa_callback(request: HttpRequest):
             display_name=profile.get('displayName', profile.get('email').split('@')[0]),
         )
         user.save()
+    else:
+        # Update avatar and display name if available
+        user.avatar_url = profile.get('avatar', user.avatar_url)
+        if not user.display_name:
+            user.display_name = profile.get('displayName', profile.get('email').split('@')[0])
+
+        user.save()
 
     user.refresh_from_db()
 
-    user = authenticate(fxa_id=user.fxa_id, email=user.email)
+    # Login with django auth
     login(request, user)
 
     if redirect_to:
