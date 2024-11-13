@@ -37,3 +37,6 @@ class User(AbstractUser, BaseModel):
         if settings.AUTH_SCHEME == 'fxa':
             return False
         return super(User).has_usable_password()
+
+    def get_short_name(self):
+        return self.display_name
