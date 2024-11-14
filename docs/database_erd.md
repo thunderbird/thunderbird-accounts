@@ -1,6 +1,6 @@
 ## Database Entity Relational Diagram
 
-The following is up to date as of: Nov 12th, 2024
+The following is up to date as of: Nov 14th, 2024
 
 ```mermaid
 erDiagram  
@@ -20,11 +20,12 @@ erDiagram
 	%%{Authentication App}%%
 	User {
 		uuid uuid PK "UUID"
-		string fxa_id "Firefox Account ID"
-		string last_used_email "The last email used with Firefox Accounts"
+		string fxa_id "Mozilla Account ID"
+		string last_used_email "The last email used with Mozilla Accounts"
 		string display_name "FXA Display Name"
 		string avatar_url "FXA Avatar URL"
 		string timezone "Timezone (e.g. America/Vancouver, Europe/Berlin)"
+        binary fxa_token "Encrypted Mozilla Account access token"
 
 		%%{Django defaults}%%
 		string password "Login password, unused with fxa"
@@ -118,4 +119,29 @@ erDiagram
 		string customer_id FK "Related Customer UUID"
 	}
 	Customer ||--o{ Subscription : has
+
+    %%{Mail App}%%
+    Account {
+        string name "Unique account name"
+        string description "Account description (used in group accounts)"
+        string secret "Passwords, App Passwords, etc..."
+        enum type "Account type [individual, group]"
+        integer quota 
+        uuid django_pk PK "Primary key for django" 
+    }
+
+    GroupMember {
+        string name FK "The account name of the group member"
+        string member_of FK "The group account name (i.e. Account with Type == Group.)"
+        uuid django_pk PK "Primary Key for django"
+    }
+    Account ||--o{ GroupMember : has
+
+    Email {
+        string name FK "The owner's account name"
+        string address "The email address"
+        enum type "The type of email address [primary, alias, list]"
+        uuid django_pk PK "Primary Key for django"
+    }
+    Account ||--o{ Email : has
 ```
