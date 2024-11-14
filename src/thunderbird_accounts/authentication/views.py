@@ -4,7 +4,6 @@ from django.conf import settings
 from django.contrib.auth import login, authenticate, logout
 from django.forms import model_to_dict
 from django.http import HttpResponseRedirect, HttpRequest, HttpResponse, JsonResponse
-from django.urls import reverse
 from django.utils.crypto import get_random_string
 from fxa.errors import ClientError
 from fxa.oauth import Client
@@ -12,7 +11,6 @@ from fxa.profile import Client as ProfileClient
 
 from thunderbird_accounts.authentication.models import User
 
-# Create your views here.
 
 REDIRECT_KEY = 'fxa_redirect_to'
 STATE_KEY = 'fxa_state'

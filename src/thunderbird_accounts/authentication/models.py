@@ -3,8 +3,8 @@ import uuid
 from django.conf import settings
 from django.db import models
 
-# Create your models here.
 from django.contrib.auth.models import AbstractUser
+from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.utils.models import BaseModel
 
@@ -18,13 +18,13 @@ class User(AbstractUser, BaseModel):
     :param avatar_url: Avatar URL from FxA profile
     :param timezone: The user's timezone
     """
-    fxa_id = models.CharField(max_length=256, null=True)
-    last_used_email = models.CharField(max_length=256, null=True)
+    fxa_id = models.CharField(max_length=256, null=True, help_text=_('Mozilla Account\'s UID field'))
+    last_used_email = models.CharField(max_length=256, null=True, help_text=_('The email previously used to login to Mozilla Accounts'))
 
     # FXA profile information
-    display_name = models.CharField(max_length=256, null=True)
-    avatar_url = models.CharField(max_length=2048, null=True)
-    timezone = models.CharField(max_length=128, default='UTC')
+    display_name = models.CharField(max_length=256, null=True, help_text=_('The display name from Mozilla Accounts'))
+    avatar_url = models.CharField(max_length=2048, null=True, help_text=_('The avatar url from Mozilla Accounts'))
+    timezone = models.CharField(max_length=128, default='UTC', help_text=_('The user\'s timezone'))
 
     class Meta(BaseModel.Meta):
         indexes = [
