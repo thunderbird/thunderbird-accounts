@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'thunderbird_accounts.authentication',
     'thunderbird_accounts.client',
     'thunderbird_accounts.subscription',
+    'thunderbird_accounts.mail',
     'thunderbird_accounts.utils',
     # Django
     'django.contrib.admin',
@@ -133,6 +134,20 @@ CACHES = {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
         'LOCATION': os.getenv('REDIS_URL'),
     }
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG",
+    },
 }
 
 AUTH_SCHEME = os.getenv('AUTH_SCHEME', 'password')
