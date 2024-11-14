@@ -26,14 +26,25 @@ DEBUG = True
 if DEBUG:
     load_dotenv()
 
+
+APP_ENV = os.getenv('APP_ENV')
+
+ADMIN_WEBSITE = os.getenv('ADMIN_WEBSITE')
+ADMIN_CONTACT = os.getenv('ADMIN_CONTACT')
+SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT')
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
+
+LOGIN_CODE_SECRET = os.getenv('LOGIN_CODE_SECRET')
+LOGIN_MAX_AGE = 120  # 2 minutes
 
 FXA_CLIENT_ID: str = os.getenv('FXA_CLIENT_ID')
 FXA_SECRET: str = os.getenv('FXA_SECRET')
 FXA_CALLBACK: str = os.getenv('FXA_CALLBACK')
 FXA_OAUTH_SERVER_URL: str = os.getenv('FXA_OAUTH_SERVER_URL')
 FXA_PROFILE_SERVER_URL: str = os.getenv('FXA_PROFILE_SERVER_URL')
+FXA_ENCRYPT_SECRET: bytes = os.getenv('FXA_ENCRYPT_SECRET', '').encode()
 
 ALLOWED_HOSTS = []
 
@@ -148,6 +159,11 @@ LOGGING = {
         "handlers": ["console"],
         "level": "DEBUG",
     },
+}
+
+SIMPLE_JWT = {
+    "USER_ID_FIELD": "uuid",
+    "USER_ID_CLAIM": "user_uuid",
 }
 
 AUTH_SCHEME = os.getenv('AUTH_SCHEME', 'password')

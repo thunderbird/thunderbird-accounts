@@ -15,7 +15,7 @@ class ClientEnvironment(BaseModel):
     :param is_active: Is this environment active?"""
     environment = models.CharField(max_length=128, default='prod', help_text=_('The environment (e.g. dev, stage, prod)'))
     redirect_url = models.CharField(max_length=2048, help_text=_('The redirect url back to the client after login'))
-    auth_token = models.CharField(max_length=256, help_text=_('The server-to-server/secret auth token'))
+    auth_token = models.CharField(max_length=256, null=True, help_text=_('The server-to-server/secret auth token'))
     is_active = models.BooleanField(default=True, help_text=_('Is this environment active?'))
 
     class Meta(BaseModel.Meta):

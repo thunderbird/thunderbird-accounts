@@ -1,5 +1,5 @@
 {% extends "admin/login.html" %}
-
+{% load helpers %}
 {% block extrastyle %}
     {{ block.super }}
     <style>
@@ -15,6 +15,7 @@
 
 {% block content %}
     <section class="alternative-login-section">
-      <a href="{% url 'fxa_login' redirect_to='/admin/'|urlencode:'' %}">Log in with Mozilla Accounts 🔗</a>
+      {% get_admin_login_code as login_code %}
+      <a href="{% url 'fxa_login' login_code=login_code %}">Log in with Mozilla Accounts 🔗</a>
     </section>
 {% endblock %}

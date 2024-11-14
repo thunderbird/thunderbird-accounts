@@ -17,7 +17,7 @@ Including another URLconf
 
 from django.conf import settings
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from thunderbird_accounts.authentication import views as auth_views
 from django.utils.translation import gettext_lazy as _
 
@@ -28,7 +28,8 @@ admin.site.index_title = _('Accounts Administration')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/logout', auth_views.fxa_logout, name='fxa_logout'),
-    path('auth/?redirect_to=<str:redirect_to>', auth_views.fxa_start, name='fxa_login'),
+    path('auth/<str:login_code>/', auth_views.fxa_start, name='fxa_login'),
+    path('auth/<str:login_code>/?redirect_to=<str:redirect_to>', auth_views.fxa_start, name='fxa_login'),
     # This will be auth/callback in the future.
     path('fxa', auth_views.fxa_callback, name='fxa_callback'),
 ]
