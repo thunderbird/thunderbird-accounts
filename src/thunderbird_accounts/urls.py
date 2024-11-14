@@ -14,18 +14,21 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include
 from thunderbird_accounts.authentication import views as auth_views
+from django.utils.translation import gettext_lazy as _
+
+admin.site.site_header = _('Thunderbird Accounts Admin Panel')
+admin.site.site_title = _('Thunderbird Accounts Admin Panel')
+admin.site.index_title = _('Accounts Administration')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/logout', auth_views.fxa_logout, name='fxa_logout'),
-
-
     path('auth/?redirect_to=<str:redirect_to>', auth_views.fxa_start, name='fxa_login'),
-
     # This will be auth/callback in the future.
     path('fxa', auth_views.fxa_callback, name='fxa_callback'),
 ]
