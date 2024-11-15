@@ -16,6 +16,7 @@ Including another URLconf
 """
 
 from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include, re_path
 from thunderbird_accounts.authentication import views as auth_views
@@ -36,3 +37,9 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns.append(path('docs/', include('rest_framework.urls')))
+
+# Needed with uvicorn dev server
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+

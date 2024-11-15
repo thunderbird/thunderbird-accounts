@@ -1,5 +1,7 @@
 # Thunderbird Accounts
 
+**Note: Thunderbird Accounts is still in active development and is not ready for any active use.**
+
 This project uses [uv](https://github.com/astral-sh/uv).
 
 Thunderbird Accounts is a Django 5.1 application. Please read up on Django before diving in.
