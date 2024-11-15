@@ -18,7 +18,7 @@ def create_login_code(client_environment: ClientEnvironment):
         return None
 
     token_serializer = URLSafeTimedSerializer(settings.LOGIN_CODE_SECRET, 'login')
-    return token_serializer.dumps({'uuid': client_environment.uuid.hex})
+    return token_serializer.dumps({'uuid': str(client_environment.uuid)})
 
 
 def validate_login_code(token: str):
@@ -68,6 +68,7 @@ def handle_auth_callback_response(
         refresh = ''
     else:
         refresh = RefreshToken.for_user(user)
+        refresh.payload['client_env_uuid'] = str(client_env.uuid)
         refresh = f'?token={refresh}'
 
     return HttpResponseRedirect(f'{client_env.redirect_url}{refresh}')

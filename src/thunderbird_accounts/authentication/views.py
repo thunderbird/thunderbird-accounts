@@ -45,7 +45,7 @@ def fxa_start(request: HttpRequest, login_code: str, redirect_to: str | None = N
     url = client.get_redirect_url(state, redirect_uri=settings.FXA_CALLBACK, scope='profile')
 
     request.session[STATE_KEY] = state
-    request.session[CLIENT_ENV_KEY] = client_environment.uuid.hex
+    request.session[CLIENT_ENV_KEY] = str(client_environment.uuid)
     if redirect_to:
         request.session[REDIRECT_KEY] = redirect_to
 
