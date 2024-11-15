@@ -1,6 +1,7 @@
 # Thunderbird Accounts
 
-**Note: Thunderbird Accounts is still in active development and is not ready for any active use.**
+> [!IMPORTANT]  
+> Thunderbird Accounts is still in active development and is not ready for any active use.
 
 This project uses [uv](https://github.com/astral-sh/uv).
 

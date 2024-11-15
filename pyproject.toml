@@ -16,7 +16,7 @@ dependencies = [
     "cryptography>=43.0.3",
     "djangorestframework-simplejwt>=5.3.1",
     "itsdangerous>=2.2.0",
-    "uvicorn>=0.32.0",
+    "uvicorn[standard]>=0.32.0",
     "psycopg>=3.2.3",
 ]
 description = "Accounts hub for Thunderbird sync and services."
@@ -47,6 +47,10 @@ Homepage = "https://www.thunderbird.net/"
 cli = [
     "ruff",
 ]
+
+[tool.setuptools.packages.find]
+#where = ["src"]
+include = ["thunderbird_accounts"]  # package names should match these glob patterns (["*"] by default)
 
 ###############################################################
 # Ruff Configuration
