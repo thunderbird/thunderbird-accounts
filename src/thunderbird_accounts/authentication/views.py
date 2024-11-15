@@ -4,16 +4,19 @@ from urllib.parse import unquote
 
 from django.conf import settings
 from django.contrib.auth import login, authenticate, logout
-from django.forms import model_to_dict
-from django.http import HttpResponseRedirect, HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpResponseRedirect, HttpRequest, HttpResponse
 from django.utils.crypto import get_random_string
 from fxa.errors import ClientError
 from fxa.oauth import Client
 from fxa.profile import Client as ProfileClient
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.authentication.utils import validate_login_code
+from thunderbird_accounts.authentication.utils import (
+    validate_login_code,
+    handle_auth_callback_response,
+    is_already_authenticated,
+)
 from thunderbird_accounts.client.models import ClientEnvironment
 
 REDIRECT_KEY = 'fxa_redirect_to'
@@ -21,18 +24,23 @@ STATE_KEY = 'fxa_state'
 CLIENT_ENV_KEY = 'client_uuid'
 
 
-def fxa_start(request: HttpRequest, login_code: str, redirect_to: str|None = None):
+def fxa_start(request: HttpRequest, login_code: str, redirect_to: str | None = None):
     """Initiate the Mozilla Account OAuth dance"""
     client_environment = validate_login_code(login_code)
 
     if not client_environment:
-        return HttpResponse('401 Unauthorized', status=401)
-
-    state = get_random_string(length=64)
+        return HttpResponse(_('401 Unauthorized'), status=401)
 
     if redirect_to:
         redirect_to = unquote(redirect_to)
 
+    # If the user is authenticated then we can skip the fxa login process
+    if is_already_authenticated(request):
+        user = request.user
+        logging.debug('Already logged in, skipping oauth')
+        return handle_auth_callback_response(user, client_environment, redirect_to)
+
+    state = get_random_string(length=64)
     client = Client(settings.FXA_CLIENT_ID, settings.FXA_SECRET, settings.FXA_OAUTH_SERVER_URL)
     url = client.get_redirect_url(state, redirect_uri=settings.FXA_CALLBACK, scope='profile')
 
@@ -53,7 +61,7 @@ def fxa_logout(request: HttpRequest):
         try:
             client.destroy_token(user.fxa_token)
         except ClientError:
-            logging.debug("Failed to destroy fxa access token")
+            logging.debug('Failed to destroy fxa access token')
 
         user.fxa_token = None
         user.save()
@@ -77,28 +85,32 @@ def fxa_callback(request: HttpRequest):
     if state:
         del request.session[STATE_KEY]
 
+    # Retrieve a redirect to if available
     redirect_to = request.session.get(REDIRECT_KEY)
     if redirect_to:
         del request.session[REDIRECT_KEY]
 
     if not state or state != request.GET.get('state') or not client_env_uuid:
-        return HttpResponse(content=b'Invalid Request', status=500)
-
-    code = request.GET.get('code')
+        logging.debug('State not found, state did not match session state, or client_env_uuid was not found.')
+        return HttpResponse(content=_('Invalid Request'), status=500)
 
     # Another check to see if the env hasn't been invalidated between the login start and now.
     client_env = ClientEnvironment.objects.get(uuid=uuid.UUID(client_env_uuid))
     if not client_env or not client_env.is_active:
-        return HttpResponse(content=b'Invalid Request, Client Environment not found or not active', status=500)
+        logging.debug('Failed to find client env')
+        return HttpResponse(content=_('Invalid Request'), status=500)
 
+    code = request.GET.get('code')
+    is_admin_client = client_env.client.name == settings.ADMIN_CLIENT_NAME
     client = Client(settings.FXA_CLIENT_ID, settings.FXA_SECRET, settings.FXA_OAUTH_SERVER_URL)
     token = client.trade_code(code)
 
     try:
         client.verify_token(token.get('access_token'))
     except ClientError:
-        return HttpResponse(content=b'Invalid Response from Mozilla Accounts server.', status=500)
+        return HttpResponse(content=_('Invalid Response from Mozilla Accounts server.'), status=500)
 
+    # Retrieve the user's fxa profile
     profile_client = ProfileClient(settings.FXA_PROFILE_SERVER_URL)
     profile = profile_client.get_profile(token.get('access_token'))
 
@@ -127,12 +139,11 @@ def fxa_callback(request: HttpRequest):
 
     user.refresh_from_db()
 
+    if is_admin_client and not user.is_staff:
+        logging.debug(f'Unauthorized user {user.uuid} trying to access admin panel.')
+        return HttpResponse('401 Unauthorized', status=401)
+
     # Login with django auth
     login(request, user)
 
-    if redirect_to:
-        return HttpResponseRedirect(redirect_to)
-
-    # Create an access token as well - only for non-redirect routes
-    refresh = RefreshToken.for_user(user)
-    return HttpResponseRedirect(f'{client_env.redirect_url}?token={refresh}')
+    return handle_auth_callback_response(user, client_env, redirect_to)
