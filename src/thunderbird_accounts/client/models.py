@@ -84,7 +84,7 @@ class Client(BaseModel):
 
     :param name: The name of the client.
     """
-    name = models.CharField(max_length=128, help_text=_('Client\'s name (for admin purposes)'))
+    name = models.CharField(max_length=128, unique=True, help_text=_('Client\'s name (must be unique.)'))
 
     class Meta(BaseModel.Meta):
         indexes = [

@@ -29,6 +29,7 @@ if DEBUG:
 
 APP_ENV = os.getenv('APP_ENV')
 
+ADMIN_CLIENT_NAME = 'Accounts Admin Panel'
 ADMIN_WEBSITE = os.getenv('ADMIN_WEBSITE')
 ADMIN_CONTACT = os.getenv('ADMIN_CONTACT')
 SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT')

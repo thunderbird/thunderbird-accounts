@@ -13,7 +13,7 @@ def up(apps, schema_editor):
     client_environment_model = apps.get_model('client', 'ClientEnvironment')
     client_contact_model = apps.get_model('client', 'ClientContact')
 
-    client = client_model.objects.create(name='Accounts Admin Panel')
+    client = client_model.objects.create(name=settings.ADMIN_CLIENT_NAME)
 
     client_contact = client_contact_model.objects.create(
         name='Main', email=settings.ADMIN_CONTACT, website=settings.ADMIN_WEBSITE, client_id=client.uuid

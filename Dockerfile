@@ -10,6 +10,8 @@ RUN apt update && apt install -y cron
 
 RUN mkdir scripts
 
+COPY static .
+COPY templates .
 COPY manage.py .
 COPY MANIFEST.in .
 COPY uv.lock .

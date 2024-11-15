@@ -9,6 +9,9 @@ services:
     volumes:
       - ./.env:/app/.env
       - ./src/thunderbird_accounts:/app/thunderbird_accounts
+      - ./static:/app/static
+      - ./templates:/app/templates
+
 
   postgres:
     image: postgres:17
