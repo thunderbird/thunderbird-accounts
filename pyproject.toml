@@ -19,7 +19,7 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "psycopg>=3.2.3",
 ]
-description = "Accounts hub for Thunderbird sync and services."
+description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"
 requires-python = ">= 3.12"
 authors = [
