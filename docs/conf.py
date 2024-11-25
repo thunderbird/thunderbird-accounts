@@ -1,10 +1,15 @@
 # Configuration file for the Sphinx documentation builder.
 import importlib
 import inspect
+import logging
 import os
 import sys
 
+print(f'Running in {os.getcwd()}')
+
 sys.path.insert(0, os.path.abspath('src'))
+
+print(f"Adding to path: {os.path.abspath('../src')}")
 
 # -- Project information
 
@@ -65,6 +70,8 @@ source_code_repository_branch = 'main'
 def linkcode_resolve(domain, info):
     """Resolve our external repo links, including code to highlight the function.
     Code line resolving thanks to: https://github.com/readthedocs/sphinx-autoapi/issues/202"""
+    objname = None
+    attrname = None
     try:
         if domain != 'py':
             return None
@@ -93,12 +100,23 @@ def linkcode_resolve(domain, info):
             return None
 
         file = os.path.relpath(file, os.path.abspath('.'))
+
+        # Depending on where the docs are built from this could be slightly different...
+        if file.startswith('../'):
+            file = file[3:]
+
         if not file.startswith('src/thunderbird_accounts'):
+            print(f"Ignoring {file}")
             # e.g. object is a typing.NewType
             return None
 
         start, end = lines[1], lines[1] + len(lines[0]) - 1
         return f'{source_code_repository}/tree/{source_code_repository_branch}/{file}#L{start}-L{end}'
-    except Exception:
+    except Exception as e:
         # We'll encounter errors with Django and any magic exceptions (like Model.DoesNotExist.)
-        pass
+        module = info['module']
+        if objname:
+            module += f'.{objname}'
+        if attrname:
+            module += f'.{attrname}'
+        logging.warning(f"[linkcode_resolve] Could not resolve link for {module}. Error: {e}")
