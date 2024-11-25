@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thunderbird_accounts"
-version = "0.1"
+version = "0.2.0"
 dependencies = [
     "django>=5.1",
     "django-filter>=24.3",
@@ -17,7 +17,9 @@ dependencies = [
     "djangorestframework-simplejwt>=5.3.1",
     "itsdangerous>=2.2.0",
     "uvicorn[standard]>=0.32.0",
-    "psycopg>=3.2.3",
+    "psycopg[binary]>=3.2.3",
+    "redis>=5.2.0",
+    "hiredis>=3.0.0",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"
@@ -49,7 +51,7 @@ cli = [
 ]
 
 [tool.setuptools.packages.find]
-#where = ["src"]
+where = ["src"]
 include = ["thunderbird_accounts"]  # package names should match these glob patterns (["*"] by default)
 
 ###############################################################

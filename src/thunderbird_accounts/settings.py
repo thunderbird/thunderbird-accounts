@@ -23,12 +23,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+IS_TEST = 'test' in sys.argv
 
 if DEBUG:
     load_dotenv()
 
 
 APP_ENV = os.getenv('APP_ENV')
+
 
 ADMIN_CLIENT_NAME = 'Accounts Admin Panel'
 ADMIN_WEBSITE = os.getenv('ADMIN_WEBSITE')
@@ -48,7 +50,7 @@ FXA_OAUTH_SERVER_URL: str = os.getenv('FXA_OAUTH_SERVER_URL')
 FXA_PROFILE_SERVER_URL: str = os.getenv('FXA_PROFILE_SERVER_URL')
 FXA_ENCRYPT_SECRET: bytes = os.getenv('FXA_ENCRYPT_SECRET', '').encode()
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost']
 
 # Application definition
 
@@ -71,6 +73,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # This needs to be first, as we're setting up our allowed hosts
+    'thunderbird_accounts.authentication.middleware.ClientSetAllowedHostsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -102,15 +106,8 @@ WSGI_APPLICATION = 'thunderbird_accounts.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-if 'test' in sys.argv:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        },
-    }
-else:
-    DATABASES = {
+AVAILABLE_DATABASES = {
+    'dev': {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.getenv('DATABASE_NAME'),
@@ -119,7 +116,16 @@ else:
             'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
             'PORT': os.getenv('DATABASE_PORT', '5432'),
         },
-    }
+    },
+    'test': {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        },
+    },
+}
+
+DATABASES = AVAILABLE_DATABASES['test'] if IS_TEST else AVAILABLE_DATABASES['dev']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -146,12 +152,22 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework_simplejwt.authentication.JWTAuthentication'],
 }
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL'),
-    }
+AVAILABLE_CACHES = {
+    'dev': {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.getenv('REDIS_URL'),
+        }
+    },
+    'test': {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+        }
+    },
 }
+
+CACHES = AVAILABLE_CACHES['test'] if IS_TEST else AVAILABLE_CACHES['dev']
 
 LOGGING = {
     'version': 1,
@@ -201,3 +217,5 @@ STATIC_ROOT = BASE_DIR.joinpath('static')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'authentication.User'
+
+ALLOWED_HOSTS_CACHE_KEY = '__ALLOWED_HOSTS'

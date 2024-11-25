@@ -23,14 +23,15 @@ COPY scripts/dev-entry.sh scripts/dev-entry.sh
 RUN echo '!! If the next step fails, copy .env.example to .env in the backend folder !!'
 COPY .env .
 
-RUN pip install --upgrade pip
-RUN pip install uv
-RUN uv sync
-
 # Add this hack to line it up with our dev environment.
 # I'll buy whoever fixes this a coffee.
 RUN mkdir src
 RUN ln -s /app/thunderbird_accounts src/thunderbird_accounts
+
+RUN pip install --upgrade pip
+RUN pip install uv
+RUN uv sync
+
 
 EXPOSE 5000
 CMD ["/bin/sh", "./scripts/dev-entry.sh"]

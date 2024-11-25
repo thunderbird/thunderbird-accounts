@@ -1,5 +1,8 @@
-import uuid
+import logging
 
+import urllib3
+from django.conf import settings
+from django.core.cache import cache
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -13,19 +16,36 @@ class ClientEnvironment(BaseModel):
     :param redirect_url: URL to redirect the login request back to
     :param auth_token: The authentication token given to a client so they can make server-to-server requests with us
     :param is_active: Is this environment active?"""
-    environment = models.CharField(max_length=128, default='prod', help_text=_('The environment (e.g. dev, stage, prod)'))
+
+    environment = models.CharField(
+        max_length=128, default='prod', help_text=_('The environment (e.g. dev, stage, prod)')
+    )
     redirect_url = models.CharField(max_length=2048, help_text=_('The redirect url back to the client after login'))
     auth_token = models.CharField(max_length=256, null=True, help_text=_('The server-to-server/secret auth token'))
     is_active = models.BooleanField(default=True, help_text=_('Is this environment active?'))
 
     class Meta(BaseModel.Meta):
-        indexes = [
-            *BaseModel.Meta.indexes,
-            models.Index(fields=['environment']),
-            models.Index(fields=['is_active'])
-        ]
+        indexes = [*BaseModel.Meta.indexes, models.Index(fields=['environment']), models.Index(fields=['is_active'])]
 
     client = models.ForeignKey('Client', on_delete=models.CASCADE)
+
+    @classmethod
+    def cache_hostnames(cls):
+        client_envs = ClientEnvironment.objects.filter(environment=settings.APP_ENV).all()
+        allowed_hosts = []
+        for env in client_envs:
+            parsed_url = urllib3.util.parse_url(env.redirect_url)
+            if parsed_url.host:
+                allowed_hosts.append(parsed_url.host)
+
+        # Clear out any duplicates
+        allowed_hosts = list(set(settings.ALLOWED_HOSTS + allowed_hosts))
+        cache.set(settings.ALLOWED_HOSTS_CACHE_KEY, allowed_hosts)
+        logging.info(f'Caching allowed_hosts: {allowed_hosts}')
+        return allowed_hosts
+
+    def __str__(self):
+        return f'Client Environment {self.environment} for {self.client.name}'
 
 
 class ClientWebhook(BaseModel):
@@ -34,17 +54,14 @@ class ClientWebhook(BaseModel):
     :param name: The name of the webhook (admin purposes)
     :param webhook_url: The URL where we should send our POST requests
     :param type: The type of webhook"""
+
     class WebhookType(models.TextChoices):
         AUTH = 'auth', _('Auth')
         SUBSCRIPTION = 'subscription', _('Subscription')
 
     name = models.CharField(max_length=128, help_text=_('The name of the webhook (for admin purposes)'))
     webhook_url = models.CharField(max_length=2048, help_text=_('The URL of the webhook'))
-    type = models.CharField(
-        max_length=32,
-        choices=WebhookType,
-        help_text=_('What type of webhook is it?')
-    )
+    type = models.CharField(max_length=32, choices=WebhookType, help_text=_('What type of webhook is it?'))
 
     client_environment = models.ForeignKey('ClientEnvironment', on_delete=models.CASCADE)
 
@@ -64,6 +81,7 @@ class ClientContact(BaseModel):
     :param email: An up-to-date active email address we could send service alerts to
     :param website: A website (can be tied to the environment, but not required)
     """
+
     name = models.CharField(max_length=128, help_text=_('How the contact should be addressed'))
     email = models.CharField(max_length=128, help_text=_('The email to reach the contact'))
     website = models.CharField(max_length=2048, help_text=_('The website for the contact'))
@@ -84,7 +102,8 @@ class Client(BaseModel):
 
     :param name: The name of the client.
     """
-    name = models.CharField(max_length=128, unique=True, help_text=_('Client\'s name (must be unique.)'))
+
+    name = models.CharField(max_length=128, unique=True, help_text=_("Client's name (must be unique.)"))
 
     class Meta(BaseModel.Meta):
         indexes = [

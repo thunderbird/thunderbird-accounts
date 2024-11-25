@@ -12,15 +12,25 @@ class User(AbstractUser, BaseModel):
     """
     :param fxa_id: The ID of the connected firefox account
     :param last_used_email: The last used email associated with firefox account
-
+    :param language: The user's preferred language to view the ui/system emails in
     :param display_name: Display name from FxA profile
     :param avatar_url: Avatar URL from FxA profile
     :param timezone: The user's timezone
     """
 
+    class UserLanguageType(models.TextChoices):
+        ENGLISH = 'en', _('English')
+        GERMAN = 'de', _('German')
+
     fxa_id = models.CharField(max_length=256, null=True, help_text=_("Mozilla Account's UID field"))
     last_used_email = models.CharField(
         max_length=256, null=True, help_text=_('The email previously used to login to Mozilla Accounts')
+    )
+    language = models.CharField(
+        max_length=16,
+        choices=UserLanguageType,
+        default=UserLanguageType.ENGLISH,
+        help_text=_('The language the UI and system emails will display in'),
     )
 
     # FXA profile information

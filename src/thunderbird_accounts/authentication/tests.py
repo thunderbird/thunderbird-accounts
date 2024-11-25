@@ -1,10 +1,32 @@
 from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.test import TestCase
+from rest_framework.test import RequestsClient
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.utils import handle_auth_callback_response
 from thunderbird_accounts.client.models import Client, ClientEnvironment
+
+
+class APITestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(
+            username='Test',
+            email='test@example.org',
+        )
+        self.client = Client.objects.create(name='Test Client')
+        self.client_env = ClientEnvironment.objects.create(
+            environment='test',
+            redirect_url='http://testserver/',
+            client_id=self.client.uuid,
+            auth_token='1234',
+        )
+
+    def test_login_link_successfully(self):
+        factory = RequestsClient()
+        response = factory.post('http://testserver/api/v1/auth/get-login/', {'secret': self.client_env.auth_token})
+        assert response.status_code == 200, response.status_code
+        assert 'login' in response.json()
 
 
 # Create your tests here.
@@ -19,13 +41,9 @@ class UtilsTestCase(TestCase):
 
     def test_handle_auth_callback_response(self):
         """Ensure this response has a token GET parameter"""
-        client = Client.objects.create(
-            name='Test Client'
-        )
+        client = Client.objects.create(name='Test Client')
         client_env = ClientEnvironment.objects.create(
-            environment='test',
-            redirect_url='https://www.thunderbird.net',
-            client_id=client.uuid
+            environment='test', redirect_url='https://www.thunderbird.net', client_id=client.uuid
         )
 
         response = handle_auth_callback_response(self.user, client_env)
@@ -53,7 +71,3 @@ class UtilsTestCase(TestCase):
         assert response.url != self.admin_client_env.redirect_url
         assert response.url == redirect_url
         assert '?token=' not in response.url
-
-
-
-

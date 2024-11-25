@@ -1,5 +1,12 @@
+import time
+
+from django.conf import settings
+from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import BaseBackend
+from django.http import HttpRequest
+
+from ..client.models import ClientEnvironment
 
 
 class FXABackend(BaseBackend):
@@ -33,3 +40,26 @@ class FXABackend(BaseBackend):
             return get_user_model().objects.get(pk=user_id)
         except get_user_model().DoesNotExist:
             return None
+
+
+class ClientSetAllowedHostsMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest):
+        print('---')
+        start = time.perf_counter_ns()
+
+        allowed_hosts = cache.get(settings.ALLOWED_HOSTS_CACHE_KEY)
+        if not allowed_hosts:
+            allowed_hosts = ClientEnvironment.cache_hostnames()
+
+        settings.ALLOWED_HOSTS = allowed_hosts
+
+        end = time.perf_counter_ns()
+
+        print(f'> total time {(end-start) / 1000000} ms')
+
+        response = self.get_response(request)
+
+        return response
