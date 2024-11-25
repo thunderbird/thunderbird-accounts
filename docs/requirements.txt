@@ -1,0 +1,5 @@
+sphinx
+sphinx-rtd-theme
+sphinxcontrib-django
+sphinxcontrib-mermaid
+myst-parser

@@ -60,3 +60,4 @@ terraform.rc
 db.sqlite3
 
 .env
+build
