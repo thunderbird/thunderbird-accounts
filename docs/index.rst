@@ -8,6 +8,7 @@ Contents
     :maxdepth: 2
     :caption: Documentation
 
+    readme.md
     modules.rst
     database_erd.rst
 

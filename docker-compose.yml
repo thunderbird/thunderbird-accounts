@@ -12,13 +12,12 @@ services:
       - ./static:/app/static
       - ./templates:/app/templates
 
-
   postgres:
     image: postgres:17
     volumes:
       - db:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432" # Note: host is exposed to 5433!
     environment:
       - POSTGRES_DB=accounts
       - POSTGRES_USER=accounts
@@ -31,16 +30,16 @@ services:
     volumes:
       - cache:/data
     ports:
-      - "6379:6379" # Redis exposed on port 6379
-      - "8070:8001" # Insights exposed on port 8070
+      - "6380:6379" # Redis exposed on port 6380
+      - "8071:8001" # Insights exposed on port 8071
 
   mailpit:
     image: axllent/mailpit
     environment:
       - MP_SMTP_AUTH_ALLOW_INSECURE=true
     ports:
-      - "8025:8025" # Web UI
-      - "1025:1024" # SMTP
+      - "8026:8025" # Web UI on port 8026
+      - "1026:1024" # SMTP on port 1026
 
 volumes:
   db: {}

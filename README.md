@@ -24,11 +24,34 @@ Run the following and follow the terminal prompts:
 ./manage.py createsuperuser
 ```
 
+### Running in docker (recommended)
+
+```shell
+docker-compose up --build -V
+```
+
+A server will be available at [http://localhost:8087/](http://localhost:8087/)
+
 ### Running local dev server
 
 ```shell
-./manage.py runserver 0.0.0.0:5173
+./manage.py runserver 0.0.0.0:8087
 ```
+
+### Exposed dev ports
+
+For development the following ports are exposed:
+
+| Service          | Port for host computer | Port in docker network |
+|------------------|------------------------|------------------------|
+| Webserver        | 8087                   | 8087                   |
+| Postgres         | 5433                   | 5432                   |
+| Redis            | 6380                   | 6379                   |
+| Redis (Insights) | 8071                   | 8001                   |
+| Mailpit (Web UI) | 8026                   | 8025                   |
+| Mailpit (SMTP)   | 1026                   | 1024                   |
+
+(Note: You're the host computer. So connect to postgres via port 5433!)
 
 ## Creating additional apps
 
