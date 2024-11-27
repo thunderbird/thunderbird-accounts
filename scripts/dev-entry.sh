@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Wait until db is available
+sleep 5s
+
 # Start up django webserver
 ./manage.py migrate
 ./manage.py collectstatic --noinput

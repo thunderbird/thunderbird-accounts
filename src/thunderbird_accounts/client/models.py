@@ -1,4 +1,5 @@
 import logging
+import secrets
 
 import urllib3
 from django.conf import settings
@@ -7,6 +8,11 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.utils.models import BaseModel
+
+
+def _generate_secret():
+    """Generate an access token for the auth_token field as the default value"""
+    return secrets.token_hex(64)
 
 
 class ClientEnvironment(BaseModel):
@@ -21,7 +27,13 @@ class ClientEnvironment(BaseModel):
         max_length=128, default='prod', help_text=_('The environment (e.g. dev, stage, prod)')
     )
     redirect_url = models.CharField(max_length=2048, help_text=_('The redirect url back to the client after login'))
-    auth_token = models.CharField(max_length=256, null=True, help_text=_('The server-to-server/secret auth token'))
+    auth_token = models.CharField(
+        max_length=256,
+        null=True,
+        help_text=_('The server-to-server/secret auth token'),
+        unique=True,
+        default=_generate_secret,
+    )
     is_active = models.BooleanField(default=True, help_text=_('Is this environment active?'))
 
     class Meta(BaseModel.Meta):
