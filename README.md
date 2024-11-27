@@ -38,7 +38,7 @@ A server will be available at [http://localhost:8087/](http://localhost:8087/)
 ./manage.py runserver 0.0.0.0:8087
 ```
 
-### Exposed dev ports
+## Exposed dev ports
 
 For development the following ports are exposed:
 
