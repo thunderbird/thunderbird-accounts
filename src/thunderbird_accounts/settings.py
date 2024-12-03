@@ -31,6 +31,8 @@ if DEBUG:
 
 APP_ENV = os.getenv('APP_ENV')
 
+# URL for public facing absolute links
+PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL')
 
 ADMIN_CLIENT_NAME = 'Accounts Admin Panel'
 ADMIN_WEBSITE = os.getenv('ADMIN_WEBSITE')
@@ -51,6 +53,10 @@ FXA_PROFILE_SERVER_URL: str = os.getenv('FXA_PROFILE_SERVER_URL')
 FXA_ENCRYPT_SECRET: bytes = os.getenv('FXA_ENCRYPT_SECRET', '').encode()
 
 ALLOWED_HOSTS = ['localhost']
+
+# For local docker usage
+if DEBUG:
+    ALLOWED_HOSTS += ['accounts']
 
 # Application definition
 
@@ -148,7 +154,7 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
-    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'],
+    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
     'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework_simplejwt.authentication.JWTAuthentication'],
 }
 
@@ -219,3 +225,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'authentication.User'
 
 ALLOWED_HOSTS_CACHE_KEY = '__ALLOWED_HOSTS'
+
+USE_X_FORWARDED_HOST = True

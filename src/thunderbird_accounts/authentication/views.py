@@ -1,6 +1,6 @@
 import logging
 import uuid
-from urllib.parse import unquote
+from urllib.parse import unquote, urlencode
 
 from django.conf import settings
 from django.contrib.auth import login, authenticate, logout
@@ -26,7 +26,7 @@ CLIENT_ENV_KEY = 'client_uuid'
 
 def fxa_start(request: HttpRequest, login_code: str, redirect_to: str | None = None):
     """Initiate the Mozilla Account OAuth dance"""
-    client_environment = validate_login_code(login_code)
+    client_environment, state = validate_login_code(login_code)
 
     if not client_environment:
         return HttpResponse(_('401 Unauthorized'), status=401)
@@ -38,9 +38,8 @@ def fxa_start(request: HttpRequest, login_code: str, redirect_to: str | None = N
     if is_already_authenticated(request):
         user = request.user
         logging.debug('Already logged in, skipping oauth')
-        return handle_auth_callback_response(user, client_environment, redirect_to)
+        return handle_auth_callback_response(user, client_environment, redirect_to, state)
 
-    state = get_random_string(length=64)
     client = Client(settings.FXA_CLIENT_ID, settings.FXA_SECRET, settings.FXA_OAUTH_SERVER_URL)
     url = client.get_redirect_url(state, redirect_uri=settings.FXA_CALLBACK, scope='profile')
 
@@ -146,4 +145,4 @@ def fxa_callback(request: HttpRequest):
     # Login with django auth
     login(request, user)
 
-    return handle_auth_callback_response(user, client_env, redirect_to)
+    return handle_auth_callback_response(user, client_env, redirect_to, state)

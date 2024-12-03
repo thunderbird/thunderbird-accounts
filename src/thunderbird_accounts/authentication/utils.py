@@ -1,4 +1,7 @@
+import secrets
 import uuid
+from typing import Optional
+from urllib.parse import urlencode, urljoin
 
 from django.conf import settings
 from django.contrib.auth import get_user
@@ -12,26 +15,30 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.client.models import ClientEnvironment
 
 
-def create_login_code(client_environment: ClientEnvironment):
+def create_login_code(client_environment: ClientEnvironment, state: Optional[str] = None):
     """Create a login code for login requests"""
     if not client_environment.is_active:
         return None
 
+    if not state:
+        state = secrets.token_hex(64)
+
     token_serializer = URLSafeTimedSerializer(settings.LOGIN_CODE_SECRET, 'login')
-    return token_serializer.dumps({'uuid': str(client_environment.uuid)})
+    return token_serializer.dumps({'uuid': str(client_environment.uuid), 'state': state})
 
 
 def validate_login_code(token: str):
     token_serializer = URLSafeTimedSerializer(settings.LOGIN_CODE_SECRET, 'login')
     contents = token_serializer.loads(token, settings.LOGIN_MAX_AGE)
 
+    state = contents.get('state')
     client_env_uuid = uuid.UUID(contents.get('uuid'))
     client_env = ClientEnvironment.objects.get(uuid=client_env_uuid)
 
-    if not client_env or not client_env.is_active:
+    if not client_env or not client_env.is_active or not state:
         return None
 
-    return client_env
+    return client_env, state
 
 
 def is_already_authenticated(request):
@@ -56,19 +63,23 @@ def is_already_authenticated(request):
 
 
 def handle_auth_callback_response(
-    user: User, client_env: ClientEnvironment, redirect_to: str | None = None
+    user: User, client_env: ClientEnvironment, redirect_to: str | None = None, state: str | None = None
 ) -> HttpResponseRedirect:
     """Handles the return response for logins. Used in callback, and also if the
     user is authenticated already to skip the fxa oauth path."""
     if redirect_to:
         return HttpResponseRedirect(redirect_to)
 
+    path_obj = {}
+
+    if state:
+        path_obj['state'] = state
+
     # Create an access token as well - only for non-redirect routes / non-admin route
-    if client_env.client.name == settings.ADMIN_CLIENT_NAME:
-        refresh = ''
-    else:
+    if client_env.client.name != settings.ADMIN_CLIENT_NAME:
         refresh = RefreshToken.for_user(user)
         refresh.payload['client_env_uuid'] = str(client_env.uuid)
-        refresh = f'?token={refresh}'
+        path_obj['token'] = str(refresh)
 
-    return HttpResponseRedirect(f'{client_env.redirect_url}{refresh}')
+    redirect_url = urljoin(client_env.redirect_url, f'?{urlencode(path_obj)}')
+    return HttpResponseRedirect(redirect_url)

@@ -11,7 +11,7 @@ class ClientContactInline(admin.TabularInline):
 class ClientEnvironmentInline(admin.TabularInline):
     model = ClientEnvironment
     extra = 1
-    fields = ('environment', 'redirect_url')
+    fields = ('environment', 'redirect_url', 'allowed_hostnames')
 
 
 class ClientAdmin(admin.ModelAdmin):
@@ -21,7 +21,11 @@ class ClientAdmin(admin.ModelAdmin):
     )
 
 
+class ClientEnvironmentAdmin(admin.ModelAdmin):
+    pass
+
+
 admin.site.register(Client, ClientAdmin)
 admin.site.register(ClientContact)
-admin.site.register(ClientEnvironment)
+admin.site.register(ClientEnvironment, ClientEnvironmentAdmin)
 admin.site.register(ClientWebhook)

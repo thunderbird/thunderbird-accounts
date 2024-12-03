@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from urllib3.exceptions import LocationParseError
 
 from thunderbird_accounts.utils.models import BaseModel
 
@@ -35,6 +36,11 @@ class ClientEnvironment(BaseModel):
         default=_generate_secret,
     )
     is_active = models.BooleanField(default=True, help_text=_('Is this environment active?'))
+    allowed_hostnames = models.JSONField(
+        default=list,
+        null=False,
+        help_text=_('List of allowed hostnames for this client environment.'),
+    )
 
     class Meta(BaseModel.Meta):
         indexes = [*BaseModel.Meta.indexes, models.Index(fields=['environment']), models.Index(fields=['is_active'])]
@@ -46,9 +52,15 @@ class ClientEnvironment(BaseModel):
         client_envs = ClientEnvironment.objects.filter(environment=settings.APP_ENV).all()
         allowed_hosts = []
         for env in client_envs:
-            parsed_url = urllib3.util.parse_url(env.redirect_url)
-            if parsed_url.host:
-                allowed_hosts.append(parsed_url.host)
+            hostnames = env.allowed_hostnames
+            for hostname in hostnames:
+                try:
+                    parsed_url = urllib3.util.parse_url(hostname)
+                except LocationParseError:
+                    logging.warning(f"[cache_hostnames] Bad hostname {hostname}")
+                    continue
+                if parsed_url.host:
+                    allowed_hosts.append(parsed_url.host)
 
         # Clear out any duplicates
         allowed_hosts = list(set(settings.ALLOWED_HOSTS + allowed_hosts))

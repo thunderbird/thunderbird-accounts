@@ -8,7 +8,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from thunderbird_accounts.authentication import views as auth_views
 from django.utils.translation import gettext_lazy as _
 
-from thunderbird_accounts.authentication.api import get_login_code
+from thunderbird_accounts.authentication.api import get_login_code, get_user_profile
 
 admin.site.site_header = _('Thunderbird Accounts Admin Panel')
 admin.site.site_title = _('Thunderbird Accounts Admin Panel')
@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
 
     path('api/v1/auth/get-login/', get_login_code, name='api_get_login'),
+    path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
 
 ]
 
