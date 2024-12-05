@@ -2,10 +2,24 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.db import models
 
+from django.contrib.sessions.models import Session
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.utils.models import BaseModel
+
+
+class UserSession(BaseModel):
+    """
+    :param user: The session's related user
+    :param session_key: The session id/key the user logged in with
+    """
+
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
+    session_key = models.CharField(max_length=256, null=False, help_text=_('Session Key'))
+
+    def __str__(self):
+        return f'User Session for {self.user.uuid} from {self.created_at}'
 
 
 class User(AbstractUser, BaseModel):
@@ -74,3 +88,17 @@ class User(AbstractUser, BaseModel):
 
     def get_short_name(self):
         return self.display_name
+
+    def logout(self):
+        """Logs out the user from their session authentication.
+        Only setup for db sessions right now, supporting cache sessions should be trivial though."""
+        for user_session in self.usersession_set.all():
+            try:
+                session = Session.objects.get(session_key=user_session.session_key)
+                # Delete the session
+                session.delete()
+            except Session.DoesNotExist:
+                pass
+
+            # And also the user session
+            user_session.delete()

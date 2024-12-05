@@ -11,7 +11,7 @@ from fxa.oauth import Client
 from fxa.profile import Client as ProfileClient
 from django.utils.translation import gettext_lazy as _
 
-from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.models import User, UserSession
 from thunderbird_accounts.authentication.utils import (
     validate_login_code,
     handle_auth_callback_response,
@@ -144,5 +144,11 @@ def fxa_callback(request: HttpRequest):
 
     # Login with django auth
     login(request, user)
+
+    # Save the current session key so we can remove it later if they log out.
+    UserSession.objects.create(
+        user_id=user.uuid,
+        session_key=request.session._session_key
+    )
 
     return handle_auth_callback_response(user, client_env, redirect_to, state)
