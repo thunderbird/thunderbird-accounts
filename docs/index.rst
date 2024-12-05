@@ -11,6 +11,7 @@ Contents
     readme.md
     modules.rst
     database_erd.rst
+    intended_sequence.rst
 
 Indices and tables
 ==================
