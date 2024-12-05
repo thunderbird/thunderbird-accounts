@@ -3,6 +3,9 @@
 > [!IMPORTANT]  
 > Thunderbird Accounts is still in active development and is not ready for any active use.
 
+
+[![Documentation Status](https://readthedocs.com/projects/thunderbird-thunderbird-pro-services/badge/?version=latest)](https://pro-services-docs.thunderbird.net/en/latest/?badge=latest)
+
 This project uses [uv](https://github.com/astral-sh/uv).
 
 Thunderbird Accounts is a Django 5.1 application. Please read up on Django before diving in.
