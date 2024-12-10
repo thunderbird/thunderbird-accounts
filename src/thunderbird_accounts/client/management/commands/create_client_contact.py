@@ -1,8 +1,21 @@
+"""
+Create a new Client Contact from a given Client UUID.
+"""
+
 from django.core.management.base import BaseCommand
 from thunderbird_accounts.client import models
 
 
 class Command(BaseCommand):
+    """
+    Usage:
+
+    .. code-block:: shell
+
+        python manage.py create_client_contact <client_uuid> <contact_name> <contact_email> <contact_url>
+
+    """
+
     help = 'Creates a client contact'
 
     def add_arguments(self, parser):

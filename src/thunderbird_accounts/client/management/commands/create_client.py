@@ -1,9 +1,22 @@
+"""
+Create a new Client, with a Client Contact and optionally a Client Environment.
+"""
+
 from django.core import management
 from django.core.management.base import BaseCommand
 from thunderbird_accounts.client import models
 
 
 class Command(BaseCommand):
+    """
+    Usage:
+
+    .. code-block:: shell
+
+        python manage.py create_client <client_name> <contact_name> <contact_email> <contact_url> [--env_type <str>] [--env_redirect_url <str>] [--env_allowed_hostnames <str>]
+
+    """
+
     help = 'Creates a new client and optionally a client environment.'
 
     def add_arguments(self, parser):
@@ -58,9 +71,7 @@ class Command(BaseCommand):
 
         client = models.Client.objects.create(name=client_name)
 
-        management.call_command(
-            'create_client_contact', client.uuid, contact_name, contact_email, contact_url
-        )
+        management.call_command('create_client_contact', client.uuid, contact_name, contact_email, contact_url)
 
         if make_env:
             management.call_command(
@@ -69,6 +80,5 @@ class Command(BaseCommand):
                 env,
                 env_redirect_url,
                 env_allowed_hostnames,
-
             )
         self.stdout.write(self.style.SUCCESS(f'Successfully created client {client_name} with uuid of {client.uuid}'))

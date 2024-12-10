@@ -1,8 +1,21 @@
+"""
+Create a new Client Environment from a given Client UUID.
+"""
+
 from django.core.management.base import BaseCommand
 from thunderbird_accounts.client import models
 
 
 class Command(BaseCommand):
+    """
+    Usage:
+
+    .. code-block:: shell
+
+        python manage.py create_client_environment <client_uuid> <env_type> <env_redirect_url> <env_allowed_hostnames>
+
+    """
+
     help = 'Creates a client environment'
 
     def add_arguments(self, parser):
