@@ -4,13 +4,39 @@ Infrastructure
 
 The following is up to date as of: Jan 7th, 2025
 
-Layout
-------
-
-
-
-Diagrams
+Overview
 --------
+
+.. mermaid::
+
+  architecture-beta
+
+      service fxa(cloud)[FXA]
+      service tbaccounts(server)[TB Accounts]
+      service cache(database)[Token Cache]
+      service tbservice(server)[Service]
+
+
+      fxa:L -- R:tbaccounts
+      cache:B -- T:tbaccounts
+      tbaccounts:L -- R:tbservice
+      cache:L -- B:tbservice
+
+
+.. table:: Definitions
+   :widths: auto
+
+   ===========    ===============================================================================================================================
+   Service        Description
+   ===========    ===============================================================================================================================
+   FXA            Mozilla Accounts used for the actual authentication
+   TB Accounts    This service. Allows for easy sharing of session, user information, payment information, etc between Thunderbird Services
+   Service        A generic stand-in for one of our service offerings (Appointment, Send, etc...)
+   Token Cache    A caching server (like redis or memcache) storing authentication session and user profile data
+   ===========    ===============================================================================================================================
+
+Authentication Flow
+-------------------
 
 The entire authentication flow:
 
@@ -40,7 +66,8 @@ The entire authentication flow:
     Service-->>User: Passes TB Account's session id
 
 
-How services can validate authentication:
+How A Service Would Validate User Authentication
+------------------------------------------------
 
 .. mermaid::
 
@@ -54,23 +81,5 @@ How services can validate authentication:
     User->>Service: Any auth-required request with session id
     Service->>Cache: Forward session id
     Cache->Cache: Ensure session id exists
-    Service->Cache: Return latest user credentials if session is valid
-
-
-Overview of architecture:
-
-.. mermaid::
-
-  architecture-beta
-
-      service fxa(cloud)[FXA]
-      service tbaccounts(server)[TB Accounts]
-      service cache(database)[Token Cache]
-      service tbservice(server)[Service]
-
-
-      fxa:L -- R:tbaccounts
-      cache:B -- T:tbaccounts
-      tbaccounts:L -- R:tbservice
-      cache:L -- B:tbservice
+    Service->Cache: Return latest user profile information if session is valid
 

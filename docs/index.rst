@@ -2,6 +2,11 @@
 Welcome to Thunderbird Accounts documentation!
 ==============================================
 
+Notice
+------
+
+This documentation is a work-in-progress, and may not be representative of the final product.
+
 Contents
 --------
 .. toctree::
