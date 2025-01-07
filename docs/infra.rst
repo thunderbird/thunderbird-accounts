@@ -39,17 +39,11 @@ The entire authentication flow:
     TB Accounts-->>Service: Passes TB Account's session id
     Service-->>User: Passes TB Account's session id
 
-    opt Service Authentication Check Flow
-    User->>Service: Any auth-required request with session id
-    Service->>Cache: Forward session id
-    Cache->Cache: Ensure session id exists
-    Service->Cache: Return latest user credentials if session is valid
-
-    end
 
 How services can validate authentication:
 
 .. mermaid::
+
   sequenceDiagram
     participant User
     participant Service
@@ -66,6 +60,7 @@ How services can validate authentication:
 Overview of architecture:
 
 .. mermaid::
+
   architecture-beta
 
       service fxa(cloud)[FXA]

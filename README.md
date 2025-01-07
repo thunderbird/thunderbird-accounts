@@ -66,3 +66,11 @@ Ensure to nest all internal apps inside `src/thunderbird_accounts` by appending 
 `mkdir -p src/thunderbird_accounts/<app name> && ./manage.py startapp <app name> src/thunderbird_accounts/<app name>`
 
 Once the app is created go to `src/thunderbird_accounts/<app name>/apps.py` and prepend `thunderbird_accounts.` to AuthConfig.name so it looks like `thunderbird_accounts.<app name>`.
+
+## Building documentation locally
+
+Ensure you have the requirements in docs installed and run the following command in the project's root folder:
+
+```shell
+sphinx-build docs build
+```
