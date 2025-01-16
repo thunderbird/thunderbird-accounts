@@ -10,10 +10,16 @@ from thunderbird_accounts.client.models import Client, ClientEnvironment
 
 class APITestCase(TestCase):
     def setUp(self):
+        self.GET_LOGIN_PATH = 'http://testserver/api/v1/auth/get-login/'
+        self.BAD_CREDENTIALS_MSG = 'Authentication credentials were not provided.'
+
         self.user = User.objects.create(
             username='Test',
             email='test@example.org',
         )
+
+        self.factory = RequestsClient()
+
         self.client = Client.objects.create(name='Test Client')
         self.client_env = ClientEnvironment.objects.create(
             environment='test',
@@ -25,43 +31,40 @@ class APITestCase(TestCase):
         self.client_env.save()
 
     def test_login_link_successfully(self):
-        factory = RequestsClient()
-        response = factory.post('http://testserver/api/v1/auth/get-login/', {'secret': self.client_env.auth_token})
-        assert response.status_code == 200, response.status_code
-        assert 'login' in response.json()
+        response = self.factory.post(self.GET_LOGIN_PATH, {'secret': self.client_env.auth_token})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('login', response.json())
 
-    def test_login_link_unsuccessful_bad_host(self):
+    def test_login_link_with_bad_host(self):
         self.client_env.allowed_hostnames = ['not-testserver']
         self.client_env.save()
-        factory = RequestsClient()
-        response = factory.post('http://testserver/api/v1/auth/get-login/', {'secret': self.client_env.auth_token})
+        response = self.factory.post(self.GET_LOGIN_PATH, {'secret': self.client_env.auth_token})
         json_resp = response.json()
 
-        assert response.status_code == 401, response.status_code
-        assert 'detail' in json_resp
-        assert json_resp.get('detail') == 'Authentication credentials were not provided.'
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('detail', json_resp)
+        self.assertEqual(json_resp.get('detail'), self.BAD_CREDENTIALS_MSG)
 
-    def test_login_link_unsuccessful_bad_auth(self):
+    def test_login_link_with_bad_auth(self):
         self.client_env.auth_token = 'bad token bad token'
 
-        factory = RequestsClient()
-        response = factory.post('http://testserver/api/v1/auth/get-login/', {'secret': self.client_env.auth_token})
+        response = self.factory.post(self.GET_LOGIN_PATH, {'secret': self.client_env.auth_token})
         json_resp = response.json()
 
-        assert response.status_code == 401, response.status_code
-        assert 'detail' in json_resp
-        assert json_resp.get('detail') == 'Authentication credentials were not provided.'
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('detail', json_resp)
+        self.assertEqual(json_resp.get('detail'), self.BAD_CREDENTIALS_MSG)
 
-    def test_login_link_unsuccessful_not_active(self):
+    def test_login_link_when_not_active(self):
         self.client_env.is_active = False
         self.client_env.save()
 
-        factory = RequestsClient()
-        response = factory.post('http://testserver/api/v1/auth/get-login/', {'secret': self.client_env.auth_token})
+        response = self.factory.post(self.GET_LOGIN_PATH, {'secret': self.client_env.auth_token})
         json_resp = response.json()
 
-        assert response.status_code == 401, response.status_code
-        assert json_resp.get('detail') == 'Authentication credentials were not provided.'
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('detail', json_resp)
+        self.assertEqual(json_resp.get('detail'), self.BAD_CREDENTIALS_MSG)
 
 
 # Create your tests here.
