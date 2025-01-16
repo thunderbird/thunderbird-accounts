@@ -1,11 +1,15 @@
 from django.conf import settings
 from django.http import HttpResponseRedirect
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from rest_framework.test import RequestsClient
+
+from django.contrib.auth import get_user_model
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.utils import handle_auth_callback_response
 from thunderbird_accounts.client.models import Client, ClientEnvironment
+
+from thunderbird_accounts.authentication.middleware import FXABackend
 
 
 class APITestCase(TestCase):
@@ -109,3 +113,41 @@ class UtilsTestCase(TestCase):
         assert response.url != self.admin_client_env.redirect_url
         assert response.url == redirect_url
         assert '?token=' not in response.url
+
+
+class FXABackendTestCase(TestCase):
+    def setUp(self):
+        factory = RequestFactory()
+        self.request = factory.get('/')
+        self.backend = FXABackend()
+
+        self.User = get_user_model()
+        self.user = self.User.objects.create(fxa_id='abc123', email='user@test.com')
+
+    def test_authenticate_with_matching_fxa_id(self):
+        """Test authentication when fxa id matches existing user"""
+        user = self.backend.authenticate(self.request, self.user.fxa_id, 'new@test.com')
+
+        assert user
+        self.assertEqual(user.uuid, self.user.uuid)
+        self.assertEqual(user.fxa_id, self.user.fxa_id)
+
+        # Confirm new email overwrites original when doing lookup by fxa id
+        self.assertEqual(user.email, 'new@test.com')
+
+    def test_authenticate_with_matching_email(self):
+        """Test authentication when email matches existing user, but fxa id is nwe"""
+        user = self.backend.authenticate(self.request, 'new_fxa_id', self.user.email)
+
+        assert user
+        self.assertEqual(user.uuid, self.user.uuid)
+        self.assertEqual(user.email, self.user.email)
+
+        # Confirm new fxa_id overwrites original when doing lookup by email
+        self.assertEqual(user.fxa_id, 'new_fxa_id')
+
+    def test_authenticate_with_no_match(self):
+        """Test authentication with new user"""
+        user = self.backend.authenticate(self.request, 'new_fxa_id', 'new@test.com')
+
+        self.assertIsNone(user)
