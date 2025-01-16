@@ -1,6 +1,7 @@
 import uuid
 
 from django.conf import settings
+from django.core.cache import cache
 from django.http import HttpResponseRedirect
 from django.test import TestCase, RequestFactory
 from rest_framework.test import RequestsClient
@@ -11,7 +12,7 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.utils import handle_auth_callback_response
 from thunderbird_accounts.client.models import Client, ClientEnvironment
 
-from thunderbird_accounts.authentication.middleware import FXABackend
+from thunderbird_accounts.authentication.middleware import FXABackend, ClientSetAllowedHostsMiddleware
 
 
 class APITestCase(TestCase):
@@ -162,3 +163,40 @@ class FXABackendTestCase(TestCase):
         bad_uuid = uuid.uuid4()
         user = self.backend.get_user(bad_uuid)
         self.assertIsNone(user)
+
+
+class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
+    def setUp(self):
+        factory = RequestFactory()
+        self.request = factory.get('/')
+        self.middleware = ClientSetAllowedHostsMiddleware(get_response=lambda request: None)
+
+        self.client = Client.objects.create(name='Test Client')
+        self.client_env = ClientEnvironment.objects.create(
+            environment='test',
+            redirect_url='http://testserver/',
+            client_id=self.client.uuid,
+            auth_token='1234',
+            allowed_hostnames=['test.com'],
+        )
+
+        # Clear cache before each test
+        cache.delete(settings.ALLOWED_HOSTS_CACHE_KEY)
+
+    def tearDown(self):
+        # Clean up cache after tests
+        cache.delete(settings.ALLOWED_HOSTS_CACHE_KEY)
+
+    def test_allowed_hosts_cache(self):
+        """Test that middleware properly sets ALLOWED_HOSTS from ClientEnvironment"""
+        self.middleware(self.request)
+        self.assertIn('test.com', settings.ALLOWED_HOSTS)
+
+    def test_allowed_uses_cached_hosts(self):
+        """Test that middleware uses cached hosts when available"""
+        cached_hosts = ['cached.com']
+        cache.set(settings.ALLOWED_HOSTS_CACHE_KEY, cached_hosts)
+
+        self.middleware(self.request)
+
+        self.assertEqual(settings.ALLOWED_HOSTS, cached_hosts)
