@@ -21,12 +21,47 @@ class APITestCase(TestCase):
             client_id=self.client.uuid,
             auth_token='1234',
         )
+        self.client_env.allowed_hostnames = ['testserver']
+        self.client_env.save()
 
     def test_login_link_successfully(self):
         factory = RequestsClient()
         response = factory.post('http://testserver/api/v1/auth/get-login/', {'secret': self.client_env.auth_token})
         assert response.status_code == 200, response.status_code
         assert 'login' in response.json()
+
+    def test_login_link_unsuccessful_bad_host(self):
+        self.client_env.allowed_hostnames = ['not-testserver']
+        self.client_env.save()
+        factory = RequestsClient()
+        response = factory.post('http://testserver/api/v1/auth/get-login/', {'secret': self.client_env.auth_token})
+        json_resp = response.json()
+
+        assert response.status_code == 401, response.status_code
+        assert 'detail' in json_resp
+        assert json_resp.get('detail') == 'Authentication credentials were not provided.'
+
+    def test_login_link_unsuccessful_bad_auth(self):
+        self.client_env.auth_token = 'bad token bad token'
+
+        factory = RequestsClient()
+        response = factory.post('http://testserver/api/v1/auth/get-login/', {'secret': self.client_env.auth_token})
+        json_resp = response.json()
+
+        assert response.status_code == 401, response.status_code
+        assert 'detail' in json_resp
+        assert json_resp.get('detail') == 'Authentication credentials were not provided.'
+
+    def test_login_link_unsuccessful_not_active(self):
+        self.client_env.is_active = False
+        self.client_env.save()
+
+        factory = RequestsClient()
+        response = factory.post('http://testserver/api/v1/auth/get-login/', {'secret': self.client_env.auth_token})
+        json_resp = response.json()
+
+        assert response.status_code == 401, response.status_code
+        assert json_resp.get('detail') == 'Authentication credentials were not provided.'
 
 
 # Create your tests here.
