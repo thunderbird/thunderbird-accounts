@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.test import TestCase, RequestFactory
@@ -150,4 +152,13 @@ class FXABackendTestCase(TestCase):
         """Test authentication with new user"""
         user = self.backend.authenticate(self.request, 'new_fxa_id', 'new@test.com')
 
+        self.assertIsNone(user)
+
+    def test_get_user_with_valid_id(self):
+        user = self.backend.get_user(self.user.uuid)
+        self.assertIsNotNone(user)
+
+    def test_get_user_with_invalid_id(self):
+        bad_uuid = uuid.uuid4()
+        user = self.backend.get_user(bad_uuid)
         self.assertIsNone(user)
