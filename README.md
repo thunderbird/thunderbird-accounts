@@ -74,3 +74,17 @@ Ensure you have the requirements in docs installed and run the following command
 ```shell
 sphinx-build docs build
 ```
+
+## Running tests in docker
+
+Make sure that the containers are alrady running.
+
+To run all tests:
+```sh
+docker compose exec backend uv run python manage.py test
+```
+
+To run tests for a specific module:
+```sh
+docker compose exec backend uv run manage.py test thunderbird_accounts.client.tests
+```
