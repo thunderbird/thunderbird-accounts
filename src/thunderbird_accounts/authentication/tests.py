@@ -157,7 +157,8 @@ class FXABackendTestCase(TestCase):
 
     def test_get_user_with_valid_id(self):
         user = self.backend.get_user(self.user.uuid)
-        self.assertIsNotNone(user)
+        assert user
+        self.assertIsNotNone(user.uuid)
 
     def test_get_user_with_invalid_id(self):
         bad_uuid = uuid.uuid4()
