@@ -77,7 +77,7 @@ sphinx-build docs build
 
 ## Running tests in docker
 
-Make sure that the containers are alrady running.
+Make sure that the containers are already running.
 
 To run all tests:
 ```sh

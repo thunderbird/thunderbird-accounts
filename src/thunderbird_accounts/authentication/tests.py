@@ -139,7 +139,7 @@ class FXABackendTestCase(TestCase):
         self.assertEqual(user.email, 'new@test.com')
 
     def test_authenticate_with_matching_email(self):
-        """Test authentication when email matches existing user, but fxa id is nwe"""
+        """Test authentication when email matches existing user, but fxa id is new"""
         user = self.backend.authenticate(self.request, 'new_fxa_id', self.user.email)
 
         assert user
