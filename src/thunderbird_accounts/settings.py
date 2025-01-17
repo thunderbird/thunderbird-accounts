@@ -26,8 +26,10 @@ DEBUG = True
 IS_TEST = 'test' in sys.argv
 
 if DEBUG:
-    load_dotenv()
-
+    if 'test' in sys.argv:
+        load_dotenv(dotenv_path='.env.test')
+    else:
+        load_dotenv(dotenv_path='.env')
 
 APP_ENV = os.getenv('APP_ENV')
 
