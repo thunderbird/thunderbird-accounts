@@ -13,7 +13,7 @@ class FXABackend(BaseBackend):
     def authenticate(self, request, fxa_id=None, email=None):
         user_model = get_user_model()
 
-        # First look-up by fxa uid
+        # First look-up by fxa id
         try:
             user = user_model.objects.get(fxa_id=fxa_id)
             if user.email != email:

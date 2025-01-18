@@ -21,7 +21,9 @@ COPY scripts/dev-entry.sh scripts/dev-entry.sh
 
 # Dev only
 RUN echo '!! If the next step fails, copy .env.example to .env in the backend folder !!'
-COPY .env .
+
+COPY .env* .
+RUN rm .env.example
 
 # Add this hack to line it up with our dev environment.
 # I'll buy whoever fixes this a coffee.
