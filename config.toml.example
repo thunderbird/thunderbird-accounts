@@ -1,0 +1,74 @@
+[server.listener."smtp"]
+bind = ["[::]:25"]
+protocol = "smtp"
+
+[server.listener."submissions"]
+bind = ["[::]:465"]
+protocol = "smtp"
+tls.implicit = true
+
+[server.listener."imaptls"]
+bind = ["[::]:993"]
+protocol = "imap"
+tls.implicit = true
+
+[server.listener."management"]
+bind = ["[::]:8080"]
+protocol = "http"
+
+[storage]
+data = "rocksdb"
+fts = "rocksdb"
+blob = "rocksdb"
+lookup = "rocksdb"
+directory = "tb-accounts-mgnt"
+
+[store."rocksdb"]
+type = "rocksdb"
+path = "%{env:MAIL_STALWART_PATH}%/data"
+compression = "lz4"
+
+[store."tb-accounts"]
+compression = "lz4"
+database = "%{env:POSTGRES_DB}%"
+host = "postgres"
+password = "%{env:POSTGRES_PASSWORD}%"
+pool.max-connections = 10
+port = 5432
+purge.frequency = "0 3 *"
+query.emails = "%{env:MAIL_QUERY_EMAILS}%"
+query.members = "%{env:MAIL_QUERY_MEMBERS}%"
+query.name = "%{env:MAIL_QUERY_NAME}%"
+query.recipients = "%{env:MAIL_QUERY_RECIPIENTS}%"
+read-from-replicas = true
+timeout = "15s"
+tls.allow-invalid-certs = false
+tls.enable = false
+type = "postgresql"
+user = "%{env:POSTGRES_USER}%"
+
+[directory."internal"]
+type = "internal"
+store = "rocksdb"
+
+[directory."tb-accounts-mgnt"]
+cache.size = 1048576
+cache.ttl.negative = "10m"
+cache.ttl.positive = "1h"
+columns.class = "type"
+columns.description = "description"
+columns.email = "email"
+columns.quota = "quota"
+columns.secret = "secret"
+store = "tb-accounts"
+type = "sql"
+
+[tracer."stdout"]
+type = "stdout"
+level = "info"
+ansi = false
+enable = true
+
+[authentication.fallback-admin]
+user = "admin"
+secret = "%{env:MAIL_ADMIN_SECRET}%"

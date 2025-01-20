@@ -16,6 +16,7 @@ venv
 htmlcov
 caldav
 
+
 # Mac noise
 **/.DS_Store
 

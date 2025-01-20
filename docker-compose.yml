@@ -1,5 +1,8 @@
+x-env: &env
+  POSTGRES_DB: accounts
+  POSTGRES_USER: accounts
+  POSTGRES_PASSWORD: accounts
 services:
-
   backend:
     build:
       context: .
@@ -19,9 +22,7 @@ services:
     ports:
       - "5433:5432" # Note: host is exposed to 5433!
     environment:
-      - POSTGRES_DB=accounts
-      - POSTGRES_USER=accounts
-      - POSTGRES_PASSWORD=accounts
+      <<: *env
     # set shared memory limit when using docker-compose
     shm_size: 128mb
 
@@ -33,14 +34,37 @@ services:
       - "6380:6379" # Redis exposed on port 6380
       - "8071:8001" # Insights exposed on port 8071
 
-  mailpit:
-    image: axllent/mailpit
-    environment:
-      - MP_SMTP_AUTH_ALLOW_INSECURE=true
-    ports:
-      - "8026:8025" # Web UI on port 8026
-      - "1026:1024" # SMTP on port 1026
+  #mailpit:
+  #  image: axllent/mailpit
+  #  environment:
+  #    - MP_SMTP_AUTH_ALLOW_INSECURE=true
+  #  ports:
+  #    - "8026:8025" # Web UI on port 8026
+  #    - "1026:1024" # SMTP on port 1026
 
+  stalwart:
+    image: stalwartlabs/mail-server:latest
+    volumes:
+      - ./mail:/opt/stalwart-mail
+    ports:
+      - "443:443"
+      - "8080:8080"
+      - "25:25"
+      - "587:587"
+      - "465:465"
+      - "143:143"
+      - "993:993"
+      - "4190:4190"
+      - "110:110"
+      - "995:995"
+    environment:
+      <<: *env
+      MAIL_QUERY_EMAILS: "SELECT address FROM mail_email WHERE name = $1 ORDER BY address ASC"
+      MAIL_QUERY_MEMBERS: "SELECT member_of FROM mail_groupmember WHERE name = $1"
+      MAIL_QUERY_NAME: "SELECT name, type, secret, description, quota FROM mail_account WHERE name = $1 AND active = true"
+      MAIL_QUERY_RECIPIENTS: "SELECT name FROM mail_email WHERE address = $1 ORDER BY name ASC"
+      MAIL_ADMIN_SECRET: "{plain}accounts"
+      MAIL_STALWART_PATH: "/opt/stalwart-mail"
 volumes:
   db: {}
   cache: {}

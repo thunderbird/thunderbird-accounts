@@ -19,6 +19,14 @@ Ensure that uv is installed, and then run:
 uv sync
 ```
 
+### Using the example config for Stalwart
+
+Note: Do not use this for production environments.
+
+Copy config.toml.example to `mail/etc/config.toml` before first run.
+
+The default admin password should be `accounts`. 
+
 ### Creating a local SuperUser
 
 Run the following and follow the terminal prompts:
