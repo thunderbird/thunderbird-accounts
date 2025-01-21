@@ -1,6 +1,6 @@
 # Thunderbird Accounts
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 > Thunderbird Accounts is still in active development and is not ready for any active use.
 
 
@@ -66,8 +66,8 @@ For development the following ports are exposed:
 
 ## Creating additional apps
 
-Apps are feature of django we can use to create re-usable modules with. We mostly just use them to separate out and organize components. 
-Apps can depend on and/or require other internal apps, there's no hard rule here. 
+Apps are feature of django we can use to create re-usable modules with. We mostly just use them to separate out and organize components.
+Apps can depend on and/or require other internal apps, there's no hard rule here.
 
 Ensure to nest all internal apps inside `src/thunderbird_accounts` by appending the destination path after the command:
 
@@ -81,4 +81,18 @@ Ensure you have the requirements in docs installed and run the following command
 
 ```shell
 sphinx-build docs build
+```
+
+## Running tests in docker
+
+Make sure that the containers are already running.
+
+To run all tests:
+```shell
+docker compose exec backend uv run python manage.py test
+```
+
+To run tests for a specific module:
+```shell
+docker compose exec backend uv run manage.py test thunderbird_accounts.client.tests
 ```
