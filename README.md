@@ -80,11 +80,11 @@ sphinx-build docs build
 Make sure that the containers are already running.
 
 To run all tests:
-```sh
+```shell
 docker compose exec backend uv run python manage.py test
 ```
 
 To run tests for a specific module:
-```sh
+```shell
 docker compose exec backend uv run manage.py test thunderbird_accounts.client.tests
 ```
