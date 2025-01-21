@@ -26,7 +26,7 @@ DEBUG = True
 IS_TEST = 'test' in sys.argv
 
 if DEBUG:
-    if 'test' in sys.argv:
+    if IS_TEST:
         load_dotenv(dotenv_path='.env.test')
     else:
         load_dotenv(dotenv_path='.env')
