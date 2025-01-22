@@ -15,6 +15,21 @@ services:
       - ./static:/app/static
       - ./templates:/app/templates
 
+  frontend:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    command: npm run dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./.env:/app/.env
+      - ./vite.config.mjs:/app/vite.config.mjs
+      - ./src/thunderbird_accounts:/app/thunderbird_accounts
+      - ./assets:/app/assets
+      - ./static:/app/static
+      - ./templates:/app/templates
+
   postgres:
     image: postgres:17
     volumes:
