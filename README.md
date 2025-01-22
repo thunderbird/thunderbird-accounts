@@ -133,6 +133,18 @@ Run the following and follow the terminal prompts:
 
 When asked, enter your FXA email address.
 
+### Generate an FXA Encryption Secret
+
+
+Generate one with this command:
+
+```shell
+./manage.py generate_key
+```
+
+Use this value for the `FXA_ENCRYPT_SECRET` variable in your `.env`.
+
+
 ### Start the local dev server
 
 ```shell
