@@ -6,17 +6,21 @@ WORKDIR /app
 ENV PATH="${PATH}:/root/.local/bin"
 ENV PYTHONPATH=.
 
-RUN apt update && apt install -y cron
+RUN apt update && apt install -y cron npm
 
 RUN mkdir scripts
 
 COPY README.md .
-COPY static .
-COPY templates .
+COPY assets ./assets/
+COPY static ./static/
+COPY templates ./templates/
 COPY manage.py .
 COPY MANIFEST.in .
 COPY uv.lock .
 COPY pyproject.toml .
+COPY vite.config.mjs .
+COPY package.json .
+COPY package-lock.json .
 COPY scripts/dev-entry.sh scripts/dev-entry.sh
 
 # Dev only
@@ -33,7 +37,7 @@ RUN ln -s /app/thunderbird_accounts src/thunderbird_accounts
 RUN pip install --upgrade pip
 RUN pip install uv
 RUN uv sync
-
+RUN npm install && npm cache clean --force
 
 EXPOSE 5000
 CMD ["/bin/sh", "./scripts/dev-entry.sh"]

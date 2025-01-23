@@ -17,6 +17,7 @@ Contents
     modules.rst
     database_erd.rst
     infra.rst
+    frontend.rst
 
 Indices and tables
 ==================

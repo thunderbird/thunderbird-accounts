@@ -6,6 +6,7 @@ from django.views.generic import RedirectView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from thunderbird_accounts.authentication import views as auth_views
+from thunderbird_accounts.mail import views as mail_views
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.api import get_login_code, get_user_profile, logout_user
@@ -23,6 +24,10 @@ urlpatterns = [
     path('auth/<str:login_code>/?redirect_to=<str:redirect_to>', auth_views.fxa_start, name='fxa_login'),
     # This will be auth/callback in the future.
     re_path(r'^favicon\.ico$', favicon_view),
+
+    # Test
+    path('', mail_views.home),
+    path('self-serve', mail_views.self_serve),
 
     # API
     path('api/v1/auth/fxa/callback', auth_views.fxa_callback, name='fxa_callback'),

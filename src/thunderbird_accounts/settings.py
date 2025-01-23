@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Third party
     'rest_framework',
+    'django_vite',
 ]
 
 MIDDLEWARE = [
@@ -236,3 +237,5 @@ AUTH_USER_MODEL = 'authentication.User'
 ALLOWED_HOSTS_CACHE_KEY = '__ALLOWED_HOSTS'
 
 USE_X_FORWARDED_HOST = True
+
+DJANGO_VITE = {'default': {'dev_mode': DEBUG}}
