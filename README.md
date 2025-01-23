@@ -81,7 +81,7 @@ After making this change, restart your docker containers.
 Run the this command and follow the terminal prompts:
 
 ```shell
-docker compose exec backend uv run manage.py createsuperuser
+docker compose exec backend uv run manage.py createsuperuser --email <fxa_email_address>
 ```
 
 When asked, enter your FXA email address.
@@ -126,7 +126,7 @@ The default admin password should be `accounts`.
 Run the following and follow the terminal prompts:
 
 ```shell
-./manage.py createsuperuser
+./manage.py createsuperuser --email <fxa_email_address>
 ```
 
 When asked, enter your FXA email address.
