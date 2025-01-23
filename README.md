@@ -32,14 +32,6 @@ In `.env.test`, set `APP_ENV=test`
 
 These can be found in the Services 1password vault in the item named "FXA stage application keys for TB Accounts".
 
-#### Generate `SECRET` keys
-
-Generate a different, random secrets for `SECRET_KEY` and `LOGIN_CODE_SECRET` using this command:
-
-```shell
-openssl rand -hex 16
-```
-
 ### Use the example config for Stalwart
 
 Note: Do not use this for production environments.
@@ -64,18 +56,24 @@ docker-compose up --build -V
 
 A server will be available at [http://localhost:8087/](http://localhost:8087/)
 
-### Generate an FXA Encryption Secret
+### Generate `SECRET` keys
 
 
-Generate one with this command:
+Generate a random secret with this command:
 
 ```shell
 docker compose exec backend uv run manage.py generate_key
 ```
 
-Use this value for the `FXA_ENCRYPT_SECRET` variable in your `.env`.
+Use this value for the following variables in your `.env` file:
 
-Then, restart your docker containers
+- `FXA_ENCRYPT_SECRET`
+- `SECRET_KEY`
+- `LOGIN_CODE_SECRET`
+
+It's fine to use the same key for all three; this is only for development.
+
+After making this change, restart your docker containers.
 
 
 ### Create a superuser
@@ -133,17 +131,22 @@ Run the following and follow the terminal prompts:
 
 When asked, enter your FXA email address.
 
-### Generate an FXA Encryption Secret
+### Generate `SECRET` keys
 
 
-Generate one with this command:
+Generate a random secret with this command:
 
 ```shell
 ./manage.py generate_key
 ```
 
-Use this value for the `FXA_ENCRYPT_SECRET` variable in your `.env`.
+Use this value for the following variables in your `.env` file:
 
+- `FXA_ENCRYPT_SECRET`
+- `SECRET_KEY`
+- `LOGIN_CODE_SECRET`
+
+It's fine to use the same key for all three; this is only for development.
 
 ### Start the local dev server
 
