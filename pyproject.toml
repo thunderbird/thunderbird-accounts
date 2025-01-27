@@ -21,6 +21,7 @@ dependencies = [
     "redis>=5.2.0",
     "hiredis>=3.0.0",
     "django-vite>=3.0.6",
+    "argon2-cffi>=23.1.0",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"

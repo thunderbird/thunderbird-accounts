@@ -12,6 +12,11 @@ bind = ["[::]:993"]
 protocol = "imap"
 tls.implicit = true
 
+[server.listener."jmap"]
+bind = ["[::]:7768"]
+protocol = "http"
+tls.implicit = true
+
 [server.listener."management"]
 bind = ["[::]:8080"]
 protocol = "http"
@@ -36,10 +41,10 @@ password = "%{env:POSTGRES_PASSWORD}%"
 pool.max-connections = 10
 port = 5432
 purge.frequency = "0 3 *"
-query.emails = "%{env:MAIL_QUERY_EMAILS}%"
-query.members = "%{env:MAIL_QUERY_MEMBERS}%"
-query.name = "%{env:MAIL_QUERY_NAME}%"
-query.recipients = "%{env:MAIL_QUERY_RECIPIENTS}%"
+query.emails = "SELECT address FROM mail_email WHERE name = $1 ORDER BY address ASC"
+query.members = "SELECT member_of FROM mail_groupmember WHERE name = $1"
+query.name = "SELECT name, type, description, quota FROM mail_account WHERE name = $1 AND active = true"
+query.recipients = "SELECT name FROM mail_email WHERE address = $1 ORDER BY name ASC"
 read-from-replicas = true
 timeout = "15s"
 tls.allow-invalid-certs = false

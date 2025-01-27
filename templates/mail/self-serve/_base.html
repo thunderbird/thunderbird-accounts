@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block nav %}
+  <p>Welcome back {{ user.display_name }}.</p>
+  {% include 'mail/self-serve/_nav.html' %}
+{% endblock %}
