@@ -28,6 +28,7 @@ urlpatterns = [
     # Test
     path('', mail_views.home),
     path('self-serve', mail_views.self_serve),
+    path('signup', mail_views.signup),
 
     # API
     path('api/v1/auth/fxa/callback', auth_views.fxa_callback, name='fxa_callback'),
@@ -45,5 +46,3 @@ if settings.DEBUG:
 # Needed with uvicorn dev server
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
-
