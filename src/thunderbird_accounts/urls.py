@@ -27,7 +27,7 @@ urlpatterns = [
     # Test
     path('', mail_views.home),
     path('self-serve', mail_views.self_serve),
-    path('waitlist', mail_views.waitlist),
+    path('wait-list', mail_views.wait_list),
     # API
     path('api/v1/auth/fxa/callback', auth_views.fxa_callback, name='fxa_callback'),
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
