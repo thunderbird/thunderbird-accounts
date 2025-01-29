@@ -13,9 +13,6 @@ from django.views.decorators.http import require_http_methods
 from thunderbird_accounts.authentication.templatetags.helpers import get_admin_login_code
 
 
-# Create your views here.
-
-
 def home(request: HttpRequest):
     return TemplateResponse(request, 'mail/index.html', {})
 
@@ -32,12 +29,16 @@ def self_serve_connection_info(request: HttpRequest):
 
     account = request.user.account_set.first()
 
-    return TemplateResponse(request, 'mail/self-serve/connection-info.html', {
-        'mail_username': account.name,
-        'IMAP': settings.CONNECTION_INFO['IMAP'],
-        'JMAP': settings.CONNECTION_INFO['JMAP'] if 'JMAP' in settings.CONNECTION_INFO else {},
-        'SMTP': settings.CONNECTION_INFO['SMTP']
-    })
+    return TemplateResponse(
+        request,
+        'mail/self-serve/connection-info.html',
+        {
+            'mail_username': account.name,
+            'IMAP': settings.CONNECTION_INFO['IMAP'],
+            'JMAP': settings.CONNECTION_INFO['JMAP'] if 'JMAP' in settings.CONNECTION_INFO else {},
+            'SMTP': settings.CONNECTION_INFO['SMTP'],
+        },
+    )
 
 
 def self_serve_app_passwords(request: HttpRequest):
@@ -60,18 +61,26 @@ def self_serve_app_passwords(request: HttpRequest):
 
 @require_http_methods(['POST'])
 def self_serve_app_password_remove(request: HttpRequest):
-    print(request.POST)
+    if request.user.is_anonymous:
+        return JsonResponse({'success': False})
+    account = request.user.account_set.first()
+    account.secret = None
+    account.save()
+
     return JsonResponse({'success': True})
 
 
 @require_http_methods(['POST'])
 @sensitive_post_parameters('password')
 def self_serve_app_password_add(request: HttpRequest):
+    if request.user.is_anonymous:
+        return JsonResponse({'success': False})
+
     label = request.POST['name']
     password = make_password(request.POST['password'], hasher='argon2')
 
     if not label or not password:
-        ValidationError('Label and password are required')
+        raise ValidationError('Label and password are required')
 
     hash_algo = identify_hasher(password)
 
@@ -81,7 +90,7 @@ def self_serve_app_password_add(request: HttpRequest):
         # Note: This is an intentional $, not a failed javascript template literal
         password = f'${password}'
     else:
-        ValidationError('Unsupported algorithm')
+        raise ValidationError('Unsupported algorithm')
 
     secret_string = f'$app${label}${password}'
 
