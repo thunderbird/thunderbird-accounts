@@ -1,4 +1,5 @@
 {% load django_vite %}
+{% load helpers %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,6 +18,8 @@
   // Site object
   window._page = {
     csrfToken: csrfToken.value,
+    isAuthenticated: {{ user.is_authenticated|to_json }},
+    userEmail: {{ user.email|to_json|safe }}
   };
   csrfToken.remove();
 </script>

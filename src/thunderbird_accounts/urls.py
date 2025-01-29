@@ -27,6 +27,10 @@ urlpatterns = [
 
     # Mail Views
     path('', mail_views.home),
+
+    path('sign-up/', mail_views.sign_up, name='sign_up'),
+    path('sign-up/submit', mail_views.sign_up_submit, name='sign_up_submit'),
+
     path('wait-list/', mail_views.wait_list),
     path('self-serve/', mail_views.self_serve, name='self_serve_home'),
     path('self-serve/app-passwords', mail_views.self_serve_app_passwords, name='self_serve_app_password'),

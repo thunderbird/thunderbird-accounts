@@ -113,6 +113,12 @@ def fxa_callback(request: HttpRequest):
     profile_client = ProfileClient(settings.FXA_PROFILE_SERVER_URL)
     profile = profile_client.get_profile(token.get('access_token'))
 
+    profile_email = profile.get('email')
+    allow_list = settings.FXA_ALLOW_LIST
+
+    if allow_list and not profile_email.endswith(tuple(allow_list.split(','))):
+        return HttpResponse(content=_('You are not allowed to sign-in.'), status=500)
+
     # Try to authenticate with fxa id and email
     user = authenticate(fxa_id=profile.get('uid'), email=profile.get('email'))
 
