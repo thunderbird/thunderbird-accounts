@@ -24,17 +24,14 @@ urlpatterns = [
     path('auth/<str:login_code>/?redirect_to=<str:redirect_to>', auth_views.fxa_start, name='fxa_login'),
     # This will be auth/callback in the future.
     re_path(r'^favicon\.ico$', favicon_view),
-
     # Test
     path('', mail_views.home),
     path('self-serve', mail_views.self_serve),
-    path('signup', mail_views.signup),
-
+    path('waitlist', mail_views.waitlist),
     # API
     path('api/v1/auth/fxa/callback', auth_views.fxa_callback, name='fxa_callback'),
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-
     path('api/v1/auth/get-login/', get_login_code, name='api_get_login'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/auth/logout/', logout_user, name='api_logout'),

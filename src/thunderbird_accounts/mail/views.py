@@ -14,5 +14,5 @@ def self_serve(request: HttpRequest):
     return TemplateResponse(request, 'mail/self-serve.html', {})
 
 
-def signup(request: HttpRequest):
-    return TemplateResponse(request, 'mail/signup.html', {})
+def waitlist(request: HttpRequest):
+    return TemplateResponse(request, 'mail/waitlist.html', {})

@@ -1,13 +1,13 @@
 {% extends 'base.html' %} {% block body %}
 <h1>Join the waitlist</h1>
-<div id="mcSignupForm">
-  <!-- Begin Mailchimp Signup Form -->
+<div id="mcWaitlistForm">
+  <!-- Begin Mailchimp Waitlist Form -->
   <form
     action="#"
-    class="signup-form"
+    class="waitlist-form"
     method="post"
-    id="mc-embedded-signup-form"
-    name="mc-embedded-signup-form"
+    id="mc-embedded-waitlist-form"
+    name="mc-embedded-waitlist-form"
   >
     <input
       id="mce-EMAIL"
@@ -18,19 +18,19 @@
     />
     <button
       type="submit"
-      id="mc-embedded-signup"
-      class="btn btn-no-bg btn-signup btn-signup-text"
+      id="mc-embedded-waitlist"
+      class="btn btn-no-bg btn-waitlist btn-waitlist-text"
     >
       {{_('Subscribe')}}
     </button>
     <button
       type="submit"
       id="mc-embedded-subscribe"
-      class="btn btn-no-bg btn-signup btn-signup-icon"
+      class="btn btn-no-bg btn-waitlist btn-waitlist-icon"
     >
       ➜
     </button>
-    <!-- Prevent Bot signups -->
+    <!-- Prevent Bot waitlists -->
     <div style="position: absolute; left: -5000px" aria-hidden="true">
       <input
         type="text"
@@ -40,6 +40,6 @@
       />
     </div>
   </form>
-  <!--End mc_embed_signup-->
+  <!--End mc_embed_waitlist-->
 </div>
 {% endblock %}
