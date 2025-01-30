@@ -1,0 +1,20 @@
+config:
+  aws:region: eu-central-1
+  accounts:secret-key:
+    secure: AAABALmRxPlL3G18FfTpYa+1Mb/WG6rhZG1ZS2V5c6mRW6bYYVAqgP86PJY/jr3buiIW
+  accounts:login-code-secret:
+    secure: AAABAFRMdr5irt/8Qkt7f9C1rUvvc4If5YY8EiFupKJGNTgqIrsbJ0vXbTDO1hPD9VSJgrXbTVTj
+  accounts:fxa-client-id:
+    secure: AAABAFg+q64R6JGmcY4NdxgA0y5qfYqd+AsyIOa9eRSPPN37paYujygWO9N1oKmn
+  accounts:fxa-secret:
+    secure: AAABAPvKKKGXbDDwMKHSmLnBPj2H+Io5WEagIjbVgIdeXWsH6sJuudfiah4FCb8RCc0uaaTGkBh4LruHoLHxrBhuovG7NFLasTMUyfxPrWN+kLcYbo6tLlaFaiZP4pTw
+  accounts:fxa-allow-list:
+    secure: AAABACEo9Dq/0HxEe94MekasmaS54mijXZy7bRTvPyMGlnFS6Xe5wRhRxjY=
+  accounts:database-name:
+    secure: AAABAPvs2oZ9FtUhU0f24kkggV4sznzSDyHU3iHBKWrx/6P4TO/S6w==
+  accounts:database-user:
+    secure: AAABAA/7CiYrNtDR4r8KjDC0cWt8Hox54MoobYQHurgr8m5hIptcQA==
+  accounts:database-password:
+    secure: AAABAHszbIf/vWKaSNF5Wv9txeQ2pUPqnTPu+M5V1CT4/xZFZligIw==
+  accounts:database-host:
+    secure: AAABAGh2rFeQbM3sop8kfwnqCMbl8LkB+OGJwGQy+BfytloYVMaUbQULTUpJQA==

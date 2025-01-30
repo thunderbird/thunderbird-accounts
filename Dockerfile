@@ -29,10 +29,10 @@ RUN echo '!! If the next step fails, copy .env.example to .env in the backend fo
 COPY .env* .
 RUN rm .env.example
 
-# Add this hack to line it up with our dev environment.
-# I'll buy whoever fixes this a coffee.
+# Add our source code
 RUN mkdir src
-RUN ln -s /app/thunderbird_accounts src/thunderbird_accounts
+ADD src/thunderbird_accounts ./src/thunderbird_accounts
+
 
 RUN pip install --upgrade pip
 RUN pip install uv
