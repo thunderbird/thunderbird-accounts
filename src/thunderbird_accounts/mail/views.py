@@ -1,6 +1,7 @@
 from django.http import HttpRequest
 from django.shortcuts import render
 from django.template.response import TemplateResponse
+from django.conf import settings
 
 
 # Create your views here.
@@ -15,4 +16,6 @@ def self_serve(request: HttpRequest):
 
 
 def wait_list(request: HttpRequest):
-    return TemplateResponse(request, 'mail/wait-list.html', {})
+    return TemplateResponse(request, 'mail/wait-list.html', {
+        'form_action': settings.WAIT_LIST_FORM_ACTION
+    })
