@@ -144,9 +144,10 @@ def fxa_callback(request: HttpRequest):
 
     user.refresh_from_db()
 
-    if is_admin_client and not user.is_staff:
-        logging.debug(f'Unauthorized user {user.uuid} trying to access admin panel.')
-        return HttpResponse('401 Unauthorized', status=401)
+    # Note: Not used right now, Admin already requires staff to login
+    #if is_admin_client and not user.is_staff:
+    #    logging.debug(f'Unauthorized user {user.uuid} trying to access admin panel.')
+    #    return HttpResponse('401 Unauthorized', status=401)
 
     # Login with django auth
     login(request, user)

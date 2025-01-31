@@ -3,26 +3,33 @@ import '@thunderbirdops/services-ui/style.css';
 import SelfServeForm from "@/components/SelfServeForm.vue";
 import SignInToSignUpForm from "@/components/SignInToSignUpForm.vue";
 import SignUpFlowForm from "@/components/SignUpFlowForm.vue";
+import AccountInfoForm from "@/components/AccountInfoForm.vue";
 
-/*
- * Self Serve - App Password Page
- */
+const vueApps = [
+  // Self Serve - App Password Page
+  {
+    id: 'selfServeForm',
+    sfc: SelfServeForm,
+  },
+  // Self Serve - Account Info Page
+  {
+    id: 'accountInfoForm',
+    sfc: AccountInfoForm,
+  },
+  // Sign Up Page
+  {
+    id: 'signInToSignUpForm',
+    sfc: SignInToSignUpForm,
+  },
+  {
+    id: 'signUpFlowForm',
+    sfc: SignUpFlowForm
+  }
+];
 
-if (document.getElementById('selfServeForm')) {
-  const selfServeForm = createApp(SelfServeForm);
-  selfServeForm.mount('#selfServeForm');
-}
-
-/*
- * Sign Up Page
- */
-
-if (document.getElementById('signInToSignUpForm')) {
-  const signInToSignUpForm = createApp(SignInToSignUpForm);
-  signInToSignUpForm.mount('#signInToSignUpForm');
-}
-
-if (document.getElementById('signUpFlowForm')) {
-  const signUpForm = createApp(SignUpFlowForm);
-  signUpForm.mount('#signUpFlowForm');
+for (const app of vueApps) {
+  if (document.getElementById(app.id)) {
+    const form = createApp(app.sfc);
+    form.mount(`#${app.id}`);
+  }
 }

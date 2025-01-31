@@ -33,6 +33,7 @@ urlpatterns = [
 
     path('wait-list/', mail_views.wait_list),
     path('self-serve/', mail_views.self_serve, name='self_serve_home'),
+    path('self-serve/account-settings', mail_views.self_serve_account_settings, name='self_serve_account_info'),
     path('self-serve/app-passwords', mail_views.self_serve_app_passwords, name='self_serve_app_password'),
 
     path('self-serve/connection-info', mail_views.self_serve_connection_info, name='self_serve_connection_info'),
