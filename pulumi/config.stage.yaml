@@ -31,15 +31,28 @@ resources:
             protocol: tcp
             from_port: 443
             to_port: 443
-        egress: []
+        egress:
+          - description: Allow outbound traffic to anywhere
+            protocol: tcp
+            from_port: 0
+            to_port: 65535
+            cidr_blocks:
+              - 0.0.0.0/0
+
     accounts-container:
       rules:
         ingress:
+            # Set the source in code to the accounts-lb SGID
           - description: Allow traffic from the load balancer to the container
             protocol: tcp
-            from_port: 5000
-            to_port: 5000
-            # Set the source in code to the accounts-lb SGID
+            from_port: 8087
+            to_port: 8087
+          - description: Allow traffic from the local network
+            protocol: tcp
+            from_port: 8087
+            to_port: 8087
+            cidr_blocks:
+              - 10.10.0.0/16
         egress:
           - description: Allow traffic from the container out to the Internet
             cidr_blocks:
@@ -74,7 +87,7 @@ resources:
           listener_port: 443
           listener_proto: HTTPS
           listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/2de484a6-2f6c-492e-a073-c62f4b28e38a
-          container_port: 5000
+          container_port: 8087
           container_name: accounts
           # "name" field is arbitrary, but must be unique and no longer than 32 chars
           name: accounts-stage
@@ -82,6 +95,7 @@ resources:
             healthy_threshold: 2
             unhealthy_threshold: 5
             interval: 30
+            path: /health
       task_definition:
         network_mode: awsvpc
         cpu: 512
@@ -90,39 +104,41 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest0
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest9
             portMappings:
               - name: accounts
-                containerPort: 5000
-                hostPort: 5000
+                containerPort: 8087
+                hostPort: 8087
                 protocol: tcp
                 appProtocol: http
             linuxParameters:
               initProcessEnabled: True
-            secrets: [] # TODO
-              # - name: DATABASE_HOST
-              #   valueFrom:
-              # - name: DATABASE_NAME
-              #   valueFrom:
-              # - name: DATABASE_PASSWORD
-              #   valueFrom:
-              # - name: DATABASE_USER
-              #   valueFrom:
-              # - name: FXA_ALLOW_LIST
-              #   valueFrom:
-              # - name: FXA_CLIENT_ID
-              #   valueFrom:
-              # - name: FXA_SECRET
-              #   valueFrom:
-              # - name: LOGIN_CODE_SECRET
-              #   valueFrom:
-              # - name: SECRET_KEY
-              #   valueFrom:
+            secrets:
+              - name: DATABASE_HOST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-wRjCb5
+              - name: DATABASE_NAME
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-qa6aJc
+              - name: DATABASE_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-Vnxk3O
+              - name: DATABASE_USER
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-5v9m6l
+              - name: FXA_ALLOW_LIST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-NeQYKI
+              - name: FXA_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-client-id-32uWP9
+              - name: FXA_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-secret-DoS6rM
+              - name: LOGIN_CODE_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-WL7MZu
+              - name: SECRET_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-ZBBV7V
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbirid.net
               - name: ADMIN_CONTACT
                 value: dummy@example.org
+              - name: ALLOWED_HOSTS
+                value: '*:8087'
               - name: APP_ENV
                 value: stage
               - name: AUTH_SCHEME
@@ -138,6 +154,12 @@ resources:
               - name: PUBLIC_BASE_URL
                 value: accounts-stage.thunderbird.dev
               - name: REDIS_URL
-                value: redis://elasticache:6379
+                value: rediss://master.accounts-stage.7syyoy.euc1.cache.amazonaws.com:6379
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
+
+  # tb:ec2:SshableInstance:
+  #   jumphost:
+  #     public_key: your pubkey goes here
+  #     source_cidrs:
+  #       - your IPv4 goes here (curl -4 https://curlmyip.net)

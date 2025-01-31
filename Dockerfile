@@ -9,6 +9,7 @@ ENV PYTHONPATH=.
 # Upgrade the OS, 
 RUN apt update && \
     apt install -y cron npm && \
+    apt install -y postgresql && \
     apt-get clean && \
     mkdir scripts && \
     pip --no-cache install --upgrade pip uv
@@ -28,11 +29,6 @@ COPY scripts/dev-entry.sh scripts/dev-entry.sh
 COPY static ./static/
 COPY templates ./templates/
 
-# Dev only
-RUN echo '!! If the next step fails, copy .env.example to .env in the backend folder !!'
-COPY .env* .
-RUN rm .env.example
-
 # Add our source code
 ADD src/thunderbird_accounts ./src/thunderbird_accounts
 
@@ -40,5 +36,5 @@ ADD src/thunderbird_accounts ./src/thunderbird_accounts
 RUN uv sync && \
     npm install && npm cache clean --force
 
-EXPOSE 5000
+EXPOSE 8087
 CMD ["/bin/sh", "./scripts/dev-entry.sh"]

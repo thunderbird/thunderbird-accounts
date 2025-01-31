@@ -11,10 +11,10 @@ config:
   accounts:fxa-allow-list:
     secure: AAABACEo9Dq/0HxEe94MekasmaS54mijXZy7bRTvPyMGlnFS6Xe5wRhRxjY=
   accounts:database-name:
-    secure: AAABAPvs2oZ9FtUhU0f24kkggV4sznzSDyHU3iHBKWrx/6P4TO/S6w==
+    secure: AAABAKfzojKEIXyjJsYqg561OopbQDN0sFDezdox/bOdbN2AqQ0=
   accounts:database-user:
-    secure: AAABAA/7CiYrNtDR4r8KjDC0cWt8Hox54MoobYQHurgr8m5hIptcQA==
+    secure: AAABAO2/AIpN+PCkPj4lhvcXHGStmJqDG+j6VIXgX8489FUQR+xk4FaEFLY=
   accounts:database-password:
-    secure: AAABAHszbIf/vWKaSNF5Wv9txeQ2pUPqnTPu+M5V1CT4/xZFZligIw==
+    secure: AAABAPj8v+cUKN64m00Uf5hVpuZPLORHICitThZoOngJQimrnn107nu/aSQsX8BU
   accounts:database-host:
-    secure: AAABAGh2rFeQbM3sop8kfwnqCMbl8LkB+OGJwGQy+BfytloYVMaUbQULTUpJQA==
+    secure: AAABAMLnImEMA1r5tomgaYBXggVkRkvX04r69M+t8N374ye52NdhSQwJGW0GcWWGPoKXlO/tv3Gm4eLeHrIDpjaH3o9FxzYuZfjmQyowz0w2U+mBdzsBjP4G

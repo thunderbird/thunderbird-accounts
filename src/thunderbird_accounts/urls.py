@@ -6,6 +6,7 @@ from django.views.generic import RedirectView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from thunderbird_accounts.authentication import views as auth_views
+from thunderbird_accounts.infra import views as infra_views
 from thunderbird_accounts.mail import views as mail_views
 from django.utils.translation import gettext_lazy as _
 
@@ -37,6 +38,7 @@ urlpatterns = [
     path('api/v1/auth/get-login/', get_login_code, name='api_get_login'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/auth/logout/', logout_user, name='api_logout'),
+    path('health', infra_views.health_check)
 ]
 
 if settings.DEBUG:
