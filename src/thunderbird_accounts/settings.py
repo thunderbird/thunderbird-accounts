@@ -15,9 +15,6 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -25,11 +22,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = True
 IS_TEST = 'test' in sys.argv
 
+# Load envs first
 if DEBUG:
     if IS_TEST:
         load_dotenv(dotenv_path='.env.test')
     else:
         load_dotenv(dotenv_path='.env')
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Get the path for settings.py and then add in REL_BASE_DIR
+BASE_DIR = Path(__file__).resolve().parent.joinpath(os.getenv('REL_BASE_DIR', '../../'))
 
 APP_ENV = os.getenv('APP_ENV')
 
