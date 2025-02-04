@@ -1,0 +1,63 @@
+@import 'fonts.css';
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.base-container {
+  margin: 1rem;
+}
+
+.nav-list {
+  padding: 0;
+  display: flex;
+  gap: 1rem;
+  list-style: none;
+
+  & a {
+    font-size: 0.875rem;
+    color: var(--colour-primary-default);
+    text-decoration: none;
+  }
+
+  & a:hover {
+    color: var(--colour-primary-hover);
+  }
+
+  & .selected {
+    font-weight: 600;
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  align-items: center;
+}
+
+.logo {
+  width: 20.0rem;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 500;
+}
+
+b {
+  font-weight: 450;
+}
+
+.connection-info-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.receiving-email, .sending-email {
+  display: flex;
+  gap: 2rem;
+    & h3 {
+    min-width: 10rem;
+  }
+}

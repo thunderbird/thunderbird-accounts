@@ -157,6 +157,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+]
+
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
@@ -242,3 +247,21 @@ ALLOWED_HOSTS_CACHE_KEY = '__ALLOWED_HOSTS'
 USE_X_FORWARDED_HOST = True
 
 DJANGO_VITE = {'default': {'dev_mode': DEBUG}}
+
+CONNECTION_INFO = {
+    'IMAP': {
+        'HOST': os.getenv('IMAP_HOST'),
+        'PORT': os.getenv('IMAP_PORT'),
+        'TLS': os.getenv('IMAP_TLS')
+    },
+    'JMAP': {
+        'HOST': os.getenv('JMAP_HOST'),
+        'PORT': os.getenv('JMAP_PORT'),
+        'TLS': os.getenv('JMAP_TLS')
+    },
+    'SMTP': {
+        'HOST': os.getenv('JMAP_HOST'),
+        'PORT': os.getenv('JMAP_PORT'),
+        'TLS': os.getenv('JMAP_TLS')
+    }
+}
