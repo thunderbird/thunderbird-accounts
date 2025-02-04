@@ -18,7 +18,7 @@ const onSubmit = () => {
     <notice-bar type="error" v-if="errorText">{{ errorText }}</notice-bar>
     <div class="container">
       <form id="sign-in-form" ref="signInToContinue" method="POST">
-        <primary-button @click.capture="onSubmit">Sign-in to continue</primary-button>
+        <primary-button @click.capture="onSubmit" id="signInBtn">Sign-in to continue</primary-button>
         <csrf-token></csrf-token>
       </form>
     </div>
