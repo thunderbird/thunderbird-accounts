@@ -20,7 +20,7 @@ export default defineConfig(({mode}) => {
   }
 
   return {
-    base: "/static/",
+    base: "/static/app/",
     root: "./",
     plugins: [
       vue({
@@ -44,7 +44,7 @@ export default defineConfig(({mode}) => {
     build: {
       sourcemap: true,
       manifest: "manifest.json",
-      outDir: './static/',
+      outDir: './static/app/',
       emptyOutDir: true,
       rollupOptions: {
         input: {

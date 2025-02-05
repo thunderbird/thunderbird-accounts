@@ -31,7 +31,7 @@ if DEBUG:
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # Get the path for settings.py and then add in REL_BASE_DIR
-BASE_DIR = Path(__file__).resolve().parent.joinpath(os.getenv('REL_BASE_DIR', '../../'))
+BASE_DIR = Path(__file__).resolve().parent.joinpath(os.getenv('REL_BASE_DIR', '../../')).resolve()
 
 APP_ENV = os.getenv('APP_ENV')
 
@@ -249,7 +249,7 @@ ALLOWED_HOSTS_CACHE_KEY = '__ALLOWED_HOSTS'
 
 USE_X_FORWARDED_HOST = True
 
-DJANGO_VITE = {'default': {'dev_mode': DEBUG}}
+DJANGO_VITE = {'default': {'dev_mode': DEBUG and os.getenv('VITE_DEV_MODE'), 'static_url_prefix': 'app'}}
 
 CONNECTION_INFO = {
     'IMAP': {
