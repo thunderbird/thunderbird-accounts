@@ -15,9 +15,6 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -25,11 +22,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = True
 IS_TEST = 'test' in sys.argv
 
+# Load envs first
 if DEBUG:
     if IS_TEST:
         load_dotenv(dotenv_path='.env.test')
     else:
         load_dotenv(dotenv_path='.env')
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Get the path for settings.py and then add in REL_BASE_DIR
+BASE_DIR = Path(__file__).resolve().parent.joinpath(os.getenv('REL_BASE_DIR', '../../')).resolve()
 
 APP_ENV = os.getenv('APP_ENV')
 
@@ -53,6 +55,7 @@ FXA_CALLBACK: str = os.getenv('FXA_CALLBACK')
 FXA_OAUTH_SERVER_URL: str = os.getenv('FXA_OAUTH_SERVER_URL')
 FXA_PROFILE_SERVER_URL: str = os.getenv('FXA_PROFILE_SERVER_URL')
 FXA_ENCRYPT_SECRET: bytes = os.getenv('FXA_ENCRYPT_SECRET', '').encode()
+FXA_ALLOW_LIST: str = os.getenv('FXA_ALLOW_LIST')
 
 # MailChimp form URL for Wait List
 WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
@@ -246,7 +249,7 @@ ALLOWED_HOSTS_CACHE_KEY = '__ALLOWED_HOSTS'
 
 USE_X_FORWARDED_HOST = True
 
-DJANGO_VITE = {'default': {'dev_mode': DEBUG}}
+DJANGO_VITE = {'default': {'dev_mode': DEBUG and os.getenv('VITE_DEV_MODE'), 'static_url_prefix': 'app'}}
 
 CONNECTION_INFO = {
     'IMAP': {
@@ -265,3 +268,8 @@ CONNECTION_INFO = {
         'TLS': os.getenv('JMAP_TLS')
     }
 }
+
+ALLOWED_EMAIL_DOMAINS = [
+    'tb.pro',
+    'tbpro.com'
+]

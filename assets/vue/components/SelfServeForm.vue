@@ -57,7 +57,6 @@ const onDeleteAppPassword = async (evt) => {
 <template>
   <div class="form-container">
     <notice-bar type="error" v-if="errorText">{{ errorText }}</notice-bar>
-    <h2>App Passwords</h2>
     <p>Create App Passwords to login to mail clients like Thunderbird! You cannot view the password after creating it, so make sure to save it.</p>
     <div class="container">
       <div>

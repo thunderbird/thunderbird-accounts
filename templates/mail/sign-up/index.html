@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load helpers %}
+{% block page_heading %}
+  <h2 class="center">Sign Up</h2>
+  <style>
+    .center {
+      display: flex;
+      justify-content: center;
+    }
+  </style>
+{% endblock %}
+{% block body %}
+  {# If the user is not logged in, show the login form! #}
+  {% if user.is_anonymous %}
+  <div id="signInToSignUpForm"></div>
+  {% else %}
+  <div id="signUpFlowForm"></div>
+  {% endif %}
+  <script>
+  window._page.allowedDomains = {{ allowed_domains|safe }}
+  </script>
+{% endblock %}

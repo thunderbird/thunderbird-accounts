@@ -15,6 +15,7 @@ venv
 .coverage
 htmlcov
 caldav
+screenshots
 
 
 # Mac noise

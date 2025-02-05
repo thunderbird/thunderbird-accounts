@@ -1,12 +1,16 @@
 {% load nav_entries %}
 <nav>
   <ul class="nav-list">
+    {% if has_account %}
     {% mail_nav_entries request.path as entries %}
     {% for entry in entries %}
       <li class="{% if entry.selected %}selected{% endif %}">
-        <a href="{{ entry.path }}">{{ entry.name }}</a></li>
+        <a href="{{ entry.path }}">{{ entry.name }}</a>
+      </li>
     {% endfor %}
     <li>|</li>
+    {% endif %}
+    <li><a href="{% url 'self_serve_account_info' %}" class="{% if is_account_settings %}selected{% endif %}">Account Info</a></li>
     <li><a href="{% url 'fxa_logout' %}">Logout</a></li>
   </ul>
 </nav>
