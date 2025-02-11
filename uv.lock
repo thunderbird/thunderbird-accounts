@@ -604,6 +604,18 @@ wheels = [
 ]
 
 [[package]]
+name = "servestatic"
+version = "3.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "asgiref" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/9b/4fde9933f565c7696fbac7fbce1a532ed7160eceda4e69a7a0e928dfc184/servestatic-3.0.0.tar.gz", hash = "sha256:b9cbe0397a63622088f9826cd37663904266b0e259750217987af358280c94a8", size = 23386 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/bb/4d0da323a2f65f2dd16d7eb905fe62409228a2f6c9aff0c3428f597ef680/servestatic-3.0.0-py3-none-any.whl", hash = "sha256:eae0f8c74f4500448813b83762b39d1c68d24471bcc1261183308ee84f29397c", size = 27192 },
+]
+
+[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -660,6 +672,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "redis" },
     { name = "selenium" },
+    { name = "servestatic" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -692,6 +705,7 @@ requires-dist = [
     { name = "redis", specifier = ">=5.2.0" },
     { name = "ruff", marker = "extra == 'cli'" },
     { name = "selenium", specifier = ">=4.28.1" },
+    { name = "servestatic", specifier = ">=3.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
 ]
 

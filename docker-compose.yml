@@ -12,7 +12,9 @@ services:
     volumes:
       - ./.env:/app/.env
       - ./src/thunderbird_accounts:/app/thunderbird_accounts
-      - ./static:/app/static
+      - ./assets:/app/assets
+      - /app/static
+      #- ./static:/app/static
       - ./templates:/app/templates
 
   frontend:
@@ -27,7 +29,7 @@ services:
       - ./vite.config.mjs:/app/vite.config.mjs
       - ./src/thunderbird_accounts:/app/thunderbird_accounts
       - ./assets:/app/assets
-      - ./static:/app/static
+      #- ./static:/app/static
       - ./templates:/app/templates
 
   postgres:

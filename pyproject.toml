@@ -23,6 +23,7 @@ dependencies = [
     "django-vite>=3.0.6",
     "argon2-cffi>=23.1.0",
     "selenium>=4.28.1",
+    "servestatic>=3.0.0",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"

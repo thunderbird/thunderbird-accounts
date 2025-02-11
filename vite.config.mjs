@@ -1,6 +1,5 @@
 import {fileURLToPath, URL} from 'node:url';
 import {defineConfig, loadEnv} from 'vite';
-import {resolve, join} from 'path';
 import vue from '@vitejs/plugin-vue';
 
 // https://vitejs.dev/config/
@@ -20,7 +19,7 @@ export default defineConfig(({mode}) => {
   }
 
   return {
-    base: "/static/app/",
+    base: "/static/",
     root: "./",
     plugins: [
       vue({
@@ -31,7 +30,7 @@ export default defineConfig(({mode}) => {
     ],
     resolve: {
       alias: {
-        '@': fileURLToPath(new URL('./assets/vue', import.meta.url)),
+        '@': fileURLToPath(new URL('./assets/app/vue', import.meta.url)),
       },
       extensions: ['.ts', '.js', '.vue'],
     },
@@ -44,12 +43,19 @@ export default defineConfig(({mode}) => {
     build: {
       sourcemap: true,
       manifest: "manifest.json",
-      outDir: './static/app/',
-      emptyOutDir: true,
+      outDir: './static/',
+      emptyOutDir: false,
       rollupOptions: {
         input: {
-          'app': 'assets/app.js'
+          'app': 'assets/app/app.js'
         },
+        output: {
+          entryFileNames: (assetInfo) => {
+            console.log(assetInfo);
+            return '[name]-[hash].js';
+          },
+          assetFileNames: "[name]-[hash].[ext]",
+        }
       }
     },
   }

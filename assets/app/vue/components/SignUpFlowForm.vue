@@ -36,7 +36,7 @@ const onSubmit = () => {
         <text-input :model-value="userLoginEmail" disabled="disabled" help="You'll use this email to login via Mozilla Accounts to our self-serve page and to your mail client">Login Username / Email</text-input>
         <text-input name="app_password" required="required" type="password" help="You'll use this password sign-in to your mail client">App Password</text-input>
         <br/>
-        <primary-button @click.capture="onSubmit">Sign Up</primary-button>
+        <primary-button @click.capture="onSubmit" id="sign-up-btn">Sign Up</primary-button>
         <csrf-token></csrf-token>
       </form>
     </div>
