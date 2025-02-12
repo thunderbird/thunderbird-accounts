@@ -5,7 +5,7 @@ import {ref} from "vue";
 import CsrfToken from "@/components/CsrfToken.vue";
 
 const signUpFlow = ref();
-const errorText = ref(null);
+const errorText = ref(window._page.formError);
 const userLoginEmail = ref(window._page.userEmail);
 
 const availableDomains = window._page.allowedDomains.map((val) => {
@@ -47,7 +47,6 @@ const onSubmit = () => {
 .form-container {
   box-sizing: border-box;
   width: 100%;
-  display: flex;
 }
 
 #sign-up-flow-form {

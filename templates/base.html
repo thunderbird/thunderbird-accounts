@@ -15,12 +15,15 @@
 <body>
 {% csrf_token %}
 <script>
+  {% get_form_error_message as form_error %}
+
   const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
   // Site object
   window._page = {
     csrfToken: csrfToken.value,
     isAuthenticated: {{ user.is_authenticated|to_json }},
     userEmail: {{ user.email|to_json|safe }},
+    formError: {{ form_error|to_json|safe|default:'null' }},
     {% block extra_page_params %}{% endblock %}
   };
   csrfToken.remove();

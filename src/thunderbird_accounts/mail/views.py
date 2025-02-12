@@ -2,7 +2,7 @@ import json
 from urllib.parse import quote_plus
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
+from django.contrib import messages
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
@@ -12,6 +12,12 @@ from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.templatetags.helpers import get_admin_login_code
 from thunderbird_accounts.mail.models import Account, Email
+
+
+def raise_form_error(request, to_view: str, error_message: str):
+    """Puts the error message into the message bag and redirects to a named view."""
+    messages.error(request, error_message, extra_tags="form-error")
+    return HttpResponseRedirect(to_view)
 
 
 def home(request: HttpRequest):
@@ -39,11 +45,11 @@ def sign_up_submit(request: HttpRequest):
     if request.user.is_anonymous:
         return HttpResponseRedirect('/')
     if len(request.user.account_set.all()) > 0:
-        raise ValidationError(_('You already have an account'))
+        return raise_form_error(request, reverse('sign_up'),  _('You already have an account'))
     if not request.POST['app_password'] or not request.POST['email_address'] or not request.POST['email_domain']:
-        raise ValidationError(_('Required fields are not set'))
+        return raise_form_error(request, reverse('sign_up'),  _('Required fields are not set'))
     if request.POST['email_domain'] not in settings.ALLOWED_EMAIL_DOMAINS:
-        raise ValidationError(_('Invalid domain selected'))
+        return raise_form_error(request, reverse('sign_up'),  _('Invalid domain selected'))
 
     email_address = f'{request.POST['email_address']}@{request.POST['email_domain']}'
 
@@ -157,11 +163,11 @@ def self_serve_app_password_add(request: HttpRequest):
     password = request.POST['password']
 
     if not label or not password:
-        raise ValidationError('Label and password are required')
+        return raise_form_error(request, reverse('self_serve_app_password'),  _('Label and password are required'))
 
     account = request.user.account_set.first()
     if not account.save_app_password(label, password):
-        raise ValidationError('Unsupported algorithm')
+        return raise_form_error(request, reverse('self_serve_app_password'),  _('Unsupported algorithm'))
 
     return HttpResponseRedirect('/self-serve/app-passwords')
 
