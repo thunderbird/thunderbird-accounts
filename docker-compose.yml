@@ -13,10 +13,11 @@ services:
       - ./.env:/app/.env
       - ./src/thunderbird_accounts:/app/thunderbird_accounts
       - ./assets:/app/assets
-      - /app/static
-      #- ./static:/app/static
       - ./templates:/app/templates
+      # To clear pass `-V` in your docker-compose up command.
+      - /app/static
 
+  # Only used when APP_DEBUG=True
   frontend:
     build:
       context: .
@@ -29,7 +30,6 @@ services:
       - ./vite.config.mjs:/app/vite.config.mjs
       - ./src/thunderbird_accounts:/app/thunderbird_accounts
       - ./assets:/app/assets
-      #- ./static:/app/static
       - ./templates:/app/templates
 
   postgres:
@@ -50,14 +50,6 @@ services:
     ports:
       - "6380:6379" # Redis exposed on port 6380
       - "8071:8001" # Insights exposed on port 8071
-
-  #mailpit:
-  #  image: axllent/mailpit
-  #  environment:
-  #    - MP_SMTP_AUTH_ALLOW_INSECURE=true
-  #  ports:
-  #    - "8026:8025" # Web UI on port 8026
-  #    - "1026:1024" # SMTP on port 1026
 
   stalwart:
     image: stalwartlabs/mail-server:latest

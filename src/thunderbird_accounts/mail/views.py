@@ -36,7 +36,6 @@ def sign_up(request: HttpRequest):
 
 @require_http_methods(['POST'])
 def sign_up_submit(request: HttpRequest):
-    print(request.POST)
     if request.user.is_anonymous:
         return HttpResponseRedirect('/')
     if len(request.user.account_set.all()) > 0:

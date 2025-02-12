@@ -23,10 +23,7 @@ Start from the `.env.example` file to create your dev and test `.env` files:
 
 ```shell
 cp .env.example .env
-cp .env.example .env.test
 ```
-
-In `.env.test`, set `APP_ENV=test`
 
 #### Get the `FXA_CLIENT_ID` and `FXA_SECRET`
 
