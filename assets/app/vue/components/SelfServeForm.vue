@@ -9,7 +9,7 @@ const deleteAppPasswordFormRef = ref();
 
 const csrfToken = ref(window._page.csrfToken);
 const appPasswords = ref(window._page.appPasswords);
-const errorText = ref(null);
+const errorText = ref(window._page.formError);
 
 /**
  * Simply submit the form, work-around since we use <button> instead of <input type=submit> in services-ui
@@ -24,6 +24,11 @@ const onAddAppPassword = () => {
  * @returns {Promise<void>}
  */
 const onDeleteAppPassword = async (evt) => {
+  const areYouSure = confirm("Are you sure you want to delete this app password?\n\nAny email clients using this will need to be updated.");
+  if (!areYouSure) {
+    return;
+  }
+
   // Clear any server error messages
   errorText.value = null;
 
@@ -57,7 +62,6 @@ const onDeleteAppPassword = async (evt) => {
 <template>
   <div class="form-container">
     <notice-bar type="error" v-if="errorText">{{ errorText }}</notice-bar>
-    <h2>App Passwords</h2>
     <p>Create App Passwords to login to mail clients like Thunderbird! You cannot view the password after creating it, so make sure to save it.</p>
     <div class="container">
       <div>

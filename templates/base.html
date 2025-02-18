@@ -1,4 +1,6 @@
 {% load django_vite %}
+{% load helpers %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,23 +8,29 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block page_title %}Thunderbird Accounts Hub{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/main.css">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
   {% vite_hmr_client %}
-  {% vite_asset 'assets/app.js' %}
+  {% vite_asset 'assets/app/app.js' %}
 </head>
 <body>
 {% csrf_token %}
 <script>
+  {% get_form_error_message as form_error %}
+
   const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
   // Site object
   window._page = {
     csrfToken: csrfToken.value,
+    isAuthenticated: {{ user.is_authenticated|to_json }},
+    userEmail: {{ user.email|to_json|safe }},
+    formError: {{ form_error|to_json|safe|default:'null' }},
+    {% block extra_page_params %}{% endblock %}
   };
   csrfToken.remove();
 </script>
 {% block header %}
   <header class="header">
-    <img alt="" class="logo" src="/static/svg/logo-wordmark.svg"/>
+    <img alt="" class="logo" src="{% static 'svg/logo-wordmark.svg' %}"/>
     <h1>Accounts Hub</h1>
   </header>
 {% endblock %}
