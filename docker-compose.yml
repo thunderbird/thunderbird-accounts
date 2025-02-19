@@ -3,32 +3,6 @@ x-env: &env
   POSTGRES_USER: accounts
   POSTGRES_PASSWORD: accounts
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-    ports:
-      - "8087:8087"
-    volumes:
-      - ./.env:/app/.env
-      - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
-      - ./static:/app/static
-      - ./templates:/app/templates
-
-  frontend:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-    command: npm run dev
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./.env:/app/.env
-      - ./vite.config.mjs:/app/vite.config.mjs
-      - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
-      - ./assets:/app/assets
-      - ./static:/app/static
-      - ./templates:/app/templates
 
   postgres:
     image: postgres:17
@@ -48,6 +22,36 @@ services:
     ports:
       - "6380:6379" # Redis exposed on port 6380
       - "8071:8001" # Insights exposed on port 8071
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - "8087:8087"
+    volumes:
+      - ./.env:/app/.env
+      - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
+      - ./static:/app/static
+      - ./templates:/app/templates
+    depends_on:
+      - postgres
+      - redis
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    command: npm run dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./.env:/app/.env
+      - ./vite.config.mjs:/app/vite.config.mjs
+      - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
+      - ./assets:/app/assets
+      - ./static:/app/static
+      - ./templates:/app/templates
 
   #mailpit:
   #  image: axllent/mailpit
