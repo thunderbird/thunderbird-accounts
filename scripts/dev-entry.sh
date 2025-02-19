@@ -1,8 +1,19 @@
 #!/bin/sh
 
-# Start up django webserver
+
+# Build the vite apps
+npm run build
+
+# Collect static content, ignore the vue component directory
+./manage.py collectstatic --noinput -i assets/app/vue
+
+echo 'Waiting 1s for DB !'
+
+# Wait until db is available
+sleep 1s
+
+# Run migrations
 ./manage.py migrate
-./manage.py collectstatic --noinput
 
 # Classic Django devserver
 #./manage.py runserver 0.0.0.0:8087

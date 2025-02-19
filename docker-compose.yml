@@ -38,6 +38,7 @@ services:
       - postgres
       - redis
 
+  # Only used when APP_DEBUG=True
   frontend:
     build:
       context: .
@@ -50,7 +51,6 @@ services:
       - ./vite.config.mjs:/app/vite.config.mjs
       - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
       - ./assets:/app/assets
-      - ./static:/app/static
       - ./templates:/app/templates
 
   #mailpit:
@@ -78,10 +78,6 @@ services:
       - "995:995"
     environment:
       <<: *env
-      MAIL_QUERY_EMAILS: "SELECT address FROM mail_email WHERE name = $1 ORDER BY address ASC"
-      MAIL_QUERY_MEMBERS: "SELECT member_of FROM mail_groupmember WHERE name = $1"
-      MAIL_QUERY_NAME: "SELECT name, type, secret, description, quota FROM mail_account WHERE name = $1 AND active = true"
-      MAIL_QUERY_RECIPIENTS: "SELECT name FROM mail_email WHERE address = $1 ORDER BY name ASC"
       MAIL_ADMIN_SECRET: "{plain}accounts"
       MAIL_STALWART_PATH: "/opt/stalwart-mail"
 volumes:

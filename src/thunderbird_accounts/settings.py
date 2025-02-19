@@ -15,9 +15,6 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -25,13 +22,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG: bool = True if os.getenv('DEBUG', 'no').lower() in ['yes', 'true'] else False
 IS_TEST = 'test' in sys.argv
 
-if DEBUG:
-    if IS_TEST:
-        load_dotenv(dotenv_path='.env.test')
-    else:
-        load_dotenv(dotenv_path='.env')
-
 APP_ENV = os.getenv('APP_ENV')
+
+# Load test env, or if our env is not already loaded, load the regular dotenv
+if IS_TEST:
+    load_dotenv(dotenv_path='.env.test')
+elif not APP_ENV:
+    load_dotenv(dotenv_path='.env')
+
+# Refresh app_env in case we just loaded a dotenv
+APP_ENV = os.getenv('APP_ENV')
+
+# Only allow DEBUG on dev or test envs.
+DEBUG = os.getenv('APP_DEBUG') and (APP_ENV == 'dev' or APP_ENV == 'test')
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Get the path for settings.py and then add in REL_BASE_DIR
+BASE_DIR = Path(__file__).resolve().parent.joinpath(os.getenv('REL_BASE_DIR', '../../')).resolve()
+
 
 # URL for public facing absolute links
 PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL')
@@ -53,6 +61,10 @@ FXA_CALLBACK: str = os.getenv('FXA_CALLBACK')
 FXA_OAUTH_SERVER_URL: str = os.getenv('FXA_OAUTH_SERVER_URL')
 FXA_PROFILE_SERVER_URL: str = os.getenv('FXA_PROFILE_SERVER_URL')
 FXA_ENCRYPT_SECRET: bytes = os.getenv('FXA_ENCRYPT_SECRET', '').encode()
+FXA_ALLOW_LIST: str = os.getenv('FXA_ALLOW_LIST')
+
+# MailChimp form URL for Wait List
+WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
 
 ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
@@ -85,6 +97,7 @@ MIDDLEWARE = [
     # This needs to be first, as we're setting up our allowed hosts
     'thunderbird_accounts.authentication.middleware.ClientSetAllowedHostsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'servestatic.middleware.ServeStaticMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -154,6 +167,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+]
+
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
@@ -177,6 +195,13 @@ AVAILABLE_CACHES = {
 }
 
 CACHES = AVAILABLE_CACHES['test'] if IS_TEST else AVAILABLE_CACHES['dev']
+
+STORAGES = {
+    'staticfiles': {
+        # TODO: Figure out why CompressedManifestStaticFilesStorage breaks w/ django-vite
+        'BACKEND': 'servestatic.storage.CompressedStaticFilesStorage',
+    },
+}
 
 LOGGING = {
     'version': 1,
@@ -224,8 +249,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
+# Built files are in ./static
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR.joinpath('static')
+
+# Unbuilt files are in ./assets
+STATICFILES_DIRS = [BASE_DIR.joinpath('assets')]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -238,4 +267,21 @@ ALLOWED_HOSTS_CACHE_KEY = '__ALLOWED_HOSTS'
 
 USE_X_FORWARDED_HOST = True
 
-DJANGO_VITE = {'default': {'dev_mode': DEBUG}}
+DJANGO_VITE = {
+    'default': {
+        'dev_mode': DEBUG,
+        'manifest_path': 'static/manifest.json',
+    }
+}
+
+CONNECTION_INFO = {
+    'IMAP': {'HOST': os.getenv('IMAP_HOST'), 'PORT': os.getenv('IMAP_PORT'), 'TLS': os.getenv('IMAP_TLS')},
+    'JMAP': {'HOST': os.getenv('JMAP_HOST'), 'PORT': os.getenv('JMAP_PORT'), 'TLS': os.getenv('JMAP_TLS')},
+    'SMTP': {'HOST': os.getenv('JMAP_HOST'), 'PORT': os.getenv('JMAP_PORT'), 'TLS': os.getenv('JMAP_TLS')},
+}
+
+ALLOWED_EMAIL_DOMAINS = ['tb.pro', 'tbpro.com']
+
+
+# Required otherwise a manifest error will be generated
+SERVESTATIC_MANIFEST_STRICT = False

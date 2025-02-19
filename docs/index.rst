@@ -18,6 +18,7 @@ Contents
     database_erd.rst
     infra.rst
     frontend.rst
+    mail.rst
 
 Indices and tables
 ==================
