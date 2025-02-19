@@ -11,7 +11,7 @@ services:
       - "8087:8087"
     volumes:
       - ./.env:/app/.env
-      - ./src/thunderbird_accounts:/app/thunderbird_accounts
+      - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
       - ./static:/app/static
       - ./templates:/app/templates
 
