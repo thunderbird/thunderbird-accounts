@@ -100,7 +100,7 @@ class CreateClientCommands(TestCase):
         output = StringIO()
         env_list = ['env_one', 'env_two', 'env_three', 'env_four', 'env_five']
 
-        # add eacb environment to existing client
+        # add each environment to existing client
         for next_env in env_list:
             management.call_command(
                 'create_client_environment', existing_client.uuid, next_env, self.env_redirect_url, self.env_allowed_hostnames, stdout=output
