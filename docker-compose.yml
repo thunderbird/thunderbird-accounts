@@ -25,7 +25,7 @@ services:
     volumes:
       - ./.env:/app/.env
       - ./vite.config.mjs:/app/vite.config.mjs
-      - ./src/thunderbird_accounts:/app/thunderbird_accounts
+      - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
       - ./assets:/app/assets
       - ./static:/app/static
       - ./templates:/app/templates
