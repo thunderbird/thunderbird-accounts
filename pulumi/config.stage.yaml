@@ -1,0 +1,165 @@
+---
+resources:
+
+  domains:
+    accounts: accounts-stage.thunderbird.dev
+
+  tb:network:MultiCidrVpc:
+    vpc:
+      cidr_block: 10.10.0.0/16
+      subnets:
+        eu-central-1a:
+          - 10.10.0.0/17
+        eu-central-1b:
+          - 10.10.128.0/17
+      enable_internet_gateway: True
+      egress_via_internet_gateway: True
+      enable_dns_hostnames: True
+      endpoint_interfaces:
+        - ecr.api
+        - ecr.dkr
+        - logs
+        - secretsmanager
+
+  tb:network:SecurityGroupWithRules:
+    accounts-lb:
+      rules:
+        ingress:
+          - description: TLS traffic to the load balancer from other private applications
+            cidr_blocks:
+              - 10.0.0.0/8
+            protocol: tcp
+            from_port: 443
+            to_port: 443
+        egress:
+          - description: Allow outbound traffic to anywhere
+            protocol: tcp
+            from_port: 0
+            to_port: 65535
+            cidr_blocks:
+              - 0.0.0.0/0
+
+    accounts-container:
+      rules:
+        ingress:
+            # Set the source in code to the accounts-lb SGID
+          - description: Allow traffic from the load balancer to the container
+            protocol: tcp
+            from_port: 8087
+            to_port: 8087
+          - description: Allow traffic from the local network
+            protocol: tcp
+            from_port: 8087
+            to_port: 8087
+            cidr_blocks:
+              - 10.10.0.0/16
+        egress:
+          - description: Allow traffic from the container out to the Internet
+            cidr_blocks:
+              - 0.0.0.0/0
+            protocol: tcp
+            from_port: 0
+            to_port: 65535
+
+  tb:secrets:PulumiSecretsManager:
+    pulumi:
+      secret_names:
+        - database-host
+        - database-name
+        - database-password
+        - database-user
+        - fxa-allow-list
+        - fxa-client-id
+        - fxa-secret
+        - login-code-secret
+        - secret-key
+  
+  tb:fargate:FargateClusterWithLogging:
+    accounts:
+      desired_count: 1
+      assign_public_ip: True  # Necessary, or else it can't talk out through the IG
+      ecr_resources:
+        - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
+      health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
+      internal: False # This needs to be open to receive auth callbacks
+      services:
+        accounts:
+          listener_port: 443
+          listener_proto: HTTPS
+          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/2de484a6-2f6c-492e-a073-c62f4b28e38a
+          container_port: 8087
+          container_name: accounts
+          # "name" field is arbitrary, but must be unique and no longer than 32 chars
+          name: accounts-stage
+          health_check:
+            healthy_threshold: 2
+            unhealthy_threshold: 5
+            interval: 30
+            path: /health
+      task_definition:
+        network_mode: awsvpc
+        cpu: 512
+        memory: 2048
+        requires_compatibilities:
+          - FARGATE
+        container_definitions:
+          accounts:
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest9
+            portMappings:
+              - name: accounts
+                containerPort: 8087
+                hostPort: 8087
+                protocol: tcp
+                appProtocol: http
+            linuxParameters:
+              initProcessEnabled: True
+            secrets:
+              - name: DATABASE_HOST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-wRjCb5
+              - name: DATABASE_NAME
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-qa6aJc
+              - name: DATABASE_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-Vnxk3O
+              - name: DATABASE_USER
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-5v9m6l
+              - name: FXA_ALLOW_LIST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-NeQYKI
+              - name: FXA_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-client-id-32uWP9
+              - name: FXA_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-secret-DoS6rM
+              - name: LOGIN_CODE_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-WL7MZu
+              - name: SECRET_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-ZBBV7V
+            environment:
+              - name: ADMIN_WEBSITE
+                value: https://www.thunderbirid.net
+              - name: ADMIN_CONTACT
+                value: dummy@example.org
+              - name: ALLOWED_HOSTS
+                value: '*:8087'
+              - name: APP_ENV
+                value: stage
+              - name: AUTH_SCHEME
+                value: fxa
+              - name: FXA_CALLBACK
+                value: https://accounts-stage.thunderbird.dev/api/v1/auth/fxa/callback
+              - name: FXA_OAUTH_SERVER_URL
+                value: https://oauth.stage.mozaws.net/v1
+              - name: FXA_OPEN_ID_CONFIG
+                value: https://accounts.stage.mozaws.net/.well-known/openid-configuration
+              - name: FXA_PROFILE_SERVER_URL
+                value: https://profile.stage.mozaws.net/v1
+              - name: PUBLIC_BASE_URL
+                value: accounts-stage.thunderbird.dev
+              - name: REDIS_URL
+                value: rediss://master.accounts-stage.7syyoy.euc1.cache.amazonaws.com:6379
+              - name: SUPPORT_CONTACT
+                value: dummy@example.org
+
+  # tb:ec2:SshableInstance:
+  #   jumphost:
+  #     public_key: your pubkey goes here
+  #     source_cidrs:
+  #       - your IPv4 goes here (curl -4 https://curlmyip.net)

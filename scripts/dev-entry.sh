@@ -1,5 +1,6 @@
 #!/bin/sh
 
+
 # Build the vite apps
 npm run build
 

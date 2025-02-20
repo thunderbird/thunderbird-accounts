@@ -1,0 +1,11 @@
+name: accounts
+description: Identity service for Thunderbird Pro Services
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-python

@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
+DEBUG: bool = True if os.getenv('DEBUG', 'no').lower() in ['yes', 'true'] else False
 IS_TEST = 'test' in sys.argv
 
 APP_ENV = os.getenv('APP_ENV')
@@ -65,11 +66,11 @@ FXA_ALLOW_LIST: str = os.getenv('FXA_ALLOW_LIST')
 # MailChimp form URL for Wait List
 WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
 
-ALLOWED_HOSTS = ['localhost']
+ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
 # For local docker usage
 if DEBUG:
-    ALLOWED_HOSTS += ['accounts']
+    ALLOWED_HOSTS += ['localhost', 'accounts']
 
 # Application definition
 
