@@ -1,16 +1,18 @@
 #!/bin/env python3
 
 import pulumi
+import pulumi_cloudflare as cloudflare
 import tb_pulumi
 import tb_pulumi.ec2
 import tb_pulumi.fargate
 import tb_pulumi.network
 import tb_pulumi.secrets
 
-
 # Set up the project and convenient config access
 project = tb_pulumi.ThunderbirdPulumiProject()
 resources = project.config.get('resources')
+cloudflare_zone_id = project.pulumi_config.require_secret('cloudflare_zone_id')
+
 
 # Build a VPC for private networking
 vpc_opts = resources['tb:network:MultiCidrVpc']['vpc']
@@ -63,3 +65,15 @@ fargate = tb_pulumi.fargate.FargateClusterWithLogging(
 #     opts=pulumi.ResourceOptions(depends_on=[vpc]),
 #     **jumphost_opts,
 # )
+
+cloudflare_backend_record = (
+    cloudflare.Record(
+        f'{project.name_prefix}-dns-backend',
+        zone_id=cloudflare_zone_id,
+        name=resources['domains']['accounts'],
+        type='CNAME',
+        content=fargate.resources['fargate_service_alb'].resources['albs']['accounts'].dns_name,
+        proxied=False,
+        ttl=1,  # ttl units are *minutes*
+    )
+)

@@ -18,3 +18,7 @@ config:
     secure: AAABAPj8v+cUKN64m00Uf5hVpuZPLORHICitThZoOngJQimrnn107nu/aSQsX8BU
   accounts:database-host:
     secure: AAABAMLnImEMA1r5tomgaYBXggVkRkvX04r69M+t8N374ye52NdhSQwJGW0GcWWGPoKXlO/tv3Gm4eLeHrIDpjaH3o9FxzYuZfjmQyowz0w2U+mBdzsBjP4G
+  accounts:cloudflare_zone_id:
+    secure: AAABABiSJCKlel9KVGj1BAReVS6z48C81bx3diyWqwvMp5r+IIPRUXuz3pcaw5nSetZ69thCErc2VnBPeAX0DQ==
+  cloudflare:apiToken:
+    secure: AAABADKoGlN5VqMcV/rAXYKjiNJCPXB8BlKj3dIvAksj4jVnu69Qwq8u8lgwDfWNY7dGdhTtsoKN7Wp8Lj2uFACZ3okP9POl

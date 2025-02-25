@@ -2,7 +2,7 @@
 resources:
 
   domains:
-    accounts: accounts-stage.thunderbird.dev
+    accounts: accounts-stage.tb.pro
 
   tb:network:MultiCidrVpc:
     vpc:
@@ -25,9 +25,9 @@ resources:
     accounts-lb:
       rules:
         ingress:
-          - description: TLS traffic to the load balancer from other private applications
+          - description: TLS traffic to the load balancer from the world
             cidr_blocks:
-              - 10.0.0.0/8
+              - 0.0.0.0/0
             protocol: tcp
             from_port: 443
             to_port: 443
@@ -47,12 +47,6 @@ resources:
             protocol: tcp
             from_port: 8087
             to_port: 8087
-          - description: Allow traffic from the local network
-            protocol: tcp
-            from_port: 8087
-            to_port: 8087
-            cidr_blocks:
-              - 10.10.0.0/16
         egress:
           - description: Allow traffic from the container out to the Internet
             cidr_blocks:
@@ -86,7 +80,7 @@ resources:
         accounts:
           listener_port: 443
           listener_proto: HTTPS
-          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/2de484a6-2f6c-492e-a073-c62f4b28e38a
+          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/c69c6b69-0185-4bba-bc59-4ed64374d45d
           container_port: 8087
           container_name: accounts
           # "name" field is arbitrary, but must be unique and no longer than 32 chars
