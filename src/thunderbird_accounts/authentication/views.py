@@ -1,16 +1,18 @@
 import logging
 import uuid
-from urllib.parse import unquote, urlencode
+from urllib.parse import unquote
 
 from django.conf import settings
 from django.contrib.auth import login, authenticate, logout
-from django.http import HttpResponseRedirect, HttpRequest, HttpResponse
-from django.utils.crypto import get_random_string
+from django.core.cache import caches
+from django.core.serializers import serialize
+from django.http import HttpResponseRedirect, HttpResponse
 from fxa.errors import ClientError
 from fxa.oauth import Client
 from fxa.profile import Client as ProfileClient
 from django.utils.translation import gettext_lazy as _
 
+from thunderbird_accounts.authentication.const import USER_SESSION_CACHE_KEY
 from thunderbird_accounts.authentication.models import User, UserSession
 from thunderbird_accounts.authentication.utils import (
     validate_login_code,
@@ -18,13 +20,30 @@ from thunderbird_accounts.authentication.utils import (
     is_already_authenticated,
 )
 from thunderbird_accounts.client.models import ClientEnvironment
+from thunderbird_accounts.utils.types import AccountsHttpRequest
 
 REDIRECT_KEY = 'fxa_redirect_to'
 STATE_KEY = 'fxa_state'
 CLIENT_ENV_KEY = 'client_uuid'
 
 
-def fxa_start(request: HttpRequest, login_code: str, redirect_to: str | None = None):
+def _set_user_session(request: AccountsHttpRequest, user: User):
+    """Create or Updates a UserSession, and sets a cache entry."""
+    session_key = request.session._session_key
+
+    # Save the current session key so we can remove it later if they log out.
+    UserSession.objects.update_or_create(user_id=user.uuid, session_key=session_key)
+
+    user_obj = serialize(
+        'json',
+        [
+            user,
+        ],
+    )
+    caches['shared'].set(f'{USER_SESSION_CACHE_KEY}.{session_key}', user_obj)
+
+
+def fxa_start(request: AccountsHttpRequest, login_code: str, redirect_to: str | None = None):
     """Initiate the Mozilla Account OAuth dance"""
     client_environment, state = validate_login_code(login_code)
 
@@ -38,7 +57,10 @@ def fxa_start(request: HttpRequest, login_code: str, redirect_to: str | None = N
     if is_already_authenticated(request):
         user = request.user
         logging.debug('Already logged in, skipping oauth')
-        return handle_auth_callback_response(user, client_environment, redirect_to, state)
+
+        _set_user_session(request, user)
+
+        return handle_auth_callback_response(client_environment, redirect_to, state, request.session._session_key)
 
     client = Client(settings.FXA_CLIENT_ID, settings.FXA_SECRET, settings.FXA_OAUTH_SERVER_URL)
     url = client.get_redirect_url(state, redirect_uri=settings.FXA_CALLBACK, scope='profile')
@@ -51,10 +73,11 @@ def fxa_start(request: HttpRequest, login_code: str, redirect_to: str | None = N
     return HttpResponseRedirect(url)
 
 
-def fxa_logout(request: HttpRequest):
+def fxa_logout(request: AccountsHttpRequest):
     """Logout of fxa"""
 
     user = request.user
+    session_key = request.session._session_key
     if user:
         client = Client(settings.FXA_CLIENT_ID, settings.FXA_SECRET, settings.FXA_OAUTH_SERVER_URL)
         try:
@@ -65,29 +88,29 @@ def fxa_logout(request: HttpRequest):
         user.fxa_token = None
         user.save()
 
+        # Delete any db sessions
+        UserSession.objects.filter(user_id=user.uuid, session_key=session_key).delete()
+
+    # Clear the cached entry
+    caches['shared'].delete(f'{USER_SESSION_CACHE_KEY}.{session_key}')
+
     logout(request)
 
     return HttpResponseRedirect('/')
 
 
-def fxa_callback(request: HttpRequest):
+def fxa_callback(request: AccountsHttpRequest):
     """The user returns from the OAuth sequence to us here, where we will check the state
     retrieve the token, and give them profile information."""
 
     # Retrieve the client env uuid
-    client_env_uuid = request.session.get(CLIENT_ENV_KEY)
-    if client_env_uuid:
-        del request.session[CLIENT_ENV_KEY]
+    client_env_uuid = request.session.pop(CLIENT_ENV_KEY)
 
     # Retrieve the state
-    state = request.session.get(STATE_KEY)
-    if state:
-        del request.session[STATE_KEY]
+    state = request.session.pop(STATE_KEY)
 
     # Retrieve a redirect to if available
-    redirect_to = request.session.get(REDIRECT_KEY)
-    if redirect_to:
-        del request.session[REDIRECT_KEY]
+    redirect_to = request.session.pop(REDIRECT_KEY)
 
     if not state or state != request.GET.get('state') or not client_env_uuid:
         logging.debug('State not found, state did not match session state, or client_env_uuid was not found.')
@@ -100,7 +123,6 @@ def fxa_callback(request: HttpRequest):
         return HttpResponse(content=_('Invalid Request'), status=500)
 
     code = request.GET.get('code')
-    is_admin_client = client_env.client.name == settings.ADMIN_CLIENT_NAME
     client = Client(settings.FXA_CLIENT_ID, settings.FXA_SECRET, settings.FXA_OAUTH_SERVER_URL)
     token = client.trade_code(code)
 
@@ -144,18 +166,9 @@ def fxa_callback(request: HttpRequest):
 
     user.refresh_from_db()
 
-    # Note: Not used right now, Admin already requires staff to login
-    #if is_admin_client and not user.is_staff:
-    #    logging.debug(f'Unauthorized user {user.uuid} trying to access admin panel.')
-    #    return HttpResponse('401 Unauthorized', status=401)
-
     # Login with django auth
     login(request, user)
 
-    # Save the current session key so we can remove it later if they log out.
-    UserSession.objects.create(
-        user_id=user.uuid,
-        session_key=request.session._session_key
-    )
+    _set_user_session(request, user)
 
-    return handle_auth_callback_response(user, client_env, redirect_to, state)
+    return handle_auth_callback_response(user, client_env, redirect_to, state, request.session._session_key)

@@ -1,3 +1,4 @@
+import base64
 import uuid
 
 from django.conf import settings
@@ -85,20 +86,23 @@ class UtilsTestCase(TestCase):
 
     def test_handle_auth_callback_response(self):
         """Ensure this response has a token GET parameter"""
+        user_session_id = 'test-session-id'
+        user_session_id_b64 = base64.urlsafe_b64encode(user_session_id.encode()).decode()
         client = Client.objects.create(name='Test Client')
         client_env = ClientEnvironment.objects.create(
             environment='test', redirect_url='https://www.thunderbird.net', client_id=client.uuid
         )
 
-        response = handle_auth_callback_response(self.user, client_env)
+        response = handle_auth_callback_response(client_env, user_session_id=user_session_id)
 
         assert response
         assert isinstance(response, HttpResponseRedirect)
-        assert response.url.startswith(f'{client_env.redirect_url}?token=')
+        print("url",response.url, 'vs', base64.urlsafe_b64encode(user_session_id.encode()), 'vs', user_session_id)
+        assert response.url.startswith(f'{client_env.redirect_url}?user_session_id={user_session_id_b64}')
 
     def test_handle_auth_callback_response_with_admin(self):
         """Ensure this response does not have a token GET parameter"""
-        response = handle_auth_callback_response(self.user, self.admin_client_env)
+        response = handle_auth_callback_response(self.admin_client_env)
 
         assert response
         assert isinstance(response, HttpResponseRedirect)
@@ -108,7 +112,7 @@ class UtilsTestCase(TestCase):
     def test_handle_auth_callback_response_with_explicit_redirect_url(self):
         """Ensure this response does not have a token GET parameter because we're overriding the redirect_url"""
         redirect_url = 'https://addons.thunderbird.net'
-        response = handle_auth_callback_response(self.user, self.admin_client_env, 'https://addons.thunderbird.net')
+        response = handle_auth_callback_response(self.admin_client_env, 'https://addons.thunderbird.net')
 
         assert response
         assert isinstance(response, HttpResponseRedirect)

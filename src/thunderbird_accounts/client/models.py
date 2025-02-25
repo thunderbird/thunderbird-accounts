@@ -5,6 +5,8 @@ import urllib3
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models
+from django.db.models.constraints import UniqueConstraint
+from django.db.models.functions.text import Lower
 from django.utils.translation import gettext_lazy as _
 from urllib3.exceptions import LocationParseError
 
@@ -44,6 +46,11 @@ class ClientEnvironment(BaseModel):
 
     class Meta(BaseModel.Meta):
         indexes = [*BaseModel.Meta.indexes, models.Index(fields=['environment']), models.Index(fields=['is_active'])]
+        constraints = [
+            UniqueConstraint(
+                Lower('environment').desc(), 'redirect_url', name='unique_lower_environment_and_redirect_url'
+            )
+        ]
 
     client = models.ForeignKey('Client', on_delete=models.CASCADE)
 
@@ -57,7 +64,7 @@ class ClientEnvironment(BaseModel):
                 try:
                     parsed_url = urllib3.util.parse_url(hostname)
                 except LocationParseError:
-                    logging.warning(f"[cache_hostnames] Bad hostname {hostname}")
+                    logging.warning(f'[cache_hostnames] Bad hostname {hostname}')
                     continue
                 if parsed_url.host:
                     allowed_hosts.append(parsed_url.host)
@@ -107,7 +114,7 @@ class ClientContact(BaseModel):
     """
 
     name = models.CharField(max_length=128, help_text=_('How the contact should be addressed'))
-    email = models.CharField(max_length=128, help_text=_('The email to reach the contact'))
+    email = models.CharField(max_length=128, help_text=_('The email to reach the contact'), unique=True)
     website = models.CharField(max_length=2048, help_text=_('The website for the contact'))
 
     client = models.ForeignKey('Client', on_delete=models.CASCADE)
