@@ -37,10 +37,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f'Client: {client_uuid} does not exist'))
             return
 
-        existing_contact = models.ClientEnvironment.objects.filter(
+        existing_env = models.ClientEnvironment.objects.filter(
             environment=options.get('env_type'), redirect_url=options.get('env_redirect_url')
         ).first()
-        if existing_contact:
+        if existing_env:
             self.stdout.write(
                 self.style.ERROR(f'A client environment with identical details already exists for client {client_uuid}')
             )
