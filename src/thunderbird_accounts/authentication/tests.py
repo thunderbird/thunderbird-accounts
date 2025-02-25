@@ -97,7 +97,6 @@ class UtilsTestCase(TestCase):
 
         assert response
         assert isinstance(response, HttpResponseRedirect)
-        print("url",response.url, 'vs', base64.urlsafe_b64encode(user_session_id.encode()), 'vs', user_session_id)
         assert response.url.startswith(f'{client_env.redirect_url}?user_session_id={user_session_id_b64}')
 
     def test_handle_auth_callback_response_with_admin(self):

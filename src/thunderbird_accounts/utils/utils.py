@@ -20,8 +20,6 @@ class JsonSerializer:
         self.protocol = protocol
 
     def dumps(self, obj):
-        print("Transforming ->", obj)
-        print("To ->",json.dumps(obj))
         return json.dumps(obj)
 
     def loads(self, obj):
