@@ -98,7 +98,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest9
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest10
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -138,7 +138,7 @@ resources:
               - name: AUTH_SCHEME
                 value: fxa
               - name: FXA_CALLBACK
-                value: https://accounts-stage.thunderbird.dev/api/v1/auth/fxa/callback
+                value: https://accounts-stage.tb.pro/api/v1/auth/fxa/callback
               - name: FXA_OAUTH_SERVER_URL
                 value: https://oauth.stage.mozaws.net/v1
               - name: FXA_OPEN_ID_CONFIG
@@ -146,7 +146,7 @@ resources:
               - name: FXA_PROFILE_SERVER_URL
                 value: https://profile.stage.mozaws.net/v1
               - name: PUBLIC_BASE_URL
-                value: accounts-stage.thunderbird.dev
+                value: accounts-stage.tb.pro
               - name: REDIS_URL
                 value: rediss://master.accounts-stage.7syyoy.euc1.cache.amazonaws.com:6379
               - name: SUPPORT_CONTACT

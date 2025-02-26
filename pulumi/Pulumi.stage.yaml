@@ -9,7 +9,7 @@ config:
   accounts:fxa-secret:
     secure: AAABAPvKKKGXbDDwMKHSmLnBPj2H+Io5WEagIjbVgIdeXWsH6sJuudfiah4FCb8RCc0uaaTGkBh4LruHoLHxrBhuovG7NFLasTMUyfxPrWN+kLcYbo6tLlaFaiZP4pTw
   accounts:fxa-allow-list:
-    secure: AAABACEo9Dq/0HxEe94MekasmaS54mijXZy7bRTvPyMGlnFS6Xe5wRhRxjY=
+    secure: AAABAAN5B2vV+kYCZZ/ZMAjFoHhR8zPS4KHIKB3k405/kx56d98Oot4u2w0ZjffhEUtyfywbLn3zoi8/vqj/ei1pnz+3UQPhC6IASQJIQLbAYKLw9HHebUIeH64I79AS6VhDdNz0dgAZ5K5pMnb1ffbEf2iWukLzp0ydY3gjtp55YcAh+dJD7LwEkYrGRChxKWQ1BjQzuZ0WYg9GI/GctMNKwSHmqdrl8rpm2MBbYrJ/ij2Sp1Qm6BBL1QGTePWIz+9cIyUc8phRzBCfU6SVln67NE0ZTz+9JbWe+NlY8aVhxqYiqlRr0YNij8UgFvswSdS3oqtS4sxoyfGauL8eT9P0Mu8=
   accounts:database-name:
     secure: AAABAKfzojKEIXyjJsYqg561OopbQDN0sFDezdox/bOdbN2AqQ0=
   accounts:database-user:
