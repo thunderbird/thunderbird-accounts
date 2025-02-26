@@ -171,4 +171,4 @@ def fxa_callback(request: AccountsHttpRequest):
 
     _set_user_session(request, user)
 
-    return handle_auth_callback_response(user, client_env, redirect_to, state, request.session._session_key)
+    return handle_auth_callback_response(client_env, redirect_to, state, request.session._session_key)
