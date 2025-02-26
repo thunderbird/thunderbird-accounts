@@ -29,7 +29,8 @@ COPY scripts/dev-entry.sh scripts/dev-entry.sh
 COPY static ./static/
 COPY templates ./templates/
 
-# Required in order to run tests against local dev
+# Required for local dev work (and running tests locally)
+COPY .env .
 COPY .env.test .
 RUN ln -s /app/thunderbird_accounts src/thunderbird_accounts
 
