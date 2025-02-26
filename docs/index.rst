@@ -19,6 +19,7 @@ Contents
     infra.rst
     frontend.rst
     mail.rst
+    internal_client_env.rst
 
 Indices and tables
 ==================

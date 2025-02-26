@@ -1,3 +1,4 @@
+import base64
 import secrets
 import uuid
 from typing import Optional
@@ -9,9 +10,7 @@ from django.http import HttpResponseRedirect
 from fxa.errors import ClientError
 from fxa.oauth import Client
 from itsdangerous import URLSafeTimedSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.client.models import ClientEnvironment
 
 
@@ -63,7 +62,10 @@ def is_already_authenticated(request):
 
 
 def handle_auth_callback_response(
-    user: User, client_env: ClientEnvironment, redirect_to: str | None = None, state: str | None = None
+    client_env: ClientEnvironment,
+    redirect_to: str | None = None,
+    state: str | None = None,
+    user_session_id: str | None = None,
 ) -> HttpResponseRedirect:
     """Handles the return response for logins. Used in callback, and also if the
     user is authenticated already to skip the fxa oauth path."""
@@ -75,11 +77,9 @@ def handle_auth_callback_response(
     if state:
         path_obj['state'] = state
 
-    # Create an access token as well - only for non-redirect routes / non-admin route
+    # Pass the user_session_id for the application requesting it. (We don't need it for internal apps.)
     if client_env.client.name != settings.ADMIN_CLIENT_NAME:
-        refresh = RefreshToken.for_user(user)
-        refresh.payload['client_env_uuid'] = str(client_env.uuid)
-        path_obj['token'] = str(refresh)
+        path_obj['user_session_id'] = base64.urlsafe_b64encode(user_session_id.encode())
 
     redirect_url = urljoin(client_env.redirect_url, f'?{urlencode(path_obj)}')
     return HttpResponseRedirect(redirect_url)

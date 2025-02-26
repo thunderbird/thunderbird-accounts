@@ -11,6 +11,7 @@ from thunderbird_accounts.utils.models import BaseModel
 
 class UserSession(BaseModel):
     """
+    User Session, mirrors the db cache for eventually showing the user which sessions they're logged into.
     :param user: The session's related user
     :param session_key: The session id/key the user logged in with
     """

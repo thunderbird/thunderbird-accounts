@@ -183,8 +183,17 @@ AVAILABLE_CACHES = {
     'dev': {
         'default': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-            'LOCATION': os.getenv('REDIS_URL'),
-        }
+            'LOCATION': f'{os.getenv('REDIS_URL')}/{os.getenv('REDIS_INTERNAL_DB')}',
+        },
+        'shared': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': f'{os.getenv('REDIS_URL')}/{os.getenv('REDIS_SHARED_DB')}',
+            'TIMEOUT': None,  # No expiry
+            'MAX_ENTRIES': 300_000_000,  # TODO: Come up with a solution to also remove db entries
+            'OPTIONS': {
+                'serializer': 'thunderbird_accounts.utils.utils.JsonSerializer',
+            },
+        },
     },
     'test': {
         'default': {
