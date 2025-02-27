@@ -60,9 +60,13 @@ redis_opts = resources['tb:elasticache:ElastiCacheReplicaGroup']['accounts']
 redis = tb_pulumi.elasticache.ElastiCacheReplicationGroup(
     name=f'{project.name_prefix}-redis',
     project=project,
-    source_sgids=[sg_container.resources['sg'].id, jumphost.resources['security_group'].resources['sg'].id],
+    source_sgids=[sg_container.resources['sg'].id],
+    # Swap above line with below if you build a jumphost
+    # source_sgids=[sg_container.resources['sg'].id, jumphost.resources['security_group'].resources['sg'].id],
     subnets=vpc.resources['subnets'],
-    opts=pulumi.ResourceOptions(depends_on=[jumphost, vpc, sg_container]),
+    opts=pulumi.ResourceOptions(depends_on=[vpc, sg_container]),
+    # Swap above line with below if you build a jumphost
+    #opts=pulumi.ResourceOptions(depends_on=[jumphost, vpc, sg_container]),
     **redis_opts,
 )
 
@@ -86,4 +90,5 @@ cloudflare_backend_record = cloudflare.Record(
     content=fargate.resources['fargate_service_alb'].resources['albs']['accounts'].dns_name,
     proxied=False,
     ttl=1,  # ttl units are *minutes*
+    opts=pulumi.ResourceOptions(depends_on=[fargate])
 )
