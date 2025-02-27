@@ -4,6 +4,7 @@ import pulumi
 import pulumi_cloudflare as cloudflare
 import tb_pulumi
 import tb_pulumi.ec2
+import tb_pulumi.elasticache
 import tb_pulumi.fargate
 import tb_pulumi.network
 import tb_pulumi.secrets
@@ -33,14 +34,36 @@ sg_lb = tb_pulumi.network.SecurityGroupWithRules(
 )
 
 # Build a security group allowing access from the load balancer to the container when we know its ID
-opts = resources['tb:network:SecurityGroupWithRules']['accounts-container']
-opts['rules']['ingress'][0]['source_security_group_id'] = sg_lb.resources['sg'].id
+sg_opts = resources['tb:network:SecurityGroupWithRules']['accounts-container']
+sg_opts['rules']['ingress'][0]['source_security_group_id'] = sg_lb.resources['sg'].id
 sg_container = tb_pulumi.network.SecurityGroupWithRules(
     name=f'{project.name_prefix}-container-sg',
     project=project,
     vpc_id=vpc.resources['vpc'].id,
     opts=pulumi.ResourceOptions(depends_on=[sg_lb, vpc]),
-    **opts,
+    **sg_opts,
+)
+
+# For testing purposes only, build an SSH-accessible server on the same network space
+jumphost_opts = resources['tb:ec2:SshableInstance']['jumphost']
+jumphost = tb_pulumi.ec2.SshableInstance(
+    name=f'{project.name_prefix}-jumphost',
+    project=project,
+    subnet_id=vpc.resources['subnets'][0],
+    vpc_id=vpc.resources['vpc'].id,
+    opts=pulumi.ResourceOptions(depends_on=[vpc]),
+    **jumphost_opts,
+)
+
+# Build an ElastiCache Redis cluster
+redis_opts = resources['tb:elasticache:ElastiCacheReplicaGroup']['accounts']
+redis = tb_pulumi.elasticache.ElastiCacheReplicationGroup(
+    name=f'{project.name_prefix}-redis',
+    project=project,
+    source_sgids=[sg_container.resources['sg'].id, jumphost.resources['security_group'].resources['sg'].id],
+    subnets=vpc.resources['subnets'],
+    opts=pulumi.ResourceOptions(depends_on=[jumphost, vpc, sg_container]),
+    **redis_opts,
 )
 
 # Build a Fargate cluster to run our containers
@@ -55,25 +78,12 @@ fargate = tb_pulumi.fargate.FargateClusterWithLogging(
     **fargate_opts,
 )
 
-# For testing purposes only, build an SSH-accessible server on the same network space
-# jumphost_opts = resources['tb:ec2:SshableInstance']['jumphost']
-# jumphost = tb_pulumi.ec2.SshableInstance(
-#     name=f'{project.name_prefix}-jumphost',
-#     project=project,
-#     subnet_id=vpc.resources['subnets'][0],
-#     vpc_id=vpc.resources['vpc'].id,
-#     opts=pulumi.ResourceOptions(depends_on=[vpc]),
-#     **jumphost_opts,
-# )
-
-cloudflare_backend_record = (
-    cloudflare.Record(
-        f'{project.name_prefix}-dns-backend',
-        zone_id=cloudflare_zone_id,
-        name=resources['domains']['accounts'],
-        type='CNAME',
-        content=fargate.resources['fargate_service_alb'].resources['albs']['accounts'].dns_name,
-        proxied=False,
-        ttl=1,  # ttl units are *minutes*
-    )
+cloudflare_backend_record = cloudflare.Record(
+    f'{project.name_prefix}-dns-backend',
+    zone_id=cloudflare_zone_id,
+    name=resources['domains']['accounts'],
+    type='CNAME',
+    content=fargate.resources['fargate_service_alb'].resources['albs']['accounts'].dns_name,
+    proxied=False,
+    ttl=1,  # ttl units are *minutes*
 )

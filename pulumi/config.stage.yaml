@@ -54,6 +54,16 @@ resources:
             protocol: tcp
             from_port: 0
             to_port: 65535
+      
+    accounts-redis:
+      rules:
+        ingress:
+          # Set the source in code to the accounts-container SGID
+          - description: Allow traffic from the accounts application to the container
+            protocol: tcp
+            from_port: 6379
+            to_port: 6379
+        egress: []
 
   tb:secrets:PulumiSecretsManager:
     pulumi:
@@ -67,6 +77,22 @@ resources:
         - fxa-secret
         - login-code-secret
         - secret-key
+  
+  tb:ec2:SshableInstance:
+    jumphost:
+      public_key: |
+        ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDLQc8Fo31m9n7vdIjMBMadZ2rWaFSBcsDgbAu9fbbpYjcgSgXv2XOEy5mP23psSgZbiYr5TW9NXITq25Y1RUCbZs4JekoYcgvdhbi4I6ru0VxBgfLJmJyQuPBG1QRMs+TpG8eBPY2RCUjCKlDslOJodRjjGRpauvEHSKKiqueByXydM9Cp+57T14ldnEs5/pB3yx3F9tv61Uf8mrZAkTj/l0bhnqoj8RAK+I3XKQuWoUpai+rvRkxzhzHHVaIr8VxkC5ChZ30o1El8UnKWJRaGQpPoZVs6t4lsMCxBIHg2ZM4BSgPQbNsEdx2K/lc4TDUEnokbFkzigF+vAfr1Ic/wKr7aP4xXnPCnaeqVi1+uNVTYfcTOeRgMpwQJRxTm1G8STccPfyM/FraFlKpQk4u/qRuKf5QDo4LEKFGbHx+7D8BYjO9QIZ4qSJxAtk5JIQ8vs4vEn7Ss4pjayu5iqcK0I+7syBQ92dYorUMKddcD1cwtTqCqST4RqHsEOjMGxcgSuFaozDGrqUgd21S0BOuYeZ9IN1OMrzRnytNMf0bTWnD0ukxDVXbO+WJuq6Ry8fnj+/S/tNuLRrxy0hQ77QGpkt+RmcZzWDA2JNF3O6aJcC8IwMKliAE+F01Yd72zyS0iCiGI2YQ6b6l7Og9XpRShk8vEMuluxslY0u77rY09Pw== rjung@churro
+      source_cidrs:
+        - 38.15.46.29/32
+
+  tb:elasticache:ElastiCacheReplicaGroup:
+    accounts:
+      num_cache_clusters: 1
+      automatic_failover_enabled: False
+      transit_encryption_mode: required
+      transit_encryption_enabled: True
+      apply_immediately: True
+      
   
   tb:fargate:FargateClusterWithLogging:
     accounts:
@@ -98,7 +124,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest10
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest11
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -128,10 +154,11 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-ZBBV7V
             environment:
               - name: ADMIN_WEBSITE
-                value: https://www.thunderbirid.net
+                value: https://www.thunderbird.net
               - name: ADMIN_CONTACT
                 value: dummy@example.org
               - name: ALLOWED_HOSTS
+                # value: '*'
                 value: '*:8087'
               - name: APP_ENV
                 value: stage
@@ -148,7 +175,7 @@ resources:
               - name: PUBLIC_BASE_URL
                 value: accounts-stage.tb.pro
               - name: REDIS_URL
-                value: rediss://master.accounts-stage.7syyoy.euc1.cache.amazonaws.com:6379
+                value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
 

@@ -1,2 +1,2 @@
-tb_pulumi @ git+https://github.com/thunderbird/pulumi.git@accounts
+tb_pulumi @ git+https://github.com/thunderbird/pulumi.git@elasticache-redis
 pulumi_cloudflare==5.48.0

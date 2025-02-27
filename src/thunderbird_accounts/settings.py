@@ -72,6 +72,8 @@ ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if h
 if DEBUG:
     ALLOWED_HOSTS += ['localhost', 'accounts']
 
+print(f'ALLOWED_HOSTS: {ALLOWED_HOSTS}')
+
 # Application definition
 
 INSTALLED_APPS = [
