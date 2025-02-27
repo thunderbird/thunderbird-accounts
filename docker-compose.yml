@@ -29,6 +29,8 @@ services:
       dockerfile: ./Dockerfile
     ports:
       - "8087:8087"
+    environment:
+      <<: *env
     volumes:
       - ./.env:/app/.env
       - ./src/thunderbird_accounts:/app/src/thunderbird_accounts

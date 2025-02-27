@@ -78,12 +78,15 @@ resources:
         - login-code-secret
         - secret-key
   
-  tb:ec2:SshableInstance:
-    jumphost:
-      public_key: |
-        ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDLQc8Fo31m9n7vdIjMBMadZ2rWaFSBcsDgbAu9fbbpYjcgSgXv2XOEy5mP23psSgZbiYr5TW9NXITq25Y1RUCbZs4JekoYcgvdhbi4I6ru0VxBgfLJmJyQuPBG1QRMs+TpG8eBPY2RCUjCKlDslOJodRjjGRpauvEHSKKiqueByXydM9Cp+57T14ldnEs5/pB3yx3F9tv61Uf8mrZAkTj/l0bhnqoj8RAK+I3XKQuWoUpai+rvRkxzhzHHVaIr8VxkC5ChZ30o1El8UnKWJRaGQpPoZVs6t4lsMCxBIHg2ZM4BSgPQbNsEdx2K/lc4TDUEnokbFkzigF+vAfr1Ic/wKr7aP4xXnPCnaeqVi1+uNVTYfcTOeRgMpwQJRxTm1G8STccPfyM/FraFlKpQk4u/qRuKf5QDo4LEKFGbHx+7D8BYjO9QIZ4qSJxAtk5JIQ8vs4vEn7Ss4pjayu5iqcK0I+7syBQ92dYorUMKddcD1cwtTqCqST4RqHsEOjMGxcgSuFaozDGrqUgd21S0BOuYeZ9IN1OMrzRnytNMf0bTWnD0ukxDVXbO+WJuq6Ry8fnj+/S/tNuLRrxy0hQ77QGpkt+RmcZzWDA2JNF3O6aJcC8IwMKliAE+F01Yd72zyS0iCiGI2YQ6b6l7Og9XpRShk8vEMuluxslY0u77rY09Pw== rjung@churro
-      source_cidrs:
-        - 38.15.46.29/32
+  # Config to build a jumphost
+  # tb:ec2:SshableInstance:
+  #   jumphost:
+  #     public_key: |
+  #       your_pubkey_goes_here; never put a private key in this file
+  #     source_cidrs:
+  #       - Your IPv4 CIDR goes here
+  #       - curl -4 https://curlmyip.net/
+  #       - 1.2.3.4/32
 
   tb:elasticache:ElastiCacheReplicaGroup:
     accounts:
@@ -124,7 +127,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest11
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest15
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -159,7 +162,7 @@ resources:
                 value: dummy@example.org
               - name: ALLOWED_HOSTS
                 # value: '*'
-                value: '*:8087'
+                value: '*:8087,accounts-stage.tb.pro,10.*,10.*:8087'
               - name: APP_ENV
                 value: stage
               - name: AUTH_SCHEME

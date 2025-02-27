@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import BaseBackend
 from django.http import HttpRequest
+from socket import gethostbyname, gethostname
 
 from ..client.models import ClientEnvironment
 
@@ -53,6 +54,9 @@ class ClientSetAllowedHostsMiddleware:
         allowed_hosts = cache.get(settings.ALLOWED_HOSTS_CACHE_KEY)
         if not allowed_hosts:
             allowed_hosts = ClientEnvironment.cache_hostnames()
+        allowed_hosts.append(gethostbyname(gethostname()))
+        if settings.DEBUG:
+            allowed_hosts.append('localhost')
 
         settings.ALLOWED_HOSTS = allowed_hosts
 
