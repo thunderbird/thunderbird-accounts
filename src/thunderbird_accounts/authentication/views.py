@@ -104,13 +104,13 @@ def fxa_callback(request: AccountsHttpRequest):
     retrieve the token, and give them profile information."""
 
     # Retrieve the client env uuid
-    client_env_uuid = request.session.pop(CLIENT_ENV_KEY)
+    client_env_uuid = request.session.pop(CLIENT_ENV_KEY, None)
 
     # Retrieve the state
-    state = request.session.pop(STATE_KEY)
+    state = request.session.pop(STATE_KEY, None)
 
     # Retrieve a redirect to if available
-    redirect_to = request.session.pop(REDIRECT_KEY)
+    redirect_to = request.session.pop(REDIRECT_KEY, None)
 
     if not state or state != request.GET.get('state') or not client_env_uuid:
         logging.debug('State not found, state did not match session state, or client_env_uuid was not found.')
