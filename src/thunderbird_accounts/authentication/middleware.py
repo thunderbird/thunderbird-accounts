@@ -56,8 +56,6 @@ class ClientSetAllowedHostsMiddleware:
             allowed_hosts = ClientEnvironment.cache_hostnames()
         # Get the IP of whatever machine is running this code and allow it as a hostname
         allowed_hosts.append(gethostbyname(gethostname()))
-        if settings.DEBUG:
-            allowed_hosts.append('localhost')
 
         settings.ALLOWED_HOSTS = allowed_hosts
 
