@@ -34,6 +34,7 @@ services:
     volumes:
       - ./.env:/app/.env
       - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
+      - ./assets:/app/assets
       - ./static:/app/static
       - ./templates:/app/templates
     depends_on:

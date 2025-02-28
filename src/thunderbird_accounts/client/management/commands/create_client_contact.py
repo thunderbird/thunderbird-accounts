@@ -33,6 +33,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f'Client: {client_uuid} does not exist'))
             return
 
+        existing_contact = models.ClientContact.objects.filter(email=options.get('contact_email')).first()
+        if existing_contact:
+            self.stdout.write(self.style.ERROR(f'A client contact with identical details already exists for client {client_uuid}'))
+            return
+
         models.ClientContact.objects.create(
             client_id=client.uuid,
             name=options.get('contact_name'),

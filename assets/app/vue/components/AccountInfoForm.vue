@@ -14,7 +14,9 @@ const onSetUp = () => {
 // Placeholder for now
 const onDeleteAccount = () => {
   const confirm = window.confirm("Are you sure you want to delete your account and all associated information? This includes your email address and emails!");
-  console.log(confirm);
+  if (confirm) {
+    window.alert("This doesn't actually do anything yet. Sorry! See github issue #25.")
+  }
 }
 </script>
 
