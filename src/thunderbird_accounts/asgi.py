@@ -24,6 +24,7 @@ def immutable_file_test(path, url):
 
 
 application = get_asgi_application()
-application = ServeStaticASGI(
-    application, root=settings.STATIC_ROOT, prefix='static', immutable_file_test=immutable_file_test
-)
+if not settings.DEBUG:
+    application = ServeStaticASGI(
+        application, root=settings.STATIC_ROOT, prefix='static', immutable_file_test=immutable_file_test
+    )

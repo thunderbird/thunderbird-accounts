@@ -1,6 +1,6 @@
 FROM python:3.13-bookworm
 #
-# Development docker file
+# Staging docker file
 #
 
 RUN mkdir -p /app/src
@@ -45,4 +45,4 @@ RUN uv sync && \
     npm install && npm cache clean --force
 
 EXPOSE 8087
-CMD ["/bin/sh", "./scripts/dev-entry.sh"]
+CMD ["/bin/sh", "./scripts/entry.sh"]

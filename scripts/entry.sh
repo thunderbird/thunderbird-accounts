@@ -1,15 +1,11 @@
 #!/bin/sh
 
-#
-# This script is for development purposes only!
-#
 
 # Build the vite apps
 npm run build
 
-# Wait until db is available
-echo 'Waiting 1s for DB !'
-sleep 1s
+# Collect static content, ignore the vue component directory
+./manage.py collectstatic --noinput -i assets/app/vue
 
 # Run migrations
 ./manage.py migrate
