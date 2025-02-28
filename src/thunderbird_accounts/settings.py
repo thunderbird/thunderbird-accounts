@@ -261,9 +261,10 @@ USE_TZ = True
 # Built files are in ./static
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR.joinpath('static')
+ASSETS_ROOT = BASE_DIR.joinpath('assets')
 
 # Unbuilt files are in ./assets
-STATICFILES_DIRS = [BASE_DIR.joinpath('assets')]
+STATICFILES_DIRS = [ASSETS_ROOT]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
