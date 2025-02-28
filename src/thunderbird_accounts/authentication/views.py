@@ -34,12 +34,7 @@ def _set_user_session(request: AccountsHttpRequest, user: User):
     # Save the current session key so we can remove it later if they log out.
     UserSession.objects.update_or_create(user_id=user.uuid, session_key=session_key)
 
-    user_obj = serialize(
-        'json',
-        [
-            user,
-        ],
-    )
+    user_obj = UserCacheSerializer(user).data
     caches['shared'].set(f'{USER_SESSION_CACHE_KEY}.{session_key}', user_obj)
 
 
