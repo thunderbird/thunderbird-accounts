@@ -51,7 +51,7 @@ SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT')
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 LOGIN_CODE_SECRET = os.getenv('LOGIN_CODE_SECRET')
-LOGIN_MAX_AGE = 120  # 2 minutes
+LOGIN_MAX_AGE = 180  # 3 minutes
 
 FXA_CLIENT_ID: str = os.getenv('FXA_CLIENT_ID')
 FXA_SECRET: str = os.getenv('FXA_SECRET')
