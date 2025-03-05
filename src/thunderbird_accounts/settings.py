@@ -18,8 +18,6 @@ from dotenv import load_dotenv
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG: bool = True if os.getenv('DEBUG', 'no').lower() in ['yes', 'true'] else False
 IS_TEST = 'test' in sys.argv
 
 APP_ENV = os.getenv('APP_ENV')
@@ -34,7 +32,7 @@ elif not APP_ENV:
 APP_ENV = os.getenv('APP_ENV')
 
 # Only allow DEBUG on dev or test envs.
-DEBUG = os.getenv('APP_DEBUG') and (APP_ENV == 'dev' or APP_ENV == 'test')
+DEBUG: bool = os.getenv('APP_DEBUG') and (APP_ENV == 'dev' or APP_ENV == 'test')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # Get the path for settings.py and then add in REL_BASE_DIR
@@ -53,7 +51,7 @@ SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT')
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 LOGIN_CODE_SECRET = os.getenv('LOGIN_CODE_SECRET')
-LOGIN_MAX_AGE = 120  # 2 minutes
+LOGIN_MAX_AGE = 180  # 3 minutes
 
 FXA_CLIENT_ID: str = os.getenv('FXA_CLIENT_ID')
 FXA_SECRET: str = os.getenv('FXA_SECRET')

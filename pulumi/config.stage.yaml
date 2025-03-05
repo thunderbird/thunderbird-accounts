@@ -2,7 +2,7 @@
 resources:
 
   domains:
-    accounts: accounts-stage.thunderbird.dev
+    accounts: accounts-stage.tb.pro
 
   tb:network:MultiCidrVpc:
     vpc:
@@ -25,9 +25,9 @@ resources:
     accounts-lb:
       rules:
         ingress:
-          - description: TLS traffic to the load balancer from other private applications
+          - description: TLS traffic to the load balancer from the world
             cidr_blocks:
-              - 10.0.0.0/8
+              - 0.0.0.0/0
             protocol: tcp
             from_port: 443
             to_port: 443
@@ -47,12 +47,6 @@ resources:
             protocol: tcp
             from_port: 8087
             to_port: 8087
-          - description: Allow traffic from the local network
-            protocol: tcp
-            from_port: 8087
-            to_port: 8087
-            cidr_blocks:
-              - 10.10.0.0/16
         egress:
           - description: Allow traffic from the container out to the Internet
             cidr_blocks:
@@ -60,6 +54,16 @@ resources:
             protocol: tcp
             from_port: 0
             to_port: 65535
+      
+    accounts-redis:
+      rules:
+        ingress:
+          # Set the source in code to the accounts-container SGID
+          - description: Allow traffic from the accounts application to the container
+            protocol: tcp
+            from_port: 6379
+            to_port: 6379
+        egress: []
 
   tb:secrets:PulumiSecretsManager:
     pulumi:
@@ -74,6 +78,25 @@ resources:
         - login-code-secret
         - secret-key
   
+  # Config to build a jumphost
+  # tb:ec2:SshableInstance:
+  #   jumphost:
+  #     public_key: |
+  #       your_pubkey_goes_here; never put a private key in this file
+  #     source_cidrs:
+  #       - Your IPv4 CIDR goes here
+  #       - curl -4 https://curlmyip.net/
+  #       - 1.2.3.4/32
+
+  tb:elasticache:ElastiCacheReplicaGroup:
+    accounts:
+      num_cache_clusters: 1
+      automatic_failover_enabled: False
+      transit_encryption_mode: required
+      transit_encryption_enabled: True
+      apply_immediately: True
+      
+  
   tb:fargate:FargateClusterWithLogging:
     accounts:
       desired_count: 1
@@ -86,7 +109,7 @@ resources:
         accounts:
           listener_port: 443
           listener_proto: HTTPS
-          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/2de484a6-2f6c-492e-a073-c62f4b28e38a
+          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/c69c6b69-0185-4bba-bc59-4ed64374d45d
           container_port: 8087
           container_name: accounts
           # "name" field is arbitrary, but must be unique and no longer than 32 chars
@@ -104,7 +127,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest9
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:jungtest19
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -134,17 +157,18 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-ZBBV7V
             environment:
               - name: ADMIN_WEBSITE
-                value: https://www.thunderbirid.net
+                value: https://www.thunderbird.net
               - name: ADMIN_CONTACT
                 value: dummy@example.org
               - name: ALLOWED_HOSTS
-                value: '*:8087'
+                # value: '*'
+                value: '*:8087,accounts-stage.tb.pro,10.*,10.*:8087'
               - name: APP_ENV
                 value: stage
               - name: AUTH_SCHEME
                 value: fxa
               - name: FXA_CALLBACK
-                value: https://accounts-stage.thunderbird.dev/api/v1/auth/fxa/callback
+                value: https://accounts-stage.tb.pro/api/v1/auth/fxa/callback
               - name: FXA_OAUTH_SERVER_URL
                 value: https://oauth.stage.mozaws.net/v1
               - name: FXA_OPEN_ID_CONFIG
@@ -152,9 +176,9 @@ resources:
               - name: FXA_PROFILE_SERVER_URL
                 value: https://profile.stage.mozaws.net/v1
               - name: PUBLIC_BASE_URL
-                value: accounts-stage.thunderbird.dev
+                value: accounts-stage.tb.pro
               - name: REDIS_URL
-                value: rediss://master.accounts-stage.7syyoy.euc1.cache.amazonaws.com:6379
+                value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
 

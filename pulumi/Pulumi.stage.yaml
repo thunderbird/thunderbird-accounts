@@ -9,7 +9,7 @@ config:
   accounts:fxa-secret:
     secure: AAABAPvKKKGXbDDwMKHSmLnBPj2H+Io5WEagIjbVgIdeXWsH6sJuudfiah4FCb8RCc0uaaTGkBh4LruHoLHxrBhuovG7NFLasTMUyfxPrWN+kLcYbo6tLlaFaiZP4pTw
   accounts:fxa-allow-list:
-    secure: AAABACEo9Dq/0HxEe94MekasmaS54mijXZy7bRTvPyMGlnFS6Xe5wRhRxjY=
+    secure: AAABABSNP2J7O0oRRDFm06caC7rdrzddoEPSlZtLtg53Paz3W+IxhLbqNNoLDYnv2sOFSKwIRa1LCsCoWbzfpr+RT/Hq35POJzzdA3xcpjjTNj99eVwFnvgRPNpKWJLNOzXI03DI1prMUzgmupL1//96I+uvOB7zpes7Ny9peaWRbRliAXp+tkUniULI+nPshlHgiUA/Sqx/H/1A8OE2B2B/j3R3JPhz6ZR9wGlG9fNN1gpzkTM27enV6yZbatCBH3pWIKPgAOKsY9lQQKE4jIVx+U+VdwBxwpfkJwoPsH4BeD1o96xVTNwr6at504dtjfxO6XM5xi/SqLq9kUdqqNNOJqol7hvl1vSuO8omYSWLtC72nM5PemU=
   accounts:database-name:
     secure: AAABAKfzojKEIXyjJsYqg561OopbQDN0sFDezdox/bOdbN2AqQ0=
   accounts:database-user:
@@ -18,3 +18,7 @@ config:
     secure: AAABAPj8v+cUKN64m00Uf5hVpuZPLORHICitThZoOngJQimrnn107nu/aSQsX8BU
   accounts:database-host:
     secure: AAABAMLnImEMA1r5tomgaYBXggVkRkvX04r69M+t8N374ye52NdhSQwJGW0GcWWGPoKXlO/tv3Gm4eLeHrIDpjaH3o9FxzYuZfjmQyowz0w2U+mBdzsBjP4G
+  accounts:cloudflare_zone_id:
+    secure: AAABABiSJCKlel9KVGj1BAReVS6z48C81bx3diyWqwvMp5r+IIPRUXuz3pcaw5nSetZ69thCErc2VnBPeAX0DQ==
+  cloudflare:apiToken:
+    secure: AAABADKoGlN5VqMcV/rAXYKjiNJCPXB8BlKj3dIvAksj4jVnu69Qwq8u8lgwDfWNY7dGdhTtsoKN7Wp8Lj2uFACZ3okP9POl
