@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.const import USER_SESSION_CACHE_KEY
 from thunderbird_accounts.authentication.models import User, UserSession
+from thunderbird_accounts.authentication.serializers import UserCacheSerializer
 from thunderbird_accounts.authentication.utils import (
     validate_login_code,
     handle_auth_callback_response,
