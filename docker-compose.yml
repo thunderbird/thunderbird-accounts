@@ -11,7 +11,9 @@ services:
     ports:
       - "5433:5432" # Note: host is exposed to 5433!
     environment:
-      <<: *env
+      POSTGRES_USER: accounts
+      POSTGRES_DB: accounts
+      POSTGRES_PASSWORD: accounts
     # set shared memory limit when using docker-compose
     shm_size: 128mb
 
