@@ -157,6 +157,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-WL7MZu
               - name: SECRET_KEY
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-ZBBV7V
+              - name: FXA_ENCRYPT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-encrypt-secret-odOppj
+              - name: SENTRY_DSN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-RxIMPu
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
