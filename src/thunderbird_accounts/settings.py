@@ -42,6 +42,7 @@ sentry_sdk.init(
     send_default_pii=True,
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
+    environment=APP_ENV
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
