@@ -22,3 +22,7 @@ config:
     secure: AAABABiSJCKlel9KVGj1BAReVS6z48C81bx3diyWqwvMp5r+IIPRUXuz3pcaw5nSetZ69thCErc2VnBPeAX0DQ==
   cloudflare:apiToken:
     secure: AAABADKoGlN5VqMcV/rAXYKjiNJCPXB8BlKj3dIvAksj4jVnu69Qwq8u8lgwDfWNY7dGdhTtsoKN7Wp8Lj2uFACZ3okP9POl
+  accounts:fxa-encrypt-secret:
+    secure: AAABAKMNzy5DwixZvU5B+W4EfWCibEMREgpT6vy4Ritc++jXZ8PxTP4sSiC8PF7/g+45QDYL1PypHYCwyZmMoNmG3rdlx4PyN8/Nuw==
+  accounts:sentry-dsn:
+    secure: AAABALuXruUUsNJ3dfQ2FN3KhDFoaxZ09/VEwhjEgDfLZmBcFsvOyXS3RZTX8eHl3ge+YBz9t3wrou25bkhQ2de0RI1y0A9NjWIRTLc1OmDmonZCDyqkaRJgJO9Z2TJVyqXK9GukeC7U4QNXR5qv8E4Y7mvLfj+eAzhXJktGHw==
