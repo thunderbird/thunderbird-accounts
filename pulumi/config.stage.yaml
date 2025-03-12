@@ -77,6 +77,8 @@ resources:
         - fxa-secret
         - login-code-secret
         - secret-key
+        - fxa-encrypt-secret
+        - sentry-dsn
   
   # Config to build a jumphost
   # tb:ec2:SshableInstance:
