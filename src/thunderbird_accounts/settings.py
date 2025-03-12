@@ -14,6 +14,7 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+import sentry_sdk
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -33,6 +34,16 @@ APP_ENV = os.getenv('APP_ENV')
 
 # Only allow DEBUG on dev or test envs.
 DEBUG: bool = os.getenv('APP_DEBUG') and (APP_ENV == 'dev' or APP_ENV == 'test')
+
+sentry_sdk.init(
+    dsn=os.getenv('SENTRY_DSN'),
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+    environment=APP_ENV
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # Get the path for settings.py and then add in REL_BASE_DIR
@@ -293,3 +304,4 @@ ALLOWED_EMAIL_DOMAINS = ['tb.pro', 'tbpro.com']
 
 # Required otherwise a manifest error will be generated
 SERVESTATIC_MANIFEST_STRICT = False
+
