@@ -187,6 +187,12 @@ resources:
                 value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
+              - name: CSRF_SECURE
+                value: 'True'
+              - name: CSRF_HTTPONLY
+                value: 'True'
+              - name: CSRF_TRUSTED_ORIGINS
+                value: 'https://accounts-stage.tb.pro'
 
   # tb:ec2:SshableInstance:
   #   jumphost:
