@@ -77,6 +77,12 @@ WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
 
 ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
+# Settings for CSRF cookie.
+CSRF_COOKIE_SECURE: bool = os.getenv('CSRF_SECURE') == 'True'
+CSRF_COOKIE_HTTPONLY: bool = os.getenv('CSRF_HTTPONLY') == 'True'
+if os.getenv('CSRF_TRUSTED_ORIGINS', ''):
+    CSRF_TRUSTED_ORIGINS = [host for host in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if host]
+
 # For local docker usage
 if DEBUG:
     ALLOWED_HOSTS += ['localhost', 'accounts']
