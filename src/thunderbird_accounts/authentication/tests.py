@@ -261,7 +261,7 @@ class FXAWebhooksTestCase(DRF_APITestCase):
         save_cache_session(user_session)
         self.assertIsNotNone(get_cache_session(user_session.session_key))
 
-        # Finally test that minimum_valid_iat_time stays the same due to an outdated password change event
+        # Now we make sure an expired password change does not log us out.
         response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
         self.assertEqual(response.status_code, 200, response.content)
 
@@ -324,10 +324,11 @@ class FXAWebhooksTestCase(DRF_APITestCase):
         save_cache_session(user_session)
         self.assertIsNotNone(get_cache_session(user_session.session_key))
 
-        # Trigger the profile change event
+        # Trigger the delete user event
         response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
         self.assertEqual(response.status_code, 200, response.content)
 
+        # We shouldn't exist anymore
         with self.assertRaises(User.DoesNotExist):
             User.objects.get(uuid=self.user.uuid)
 
