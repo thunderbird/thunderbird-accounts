@@ -1,17 +1,20 @@
 import base64
+import datetime
 import uuid
 
 from django.conf import settings
 from django.core.cache import cache
 from django.http import HttpResponseRedirect
 from django.test import TestCase, RequestFactory
-from rest_framework.test import RequestsClient
+from django.test.utils import freeze_time
+from rest_framework.test import RequestsClient, APIClient, APITestCase as DRF_APITestCase
 
 from django.contrib.auth import get_user_model
 
 from thunderbird_accounts.authentication.const import GET_LOGIN_PATH, BAD_CREDENTIALS_MSG
-from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.authentication.utils import handle_auth_callback_response
+from thunderbird_accounts.authentication.models import User, UserSession
+from thunderbird_accounts.authentication.utils import handle_auth_callback_response, save_cache_session, \
+    get_cache_session
 from thunderbird_accounts.client.models import Client, ClientEnvironment
 
 from thunderbird_accounts.authentication.middleware import FXABackend, ClientSetAllowedHostsMiddleware
@@ -19,7 +22,6 @@ from thunderbird_accounts.authentication.middleware import FXABackend, ClientSet
 
 class APITestCase(TestCase):
     def setUp(self):
-
         self.user = User.objects.create(
             username='Test',
             email='test@example.org',
@@ -203,3 +205,131 @@ class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
         self.middleware(self.request)
 
         self.assertEqual(settings.ALLOWED_HOSTS, cached_hosts)
+
+
+class FXAWebhooksTestCase(DRF_APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create(
+            username='Test',
+            email='test@example.org',
+            fxa_id='abc-123'
+        )
+
+        # Clear cache before each test
+        cache.delete(settings.ALLOWED_HOSTS_CACHE_KEY)
+
+    def tearDown(self):
+        # Clean up cache after tests
+        cache.delete(settings.ALLOWED_HOSTS_CACHE_KEY)
+
+    def test_fxa_process_change_password(self):
+        """Ensure the change password event is handled correctly"""
+        self.client.force_authenticate(self.user, {
+                'iss': 'https://accounts.firefox.com/',
+                'sub': 'abc-123',
+                'aud': 'REMOTE_SYSTEM',
+                'iat': 1565720808,
+                'jti': 'e19ed6c5-4816-4171-aa43-56ffe80dbda1',
+                'events': {'https://schemas.accounts.firefox.com/event/password-change': {'changeTime': 1565721242227}},
+            })
+
+        # Create a user session and save it in our cache
+        user_session, created = UserSession.objects.update_or_create(user_id=self.user.uuid, session_key='abc123')
+        save_cache_session(user_session)
+        self.assertIsNotNone(get_cache_session(user_session.session_key))
+
+        # Freeze time to before the changeTime timestamp and test the password change works correctly
+        with freeze_time(datetime.datetime(year=2019, month=9, day=13).timestamp()):
+            # Update the last login time to match our freeze_time
+            self.user.last_login = datetime.datetime.now().astimezone(datetime.UTC)
+            self.user.save()
+
+            response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
+            self.assertEqual(response.status_code, 200, response.content)
+
+            user = User.objects.get(uuid=self.user.uuid)
+            # Ensure our session cache no longer exists
+            self.assertEqual(user.usersession_set.count(), 0)
+            self.assertIsNone(get_cache_session(user_session.session_key))
+
+        # Update the last login time to match our freeze_time
+        self.user.last_login = datetime.datetime.now().astimezone(datetime.UTC)
+        self.user.save()
+
+        # Re-create the cache entry (aka re-login)
+        save_cache_session(user_session)
+        self.assertIsNotNone(get_cache_session(user_session.session_key))
+
+        # Finally test that minimum_valid_iat_time stays the same due to an outdated password change event
+        response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
+        self.assertEqual(response.status_code, 200, response.content)
+
+        # The request was outdated so we should still be logged in
+        self.assertIsNotNone(get_cache_session(user_session.session_key))
+
+    def test_fxa_process_change_primary_email(self):
+        OLD_EMAIL = self.user.email
+        NEW_EMAIL = 'john.butterfly@example.org'
+
+        self.client.force_authenticate(
+            self.user,
+            {
+                'iss': 'https://accounts.firefox.com/',
+                'sub': 'abc-123',
+                'aud': 'REMOTE_SYSTEM',
+                'iat': 1565720808,
+                'jti': 'e19ed6c5-4816-4171-aa43-56ffe80dbda1',
+                'events': {'https://schemas.accounts.firefox.com/event/profile-change': {'email': NEW_EMAIL}},
+            },
+        )
+
+        # Create a user session and save it in our cache
+        user_session, created = UserSession.objects.update_or_create(user_id=self.user.uuid, session_key='abc123')
+        save_cache_session(user_session)
+        self.assertIsNotNone(get_cache_session(user_session.session_key))
+
+        self.assertEqual(self.user.email, OLD_EMAIL)
+
+        # Trigger the profile change event
+        response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
+        self.assertEqual(response.status_code, 200, response.content)
+
+        user = User.objects.get(uuid=self.user.uuid)
+
+        # We should be logged out
+        self.assertIsNone(get_cache_session(user_session.session_key))
+
+        # Ensure the email has changed
+        self.assertNotEqual(user.email, OLD_EMAIL)
+        self.assertEqual(user.email, NEW_EMAIL)
+
+        # TODO: Profile updating? (this happens on login so not to concerned.)
+
+    def test_fxa_process_delete_user(self):
+        self.client.force_authenticate(
+            self.user,
+            {
+                'iss': 'https://accounts.firefox.com/',
+                'sub': 'abc-123',
+                'aud': 'REMOTE_SYSTEM',
+                'iat': 1565720810,
+                'jti': '1b3d623a-300a-4ab8-9241-855c35586809',
+                'events': {'https://schemas.accounts.firefox.com/event/delete-user': {}},
+            },
+        )
+
+        # Create a user session and save it in our cache
+        user_session, created = UserSession.objects.update_or_create(user_id=self.user.uuid, session_key='abc123')
+        save_cache_session(user_session)
+        self.assertIsNotNone(get_cache_session(user_session.session_key))
+
+        # Trigger the profile change event
+        response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
+        self.assertEqual(response.status_code, 200, response.content)
+
+        with self.assertRaises(User.DoesNotExist):
+            User.objects.get(uuid=self.user.uuid)
+
+        # We should be logged out
+        self.assertIsNone(get_cache_session(user_session.session_key))

@@ -24,6 +24,7 @@ dependencies = [
     "argon2-cffi>=23.1.0",
     "servestatic>=3.0.0",
     "sentry-sdk[django]>=2.22.0",
+    "requests>=2.32.3",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"

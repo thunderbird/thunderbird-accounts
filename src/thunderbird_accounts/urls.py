@@ -45,6 +45,7 @@ urlpatterns = [
 
     # API
     path('api/v1/auth/fxa/callback', auth_views.fxa_callback, name='fxa_callback'),
+    path('api/v1/auth/fxa/webhook', auth_views.fxa_webhook, name='fxa_webhook'),
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/v1/auth/get-login/', get_login_code, name='api_get_login'),

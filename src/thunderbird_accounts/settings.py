@@ -42,7 +42,7 @@ sentry_sdk.init(
     send_default_pii=False,
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
-    environment=APP_ENV
+    environment=APP_ENV,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -71,6 +71,7 @@ FXA_OAUTH_SERVER_URL: str = os.getenv('FXA_OAUTH_SERVER_URL')
 FXA_PROFILE_SERVER_URL: str = os.getenv('FXA_PROFILE_SERVER_URL')
 FXA_ENCRYPT_SECRET: bytes = os.getenv('FXA_ENCRYPT_SECRET', '').encode()
 FXA_ALLOW_LIST: str = os.getenv('FXA_ALLOW_LIST')
+FXA_OPEN_ID_CONFIG_URL: str = os.getenv('FXA_OPEN_ID_CONFIG')
 
 # MailChimp form URL for Wait List
 WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
@@ -214,7 +215,15 @@ AVAILABLE_CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
             'LOCATION': 'unique-snowflake',
-        }
+        },
+        'shared': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'cookie-dispenser',
+            'TIMEOUT': None,  # No expiry
+            'OPTIONS': {
+                'serializer': 'thunderbird_accounts.utils.utils.JsonSerializer',
+            },
+        },
     },
 }
 
@@ -310,4 +319,3 @@ ALLOWED_EMAIL_DOMAINS = ['tb.pro', 'tbpro.com']
 
 # Required otherwise a manifest error will be generated
 SERVESTATIC_MANIFEST_STRICT = False
-
