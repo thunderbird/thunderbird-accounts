@@ -183,7 +183,7 @@ def fxa_callback(request: AccountsHttpRequest):
 @authentication_classes([IsValidFXAWebhook])
 def fxa_webhook(request: Request):
     """Main for webhooks regarding fxa"""
-    response = HttpResponse(content=_('No thank you!'), status=200)
+    response = HttpResponse(content=_('Thank you!'), status=200)
 
     if not request.auth or not request.user:
         logging.warning('FXA webhook event received for non-existent user.')
