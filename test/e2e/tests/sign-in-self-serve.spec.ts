@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { SelfServePage } from '../pages/self-serve-page';
 import { FxAPage } from '../pages/fxa-page';
-import { PLAYWRIGHT_TAG_E2E_SUITE } from '../const/constants';
+import { PLAYWRIGHT_TAG_E2E_SUITE, TIMEOUT_2_SECONDS } from '../const/constants';
 import exp from 'constants';
 
 let selfServePage: SelfServePage;
@@ -24,9 +24,9 @@ test.describe('tb accounts self-serve hub', {
     await expect(selfServePage.logoutLink).toBeVisible();
 
     // wait a couple of seconds then sign out
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT_2_SECONDS);
     await selfServePage.logoutLink.click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT_2_SECONDS);
     await expect(selfServePage.selfServeHeader).not.toBeVisible();
     await expect(selfServePage.welcomeBackHeader).not.toBeVisible();
   });

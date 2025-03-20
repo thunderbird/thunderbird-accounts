@@ -91,11 +91,11 @@ npm run e2e-test-debug
 
 ## Running on BrowserStack
 
-You can run the E2E tests from your local machine but against browsers provided in the BrowserStack Automate cloud.
+You can run the E2E tests from your local machine pointed at the stage environment, but against browsers provided in the BrowserStack Automate cloud.
 
 <b>For security reasons when running the tests on BrowserStack I recommend that you use a dedicated test TB Accounts FxA account / credentials (NOT your own personal TB Acccounts / FxA credentials).</b>
 
-Once you have credentials for an existing TB Accounts test account, edit your local `.env` file and add these details (more information found above):
+Once you have credentials for an existing TB Accounts test account, edit your local `.env` file (that you first copied from `.env.stage.example`) and add these details (more information found above):
 
 ```dotenv
 ACCTS_FXA_EMAIL=<existing-stage-FxA-user-email>

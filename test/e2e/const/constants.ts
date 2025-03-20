@@ -10,3 +10,6 @@ export const ACCTS_FXA_PWORD = String(process.env.ACCTS_FXA_PWORD);
 
 // playwright test tags
 export const PLAYWRIGHT_TAG_E2E_SUITE = '@e2e-suite';
+
+// timeouts
+export const TIMEOUT_2_SECONDS = 2000;
