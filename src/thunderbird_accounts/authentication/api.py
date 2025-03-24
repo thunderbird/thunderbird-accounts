@@ -12,7 +12,8 @@ from thunderbird_accounts.authentication import utils
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.permissions import IsClient
 from thunderbird_accounts.authentication.serializers import UserProfileSerializer
-from thunderbird_accounts.authentication.utils import is_email_in_allow_list
+from thunderbird_accounts.authentication.utils import is_email_in_allow_list, get_cache_allow_list_entry, \
+    set_cache_allow_list_entry
 from thunderbird_accounts.utils.utils import get_absolute_url
 
 
@@ -61,7 +62,7 @@ def is_in_allow_list(request: Request):
     if not email:
         return JsonResponse({'result': False})
 
-    response = cache.get(f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}')
+    response = get_cache_allow_list_entry(email)
 
     # Check if we have their user data in accounts
     if not response:
@@ -73,11 +74,9 @@ def is_in_allow_list(request: Request):
 
     # If no user data, then see if their email is on the allow list
     if not response:
-        response = is_email_in_allow_list(request.email)
+        response = is_email_in_allow_list(email)
 
     # Cache the result for 1 day
-    cache.set(
-        f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}', response, settings.IS_IN_ALLOW_LIST_CACHE_MAX_AGE
-    )
+    set_cache_allow_list_entry(email, response)
 
     return JsonResponse({'result': response})

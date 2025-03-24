@@ -106,6 +106,20 @@ def save_cache_session(user_session: UserSession):
     return caches['shared'].set(f'{USER_SESSION_CACHE_KEY}.{user_session.session_key}', user_obj)
 
 
+def get_cache_allow_list_entry(email: str):
+    return caches['default'].get(f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}')
+
+
+def set_cache_allow_list_entry(email: str, result: bool):
+    caches['default'].set(
+        f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}', result, settings.IS_IN_ALLOW_LIST_CACHE_MAX_AGE
+    )
+
+
+def delete_cache_allow_list_entry(email: str):
+    caches['default'].delete(f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}')
+
+
 def logout_user(user: User, client: Optional[FxaOAuthClient] = None) -> bool:
     """Log out a user by:
     1. Telling FXA to delete their access token
