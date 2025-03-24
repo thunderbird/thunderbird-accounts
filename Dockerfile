@@ -40,8 +40,8 @@ RUN ln -s /app/thunderbird_accounts src/thunderbird_accounts
 # Add our source code
 ADD src/thunderbird_accounts ./src/thunderbird_accounts
 
-# Install our package dependencies
-RUN uv sync && \
+# Install our package dependencies, with cli
+RUN uv sync --extra cli && \
     npm install && npm cache clean --force
 
 EXPOSE 8087

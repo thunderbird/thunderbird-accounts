@@ -1,0 +1,46 @@
+name: validate
+
+concurrency:
+  group: validate
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!main'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
+jobs:
+  validate-backend:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Start docker-compose
+        run: docker compose up -d --build -V
+
+      - name: Backend lint check
+        run: |
+          docker compose exec backend bash -c 'uv run ruff check'
+
+      - name: Test with pytest
+        run: |
+          docker compose exec backend bash -c 'uv run coverage run --source="thunderbird_accounts" manage.py test thunderbird_accounts'
+
+      - name: Generate code coverage report
+        continue-on-error: true
+        run: |
+          docker compose exec backend bash -c 'uv run coverage report'
