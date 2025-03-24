@@ -158,7 +158,7 @@ def fxa_callback(request: AccountsHttpRequest):
 
     profile_email = profile.get('email')
 
-    if not is_email_in_allow_list(profile_email):
+    if not client_env.is_public and not is_email_in_allow_list(profile_email):
         return HttpResponse(content=_('You are not allowed to sign-in.'), status=500)
 
     # Try to authenticate with fxa id and email

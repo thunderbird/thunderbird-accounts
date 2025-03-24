@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.core.cache import cache
 from django.http import JsonResponse
 from django.urls import reverse
 from fxa.oauth import Client
@@ -12,8 +11,11 @@ from thunderbird_accounts.authentication import utils
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.permissions import IsClient
 from thunderbird_accounts.authentication.serializers import UserProfileSerializer
-from thunderbird_accounts.authentication.utils import is_email_in_allow_list, get_cache_allow_list_entry, \
-    set_cache_allow_list_entry
+from thunderbird_accounts.authentication.utils import (
+    is_email_in_allow_list,
+    get_cache_allow_list_entry,
+    set_cache_allow_list_entry,
+)
 from thunderbird_accounts.utils.utils import get_absolute_url
 
 
@@ -57,6 +59,10 @@ def logout_user(request: Request):
 @api_view(['POST'])
 @permission_classes([IsClient])
 def is_in_allow_list(request: Request):
+    """Is the user in the allow list? If the client_env is public we just say yes."""
+    if request.client_env and request.client_env.is_public:
+        return JsonResponse({'result': True})
+
     email = request.data.get('email')
 
     if not email:

@@ -352,12 +352,31 @@ class AllowListTestCase(DRF_APITestCase):
             redirect_url='http://testserver/',
             client_id=self.client.uuid,
             auth_token='1234',
+            is_public=False,  # Important, otherwise it'll always be yes
         )
         self.client_env.allowed_hostnames = ['testserver']
         self.client_env.save()
 
     def tearDown(self):
         cache.clear()
+
+    def test_client_env_is_public(self):
+        # Make the client env public
+        self.client_env.is_public = True
+        self.client_env.save()
+
+        # Normally not in allow list!
+        settings.FXA_ALLOW_LIST = '@example.net'
+        email = 'greg@example.org'
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'email': email, 'secret': self.client_env.auth_token},
+        )
+        result = response.json().get('result')
+
+        self.assertIsNotNone(result)
+        self.assertTrue(result)
 
     def test_is_in_allow_list(self):
         settings.FXA_ALLOW_LIST = '@example.org'
