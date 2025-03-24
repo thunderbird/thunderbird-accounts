@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from cryptography.fernet import Fernet
 
 
@@ -7,4 +7,4 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         key = Fernet.generate_key()
-        self.stdout.write(self.style.SUCCESS(key.decode("utf-8")))
+        self.stdout.write(self.style.SUCCESS(key.decode('utf-8')))

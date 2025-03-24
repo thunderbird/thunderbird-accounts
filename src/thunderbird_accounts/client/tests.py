@@ -103,10 +103,17 @@ class CreateClientCommands(TestCase):
         # add each environment to existing client
         for next_env in env_list:
             management.call_command(
-                'create_client_environment', existing_client.uuid, next_env, self.env_redirect_url, self.env_allowed_hostnames, stdout=output
+                'create_client_environment',
+                existing_client.uuid,
+                next_env,
+                self.env_redirect_url,
+                self.env_allowed_hostnames,
+                stdout=output,
             )
 
-            self.assertIn(f'Successfully created client environment {next_env} for {existing_client.uuid}', output.getvalue())
+            self.assertIn(
+                f'Successfully created client environment {next_env} for {existing_client.uuid}', output.getvalue()
+            )
 
         # verify all envs exist
         for next_env in env_list:
@@ -133,7 +140,7 @@ class CreateClientCommands(TestCase):
             stdout=output,
         )
 
-        self.assertIn(f'A client environment requires all env_* options to be filled', output.getvalue())
+        self.assertIn('A client environment requires all env_* options to be filled', output.getvalue())
 
         try:
             client = models.Client.objects.get(name=self.client_name)
@@ -152,7 +159,12 @@ class CreateClientCommands(TestCase):
         fake_client_uuid = uuid.uuid4()
 
         management.call_command(
-            'create_client_environment', fake_client_uuid, self.env_type, self.env_redirect_url, self.env_allowed_hostnames, stdout=output
+            'create_client_environment',
+            fake_client_uuid,
+            self.env_type,
+            self.env_redirect_url,
+            self.env_allowed_hostnames,
+            stdout=output,
         )
 
         self.assertIn(f'Client: {fake_client_uuid} does not exist', output.getvalue())
@@ -167,10 +179,17 @@ class CreateClientCommands(TestCase):
 
         # add an environment to our existing client
         management.call_command(
-            'create_client_environment', new_client.uuid, same_env_type, same_redirect_url, same_allowed_hostnames, stdout=output
+            'create_client_environment',
+            new_client.uuid,
+            same_env_type,
+            same_redirect_url,
+            same_allowed_hostnames,
+            stdout=output,
         )
 
-        self.assertIn(f'Successfully created client environment {same_env_type} for {new_client.uuid}', output.getvalue())
+        self.assertIn(
+            f'Successfully created client environment {same_env_type} for {new_client.uuid}', output.getvalue()
+        )
 
         try:
             client_env = models.ClientEnvironment.objects.get(
@@ -183,10 +202,18 @@ class CreateClientCommands(TestCase):
 
         # now attempt to add the exact same environment entry for the same client, expect failure
         management.call_command(
-            'create_client_environment', new_client.uuid, same_env_type, same_redirect_url, same_allowed_hostnames, stdout=output
+            'create_client_environment',
+            new_client.uuid,
+            same_env_type,
+            same_redirect_url,
+            same_allowed_hostnames,
+            stdout=output,
         )
 
-        self.assertIn(f'A client environment with identical details already exists for client {new_client.uuid}', output.getvalue())
+        self.assertIn(
+            f'A client environment with identical details already exists for client {new_client.uuid}',
+            output.getvalue(),
+        )
 
         # ensure still only one environment for this client
         client_env_query = models.ClientEnvironment.objects.filter(client_id=new_client.uuid)
@@ -197,7 +224,12 @@ class CreateClientCommands(TestCase):
         fake_client_uuid = uuid.uuid4()
 
         management.call_command(
-            'create_client_contact', fake_client_uuid, self.contact_name, self.contact_email, self.contact_url, stdout=output
+            'create_client_contact',
+            fake_client_uuid,
+            self.contact_name,
+            self.contact_email,
+            self.contact_url,
+            stdout=output,
         )
 
         self.assertIn(f'Client: {fake_client_uuid} does not exist', output.getvalue())
@@ -228,7 +260,9 @@ class CreateClientCommands(TestCase):
             'create_client_contact', new_client.uuid, same_name, same_email, same_url, stdout=output
         )
 
-        self.assertIn(f'A client contact with identical details already exists for client {new_client.uuid}', output.getvalue())
+        self.assertIn(
+            f'A client contact with identical details already exists for client {new_client.uuid}', output.getvalue()
+        )
 
         # ensure still only one contact for this client
         client_contact_query = models.ClientContact.objects.filter(client_id=new_client.uuid)

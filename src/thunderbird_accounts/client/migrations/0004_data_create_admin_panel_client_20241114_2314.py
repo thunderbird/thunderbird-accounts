@@ -15,11 +15,11 @@ def up(apps, schema_editor):
 
     client = client_model.objects.create(name=settings.ADMIN_CLIENT_NAME)
 
-    client_contact = client_contact_model.objects.create(
+    client_contact_model.objects.create(
         name='Main', email=settings.ADMIN_CONTACT, website=settings.ADMIN_WEBSITE, client_id=client.uuid
     )
 
-    client_environment = client_environment_model.objects.create(
+    client_environment_model.objects.create(
         environment=settings.APP_ENV,
         redirect_url=reverse('admin:index'),
         auth_token=None,

@@ -7,19 +7,28 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
             name='Account',
             fields=[
-                ('name', thunderbird_accounts.mail.models.SmallTextField(help_text='The account name (this must be unique.)', unique=True)),
+                (
+                    'name',
+                    thunderbird_accounts.mail.models.SmallTextField(
+                        help_text='The account name (this must be unique.)', unique=True
+                    ),
+                ),
                 ('description', models.TextField(help_text='The account description (used in groups.)', null=True)),
-                ('secret', models.TextField(help_text='Text area of account secrets (password, app password, etc...)<br/>\n    App Passwords must be in the format of <pre>$app$app_password_name$hashed_app_password</pre><br/>\n    So with a password of test it could be: <pre>$app$Thunderbird$(hashed password goes here)</pre>', null=True)),
+                (
+                    'secret',
+                    models.TextField(
+                        help_text='Text area of account secrets (password, app password, etc...)<br/>\n    App Passwords must be in the format of <pre>$app$app_password_name$hashed_app_password</pre><br/>\n    So with a password of test it could be: <pre>$app$Thunderbird$(hashed password goes here)</pre>',  #noqa
+                        null=True,
+                    ),
+                ),
                 ('type', models.TextField(choices=[('individual', 'Individual'), ('group', 'Group')])),
                 ('quota', models.IntegerField(default=0)),
                 ('active', models.BooleanField(default=True)),
@@ -33,9 +42,23 @@ class Migration(migrations.Migration):
             name='Email',
             fields=[
                 ('address', thunderbird_accounts.mail.models.SmallTextField(help_text='Full email address.')),
-                ('type', models.TextField(choices=[('primary', 'Primary Email'), ('alias', 'Alias Email'), ('list', 'Mailing List')], null=True)),
+                (
+                    'type',
+                    models.TextField(
+                        choices=[('primary', 'Primary Email'), ('alias', 'Alias Email'), ('list', 'Mailing List')],
+                        null=True,
+                    ),
+                ),
                 ('django_pk', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.ForeignKey(db_column='name', on_delete=django.db.models.deletion.CASCADE, to='mail.account', to_field='name')),
+                (
+                    'name',
+                    models.ForeignKey(
+                        db_column='name',
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to='mail.account',
+                        to_field='name',
+                    ),
+                ),
             ],
             options={
                 'indexes': [models.Index(fields=['name', 'address'], name='mail_email_name_9708d8_idx')],
@@ -44,9 +67,22 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GroupMember',
             fields=[
-                ('member_of', models.TextField(help_text='The name of a group account (an account with the type of <b>group</b>.)')),
+                (
+                    'member_of',
+                    models.TextField(
+                        help_text='The name of a group account (an account with the type of <b>group</b>.)'
+                    ),
+                ),
                 ('django_pk', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.ForeignKey(db_column='name', on_delete=django.db.models.deletion.CASCADE, to='mail.account', to_field='name')),
+                (
+                    'name',
+                    models.ForeignKey(
+                        db_column='name',
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to='mail.account',
+                        to_field='name',
+                    ),
+                ),
             ],
             options={
                 'indexes': [models.Index(fields=['name', 'member_of'], name='mail_groupm_name_b415ef_idx')],

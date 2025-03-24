@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('authentication', '0003_user__fxa_token'),
     ]
@@ -13,6 +12,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='user',
             name='language',
-            field=models.CharField(choices=[('en', 'English'), ('de', 'German')], default='en', help_text='The language the UI and system emails will display in', max_length=16),
+            field=models.CharField(
+                choices=[('en', 'English'), ('de', 'German')],
+                default='en',
+                help_text='The language the UI and system emails will display in',
+                max_length=16,
+            ),
         ),
     ]
