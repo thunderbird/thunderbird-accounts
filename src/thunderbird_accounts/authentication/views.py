@@ -23,6 +23,7 @@ from thunderbird_accounts.authentication.utils import (
     is_already_authenticated,
     save_cache_session,
     logout_user,
+    is_email_in_allow_list,
 )
 from thunderbird_accounts.client.models import ClientEnvironment
 from thunderbird_accounts.utils.types import AccountsHttpRequest
@@ -156,9 +157,8 @@ def fxa_callback(request: AccountsHttpRequest):
     profile = profile_client.get_profile(token.get('access_token'))
 
     profile_email = profile.get('email')
-    allow_list = settings.FXA_ALLOW_LIST
 
-    if allow_list and not profile_email.endswith(tuple(allow_list.split(','))):
+    if not is_email_in_allow_list(profile_email):
         return HttpResponse(content=_('You are not allowed to sign-in.'), status=500)
 
     # Try to authenticate with fxa id and email

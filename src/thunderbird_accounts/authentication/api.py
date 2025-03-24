@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.contrib.auth import logout, update_session_auth_hash
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.urls import reverse
 from fxa.oauth import Client
@@ -9,8 +9,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from thunderbird_accounts.authentication import utils
+from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.permissions import IsClient
 from thunderbird_accounts.authentication.serializers import UserProfileSerializer
+from thunderbird_accounts.authentication.utils import is_email_in_allow_list
 from thunderbird_accounts.utils.utils import get_absolute_url
 
 
@@ -49,3 +51,33 @@ def logout_user(request: Request):
     request.user.logout()
 
     return JsonResponse({'success': True})
+
+
+@api_view(['POST'])
+@permission_classes([IsClient])
+def is_in_allow_list(request: Request):
+    email = request.data.get('email')
+
+    if not email:
+        return JsonResponse({'result': False})
+
+    response = cache.get(f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}')
+
+    # Check if we have their user data in accounts
+    if not response:
+        try:
+            user = User.objects.get(email=email)
+            response = user.email == email
+        except User.DoesNotExist:
+            pass
+
+    # If no user data, then see if their email is on the allow list
+    if not response:
+        response = is_email_in_allow_list(request.email)
+
+    # Cache the result for 1 day
+    cache.set(
+        f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}', response, settings.IS_IN_ALLOW_LIST_CACHE_MAX_AGE
+    )
+
+    return JsonResponse({'result': response})

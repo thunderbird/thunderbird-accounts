@@ -64,6 +64,9 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 LOGIN_CODE_SECRET = os.getenv('LOGIN_CODE_SECRET')
 LOGIN_MAX_AGE = 180  # 3 minutes
 
+IS_IN_ALLOW_LIST_CACHE_KEY = 'is_in_allow_list'
+IS_IN_ALLOW_LIST_CACHE_MAX_AGE = 60 * 24  # 1 day
+
 FXA_CLIENT_ID: str = os.getenv('FXA_CLIENT_ID')
 FXA_SECRET: str = os.getenv('FXA_SECRET')
 FXA_CALLBACK: str = os.getenv('FXA_CALLBACK')

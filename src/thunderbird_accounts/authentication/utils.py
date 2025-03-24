@@ -143,3 +143,11 @@ def logout_user(user: User, client: Optional[FxaOAuthClient] = None) -> bool:
         delete_cache_session(user_session)
 
     return True
+
+
+def is_email_in_allow_list(email: str):
+    allow_list = settings.FXA_ALLOW_LIST
+    if not allow_list:
+        return True
+
+    return email.endswith(tuple(allow_list.split(',')))

@@ -2,6 +2,8 @@
 Create a new Client Environment from a given Client UUID.
 """
 
+import enum
+
 from django.core.management.base import BaseCommand
 from thunderbird_accounts.client import models
 
@@ -15,6 +17,12 @@ class Command(BaseCommand):
         python manage.py create_client_environment <client_uuid> <env_type> <env_redirect_url> <env_allowed_hostnames>
 
     """
+
+    class ReturnCodes(enum.Enum):
+        OK = 0
+        ERROR = 1  # Generic error, shouldn't normally be set
+        CLIENT_DOESNT_EXIST = 2
+        ALREADY_EXISTS = 3
 
     help = 'Creates a client environment'
 
@@ -30,29 +38,42 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         client_uuid = options.get('client_uuid')
+        verbosity = options.get('verbosity', 1)
+        hostnames = options.get('env_allowed_hostnames')
+
+        hostname_list = hostnames.split(',')
 
         try:
             client = models.Client.objects.get(uuid=client_uuid)
         except models.Client.DoesNotExist:
-            self.stdout.write(self.style.ERROR(f'Client: {client_uuid} does not exist'))
-            return
+            if verbosity > 0:
+                self.stdout.write(self.style.ERROR(f'Client: {client_uuid} does not exist'))
+            return self.ReturnCodes.CLIENT_DOESNT_EXIST.value
 
         existing_env = models.ClientEnvironment.objects.filter(
             environment=options.get('env_type'), redirect_url=options.get('env_redirect_url')
         ).first()
         if existing_env:
-            self.stdout.write(
-                self.style.ERROR(f'A client environment with identical details already exists for client {client_uuid}')
-            )
-            return
+            if verbosity > 0:
+                self.stdout.write(
+                    self.style.ERROR(
+                        f'A client environment with identical details already exists for client {client_uuid}'
+                    )
+                )
+            return self.ReturnCodes.ALREADY_EXISTS.value
 
         models.ClientEnvironment.objects.create(
             client_id=client.uuid,
             environment=options.get('env_type'),
             redirect_url=options.get('env_redirect_url'),
-            allowed_hostnames=options.get('env_allowed_hostnames'),
+            allowed_hostnames=hostname_list,
         )
 
-        self.stdout.write(
-            self.style.SUCCESS(f'Successfully created client environment {options.get('env_type')} for {client.uuid}')
-        )
+        if verbosity > 0:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'Successfully created client environment {options.get('env_type')} for {client.uuid}'
+                )
+            )
+
+        return self.ReturnCodes.OK.value
