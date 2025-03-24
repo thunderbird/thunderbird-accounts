@@ -33,8 +33,6 @@ COPY static ./static/
 COPY templates ./templates/
 
 # Required for local dev work (and running tests locally)
-COPY .env .
-COPY .env.test .
 RUN ln -s /app/thunderbird_accounts src/thunderbird_accounts
 
 # Add our source code
