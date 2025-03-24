@@ -183,6 +183,8 @@ def fxa_callback(request: AccountsHttpRequest):
 @authentication_classes([IsValidFXAWebhook])
 def fxa_webhook(request: Request):
     """Main for webhooks regarding fxa"""
+
+    # We always need to return a 200, otherwise FXA will keep sending the request
     response = HttpResponse(content=_('Thank you!'), status=200)
 
     if not request.auth or not request.user:
@@ -210,13 +212,10 @@ def fxa_webhook(request: Request):
                     user.email = event_data.get('email').lower()
                     user.save()
 
-                # This should just update the profile
-                # _create_or_update_user(profile, user)
-
                 # Finally log the subscriber out
                 logout_user(user, client)
             case 'https://schemas.accounts.firefox.com/event/delete-user':
-                # TODO: Add client webhook here
+                # TODO: Add client webhook here - See #51
                 logout_user(user, client)
                 user.delete()
             case _:
