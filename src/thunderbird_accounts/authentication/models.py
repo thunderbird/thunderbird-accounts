@@ -2,7 +2,6 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.db import models
 
-from django.contrib.sessions.models import Session
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
@@ -89,17 +88,3 @@ class User(AbstractUser, BaseModel):
 
     def get_short_name(self):
         return self.display_name
-
-    def logout(self):
-        """Logs out the user from their session authentication.
-        Only setup for db sessions right now, supporting cache sessions should be trivial though."""
-        for user_session in self.usersession_set.all():
-            try:
-                session = Session.objects.get(session_key=user_session.session_key)
-                # Delete the session
-                session.delete()
-            except Session.DoesNotExist:
-                pass
-
-            # And also the user session
-            user_session.delete()
