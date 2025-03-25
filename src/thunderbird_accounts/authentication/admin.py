@@ -15,9 +15,15 @@ class CustomUserAdmin(UserAdmin):
             {'fields': ('fxa_id',)},
         ),
         (_('Timestamps'), {'fields': ('created_at', 'updated_at')}),
-
     )
-    readonly_fields = UserAdmin.readonly_fields + ('uuid', 'display_name', 'avatar_url', 'fxa_id', 'created_at', 'updated_at')
+    readonly_fields = UserAdmin.readonly_fields + (
+        'uuid',
+        'display_name',
+        'avatar_url',
+        'fxa_id',
+        'created_at',
+        'updated_at',
+    )
 
 
 admin.site.register(User, CustomUserAdmin)

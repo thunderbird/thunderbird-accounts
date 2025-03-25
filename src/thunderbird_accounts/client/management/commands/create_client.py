@@ -16,7 +16,8 @@ class Command(BaseCommand):
 
     .. code-block:: shell
 
-        python manage.py create_client <client_name> <contact_name> <contact_email> <contact_url> [--env_type <str>] [--env_redirect_url <str>] [--env_allowed_hostnames <str>]
+        python manage.py create_client <client_name> <contact_name> <contact_email> <contact_url> [--env_type <str>]
+            [--env_redirect_url <str>] [--env_allowed_hostnames <str>]
 
     """
 

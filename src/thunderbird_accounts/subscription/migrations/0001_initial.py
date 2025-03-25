@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -41,7 +40,10 @@ class Migration(migrations.Migration):
                 ('is_active', models.BooleanField()),
                 ('active_since', models.DateTimeField()),
                 ('inactive_since', models.DateTimeField()),
-                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='subscription.customer')),
+                (
+                    'customer',
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='subscription.customer'),
+                ),
             ],
             options={
                 'abstract': False,

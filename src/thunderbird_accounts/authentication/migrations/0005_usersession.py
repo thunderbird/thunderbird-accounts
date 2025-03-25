@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('authentication', '0004_user_language'),
     ]
@@ -24,7 +23,11 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
-                'indexes': [models.Index(fields=['uuid'], name='authenticat_uuid_f1b526_idx'), models.Index(fields=['created_at'], name='authenticat_created_406c61_idx'), models.Index(fields=['updated_at'], name='authenticat_updated_222183_idx')],
+                'indexes': [
+                    models.Index(fields=['uuid'], name='authenticat_uuid_f1b526_idx'),
+                    models.Index(fields=['created_at'], name='authenticat_created_406c61_idx'),
+                    models.Index(fields=['updated_at'], name='authenticat_updated_222183_idx'),
+                ],
             },
         ),
     ]

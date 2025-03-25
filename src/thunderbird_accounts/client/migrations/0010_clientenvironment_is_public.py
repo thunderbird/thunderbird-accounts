@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('client', '0009_clientenvironment_unique_lower_environment_and_redirect_url'),
     ]
@@ -13,6 +12,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='clientenvironment',
             name='is_public',
-            field=models.BooleanField(db_index=True, default=True, help_text='Are non-users allowed to sign up? Otherwise an allow list is checked.'),
+            field=models.BooleanField(
+                db_index=True,
+                default=True,
+                help_text='Are non-users allowed to sign up? Otherwise an allow list is checked.',
+            ),
         ),
     ]

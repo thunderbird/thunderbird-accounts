@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('client', '0008_alter_clientcontact_email_and_more'),
     ]
@@ -13,6 +12,10 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddConstraint(
             model_name='clientenvironment',
-            constraint=models.UniqueConstraint(models.OrderBy(django.db.models.functions.text.Lower('environment'), descending=True), models.F('redirect_url'), name='unique_lower_environment_and_redirect_url'),
+            constraint=models.UniqueConstraint(
+                models.OrderBy(django.db.models.functions.text.Lower('environment'), descending=True),
+                models.F('redirect_url'),
+                name='unique_lower_environment_and_redirect_url',
+            ),
         ),
     ]

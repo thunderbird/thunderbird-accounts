@@ -6,11 +6,9 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
@@ -23,7 +21,12 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
-                'indexes': [models.Index(fields=['uuid'], name='client_clie_uuid_82e0b3_idx'), models.Index(fields=['created_at'], name='client_clie_created_aab6e4_idx'), models.Index(fields=['updated_at'], name='client_clie_updated_b97dd2_idx'), models.Index(fields=['name'], name='client_clie_name_5f3fd4_idx')],
+                'indexes': [
+                    models.Index(fields=['uuid'], name='client_clie_uuid_82e0b3_idx'),
+                    models.Index(fields=['created_at'], name='client_clie_created_aab6e4_idx'),
+                    models.Index(fields=['updated_at'], name='client_clie_updated_b97dd2_idx'),
+                    models.Index(fields=['name'], name='client_clie_name_5f3fd4_idx'),
+                ],
             },
         ),
         migrations.CreateModel(
@@ -51,7 +54,10 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=128)),
                 ('webhook_url', models.CharField(max_length=2048)),
                 ('type', models.CharField(choices=[('auth', 'Auth'), ('subscription', 'Subscription')], max_length=32)),
-                ('client_environment', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='client.clientenvironment')),
+                (
+                    'client_environment',
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='client.clientenvironment'),
+                ),
             ],
             options={
                 'abstract': False,
@@ -70,7 +76,13 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
-                'indexes': [models.Index(fields=['uuid'], name='client_clie_uuid_d3c673_idx'), models.Index(fields=['created_at'], name='client_clie_created_30de2f_idx'), models.Index(fields=['updated_at'], name='client_clie_updated_108e37_idx'), models.Index(fields=['name'], name='client_clie_name_16f367_idx'), models.Index(fields=['email'], name='client_clie_email_d3a06e_idx')],
+                'indexes': [
+                    models.Index(fields=['uuid'], name='client_clie_uuid_d3c673_idx'),
+                    models.Index(fields=['created_at'], name='client_clie_created_30de2f_idx'),
+                    models.Index(fields=['updated_at'], name='client_clie_updated_108e37_idx'),
+                    models.Index(fields=['name'], name='client_clie_name_16f367_idx'),
+                    models.Index(fields=['email'], name='client_clie_email_d3a06e_idx'),
+                ],
             },
         ),
         migrations.AddIndex(

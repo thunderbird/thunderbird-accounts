@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('client', '0001_initial'),
     ]
@@ -58,7 +57,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='clientwebhook',
             name='type',
-            field=models.CharField(choices=[('auth', 'Auth'), ('subscription', 'Subscription')], help_text='What type of webhook is it?', max_length=32),
+            field=models.CharField(
+                choices=[('auth', 'Auth'), ('subscription', 'Subscription')],
+                help_text='What type of webhook is it?',
+                max_length=32,
+            ),
         ),
         migrations.AlterField(
             model_name='clientwebhook',

@@ -53,6 +53,8 @@ Homepage = "https://www.thunderbird.net/"
 [project.optional-dependencies]
 cli = [
     "ruff",
+    "coverage",
+    "pytest",
 ]
 
 [tool.setuptools.packages.find]

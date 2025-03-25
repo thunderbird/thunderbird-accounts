@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('authentication', '0001_initial'),
     ]
@@ -28,7 +27,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='last_used_email',
-            field=models.CharField(help_text='The email previously used to login to Mozilla Accounts', max_length=256, null=True),
+            field=models.CharField(
+                help_text='The email previously used to login to Mozilla Accounts', max_length=256, null=True
+            ),
         ),
         migrations.AlterField(
             model_name='user',
