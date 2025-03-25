@@ -20,11 +20,11 @@ class Command(BaseCommand):
 
     """
 
-    class ReturnCodes(enum.Enum):
-        OK = 0
-        ERROR = 1  # Generic error, shouldn't normally be set
-        NOT_ENOUGH_PARAMS = 2
-        ALREADY_EXISTS = 3
+    class ReturnCodes(enum.StrEnum):
+        OK = 'OK'
+        ERROR = 'ERROR'  # Generic error, shouldn't normally be set
+        NOT_ENOUGH_PARAMS = 'NOT_ENOUGH_PARAMS'
+        ALREADY_EXISTS = 'ALREADY_EXISTS'
 
     help = 'Creates a new client and optionally a client environment.'
 
