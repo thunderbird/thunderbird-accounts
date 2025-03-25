@@ -43,6 +43,11 @@ class ClientEnvironment(BaseModel):
         null=False,
         help_text=_('List of allowed hostnames for this client environment.'),
     )
+    is_public = models.BooleanField(
+        default=True,
+        help_text=_('Are non-users allowed to sign up? Otherwise an allow list is checked.'),
+        db_index=True,
+    )
 
     class Meta(BaseModel.Meta):
         indexes = [*BaseModel.Meta.indexes, models.Index(fields=['environment']), models.Index(fields=['is_active'])]

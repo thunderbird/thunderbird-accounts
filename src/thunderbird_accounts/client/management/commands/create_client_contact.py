@@ -2,6 +2,8 @@
 Create a new Client Contact from a given Client UUID.
 """
 
+import enum
+
 from django.core.management.base import BaseCommand
 from thunderbird_accounts.client import models
 
@@ -16,6 +18,12 @@ class Command(BaseCommand):
 
     """
 
+    class ReturnCodes(enum.StrEnum):
+        OK = 'OK'
+        ERROR = 'ERROR'  # Generic error, shouldn't normally be set
+        CLIENT_DOESNT_EXIST = 'CLIENT_DOESNT_EXIST'
+        ALREADY_EXISTS = 'ALREADY_EXISTS'
+
     help = 'Creates a client contact'
 
     def add_arguments(self, parser):
@@ -26,17 +34,22 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         client_uuid = options.get('client_uuid')
+        verbosity = options.get('verbosity', 1)
 
         try:
             client = models.Client.objects.get(uuid=client_uuid)
         except models.Client.DoesNotExist:
-            self.stdout.write(self.style.ERROR(f'Client: {client_uuid} does not exist'))
-            return
+            if verbosity > 0:
+                self.stdout.write(self.style.ERROR(f'Client: {client_uuid} does not exist'))
+            return self.ReturnCodes.CLIENT_DOESNT_EXIST.value
 
         existing_contact = models.ClientContact.objects.filter(email=options.get('contact_email')).first()
         if existing_contact:
-            self.stdout.write(self.style.ERROR(f'A client contact with identical details already exists for client {client_uuid}'))
-            return
+            if verbosity > 0:
+                self.stdout.write(
+                    self.style.ERROR(f'A client contact with identical details already exists for client {client_uuid}')
+                )
+            return self.ReturnCodes.ALREADY_EXISTS.value
 
         models.ClientContact.objects.create(
             client_id=client.uuid,
@@ -45,6 +58,11 @@ class Command(BaseCommand):
             website=options.get('contact_url'),
         )
 
-        self.stdout.write(
-            self.style.SUCCESS(f'Successfully created client contact {options.get('contact_name')} for {client.uuid}')
-        )
+        if verbosity > 0:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'Successfully created client contact {options.get('contact_name')} for {client.uuid}'
+                )
+            )
+
+        return self.ReturnCodes.OK.value

@@ -13,8 +13,12 @@ from django.contrib.auth import get_user_model
 
 from thunderbird_accounts.authentication.const import GET_LOGIN_PATH, BAD_CREDENTIALS_MSG
 from thunderbird_accounts.authentication.models import User, UserSession
-from thunderbird_accounts.authentication.utils import handle_auth_callback_response, save_cache_session, \
-    get_cache_session
+from thunderbird_accounts.authentication.utils import (
+    handle_auth_callback_response,
+    save_cache_session,
+    get_cache_session,
+    get_cache_allow_list_entry,
+)
 from thunderbird_accounts.client.models import Client, ClientEnvironment
 
 from thunderbird_accounts.authentication.middleware import FXABackend, ClientSetAllowedHostsMiddleware
@@ -199,40 +203,39 @@ class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
 
     def test_allowed_uses_cached_hosts(self):
         """Test that middleware uses cached hosts when available"""
-        cached_hosts = ['cached.com']
-        cache.set(settings.ALLOWED_HOSTS_CACHE_KEY, cached_hosts)
+        cached_hosts = 'cached.com'
+        settings.ALLOWED_HOSTS += [cached_hosts]
 
         self.middleware(self.request)
 
-        self.assertEqual(settings.ALLOWED_HOSTS, cached_hosts)
+        self.assertIn(cached_hosts, settings.ALLOWED_HOSTS)
 
 
 class FXAWebhooksTestCase(DRF_APITestCase):
     def setUp(self):
         self.client = APIClient()
-        self.user = User.objects.create(
-            username='Test',
-            email='test@example.org',
-            fxa_id='abc-123'
-        )
+        self.user = User.objects.create(username='Test', email='test@example.org', fxa_id='abc-123')
 
         # Clear cache before each test
-        cache.delete(settings.ALLOWED_HOSTS_CACHE_KEY)
+        cache.clear()
 
     def tearDown(self):
         # Clean up cache after tests
-        cache.delete(settings.ALLOWED_HOSTS_CACHE_KEY)
+        cache.clear()
 
     def test_fxa_process_change_password(self):
         """Ensure the change password event is handled correctly"""
-        self.client.force_authenticate(self.user, {
+        self.client.force_authenticate(
+            self.user,
+            {
                 'iss': 'https://accounts.firefox.com/',
                 'sub': 'abc-123',
                 'aud': 'REMOTE_SYSTEM',
                 'iat': 1565720808,
                 'jti': 'e19ed6c5-4816-4171-aa43-56ffe80dbda1',
                 'events': {'https://schemas.accounts.firefox.com/event/password-change': {'changeTime': 1565721242227}},
-            })
+            },
+        )
 
         # Create a user session and save it in our cache
         user_session, created = UserSession.objects.update_or_create(user_id=self.user.uuid, session_key='abc123')
@@ -334,3 +337,198 @@ class FXAWebhooksTestCase(DRF_APITestCase):
 
         # We should be logged out
         self.assertIsNone(get_cache_session(user_session.session_key))
+
+
+class AllowListTestCase(DRF_APITestCase):
+    def setUp(self):
+        cache.clear()
+
+        self.api_client = APIClient()
+        self.user = User.objects.create(username='Test', email='test@example.org', fxa_id='abc-123')
+
+        self.client = Client.objects.create(name='Test Client')
+        self.client_env = ClientEnvironment.objects.create(
+            environment='test',
+            redirect_url='http://testserver/',
+            client_id=self.client.uuid,
+            auth_token='1234',
+            is_public=False,  # Important, otherwise it'll always be yes
+        )
+        self.client_env.allowed_hostnames = ['testserver']
+        self.client_env.save()
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_client_env_is_public(self):
+        # Make the client env public
+        self.client_env.is_public = True
+        self.client_env.save()
+
+        # Normally not in allow list!
+        settings.FXA_ALLOW_LIST = '@example.net'
+        email = 'greg@example.org'
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'email': email, 'secret': self.client_env.auth_token},
+        )
+        result = response.json().get('result')
+
+        self.assertIsNotNone(result)
+        self.assertTrue(result)
+
+    def test_is_in_allow_list(self):
+        settings.FXA_ALLOW_LIST = '@example.org'
+        email = 'greg@example.org'
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'email': email, 'secret': self.client_env.auth_token},
+        )
+        result = response.json().get('result')
+
+        self.assertIsNotNone(result)
+        self.assertTrue(result)
+
+    def test_is_a_user(self):
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'email': self.user.email, 'secret': self.client_env.auth_token},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        result = response.json().get('result')
+
+        self.assertIsNotNone(result)
+        self.assertTrue(result)
+
+    def test_is_not_in_list(self):
+        settings.FXA_ALLOW_LIST = '@example.org'
+        email = 'greg@example.com'
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'email': email, 'secret': self.client_env.auth_token},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        result = response.json().get('result')
+
+        self.assertIsNotNone(result)
+        self.assertFalse(result)
+
+    def test_entry_is_cached(self):
+        """Test that the entry is cached, and is deleted on user delete"""
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'email': self.user.email, 'secret': self.client_env.auth_token},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        result = response.json().get('result')
+
+        self.assertIsNotNone(result)
+        self.assertTrue(result)
+
+        self.assertTrue(get_cache_allow_list_entry(self.user.email))
+
+        # okay lets delete the user, this should remove the cache...
+        self.user.delete()
+
+        self.assertIsNone(self.user.uuid)
+
+        self.assertFalse(get_cache_allow_list_entry(self.user.email))
+
+    def test_entry_with_updated_email_is_uncached(self):
+        """If a user's email changes via a fxa webhook, we should make sure the cache is cleared for that entry."""
+        settings.FXA_ALLOW_LIST = '@example.com'  # Not .org like the original email!
+        original_email = self.user.email
+        new_email = 'new-email@example.com'
+
+        # Wouldn't normally be in the allow list
+        self.assertFalse(original_email.endswith(settings.FXA_ALLOW_LIST))
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'email': self.user.email, 'secret': self.client_env.auth_token},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        result = response.json().get('result')
+
+        self.assertIsNotNone(result)
+        self.assertTrue(result)
+
+        self.assertTrue(get_cache_allow_list_entry(self.user.email))
+
+        # okay lets change the user's email, this should remove the cache
+        self.user.email = new_email
+        self.user.save()
+
+        # The cache entry should be gone
+        self.assertIsNone(get_cache_allow_list_entry(original_email))
+
+        # Okay the allow list should return false now
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'email': original_email, 'secret': self.client_env.auth_token},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        result = response.json().get('result')
+        self.assertIsNotNone(result)
+        self.assertFalse(result)
+
+    def test_with_no_allow_list(self):
+        settings.FXA_ALLOW_LIST = ''
+        emails = ['greg@example.org', self.user.email]
+
+        while len(emails) > 0:
+            email = emails.pop()
+            response = self.api_client.post(
+                'http://testserver/api/v1/auth/is-in-allow-list/',
+                data={'email': email, 'secret': self.client_env.auth_token},
+            )
+            result = response.json().get('result')
+
+            self.assertIsNotNone(result)
+            self.assertTrue(result)
+
+        # Make sure we've tested each email
+        self.assertEqual(len(emails), 0)
+
+    def test_with_no_email(self):
+        settings.FXA_ALLOW_LIST = '@example.org'
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'secret': self.client_env.auth_token},
+        )
+        result = response.json()
+
+        self.assertEqual(response.status_code, 400)
+        # Ensure we have an email key in the json
+        self.assertIn('email', result)
+
+    def test_with_no_secret(self):
+        settings.FXA_ALLOW_LIST = '@example.org'
+        email = 'greg@example.org'
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'email': email},
+        )
+        result = response.json()
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('detail', result)
+        self.assertEqual(result['detail'], 'Authentication credentials were not provided.')
+
+    def test_with_no_secret_or_email(self):
+        settings.FXA_ALLOW_LIST = '@example.org'
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={},
+        )
+        result = response.json()
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('detail', result)
+        self.assertEqual(result['detail'], 'Authentication credentials were not provided.')

@@ -34,7 +34,7 @@ def create_login_code(client_environment: ClientEnvironment, state: Optional[str
 
 def validate_login_code(token: str):
     token_serializer = URLSafeTimedSerializer(settings.LOGIN_CODE_SECRET, 'login')
-    contents = token_serializer.loads(token, settings.LOGIN_MAX_AGE)
+    contents = token_serializer.loads(token, settings.LOGIN_MAX_AGE_IN_SECONDS)
 
     state = contents.get('state')
     client_env_uuid = uuid.UUID(contents.get('uuid'))
@@ -106,6 +106,20 @@ def save_cache_session(user_session: UserSession):
     return caches['shared'].set(f'{USER_SESSION_CACHE_KEY}.{user_session.session_key}', user_obj)
 
 
+def get_cache_allow_list_entry(email: str):
+    return caches['default'].get(f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}')
+
+
+def set_cache_allow_list_entry(email: str, result: bool):
+    caches['default'].set(
+        f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}', result, settings.IS_IN_ALLOW_LIST_CACHE_MAX_AGE_IN_SECONDS
+    )
+
+
+def delete_cache_allow_list_entry(email: str):
+    caches['default'].delete(f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}')
+
+
 def logout_user(user: User, client: Optional[FxaOAuthClient] = None) -> bool:
     """Log out a user by:
     1. Telling FXA to delete their access token
@@ -143,3 +157,11 @@ def logout_user(user: User, client: Optional[FxaOAuthClient] = None) -> bool:
         delete_cache_session(user_session)
 
     return True
+
+
+def is_email_in_allow_list(email: str):
+    allow_list = settings.FXA_ALLOW_LIST
+    if not allow_list:
+        return True
+
+    return email.endswith(tuple(allow_list.split(',')))

@@ -21,11 +21,13 @@ class IsClient(BasePermission):
         host = request.get_host()
         client_secret = request.data.get('secret')
         if not client_secret:
+            logging.debug("[IsClient] failed: No client secret")
             return False
 
         try:
             client_env: ClientEnvironment = ClientEnvironment.objects.get(auth_token=client_secret)
         except ClientEnvironment.DoesNotExist:
+            logging.debug("[IsClient] failed: Provided secret is not associated with a client environment")
             return False
 
         allowed_hostnames = client_env.allowed_hostnames
@@ -34,6 +36,7 @@ class IsClient(BasePermission):
 
         # Check if the client env is not active, or if the host is valid
         if not client_env.is_active or not is_host_valid:
+            logging.debug("[IsClient] failed: Client environment is not active or host is invalid")
             return False
 
         # Append client_env to request
