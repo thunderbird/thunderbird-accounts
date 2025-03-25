@@ -458,7 +458,7 @@ class AllowListTestCase(DRF_APITestCase):
 
         self.assertTrue(get_cache_allow_list_entry(self.user.email))
 
-        # okay lets delete the user, this should remove the cache...
+        # okay lets change the user's email, this should remove the cache
         self.user.email = new_email
         self.user.save()
 
@@ -474,3 +474,61 @@ class AllowListTestCase(DRF_APITestCase):
         result = response.json().get('result')
         self.assertIsNotNone(result)
         self.assertFalse(result)
+
+    def test_with_no_allow_list(self):
+        settings.FXA_ALLOW_LIST = ''
+        emails = ['greg@example.org', self.user.email]
+
+        while len(emails) > 0:
+            email = emails.pop()
+            response = self.api_client.post(
+                'http://testserver/api/v1/auth/is-in-allow-list/',
+                data={'email': email, 'secret': self.client_env.auth_token},
+            )
+            result = response.json().get('result')
+
+            self.assertIsNotNone(result)
+            self.assertTrue(result)
+
+        # Make sure we've tested each email
+        self.assertEqual(len(emails), 0)
+
+    def test_with_no_email(self):
+        settings.FXA_ALLOW_LIST = '@example.org'
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'secret': self.client_env.auth_token},
+        )
+        result = response.json()
+
+        self.assertEqual(response.status_code, 400)
+        # Ensure we have an email key in the json
+        self.assertIn('email', result)
+
+    def test_with_no_secret(self):
+        settings.FXA_ALLOW_LIST = '@example.org'
+        email = 'greg@example.org'
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={'email': email},
+        )
+        result = response.json()
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('detail', result)
+        self.assertEqual(result['detail'], 'Authentication credentials were not provided.')
+
+    def test_with_no_secret_or_email(self):
+        settings.FXA_ALLOW_LIST = '@example.org'
+
+        response = self.api_client.post(
+            'http://testserver/api/v1/auth/is-in-allow-list/',
+            data={},
+        )
+        result = response.json()
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('detail', result)
+        self.assertEqual(result['detail'], 'Authentication credentials were not provided.')

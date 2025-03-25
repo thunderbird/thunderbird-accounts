@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.urls import reverse
 from fxa.oauth import Client
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import NotAuthenticated
+from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -66,7 +66,7 @@ def is_in_allow_list(request: Request):
     email = request.data.get('email')
 
     if not email:
-        return JsonResponse({'result': False})
+        raise ValidationError({'email': 'Please provide an email address.'})
 
     response = get_cache_allow_list_entry(email)
 

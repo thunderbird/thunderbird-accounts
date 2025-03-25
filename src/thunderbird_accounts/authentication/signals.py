@@ -8,7 +8,7 @@ from thunderbird_accounts.authentication.utils import delete_cache_allow_list_en
 
 
 @receiver(post_delete, sender=User)
-def user_post_delete(sender, instance, **kwargs):
+def user_post_delete(instance, **kwargs):
     """Django doesn't recommend using signals anymore, but we need to remove this cache entry
     and this is the only way to catch Query deletes and instance deletes."""
     logging.debug(f'[user_post_delete] Clearing allow list entry for {instance.email}')
