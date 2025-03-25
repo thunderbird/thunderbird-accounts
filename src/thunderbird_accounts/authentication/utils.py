@@ -34,7 +34,7 @@ def create_login_code(client_environment: ClientEnvironment, state: Optional[str
 
 def validate_login_code(token: str):
     token_serializer = URLSafeTimedSerializer(settings.LOGIN_CODE_SECRET, 'login')
-    contents = token_serializer.loads(token, settings.LOGIN_MAX_AGE)
+    contents = token_serializer.loads(token, settings.LOGIN_MAX_AGE_IN_SECONDS)
 
     state = contents.get('state')
     client_env_uuid = uuid.UUID(contents.get('uuid'))
@@ -112,7 +112,7 @@ def get_cache_allow_list_entry(email: str):
 
 def set_cache_allow_list_entry(email: str, result: bool):
     caches['default'].set(
-        f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}', result, settings.IS_IN_ALLOW_LIST_CACHE_MAX_AGE
+        f'{settings.IS_IN_ALLOW_LIST_CACHE_KEY}:{email}', result, settings.IS_IN_ALLOW_LIST_CACHE_MAX_AGE_IN_SECONDS
     )
 
 
