@@ -62,14 +62,14 @@ const onDeleteAppPassword = async (evt) => {
 <template>
   <div class="form-container">
     <notice-bar type="error" v-if="errorText">{{ errorText }}</notice-bar>
-    <p>Create App Passwords to login to mail clients like Thunderbird! You cannot view the password after creating it, so make sure to save it.</p>
+    <p data-testid="app-passwords-create-description">Create App Passwords to login to mail clients like Thunderbird! You cannot view the password after creating it, so make sure to save it.</p>
     <div class="container">
       <div>
         <h3>Existing App Passwords</h3>
         <form id="delete-app-password-form" ref="deleteAppPasswordFormRef" method="post" action="/self-serve/app-passwords/remove">
           <ul class="app-passwords" v-if="appPasswords?.length > 0">
-            <li class="app-password" v-for="password in appPasswords" :key="password">{{ password }}
-              <secondary-button size="small" :value="password" @click.capture="onDeleteAppPassword" :aria-label="`Delete ${password} app password.`">Delete</secondary-button>
+            <li class="app-password" v-for="password in appPasswords" :key="password" :data-testid="'app-passwords-existing-password-' + t(password)">{{ password }}
+              <secondary-button size="small" :value="password" @click.capture="onDeleteAppPassword" :data-testid="'app-passwords-delete-password-btn-' + t(password)" :aria-label="`Delete ${password} app password.`">Delete</secondary-button>
             </li>
           </ul>
           <p v-else>You don't have any App Passwords.</p>
@@ -78,9 +78,9 @@ const onDeleteAppPassword = async (evt) => {
       <div>
         <h3>Add a new App Password</h3>
         <form id="new-app-password-form" ref="newAppPasswordFormRef" name="addForm" method="post" action="/self-serve/app-passwords/add" v-if="appPasswords?.length === 0">
-          <text-input name="name">Name</text-input>
-          <text-input name="password" type="password">Password</text-input>
-          <primary-button @click.capture="onAddAppPassword">Add</primary-button>
+          <text-input name="name" data-testid="app-passwords-add-name-input">Name</text-input>
+          <text-input name="password" data-testid="app-passwords-add-password-input" type="password">Password</text-input>
+          <primary-button data-testid="app-passwords-add-btn" @click.capture="onAddAppPassword">Add</primary-button>
           <csrf-token></csrf-token>
         </form>
         <p v-else>You have reached the maximum number of App Passwords you can create.</p>

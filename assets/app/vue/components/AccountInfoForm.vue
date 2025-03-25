@@ -30,8 +30,8 @@ const onDeleteAccount = () => {
     </div>
     <div>
       <h3>Delete Account</h3>
-      <p>You can delete your account and all associated information (including your email address, and emails!)</p>
-      <secondary-button @click.capture="onDeleteAccount">Delete Account</secondary-button>
+      <p data-testid="account-info-delete-account-description">You can delete your account and all associated information (including your email address, and emails!)</p>
+      <secondary-button data-testid="account-info-delete-account-btn" @click.capture="onDeleteAccount">Delete Account</secondary-button>
     </div>
   </div>
 </template>
