@@ -26,17 +26,16 @@ const onSubmit = () => {
   <div class="form-container">
     <notice-bar type="error" v-if="errorText">{{ errorText }}</notice-bar>
     <div class="container">
-      <p>Thank you for your interest in signing up. Please enter a desired email address, and select a domain below.</p>
+      <p data-testid="sign-up-description-text">Thank you for your interest in signing up. Please enter a desired email address, and select a domain below.</p>
       <form id="sign-up-flow-form" ref="signUpFlow" method="POST" action="/sign-up/submit">
         <div class="split-input">
-          <text-input name="email_address" required="required">Email Address</text-input>
-          @
-          <select-input name="email_domain" :options="availableDomains" :model-value="selectedDomain" required="required">Domain</select-input>
+          <text-input name="email_address" required="required" data-testid="sign-up-email-address-input">Email Address</text-input>
+          <select-input name="email_domain" :options="availableDomains" :model-value="selectedDomain" required="required" data-testid="sign-up-domain-input">Domain</select-input>
         </div>
-        <text-input :model-value="userLoginEmail" disabled="disabled" help="You'll use this email to login via Mozilla Accounts to our self-serve page and to your mail client">Login Username / Email</text-input>
-        <text-input name="app_password" required="required" type="password" help="You'll use this password sign-in to your mail client">App Password</text-input>
+        <text-input :model-value="userLoginEmail" disabled="disabled" help="You'll use this email to login via Mozilla Accounts to our self-serve page and to your mail client" data-testid="sign-up-login-username-input">Login Username / Email</text-input>
+        <text-input name="app_password" required="required" type="password" help="You'll use this password sign-in to your mail client" data-testid="sign-up-app-password-input">App Password</text-input>
         <br/>
-        <primary-button @click.capture="onSubmit" id="sign-up-btn">Sign Up</primary-button>
+        <primary-button @click.capture="onSubmit" id="sign-up-btn" data-testid="sign-up-sign-up-btn">Sign Up</primary-button>
         <csrf-token></csrf-token>
       </form>
     </div>
