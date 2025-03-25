@@ -68,8 +68,8 @@ const onDeleteAppPassword = async (evt) => {
         <h3>Existing App Passwords</h3>
         <form id="delete-app-password-form" ref="deleteAppPasswordFormRef" method="post" action="/self-serve/app-passwords/remove">
           <ul class="app-passwords" v-if="appPasswords?.length > 0">
-            <li class="app-password" v-for="password in appPasswords" :key="password" :data-testid="'app-passwords-existing-password-' + t(password)">{{ password }}
-              <secondary-button size="small" :value="password" @click.capture="onDeleteAppPassword" :data-testid="'app-passwords-delete-password-btn-' + t(password)" :aria-label="`Delete ${password} app password.`">Delete</secondary-button>
+            <li class="app-password" v-for="password in appPasswords" :key="password" :data-testid="'app-passwords-existing-password-' + password">{{ password }}
+              <secondary-button size="small" :value="password" @click.capture="onDeleteAppPassword" :data-testid="'app-passwords-delete-app-password-btn-' + password" :aria-label="`Delete ${password} app password.`">Delete</secondary-button>
             </li>
           </ul>
           <p v-else>You don't have any App Passwords.</p>
