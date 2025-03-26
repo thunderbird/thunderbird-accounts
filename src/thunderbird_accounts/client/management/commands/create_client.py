@@ -65,8 +65,8 @@ class Command(BaseCommand):
         make_env = [env, env_redirect_url, env_allowed_hostnames]
         verbosity = options.get('verbosity', 1)
 
-        client_contact_result = create_client_contact.Command.ReturnCodes.ERROR
-        client_env_result = create_client_environment.Command.ReturnCodes.ERROR
+        client_contact_result = create_client_contact.Command.ReturnCodes.ERROR.value
+        client_env_result = create_client_environment.Command.ReturnCodes.ERROR.value
 
         if any(make_env) and not all(make_env):
             if verbosity > 0:
@@ -101,7 +101,16 @@ class Command(BaseCommand):
                 self.style.SUCCESS(f'Your client was successfully created with the uuid of {client.uuid}')
             )
 
-        if all([client, client_contact_result == 0, client_env_result == 0]) and verbosity > 0:
+        if (
+            all(
+                [
+                    client,
+                    client_contact_result == create_client_contact.Command.ReturnCodes.OK.value,
+                    client_env_result == create_client_environment.Command.ReturnCodes.OK.value,
+                ]
+            )
+            and verbosity > 0
+        ):
             self.stdout.write(self.style.SUCCESS('Your Client Details:'))
             self.stdout.write(self.style.SUCCESS(f'* Client ID: {client.uuid}'))
             self.stdout.write(self.style.SUCCESS(f'* Client Secret: {client.clientenvironment_set.first().auth_token}'))
