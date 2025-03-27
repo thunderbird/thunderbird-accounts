@@ -8,30 +8,30 @@
       <h3>Receiving Email</h3>
       <div>
         <h4 id="imap">IMAP</h4>
-        <p><b>Server Name:</b> {{ IMAP.HOST }}</p>
-        <p><b>Server Port:</b> {{ IMAP.PORT }}</p>
-        <p><b>Security:</b> {% if IMAP.TLS %}SSL/TLS{% else %}None{% endif %}</p>
-        <p><b>Username:</b> {{ mail_username }}</p>
-        <p><b>Password:</b> Your App Password</p>
+        <p data-testid="connection-info-imap-server"><b>Server Name:</b> {{ IMAP.HOST }}</p>
+        <p data-testid="connection-info-imap-port"><b>Server Port:</b> {{ IMAP.PORT }}</p>
+        <p data-testid="connection-info-imap-security"><b>Security:</b> {% if IMAP.TLS %}SSL/TLS{% else %}None{% endif %}</p>
+        <p data-testid="connection-info-imap-username"><b>Username:</b> {{ mail_username }}</p>
+        <p data-testid="connection-info-imap-password"><b>Password:</b> Your App Password</p>
       </div>
       <div>
         <h4 id="jmap">JMAP</h4>
-        <p><b>Server Name:</b> {{ JMAP.HOST }}</p>
-        <p><b>Server Port:</b> {{ JMAP.PORT }}</p>
-        <p><b>Security:</b> {% if JMAP.TLS %}SSL/TLS{% else %}None{% endif %}</p>
-        <p><b>Username:</b> {{ mail_username }}</p>
-        <p><b>Password:</b> Your App Password</p>
+        <p data-testid="connection-info-jmap-server"><b>Server Name:</b> {{ JMAP.HOST }}</p>
+        <p data-testid="connection-info-jmap-port"><b>Server Port:</b> {{ JMAP.PORT }}</p>
+        <p data-testid="connection-info-jmap-security"><b>Security:</b> {% if JMAP.TLS %}SSL/TLS{% else %}None{% endif %}</p>
+        <p data-testid="connection-info-jmap-username"><b>Username:</b> {{ mail_username }}</p>
+        <p data-testid="connection-info-jmap-password"><b>Password:</b> Your App Password</p>
       </div>
     </div>
     <div class="sending-email">
       <h3>Sending Email</h3>
       <div>
         <h4 id="smtp">SMTP</h4>
-        <p><b>Server Name:</b> {{ SMTP.HOST }}</p>
-        <p><b>Server Port:</b> {{ SMTP.PORT }}</p>
-        <p><b>Security:</b> {% if SMTP.TLS %}SSL/TLS{% else %}None{% endif %}</p>
-        <p><b>Username:</b> {{ mail_username }}</p>
-        <p><b>Password:</b> Your App Password</p>
+        <p data-testid="connection-info-smtp-server"><b>Server Name:</b> {{ SMTP.HOST }}</p>
+        <p data-testid="connection-info-smtp-port"><b>Server Port:</b> {{ SMTP.PORT }}</p>
+        <p data-testid="connection-info-smtp-security"><b>Security:</b> {% if SMTP.TLS %}SSL/TLS{% else %}None{% endif %}</p>
+        <p data-testid="connection-info-smtp-username"><b>Username:</b> {{ mail_username }}</p>
+        <p data-testid="connection-info-smtp-password"><b>Password:</b> Your App Password</p>
       </div>
     </div>
   </div>

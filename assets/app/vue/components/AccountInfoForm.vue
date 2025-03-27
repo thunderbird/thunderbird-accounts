@@ -25,13 +25,13 @@ const onDeleteAccount = () => {
     <notice-bar type="error" v-if="errorText">{{ errorText }}</notice-bar>
     <div v-if="!hasAccount">
       <h3>Email</h3>
-      <p>You have not setup your email address. Click below to get started!</p>
-      <primary-button @click.capture="onSetUp">Set Up</primary-button>
+      <p data-testid="account-info-no-email-setup-text">You have not setup your email address. Click below to get started!</p>
+      <primary-button data-testid="account-info-email-setup-btn" @click.capture="onSetUp">Set Up</primary-button>
     </div>
     <div>
       <h3>Delete Account</h3>
-      <p>You can delete your account and all associated information (including your email address, and emails!)</p>
-      <secondary-button @click.capture="onDeleteAccount">Delete Account</secondary-button>
+      <p data-testid="account-info-delete-account-description">You can delete your account and all associated information (including your email address, and emails!)</p>
+      <secondary-button data-testid="account-info-delete-account-btn" @click.capture="onDeleteAccount">Delete Account</secondary-button>
     </div>
   </div>
 </template>

@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 import { SelfServePage } from '../pages/self-serve-page';
 import { FxAPage } from '../pages/fxa-page';
 import { PLAYWRIGHT_TAG_E2E_SUITE, TIMEOUT_2_SECONDS } from '../const/constants';
-import exp from 'constants';
 
 let selfServePage: SelfServePage;
 let fxaPage: FxAPage;
