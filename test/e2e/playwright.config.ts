@@ -25,6 +25,10 @@ export default defineConfig({
   timeout: 2 * 60 * 1000,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [['list']],
+
+  // dir for screenshots
+  outputDir: 'e2e-artifacts',
+
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -32,6 +36,10 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+
+
+    // Capture screenshots on failure
+    screenshot: 'only-on-failure',
   },
 
   /* Configure projects for major browsers */
