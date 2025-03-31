@@ -2,7 +2,8 @@
 
 :root {
   --border-color: #273347;
-  --background-color: #0f172a;
+  /* --background-color: #0f172a; */
+  --background-color: #1a202c;
   --border-radius: 4px;
   font-size: 16px;
 }
@@ -21,6 +22,10 @@ body {
 
   height: 100%;
   width: 100%;
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
 
   font-family: "Inter", sans-serif;
   font-size: 1rem;
@@ -53,7 +58,7 @@ header {
 .callout {
   border: 0.063rem solid var(--border-color);
   border-radius: var(--border-radius);
-  padding: 0.5rem;
+  padding: 1.5rem;
   margin-top: 1.5rem;
 }
 
@@ -112,4 +117,58 @@ input[type="submit"] {
   padding: 0 1rem;
   border-radius: var(--border-radius);
   font-size: 0.875rem;
+}
+
+
+#footer {
+  position: relative;
+  margin-top: auto;
+  margin-bottom: 0;
+  min-height: 10rem;
+  display: flex;
+  color: #e4e4e7;
+
+  a {
+    --legal-txt: #e4e4e7;
+    color: var(--legal-txt);
+    text-decoration-color: var(--legal-txt);
+    text-underline-offset: 0.25em;
+    text-decoration-thickness: 0.12em;
+    text-decoration-style: solid;
+    transition: font-size 0.2s, text-decoration-color 0.2s;
+  }
+
+  svg {
+    width: 100%;
+    height: 100%
+  }
+
+  .mzla {
+    display: grid;
+    place-items: center;
+    gap: 0.9375rem;
+    text-align: center;
+    max-inline-size: 75ch;
+
+    position: relative;
+    padding-inline: 1rem;
+    padding-block: clamp(1rem, 5.469vw, 2.375rem);
+    margin-inline: auto;
+    max-width: 1280px;
+    overflow: hidden;
+  }
+
+  .mozilla-logo {
+    --accent: white;
+    width: 7.6875rem;
+    max-width: 100%;
+  }
+
+  .legal-links {
+    font-size: 1rem;
+    display: flex;
+    gap: 1.875rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
