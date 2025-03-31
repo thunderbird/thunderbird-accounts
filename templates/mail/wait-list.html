@@ -12,99 +12,104 @@
   <link rel="stylesheet" href="{% static 'css/wait-list.css' %}">
 </head>
 <body>
-  <div class="container">
-    <header class="header">
+<div class="container">
+  <header class="header">
       <span>
         <pre><code>$ thunderbird --version=pro</code></pre>
       </span>
-      <h1>For Those Who Know</h1>
-      <h2>The power tool for digital communication</h2>
-    </header>
-    <section class="callout">
+    <h1>For Those Who Know</h1>
+    <h2>The power tool for digital communication</h2>
+  </header>
+  <section class="callout">
       <span>
         <code><pre>&gt;&gt; features</pre></code>
       </span>
-      <span class="output">
+    <span class="output">
         <pre><code>[email_service, appointment, send, assist]</code></pre>
       </span>
-    </section>
-    <section class="callout">
+  </section>
+  <section class="callout">
       <span>
         <pre><code>&gt;&gt; philosophy</code></pre>
       </span>
-      <span class="output">
+    <span class="output">
         <pre><code>open_source & privacy_focused & user_controlled</code></pre>
       </span>
-    </section>
-    <section class="callout">
+  </section>
+  <section class="callout">
       <span>
         <pre><code>&gt;&gt; status</code></pre>
       </span>
-      <span class="output">
+    <span class="output">
         <pre><code>beta_signup.is_open=true</code></pre>
       </span>
-    </section>
-    <div class="form-container">
-      <h3>Join the Waitlist</h3>
-      <div id="mc_embed_shell">
-        <div id="mc_embed_signup">
-          <form
-            action="{{form_action}}"
-            method="post"
-            id="mc-embedded-subscribe-form"
-            name="mc-embedded-subscribe-form"
-            class="validate"
-            target="_self"
-            novalidate=""
-          >
-            <div id="mc_embed_signup_scroll">
-              <div class="mc-field-group form-inputs">
-                <input
-                  type="email"
-                  name="EMAIL"
-                  class="required email"
-                  id="mce-EMAIL"
-                  required=""
-                  value=""
-                  placeholder="email@domain.com"
-                />
-                <input
-                  type="submit"
-                  name="subscribe"
-                  id="mc-embedded-subscribe"
-                  class="button"
-                  value="Submit &#8594;"
-                />
-              </div>
-              <div hidden="">
-                <input type="hidden" name="tags" value="10526643" />
-              </div>
-              <div id="mce-responses" class="clear">
-                <div
-                  class="response"
-                  id="mce-error-response"
-                  style="display: none"
-                ></div>
-                <div
-                  class="response"
-                  id="mce-success-response"
-                  style="display: none"
-                ></div>
-              </div>
-              <div style="position: absolute; left: -5000px" aria-hidden="true">
-                <input
-                  type="text"
-                  name="b_b7a94f022286353777c825b60_8950d99234"
-                  tabindex="-1"
-                  value=""
-                />
-              </div>
+  </section>
+  <div class="form-container">
+    <h3>Join the Waitlist</h3>
+    <div id="mc_embed_shell">
+      <div id="mc_embed_signup">
+        <form
+          action="{{ form_action }}"
+          method="post"
+          id="mc-embedded-subscribe-form"
+          name="mc-embedded-subscribe-form"
+          class="validate"
+          target="_self"
+          novalidate=""
+        >
+          <div id="mc_embed_signup_scroll">
+            <div class="mc-field-group form-inputs">
+              <input
+                type="email"
+                name="EMAIL"
+                class="required email"
+                id="mce-EMAIL"
+                required=""
+                value=""
+                placeholder="email@domain.com"
+              />
+              <input
+                type="submit"
+                name="subscribe"
+                id="mc-embedded-subscribe"
+                class="button"
+                value="Submit &#8594;"
+              />
             </div>
-          </form>
-        </div>
+            <div hidden="">
+              <input type="hidden" name="tags" value="10526643"/>
+            </div>
+            <div id="mce-responses" class="clear">
+              <div
+                class="response"
+                id="mce-error-response"
+                style="display: none"
+              ></div>
+              <div
+                class="response"
+                id="mce-success-response"
+                style="display: none"
+              ></div>
+            </div>
+            <div style="position: absolute; left: -5000px" aria-hidden="true">
+              <input
+                type="text"
+                name="b_b7a94f022286353777c825b60_8950d99234"
+                tabindex="-1"
+                value=""
+              />
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   </div>
+  <a href="https://www.thunderbird.net" class="tb-logo">
+    <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M452.16 306.5H452.092H452.001C396.001 329.5 390 380.91 399 408.566C399 408.566 399.001 408.774 398.986 409.152C431.405 386.352 472.861 374.065 511.998 374.065C607.063 374.065 684.129 436.947 684.129 514.516C684.129 592.085 607.063 654.967 511.998 654.967C511.264 654.967 510.449 654.936 509.587 654.904C505.069 654.736 499.249 654.52 496.891 658.361C494.082 662.935 500.275 669.969 503.841 674.004C541.004 716.044 594.909 721.327 609.066 722.715C609.976 722.804 610.722 722.877 611.289 722.943C486.411 735.02 339.913 655.242 339.867 516.566C339.856 483.878 351.932 456.096 371.21 433.983C371.164 433.977 371.118 433.97 371.071 433.964C371.039 433.959 371.007 433.955 370.975 433.95C375.218 362.99 347.972 278.133 297.007 261.447C293.401 260.266 289.828 262.978 289.378 266.746C282.676 322.875 268.163 342.33 252.508 363.318C229.02 394.805 211.952 431.197 212.696 471.162C204.172 453.322 197.261 434.697 192.132 415.439C191.437 412.829 187.144 404.814 182.421 407.502C178.648 409.65 175.806 415.522 173.774 421.644C166.008 450.792 162 481.89 162 511.999C162 702.646 321.68 862 512.001 862C705.301 862 862.001 705.299 862.001 512C862.001 438.3 839.222 369.921 800.32 313.519C801.941 313.489 803.566 313.474 805.195 313.474C820.302 313.474 835.037 314.766 849.243 317.221C827.829 293.427 798.94 274.194 765.314 261.702C787.763 253.561 812.289 248.516 838.069 247.239C796.454 213.252 735.735 191.835 668.115 191.835C570.242 191.835 474.2 229.451 452.16 306.5ZM472.046 573.851C446.695 547.466 370.77 459.824 370.77 459.824L376.647 460.076L495.501 548.851C504.406 555.319 517.098 555.254 525.922 548.695L642.469 460.191L648.657 459.71C648.657 459.71 575.214 545.276 547.085 573.467C518.955 601.658 497.396 600.235 472.046 573.851ZM552.957 279.776C552.957 279.776 554.569 298.012 536.149 303.813C515.093 310.444 505.76 292.732 505.76 292.732C505.76 292.732 508.407 280.569 525.491 274.943C543.74 268.933 552.957 279.776 552.957 279.776Z" fill="white"/>
+    </svg>
+  </a>
+</div>
 <footer id="footer">
   <div class="mzla container">
     <a href="https://mozilla.org" class="mozilla-logo">

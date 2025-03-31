@@ -20,7 +20,6 @@ body {
   background-color: var(--background-color);
   color: white;
 
-  height: 100%;
   width: 100%;
   min-height: 100vh;
 
@@ -119,6 +118,17 @@ input[type="submit"] {
   font-size: 0.875rem;
 }
 
+.tb-logo {
+  display: flex;
+  justify-content: center;
+  margin: 2.25rem auto 4.0rem;
+
+  svg {
+    width: 3rem;
+    height: auto;
+  }
+}
+
 
 #footer {
   position: relative;
@@ -127,6 +137,8 @@ input[type="submit"] {
   min-height: 10rem;
   display: flex;
   color: #e4e4e7;
+  background-color: black;
+  line-height: 1.6;
 
   a {
     --legal-txt: #e4e4e7;
@@ -136,6 +148,7 @@ input[type="submit"] {
     text-decoration-thickness: 0.12em;
     text-decoration-style: solid;
     transition: font-size 0.2s, text-decoration-color 0.2s;
+    font-size: 1rem;
   }
 
   svg {
@@ -152,7 +165,7 @@ input[type="submit"] {
 
     position: relative;
     padding-inline: 1rem;
-    padding-block: clamp(1rem, 5.469vw, 2.375rem);
+    padding-block: clamp(1rem, 5.469vw, 6.375rem);
     margin-inline: auto;
     max-width: 1280px;
     overflow: hidden;
