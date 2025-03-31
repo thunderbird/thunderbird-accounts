@@ -66,6 +66,8 @@ mermaid_d3_zoom = True
 source_code_repository = 'https://github.com/thunderbird/thunderbird-pro-services'
 source_code_repository_branch = 'main'
 
+# Set APP_ENV to docs, this should disable redis and use a local cache to prevent errors
+os.environ['APP_ENV'] = 'docs'
 
 def linkcode_resolve(domain, info):
     """Resolve our external repo links, including code to highlight the function.

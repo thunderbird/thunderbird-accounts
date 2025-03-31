@@ -32,6 +32,8 @@ elif not APP_ENV:
 # Refresh app_env in case we just loaded a dotenv
 APP_ENV = os.getenv('APP_ENV')
 
+IS_DOCS = APP_ENV == 'docs'
+
 # Only allow DEBUG on dev or test envs.
 DEBUG: bool = os.getenv('APP_DEBUG') and (APP_ENV == 'dev' or APP_ENV == 'test')
 
@@ -230,7 +232,7 @@ AVAILABLE_CACHES = {
     },
 }
 
-CACHES = AVAILABLE_CACHES['test'] if IS_TEST else AVAILABLE_CACHES['dev']
+CACHES = AVAILABLE_CACHES['test'] if IS_TEST or IS_DOCS else AVAILABLE_CACHES['dev']
 
 STORAGES = {
     'staticfiles': {
