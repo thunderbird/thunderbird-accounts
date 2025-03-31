@@ -21,6 +21,7 @@ Contents
     mail.rst
     internal_client_env.rst
     building.rst
+    deploying-thundermail-waiting-list.rst
 
 Indices and tables
 ==================

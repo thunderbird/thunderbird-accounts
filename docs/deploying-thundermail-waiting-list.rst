@@ -19,6 +19,14 @@ So you should see a folder structure like:
   ./index.html
   ./svg
 
-Finally edit the css path inside index.html to be `"/css/wait-list.css"`.
+Next you'll need to edit some paths to remove `/static/`.
+
+In `index.html` edit the css path to be `"/css/wait-list.css"`.
+
+In `css/fonts/inter.css` bulk edit the string `/static/` to `/`.
 
 Once done that directory's contents to the s3 bucket.
+
+Once everything is uploaded to s3, head over to the cloudfront distribution and create an invalidation for the path `/*`.
+
+After a few seconds it should be live at www.thundermail.com.
