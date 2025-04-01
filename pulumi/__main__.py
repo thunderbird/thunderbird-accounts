@@ -3,6 +3,7 @@
 import pulumi
 import pulumi_cloudflare as cloudflare
 import tb_pulumi
+import tb_pulumi.ci
 import tb_pulumi.ec2
 import tb_pulumi.elasticache
 import tb_pulumi.fargate
@@ -92,3 +93,8 @@ cloudflare_backend_record = cloudflare.Record(
     ttl=1,  # ttl units are *minutes*
     opts=pulumi.ResourceOptions(depends_on=[fargate]),
 )
+
+# This is only managed by a single stack, so a configuration may not exist for it
+if 'tb:ci:AwsAutomationUser' in resources and 'ci' in resources['tb:ci:AwsAutomationUser']:
+    ci_opts = resources['tb:ci:AwsAutomationUser']['ci']
+    ci_iam = tb_pulumi.ci.AwsAutomationUser(name=f'{project.project}-ci', project=project, **ci_opts)
