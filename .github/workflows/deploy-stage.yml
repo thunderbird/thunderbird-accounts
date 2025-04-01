@@ -112,6 +112,7 @@ jobs:
         shell: bash
         env:
           ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:${{ github.sha }}"
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |
           # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
           # to do with the GHA workflow "env" settings above.
@@ -133,9 +134,6 @@ jobs:
           # Use yq to merge the stump into the main config
           yq -i '. *= load("newimage.yaml")' config.stage.yaml
 
-          # Set up the Pulumi environment and update the service
-          export PULUMI_ACCESS_TOKEN="${{ secrets.PULUMI_ACCESS_TOKEN }}"
-          
           source ./venv/bin/activate
           pulumi login
           pulumi stack select thunderbird/accounts/stage
