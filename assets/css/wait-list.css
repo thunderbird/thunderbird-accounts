@@ -63,13 +63,15 @@ header {
 
 code {
   color: #5695e1;
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
 }
 
 .output code {
   color: #bbc7d3;
-  font-size: 0.7rem;
+  font-size: 0.9rem;
+  text-wrap: wrap;
+  font-weight: 300;
 }
 
 .form-container {
@@ -79,7 +81,7 @@ code {
   margin-top: 1.5rem;
 
   h3 {
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
   }
 }
 
@@ -98,14 +100,14 @@ code {
 }
 
 input[type="email"] {
-  font-size: 0.875rem;
+  font-size: 1rem;
   color: #9ba2ae;
   background-color: var(--background-color);
   border: 0.063rem solid var(--border-color);
   border-radius: var(--border-radius);
   padding: 0.15rem;
   padding-left: 0.5rem;
-  line-height: 1.75rem;
+  line-height: 2.5rem;
   max-width: 100%;
 }
 
@@ -178,7 +180,7 @@ input[type="submit"] {
   }
 
   .legal-links {
-    font-size: 1rem;
+    font-size: 0.9rem;
     display: flex;
     gap: 1.875rem;
     flex-wrap: wrap;
