@@ -6,10 +6,12 @@ import { connectionInfo } from '../const/types';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
-  CONNECTION_LOCALHOST,
   IMAP_SERVER_PORT,
   JMAP_SERVER_PORT,
   SMTP_SERVER_PORT,
+  IMAP_SERVER_HOST,
+  JMAP_SERVER_HOST,
+  SMTP_SERVER_HOST,
   SECURITY_SSL_TLS,
   USERNAME_NONE,
   APP_PASSWORD_NONE,
@@ -35,7 +37,7 @@ test.describe('self-serve hub connection info', {
 
     // imap details
     var expectedInfo: connectionInfo = {
-      'serverName': CONNECTION_LOCALHOST,
+      'serverName': IMAP_SERVER_HOST,
       'serverPort': IMAP_SERVER_PORT,
       'securityType': SECURITY_SSL_TLS,
       'userName': USERNAME_NONE,
@@ -46,10 +48,12 @@ test.describe('self-serve hub connection info', {
     await selfServePage.checkIMAPInfo(expectedInfo);
 
     // jmap details
+    expectedInfo['serverName'] = JMAP_SERVER_HOST;
     expectedInfo['serverPort'] = JMAP_SERVER_PORT;
     await selfServePage.checkJMAPInfo(expectedInfo);
 
     // smtp details
+    expectedInfo['serverName'] = SMTP_SERVER_HOST;
     expectedInfo['serverPort'] = SMTP_SERVER_PORT;
     await selfServePage.checkSMTPInfo(expectedInfo);
   });
