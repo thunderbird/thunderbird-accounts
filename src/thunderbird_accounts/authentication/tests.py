@@ -1,6 +1,7 @@
 import base64
 import datetime
 import uuid
+from unittest.mock import patch
 
 from django.conf import settings
 from django.core.cache import cache
@@ -310,7 +311,8 @@ class FXAWebhooksTestCase(DRF_APITestCase):
         # TODO: Profile updating? (this happens on login so not to concerned.)
 
     def test_fxa_process_delete_user(self):
-        self.client.force_authenticate(
+        client = APIClient()
+        client.force_authenticate(
             self.user,
             {
                 'iss': 'https://accounts.firefox.com/',
@@ -328,7 +330,7 @@ class FXAWebhooksTestCase(DRF_APITestCase):
         self.assertIsNotNone(get_cache_session(user_session.session_key))
 
         # Trigger the delete user event
-        response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
+        response = client.post('http://testserver/api/v1/auth/fxa/webhook')
         self.assertEqual(response.status_code, 200, response.content)
 
         # We shouldn't exist anymore
