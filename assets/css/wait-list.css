@@ -97,6 +97,10 @@ code {
   > :last-child {
     flex: 0;
   }
+
+  @media (max-width: 25rem) {
+    flex-direction: column;
+  }
 }
 
 input[type="email"] {
@@ -118,6 +122,10 @@ input[type="submit"] {
   padding: 0 1rem;
   border-radius: var(--border-radius);
   font-size: 0.875rem;
+
+  @media (max-width: 25.0rem) {
+    min-height: 2rem;
+  }
 }
 
 .tb-logo {
