@@ -137,4 +137,6 @@ jobs:
           source ./venv/bin/activate
           pulumi login
           pulumi stack select thunderbird/accounts/stage
-          pulumi up -y --diff
+          pulumi up -y --diff \
+            --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-taskdef' \
+            --target-dependencies
