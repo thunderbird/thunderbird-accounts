@@ -25,6 +25,7 @@ dependencies = [
     "servestatic>=3.0.0",
     "sentry-sdk[django]>=2.22.0",
     "requests>=2.32.3",
+    "celery[redis]>=5.5.0",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"

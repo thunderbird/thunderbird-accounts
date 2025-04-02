@@ -204,11 +204,11 @@ AVAILABLE_CACHES = {
     'dev': {
         'default': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-            'LOCATION': f'{os.getenv('REDIS_URL')}/{os.getenv('REDIS_INTERNAL_DB')}',
+            'LOCATION': f'{os.getenv("REDIS_URL")}/{os.getenv("REDIS_INTERNAL_DB")}',
         },
         'shared': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-            'LOCATION': f'{os.getenv('REDIS_URL')}/{os.getenv('REDIS_SHARED_DB')}',
+            'LOCATION': f'{os.getenv("REDIS_URL")}/{os.getenv("REDIS_SHARED_DB")}',
             'TIMEOUT': None,  # No expiry
             'MAX_ENTRIES': 300_000_000,  # TODO: Come up with a solution to also remove db entries
             'OPTIONS': {
@@ -324,3 +324,10 @@ ALLOWED_EMAIL_DOMAINS = ['tb.pro', 'tbpro.com']
 
 # Required otherwise a manifest error will be generated
 SERVESTATIC_MANIFEST_STRICT = False
+
+# Celery settings, these are prefixed by CELERY_ and are otherwise just celery parameters
+CELERY_BROKER_URL = '/'.join(filter(None, [os.getenv('CELERY_BROKER'), os.getenv('REDIS_CELERY_DB')]))
+CELERY_RESULT_BACKEND = '/'.join(filter(None, [os.getenv('CELERY_BACKEND'), os.getenv('REDIS_CELERY_RESULTS_DB')]))
+CELERY_RESULT_EXPIRES = 3600
+# If true, immediately run tasks instead of queueing them
+CELERY_TASK_ALWAYS_EAGER = os.getenv('CELERY_EAGER', False) == 'True'

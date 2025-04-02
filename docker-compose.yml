@@ -25,7 +25,7 @@ services:
       - "6380:6379" # Redis exposed on port 6380
       - "8071:8001" # Insights exposed on port 8071
 
-  backend:
+  backend: &backend
     build:
       context: .
       dockerfile: ./Dockerfile
@@ -43,6 +43,11 @@ services:
     depends_on:
       - postgres
       - redis
+
+  celery:
+    <<: *backend
+    ports: []
+    command: uv run celery -A thunderbird_accounts worker -l INFO
 
   # Only used when APP_DEBUG=True
   frontend:
