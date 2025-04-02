@@ -1,6 +1,5 @@
 from uuid import UUID
 
-from django.core.cache import caches
 from celery import shared_task
 
 
