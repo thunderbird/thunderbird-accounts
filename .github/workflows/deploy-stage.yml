@@ -139,4 +139,4 @@ jobs:
           pulumi stack select thunderbird/accounts/stage
           pulumi up -y --diff \
             --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-taskdef' \
-            --target-dependencies
+            --target-dependents
