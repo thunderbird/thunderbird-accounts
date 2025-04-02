@@ -47,6 +47,7 @@ jobs:
     env:
       IS_CI_AUTOMATION: "yes"
       PULUMI_DIR: "pulumi"
+      CELERY_WORKER_TAG: '-celery-worker'
     steps:
       # Preparation for future steps
       - uses: actions/checkout@v4
@@ -107,11 +108,30 @@ jobs:
           name: ecr_tag
           path: ecr_tag.txt
 
+      - name: Build, tag, and push account's celery worker image to Amazon ECR
+        id: build-celery-worker
+        env:
+          ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}${{ env.CELERY_WORKER_TAG }}:${{ github.sha }}"
+        run: |
+          # Build a docker container and push it to ECR so that it can be deployed to ECS.
+          docker build -t $ECR_TAG -f ./Dockerfile.celery.stage --platform="linux/amd64" .          
+          docker push $ECR_TAG
+          echo "accounts-image=$ECR_TAG" >> $GITHUB_OUTPUT
+          echo -n "$ECR_TAG" > ecr_tag_celery_worker.txt
+
+      - name: Archive the ECR tag
+        id: tag-archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecr_tag
+          path: ecr_tag_celery_worker.txt
+
       # Deploy to stage
       - name: Deploy new image to stage
         shell: bash
         env:
           ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:${{ github.sha }}"
+          CELERY_WORKER_ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}${{ env.CELERY_WORKER_TAG }}:${{ github.sha }}"
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |
           # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
@@ -127,8 +147,10 @@ jobs:
               accounts:
                 task_definition:
                   container_definitions:
-                    accounts:
+                    accounts: &accounts_def
                       image: "$ECR_TAG"
+                    celery_worker:
+                      image: "$CELERY_WORKER_ECR_TAG"
           EOF
 
           # Use yq to merge the stump into the main config
