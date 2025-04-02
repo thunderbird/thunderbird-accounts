@@ -1,0 +1,71 @@
+name: e2e-test-local
+
+concurrency:
+  group: e2e-test-local
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!main'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
+jobs:
+  run-e2e-tests-local:
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      ACCTS_FXA_EMAIL: ${{ secrets.E2E_ACCTS_FXA_EMAIL }}
+      ACCTS_FXA_PWORD: ${{ secrets.E2E_ACCTS_FXA_PWORD }}
+      FXA_CLIENT_ID: ${{ secrets.E2E_ACCTS_FXA_CLIENT_ID }}
+      FXA_SECRET: ${{ secrets.E2E_ACCTS_FXA_SECRET }}
+      SECRET_KEY: ${{ secrets.E2E_ACCTS_SECRET_KEY }}
+      LOGIN_CODE_SECRET: ${{ secrets.E2E_ACCTS_LOGIN_CODE_SECRET }}
+      FXA_ENCRYPT_SECRET: ${{ secrets.E2E_ACCTS_FXA_ENCRYPT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up local environment
+        run: |
+          cp .env.example .env
+          mkdir -p mail/etc && cp config.toml.example mail/etc/config.toml
+          echo -e "\nFXA_CLIENT_ID=$FXA_CLIENT_ID" >> .env
+          echo "FXA_SECRET=$FXA_SECRET" >> .env
+          echo "SECRET_KEY=$SECRET_KEY" >> .env
+          echo "LOGIN_CODE_SECRET=$LOGIN_CODE_SECRET" >> .env
+          echo "FXA_ENCRYPT_SECRET=$FXA_ENCRYPT_SECRET" >> .env
+
+      - name: Start appointment stack via docker
+        run: docker compose up -d --build -V postgres redis backend frontend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'test/e2e/package-lock.json'
+
+      - name: Install E2E test dependencies
+        run: |
+          cd ./test/e2e
+          npm install
+          npx playwright install
+
+      - name: Run E2E tests against local stack
+        id: e2e
+        run: |
+          cd ./test/e2e
+          cp .env.dev.example .env
+          npm run e2e-test
+
+      - uses: actions/upload-artifact@v4
+        if: always() && ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: test/e2e/playwright-report/
+          retention-days: 7
