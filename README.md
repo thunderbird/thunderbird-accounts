@@ -194,3 +194,6 @@ To run tests for a specific module:
 ```shell
 docker compose exec backend uv run manage.py test thunderbird_accounts.client.tests
 ```
+
+## Running the E2E tests
+Please see the [E2E tests README](./test/e2e/README.md).

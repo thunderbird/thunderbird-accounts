@@ -126,6 +126,7 @@ Here is some advice for how to investigate E2E test failures.
 
 ### E2E Tests Failing on your Local Dev Environment
 If you are running the E2E tests on your local machine against your local development environment and the tests are failing, you can:
+- Look at the playwright HTML report by running `npx playwright show-report` in test/e2e/
 - Run the tests again this time in debug (UI) mode (see above)
     - In the debug mode browser expand each test that was ran, and review each test step to trace the test progress and failure
     - Look at the corresponding screenshots to get a visual of where and when the tests actually failed
