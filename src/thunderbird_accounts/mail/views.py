@@ -62,6 +62,12 @@ def sign_up_submit(request: HttpRequest):
     )
     account.save_app_password('Mail Clients', request.POST['app_password'])
 
+    try:
+        Email.objects.get(address=email_address)
+        return raise_form_error(request, reverse('sign_up'),  _('Requested email is already taken'))
+    except Email.DoesNotExist:
+        pass
+
     address = Email.objects.create(address=email_address, type='primary', name=account)
 
     if account and address:
