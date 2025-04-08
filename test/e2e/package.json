@@ -6,7 +6,7 @@
     "e2e-test": "npx playwright test --grep e2e-suite --project=firefox",
     "e2e-test-headed": "npx playwright test --grep e2e-suite --project=firefox --headed",
     "e2e-test-debug": "npx playwright test --grep e2e-suite --project=firefox --headed --ui",
-    "e2e-test-browserstack": "npx browserstack-node-sdk playwright test --grep e2e-suite --browserstack.buildName 'Thunderbird Accounts E2E Tests'",
+    "e2e-test-browserstack": "npx browserstack-node-sdk playwright test --grep e2e-suite --browserstack.buildName 'TB Accounts E2E Tests'",
     "e2e-test-browserstack-gha": "npx browserstack-node-sdk playwright test --grep e2e-suite",
     "postinstall": "npm update browserstack-node-sdk"
   },
