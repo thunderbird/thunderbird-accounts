@@ -53,6 +53,12 @@ def sign_up_submit(request: HttpRequest):
 
     email_address = f'{request.POST['email_address']}@{request.POST['email_domain']}'
 
+    try:
+        Email.objects.get(address=email_address)
+        return raise_form_error(request, reverse('sign_up'),  _('Requested email is already taken'))
+    except Email.DoesNotExist:
+        pass
+
     account = Account.objects.create(
         name=request.user.email,
         type='individual',
