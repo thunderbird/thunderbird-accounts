@@ -9,7 +9,7 @@ print(f'Running in {os.getcwd()}')
 
 sys.path.insert(0, os.path.abspath('src'))
 
-print(f"Adding to path: {os.path.abspath('../src')}")
+print(f'Adding to path: {os.path.abspath("../src")}')
 
 # -- Project information
 
@@ -68,6 +68,8 @@ source_code_repository_branch = 'main'
 
 # Set APP_ENV to docs, this should disable redis and use a local cache to prevent errors
 os.environ['APP_ENV'] = 'docs'
+os.environ['SECRET_KEY'] = 'its-just-the-docs'
+
 
 def linkcode_resolve(domain, info):
     """Resolve our external repo links, including code to highlight the function.
@@ -108,7 +110,7 @@ def linkcode_resolve(domain, info):
             file = file[3:]
 
         if not file.startswith('src/thunderbird_accounts'):
-            print(f"Ignoring {file}")
+            print(f'Ignoring {file}')
             # e.g. object is a typing.NewType
             return None
 
@@ -121,4 +123,4 @@ def linkcode_resolve(domain, info):
             module += f'.{objname}'
         if attrname:
             module += f'.{attrname}'
-        logging.warning(f"[linkcode_resolve] Could not resolve link for {module}. Error: {e}")
+        logging.warning(f'[linkcode_resolve] Could not resolve link for {module}. Error: {e}')

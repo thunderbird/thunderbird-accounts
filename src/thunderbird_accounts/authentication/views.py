@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.request import Request
 
+from thunderbird_accounts.client import tasks
 from thunderbird_accounts.authentication.const import USER_SESSION_CACHE_KEY
 from thunderbird_accounts.authentication.models import User, UserSession
 from thunderbird_accounts.authentication.permissions import IsValidFXAWebhook
@@ -26,7 +27,6 @@ from thunderbird_accounts.authentication.utils import (
     is_email_in_allow_list,
 )
 from thunderbird_accounts.client.models import ClientEnvironment
-from thunderbird_accounts.client.tasks import send_client_webhook
 from thunderbird_accounts.utils.types import AccountsHttpRequest
 
 
@@ -216,7 +216,7 @@ def fxa_webhook(request: Request):
                 # Finally log the subscriber out
                 logout_user(user, client)
             case 'https://schemas.accounts.firefox.com/event/delete-user':
-                send_client_webhook.delay(user.uuid)
+                tasks.send_notice_of_user_deletion.delay(user.uuid)
 
                 logout_user(user, client)
                 user.delete()

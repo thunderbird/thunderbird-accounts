@@ -113,7 +113,7 @@ For development the following ports are exposed:
 
 Ensure that uv is installed, and then run:
 ```shell
-uv sync
+uv sync --extra cli --extra docs
 ```
 
 The default admin password should be `accounts`.

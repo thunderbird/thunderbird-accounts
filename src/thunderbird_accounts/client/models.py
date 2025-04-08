@@ -98,6 +98,13 @@ class ClientWebhook(BaseModel):
     name = models.CharField(max_length=128, help_text=_('The name of the webhook (for admin purposes)'))
     webhook_url = models.CharField(max_length=2048, help_text=_('The URL of the webhook'))
     type = models.CharField(max_length=32, choices=WebhookType, help_text=_('What type of webhook is it?'))
+    secret = models.CharField(
+        max_length=256,
+        null=False,
+        help_text=_('The server-to-server/secret webhook secret'),
+        unique=True,
+        default=_generate_secret,
+    )
 
     client_environment = models.ForeignKey('ClientEnvironment', on_delete=models.CASCADE)
 
