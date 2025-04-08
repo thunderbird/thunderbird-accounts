@@ -17,19 +17,19 @@ export const PLAYWRIGHT_TAG_E2E_SUITE = '@e2e-suite';
 export const TIMEOUT_2_SECONDS = 2000;
 
 // connection info
-export const IMAP_SERVER_HOST = String(process.env.IMAP_HOST || 'localhost');
-export const IMAP_SERVER_PORT = Number(process.env.IMAP_PORT || 993);
-export const JMAP_SERVER_HOST = String(process.env.JMAP_HOST || 'localhost');
-export const JMAP_SERVER_PORT = Number(process.env.JMAP_PORT || 7768);
-export const SMTP_SERVER_HOST = String(process.env.SMTP_HOST || 'localhost');
-export const SMTP_SERVER_PORT = Number(process.env.SMTP_PORT || 465);
+export const ACCTS_HOST = String(process.env.ACCTS_HOST);
+export const IMAP_PORT = Number(process.env.IMAP_PORT);
+export const JMAP_PORT = Number(process.env.JMAP_PORT);
+export const SMTP_PORT = Number(process.env.SMTP_PORT);
 export const SECURITY_SSL_TLS = 'SSL/TLS';
-export const USERNAME_NONE = 'None';
-export const APP_PASSWORD_NONE = 'Your App Password';
+export const APP_PASSWORD = 'Your App Password';
+export const YOUR_EMAIL_LBL = 'Your email address:'
+export const THUNDERMAIL_USERNAME = String(process.env.THUNDERMAIL_USERNAME);
+export const THUNDERMAIL_EMAIL_ADDRESS = String(process.env.THUNDERMAIL_EMAIL_ADDRESS);
 
 // email sign-up
 export const EMAIL_SIGN_UP_EMAIL_ADDRESS = 'my-new-email-address';
-export const EMAIL_SIGN_UP_DOMAIN = 'example.org';
+export const EMAIL_SIGN_UP_DOMAIN = String(process.env.EMAIL_SIGN_UP_DOMAIN);
 export const EMAIL_SIGN_UP_APP_PWORD = 'password';
 
 // mock responses

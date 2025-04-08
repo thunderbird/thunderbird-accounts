@@ -21,19 +21,14 @@ test.beforeEach(async ({ page }) => {
 test.describe('self-serve hub accounts info', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE],
 }, () => {
-  test('displayed correctly with no email set up', async ({ page }) => {
-    // headers and link
+  test('accounts info displayed correctly', async ({ page }) => {
+    // check headers and links
     await expect(selfServePage.selfServeAccountInfoHeader).toBeVisible();
     await expect(selfServePage.welcomeBackHeader).toBeVisible();
     await expect(selfServePage.accountInfoLink).toBeEnabled();
     await expect(selfServePage.logoutLink).toBeVisible();
 
-    // no email setup text and button
-    await expect(selfServePage.emailHeader).toBeVisible();
-    await expect(selfServePage.noEmailSetupText).toBeVisible();
-    await expect(selfServePage.emailSetupBtn).toBeEnabled();
-
-    // delete account text and button
+    // check for the delete account text and button
     await expect(selfServePage.deleteAccountHeader).toBeVisible();
     await expect(selfServePage.deleteAcctText).toBeVisible();
     await expect(selfServePage.deleteAcctBtn).toBeEnabled();

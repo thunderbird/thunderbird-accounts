@@ -1,5 +1,5 @@
 import { expect, type Page, type Locator } from '@playwright/test';
-import { ACCTS_SELF_SERVE_URL, ACCTS_FXA_EMAIL } from '../const/constants';
+import { ACCTS_SELF_SERVE_URL, ACCTS_FXA_EMAIL, ACCTS_TARGET_ENV } from '../const/constants';
 import { connectionInfo } from '../const/types';
 
 export class SelfServePage {
@@ -11,6 +11,7 @@ export class SelfServePage {
   readonly logoutLink: Locator;
   readonly userDisplayName: string;
   readonly accountInfoLink: Locator;
+  readonly yourEmailAddressText: Locator;
   readonly imapServerName: Locator;
   readonly imapServerPort: Locator;
   readonly imapSecurityType: Locator;
@@ -44,7 +45,8 @@ export class SelfServePage {
     this.welcomeBackHeader = this.page.getByText(`Welcome back ${this.userDisplayName}.`, { exact: true });
     this.logoutLink = this.page.getByRole('link', { name: 'Logout'});
     this.accountInfoLink = this.page.getByRole('link', { name: 'Account Info'});
-    
+    this.yourEmailAddressText = this.page.getByTestId('connection-info-primary-email-address');
+
     // imap details
     this.imapServerName = this.page.getByTestId('connection-info-imap-server');
     this.imapServerPort = this.page.getByTestId('connection-info-imap-port');
@@ -80,26 +82,35 @@ export class SelfServePage {
   }
 
   async checkIMAPInfo(expectedInfo: connectionInfo) {
-    expect(await this.imapServerName.innerText()).toBe(`Server Name: ${expectedInfo['serverName']}`);
-    expect(await this.imapServerPort.innerText()).toBe(`Server Port: ${expectedInfo['serverPort']}`);
+    expect(await this.imapServerName.innerText({ timeout: 5000 })).toBe(`Server Name: ${expectedInfo['hostName']}`);
+    expect(await this.imapServerPort.innerText()).toBe(`Server Port: ${expectedInfo['port']}`);
     expect(await this.imapSecurityType.innerText()).toBe(`Security: ${expectedInfo['securityType']}`);
-    expect(await this.imapUsername.innerText()).toBe(`Username: ${expectedInfo['userName']}`);
+    // when running on the stage env a thundermail email is required, but might not exist on the local dev env
+    if (ACCTS_TARGET_ENV == 'stage') {
+      expect(await this.imapUsername.innerText()).toBe(`Username: ${expectedInfo['userName']}`);
+    }
     expect(await this.imapPassword.innerText()).toBe(`Password: ${expectedInfo['appPassword']}`);
   }
 
   async checkJMAPInfo(expectedInfo: connectionInfo) {
-    expect(await this.jmapServerName.innerText()).toBe(`Server Name: ${expectedInfo['serverName']}`);
-    expect(await this.jmapServerPort.innerText()).toBe(`Server Port: ${expectedInfo['serverPort']}`);
+    expect(await this.jmapServerName.innerText({ timeout: 5000 })).toBe(`Server Name: ${expectedInfo['hostName']}`);
+    expect(await this.jmapServerPort.innerText()).toBe(`Server Port: ${expectedInfo['port']}`);
     expect(await this.jmapSecurityType.innerText()).toBe(`Security: ${expectedInfo['securityType']}`);
-    expect(await this.jmapUsername.innerText()).toBe(`Username: ${expectedInfo['userName']}`);
+    // when running on the stage env a thundermail email is required, but might not exist on the local dev env
+    if (ACCTS_TARGET_ENV == 'stage') {
+      expect(await this.jmapUsername.innerText()).toBe(`Username: ${expectedInfo['userName']}`);
+    }
     expect(await this.jmapPassword.innerText()).toBe(`Password: ${expectedInfo['appPassword']}`);
   }
 
   async checkSMTPInfo(expectedInfo: connectionInfo) {
-    expect(await this.smtpServerName.innerText()).toBe(`Server Name: ${expectedInfo['serverName']}`);
-    expect(await this.smtpServerPort.innerText()).toBe(`Server Port: ${expectedInfo['serverPort']}`);
+    expect(await this.smtpServerName.innerText({ timeout: 5000 })).toBe(`Server Name: ${expectedInfo['hostName']}`);
+    expect(await this.smtpServerPort.innerText()).toBe(`Server Port: ${expectedInfo['port']}`);
     expect(await this.smtpSecurityType.innerText()).toBe(`Security: ${expectedInfo['securityType']}`);
-    expect(await this.smtpUsername.innerText()).toBe(`Username: ${expectedInfo['userName']}`);
+    // when running on the stage env a thundermail email is required, but might not exist on the local dev env
+    if (ACCTS_TARGET_ENV == 'stage') {
+      expect(await this.smtpUsername.innerText()).toBe(`Username: ${expectedInfo['userName']}`);
+    }
     expect(await this.smtpPassword.innerText()).toBe(`Password: ${expectedInfo['appPassword']}`);
   }
 }
