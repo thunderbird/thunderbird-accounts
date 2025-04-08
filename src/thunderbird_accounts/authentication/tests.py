@@ -12,7 +12,6 @@ from rest_framework.test import RequestsClient, APIClient, APITestCase as DRF_AP
 
 from django.contrib.auth import get_user_model
 
-import thunderbird_accounts.client.tasks
 from thunderbird_accounts.authentication.const import GET_LOGIN_PATH, BAD_CREDENTIALS_MSG
 from thunderbird_accounts.authentication.models import User, UserSession
 from thunderbird_accounts.authentication.utils import (
