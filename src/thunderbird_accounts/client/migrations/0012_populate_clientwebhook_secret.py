@@ -5,7 +5,7 @@ from django.db import migrations
 from thunderbird_accounts.client.models import _generate_secret
 
 
-def gen_secrest(apps, schema_editor):
+def gen_secrets(apps, schema_editor):
     webhook = apps.get_model('client', 'ClientWebhook')
     for row in webhook.objects.all():
         row.secret = _generate_secret()
@@ -19,5 +19,5 @@ class Migration(migrations.Migration):
 
     operations = [
         # omit reverse_code=... if you don't want the migration to be reversible.
-        migrations.RunPython(gen_secrest, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(gen_secrets, reverse_code=migrations.RunPython.noop),
     ]
