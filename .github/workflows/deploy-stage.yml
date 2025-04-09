@@ -20,7 +20,7 @@ jobs:
     env:
       IS_CI_AUTOMATION: "yes"
     outputs:
-      accounts-changed: ${{ steps.check.outputs.accounts-changed }}
+      code-changed: ${{ steps.check.outputs.code-changed }}
       iac-changed: ${{ steps.check.outputs.iac-changed }}
     steps:
       - uses: actions/checkout@v4
