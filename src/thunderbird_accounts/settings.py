@@ -319,7 +319,7 @@ CONNECTION_INFO = {
     'SMTP': {'HOST': os.getenv('JMAP_HOST'), 'PORT': os.getenv('JMAP_PORT'), 'TLS': os.getenv('JMAP_TLS')},
 }
 
-ALLOWED_EMAIL_DOMAINS = ['tb.pro', 'tbpro.com']
+ALLOWED_EMAIL_DOMAINS = os.getenv('ALLOWED_EMAIL_DOMAINS').split(',') if os.getenv('ALLOWED_EMAIL_DOMAINS') else None
 
 
 # Required otherwise a manifest error will be generated
