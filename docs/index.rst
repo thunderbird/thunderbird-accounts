@@ -19,6 +19,8 @@ Contents
     infra.rst
     frontend.rst
     mail.rst
+    tasks.py
+    webhooks.rst
     internal_client_env.rst
     building.rst
     deploying-thundermail-waiting-list.rst

@@ -1,6 +1,7 @@
 import base64
 import datetime
 import uuid
+from unittest.mock import patch, Mock
 
 from django.conf import settings
 from django.core.cache import cache
@@ -223,6 +224,16 @@ class FXAWebhooksTestCase(DRF_APITestCase):
         # Clean up cache after tests
         cache.clear()
 
+    def _webhook_call(self, assert_delete_called=False):
+        with patch('thunderbird_accounts.client.tasks.send_notice_of_user_deletion', Mock()) as delete_task_mock:
+            response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
+
+            # Ensure the task wasn't called
+            delete_task_mock.assert_not_called()
+            (delete_task_mock.delay.assert_called_once()
+             if assert_delete_called else delete_task_mock.delay.assert_not_called())
+        return response
+
     def test_fxa_process_change_password(self):
         """Ensure the change password event is handled correctly"""
         self.client.force_authenticate(
@@ -248,7 +259,7 @@ class FXAWebhooksTestCase(DRF_APITestCase):
             self.user.last_login = datetime.datetime.now().astimezone(datetime.UTC)
             self.user.save()
 
-            response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
+            response = self._webhook_call(assert_delete_called=False)
             self.assertEqual(response.status_code, 200, response.content)
 
             user = User.objects.get(uuid=self.user.uuid)
@@ -265,7 +276,7 @@ class FXAWebhooksTestCase(DRF_APITestCase):
         self.assertIsNotNone(get_cache_session(user_session.session_key))
 
         # Now we make sure an expired password change does not log us out.
-        response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
+        response = self._webhook_call(assert_delete_called=False)
         self.assertEqual(response.status_code, 200, response.content)
 
         # The request was outdated so we should still be logged in
@@ -295,7 +306,8 @@ class FXAWebhooksTestCase(DRF_APITestCase):
         self.assertEqual(self.user.email, OLD_EMAIL)
 
         # Trigger the profile change event
-        response = self.client.post('http://testserver/api/v1/auth/fxa/webhook')
+        response = self._webhook_call(assert_delete_called=False)
+
         self.assertEqual(response.status_code, 200, response.content)
 
         user = User.objects.get(uuid=self.user.uuid)
@@ -310,8 +322,7 @@ class FXAWebhooksTestCase(DRF_APITestCase):
         # TODO: Profile updating? (this happens on login so not to concerned.)
 
     def test_fxa_process_delete_user(self):
-        client = APIClient()
-        client.force_authenticate(
+        self.client.force_authenticate(
             self.user,
             {
                 'iss': 'https://accounts.firefox.com/',
@@ -329,7 +340,8 @@ class FXAWebhooksTestCase(DRF_APITestCase):
         self.assertIsNotNone(get_cache_session(user_session.session_key))
 
         # Trigger the delete user event
-        response = client.post('http://testserver/api/v1/auth/fxa/webhook')
+        response = self._webhook_call(assert_delete_called=True)
+
         self.assertEqual(response.status_code, 200, response.content)
 
         # We shouldn't exist anymore
