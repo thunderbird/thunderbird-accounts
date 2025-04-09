@@ -28,7 +28,7 @@ test.describe('self-serve hub accounts info', {
     await expect(selfServePage.accountInfoLink).toBeEnabled();
     await expect(selfServePage.logoutLink).toBeVisible();
 
-    // no email setup text and button
+    // expected text and button (with no email set up)
     await expect(selfServePage.emailHeader).toBeVisible();
     await expect(selfServePage.noEmailSetupText).toBeVisible();
     await expect(selfServePage.emailSetupBtn).toBeEnabled();

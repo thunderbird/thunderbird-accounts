@@ -80,7 +80,7 @@ export class SelfServePage {
   }
 
   async checkIMAPInfo(expectedInfo: connectionInfo) {
-    expect(await this.imapServerName.innerText()).toBe(`Server Name: ${expectedInfo['serverName']}`);
+    expect(await this.imapServerName.innerText({ timeout: 5000 })).toBe(`Server Name: ${expectedInfo['serverName']}`);
     expect(await this.imapServerPort.innerText()).toBe(`Server Port: ${expectedInfo['serverPort']}`);
     expect(await this.imapSecurityType.innerText()).toBe(`Security: ${expectedInfo['securityType']}`);
     expect(await this.imapUsername.innerText()).toBe(`Username: ${expectedInfo['userName']}`);
@@ -88,7 +88,7 @@ export class SelfServePage {
   }
 
   async checkJMAPInfo(expectedInfo: connectionInfo) {
-    expect(await this.jmapServerName.innerText()).toBe(`Server Name: ${expectedInfo['serverName']}`);
+    expect(await this.jmapServerName.innerText({ timeout: 5000 })).toBe(`Server Name: ${expectedInfo['serverName']}`);
     expect(await this.jmapServerPort.innerText()).toBe(`Server Port: ${expectedInfo['serverPort']}`);
     expect(await this.jmapSecurityType.innerText()).toBe(`Security: ${expectedInfo['securityType']}`);
     expect(await this.jmapUsername.innerText()).toBe(`Username: ${expectedInfo['userName']}`);
@@ -96,7 +96,7 @@ export class SelfServePage {
   }
 
   async checkSMTPInfo(expectedInfo: connectionInfo) {
-    expect(await this.smtpServerName.innerText()).toBe(`Server Name: ${expectedInfo['serverName']}`);
+    expect(await this.smtpServerName.innerText({ timeout: 5000 })).toBe(`Server Name: ${expectedInfo['serverName']}`);
     expect(await this.smtpServerPort.innerText()).toBe(`Server Port: ${expectedInfo['serverPort']}`);
     expect(await this.smtpSecurityType.innerText()).toBe(`Security: ${expectedInfo['securityType']}`);
     expect(await this.smtpUsername.innerText()).toBe(`Username: ${expectedInfo['userName']}`);
