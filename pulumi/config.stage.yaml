@@ -193,6 +193,9 @@ resources:
                 value: 'True'
               - name: CSRF_TRUSTED_ORIGINS
                 value: 'https://accounts-stage.tb.pro'
+              - name: ALLOWED_EMAIL_DOMAINS
+                value: 'stage-thundermail.com'
+
 
   tb:ci:AwsAutomationUser:
     ci:

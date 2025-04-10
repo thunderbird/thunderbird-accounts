@@ -29,7 +29,7 @@ export const APP_PASSWORD_NONE = 'Your App Password';
 
 // email sign-up
 export const EMAIL_SIGN_UP_EMAIL_ADDRESS = 'my-new-email-address';
-export const EMAIL_SIGN_UP_DOMAIN = 'tb.pro';
+export const EMAIL_SIGN_UP_DOMAIN = 'example.org';
 export const EMAIL_SIGN_UP_APP_PWORD = 'password';
 
 // mock responses
