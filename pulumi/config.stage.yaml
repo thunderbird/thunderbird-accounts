@@ -195,7 +195,24 @@ resources:
                 value: 'https://accounts-stage.tb.pro'
               - name: ALLOWED_EMAIL_DOMAINS
                 value: 'stage-thundermail.com'
-
+              - name: IMAP_HOST
+                value: 'stage-thundermail.com'
+              - name: IMAP_PORT
+                value: '993'
+              - name: IMAP_TLS
+                value: 'True'
+              - name: SMTP_HOST
+                value: 'stage-thundermail.com'
+              - name: SMTP_PORT
+                value: '465'
+              - name: SMTP_TLS
+                value: 'True'
+              - name: JMAP_HOST
+                value: 'stage-thundermail.com'
+              - name: JMAP_PORT
+                value: '7768'
+              - name: JMAP_TLS
+                value: 'True'
 
   tb:ci:AwsAutomationUser:
     ci:
