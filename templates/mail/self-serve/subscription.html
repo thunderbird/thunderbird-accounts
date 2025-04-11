@@ -26,6 +26,8 @@
     {% endfor %}
   ];
 
+  const successUrl = window.location.toString().replace(window.location.pathname, '') + '{{ success_redirect }}'
+
   // DOM elements
   const loadingIcon = document.querySelector('#loading-icon');
   const pricingGrid = document.querySelector('#pricing-grid');
@@ -38,7 +40,10 @@
   // Function defs
   function openCheckout(items){
     Paddle.Checkout.open({
-      items: items
+      settings: {
+        successUrl,
+      },
+      items
     });
   }
 
