@@ -133,6 +133,7 @@ def self_serve_subscription(request: HttpRequest):
     return TemplateResponse(request, 'mail/self-serve/subscription.html', {
         'is_subscription': True,
         'paddle_token': settings.PADDLE_TOKEN,
+        'paddle_item_id_list': [settings.PADDLE_ID_ITEM_1, settings.PADDLE_ID_ITEM_2, settings.PADDLE_ID_ITEM_3,],
         **self_serve_common_options(False, account)
     })
 

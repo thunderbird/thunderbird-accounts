@@ -83,6 +83,9 @@ WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
 
 # PADDLE CLIENT TOKEN
 PADDLE_TOKEN: str = os.getenv('PADDLE_TOKEN')
+PADDLE_ID_ITEM_1: str = os.getenv('PADDLE_ID_ITEM_1')
+PADDLE_ID_ITEM_2: str = os.getenv('PADDLE_ID_ITEM_2')
+PADDLE_ID_ITEM_3: str = os.getenv('PADDLE_ID_ITEM_3')
 
 ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
