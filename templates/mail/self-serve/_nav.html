@@ -11,6 +11,7 @@
     <li>|</li>
     {% endif %}
     <li><a href="{% url 'self_serve_account_info' %}" class="{% if is_account_settings %}selected{% endif %}">Account Info</a></li>
+    <li><a href="{% url 'self_serve_subscription' %}" class="{% if is_subscription %}selected{% endif %}">Subscription</a></li>
     <li><a href="{% url 'fxa_logout' %}">Logout</a></li>
   </ul>
 </nav>

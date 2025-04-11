@@ -127,6 +127,13 @@ def self_serve_connection_info(request: HttpRequest):
     )
 
 
+def self_serve_subscription(request: HttpRequest):
+    """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
+    return TemplateResponse(request, 'mail/self-serve/subscription.html', {
+        'is_subscription': True
+    })
+
+
 def self_serve_app_passwords(request: HttpRequest):
     """App Password page for Self Serve
     A user can create (if none exists), or delete an App Password which is used to connect to the mail server."""
