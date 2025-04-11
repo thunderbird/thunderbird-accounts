@@ -129,8 +129,11 @@ def self_serve_connection_info(request: HttpRequest):
 
 def self_serve_subscription(request: HttpRequest):
     """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
+    account = request.user.account_set.first()
     return TemplateResponse(request, 'mail/self-serve/subscription.html', {
-        'is_subscription': True
+        'is_subscription': True,
+        'paddle_token': settings.PADDLE_TOKEN,
+        **self_serve_common_options(False, account)
     })
 
 

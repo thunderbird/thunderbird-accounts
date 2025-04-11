@@ -4,5 +4,10 @@
 {% endblock %}
 {% block body %}
 <p>this is the subscription page for the paddle.js overlay</p>
-
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<script>
+Paddle.Initialize({
+  token: "{{ paddle_token }}"
+});
+</script>
 {% endblock %}

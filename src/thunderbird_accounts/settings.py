@@ -81,6 +81,9 @@ FXA_OPEN_ID_CONFIG_URL: str = os.getenv('FXA_OPEN_ID_CONFIG')
 # MailChimp form URL for Wait List
 WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
 
+# PADDLE CLIENT TOKEN
+PADDLE_TOKEN: str = os.getenv('PADDLE_TOKEN')
+
 ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
 # Settings for CSRF cookie.
