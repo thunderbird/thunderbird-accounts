@@ -1,11 +1,15 @@
 {% extends 'mail/self-serve/_base.html' %}
+{% load static %}
 {% block page_heading %}
   <h2>Self Serve - Subscription</h2>
 {% endblock %}
 {% block body %}
 <p>this is the subscription page for the paddle.js overlay</p>
+<img alt="" id="loading" src="{% static 'img/cc_loading-icon.gif' %}"/>
+
 <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
 <script>
+const loadingIcon = document.querySelector('#loading');
 Paddle.Initialize({
   token: "{{ paddle_token }}"
 });
