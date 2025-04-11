@@ -137,6 +137,14 @@ def self_serve_subscription(request: HttpRequest):
         **self_serve_common_options(False, account)
     })
 
+def self_serve_subscription_success(request: HttpRequest):
+    """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
+    account = request.user.account_set.first()
+    return TemplateResponse(request, 'mail/self-serve/subscription-success.html', {
+        'is_subscription': True,
+        **self_serve_common_options(False, account)
+    })
+
 
 def self_serve_app_passwords(request: HttpRequest):
     """App Password page for Self Serve

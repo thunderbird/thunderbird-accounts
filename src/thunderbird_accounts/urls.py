@@ -40,6 +40,7 @@ urlpatterns = [
     path('self-serve/connection-info', mail_views.self_serve_connection_info, name='self_serve_connection_info'),
 
     path('self-serve/subscription', mail_views.self_serve_subscription, name='self_serve_subscription'),
+    path('self-serve/subscription/success', mail_views.self_serve_subscription_success, name='self_serve_subscription_success'),
 
     # Post only
     path('self-serve/app-passwords/add', mail_views.self_serve_app_password_add, name='app_password_add'),
