@@ -15,18 +15,9 @@
 </div>
 <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
 <script>
-  const loadingIcon = document.querySelector('#loading-icon');
-  const pricingGrid = document.querySelector('#pricing-grid');
 
-  pricingGrid.style.display = 'none';
-  Paddle.Environment.set("sandbox");
-  Paddle.Initialize({
-    token: "{{ paddle_token }}"
-  });
-  const items = [
-    {% comment %}
-      Output each item_id from the template var
-    {% endcomment %}
+  // Create JS Obj from Django view template variables
+  const paddleItems = [
     {% for item_id in paddle_item_id_list %}
     {
       quantity: 1,
@@ -35,33 +26,83 @@
     {% endfor %}
   ];
 
-  Paddle.PricePreview({items})
-    .then((result) => {
-      console.log(result);
-      const { lineItems } = result.data.details;
-      for (const item of lineItems ) {
-        const { total } = item.formattedTotals;
-        const { name, description } = item.price;
-        pricingGrid.appendChild(createPriceItem({
-          total,
-          name,
-          description
-        }));
-      }
-      loadingIcon.style.display = 'none';
-      pricingGrid.style.display = 'block';
-    })
-    .catch((error) => {
-      console.error(error);
+  // DOM elements
+  const loadingIcon = document.querySelector('#loading-icon');
+  const pricingGrid = document.querySelector('#pricing-grid');
+
+  // main
+  beginLoadingState();
+  initPaddle(paddleItems, endLoadingState);
+
+
+  // Function defs
+  function openCheckout(items){
+    Paddle.Checkout.open({
+      items: items
+    });
+  }
+
+  /**
+  * Function that accepts a list of items and initializes the paddle.js api with those items.
+  * Fetches item pricing and creates the price items elements.
+  * @param {Array<{quantity: number, priceId: string}>} items - Array of items to use
+  * @param {Function} fn - A callback fn to be called after init completes successfully
+  */
+  function initPaddle(items, fn) {
+    Paddle.Environment.set("sandbox");
+    Paddle.Initialize({
+      token: "{{ paddle_token }}"
     });
 
+    Paddle.PricePreview({items})
+      .then((result) => {
+        const { lineItems } = result.data.details;
+        for (const item of lineItems ) {
+          const { total } = item.formattedTotals;
+          const { name, description, id } = item.price;
+          pricingGrid.appendChild(createPriceItem({
+            id,
+            total,
+            name,
+            description
+          }));
+        }
+      })
+      .then(fn)
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
+  function beginLoadingState() {
+    setVisible(loadingIcon, true);
+    setVisible(pricingGrid, false);
+  }
+
+  function endLoadingState() {
+    setVisible(loadingIcon, false);
+    setVisible(pricingGrid, true);
+  }
+
+  function setVisible(element, shouldShow) {
+    element.style.display = shouldShow ? 'block' : 'none';
+  }
+
   function createPriceItem(item) {
-    const { name, description, total } = item;
+    const { name, description, total, id: priceId } = item;
     const itemContainer = document.createElement('div');
     const nameEl = document.createElement('h3');
     const descriptionEl = document.createElement('p');
     const priceEl = document.createElement('p');
     const button = document.createElement('button');
+    button.addEventListener('click', () => {
+      openCheckout([
+        {
+          quantity: 1,
+          priceId
+        }
+      ]);
+    });
     nameEl.textContent = name;
     descriptionEl.textContent = description;
     priceEl.textContent = total;
