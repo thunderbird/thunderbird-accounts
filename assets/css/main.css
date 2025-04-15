@@ -61,3 +61,108 @@ b {
     min-width: 10rem;
   }
 }
+
+@property --load-position {
+  syntax: "<angle>";
+  initial-value: -270deg;
+  inherits: true;
+}
+
+@property --load-offset {
+  syntax: "<angle>";
+  initial-value: 270deg;
+  inherits: true;
+}
+
+@property --trail-offset {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: true;
+}
+
+.loader-outside {
+  color-scheme: light dark;
+
+  --bg: light-dark(white, #333);
+  --loader-color: light-dark(dodgerblue, deepskyblue);
+  --timing: cubic-bezier(0.61, 0.12, 0, 0.99);
+  position: relative;
+  height: 64px;
+  aspect-ratio: 1;
+  background-image: conic-gradient(
+    from var(--load-position),
+    transparent calc(0deg - var(--trail-offset)),
+    var(--loader-color) var(--load-offset),
+    transparent calc(var(--load-position) + var(--trail-offset))
+  );
+  border-radius: 50%;
+  animation: 0.8s load-in 0s var(--timing) forwards,
+    1.1s loading 1s var(--timing) infinite,
+    1.1s trail 1.095s var(--timing) infinite reverse;
+}
+
+.loader-outside::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  height: 48px;
+  aspect-ratio: 1;
+  background: var(--bg);
+  border-radius: 50%;
+}
+
+.loader-inside {
+  positon: absolute;
+  inset: 0;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  rotate: calc(var(--load-position) + var(--load-offset));
+}
+
+.loader-inside::before {
+  content: "";
+  position: absolute;
+  height: 8px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--loader-color);
+  inset-block-start: 0;
+  inset-inline: calc(50% - 4px);
+}
+
+@keyframes load-in {
+  from {
+    --load-position: -270deg;
+    --trail-offset: 0deg;
+    --load-offset: 270deg;
+  }
+  to {
+    --load-position: 0deg;
+    --trail-offset: 360deg;
+    --load-offset: 360deg;
+  }
+}
+
+@keyframes loading {
+  from {
+    --load-position: 0deg;
+  }
+  to {
+    --load-position: 360deg;
+  }
+}
+
+@keyframes trail {
+  0% {
+    --trail-offset: -270deg;
+  }
+  40% {
+    --trail-offset: 0deg;
+  }
+  70% {
+    --trail-offset: 0deg;
+  }
+  100% {
+    --trail-offset: -270deg;
+  }
+}
