@@ -112,7 +112,7 @@ b {
 }
 
 .loader-inside {
-  positon: absolute;
+  position: absolute;
   inset: 0;
   aspect-ratio: 1;
   border-radius: 50%;
