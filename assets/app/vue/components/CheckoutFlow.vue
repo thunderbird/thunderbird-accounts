@@ -26,8 +26,6 @@ const paddleItems = [paddlePriceIdLo, paddlePriceIdMd, paddlePriceIdHi].map(
   })
 );
 
-console.log(`TODO: put environment value in actual env var`);
-
 onMounted(() => {
   initializePaddle({
     environment: paddleEnvironment,
