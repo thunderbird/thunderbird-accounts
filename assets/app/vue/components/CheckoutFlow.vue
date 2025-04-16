@@ -83,7 +83,8 @@ function initPaddle(items, fn) {
       didReceivePaddleError.value = true;
       errorTitle.value = 'Server Error';
       console.error(error);
-    });
+    })
+    .finally(() => (isLoading.value = false));
 }
 </script>
 <template>
