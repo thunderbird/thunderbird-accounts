@@ -68,7 +68,7 @@ Pass Django variables to SFC
 
 If you need to supply the SFC with values from the Django application, do these two things:
 1. Provide them to the template from the view function.
-2. Add them to the `window` object in the template
+2. Add them to the `window._page` object in the template
 
 
 This example renders `mail/self-serve/subscription.html` and provides context variables:
