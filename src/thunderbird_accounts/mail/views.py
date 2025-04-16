@@ -51,7 +51,8 @@ def sign_up_submit(request: HttpRequest):
     if request.POST['email_domain'] not in settings.ALLOWED_EMAIL_DOMAINS:
         return raise_form_error(request, reverse('sign_up'),  _('Invalid domain selected'))
 
-    email_address = f'{request.POST['email_address']}@{request.POST['email_domain']}'
+    email_address = request.POST['email_address'].strip()
+    email_address = f'{email_address}@{request.POST['email_domain']}'
 
     try:
         Email.objects.get(address=email_address)
