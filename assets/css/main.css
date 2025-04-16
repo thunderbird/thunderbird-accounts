@@ -83,7 +83,7 @@ b {
 .loader-outside {
   color-scheme: light dark;
 
-  --bg: light-dark(white, #333);
+  --bg: white;
   --loader-color: light-dark(dodgerblue, deepskyblue);
   --timing: cubic-bezier(0.61, 0.12, 0, 0.99);
   position: relative;
