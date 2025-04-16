@@ -112,13 +112,17 @@ def self_serve_connection_info(request: HttpRequest):
             reverse('fxa_login', kwargs={'login_code': get_admin_login_code(), 'redirect_to': quote_plus(request.path)})
         )
 
+    email = None
     account = request.user.account_set.first()
+    if account:
+        email = account.email_set.first()
 
     return TemplateResponse(
         request,
         'mail/self-serve/connection-info.html',
         {
             **self_serve_common_options(False, account),
+            'mail_address': email.address if email else None,
             'mail_username': account.name if account else None,
             'IMAP': settings.CONNECTION_INFO['IMAP'],
             'JMAP': settings.CONNECTION_INFO['JMAP'] if 'JMAP' in settings.CONNECTION_INFO else {},

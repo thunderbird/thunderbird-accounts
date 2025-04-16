@@ -316,7 +316,7 @@ DJANGO_VITE = {
 CONNECTION_INFO = {
     'IMAP': {'HOST': os.getenv('IMAP_HOST'), 'PORT': os.getenv('IMAP_PORT'), 'TLS': os.getenv('IMAP_TLS')},
     'JMAP': {'HOST': os.getenv('JMAP_HOST'), 'PORT': os.getenv('JMAP_PORT'), 'TLS': os.getenv('JMAP_TLS')},
-    'SMTP': {'HOST': os.getenv('JMAP_HOST'), 'PORT': os.getenv('JMAP_PORT'), 'TLS': os.getenv('JMAP_TLS')},
+    'SMTP': {'HOST': os.getenv('SMTP_HOST'), 'PORT': os.getenv('SMTP_PORT'), 'TLS': os.getenv('SMTP_TLS')},
 }
 
 ALLOWED_EMAIL_DOMAINS = os.getenv('ALLOWED_EMAIL_DOMAINS').split(',') if os.getenv('ALLOWED_EMAIL_DOMAINS') else None
