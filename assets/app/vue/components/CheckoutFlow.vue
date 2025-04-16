@@ -4,6 +4,9 @@ import { initializePaddle } from '@paddle/paddle-js';
 
 const isLoading = ref(true);
 const priceItems = ref([]);
+const isPaddleTokenMissing = ref(false);
+const didReceivePaddleError = ref(false);
+const errorTitle = ref('');
 
 const paddleToken = window._page.paddleToken;
 const paddleEnvironment = window._page.paddleEnvironment;
@@ -27,6 +30,12 @@ const paddleItems = [paddlePriceIdLo, paddlePriceIdMd, paddlePriceIdHi].map(
 );
 
 onMounted(() => {
+  if (!paddleToken) {
+    isPaddleTokenMissing.value = true;
+    errorTitle.value = 'Configuration Error';
+    return;
+  }
+
   initializePaddle({
     environment: paddleEnvironment,
     token: paddleToken,
@@ -71,6 +80,8 @@ function initPaddle(items, fn) {
     })
     .then(fn)
     .catch((error) => {
+      didReceivePaddleError.value = true;
+      errorTitle.value = 'Server Error';
       console.error(error);
     });
 }
@@ -78,7 +89,14 @@ function initPaddle(items, fn) {
 <template>
   <div class="pricing-page-container">
     <h1>Choose your plan</h1>
-    <div v-if="isLoading" class="loader-outside">
+    <div
+      v-if="isPaddleTokenMissing || didReceivePaddleError"
+      class="paddle-error"
+    >
+      <h3>{{ errorTitle }}</h3>
+      <p>Cannot complete checkout at this time.</p>
+    </div>
+    <div v-else-if="isLoading" class="loader-outside">
       <div class="loader-inside"></div>
     </div>
     <div v-else class="pricing-grid" id="pricing-grid">
