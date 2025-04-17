@@ -132,6 +132,35 @@ def self_serve_connection_info(request: HttpRequest):
     )
 
 
+def self_serve_subscription(request: HttpRequest):
+    """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
+    account = request.user.account_set.first()
+    return TemplateResponse(
+        request,
+        'mail/self-serve/subscription.html',
+        {
+            'is_subscription': True,
+            'success_redirect': reverse('self_serve_subscription_success'),
+            'paddle_token': settings.PADDLE_TOKEN,
+            'paddle_environment': settings.PADDLE_ENV,
+            'paddle_price_id_lo': settings.PADDLE_PRICE_ID_LO,
+            'paddle_price_id_md': settings.PADDLE_PRICE_ID_MD,
+            'paddle_price_id_hi': settings.PADDLE_PRICE_ID_HI,
+            **self_serve_common_options(False, account),
+        },
+    )
+
+
+def self_serve_subscription_success(request: HttpRequest):
+    """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
+    account = request.user.account_set.first()
+    return TemplateResponse(
+        request,
+        'mail/self-serve/subscription-success.html',
+        {'is_subscription': True, **self_serve_common_options(False, account)},
+    )
+
+
 def self_serve_app_passwords(request: HttpRequest):
     """App Password page for Self Serve
     A user can create (if none exists), or delete an App Password which is used to connect to the mail server."""

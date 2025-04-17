@@ -25,24 +25,24 @@ urlpatterns = [
     path('auth/<str:login_code>/?redirect_to=<str:redirect_to>/', auth_views.fxa_start, name='fxa_login'),
     # This will be auth/callback in the future.
     re_path(r'^favicon\.ico$', favicon_view),
-
     # Mail Views
     path('', mail_views.home),
-
     path('sign-up/', mail_views.sign_up, name='sign_up'),
     path('sign-up/submit', mail_views.sign_up_submit, name='sign_up_submit'),
-
     path('wait-list/', mail_views.wait_list),
     path('self-serve/', mail_views.self_serve, name='self_serve_home'),
     path('self-serve/account-settings', mail_views.self_serve_account_settings, name='self_serve_account_info'),
     path('self-serve/app-passwords', mail_views.self_serve_app_passwords, name='self_serve_app_password'),
-
     path('self-serve/connection-info', mail_views.self_serve_connection_info, name='self_serve_connection_info'),
-
+    path('self-serve/subscription', mail_views.self_serve_subscription, name='self_serve_subscription'),
+    path(
+        'self-serve/subscription/success',
+        mail_views.self_serve_subscription_success,
+        name='self_serve_subscription_success',
+    ),
     # Post only
     path('self-serve/app-passwords/add', mail_views.self_serve_app_password_add, name='app_password_add'),
     path('self-serve/app-passwords/remove', mail_views.self_serve_app_password_remove, name='app_password_remove'),
-
     # API
     path('api/v1/auth/fxa/callback', auth_views.fxa_callback, name='fxa_callback'),
     path('api/v1/auth/fxa/webhook', auth_views.fxa_webhook, name='fxa_webhook'),
@@ -52,7 +52,7 @@ urlpatterns = [
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/auth/logout/', logout_user, name='api_logout'),
     path('api/v1/auth/is-in-allow-list/', is_in_allow_list, name='api_is_in_allow_list'),
-    path('health', infra_views.health_check)
+    path('health', infra_views.health_check),
 ]
 
 if settings.DEBUG:

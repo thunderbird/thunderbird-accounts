@@ -1,0 +1,15 @@
+{% extends 'mail/self-serve/_base.html' %}
+{% block page_heading %}
+  <h2>Self Serve - Subscription</h2>
+{% endblock %}
+{% block body %}
+  <div id="checkoutFlow"></div>
+  <script>
+    window._page.paddleToken="{{ paddle_token }}";
+    window._page.paddleEnvironment="{{ paddle_environment}}";
+    window._page.successRedirect="{{ success_redirect }}";
+    window._page.paddlePriceIdLo="{{ paddle_price_id_lo }}";
+    window._page.paddlePriceIdMd="{{ paddle_price_id_md }}";
+    window._page.paddlePriceIdHi="{{ paddle_price_id_hi }}";
+  </script>
+{% endblock %}
