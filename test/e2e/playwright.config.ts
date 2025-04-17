@@ -21,17 +21,29 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : 1, // actualy don't run in parallel locally either, for now
-  // Tests will timeout if still running after this time (ms)
-  timeout: 2 * 60 * 1000,
+  // Global timeout: Playwright will timeout if the entire session (includes all test runs) exceeds this.
+  // Must take into account running on mulitple browsers (and BrowserStack is much slower too!). Odds are the
+  // tests will time out at the locator/test level first anyway; but there is no default so best to specify
+  globalTimeout: 5 * 60 * 1000,
+  // Individual test timeout - a single test will time out if it is still running after this time (ms)
+  timeout: 90 * 1000, // 1.5 minutes
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [['html']],
-
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
     // baseURL: 'http://127.0.0.1:3000',
-    trace: 'off',
+    trace: 'off', // traces can contain sensitive info so only do this manually locally if need be
     screenshot: 'only-on-failure',
+    // Maximum time (ms) each action such as `click()` can take. Defaults to 0 (no limit)
+    actionTimeout: 10_000,
+    // Maximum time given for browser page navigation
+    navigationTimeout: 15_000,
+  },
+  expect: {
+    // set default timeout for all expects that have a {timeout} option i.e. if locators are not found,
+    // timeout after 10 seconds instead of waiting for the entire test timeout set above
+    timeout: 10_000,
   },
 
   /* Configure projects for major browsers */

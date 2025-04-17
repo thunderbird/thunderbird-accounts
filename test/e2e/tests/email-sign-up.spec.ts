@@ -42,7 +42,7 @@ test.describe('email sign-up', {
     });
 
     // now fill out the email sign up fields
-    await emailSignUpPage.emailAddressInput.fill(EMAIL_SIGN_UP_EMAIL_ADDRESS);
+    await emailSignUpPage.emailAddressInput.fill(EMAIL_SIGN_UP_EMAIL_ADDRESS, { timeout: 5000 });
     await emailSignUpPage.domainSelect.selectOption(EMAIL_SIGN_UP_DOMAIN);
 
     // the login username/email field should already be filled with your tb accounts login email
@@ -50,7 +50,7 @@ test.describe('email sign-up', {
     await expect(emailSignUpPage.loginUserNameEmail).toHaveValue(ACCTS_FXA_EMAIL);
 
     // fill in app password then click sign up
-    await emailSignUpPage.appPassword.fill(EMAIL_SIGN_UP_APP_PWORD);
+    await emailSignUpPage.appPassword.fill(EMAIL_SIGN_UP_APP_PWORD, { timeout: 5000 });
     await emailSignUpPage.signUpBtn.click();
   });
 });

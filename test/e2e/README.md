@@ -58,6 +58,8 @@ npm run e2e-test-debug
 
 ## Running the E2E tests against the stage environmnent
 
+`Prerequisite`: When running the tests on the stage env, the TB Accounts test account must have a Thundermail email address already set up.
+
 First copy over the provided `.env.stage.example` to a local `.env`:
 
 ```bash
@@ -69,6 +71,8 @@ Then edit your local `.env` file and provide the following values:
 ```dotenv
 ACCTS_FXA_EMAIL=<existing-stage-FxA-user-email>
 ACCTS_FXA_PWORD=<exisiting-stage-FxA-user-password>
+THUNDERMAIL_USERNAME<thundermail username associated with the above acct>
+THUNDERMAIL_EMAIL_ADDRESS=<thundermail email address associated with the above acct>
 ```
 
 To run the E2E tests headless (still in `test/e2e`):
@@ -100,6 +104,8 @@ Once you have credentials for an existing TB Accounts test account, edit your lo
 ```dotenv
 ACCTS_FXA_EMAIL=<existing-stage-FxA-user-email>
 ACCTS_FXA_PWORD=<exisiting-stage-FxA-user-password>
+THUNDERMAIL_USERNAME<thundermail username associated with the above acct>
+THUNDERMAIL_EMAIL_ADDRESS=<thundermail email address associated with the above acct>
 ```
 
 Also in order to run on BrowserStack you need to provide your BrowserStack credentials. Sign into your BrowserStack account and navigate to your `User Profile` and find your auth username and access key. In your local terminal export the following env vars to set the BrowserStack credentials that the tests will use:

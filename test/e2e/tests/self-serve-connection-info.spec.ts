@@ -6,15 +6,16 @@ import { connectionInfo } from '../const/types';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
-  IMAP_SERVER_PORT,
-  JMAP_SERVER_PORT,
-  SMTP_SERVER_PORT,
-  IMAP_SERVER_HOST,
-  JMAP_SERVER_HOST,
-  SMTP_SERVER_HOST,
+  IMAP_PORT,
+  JMAP_PORT,
+  SMTP_PORT,
+  ACCTS_HOST,
   SECURITY_SSL_TLS,
-  USERNAME_NONE,
-  APP_PASSWORD_NONE,
+  APP_PASSWORD,
+  YOUR_EMAIL_LBL,
+  THUNDERMAIL_USERNAME,
+  THUNDERMAIL_EMAIL_ADDRESS,
+  ACCTS_TARGET_ENV,
  } from '../const/constants';
 
 let selfServePage: SelfServePage;
@@ -29,32 +30,34 @@ test.beforeEach(async ({ page }) => {
 test.describe('self-serve hub connection info', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE],
 }, () => {
-  test('displayed correctly with no email set up', async ({ page }) => {
+  test('connection info displayed correctly', async ({ page }) => {
     // headers and link
     await expect(selfServePage.selfServeConnectionInfoHeader).toBeVisible();
     await expect(selfServePage.welcomeBackHeader).toBeVisible();
     await expect(selfServePage.accountInfoLink).toBeEnabled();
 
-    // imap details
     var expectedInfo: connectionInfo = {
-      'serverName': IMAP_SERVER_HOST,
-      'serverPort': IMAP_SERVER_PORT,
-      'securityType': SECURITY_SSL_TLS,
-      'userName': USERNAME_NONE,
-      'appPassword': APP_PASSWORD_NONE,
-    };
+        'hostName': ACCTS_HOST,
+        'port': IMAP_PORT,
+        'securityType': SECURITY_SSL_TLS,
+        'userName': THUNDERMAIL_USERNAME,
+        'appPassword': APP_PASSWORD,
+      };
 
-    // imap details
+    // when running on the stage env a thundermail email is required, but might not exist on the local dev env
+    if (ACCTS_TARGET_ENV == 'stage') {
+      expect(await selfServePage.yourEmailAddressText.innerText()).toBe(`${YOUR_EMAIL_LBL} ${THUNDERMAIL_EMAIL_ADDRESS}`);
+    }
+
+    // check imap details
     await selfServePage.checkIMAPInfo(expectedInfo);
 
-    // jmap details
-    expectedInfo['serverName'] = JMAP_SERVER_HOST;
-    expectedInfo['serverPort'] = JMAP_SERVER_PORT;
+    // check jmap details
+    expectedInfo['port'] = JMAP_PORT;
     await selfServePage.checkJMAPInfo(expectedInfo);
 
-    // smtp details
-    expectedInfo['serverName'] = SMTP_SERVER_HOST;
-    expectedInfo['serverPort'] = SMTP_SERVER_PORT;
+    // check smtp details
+    expectedInfo['port'] = SMTP_PORT;
     await selfServePage.checkSMTPInfo(expectedInfo);
   });
 });

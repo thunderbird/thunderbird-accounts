@@ -1,8 +1,8 @@
 // our custom types
 
 export interface connectionInfo {
-    serverName: string;
-    serverPort: number;
+    hostName: string;
+    port: number;
     securityType: string;
     userName: string;
     appPassword: string;
