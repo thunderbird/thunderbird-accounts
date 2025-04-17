@@ -37,10 +37,13 @@ body {
 }
 
 .logo {
-  width: 20.0rem;
+  width: 20rem;
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   font-weight: 500;
 }
 
@@ -54,28 +57,29 @@ b {
   gap: 1rem;
 }
 
-.receiving-email, .sending-email {
+.receiving-email,
+.sending-email {
   display: flex;
   gap: 2rem;
-    & h3 {
+  & h3 {
     min-width: 10rem;
   }
 }
 
 @property --load-position {
-  syntax: "<angle>";
+  syntax: '<angle>';
   initial-value: -270deg;
   inherits: true;
 }
 
 @property --load-offset {
-  syntax: "<angle>";
+  syntax: '<angle>';
   initial-value: 270deg;
   inherits: true;
 }
 
 @property --trail-offset {
-  syntax: "<angle>";
+  syntax: '<angle>';
   initial-value: 0deg;
   inherits: true;
 }
@@ -102,7 +106,7 @@ b {
 }
 
 .loader-outside::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 8px;
   height: 48px;
@@ -120,7 +124,7 @@ b {
 }
 
 .loader-inside::before {
-  content: "";
+  content: '';
   position: absolute;
   height: 8px;
   aspect-ratio: 1;
