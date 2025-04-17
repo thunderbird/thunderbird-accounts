@@ -26,3 +26,11 @@ config:
     secure: AAABAKMNzy5DwixZvU5B+W4EfWCibEMREgpT6vy4Ritc++jXZ8PxTP4sSiC8PF7/g+45QDYL1PypHYCwyZmMoNmG3rdlx4PyN8/Nuw==
   accounts:sentry-dsn:
     secure: AAABALuXruUUsNJ3dfQ2FN3KhDFoaxZ09/VEwhjEgDfLZmBcFsvOyXS3RZTX8eHl3ge+YBz9t3wrou25bkhQ2de0RI1y0A9NjWIRTLc1OmDmonZCDyqkaRJgJO9Z2TJVyqXK9GukeC7U4QNXR5qv8E4Y7mvLfj+eAzhXJktGHw==
+  accounts:paddle-token:
+    secure: AAABAFSV2O88PoZpgcX9oKEnUgJncaOwve8v4bPePMlIOB3trW3nCbRUx1YQ/+KbloK5WWO3C/DrCHxOruYASw==
+  accounts:paddle-price-id-lo:
+    secure: AAABAOHwI0kaUz9fuPGa5Dyj788rG6H1nULDDCmLhDdzrc1M1Ldz5W9NZ93FD7s9ela+Km4daRCbAStaXLE=
+  accounts:paddle-price-id-md:
+    secure: AAABAL0e+qOGwPX5TWx/5loAuNAUhPHVMM/R6ABQtlmqsqS1UBKyNKo1MzpZKh6gwOEJNIBAtq9OUBvM00g=
+  accounts:paddle-price-id-hi:
+    secure: AAABAG3r3zI76eGA/HsfWKEJ8UN13w8BDrHm3vQrEiixAG408dVFq0llEnTIBLpiXTEzXfuRv4IcUZLiZnA=

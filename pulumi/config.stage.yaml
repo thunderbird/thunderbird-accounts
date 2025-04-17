@@ -79,6 +79,10 @@ resources:
         - secret-key
         - fxa-encrypt-secret
         - sentry-dsn
+        - paddle-token
+        - paddle-price-id-lo
+        - paddle-price-id-md
+        - paddle-price-id-hi
   
   # Config to build a jumphost
   # tb:ec2:SshableInstance:
@@ -161,6 +165,14 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-encrypt-secret-odOppj
               - name: SENTRY_DSN
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-RxIMPu
+              - name: PADDLE_TOKEN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-token-ZWf7NX
+              - name: PADDLE_PRICE_ID_LO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-lo-QXPZou
+              - name: PADDLE_PRICE_ID_MD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-oiVCgC
+              - name: PADDLE_PRICE_ID_HI
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-82mAW4
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -213,6 +225,8 @@ resources:
                 value: '7768'
               - name: JMAP_TLS
                 value: 'True'
+              - name: PADDLE_ENV
+                value: 'sandbox'
 
   tb:ci:AwsAutomationUser:
     ci:
