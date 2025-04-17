@@ -38,7 +38,7 @@ export default defineConfig({
     // Maximum time (ms) each action such as `click()` can take. Defaults to 0 (no limit)
     actionTimeout: 10_000,
     // Maximum time given for browser page navigation
-    navigationTimeout: 15_000,
+    navigationTimeout: 30_000,
   },
   expect: {
     // set default timeout for all expects that have a {timeout} option i.e. if locators are not found,

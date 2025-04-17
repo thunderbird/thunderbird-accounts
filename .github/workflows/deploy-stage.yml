@@ -170,7 +170,6 @@ jobs:
         run: |
           cd ./test/e2e
           npm install
-          npx playwright install
 
       - name: BrowserStack Env Setup
         uses: browserstack/github-actions/setup-env@master
