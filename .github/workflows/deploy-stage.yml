@@ -120,7 +120,7 @@ jobs:
           echo -n "$ECR_TAG" > ecr_tag_celery_worker.txt
 
       - name: Archive the ECR tag
-        id: tag-archive
+        id: tag-archive-celery
         uses: actions/upload-artifact@v4
         with:
           name: ecr_tag
