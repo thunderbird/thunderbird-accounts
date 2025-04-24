@@ -15,19 +15,15 @@ const paddlePriceIdMd = window._page.paddlePriceIdMd;
 const paddlePriceIdHi = window._page.paddlePriceIdHi;
 const successRedirect = window._page.successRedirect;
 
-const baseUrl = window.location
-  .toString()
-  .replace(window.location.pathname, '');
+const baseUrl = window.location.toString().replace(window.location.pathname, '');
 const successUrl = `${baseUrl}${successRedirect}`;
 
 let Paddle; // The initialized Paddle instance.
 
-const paddleItems = [paddlePriceIdLo, paddlePriceIdMd, paddlePriceIdHi].map(
-  (priceId) => ({
-    quantity: 1,
-    priceId,
-  })
-);
+const paddleItems = [paddlePriceIdLo, paddlePriceIdMd, paddlePriceIdHi].map((priceId) => ({
+  quantity: 1,
+  priceId,
+}));
 
 onMounted(() => {
   if (!paddleToken) {
@@ -90,22 +86,19 @@ function initPaddle(items, fn) {
 <template>
   <div class="pricing-page-container">
     <h1>Choose your plan</h1>
-    <div
-      v-if="isPaddleTokenMissing || didReceivePaddleError"
-      class="paddle-error"
-    >
+    <div v-if="isPaddleTokenMissing || didReceivePaddleError" class="paddle-error" data-testid="pricing-error">
       <h3>{{ errorTitle }}</h3>
       <p>Cannot complete checkout at this time.</p>
     </div>
-    <div v-else-if="isLoading" class="loader-outside">
+    <div v-else-if="isLoading" class="loader-outside" data-testid="pricing-loader">
       <div class="loader-inside"></div>
     </div>
-    <div v-else class="pricing-grid" id="pricing-grid">
-      <div v-for="item in priceItems">
+    <div v-else-if="priceItems.length > 0" class="pricing-grid" data-testid="pricing-grid">
+      <div v-for="item in priceItems" data-testid="pricing-grid-price-item">
         <h3>{{ item.name }}</h3>
         <p>{{ item.description }}</p>
         <p>{{ item.total }}</p>
-        <button @click="openCheckout(item.id)">Select {{ item.total }}</button>
+        <button @click="openCheckout(item.id)" data-testid="checkout-button">Select {{ item.total }}</button>
       </div>
     </div>
   </div>
