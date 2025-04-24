@@ -128,6 +128,7 @@ resources:
         celery_worker:  # Doesn't require a listener, simply handles queued tasks
           container_name: celery_worker
           name: celery-worker-stage
+          container_port: 8088
       task_definition:
         network_mode: awsvpc
         cpu: 512
