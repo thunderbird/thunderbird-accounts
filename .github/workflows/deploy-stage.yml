@@ -123,7 +123,7 @@ jobs:
         id: tag-archive-celery
         uses: actions/upload-artifact@v4
         with:
-          name: ecr_tag
+          name: ecr_tag_celery_worker
           path: ecr_tag_celery_worker.txt
 
       # Deploy to stage
