@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { CheckoutPage } from '../pages/checkout-page';
+import { PaddleFrame } from '../pages/paddle-frame';
 import { navigateToAccountsSelfServeHubAndSignIn } from '../utils/utils';
 
 import {
@@ -17,6 +18,7 @@ import {
 import { MOCK_PRICING_RESPONSE_BAD } from '../const/mocks/paddle';
 
 let checkoutPage: CheckoutPage;
+let paddleFrame: PaddleFrame;
 
 test.describe(
   'self-serve hub checkout page',
@@ -47,52 +49,44 @@ test.describe(
       });
 
       test('shows correct products when SDK calls /pricing-preview', async ({ page }) => {
-        const priceCards = page.getByTestId('pricing-grid-price-item');
         await expect(checkoutPage.pricingGrid).toBeVisible();
-        await expect(priceCards).toHaveCount(3);
-        await expect(priceCards.nth(0)).toContainText('Small');
-        await expect(priceCards.nth(1)).toContainText('Medium');
-        await expect(priceCards.nth(2)).toContainText('Big');
+        await expect(checkoutPage.priceCards).toHaveCount(3);
+        await expect(checkoutPage.priceCards.nth(0)).toContainText('Small');
+        await expect(checkoutPage.priceCards.nth(1)).toContainText('Medium');
+        await expect(checkoutPage.priceCards.nth(2)).toContainText('Big');
       });
 
       test('able to complete a checkout', async ({ page }) => {
         // open modal for a product
-        const checkoutButtons = page.getByTestId('checkout-button');
-        await checkoutButtons.nth(0).click();
+        await checkoutPage.checkoutButtons.nth(0).click();
 
         // frame takes some time to load
         await page.waitForTimeout(TIMEOUT_2_SECONDS);
-        const paddleFrame = page.frame({ name: 'paddle_frame' });
-        await expect(paddleFrame).not.toBeNull();
-        if (!paddleFrame) {
-          // serves as non-null type guard
-          return;
-        }
+        paddleFrame = new PaddleFrame(page);
 
         // confirm that modal opens
-        const modal = await paddleFrame.locator('body');
-        expect(modal).toContainText('Order summary');
+        expect(paddleFrame.modal).toContainText('Order summary');
 
         // fill out form
-        const emailField = modal.getByTestId('authenticationEmailInput');
+        const emailField = paddleFrame.modal.getByTestId('authenticationEmailInput');
         await emailField.fill(CHECKOUT_EMAIL_ADDRESS, { timeout: TIMEOUT_2_SECONDS });
-        const postalCodeField = modal.getByTestId('postcodeInput');
+        const postalCodeField = paddleFrame.modal.getByTestId('postcodeInput');
         await postalCodeField.fill(CHECKOUT_POSTAL_CODE, { timeout: TIMEOUT_2_SECONDS });
 
-        const continueButton = modal.getByTestId('combinedAuthenticationLocationFormSubmitButton');
+        const continueButton = paddleFrame.modal.getByTestId('combinedAuthenticationLocationFormSubmitButton');
         await continueButton.click();
 
         await page.waitForTimeout(TIMEOUT_2_SECONDS);
-        const cardNumberField = modal.getByTestId('cardNumberInput');
+        const cardNumberField = paddleFrame.modal.getByTestId('cardNumberInput');
         await cardNumberField.fill(CHECKOUT_CC_NUM, { timeout: TIMEOUT_2_SECONDS });
-        const cardNameField = modal.getByTestId('cardholderNameInput');
+        const cardNameField = paddleFrame.modal.getByTestId('cardholderNameInput');
         await cardNameField.fill(CHECKOUT_CC_NAME, { timeout: TIMEOUT_2_SECONDS });
-        const cardExpiryField = modal.getByTestId('expiryDateField');
+        const cardExpiryField = paddleFrame.modal.getByTestId('expiryDateField');
         await cardExpiryField.fill(CHECKOUT_CC_EXP, { timeout: TIMEOUT_2_SECONDS });
-        const cardVerificationField = modal.getByTestId('cardVerificationValueInput');
+        const cardVerificationField = paddleFrame.modal.getByTestId('cardVerificationValueInput');
         await cardVerificationField.fill(CHECKOUT_CC_CVV, { timeout: TIMEOUT_2_SECONDS });
 
-        const finalCheckoutButton = modal.getByTestId('cardPaymentFormSubmitButton');
+        const finalCheckoutButton = paddleFrame.modal.getByTestId('cardPaymentFormSubmitButton');
 
         await Promise.all([page.waitForURL(ACCTS_CHECKOUT_SUCCESS_URL), await finalCheckoutButton.click()]);
 
