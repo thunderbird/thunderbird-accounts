@@ -126,9 +126,9 @@ resources:
             interval: 30
             path: /health
         celery_worker:  # Doesn't require a listener, simply handles queued tasks
+          container_port: 8088
           container_name: celery_worker
           name: celery-worker-stage
-          container_port: 8088
       task_definition:
         network_mode: awsvpc
         cpu: 512
@@ -247,7 +247,12 @@ resources:
                 value: 'False'
           celery_worker:
             <<: *accounts_def
-            portMappings: null
+            portMappings:
+              - name: celery_worker
+                containerPort: 8088
+                hostPort: 8087
+                protocol: tcp
+                appProtocol: http
 
   tb:ci:AwsAutomationUser:
     ci:
