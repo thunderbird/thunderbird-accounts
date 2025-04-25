@@ -1,5 +1,91 @@
 ---
 resources:
+  # We merge this into container defs as they're shared
+  x-container-secrets: &x-container-secrets
+    - name: DATABASE_HOST
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-wRjCb5
+    - name: DATABASE_NAME
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-qa6aJc
+    - name: DATABASE_PASSWORD
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-Vnxk3O
+    - name: DATABASE_USER
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-5v9m6l
+    - name: FXA_ALLOW_LIST
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-NeQYKI
+    - name: FXA_CLIENT_ID
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-client-id-32uWP9
+    - name: FXA_SECRET
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-secret-DoS6rM
+    - name: LOGIN_CODE_SECRET
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-WL7MZu
+    - name: SECRET_KEY
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-ZBBV7V
+    - name: FXA_ENCRYPT_SECRET
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-encrypt-secret-odOppj
+    - name: SENTRY_DSN
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-RxIMPu
+    - name: PADDLE_TOKEN
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-token-ZWf7NX
+    - name: PADDLE_PRICE_ID_LO
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-lo-QXPZou
+    - name: PADDLE_PRICE_ID_MD
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-oiVCgC
+    - name: PADDLE_PRICE_ID_HI
+      valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-82mAW4
+  x-container-envs: &x-container-envs
+    - name: ADMIN_WEBSITE
+      value: https://www.thunderbird.net
+    - name: ADMIN_CONTACT
+      value: dummy@example.org
+    - name: ALLOWED_HOSTS
+      # value: '*'
+      value: '*:8087,accounts-stage.tb.pro,10.*,10.*:8087'
+    - name: APP_ENV
+      value: stage
+    - name: AUTH_SCHEME
+      value: fxa
+    - name: FXA_CALLBACK
+      value: https://accounts-stage.tb.pro/api/v1/auth/fxa/callback
+    - name: FXA_OAUTH_SERVER_URL
+      value: https://oauth.stage.mozaws.net/v1
+    - name: FXA_OPEN_ID_CONFIG
+      value: https://accounts.stage.mozaws.net/.well-known/openid-configuration
+    - name: FXA_PROFILE_SERVER_URL
+      value: https://profile.stage.mozaws.net/v1
+    - name: PUBLIC_BASE_URL
+      value: accounts-stage.tb.pro
+    - name: REDIS_URL
+      value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
+    - name: SUPPORT_CONTACT
+      value: dummy@example.org
+    - name: CSRF_SECURE
+      value: 'True'
+    - name: CSRF_HTTPONLY
+      value: 'True'
+    - name: CSRF_TRUSTED_ORIGINS
+      value: 'https://accounts-stage.tb.pro'
+    - name: ALLOWED_EMAIL_DOMAINS
+      value: 'mail.stage-thundermail.com'
+    - name: IMAP_HOST
+      value: 'mail.stage-thundermail.com'
+    - name: IMAP_PORT
+      value: '993'
+    - name: IMAP_TLS
+      value: 'True'
+    - name: SMTP_HOST
+      value: 'mail.stage-thundermail.com'
+    - name: SMTP_PORT
+      value: '465'
+    - name: SMTP_TLS
+      value: 'True'
+    - name: JMAP_HOST
+      value: 'mail.stage-thundermail.com'
+    - name: JMAP_PORT
+      value: '443'
+    - name: JMAP_TLS
+      value: 'True'
+    - name: PADDLE_ENV
+      value: 'sandbox'
 
   domains:
     accounts: accounts-stage.tb.pro
@@ -143,90 +229,9 @@ resources:
             linuxParameters:
               initProcessEnabled: True
             secrets:
-              - name: DATABASE_HOST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-wRjCb5
-              - name: DATABASE_NAME
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-qa6aJc
-              - name: DATABASE_PASSWORD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-Vnxk3O
-              - name: DATABASE_USER
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-5v9m6l
-              - name: FXA_ALLOW_LIST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-NeQYKI
-              - name: FXA_CLIENT_ID
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-client-id-32uWP9
-              - name: FXA_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-secret-DoS6rM
-              - name: LOGIN_CODE_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-WL7MZu
-              - name: SECRET_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-ZBBV7V
-              - name: FXA_ENCRYPT_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-encrypt-secret-odOppj
-              - name: SENTRY_DSN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-RxIMPu
-              - name: PADDLE_TOKEN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-token-ZWf7NX
-              - name: PADDLE_PRICE_ID_LO
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-lo-QXPZou
-              - name: PADDLE_PRICE_ID_MD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-oiVCgC
-              - name: PADDLE_PRICE_ID_HI
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-82mAW4
+              <<: *x-container-secrets
             environment:
-              - name: ADMIN_WEBSITE
-                value: https://www.thunderbird.net
-              - name: ADMIN_CONTACT
-                value: dummy@example.org
-              - name: ALLOWED_HOSTS
-                # value: '*'
-                value: '*:8087,accounts-stage.tb.pro,10.*,10.*:8087'
-              - name: APP_ENV
-                value: stage
-              - name: AUTH_SCHEME
-                value: fxa
-              - name: FXA_CALLBACK
-                value: https://accounts-stage.tb.pro/api/v1/auth/fxa/callback
-              - name: FXA_OAUTH_SERVER_URL
-                value: https://oauth.stage.mozaws.net/v1
-              - name: FXA_OPEN_ID_CONFIG
-                value: https://accounts.stage.mozaws.net/.well-known/openid-configuration
-              - name: FXA_PROFILE_SERVER_URL
-                value: https://profile.stage.mozaws.net/v1
-              - name: PUBLIC_BASE_URL
-                value: accounts-stage.tb.pro
-              - name: REDIS_URL
-                value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
-              - name: SUPPORT_CONTACT
-                value: dummy@example.org
-              - name: CSRF_SECURE
-                value: 'True'
-              - name: CSRF_HTTPONLY
-                value: 'True'
-              - name: CSRF_TRUSTED_ORIGINS
-                value: 'https://accounts-stage.tb.pro'
-              - name: ALLOWED_EMAIL_DOMAINS
-                value: 'mail.stage-thundermail.com'
-              - name: IMAP_HOST
-                value: 'mail.stage-thundermail.com'
-              - name: IMAP_PORT
-                value: '993'
-              - name: IMAP_TLS
-                value: 'True'
-              - name: SMTP_HOST
-                value: 'mail.stage-thundermail.com'
-              - name: SMTP_PORT
-                value: '465'
-              - name: SMTP_TLS
-                value: 'True'
-              - name: JMAP_HOST
-                value: 'mail.stage-thundermail.com'
-              - name: JMAP_PORT
-                value: '443'
-              - name: JMAP_TLS
-                value: 'True'
-              - name: PADDLE_ENV
-                value: 'sandbox'
+              <<: *x-container-envs
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
       build_load_balancer: False  # This service has no network inputs and thus needs no LB
@@ -247,87 +252,12 @@ resources:
             linuxParameters:
               initProcessEnabled: True
             secrets:
-              - name: DATABASE_HOST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-wRjCb5
-              - name: DATABASE_NAME
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-qa6aJc
-              - name: DATABASE_PASSWORD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-Vnxk3O
-              - name: DATABASE_USER
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-5v9m6l
-              - name: FXA_ALLOW_LIST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-NeQYKI
-              - name: FXA_CLIENT_ID
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-client-id-32uWP9
-              - name: FXA_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-secret-DoS6rM
-              - name: LOGIN_CODE_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-WL7MZu
-              - name: SECRET_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-ZBBV7V
-              - name: FXA_ENCRYPT_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-encrypt-secret-odOppj
-              - name: SENTRY_DSN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-RxIMPu
-              - name: PADDLE_TOKEN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-token-ZWf7NX
-              - name: PADDLE_PRICE_ID_LO
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-lo-QXPZou
-              - name: PADDLE_PRICE_ID_MD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-oiVCgC
-              - name: PADDLE_PRICE_ID_HI
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-82mAW4
+              <<: *x-container-secrets
             environment:
-              - name: ADMIN_WEBSITE
-                value: https://www.thunderbird.net
-              - name: ADMIN_CONTACT
-                value: dummy@example.org
-              - name: APP_ENV
-                value: stage
-              - name: AUTH_SCHEME
-                value: fxa
-              - name: FXA_CALLBACK
-                value: https://accounts-stage.tb.pro/api/v1/auth/fxa/callback
-              - name: FXA_OAUTH_SERVER_URL
-                value: https://oauth.stage.mozaws.net/v1
-              - name: FXA_OPEN_ID_CONFIG
-                value: https://accounts.stage.mozaws.net/.well-known/openid-configuration
-              - name: FXA_PROFILE_SERVER_URL
-                value: https://profile.stage.mozaws.net/v1
-              - name: PUBLIC_BASE_URL
-                value: accounts-stage.tb.pro
-              - name: REDIS_URL
-                value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
-              - name: SUPPORT_CONTACT
-                value: dummy@example.org
-              - name: CSRF_SECURE
-                value: 'True'
-              - name: CSRF_HTTPONLY
-                value: 'True'
-              - name: CSRF_TRUSTED_ORIGINS
-                value: 'https://accounts-stage.tb.pro'
-              - name: ALLOWED_EMAIL_DOMAINS
-                value: 'mail.stage-thundermail.com'
-              - name: IMAP_HOST
-                value: 'mail.stage-thundermail.com'
-              - name: IMAP_PORT
-                value: '993'
-              - name: IMAP_TLS
-                value: 'True'
-              - name: SMTP_HOST
-                value: 'mail.stage-thundermail.com'
-              - name: SMTP_PORT
-                value: '465'
-              - name: SMTP_TLS
-                value: 'True'
-              - name: JMAP_HOST
-                value: 'mail.stage-thundermail.com'
-              - name: JMAP_PORT
-                value: '443'
-              - name: JMAP_TLS
-                value: 'True'
-              - name: PADDLE_ENV
-                value: 'sandbox'
+              - <<: *x-container-envs
+              # Celery shouldn't have any allowed hosts
+              - name: ALLOWED_HOSTS
+                value: null
 
   tb:ci:AwsAutomationUser:
     ci:
