@@ -5,6 +5,7 @@ export class PaddleFrame {
   readonly frame: Frame;
   readonly modal: Locator;
   readonly emailField: Locator;
+  readonly countryField: Locator;
   readonly postalCodeField: Locator;
   readonly continueButton: Locator;
   readonly cardNumberField: Locator;
@@ -18,6 +19,7 @@ export class PaddleFrame {
     this.frame = this.page.frame({ name: 'paddle_frame' })!; // non-null assertion
     this.modal = this.frame.locator('body');
     this.emailField = this.modal.getByTestId('authenticationEmailInput');
+    this.countryField = this.modal.getByTestId('countriesSelect');
     this.postalCodeField = this.modal.getByTestId('postcodeInput');
     this.continueButton = this.modal.getByTestId('combinedAuthenticationLocationFormSubmitButton');
     this.cardNumberField = this.modal.getByTestId('cardNumberInput');

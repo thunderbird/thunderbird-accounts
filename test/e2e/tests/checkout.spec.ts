@@ -14,6 +14,7 @@ import {
   CHECKOUT_CC_CVV,
   ACCTS_CHECKOUT_SUCCESS_URL,
   TIMEOUT_2_SECONDS,
+  CHECKOUT_COUNTRY,
 } from '../const/constants';
 import { MOCK_PRICING_RESPONSE_BAD } from '../const/mocks/paddle';
 
@@ -68,27 +69,18 @@ test.describe(
         expect(paddleFrame.modal).toContainText('Order summary');
 
         // fill out form
-        const emailField = paddleFrame.modal.getByTestId('authenticationEmailInput');
-        await emailField.fill(CHECKOUT_EMAIL_ADDRESS, { timeout: TIMEOUT_2_SECONDS });
-        const postalCodeField = paddleFrame.modal.getByTestId('postcodeInput');
-        await postalCodeField.fill(CHECKOUT_POSTAL_CODE, { timeout: TIMEOUT_2_SECONDS });
-
-        const continueButton = paddleFrame.modal.getByTestId('combinedAuthenticationLocationFormSubmitButton');
-        await continueButton.click();
+        await paddleFrame.emailField.fill(CHECKOUT_EMAIL_ADDRESS, { timeout: TIMEOUT_2_SECONDS });
+        await paddleFrame.countryField.selectOption(CHECKOUT_COUNTRY);
+        await paddleFrame.postalCodeField.fill(CHECKOUT_POSTAL_CODE, { timeout: TIMEOUT_2_SECONDS });
+        await paddleFrame.continueButton.click();
 
         await page.waitForTimeout(TIMEOUT_2_SECONDS);
-        const cardNumberField = paddleFrame.modal.getByTestId('cardNumberInput');
-        await cardNumberField.fill(CHECKOUT_CC_NUM, { timeout: TIMEOUT_2_SECONDS });
-        const cardNameField = paddleFrame.modal.getByTestId('cardholderNameInput');
-        await cardNameField.fill(CHECKOUT_CC_NAME, { timeout: TIMEOUT_2_SECONDS });
-        const cardExpiryField = paddleFrame.modal.getByTestId('expiryDateField');
-        await cardExpiryField.fill(CHECKOUT_CC_EXP, { timeout: TIMEOUT_2_SECONDS });
-        const cardVerificationField = paddleFrame.modal.getByTestId('cardVerificationValueInput');
-        await cardVerificationField.fill(CHECKOUT_CC_CVV, { timeout: TIMEOUT_2_SECONDS });
+        await paddleFrame.cardNumberField.fill(CHECKOUT_CC_NUM, { timeout: TIMEOUT_2_SECONDS });
+        await paddleFrame.cardNameField.fill(CHECKOUT_CC_NAME, { timeout: TIMEOUT_2_SECONDS });
+        await paddleFrame.cardExpiryField.fill(CHECKOUT_CC_EXP, { timeout: TIMEOUT_2_SECONDS });
+        await paddleFrame.cardVerificationField.fill(CHECKOUT_CC_CVV, { timeout: TIMEOUT_2_SECONDS });
 
-        const finalCheckoutButton = paddleFrame.modal.getByTestId('cardPaymentFormSubmitButton');
-
-        await Promise.all([page.waitForURL(ACCTS_CHECKOUT_SUCCESS_URL), await finalCheckoutButton.click()]);
+        await Promise.all([page.waitForURL(ACCTS_CHECKOUT_SUCCESS_URL), await paddleFrame.finalCheckoutButton.click()]);
 
         expect(page.url()).toBe(ACCTS_CHECKOUT_SUCCESS_URL);
       });
