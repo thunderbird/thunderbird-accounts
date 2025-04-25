@@ -14,7 +14,7 @@ import {
   ACCTS_CHECKOUT_SUCCESS_URL,
   TIMEOUT_2_SECONDS,
 } from '../const/constants';
-import { MOCK_PRICING_RESPONSE_BAD, MOCK_PRICING_RESPONSE_OK } from '../const/mocks/paddle';
+import { MOCK_PRICING_RESPONSE_BAD } from '../const/mocks/paddle';
 
 let checkoutPage: CheckoutPage;
 
