@@ -71,27 +71,31 @@ redis = tb_pulumi.elasticache.ElastiCacheReplicationGroup(
     **redis_opts,
 )
 
-# Build a Fargate cluster to run our containers
-fargate_opts = resources['tb:fargate:FargateClusterWithLogging']['accounts']
-fargate = tb_pulumi.fargate.FargateClusterWithLogging(
-    name=f'{project.name_prefix}-fargate',
-    project=project,
-    subnets=vpc.resources['subnets'],
-    container_security_groups=[sg_container.resources['sg'].id],
-    load_balancer_security_groups=[sg_lb.resources['sg'].id],
-    opts=pulumi.ResourceOptions(depends_on=[sg_lb, sg_container, vpc]),
-    **fargate_opts,
-)
+# Build Fargate clusters to run our containers
+fargate_clusters = {
+    cluster: tb_pulumi.fargate.FargateClusterWithLogging(
+        name=f'{project.name_prefix}-fargate-{cluster}',
+        project=project,
+        subnets=vpc.resources['subnets'],
+        container_security_groups=[sg_container.resources['sg'].id],
+        load_balancer_security_groups=[sg_lb.resources['sg'].id],
+        opts=pulumi.ResourceOptions(
+            depends_on=[sg_lb.resources['sg'], sg_container.resources['sg'], *vpc.resources['subnets']]
+        ),
+        **opts,
+    )
+    for cluster, opts in resources['tb:fargate:FargateClusterWithLogging'].items()
+}
 
 cloudflare_backend_record = cloudflare.Record(
     f'{project.name_prefix}-dns-backend',
     zone_id=cloudflare_zone_id,
     name=resources['domains']['accounts'],
     type='CNAME',
-    content=fargate.resources['fargate_service_alb'].resources['albs']['accounts'].dns_name,
+    content=fargate_clusters['accounts'].resources['fargate_service_alb'].resources['albs']['accounts'].dns_name,
     proxied=False,
     ttl=1,  # ttl units are *minutes*
-    opts=pulumi.ResourceOptions(depends_on=[fargate]),
+    opts=pulumi.ResourceOptions(depends_on=[*fargate_clusters.values()]),
 )
 
 # This is only managed by a single stack, so a configuration may not exist for it
