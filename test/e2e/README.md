@@ -18,10 +18,29 @@ npx playwright install
 ```
 
 ## E2E Test Prerequisites
+
 The E2E tests require an existing FxA account used to sign-in to TB Accounts, and reads this from your local .env file. This includes:
+
 - Credentials for an existing Accounts (FxA) account (email address, password)
 
+In addition, you will need the env vars for the Paddle sandbox.
+These can be found in the Services vault in 1Password in the secure note "Paddle Sandbox env vars".
+
 ## Running the E2E tests against your local dev environment
+
+### Add Paddle env vars
+
+In the top level `.env` file, add the values from the "Paddle Sandbox env vars" secure note.
+
+```dotenv
+PADDLE_TOKEN=<token>
+PADDLE_ENV=sandbox
+PADDLE_PRICE_ID_LO=<price id 1>
+PADDLE_PRICE_ID_MD=<price id 2>
+PADDLE_PRICE_ID_HI=<price id 3>
+```
+
+### Add FxA Account Information
 
 When running the TB Accounts local dev stack it uses the FxA stage env for sign-in, and then redirects back to your localhost afterwords. So you will use your FxA stage test account also when running the E2E tests against your local dev stack.
 
@@ -33,10 +52,13 @@ cp .env.dev.example .env
 ```
 
 Then edit your local `.env` file and provide the following values:
+
 ```dotenv
 ACCTS_FXA_EMAIL=<existing-stage-FxA-user-email>
 ACCTS_FXA_PWORD=<exisiting-stage-FxA-user-password>
 ```
+
+### Run the tests
 
 To run the E2E tests headless (still in `test/e2e`):
 
