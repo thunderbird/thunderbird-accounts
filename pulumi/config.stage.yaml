@@ -92,12 +92,12 @@ resources:
 
   tb:network:MultiCidrVpc:
     vpc:
-      cidr_block: 10.10.0.0/16
+      cidr_block: 10.11.0.0/16
       subnets:
         eu-central-1a:
-          - 10.10.0.0/17
+          - 10.11.0.0/17
         eu-central-1b:
-          - 10.10.128.0/17
+          - 10.11.128.0/17
       enable_internet_gateway: True
       egress_via_internet_gateway: True
       enable_dns_hostnames: True
