@@ -160,8 +160,8 @@ jobs:
           pulumi login
           pulumi stack select thunderbird/accounts/stage
           pulumi up -y --diff \
-            --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-taskdef' \
-            --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$tb:fargate:FargateServiceAlb$aws:alb/targetGroup:TargetGroup::accounts-stage-fargate-fargateservicealb-targetgroup-celery_worker' \
+            --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-taskdef' \
+            --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-celery-taskdef' \
             --target-dependents
 
   e2e-tests-browserstack-stage:
