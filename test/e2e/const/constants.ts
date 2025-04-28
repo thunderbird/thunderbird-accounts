@@ -35,7 +35,7 @@ export const EMAIL_SIGN_UP_DOMAIN = String(process.env.EMAIL_SIGN_UP_DOMAIN);
 export const EMAIL_SIGN_UP_APP_PWORD = 'password';
 
 // checkout details
-export const CHECKOUT_EMAIL_ADDRESS = String(process.env.EMAIL_SIGN_UP_DOMAIN);
+export const CHECKOUT_EMAIL_ADDRESS = String(process.env.EMAIL_SIGN_UP_ADDRESS);
 export const CHECKOUT_COUNTRY = 'US';
 export const CHECKOUT_POSTAL_CODE = '90210';
 export const CHECKOUT_CC_NUM = '4242 4242 4242 4242';
