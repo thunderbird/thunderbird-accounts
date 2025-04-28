@@ -339,6 +339,13 @@ SERVESTATIC_MANIFEST_STRICT = False
 # Celery settings, these are prefixed by CELERY_ and are otherwise just celery parameters
 CELERY_BROKER_URL = '/'.join(filter(None, [os.getenv('CELERY_BROKER'), os.getenv('REDIS_CELERY_DB')]))
 CELERY_RESULT_BACKEND = '/'.join(filter(None, [os.getenv('CELERY_BACKEND'), os.getenv('REDIS_CELERY_RESULTS_DB')]))
+
+# If we are using a rediss url, require certs!
+if CELERY_BROKER_URL.startswith('rediss://'):
+    CELERY_BROKER_URL += '?ssl_cert_reqs=CERT_REQUIRED'
+if CELERY_RESULT_BACKEND.startswith('rediss://'):
+    CELERY_RESULT_BACKEND += '?ssl_cert_reqs=CERT_REQUIRED'
+
 CELERY_RESULT_EXPIRES = 3600
 # If true, immediately run tasks instead of queueing them
 CELERY_TASK_ALWAYS_EAGER = os.getenv('CELERY_EAGER', False) == 'True'

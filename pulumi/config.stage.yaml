@@ -41,7 +41,7 @@ resources:
     accounts-container:
       rules:
         ingress:
-            # Set the source in code to the accounts-lb SGID
+          # Set the source in code to the accounts-lb SGID
           - description: Allow traffic from the load balancer to the container
             protocol: tcp
             from_port: 8087
@@ -53,7 +53,7 @@ resources:
             protocol: tcp
             from_port: 0
             to_port: 65535
-      
+
     accounts-redis:
       rules:
         ingress:
@@ -62,7 +62,7 @@ resources:
             protocol: tcp
             from_port: 6379
             to_port: 6379
-        egress: []
+        egress: [ ]
 
   tb:secrets:PulumiSecretsManager:
     pulumi:
@@ -100,7 +100,7 @@ resources:
       transit_encryption_mode: required
       transit_encryption_enabled: True
       apply_immediately: True
-      
+
   
   tb:fargate:FargateClusterWithLogging:
     accounts:
@@ -226,6 +226,19 @@ resources:
                 value: 'True'
               - name: PADDLE_ENV
                 value: 'sandbox'
+              - name: CELERY_BROKER
+                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
+              - name: CELERY_BACKEND
+                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
+              - name: REDIS_INTERNAL_DB
+                value: '0'
+              - name: REDIS_CELERY_DB
+                value: '5'
+              - name: REDIS_CELERY_RESULTS_DB
+                value: '6'
+              - name: REDIS_SHARED_DB
+                value: '10'
+
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
       build_load_balancer: False  # This service has no network inputs and thus needs no LB
@@ -233,7 +246,7 @@ resources:
       ecr_resources:
         - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts-celery-worker*
       internal: True
-      services: {}
+      services: { }
       task_definition:
         network_mode: awsvpc
         cpu: 512
@@ -327,6 +340,19 @@ resources:
                 value: 'True'
               - name: PADDLE_ENV
                 value: 'sandbox'
+              - name: CELERY_BROKER
+                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
+              - name: CELERY_BACKEND
+                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
+              - name: REDIS_INTERNAL_DB
+                value: '0'
+              - name: REDIS_CELERY_DB
+                value: '5'
+              - name: REDIS_CELERY_RESULTS_DB
+                value: '6'
+              - name: REDIS_SHARED_DB
+                value: '10'
+
   tb:ci:AwsAutomationUser:
     ci:
       enable_ecr_image_push: true
