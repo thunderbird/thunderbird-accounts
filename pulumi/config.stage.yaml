@@ -1,17 +1,16 @@
 ---
 resources:
-
   domains:
     accounts: accounts-stage.tb.pro
 
   tb:network:MultiCidrVpc:
     vpc:
-      cidr_block: 10.10.0.0/16
+      cidr_block: 10.11.0.0/16
       subnets:
         eu-central-1a:
-          - 10.10.0.0/17
+          - 10.11.0.0/17
         eu-central-1b:
-          - 10.10.128.0/17
+          - 10.11.128.0/17
       enable_internet_gateway: True
       egress_via_internet_gateway: True
       enable_dns_hostnames: True
@@ -42,7 +41,7 @@ resources:
     accounts-container:
       rules:
         ingress:
-            # Set the source in code to the accounts-lb SGID
+          # Set the source in code to the accounts-lb SGID
           - description: Allow traffic from the load balancer to the container
             protocol: tcp
             from_port: 8087
@@ -54,7 +53,7 @@ resources:
             protocol: tcp
             from_port: 0
             to_port: 65535
-      
+
     accounts-redis:
       rules:
         ingress:
@@ -63,7 +62,7 @@ resources:
             protocol: tcp
             from_port: 6379
             to_port: 6379
-        egress: []
+        egress: [ ]
 
   tb:secrets:PulumiSecretsManager:
     pulumi:
@@ -83,7 +82,7 @@ resources:
         - paddle-price-id-lo
         - paddle-price-id-md
         - paddle-price-id-hi
-
+  
   # Config to build a jumphost
   # tb:ec2:SshableInstance:
   #   jumphost:
@@ -101,12 +100,12 @@ resources:
       transit_encryption_mode: required
       transit_encryption_enabled: True
       apply_immediately: True
-      
+
   
   tb:fargate:FargateClusterWithLogging:
     accounts:
-      desired_count: 1
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
+      desired_count: 1
       ecr_resources:
         - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
       health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
@@ -125,10 +124,6 @@ resources:
             unhealthy_threshold: 5
             interval: 30
             path: /health
-        celery_worker:  # Doesn't require a listener, simply handles queued tasks
-          container_port: 8088
-          container_name: celery_worker
-          name: celery-worker-stage
       task_definition:
         network_mode: awsvpc
         cpu: 512
@@ -136,8 +131,8 @@ resources:
         requires_compatibilities:
           - FARGATE
         container_definitions:
-          accounts: &accounts_def
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:latest
+          accounts:
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:760f6d1bfd2d7d924b3ac8cc04187c5e10578859
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -148,35 +143,35 @@ resources:
               initProcessEnabled: True
             secrets:
               - name: DATABASE_HOST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-wRjCb5
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-zmv0GO
               - name: DATABASE_NAME
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-qa6aJc
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-ZCR7dN
               - name: DATABASE_PASSWORD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-Vnxk3O
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-8RraYV
               - name: DATABASE_USER
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-5v9m6l
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-a99f03
               - name: FXA_ALLOW_LIST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-NeQYKI
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-Rjs24C
               - name: FXA_CLIENT_ID
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-client-id-32uWP9
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-client-id-XO3yvx
               - name: FXA_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-secret-DoS6rM
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-secret-0JxgeP
               - name: LOGIN_CODE_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-WL7MZu
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-g3HGZu
               - name: SECRET_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-ZBBV7V
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-RMUzrl
               - name: FXA_ENCRYPT_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-encrypt-secret-odOppj
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-encrypt-secret-FZ0iVv
               - name: SENTRY_DSN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-RxIMPu
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-rgui8C
               - name: PADDLE_TOKEN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-token-ZWf7NX
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-token-1Xo0np
               - name: PADDLE_PRICE_ID_LO
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-lo-QXPZou
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-lo-BOxRwS
               - name: PADDLE_PRICE_ID_MD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-oiVCgC
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-YShIxp
               - name: PADDLE_PRICE_ID_HI
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-82mAW4
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -210,27 +205,31 @@ resources:
               - name: CSRF_TRUSTED_ORIGINS
                 value: 'https://accounts-stage.tb.pro'
               - name: ALLOWED_EMAIL_DOMAINS
-                value: 'stage-thundermail.com'
+                value: 'mail.stage-thundermail.com'
               - name: IMAP_HOST
-                value: 'stage-thundermail.com'
+                value: 'mail.stage-thundermail.com'
               - name: IMAP_PORT
                 value: '993'
               - name: IMAP_TLS
                 value: 'True'
               - name: SMTP_HOST
-                value: 'stage-thundermail.com'
+                value: 'mail.stage-thundermail.com'
               - name: SMTP_PORT
                 value: '465'
               - name: SMTP_TLS
                 value: 'True'
               - name: JMAP_HOST
-                value: 'stage-thundermail.com'
+                value: 'mail.stage-thundermail.com'
               - name: JMAP_PORT
-                value: '7768'
+                value: '443'
               - name: JMAP_TLS
                 value: 'True'
               - name: PADDLE_ENV
                 value: 'sandbox'
+              - name: CELERY_BROKER
+                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
+              - name: CELERY_BACKEND
+                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
               - name: REDIS_INTERNAL_DB
                 value: '0'
               - name: REDIS_CELERY_DB
@@ -239,20 +238,120 @@ resources:
                 value: '6'
               - name: REDIS_SHARED_DB
                 value: '10'
+
+    accounts-celery:
+      assign_public_ip: True  # Necessary, or else it can't talk out through the IG
+      build_load_balancer: False  # This service has no network inputs and thus needs no LB
+      desired_count: 1
+      ecr_resources:
+        - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts-celery-worker*
+      internal: True
+      services: { }
+      task_definition:
+        network_mode: awsvpc
+        cpu: 512
+        memory: 2048
+        requires_compatibilities:
+          - FARGATE
+        container_definitions:
+          accounts:
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts-celery-worker:0bd8ccbe4a85a1332ba7b28216d158a97b5ffa6f
+            linuxParameters:
+              initProcessEnabled: True
+            secrets:
+              - name: DATABASE_HOST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-zmv0GO
+              - name: DATABASE_NAME
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-ZCR7dN
+              - name: DATABASE_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-8RraYV
+              - name: DATABASE_USER
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-a99f03
+              - name: FXA_ALLOW_LIST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-Rjs24C
+              - name: FXA_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-client-id-XO3yvx
+              - name: FXA_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-secret-0JxgeP
+              - name: LOGIN_CODE_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-g3HGZu
+              - name: SECRET_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-RMUzrl
+              - name: FXA_ENCRYPT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-encrypt-secret-FZ0iVv
+              - name: SENTRY_DSN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-rgui8C
+              - name: PADDLE_TOKEN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-token-1Xo0np
+              - name: PADDLE_PRICE_ID_LO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-lo-BOxRwS
+              - name: PADDLE_PRICE_ID_MD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-YShIxp
+              - name: PADDLE_PRICE_ID_HI
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08
+            environment:
+              - name: ADMIN_WEBSITE
+                value: https://www.thunderbird.net
+              - name: ADMIN_CONTACT
+                value: dummy@example.org
+              - name: APP_ENV
+                value: stage
+              - name: AUTH_SCHEME
+                value: fxa
+              - name: FXA_CALLBACK
+                value: https://accounts-stage.tb.pro/api/v1/auth/fxa/callback
+              - name: FXA_OAUTH_SERVER_URL
+                value: https://oauth.stage.mozaws.net/v1
+              - name: FXA_OPEN_ID_CONFIG
+                value: https://accounts.stage.mozaws.net/.well-known/openid-configuration
+              - name: FXA_PROFILE_SERVER_URL
+                value: https://profile.stage.mozaws.net/v1
+              - name: PUBLIC_BASE_URL
+                value: accounts-stage.tb.pro
+              - name: REDIS_URL
+                value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
+              - name: SUPPORT_CONTACT
+                value: dummy@example.org
+              - name: CSRF_SECURE
+                value: 'True'
+              - name: CSRF_HTTPONLY
+                value: 'True'
+              - name: CSRF_TRUSTED_ORIGINS
+                value: 'https://accounts-stage.tb.pro'
+              - name: ALLOWED_EMAIL_DOMAINS
+                value: 'mail.stage-thundermail.com'
+              - name: IMAP_HOST
+                value: 'mail.stage-thundermail.com'
+              - name: IMAP_PORT
+                value: '993'
+              - name: IMAP_TLS
+                value: 'True'
+              - name: SMTP_HOST
+                value: 'mail.stage-thundermail.com'
+              - name: SMTP_PORT
+                value: '465'
+              - name: SMTP_TLS
+                value: 'True'
+              - name: JMAP_HOST
+                value: 'mail.stage-thundermail.com'
+              - name: JMAP_PORT
+                value: '443'
+              - name: JMAP_TLS
+                value: 'True'
+              - name: PADDLE_ENV
+                value: 'sandbox'
               - name: CELERY_BROKER
-                value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
+                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
               - name: CELERY_BACKEND
-                value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
-              - name: CELERY_EAGER
-                value: 'False'
-          celery_worker:
-            <<: *accounts_def
-            portMappings:
-              - name: celery_worker
-                containerPort: 8088
-                hostPort: 8087
-                protocol: tcp
-                appProtocol: http
+                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
+              - name: REDIS_INTERNAL_DB
+                value: '0'
+              - name: REDIS_CELERY_DB
+                value: '5'
+              - name: REDIS_CELERY_RESULTS_DB
+                value: '6'
+              - name: REDIS_SHARED_DB
+                value: '10'
 
   tb:ci:AwsAutomationUser:
     ci:
