@@ -319,7 +319,7 @@ resources:
               - name: CSRF_TRUSTED_ORIGINS
                 value: 'https://accounts-stage.tb.pro'
               - name: ALLOWED_EMAIL_DOMAINS
-                value: 'mail.stage-thundermail.com'
+                value: 'stage-thundermail.com'
               - name: IMAP_HOST
                 value: 'mail.stage-thundermail.com'
               - name: IMAP_PORT
