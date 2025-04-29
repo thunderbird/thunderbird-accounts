@@ -207,15 +207,16 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework_simplejwt.authentication.JWTAuthentication'],
 }
 
+REDIS_URL = os.getenv('REDIS_URL')
 AVAILABLE_CACHES = {
     'dev': {
         'default': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-            'LOCATION': f'{os.getenv("REDIS_URL")}/{os.getenv("REDIS_INTERNAL_DB")}',
+            'LOCATION': f'{REDIS_URL}/{os.getenv("REDIS_INTERNAL_DB")}',
         },
         'shared': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-            'LOCATION': f'{os.getenv("REDIS_URL")}/{os.getenv("REDIS_SHARED_DB")}',
+            'LOCATION': f'{REDIS_URL}/{os.getenv("REDIS_SHARED_DB")}',
             'TIMEOUT': None,  # No expiry
             'MAX_ENTRIES': 300_000_000,  # TODO: Come up with a solution to also remove db entries
             'OPTIONS': {
@@ -337,8 +338,10 @@ ALLOWED_EMAIL_DOMAINS = (
 SERVESTATIC_MANIFEST_STRICT = False
 
 # Celery settings, these are prefixed by CELERY_ and are otherwise just celery parameters
-CELERY_BROKER_URL = '/'.join(filter(None, [os.getenv('CELERY_BROKER'), os.getenv('REDIS_CELERY_DB')]))
-CELERY_RESULT_BACKEND = '/'.join(filter(None, [os.getenv('CELERY_BACKEND'), os.getenv('REDIS_CELERY_RESULTS_DB')]))
+CELERY_BROKER_URL = '/'.join(filter(None, [os.getenv('CELERY_BROKER') or REDIS_URL, os.getenv('REDIS_CELERY_DB')]))
+CELERY_RESULT_BACKEND = '/'.join(
+    filter(None, [os.getenv('CELERY_BACKEND') or REDIS_URL, os.getenv('REDIS_CELERY_RESULTS_DB')])
+)
 
 # If we are using a rediss url, require certs!
 if CELERY_BROKER_URL.startswith('rediss://'):

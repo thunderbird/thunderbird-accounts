@@ -34,3 +34,5 @@ config:
     secure: AAABAL0e+qOGwPX5TWx/5loAuNAUhPHVMM/R6ABQtlmqsqS1UBKyNKo1MzpZKh6gwOEJNIBAtq9OUBvM00g=
   accounts:paddle-price-id-hi:
     secure: AAABAG3r3zI76eGA/HsfWKEJ8UN13w8BDrHm3vQrEiixAG408dVFq0llEnTIBLpiXTEzXfuRv4IcUZLiZnA=
+  accounts:redis-url:
+    secure: AAABAIiHFjnoqDsrol7P6cdS/6HcGkS9Q6KZOuTw6OxAuh8j0nRZWSHvWFvDR49724lf0qZrwQWNn+45zNx1nx5LowyC8pZwoaL/yqH9SWXFA8BoAnPdY5wIKQBbgLLBvYOrQPYNQCp0
