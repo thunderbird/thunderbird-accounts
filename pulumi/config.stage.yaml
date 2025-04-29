@@ -82,6 +82,7 @@ resources:
         - paddle-price-id-lo
         - paddle-price-id-md
         - paddle-price-id-hi
+        - redis-url
   
   # Config to build a jumphost
   # tb:ec2:SshableInstance:
@@ -172,6 +173,8 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-YShIxp
               - name: PADDLE_PRICE_ID_HI
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08
+              - name: REDIS_URL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -194,8 +197,6 @@ resources:
                 value: https://profile.stage.mozaws.net/v1
               - name: PUBLIC_BASE_URL
                 value: accounts-stage.tb.pro
-              - name: REDIS_URL
-                value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
               - name: CSRF_SECURE
@@ -205,7 +206,7 @@ resources:
               - name: CSRF_TRUSTED_ORIGINS
                 value: 'https://accounts-stage.tb.pro'
               - name: ALLOWED_EMAIL_DOMAINS
-                value: 'mail.stage-thundermail.com'
+                value: 'stage-thundermail.com'
               - name: IMAP_HOST
                 value: 'mail.stage-thundermail.com'
               - name: IMAP_PORT
@@ -226,10 +227,6 @@ resources:
                 value: 'True'
               - name: PADDLE_ENV
                 value: 'sandbox'
-              - name: CELERY_BROKER
-                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
-              - name: CELERY_BACKEND
-                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
               - name: REDIS_INTERNAL_DB
                 value: '0'
               - name: REDIS_CELERY_DB
@@ -289,6 +286,8 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-YShIxp
               - name: PADDLE_PRICE_ID_HI
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08
+              - name: REDIS_URL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -308,8 +307,6 @@ resources:
                 value: https://profile.stage.mozaws.net/v1
               - name: PUBLIC_BASE_URL
                 value: accounts-stage.tb.pro
-              - name: REDIS_URL
-                value: rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
               - name: CSRF_SECURE
@@ -340,10 +337,6 @@ resources:
                 value: 'True'
               - name: PADDLE_ENV
                 value: 'sandbox'
-              - name: CELERY_BROKER
-                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
-              - name: CELERY_BACKEND
-                value: 'rediss://master.accounts-stage-redis.7syyoy.euc1.cache.amazonaws.com:6379'
               - name: REDIS_INTERNAL_DB
                 value: '0'
               - name: REDIS_CELERY_DB
