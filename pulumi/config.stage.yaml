@@ -173,6 +173,8 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-YShIxp
               - name: PADDLE_PRICE_ID_HI
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08
+              - name: REDIS_URL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -284,6 +286,8 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-YShIxp
               - name: PADDLE_PRICE_ID_HI
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08
+              - name: REDIS_URL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
