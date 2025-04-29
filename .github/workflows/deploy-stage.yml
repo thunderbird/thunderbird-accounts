@@ -149,7 +149,7 @@ jobs:
                   container_definitions:
                     accounts: &accounts_def
                       image: "$ECR_TAG"
-                    celery_worker:
+                    accounts-celery:
                       image: "$CELERY_WORKER_ECR_TAG"
           EOF
 
