@@ -345,10 +345,17 @@ CELERY_RESULT_BACKEND = '/'.join(
 
 # If we are using a rediss url, require certs!
 if CELERY_BROKER_URL.startswith('rediss://'):
-    CELERY_BROKER_URL += '?ssl_cert_reqs=CERT_REQUIRED'
+    CELERY_BROKER_URL = f'{CELERY_BROKER_URL}?ssl_cert_reqs=CERT_REQUIRED'
 if CELERY_RESULT_BACKEND.startswith('rediss://'):
-    CELERY_RESULT_BACKEND += '?ssl_cert_reqs=CERT_REQUIRED'
+    CELERY_RESULT_BACKEND = f'{CELERY_RESULT_BACKEND}?ssl_cert_reqs=CERT_REQUIRED'
 
 CELERY_RESULT_EXPIRES = 3600
 # If true, immediately run tasks instead of queueing them
 CELERY_TASK_ALWAYS_EAGER = os.getenv('CELERY_EAGER', False) == 'True'
+
+# Some debug info for sentry
+sentry_sdk.set_extra('REDIS_URL', REDIS_URL)
+sentry_sdk.set_extra('CELERY_BROKER_URL', CELERY_BROKER_URL)
+sentry_sdk.set_extra('CELERY_RESULT_BACKEND', CELERY_RESULT_BACKEND)
+sentry_sdk.set_extra('CELERY_RESULT_EXPIRES', CELERY_RESULT_EXPIRES)
+sentry_sdk.set_extra('CELERY_TASK_ALWAYS_EAGER', CELERY_TASK_ALWAYS_EAGER)
