@@ -152,7 +152,7 @@ jobs:
               accounts-celery:
                 task_definition:
                   container_definitions:
-                    accounts: &accounts_def
+                    accounts:
                       image: "$CELERY_WORKER_ECR_TAG"
           EOF
 
