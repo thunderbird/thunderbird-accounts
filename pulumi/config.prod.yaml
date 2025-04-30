@@ -188,11 +188,11 @@ resources:
               - name: FXA_CALLBACK
                 value: https://accounts.tb.pro/api/v1/auth/fxa/callback
               - name: FXA_OAUTH_SERVER_URL
-                value: https://oauth.stage.mozaws.net/v1
+                value: https://oauth.accounts.firefox.com/v1
               - name: FXA_OPEN_ID_CONFIG
-                value: https://accounts.stage.mozaws.net/.well-known/openid-configuration
+                value: https://accounts.firefox.com/.well-known/openid-configuration
               - name: FXA_PROFILE_SERVER_URL
-                value: https://profile.stage.mozaws.net/v1
+                value: https://profile.accounts.firefox.com/v1
               - name: PUBLIC_BASE_URL
                 value: accounts.tb.pro
               - name: SUPPORT_CONTACT
@@ -298,11 +298,11 @@ resources:
               - name: FXA_CALLBACK
                 value: https://accounts.tb.pro/api/v1/auth/fxa/callback
               - name: FXA_OAUTH_SERVER_URL
-                value: https://oauth.mozaws.net/v1
+                value: https://oauth.accounts.firefox.com/v1
               - name: FXA_OPEN_ID_CONFIG
-                value: https://accounts.mozaws.net/.well-known/openid-configuration
+                value: https://accounts.firefox.com/.well-known/openid-configuration
               - name: FXA_PROFILE_SERVER_URL
-                value: https://profile.mozaws.net/v1
+                value: https://profile.accounts.firefox.com/v1
               - name: PUBLIC_BASE_URL
                 value: accounts.tb.pro
               - name: SUPPORT_CONTACT
