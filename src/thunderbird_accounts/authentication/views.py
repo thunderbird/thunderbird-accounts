@@ -1,12 +1,13 @@
 import logging
 import uuid
 from typing import Optional
-from urllib.parse import unquote
+from urllib.parse import unquote, quote_plus
 
 from django.conf import settings
 from django.contrib.auth import login, authenticate, logout
 from django.core.cache import caches
 from django.http import HttpResponseRedirect, HttpResponse
+from django.urls import reverse
 from fxa.errors import ClientError
 from fxa.oauth import Client
 from fxa.profile import Client as ProfileClient
@@ -14,6 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.request import Request
 
+from thunderbird_accounts.authentication.templatetags.helpers import get_admin_login_code
 from thunderbird_accounts.client import tasks
 from thunderbird_accounts.authentication.const import USER_SESSION_CACHE_KEY
 from thunderbird_accounts.authentication.models import User, UserSession
@@ -63,6 +65,16 @@ def _create_or_update_user(profile: dict, user: Optional[User] = None):
         if not user.display_name:
             user.display_name = profile.get('displayName', profile.get('email').split('@')[0])
     return user
+
+
+def login_view(request: AccountsHttpRequest):
+    """This view is called on any @login_required decorator while the user isn't logged in. We generate a login url
+    for the current instance, and either pass the 'next' query param to redirect_to, or default them to redirect_home.
+    """
+    redirect_to = request.GET['next'] if 'next' in request.GET else reverse(settings.LOGIN_REDIRECT_URL)
+    return HttpResponseRedirect(
+        reverse('fxa_login', kwargs={'login_code': get_admin_login_code(), 'redirect_to': quote_plus(redirect_to)})
+    )
 
 
 def fxa_start(request: AccountsHttpRequest, login_code: str, redirect_to: str | None = None):

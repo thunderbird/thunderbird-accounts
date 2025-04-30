@@ -63,6 +63,10 @@ SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
 
+# These are url reverse keys
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'self_serve_home'
+
 LOGIN_CODE_SECRET = os.getenv('LOGIN_CODE_SECRET')
 LOGIN_MAX_AGE_IN_SECONDS = 60 * 3
 

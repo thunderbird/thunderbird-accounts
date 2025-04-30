@@ -27,6 +27,7 @@ urlpatterns = [
     re_path(r'^favicon\.ico$', favicon_view),
     # Mail Views
     path('', mail_views.home),
+    path('login/', auth_views.login_view, name='login'),
     path('sign-up/', mail_views.sign_up, name='sign_up'),
     path('sign-up/submit', mail_views.sign_up_submit, name='sign_up_submit'),
     path('wait-list/', mail_views.wait_list),

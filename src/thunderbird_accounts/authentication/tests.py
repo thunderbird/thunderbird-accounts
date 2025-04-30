@@ -6,8 +6,9 @@ from unittest.mock import patch, Mock
 from django.conf import settings
 from django.core.cache import cache
 from django.http import HttpResponseRedirect
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, RequestFactory, Client as RequestClient
 from django.test.utils import freeze_time
+from django.urls import reverse
 from rest_framework.test import RequestsClient, APIClient, APITestCase as DRF_APITestCase
 
 from django.contrib.auth import get_user_model
@@ -230,8 +231,11 @@ class FXAWebhooksTestCase(DRF_APITestCase):
 
             # Ensure the task wasn't called
             delete_task_mock.assert_not_called()
-            (delete_task_mock.delay.assert_called_once()
-             if assert_delete_called else delete_task_mock.delay.assert_not_called())
+            (
+                delete_task_mock.delay.assert_called_once()
+                if assert_delete_called
+                else delete_task_mock.delay.assert_not_called()
+            )
         return response
 
     def test_fxa_process_change_password(self):
@@ -545,3 +549,40 @@ class AllowListTestCase(DRF_APITestCase):
         self.assertEqual(response.status_code, 401)
         self.assertIn('detail', result)
         self.assertEqual(result['detail'], 'Authentication credentials were not provided.')
+
+
+class LoginRequiredTestCase(TestCase):
+    # (URL reverse key, expected response status code),
+    login_required_keys = [
+        ('self_serve_home', 302),  # This one is a redirect
+        ('self_serve_account_info', 200),
+        ('self_serve_app_password', 200),
+        ('self_serve_connection_info', 200),
+        ('self_serve_subscription', 200),
+        ('self_serve_subscription_success', 200),
+    ]
+
+    def test_logged_out(self):
+        client = RequestClient()
+        login_url = reverse(settings.LOGIN_URL)
+
+        for key, _ in self.login_required_keys:
+            url = reverse(key)
+            self.assertTrue(url)
+
+            response = client.get(url, follow=False)
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(response.url.startswith(login_url))
+
+    def test_logged_in(self):
+        client = RequestClient()
+        user = User.objects.get_or_create(username='test', fxa_id='1234')[0]
+        client.force_login(user)
+
+        for key, status in self.login_required_keys:
+            url = reverse(key)
+            self.assertTrue(url)
+
+            response = client.get(url, follow=False)
+            self.assertEqual(response.status_code, status)
+            self.assertTrue(response.request['PATH_INFO'].startswith(url))

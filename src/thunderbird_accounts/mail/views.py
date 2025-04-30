@@ -3,6 +3,7 @@ from urllib.parse import quote_plus
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
@@ -16,7 +17,7 @@ from thunderbird_accounts.mail.models import Account, Email
 
 def raise_form_error(request, to_view: str, error_message: str):
     """Puts the error message into the message bag and redirects to a named view."""
-    messages.error(request, error_message, extra_tags="form-error")
+    messages.error(request, error_message, extra_tags='form-error')
     return HttpResponseRedirect(to_view)
 
 
@@ -45,18 +46,18 @@ def sign_up_submit(request: HttpRequest):
     if request.user.is_anonymous:
         return HttpResponseRedirect('/')
     if len(request.user.account_set.all()) > 0:
-        return raise_form_error(request, reverse('sign_up'),  _('You already have an account'))
+        return raise_form_error(request, reverse('sign_up'), _('You already have an account'))
     if not request.POST['app_password'] or not request.POST['email_address'] or not request.POST['email_domain']:
-        return raise_form_error(request, reverse('sign_up'),  _('Required fields are not set'))
+        return raise_form_error(request, reverse('sign_up'), _('Required fields are not set'))
     if request.POST['email_domain'] not in settings.ALLOWED_EMAIL_DOMAINS:
-        return raise_form_error(request, reverse('sign_up'),  _('Invalid domain selected'))
+        return raise_form_error(request, reverse('sign_up'), _('Invalid domain selected'))
 
     email_address = request.POST['email_address'].strip()
-    email_address = f'{email_address}@{request.POST['email_domain']}'
+    email_address = f'{email_address}@{request.POST["email_domain"]}'
 
     try:
         Email.objects.get(address=email_address)
-        return raise_form_error(request, reverse('sign_up'),  _('Requested email is already taken'))
+        return raise_form_error(request, reverse('sign_up'), _('Requested email is already taken'))
     except Email.DoesNotExist:
         pass
 
@@ -82,19 +83,16 @@ def self_serve_common_options(is_account_settings: bool, account: Account):
     return {'has_account': True if account else False, 'is_account_settings': is_account_settings}
 
 
+@login_required
 def self_serve(request: HttpRequest):
     return HttpResponseRedirect(reverse('self_serve_connection_info'))
 
 
+@login_required
 def self_serve_account_settings(request: HttpRequest):
     """Account Settings page for Self Serve
     A user can always access this page even if they don't have a mail account setup.
     This way they can delete their account if they wish, or create an account."""
-    if request.user.is_anonymous:
-        return HttpResponseRedirect(
-            reverse('fxa_login', kwargs={'login_code': get_admin_login_code(), 'redirect_to': quote_plus(request.path)})
-        )
-
     account = request.user.account_set.first()
 
     return TemplateResponse(
@@ -104,14 +102,11 @@ def self_serve_account_settings(request: HttpRequest):
     )
 
 
+@login_required
 def self_serve_connection_info(request: HttpRequest):
     """Connection Info page for Self Serve
     This page displays information relating to the connection settings
     that a user may need to connect an external mail client."""
-    if request.user.is_anonymous:
-        return HttpResponseRedirect(
-            reverse('fxa_login', kwargs={'login_code': get_admin_login_code(), 'redirect_to': quote_plus(request.path)})
-        )
 
     email = None
     account = request.user.account_set.first()
@@ -132,6 +127,7 @@ def self_serve_connection_info(request: HttpRequest):
     )
 
 
+@login_required
 def self_serve_subscription(request: HttpRequest):
     """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
     account = request.user.account_set.first()
@@ -151,6 +147,7 @@ def self_serve_subscription(request: HttpRequest):
     )
 
 
+@login_required
 def self_serve_subscription_success(request: HttpRequest):
     """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
     account = request.user.account_set.first()
@@ -161,14 +158,10 @@ def self_serve_subscription_success(request: HttpRequest):
     )
 
 
+@login_required
 def self_serve_app_passwords(request: HttpRequest):
     """App Password page for Self Serve
     A user can create (if none exists), or delete an App Password which is used to connect to the mail server."""
-    if request.user.is_anonymous:
-        return HttpResponseRedirect(
-            reverse('fxa_login', kwargs={'login_code': get_admin_login_code(), 'redirect_to': quote_plus(request.path)})
-        )
-
     account = request.user.account_set.first()
     app_passwords = account.app_passwords if account else []
 
@@ -182,6 +175,7 @@ def self_serve_app_passwords(request: HttpRequest):
     )
 
 
+@login_required
 @require_http_methods(['POST'])
 def self_serve_app_password_remove(request: HttpRequest):
     if request.user.is_anonymous:
@@ -193,6 +187,7 @@ def self_serve_app_password_remove(request: HttpRequest):
     return JsonResponse({'success': True})
 
 
+@login_required
 @require_http_methods(['POST'])
 @sensitive_post_parameters('password')
 def self_serve_app_password_add(request: HttpRequest):
@@ -203,16 +198,14 @@ def self_serve_app_password_add(request: HttpRequest):
     password = request.POST['password']
 
     if not label or not password:
-        return raise_form_error(request, reverse('self_serve_app_password'),  _('Label and password are required'))
+        return raise_form_error(request, reverse('self_serve_app_password'), _('Label and password are required'))
 
     account = request.user.account_set.first()
     if not account.save_app_password(label, password):
-        return raise_form_error(request, reverse('self_serve_app_password'),  _('Unsupported algorithm'))
+        return raise_form_error(request, reverse('self_serve_app_password'), _('Unsupported algorithm'))
 
     return HttpResponseRedirect('/self-serve/app-passwords')
 
 
 def wait_list(request: HttpRequest):
-    return TemplateResponse(request, 'mail/wait-list.html', {
-        'form_action': settings.WAIT_LIST_FORM_ACTION
-    })
+    return TemplateResponse(request, 'mail/wait-list.html', {'form_action': settings.WAIT_LIST_FORM_ACTION})
