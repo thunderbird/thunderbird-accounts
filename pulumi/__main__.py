@@ -45,16 +45,18 @@ sg_container = tb_pulumi.network.SecurityGroupWithRules(
     **sg_opts,
 )
 
-# For testing purposes only, build an SSH-accessible server on the same network space
-# jumphost_opts = resources['tb:ec2:SshableInstance']['jumphost']
-# jumphost = tb_pulumi.ec2.SshableInstance(
-#     name=f'{project.name_prefix}-jumphost',
-#     project=project,
-#     subnet_id=vpc.resources['subnets'][0],
-#     vpc_id=vpc.resources['vpc'].id,
-#     opts=pulumi.ResourceOptions(depends_on=[vpc]),
-#     **jumphost_opts,
-# )
+# Build out SSH-able instances if they are defined
+instances = {}
+for instance in resources['tb:ec2:SshableInstance'].keys():
+    instance_opts = resources['tb:ec2:SshableInstance'][instance]
+    instances[instance] = tb_pulumi.ec2.SshableInstance(
+        f'{project.name_prefix}-{instance}',
+        project=project,
+        subnet_id=vpc.resources['subnets'][0].id,
+        vpc_id=vpc.resources['vpc'].id,
+        opts=pulumi.ResourceOptions(depends_on=[vpc]),
+        **instance_opts,
+    )
 
 # Build an ElastiCache Redis cluster
 redis_opts = resources['tb:elasticache:ElastiCacheReplicaGroup']['accounts']

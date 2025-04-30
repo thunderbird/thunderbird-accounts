@@ -1,0 +1,37 @@
+config:
+  accounts:database-host:
+    secure: AAABAFzLlhqLDUFBLHGtky+1pYtSFMkzU+YEpA82pyY3oVNFjxH8QmuLnLYFOZ+RrA7+alRn5WNr8DvBys+TcqZy1LuuhInEn4cpuItKbnZpYAEQpI5eioY=
+  accounts:database-name:
+    secure: AAABAPTam+QZgt51uecNRLDsXkDvqVw6ims1dp6lgHu7ICnKNQI=
+  accounts:database-user:
+    secure: AAABAK18uq5jS61X6bNmlujYCujrxPyewMBcOneLzZkKC6N+f0OPEPGKfN8=
+  accounts:database-password:
+    secure: AAABAEqCd2aalzCbeV5gsYdrQwdDJ81Edx7wJJzlz1beyT4wKCnox0dxM4o3a9XG
+  accounts:fxa-client-id:
+    secure: AAABAGGONPWrDOhw7RMh/2v7Ib4k53IF2SBz15yjCGmEHFMidd7PXRbVDM7q+OZq
+  accounts:fxa-secret:
+    secure: AAABAAQC37wfmLmNpsgLrLEoO1NVgy3K3hmXhF8lLIE3fwwjIBNRml/x1nXUVtOBtHACWL4IEpk6G1bebxC9AhDzCAfWYfzQZ6LFM/EUUh6Qz1MfPgTUhEH+4VkKoNo1
+  accounts:fxa-allow-list:
+    secure: AAABANFYR3QroUaA7tz84NMhAGHCqcEgTvaOvQsvPz00WdQWIoJTmOYMMi3pxga0SeA0vbBu1pNC025M11LC2a+7yjmBbYpOpFlouS9UGhi9/S+gEPWISsW6qGK3eOpYt1ZMYuqdjzrP/SbPckhywH7GHpzF5cWYIEaM9JSLHK/lYd2Rn0jskNJY2kPPv/sF1oGHnBXzwT75RjGU8nqIM0Dr4FICi64DEa9IwvJvUP6YA8JdN1YqbPNRrJ1BzEeBuJYetxn76WmWQB/Jj1fpO2Uln7DimBzNkmBjyIG39yhNYtEzWsOfjfVESFSy8nU0v8z0a5G/Nc9yU5suQp6CIfHXdtrLg/zRsaM/twkDsx9nDHbfXGq5W6g=
+  accounts:login-code-secret:
+    secure: AAABAHhX+d0gYJqUSlUt+MgD+/XBs5KvQ4r+hW7jxbGafpqL5P3ZWmPw63oeDIEWvH7yw/uDd5OfnL82Ogqs
+  accounts:secret-key:
+    secure: AAABAJwtHpG7cHmoNtu+zCpzdZspSGANDCdgDOYkauouhsWjQUBlA1BnEQ4X7U8jPCsqOXufiyV/VRa4Qq7m
+  accounts:sentry-dsn:
+    secure: AAABAFRmX5O1yR2MBEayYHb+LVoEluEerB3Ma2+MLhdUXbH3wwf/pZx2Ckp4IrUo6IiMJrf84/WeEp0gTvOBcZpsDuB0OJ2q7Ft/iH7L/Naa92hJPEYzt24xqG/sWUoLxrkIgIQIMAFqbrURfowUangMIFIcRoyuMC+IHIYBSQ==
+  accounts:fxa-encrypt-secret:
+    secure: AAABAMPhy394kdOrJWSwklQR/6ZD6PUg7iXnoRwug5OQOUbzcr/O1v846wbjYzZZc7G9XserUhgr2BN7Uk2Rnejagdi7g0ab2vTzTQ==
+  accounts:paddle-token:
+    secure: AAABANgq3/jY0GRqUvv7JLceOt7J8epkxQ4Zq24ybxTdnzA=
+  accounts:paddle-price-id-lo:
+    secure: AAABAPb2QBKyQRMZ2jnPAAVaer/zz0CSBtyEb5YV6r3Fe10=
+  accounts:paddle-price-id-md:
+    secure: AAABAMg7PmMKqQdF89Hk4MpX/8YeRdUfqIzZwece2T+raR8=
+  accounts:paddle-price-id-hi:
+    secure: AAABAA7TsF5LaXJ9GgUJO7Mh+vG/YnBZSP+GDPt9ATVWgKc=
+  accounts:cloudflare_zone_id:
+    secure: AAABAJ+noS1cIhqmKf9vPxANTX+pcZ+z3QZVFT9qwfOy0FWJWKmTPXnfLHpJF9p4OzgThXg+w5cv+hnUgJpzuQ==
+  cloudflare:apiToken:
+    secure: AAABAJ5aDUnbsSAiDAC+pq2zJtOaZLewaGR0GllOsngkjjbnTfSsrMQ5yUE4ulnbsz1/TJnr755ylM2FiUXo58pG2/tej4Sp
+  accounts:redis-url:
+    secure: AAABAPbHXsa/mhEMGiZkJWa7mrfyM0CP2qh0sbWripJvUj9GMJjHFYIvgVEkFSECZNDv6mZZvxSN9PB9JGiVvmfoWy4guc5y4jrIaSMMvYf/ftDAdDnyTgWEDo7olqexesV7oEHZFaM=

@@ -1,16 +1,17 @@
 ---
 resources:
+
   domains:
-    accounts: accounts-stage.tb.pro
+    accounts: accounts.tb.pro
 
   tb:network:MultiCidrVpc:
     vpc:
-      cidr_block: 10.11.0.0/16
+      cidr_block: 10.10.0.0/16
       subnets:
         eu-central-1a:
-          - 10.11.0.0/17
+          - 10.10.0.0/17
         eu-central-1b:
-          - 10.11.128.0/17
+          - 10.10.128.0/17
       enable_internet_gateway: True
       egress_via_internet_gateway: True
       enable_dns_hostnames: True
@@ -41,7 +42,7 @@ resources:
     accounts-container:
       rules:
         ingress:
-          # Set the source in code to the accounts-lb SGID
+            # Set the source in code to the accounts-lb SGID
           - description: Allow traffic from the load balancer to the container
             protocol: tcp
             from_port: 8087
@@ -53,7 +54,7 @@ resources:
             protocol: tcp
             from_port: 0
             to_port: 65535
-
+      
     accounts-redis:
       rules:
         ingress:
@@ -62,7 +63,7 @@ resources:
             protocol: tcp
             from_port: 6379
             to_port: 6379
-        egress: [ ]
+        egress: []
 
   tb:secrets:PulumiSecretsManager:
     pulumi:
@@ -83,7 +84,7 @@ resources:
         - paddle-price-id-md
         - paddle-price-id-hi
         - redis-url
-
+  
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
   # tb:ec2:SshableInstance:
@@ -99,7 +100,7 @@ resources:
       transit_encryption_mode: required
       transit_encryption_enabled: True
       apply_immediately: True
-  
+      
   tb:fargate:FargateClusterWithLogging:
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -112,11 +113,11 @@ resources:
         accounts:
           listener_port: 443
           listener_proto: HTTPS
-          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/c69c6b69-0185-4bba-bc59-4ed64374d45d
+          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/901fd0a8-b113-4672-adf7-9793aae844fa
           container_port: 8087
           container_name: accounts
           # "name" field is arbitrary, but must be unique and no longer than 32 chars
-          name: accounts-stage
+          name: accounts-prod
           health_check:
             healthy_threshold: 2
             unhealthy_threshold: 5
@@ -141,37 +142,37 @@ resources:
               initProcessEnabled: True
             secrets:
               - name: DATABASE_HOST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-zmv0GO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-host-u5Ly46
               - name: DATABASE_NAME
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-ZCR7dN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-name-1LT9GX
               - name: DATABASE_PASSWORD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-8RraYV
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-password-YEuGDS
               - name: DATABASE_USER
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-a99f03
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-user-aLCuis
               - name: FXA_ALLOW_LIST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-Rjs24C
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-allow-list-6iQipk
               - name: FXA_CLIENT_ID
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-client-id-XO3yvx
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-client-id-ggzLOI
               - name: FXA_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-secret-0JxgeP
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-secret-yPR6T4
               - name: LOGIN_CODE_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-g3HGZu
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/login-code-secret-OSoact
               - name: SECRET_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-RMUzrl
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK
               - name: FXA_ENCRYPT_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-encrypt-secret-FZ0iVv
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-encrypt-secret-MXgdBx
               - name: SENTRY_DSN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-rgui8C
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV
               - name: PADDLE_TOKEN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-token-1Xo0np
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-token-aNOfo6
               - name: PADDLE_PRICE_ID_LO
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-lo-BOxRwS
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-lo-MhLJdH
               - name: PADDLE_PRICE_ID_MD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-YShIxp
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-md-HAbQbW
               - name: PADDLE_PRICE_ID_HI
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-hi-0gHjja
               - name: REDIS_URL
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/redis-url-Nq3x1a
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -179,21 +180,21 @@ resources:
                 value: dummy@example.org
               - name: ALLOWED_HOSTS
                 # value: '*'
-                value: '*:8087,accounts-stage.tb.pro,10.*,10.*:8087'
+                value: '*:8087,accounts.tb.pro,10.*,10.*:8087'
               - name: APP_ENV
                 value: stage
               - name: AUTH_SCHEME
                 value: fxa
               - name: FXA_CALLBACK
-                value: https://accounts-stage.tb.pro/api/v1/auth/fxa/callback
+                value: https://accounts.tb.pro/api/v1/auth/fxa/callback
               - name: FXA_OAUTH_SERVER_URL
-                value: https://oauth.stage.mozaws.net/v1
+                value: https://oauth.accounts.firefox.com/v1
               - name: FXA_OPEN_ID_CONFIG
-                value: https://accounts.stage.mozaws.net/.well-known/openid-configuration
+                value: https://accounts.firefox.com/.well-known/openid-configuration
               - name: FXA_PROFILE_SERVER_URL
-                value: https://profile.stage.mozaws.net/v1
+                value: https://profile.accounts.firefox.com/v1
               - name: PUBLIC_BASE_URL
-                value: accounts-stage.tb.pro
+                value: accounts.tb.pro
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
               - name: CSRF_SECURE
@@ -201,23 +202,23 @@ resources:
               - name: CSRF_HTTPONLY
                 value: 'True'
               - name: CSRF_TRUSTED_ORIGINS
-                value: 'https://accounts-stage.tb.pro'
+                value: 'https://accounts.tb.pro'
               - name: ALLOWED_EMAIL_DOMAINS
-                value: 'stage-thundermail.com'
+                value: 'thundermail.com'
               - name: IMAP_HOST
-                value: 'mail.stage-thundermail.com'
+                value: 'mail.thundermail.com'
               - name: IMAP_PORT
                 value: '993'
               - name: IMAP_TLS
                 value: 'True'
               - name: SMTP_HOST
-                value: 'mail.stage-thundermail.com'
+                value: 'mail.thundermail.com'
               - name: SMTP_PORT
                 value: '465'
               - name: SMTP_TLS
                 value: 'True'
               - name: JMAP_HOST
-                value: 'mail.stage-thundermail.com'
+                value: 'mail.thundermail.com'
               - name: JMAP_PORT
                 value: '443'
               - name: JMAP_TLS
@@ -254,37 +255,37 @@ resources:
               initProcessEnabled: True
             secrets:
               - name: DATABASE_HOST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-zmv0GO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-host-u5Ly46
               - name: DATABASE_NAME
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-ZCR7dN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-name-1LT9GX
               - name: DATABASE_PASSWORD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-8RraYV
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-password-YEuGDS
               - name: DATABASE_USER
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-a99f03
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-user-aLCuis
               - name: FXA_ALLOW_LIST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-Rjs24C
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-allow-list-6iQipk
               - name: FXA_CLIENT_ID
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-client-id-XO3yvx
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-client-id-ggzLOI
               - name: FXA_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-secret-0JxgeP
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-secret-yPR6T4
               - name: LOGIN_CODE_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/login-code-secret-g3HGZu
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/login-code-secret-OSoact
               - name: SECRET_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-RMUzrl
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK
               - name: FXA_ENCRYPT_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-encrypt-secret-FZ0iVv
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-encrypt-secret-MXgdBx
               - name: SENTRY_DSN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-rgui8C
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV
               - name: PADDLE_TOKEN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-token-1Xo0np
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-token-aNOfo6
               - name: PADDLE_PRICE_ID_LO
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-lo-BOxRwS
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-lo-MhLJdH
               - name: PADDLE_PRICE_ID_MD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-YShIxp
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-md-HAbQbW
               - name: PADDLE_PRICE_ID_HI
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-hi-0gHjja
               - name: REDIS_URL
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/redis-url-Nq3x1a
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -295,15 +296,15 @@ resources:
               - name: AUTH_SCHEME
                 value: fxa
               - name: FXA_CALLBACK
-                value: https://accounts-stage.tb.pro/api/v1/auth/fxa/callback
+                value: https://accounts.tb.pro/api/v1/auth/fxa/callback
               - name: FXA_OAUTH_SERVER_URL
-                value: https://oauth.stage.mozaws.net/v1
+                value: https://oauth.accounts.firefox.com/v1
               - name: FXA_OPEN_ID_CONFIG
-                value: https://accounts.stage.mozaws.net/.well-known/openid-configuration
+                value: https://accounts.firefox.com/.well-known/openid-configuration
               - name: FXA_PROFILE_SERVER_URL
-                value: https://profile.stage.mozaws.net/v1
+                value: https://profile.accounts.firefox.com/v1
               - name: PUBLIC_BASE_URL
-                value: accounts-stage.tb.pro
+                value: accounts.tb.pro
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
               - name: CSRF_SECURE
@@ -311,23 +312,23 @@ resources:
               - name: CSRF_HTTPONLY
                 value: 'True'
               - name: CSRF_TRUSTED_ORIGINS
-                value: 'https://accounts-stage.tb.pro'
+                value: 'https://accounts.tb.pro'
               - name: ALLOWED_EMAIL_DOMAINS
-                value: 'stage-thundermail.com'
+                value: 'thundermail.com'
               - name: IMAP_HOST
-                value: 'mail.stage-thundermail.com'
+                value: 'mail.thundermail.com'
               - name: IMAP_PORT
                 value: '993'
               - name: IMAP_TLS
                 value: 'True'
               - name: SMTP_HOST
-                value: 'mail.stage-thundermail.com'
+                value: 'mail.thundermail.com'
               - name: SMTP_PORT
                 value: '465'
               - name: SMTP_TLS
                 value: 'True'
               - name: JMAP_HOST
-                value: 'mail.stage-thundermail.com'
+                value: 'mail.thundermail.com'
               - name: JMAP_PORT
                 value: '443'
               - name: JMAP_TLS
@@ -342,22 +343,3 @@ resources:
                 value: '6'
               - name: REDIS_SHARED_DB
                 value: '10'
-
-  tb:ci:AwsAutomationUser:
-    ci:
-      enable_ecr_image_push: true
-      ecr_repositories:
-        - thunderbird/accounts
-      enable_fargate_deployments: true
-      fargate_clusters:
-        - accounts-stage-fargate-accounts
-        - accounts-stage-fargate-accounts-celery
-      fargate_task_role_arns:
-        - arn:aws:iam::768512802988:role/accounts-stage-fargate-accounts
-        - arn:aws:iam::768512802988:role/accounts-stage-fargate-accounts-celery
-
-  # tb:ec2:SshableInstance:
-  #   jumphost:
-  #     public_key: your pubkey goes here
-  #     source_cidrs:
-  #       - your IPv4 goes here (curl -4 https://curlmyip.net)
