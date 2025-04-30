@@ -8,9 +8,9 @@ config:
   accounts:database-password:
     secure: AAABAEqCd2aalzCbeV5gsYdrQwdDJ81Edx7wJJzlz1beyT4wKCnox0dxM4o3a9XG
   accounts:fxa-client-id:
-    secure: AAABAKluQZJFaleo6ukpBbUJxxZHJJ+OF1iN4m+Kb7QVmFwMQEjC1mxdAD2GenRT
+    secure: AAABAGGONPWrDOhw7RMh/2v7Ib4k53IF2SBz15yjCGmEHFMidd7PXRbVDM7q+OZq
   accounts:fxa-secret:
-    secure: AAABADvqwHb7zvKg1JdjEMVYT7dfo9k4tvJBiqghARiNoWlsne7w+yBszc0WLxUnPQPTgKEWhWzfHuy56PPB+7FhJ0TYWBbqL+IowdQ/8rveW1KzJIWzJo60zfQnf13p
+    secure: AAABAAQC37wfmLmNpsgLrLEoO1NVgy3K3hmXhF8lLIE3fwwjIBNRml/x1nXUVtOBtHACWL4IEpk6G1bebxC9AhDzCAfWYfzQZ6LFM/EUUh6Qz1MfPgTUhEH+4VkKoNo1
   accounts:fxa-allow-list:
     secure: AAABANFYR3QroUaA7tz84NMhAGHCqcEgTvaOvQsvPz00WdQWIoJTmOYMMi3pxga0SeA0vbBu1pNC025M11LC2a+7yjmBbYpOpFlouS9UGhi9/S+gEPWISsW6qGK3eOpYt1ZMYuqdjzrP/SbPckhywH7GHpzF5cWYIEaM9JSLHK/lYd2Rn0jskNJY2kPPv/sF1oGHnBXzwT75RjGU8nqIM0Dr4FICi64DEa9IwvJvUP6YA8JdN1YqbPNRrJ1BzEeBuJYetxn76WmWQB/Jj1fpO2Uln7DimBzNkmBjyIG39yhNYtEzWsOfjfVESFSy8nU0v8z0a5G/Nc9yU5suQp6CIfHXdtrLg/zRsaM/twkDsx9nDHbfXGq5W6g=
   accounts:login-code-secret:
