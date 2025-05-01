@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 import sys
 from pathlib import Path
+
+from django.core.exceptions import DisallowedHost
 from dotenv import load_dotenv
 import sentry_sdk
 
@@ -45,6 +47,7 @@ sentry_sdk.init(
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
     environment=APP_ENV,
+    ignore_errors=[DisallowedHost],
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
