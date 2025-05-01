@@ -64,3 +64,4 @@ db.sqlite3
 .env
 build
 node_modules
+deploy-wait-list
