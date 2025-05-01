@@ -51,8 +51,10 @@ sentry_sdk.init(
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-# Get the path for settings.py and then add in REL_BASE_DIR
-BASE_DIR = Path(__file__).resolve().parent.joinpath(os.getenv('REL_BASE_DIR', '../../')).resolve()
+if os.getenv('IN_CONTAINER') == 'True':
+    BASE_DIR = Path('/app')
+else:
+    BASE_DIR = Path(__file__).parent.joinpath('../../')
 
 # URL for public facing absolute links
 PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL')

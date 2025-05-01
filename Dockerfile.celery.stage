@@ -8,6 +8,8 @@ WORKDIR /app
 
 ENV PATH="${PATH}:/root/.local/bin"
 ENV PYTHONPATH=.
+# Determines what BASE_DIR we use
+ENV IN_CONTAINER=True
 
 # Upgrade the OS, 
 RUN apt update && \
