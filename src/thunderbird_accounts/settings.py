@@ -51,7 +51,6 @@ sentry_sdk.init(
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-# Get the path for settings.py and then add in REL_BASE_DIR
 if os.getenv('IN_CONTAINER') == 'True':
     BASE_DIR = Path('/app')
 else:
