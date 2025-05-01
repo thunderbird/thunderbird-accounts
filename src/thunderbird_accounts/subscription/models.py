@@ -8,11 +8,9 @@ from thunderbird_accounts.utils.models import BaseModel
 class PaddleId(models.CharField):
     """Holds a paddle id with some sensible defaults, but is otherwise just a CharField"""
 
-    max_length = 256
-    unique = True
-    db_index = True
-    null = False
-    blank = False
+    def __init__(self, *args, db_collation=None, **kwargs):
+        kwargs = {'max_length': 256, 'db_index': True, 'null': True, 'default': None, **kwargs}
+        super().__init__(*args, **kwargs)
 
 
 class Price(BaseModel):
@@ -31,7 +29,7 @@ class Price(BaseModel):
         YEAR = 'year', _('Year')
 
     paddle_id = PaddleId()
-    product_id = PaddleId()
+    paddle_product_id = PaddleId()
     name = models.CharField()
     amount = models.CharField(help_text=_('Amount in lowest denomination for currency. e.g. 10 USD = 1000 (cents).'))
     currency = models.CharField(help_text=_('Three letter ISO 4217 currency code.'))
@@ -52,7 +50,7 @@ class Plan(BaseModel):
     For now a plan has access to all clients
     """
 
-    product_id = PaddleId()
+    paddle_product_id = PaddleId()
     name = models.CharField(max_length=256)
 
     # Plan parameters
@@ -66,7 +64,7 @@ class Plan(BaseModel):
     )
 
     def __str__(self):
-        return f'Plan [{self.uuid}] {self.name} - {self.product_id}'
+        return f'Plan [{self.uuid}] {self.name} - {self.paddle_product_id}'
 
 
 class SubscriptionItem(BaseModel):
@@ -74,16 +72,15 @@ class SubscriptionItem(BaseModel):
     we add additional purchasable/subscribable items like addons."""
 
     quantity = models.IntegerField(default=0)
-    price_id = PaddleId()
-    product_id = PaddleId()
-    subscription_id = PaddleId()
+    paddle_price_id = PaddleId()
+    paddle_product_id = PaddleId()
+    paddle_subscription_id = PaddleId()
 
-    product = models.ForeignKey('Product', on_delete=models.CASCADE)
     subscription = models.ForeignKey('Subscription', on_delete=models.CASCADE)
     price = models.ForeignKey('Price', on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'Subscription Item [{self.uuid}] {self.subscription_id} - {self.product_id}'
+        return f'Subscription Item [{self.uuid}] {self.subscription_id} - {self.paddle_product_id}'
 
 
 class Subscription(BaseModel):
@@ -117,7 +114,7 @@ class Subscription(BaseModel):
         WEB = 'web', _('Web')
 
     paddle_id = PaddleId(help_text=_('The subscription paddle id.'))
-    customer_id = PaddleId(help_text=_('The customer paddle id.'))
+    paddle_customer_id = PaddleId(help_text=_('The customer paddle id.'))
     status = models.CharField(
         max_length=256,
         choices=StatusValues,
@@ -139,7 +136,7 @@ class Subscription(BaseModel):
         choices=OriginValues, null=True, help_text=_('where the transaction first start from.')
     )
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return f'Subscription [{self.uuid}] {self.paddle_id} - {self.user.display_name}'
