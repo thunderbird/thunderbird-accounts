@@ -54,7 +54,6 @@ sentry_sdk.init(
 # Get the path for settings.py and then add in REL_BASE_DIR
 BASE_DIR = Path(__file__).resolve().parent.joinpath(os.getenv('REL_BASE_DIR', '../../')).resolve()
 
-
 # URL for public facing absolute links
 PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL')
 
@@ -65,6 +64,10 @@ SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
+
+# These are url reverse keys
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'self_serve_home'
 
 LOGIN_CODE_SECRET = os.getenv('LOGIN_CODE_SECRET')
 LOGIN_MAX_AGE_IN_SECONDS = 60 * 3

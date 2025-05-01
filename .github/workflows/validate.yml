@@ -23,6 +23,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Apply env
+        run: cp .env.test.docker .env.test
+
       - name: Start docker-compose
         run: docker compose up -d --build -V postgres redis backend frontend
 

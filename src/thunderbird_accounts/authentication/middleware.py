@@ -1,3 +1,4 @@
+import logging
 import time
 
 from django.conf import settings
@@ -48,7 +49,7 @@ class ClientSetAllowedHostsMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest):
-        print('---')
+        logging.debug('---')
         start = time.perf_counter_ns()
 
         allowed_hosts = cache.get(settings.ALLOWED_HOSTS_CACHE_KEY)
@@ -61,7 +62,7 @@ class ClientSetAllowedHostsMiddleware:
 
         end = time.perf_counter_ns()
 
-        print(f'> total time {(end-start) / 1000000} ms')
+        logging.debug(f'> total time {(end - start) / 1000000} ms')
 
         response = self.get_response(request)
 
