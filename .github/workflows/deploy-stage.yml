@@ -183,6 +183,7 @@ jobs:
       FXA_ENCRYPT_SECRET: ${{ secrets.E2E_ACCTS_FXA_ENCRYPT_SECRET }}
       THUNDERMAIL_USERNAME: ${{ secrets.E2E_THUNDERMAIL_USERNAME }}
       THUNDERMAIL_EMAIL_ADDRESS: ${{ secrets.E2E_THUNDERMAIL_EMAIL_ADDRESS }}
+      EMAIL_SIGN_UP_ADDRESS: ${{ secrets.E2E_ACCTS_PADDLE_EMAIL_SIGN_UP_ADDRESS }}
     steps:
       - uses: actions/checkout@v4
 
