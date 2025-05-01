@@ -51,6 +51,8 @@ sentry_sdk.init(
 # Get the path for settings.py and then add in REL_BASE_DIR
 BASE_DIR = Path(__file__).resolve().parent.joinpath(os.getenv('REL_BASE_DIR', '../../')).resolve()
 print('Base dir:', BASE_DIR)
+print('File loc:', __file__)
+print('Module  :', __package__)
 
 # URL for public facing absolute links
 PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL')
