@@ -691,6 +691,19 @@ wheels = [
 ]
 
 [[package]]
+name = "paddle-python-sdk"
+version = "1.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/86/b4/aaed262f8391bdcddcca817ae07d17011e7c30a46bbb96d15a9aa207539e/paddle_python_sdk-1.6.0.tar.gz", hash = "sha256:aaf1f13e812a904f6a50bd62160a284bd9ab2126676c6f8a3258415f0d9bd010", size = 144030 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/60/29/dbfdc8059b885966d1880e159150131ab2edc21a80eb1deee8eae5c8070d/paddle_python_sdk-1.6.0-py3-none-any.whl", hash = "sha256:40ab2deb532cc729e99d3a3fe2c965a6dcff1d962767226e6be564aa3911c94f", size = 373701 },
+]
+
+[[package]]
 name = "pluggy"
 version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1150,6 +1163,7 @@ dependencies = [
     { name = "hiredis" },
     { name = "itsdangerous" },
     { name = "markdown" },
+    { name = "paddle-python-sdk" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pyfxa" },
     { name = "pyjwt" },
@@ -1196,6 +1210,7 @@ requires-dist = [
     { name = "itsdangerous", specifier = ">=2.2.0" },
     { name = "markdown", specifier = ">=3.7" },
     { name = "myst-parser", marker = "extra == 'docs'" },
+    { name = "paddle-python-sdk", specifier = ">=1.6.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.3" },
     { name = "pyfxa", specifier = ">=0.7.9" },
     { name = "pyjwt", specifier = ">=2.9.0" },

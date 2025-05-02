@@ -118,6 +118,12 @@ uv sync --extra cli --extra docs
 
 The default admin password should be `accounts`.
 
+If you're developing for our subscription apps you'll also want to add
+
+```shell
+--extra subscription
+```
+
 ### Create a superuser
 
 Run the following and follow the terminal prompts:

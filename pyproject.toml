@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thunderbird_accounts"
-version = "0.3.3"
+version = "0.3.99"
 dependencies = [
     "django>=5.1",
     "django-filter>=24.3",
@@ -64,6 +64,9 @@ docs = [
     'sphinxcontrib-django',
     'sphinxcontrib-mermaid',
     'myst-parser',
+]
+subscription = [
+    "paddle-python-sdk>=1.6.0",
 ]
 
 [tool.setuptools.packages.find]

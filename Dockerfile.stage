@@ -36,7 +36,7 @@ COPY templates ./templates/
 COPY src/thunderbird_accounts ./src/thunderbird_accounts
 
 # Install our package dependencies
-RUN uv sync && \
+RUN uv sync --extra subscription && \
     npm install && npm cache clean --force
 
 EXPOSE 8087
