@@ -42,6 +42,15 @@ class Price(BaseModel):
     def __str__(self):
         return f'Price [{self.uuid}] {self.name} - {self.paddle_id}'
 
+    class Meta(BaseModel.Meta):
+        indexes = [
+            *BaseModel.Meta.indexes,
+            models.Index(fields=['status']),
+            models.Index(fields=['currency']),
+            models.Index(fields=['billing_cycle_frequency']),
+            models.Index(fields=['billing_cycle_interval']),
+        ]
+
 
 class Plan(BaseModel):
     """A paddle product
@@ -97,22 +106,6 @@ class Subscription(BaseModel):
         PAUSED = 'paused', _('Paused')
         TRIALING = 'trialing', _('Trialing')
 
-    class OriginValues(models.TextChoices):
-        """Values from https://developer.paddle.com/webhooks/transactions/transaction-created -> origin"""
-
-        API = 'api', _('Api')
-        SUBSCRIPTION_CHARGE = (
-            'subscription_charge',
-            _('Subscription: Charge'),
-        )
-        SUBSCRIPTION_PAYMENT_METHOD_CHANGE = (
-            'subscription_payment_method_change',
-            _('Subscription: Payment method change'),
-        )
-        SUBSCRIPTION_RECURRING = 'subscription_recurring', _('Subscription: Recurring')
-        SUBSCRIPTION_UPDATE = 'subscription_update', _('Subscription: Update')
-        WEB = 'web', _('Web')
-
     paddle_id = PaddleId(help_text=_('The subscription paddle id.'))
     paddle_customer_id = PaddleId(help_text=_('The customer paddle id.'))
     status = models.CharField(
@@ -132,10 +125,6 @@ class Subscription(BaseModel):
     )
     current_billing_period_ends_at = models.DateTimeField(null=True, help_text=_('date when the billing period ends.'))
 
-    transaction_origin = models.CharField(
-        choices=OriginValues, null=True, help_text=_('where the transaction first start from.')
-    )
-
     user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -145,4 +134,87 @@ class Subscription(BaseModel):
         indexes = [
             *BaseModel.Meta.indexes,
             models.Index(fields=['status']),
+            models.Index(fields=['next_billed_at']),
+            models.Index(fields=['current_billing_period_starts_at', 'current_billing_period_ends_at']),
+        ]
+
+
+class Transaction(BaseModel):
+    class StatusValues(models.TextChoices):
+        # Empty value, non-paddle value
+        NONE = '', _('None')
+
+        # Paddle values
+        DRAFT = 'draft', _('Draft')
+        READY = 'ready', _('Ready')
+        BILLED = 'billed', _('Billed')
+        PAID = 'paid', _('Paid')
+        COMPLETED = 'completed', _('Completed')
+        CANCELED = 'canceled', _('Canceled')
+        PAST_DUE = 'past_due', _('Past Due')
+
+    class OriginValues(models.TextChoices):
+        """Values from https://developer.paddle.com/webhooks/transactions/transaction-created -> origin"""
+
+        NONE = '', _('None')
+
+        API = 'api', _('Api')
+        SUBSCRIPTION_CHARGE = (
+            'subscription_charge',
+            _('Subscription: Charge'),
+        )
+        SUBSCRIPTION_PAYMENT_METHOD_CHANGE = (
+            'subscription_payment_method_change',
+            _('Subscription: Payment method change'),
+        )
+        SUBSCRIPTION_RECURRING = 'subscription_recurring', _('Subscription: Recurring')
+        SUBSCRIPTION_UPDATE = 'subscription_update', _('Subscription: Update')
+        WEB = 'web', _('Web')
+
+    paddle_id = PaddleId(help_text=_('The transaction paddle id.'))
+    paddle_invoice_id = PaddleId(help_text=_('The invoice paddle id,'), null=True)
+    paddle_subscription_id = PaddleId(help_text=_('The subscription paddle id.'), null=True)
+
+    invoice_number = models.CharField(null=True, help_text=_('Invoice number for this transaction.'))
+
+    total = models.CharField(max_length=256, null=False, help_text=_('Total after discount and tax.'))
+    tax = models.CharField(max_length=256, null=False, help_text=_('Total tax on the subtotal.'))
+    currency = models.CharField(max_length=256, null=False, help_text=_('Three letter ISO 4217 currency code.'))
+
+    status = models.CharField(
+        max_length=256,
+        choices=StatusValues,
+        default=StatusValues.NONE,
+        null=False,
+        help_text=_('The current subscription status.'),
+    )
+
+    transaction_origin = models.CharField(
+        choices=OriginValues,
+        null=False,
+        default=OriginValues.NONE,
+        help_text=_('where the transaction first start from.'),
+    )
+
+    billed_at = models.DateTimeField(
+        null=True, help_text=_('date when the subscription is next schedule to be billed.')
+    )
+    revised_at = models.DateTimeField(
+        null=True, help_text=_('date when the subscription is next schedule to be billed.')
+    )
+
+    subscription = models.ForeignKey(Subscription, null=True, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'Transaction [{self.uuid}] {self.paddle_id}'
+
+    class Meta(BaseModel.Meta):
+        indexes = [
+            *BaseModel.Meta.indexes,
+            models.Index(fields=['invoice_number']),
+            models.Index(fields=['transaction_origin']),
+            models.Index(fields=['currency']),
+            models.Index(fields=['status']),
+            models.Index(fields=['billed_at']),
+            models.Index(fields=['revised_at']),
         ]

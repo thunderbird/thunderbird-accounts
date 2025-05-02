@@ -11,6 +11,12 @@ from thunderbird_accounts import settings
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.client.models import ClientEnvironment
 
+# We don't want hard requirements on having paddle package installed
+try:
+    from paddle_billing.Notifications import Verifier, Secret
+except ImportError:
+    Verifier, Secret = None, None
+
 
 class IsClient(BasePermission):
     """
@@ -21,13 +27,13 @@ class IsClient(BasePermission):
         host = request.get_host()
         client_secret = request.data.get('secret')
         if not client_secret:
-            logging.debug("[IsClient] failed: No client secret")
+            logging.debug('[IsClient] failed: No client secret')
             return False
 
         try:
             client_env: ClientEnvironment = ClientEnvironment.objects.get(auth_token=client_secret)
         except ClientEnvironment.DoesNotExist:
-            logging.debug("[IsClient] failed: Provided secret is not associated with a client environment")
+            logging.debug('[IsClient] failed: Provided secret is not associated with a client environment')
             return False
 
         allowed_hostnames = client_env.allowed_hostnames
@@ -36,7 +42,7 @@ class IsClient(BasePermission):
 
         # Check if the client env is not active, or if the host is valid
         if not client_env.is_active or not is_host_valid:
-            logging.debug("[IsClient] failed: Client environment is not active or host is invalid")
+            logging.debug('[IsClient] failed: Client environment is not active or host is invalid')
             return False
 
         # Append client_env to request
@@ -92,7 +98,7 @@ class IsValidFXAWebhook(BaseAuthentication):
                 break
 
         if jwk_pem is None:
-            logging.error(f"Error decoding token. Key ID ({headers.get('kid')}) is missing from public list.")
+            logging.error(f'Error decoding token. Key ID ({headers.get("kid")}) is missing from public list.')
             raise AuthenticationFailed('Key ID is missing from the JWK list')
 
         # Amount of time over what the iat is issued for to allow
@@ -104,7 +110,7 @@ class IsValidFXAWebhook(BaseAuthentication):
 
         # Final verification
         if decoded_jwt.get('iss') != issuer:
-            logging.error(f"Issuer is not valid: ({decoded_jwt.get('iss')}) vs ({issuer})")
+            logging.error(f'Issuer is not valid: ({decoded_jwt.get("iss")}) vs ({issuer})')
             raise AuthenticationFailed('Issuer mismatch')
 
         try:
@@ -114,3 +120,14 @@ class IsValidFXAWebhook(BaseAuthentication):
 
         # Return user and decoded_jwt for request.user and request.auth
         return user, decoded_jwt
+
+
+class IsValidPaddleWebhook(BaseAuthentication):
+    def authenticate(self, request):
+        if not Verifier or not Secret:
+            logging.error('Paddle package is not installed. This webhook has been rejected.')
+            return None
+
+        integrity_check = Verifier().verify(request, Secret(settings.PADDLE_WEBHOOK_KEY))
+
+        return True if integrity_check else None
