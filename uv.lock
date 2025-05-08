@@ -349,6 +349,19 @@ wheels = [
 ]
 
 [[package]]
+name = "django-cors-headers"
+version = "4.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "asgiref" },
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/93/6c/16f6cb6064c63074fd5b2bd494eb319afd846236d9c1a6c765946df2c289/django_cors_headers-4.7.0.tar.gz", hash = "sha256:6fdf31bf9c6d6448ba09ef57157db2268d515d94fc5c89a0a1028e1fc03ee52b", size = 21037 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/a2/7bcfff86314bd9dd698180e31ba00604001606efb518a06cca6833a54285/django_cors_headers-4.7.0-py3-none-any.whl", hash = "sha256:f1c125dcd58479fe7a67fe2499c16ee38b81b397463cf025f0e2c42937421070", size = 12794 },
+]
+
+[[package]]
 name = "django-filter"
 version = "25.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1129,6 +1142,7 @@ dependencies = [
     { name = "celery", extra = ["redis"] },
     { name = "cryptography" },
     { name = "django" },
+    { name = "django-cors-headers" },
     { name = "django-filter" },
     { name = "django-vite" },
     { name = "djangorestframework" },
@@ -1173,6 +1187,7 @@ requires-dist = [
     { name = "coverage", marker = "extra == 'cli'" },
     { name = "cryptography", specifier = ">=43.0.3" },
     { name = "django", specifier = ">=5.1" },
+    { name = "django-cors-headers", specifier = ">=4.7.0" },
     { name = "django-filter", specifier = ">=24.3" },
     { name = "django-vite", specifier = ">=3.0.6" },
     { name = "djangorestframework", specifier = ">=3.15.2" },

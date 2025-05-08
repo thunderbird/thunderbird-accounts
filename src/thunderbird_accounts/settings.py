@@ -130,7 +130,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # This needs to be first, as we're setting up our allowed hosts
+    # Cors first!
+    'corsheaders.middleware.CorsMiddleware',
+    # This needs to be second, as we're setting up our allowed hosts
     'thunderbird_accounts.authentication.middleware.ClientSetAllowedHostsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'servestatic.middleware.ServeStaticMiddleware',
