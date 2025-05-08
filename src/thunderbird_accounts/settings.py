@@ -321,6 +321,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'authentication.User'
 
 ALLOWED_HOSTS_CACHE_KEY = '__ALLOWED_HOSTS'
+ALLOWED_ORIGINS_CACHE_KEY = '__ALLOWED_ORIGINS'
 
 USE_X_FORWARDED_HOST = True
 
@@ -369,3 +370,11 @@ sentry_sdk.set_extra('CELERY_BROKER_URL', CELERY_BROKER_URL)
 sentry_sdk.set_extra('CELERY_RESULT_BACKEND', CELERY_RESULT_BACKEND)
 sentry_sdk.set_extra('CELERY_RESULT_EXPIRES', CELERY_RESULT_EXPIRES)
 sentry_sdk.set_extra('CELERY_TASK_ALWAYS_EAGER', CELERY_TASK_ALWAYS_EAGER)
+
+# Cors
+CORS_PREFLIGHT_MAX_AGE = 0  # For debugging purposes
+CORS_ALLOWED_ORIGINS = [host for host in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if host]
+
+# For local docker usage
+if DEBUG:
+    CORS_ALLOWED_ORIGINS += ['localhost', 'accounts']

@@ -63,22 +63,33 @@ class ClientEnvironment(BaseModel):
     def cache_hostnames(cls):
         client_envs = ClientEnvironment.objects.filter(environment=settings.APP_ENV).all()
         allowed_hosts = []
+        allowed_origins = []
+
         for env in client_envs:
             hostnames = env.allowed_hostnames
             for hostname in hostnames:
                 try:
                     parsed_url = urllib3.util.parse_url(hostname)
+                    parsed_redirect_url = urllib3.util.parse_url(env.redirect_url)
                 except LocationParseError:
                     logging.warning(f'[cache_hostnames] Bad hostname {hostname}')
                     continue
                 if parsed_url.host:
                     allowed_hosts.append(parsed_url.host)
+                    # Retrieve the scheme off the redirect url for now...
+                    scheme = parsed_redirect_url.scheme or 'https'
+                    allowed_origins.append(f'{scheme}://{parsed_url.host}')
 
         # Clear out any duplicates
         allowed_hosts = list(set(settings.ALLOWED_HOSTS + allowed_hosts))
+        allowed_origins = list(set(settings.CORS_ALLOWED_ORIGINS + allowed_origins))
+
         cache.set(settings.ALLOWED_HOSTS_CACHE_KEY, allowed_hosts)
+        cache.set(settings.ALLOWED_ORIGINS_CACHE_KEY, allowed_origins)
+
         logging.info(f'Caching allowed_hosts: {allowed_hosts}')
-        return allowed_hosts
+        logging.info(f'Caching cors_allowed_origins: {allowed_origins}')
+        return allowed_hosts, allowed_origins
 
     def __str__(self):
         return f'Client Environment {self.environment} for {self.client.name}'
