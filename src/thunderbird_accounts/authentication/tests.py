@@ -266,6 +266,23 @@ class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
         self.assertIn('testserver2', settings.ALLOWED_HOSTS)
         self.assertIn('http://testserver2', settings.CORS_ALLOWED_ORIGINS)
 
+    def test_allowed_origins_works_with_localhost(self):
+        """Test that middleware uses cached hosts when available"""
+
+        # Note: At this point there's no cache entry, so the allowed host cache is remade.
+        ClientEnvironment.objects.create(
+            environment='test',
+            redirect_url='http://localhost:8080/really-long-url-holy-carp/whatever/',
+            client_id=self.client.uuid,
+            auth_token='12345',
+            allowed_hostnames=['localhost:8080'],
+        )
+
+        self.middleware(self.request)
+
+        self.assertIn('localhost:8080', settings.ALLOWED_HOSTS)
+        self.assertIn('http://localhost:8080', settings.CORS_ALLOWED_ORIGINS)
+
 
 class FXAWebhooksTestCase(DRF_APITestCase):
     def setUp(self):

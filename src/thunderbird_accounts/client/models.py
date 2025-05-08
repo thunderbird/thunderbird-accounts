@@ -1,14 +1,12 @@
 import logging
 import secrets
-
-import urllib3
+from urllib.parse import urlparse
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
 from django.db.models.functions.text import Lower
 from django.utils.translation import gettext_lazy as _
-from urllib3.exceptions import LocationParseError
 
 from thunderbird_accounts.utils.models import BaseModel
 
@@ -69,16 +67,17 @@ class ClientEnvironment(BaseModel):
             hostnames = env.allowed_hostnames
             for hostname in hostnames:
                 try:
-                    parsed_url = urllib3.util.parse_url(hostname)
-                    parsed_redirect_url = urllib3.util.parse_url(env.redirect_url)
-                except LocationParseError:
-                    logging.warning(f'[cache_hostnames] Bad hostname {hostname}')
-                    continue
-                if parsed_url.host:
-                    allowed_hosts.append(parsed_url.host)
+                    parsed_redirect_url = urlparse(env.redirect_url)
                     # Retrieve the scheme off the redirect url for now...
                     scheme = parsed_redirect_url.scheme or 'https'
-                    allowed_origins.append(f'{scheme}://{parsed_url.host}')
+
+                    parsed_url = urlparse(f'{scheme}://{hostname}')
+                except ValueError as ex:
+                    logging.warning(f'[cache_hostnames] Bad hostname {hostname} / {ex}')
+                    continue
+                if parsed_url.netloc:
+                    allowed_hosts.append(parsed_url.netloc)
+                    allowed_origins.append(f'{scheme}://{parsed_url.netloc}')
 
         # Clear out any duplicates
         allowed_hosts = list(set(settings.ALLOWED_HOSTS + allowed_hosts))
