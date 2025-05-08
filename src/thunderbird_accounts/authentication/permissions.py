@@ -19,7 +19,9 @@ class IsClient(BasePermission):
     """
 
     def has_permission(self, request, view):
-        host = request.get_host()
+        host = (
+            request.headers.get('origin') or request.get_host()
+        )  # We're not forwarding hosts correctly, cors middleware uses origin so we should too.
         client_secret = request.data.get('secret')
         if not client_secret:
             logging.debug('[IsClient] failed: No client secret')
