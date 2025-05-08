@@ -253,7 +253,7 @@ class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
         """Test that middleware uses cached hosts when available"""
 
         # Note: At this point there's no cache entry, so the allowed host cache is remade.
-        client_env = ClientEnvironment.objects.create(
+        ClientEnvironment.objects.create(
             environment='test',
             redirect_url='http://testserver2/really-long-url-holy-carp/whatever/',
             client_id=self.client.uuid,
