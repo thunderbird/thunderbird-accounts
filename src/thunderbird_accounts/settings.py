@@ -127,6 +127,7 @@ INSTALLED_APPS = [
     # Third party
     'rest_framework',
     'django_vite',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
