@@ -191,12 +191,19 @@ class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
             allowed_hostnames=['test.com'],
         )
 
+        self._original_allowed_hosts = settings.ALLOWED_HOSTS
+        self._original_allowed_origins = settings.CORS_ALLOWED_ORIGINS
+
         # Clear cache before each test
         cache.delete(settings.ALLOWED_HOSTS_CACHE_KEY)
+        cache.delete(settings.ALLOWED_ORIGINS_CACHE_KEY)
 
     def tearDown(self):
         # Clean up cache after tests
         cache.delete(settings.ALLOWED_HOSTS_CACHE_KEY)
+        cache.delete(settings.ALLOWED_ORIGINS_CACHE_KEY)
+        settings.ALLOWED_HOSTS = self._original_allowed_hosts
+        settings.CORS_ALLOWED_ORIGINS = self._original_allowed_origins
 
     def test_allowed_hosts_cache(self):
         """Test that middleware properly sets ALLOWED_HOSTS from ClientEnvironment"""
@@ -204,7 +211,7 @@ class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
         self.assertIn('test.com', settings.ALLOWED_HOSTS)
         self.assertIn('test.com', settings.CORS_ALLOWED_ORIGINS)
 
-    def test_allowed_uses_cached_hosts(self):
+    def test_allowed_hosts_uses_cached_hosts(self):
         """Test that middleware uses cached hosts when available"""
 
         # Note: At this point there's no cache entry, so the allowed host cache is remade.
@@ -214,7 +221,50 @@ class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
         self.middleware(self.request)
 
         self.assertIn(cached_hosts, settings.ALLOWED_HOSTS)
+        self.assertNotIn(cached_hosts, settings.CORS_ALLOWED_ORIGINS)
+
+    def test_allowed_origins_cached_hosts(self):
+        """Test that middleware uses cached hosts when available"""
+
+        # Note: At this point there's no cache entry, so the allowed host cache is remade.
+        cached_hosts = 'https://cached.com'
+        settings.CORS_ALLOWED_ORIGINS += [cached_hosts]
+
+        self.middleware(self.request)
+
+        self.assertNotIn(cached_hosts, settings.ALLOWED_HOSTS)
         self.assertIn(cached_hosts, settings.CORS_ALLOWED_ORIGINS)
+
+    def test_both_cached_hosts(self):
+        """Test that middleware uses cached hosts when available"""
+
+        # Note: At this point there's no cache entry, so the allowed host cache is remade.
+        cached_hosts = 'cached.com'
+        cached_origins = f'https://{cached_hosts}'
+        settings.ALLOWED_HOSTS += [cached_hosts]
+        settings.CORS_ALLOWED_ORIGINS += [cached_origins]
+
+        self.middleware(self.request)
+
+        self.assertIn(cached_hosts, settings.ALLOWED_HOSTS)
+        self.assertIn(cached_origins, settings.CORS_ALLOWED_ORIGINS)
+
+    def test_allowed_origins_only_ingests_url_not_path(self):
+        """Test that middleware uses cached hosts when available"""
+
+        # Note: At this point there's no cache entry, so the allowed host cache is remade.
+        client_env = ClientEnvironment.objects.create(
+            environment='test',
+            redirect_url='http://testserver2/really-long-url-holy-carp/whatever/',
+            client_id=self.client.uuid,
+            auth_token='12345',
+            allowed_hostnames=['testserver2'],
+        )
+
+        self.middleware(self.request)
+
+        self.assertIn('testserver2', settings.ALLOWED_HOSTS)
+        self.assertIn('http://testserver2', settings.CORS_ALLOWED_ORIGINS)
 
 
 class FXAWebhooksTestCase(DRF_APITestCase):

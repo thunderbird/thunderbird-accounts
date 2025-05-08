@@ -53,14 +53,15 @@ class ClientSetAllowedHostsMiddleware:
         start = time.perf_counter_ns()
 
         allowed_hosts = cache.get(settings.ALLOWED_HOSTS_CACHE_KEY)
-        if not allowed_hosts:
-            allowed_hosts = ClientEnvironment.cache_hostnames()
+        allowed_origins = cache.get(settings.ALLOWED_ORIGINS_CACHE_KEY)
+        if not allowed_hosts or not allowed_origins:
+            allowed_hosts, allowed_origins = ClientEnvironment.cache_hostnames()
         # Get the IP of whatever machine is running this code and allow it as a hostname
         allowed_hosts.append(gethostbyname(gethostname()))
 
         # Set both django allowed hosts and cors allowed origins
         settings.ALLOWED_HOSTS = allowed_hosts
-        settings.CORS_ALLOWED_ORIGINS = allowed_hosts
+        settings.CORS_ALLOWED_ORIGINS = allowed_origins
 
         end = time.perf_counter_ns()
 
