@@ -59,7 +59,7 @@ class ClientEnvironment(BaseModel):
 
     @classmethod
     def cache_hostnames(cls):
-        client_envs = ClientEnvironment.objects.filter(environment=settings.APP_ENV).all()
+        client_envs = ClientEnvironment.objects.all()
         allowed_hosts = []
         allowed_origins = []
 
