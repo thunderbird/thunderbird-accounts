@@ -1,5 +1,7 @@
 import datetime
 import logging
+from urllib.parse import urlparse
+
 import jwt
 import sentry_sdk
 
@@ -20,7 +22,7 @@ class IsClient(BasePermission):
 
     def has_permission(self, request, view):
         host = (
-            request.headers.get('origin') or request.get_host()
+            request.headers.get('origin') or f'{request.scheme}://{request.get_host()}'
         )  # We're not forwarding hosts correctly, cors middleware uses origin so we should too.
         client_secret = request.data.get('secret')
         if not client_secret:
@@ -35,7 +37,8 @@ class IsClient(BasePermission):
 
         allowed_hostnames = client_env.allowed_hostnames
 
-        is_host_valid = any([allowed_hostname == host for allowed_hostname in allowed_hostnames])
+        parsed_url = urlparse(host) or host
+        is_host_valid = any([allowed_hostname == parsed_url.netloc for allowed_hostname in allowed_hostnames])
 
         # Check if the client env is not active, or if the host is valid
         if not client_env.is_active or not is_host_valid:
