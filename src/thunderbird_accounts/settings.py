@@ -17,6 +17,7 @@ from pathlib import Path
 from django.core.exceptions import DisallowedHost
 from dotenv import load_dotenv
 import sentry_sdk
+from sentry_sdk.types import Event, Hint
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -39,6 +40,15 @@ IS_DOCS = APP_ENV == 'docs'
 # Only allow DEBUG on dev or test envs.
 DEBUG: bool = os.getenv('APP_DEBUG') and (APP_ENV == 'dev' or APP_ENV == 'test')
 
+
+def before_send(event: Event, hint: Hint) -> Event | None:
+    """Filter out any exceptions we don't want to pollute sentry"""
+    if hint.get('exc_info', [None])[0] in [DisallowedHost]:
+        return None
+
+    return event
+
+
 sentry_sdk.init(
     dsn=os.getenv('SENTRY_DSN'),
     # Add data like request headers and IP for users,
@@ -47,7 +57,8 @@ sentry_sdk.init(
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
     environment=APP_ENV,
-    ignore_errors=[DisallowedHost],
+    before_send=before_send,
+    attach_stacktrace=True,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
