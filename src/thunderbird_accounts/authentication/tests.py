@@ -202,15 +202,19 @@ class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
         """Test that middleware properly sets ALLOWED_HOSTS from ClientEnvironment"""
         self.middleware(self.request)
         self.assertIn('test.com', settings.ALLOWED_HOSTS)
+        self.assertIn('test.com', settings.CORS_ALLOWED_ORIGINS)
 
     def test_allowed_uses_cached_hosts(self):
         """Test that middleware uses cached hosts when available"""
+
+        # Note: At this point there's no cache entry, so the allowed host cache is remade.
         cached_hosts = 'cached.com'
         settings.ALLOWED_HOSTS += [cached_hosts]
 
         self.middleware(self.request)
 
         self.assertIn(cached_hosts, settings.ALLOWED_HOSTS)
+        self.assertIn(cached_hosts, settings.CORS_ALLOWED_ORIGINS)
 
 
 class FXAWebhooksTestCase(DRF_APITestCase):
