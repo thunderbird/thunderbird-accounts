@@ -209,7 +209,7 @@ class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
         """Test that middleware properly sets ALLOWED_HOSTS from ClientEnvironment"""
         self.middleware(self.request)
         self.assertIn('test.com', settings.ALLOWED_HOSTS)
-        self.assertIn('test.com', settings.CORS_ALLOWED_ORIGINS)
+        self.assertIn('http://test.com', settings.CORS_ALLOWED_ORIGINS)
 
     def test_allowed_hosts_uses_cached_hosts(self):
         """Test that middleware uses cached hosts when available"""
