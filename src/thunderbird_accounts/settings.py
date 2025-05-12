@@ -388,4 +388,4 @@ CORS_ALLOWED_ORIGINS = [host for host in os.getenv('CORS_ALLOWED_ORIGINS', '').s
 
 # For local docker usage
 if DEBUG:
-    CORS_ALLOWED_ORIGINS += ['localhost', 'accounts']
+    CORS_ALLOWED_ORIGINS += ['http://localhost', 'http://accounts']
