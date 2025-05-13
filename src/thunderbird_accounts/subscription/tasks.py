@@ -35,8 +35,8 @@ def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datet
             transaction = Transaction.objects.filter(paddle_id=paddle_id, webhook_updated_at__gt=occurred_at).get()
             if transaction:
                 logging.info(
-                    f'Ignoring webhook as transaction (uuid={transaction.uuid}, paddle_id={paddle_id}) update was updated '
-                    f'later than when the webhook occurred at.'
+                    f'Ignoring webhook as transaction (uuid={transaction.uuid}, paddle_id={paddle_id}) update '
+                    f'was updated later than when the webhook occurred at.'
                 )
                 return {
                     'paddle_id': paddle_id,
