@@ -12,7 +12,7 @@ export class FxAPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.emailHeaderText = this.page.getByText('Enter your email');
+    this.emailHeaderText = this.page.getByRole('heading', { name: 'Enter your email' });
     this.passwordHeaderText = this.page.getByText('Enter your password');
     this.userAvatar = this.page.getByTestId('avatar-default');
     this.emailInput = this.page.getByRole('textbox', { name: 'Enter your email' });
