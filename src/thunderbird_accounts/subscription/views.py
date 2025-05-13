@@ -1,6 +1,8 @@
 import datetime
 
 import sentry_sdk
+from django.http import HttpResponse
+from django.utils.translation import gettext_lazy as _
 
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.request import Request
@@ -27,9 +29,14 @@ def handle_paddle_webhook(request: Request):
         cloned_data: dict = data.copy()
         cloned_data.pop('event_data', '')
         sentry_sdk.set_context('request_data', cloned_data)
+        raise UnexpectedBehaviour('Paddle webhook is missing occurred at')
 
     occurred_at: datetime.datetime = datetime.datetime.fromisoformat(occurred_at)
 
     match event_type:
         case 'transaction.created':
             tasks.paddle_transaction_created.delay(event_data, occurred_at)
+        case 'subscription.created':
+            tasks.paddle_subscription_created(event_data, occurred_at)
+
+    return HttpResponse(content=_('Thank you!'), status=200)

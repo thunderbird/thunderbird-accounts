@@ -1,10 +1,59 @@
 import json
 import datetime
 from pathlib import Path
+from unittest.mock import patch, Mock
 
 from django.conf import settings
 from django.test import TestCase
+from rest_framework.test import APIClient, APITestCase as DRF_APITestCase
+
+from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.subscription import tasks, models
+from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
+
+
+class PaddleWebhookViewTestCase(DRF_APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def skip_permission(self, _request):
+        return User(), None
+
+    @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
+    def test_empty_webhook(self):
+        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_created', Mock()):
+            with self.assertRaises(UnexpectedBehaviour) as ex:
+                self.client.post('http://testserver/api/v1/subscription/paddle/webhook')
+                self.assertEqual(ex.message, 'Paddle webhook is empty')
+
+    @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
+    def test_empty_occurred_at(self):
+        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_created', Mock()):
+            with self.assertRaises(UnexpectedBehaviour) as ex:
+                self.client.post(
+                    'http://testserver/api/v1/subscription/paddle/webhook',
+                    {
+                        'event_type': 'transaction.created',
+                        'event_data': {'not': 'empty'},
+                    },
+                    content_type='application/json',
+                )
+                self.assertEqual(ex.message, 'Paddle webhook is missing occurred at')
+
+    @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
+    def test_success(self):
+        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_created', Mock()) as tx_created_mock:
+            response = self.client.post(
+                'http://testserver/api/v1/subscription/paddle/webhook',
+                {
+                    'event_type': 'transaction.created',
+                    'event_data': {'not': 'empty'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            tx_created_mock.delay.assert_called()
 
 
 class TransactionCreatedTaskTestCase(TestCase):

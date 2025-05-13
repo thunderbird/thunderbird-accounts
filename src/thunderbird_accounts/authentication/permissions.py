@@ -138,4 +138,6 @@ class IsValidPaddleWebhook(BaseAuthentication):
 
         integrity_check = Verifier().verify(request, Secret(settings.PADDLE_WEBHOOK_KEY))
 
-        return True if integrity_check else None
+        # We need to return a user, but we don't need the user for these requests
+        # So return an empty user object
+        return User(), None if integrity_check else None
