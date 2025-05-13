@@ -21,14 +21,14 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
 
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
     def test_empty_webhook(self):
-        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_created', Mock()):
+        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()):
             with self.assertRaises(UnexpectedBehaviour) as ex:
                 self.client.post('http://testserver/api/v1/subscription/paddle/webhook')
                 self.assertEqual(ex.message, 'Paddle webhook is empty')
 
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
     def test_empty_occurred_at(self):
-        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_created', Mock()):
+        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()):
             with self.assertRaises(UnexpectedBehaviour) as ex:
                 self.client.post(
                     'http://testserver/api/v1/subscription/paddle/webhook',
@@ -42,7 +42,7 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
 
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
     def test_success(self):
-        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_created', Mock()) as tx_created_mock:
+        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()) as tx_created_mock:
             response = self.client.post(
                 'http://testserver/api/v1/subscription/paddle/webhook',
                 {
@@ -79,7 +79,7 @@ class TransactionCreatedTaskTestCase(TestCase):
         event_data: dict = data.get('data')
         occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
 
-        task_results: dict | None = tasks.paddle_transaction_created.delay(event_data, occurred_at).get(timeout=10)
+        task_results: dict | None = tasks.paddle_transaction_event.delay(event_data, occurred_at, True).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
@@ -93,7 +93,7 @@ class TransactionCreatedTaskTestCase(TestCase):
         # Check if the model actually exists
         self.assertTrue(models.Transaction.objects.filter(pk=task_results.get('model_uuid')).exists())
 
-    def test_out_of_date_webhook(self):
+    def test_transaction_already_exists(self):
         self.assertEqual(models.Transaction.objects.count(), 0)
 
         # Retrieve the webhook sample
@@ -112,12 +112,12 @@ class TransactionCreatedTaskTestCase(TestCase):
 
         self.assertIsNotNone(transaction)
 
-        task_results: dict | None = tasks.paddle_transaction_created.delay(event_data, occurred_at).get(timeout=10)
+        task_results: dict | None = tasks.paddle_transaction_event.delay(event_data, occurred_at, True).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
         self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'webhook is out of date')
+        self.assertEqual(task_results.get('reason'), 'transaction already exists')
 
     def test_details_doesnt_exist(self):
         self.assertEqual(models.Transaction.objects.count(), 0)
@@ -128,7 +128,7 @@ class TransactionCreatedTaskTestCase(TestCase):
 
         event_data.pop('details', '')
 
-        task_results: dict | None = tasks.paddle_transaction_created.delay(event_data, occurred_at).get(timeout=10)
+        task_results: dict | None = tasks.paddle_transaction_event.delay(event_data, occurred_at, True).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
@@ -147,7 +147,7 @@ class TransactionCreatedTaskTestCase(TestCase):
         del event_data['details']['totals']['tax']
         del event_data['details']['totals']['currency_code']
 
-        task_results: dict | None = tasks.paddle_transaction_created.delay(event_data, occurred_at).get(timeout=10)
+        task_results: dict | None = tasks.paddle_transaction_event.delay(event_data, occurred_at, True).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))

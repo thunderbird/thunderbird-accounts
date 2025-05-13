@@ -35,7 +35,9 @@ def handle_paddle_webhook(request: Request):
 
     match event_type:
         case 'transaction.created':
-            tasks.paddle_transaction_created.delay(event_data, occurred_at)
+            tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=True)
+        case 'transaction.updated':
+            tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=False)
         case 'subscription.created':
             tasks.paddle_subscription_created(event_data, occurred_at)
 

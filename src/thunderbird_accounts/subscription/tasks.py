@@ -3,32 +3,49 @@ import logging
 
 from celery import shared_task
 
-from thunderbird_accounts.subscription.models import Transaction
+from thunderbird_accounts.subscription.models import Transaction, Subscription
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
-def paddle_transaction_created(self, event_data: dict, occurred_at: datetime.datetime):
-    """Handles transaction.created events.
+def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datetime, is_create_event: bool):
+    """Handles transaction.created and transaction.updated events.
     Docs: https://developer.paddle.com/webhooks/transactions/transaction-created
+    Docs: https://developer.paddle.com/webhooks/transactions/transaction-updated
     """
     paddle_id = event_data.get('id')
 
-    try:
-        transaction = Transaction.objects.filter(paddle_id=paddle_id, webhook_updated_at__gt=occurred_at).get()
-    except Transaction.DoesNotExist:
-        transaction = None
-
-    if transaction:
-        logging.info(
-            f'Ignoring webhook as transaction (uuid={transaction.uuid}, paddle_id={paddle_id}) update was updated '
-            f'later than when the webhook occurred at.'
-        )
-        return {
-            'paddle_id': paddle_id,
-            'occurred_at': occurred_at,
-            'task_status': 'failed',
-            'reason': 'webhook is out of date',
-        }
+    if is_create_event:
+        try:
+            transaction = Transaction.objects.filter(paddle_id=paddle_id).get()
+            if transaction:
+                logging.info(
+                    f'Ignoring webhook as transaction (uuid={transaction.uuid}, paddle_id={paddle_id}) exists '
+                    f"when it shouldn't exist."
+                )
+                return {
+                    'paddle_id': paddle_id,
+                    'occurred_at': occurred_at,
+                    'task_status': 'failed',
+                    'reason': 'transaction already exists',
+                }
+        except Transaction.DoesNotExist:
+            pass
+    else:
+        try:
+            transaction = Transaction.objects.filter(paddle_id=paddle_id, webhook_updated_at__gt=occurred_at).get()
+            if transaction:
+                logging.info(
+                    f'Ignoring webhook as transaction (uuid={transaction.uuid}, paddle_id={paddle_id}) update was updated '
+                    f'later than when the webhook occurred at.'
+                )
+                return {
+                    'paddle_id': paddle_id,
+                    'occurred_at': occurred_at,
+                    'task_status': 'failed',
+                    'reason': 'webhook is out of date',
+                }
+        except Transaction.DoesNotExist:
+            pass
 
     paddle_invoice_id = event_data.get('invoice_id')
     paddle_subscription_id = event_data.get('subscription_id')
