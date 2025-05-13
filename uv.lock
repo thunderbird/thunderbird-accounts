@@ -1148,7 +1148,7 @@ wheels = [
 
 [[package]]
 name = "thunderbird-accounts"
-version = "0.3.3"
+version = "0.3.99"
 source = { editable = "." }
 dependencies = [
     { name = "argon2-cffi" },
@@ -1163,7 +1163,6 @@ dependencies = [
     { name = "hiredis" },
     { name = "itsdangerous" },
     { name = "markdown" },
-    { name = "paddle-python-sdk" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pyfxa" },
     { name = "pyjwt" },
@@ -1188,6 +1187,9 @@ docs = [
     { name = "sphinxcontrib-django" },
     { name = "sphinxcontrib-mermaid" },
 ]
+subscription = [
+    { name = "paddle-python-sdk" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1210,7 +1212,7 @@ requires-dist = [
     { name = "itsdangerous", specifier = ">=2.2.0" },
     { name = "markdown", specifier = ">=3.7" },
     { name = "myst-parser", marker = "extra == 'docs'" },
-    { name = "paddle-python-sdk", specifier = ">=1.6.0" },
+    { name = "paddle-python-sdk", marker = "extra == 'subscription'", specifier = ">=1.6.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.3" },
     { name = "pyfxa", specifier = ">=0.7.9" },
     { name = "pyjwt", specifier = ">=2.9.0" },
@@ -1227,7 +1229,7 @@ requires-dist = [
     { name = "sphinxcontrib-mermaid", marker = "extra == 'docs'" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
 ]
-provides-extras = ["cli", "docs"]
+provides-extras = ["cli", "docs", "subscription"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "faker", specifier = ">=33.1.0" }]

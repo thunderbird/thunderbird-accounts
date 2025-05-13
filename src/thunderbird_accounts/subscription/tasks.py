@@ -20,7 +20,8 @@ def paddle_transaction_created(self, event_data: dict, occurred_at: datetime.dat
 
     if transaction:
         logging.info(
-            f'Ignoring webhook as transaction (uuid={transaction.uuid}, paddle_id={paddle_id}) update was updated later than when the webhook occurred at.'
+            f'Ignoring webhook as transaction (uuid={transaction.uuid}, paddle_id={paddle_id}) update was updated '
+            f'later than when the webhook occurred at.'
         )
         return {
             'paddle_id': paddle_id,

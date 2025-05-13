@@ -102,6 +102,7 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
+    "migrations"  # These are auto-generated
 ]
 
 # Always generate Python 3.12-compatible code.
