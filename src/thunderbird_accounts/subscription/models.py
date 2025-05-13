@@ -38,6 +38,9 @@ class Price(BaseModel):
     billing_cycle_interval = models.CharField(
         choices=IntervalValues, help_text=_('The unit of time in a billing cycle.')
     )
+    webhook_updated_at = models.DateTimeField(
+        null=True, help_text=_('date when this model was last updated by a paddle webhook.')
+    )
 
     def __str__(self):
         return f'Price [{self.uuid}] {self.name} - {self.paddle_id}'
@@ -45,7 +48,6 @@ class Price(BaseModel):
     class Meta(BaseModel.Meta):
         indexes = [
             *BaseModel.Meta.indexes,
-            models.Index(fields=['status']),
             models.Index(fields=['currency']),
             models.Index(fields=['billing_cycle_frequency']),
             models.Index(fields=['billing_cycle_interval']),
@@ -127,6 +129,10 @@ class Subscription(BaseModel):
 
     user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
 
+    webhook_updated_at = models.DateTimeField(
+        null=True, help_text=_('date when this model was last updated by a paddle webhook.')
+    )
+
     def __str__(self):
         return f'Subscription [{self.uuid}] {self.paddle_id} - {self.user.display_name}'
 
@@ -201,6 +207,9 @@ class Transaction(BaseModel):
     )
     revised_at = models.DateTimeField(
         null=True, help_text=_('date when the subscription is next schedule to be billed.')
+    )
+    webhook_updated_at = models.DateTimeField(
+        null=True, help_text=_('date when this model was last updated by a paddle webhook.')
     )
 
     subscription = models.ForeignKey(Subscription, null=True, on_delete=models.CASCADE)
