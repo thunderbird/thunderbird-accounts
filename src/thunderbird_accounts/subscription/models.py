@@ -1,57 +1,229 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.utils.models import BaseModel
 
 
-class Customer(BaseModel):
-    """A paddle customer.
+class PaddleId(models.CharField):
+    """Holds a paddle id with some sensible defaults, but is otherwise just a CharField"""
 
-    :param paddle_id: The customer id field in paddle
-    :param name: The name of the customer
-    :param email: The email of the customer
-    """
-    paddle_id = models.CharField(max_length=256)
+    def __init__(self, *args, db_collation=None, **kwargs):
+        kwargs = {'max_length': 256, 'db_index': True, 'null': True, 'default': None, **kwargs}
+        super().__init__(*args, **kwargs)
 
-    name = models.CharField(max_length=128)
-    email = models.CharField(max_length=256)
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+class Price(BaseModel):
+    """Paddle price object. A product can have multiple of these."""
+
+    class TypeValues(models.TextChoices):
+        # Paddle values
+        STANDARD = 'standard', _('Standard')
+        CUSTOM = 'custom', _('Custom')
+
+    class IntervalValues(models.TextChoices):
+        # Paddle values
+        DAY = 'day', _('Day')
+        WEEK = 'week', _('Week')
+        MONTH = 'month', _('Month')
+        YEAR = 'year', _('Year')
+
+    paddle_id = PaddleId()
+    paddle_product_id = PaddleId()
+    name = models.CharField()
+    amount = models.CharField(help_text=_('Amount in lowest denomination for currency. e.g. 10 USD = 1000 (cents).'))
+    currency = models.CharField(help_text=_('Three letter ISO 4217 currency code.'))
+    price_type = models.CharField(choices=TypeValues, help_text=_('Is this a one-off price?'))
+    billing_cycle_frequency = models.CharField(help_text=_('Amount of time in a billing cycle.'))
+    billing_cycle_interval = models.CharField(
+        choices=IntervalValues, help_text=_('The unit of time in a billing cycle.')
+    )
+    webhook_updated_at = models.DateTimeField(
+        null=True, help_text=_('date when this model was last updated by a paddle webhook.')
+    )
+
+    def __str__(self):
+        return f'Price [{self.uuid}] {self.name} - {self.paddle_id}'
 
     class Meta(BaseModel.Meta):
         indexes = [
             *BaseModel.Meta.indexes,
+            models.Index(fields=['currency']),
+            models.Index(fields=['billing_cycle_frequency']),
+            models.Index(fields=['billing_cycle_interval']),
         ]
 
+
+class Plan(BaseModel):
+    """A paddle product
+    This will correspond with permissions/plans
+
+    For now a plan has access to all clients
+    """
+
+    paddle_product_id = PaddleId()
+    name = models.CharField(max_length=256)
+
+    # Plan parameters
+    mail_address_count = models.IntegerField(null=True, help_text=_('Amount of mail addresses a user can create.'))
+    mail_domain_count = models.IntegerField(null=True, help_text=_('Amount of custom domains a user can have.'))
+    mail_storage_gb = models.IntegerField(
+        null=True, help_text=_('Amount of mail storage a user has access to (in GB).')
+    )
+    send_storage_gb = models.IntegerField(
+        null=True, help_text=_('Amount of send storage a user has access to (in GB).')
+    )
+
     def __str__(self):
-        return f'Customer [{self.uuid}] {self.name}'
+        return f'Plan [{self.uuid}] {self.name} - {self.paddle_product_id}'
+
+
+class SubscriptionItem(BaseModel):
+    """An item from a subscription, a subscription should really only have one of these unless
+    we add additional purchasable/subscribable items like addons."""
+
+    quantity = models.IntegerField(default=0)
+    paddle_price_id = PaddleId()
+    paddle_product_id = PaddleId()
+    paddle_subscription_id = PaddleId()
+
+    subscription = models.ForeignKey('Subscription', on_delete=models.CASCADE)
+    price = models.ForeignKey('Price', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'Subscription Item [{self.uuid}] {self.subscription_id} - {self.paddle_product_id}'
 
 
 class Subscription(BaseModel):
-    """A paddle subscription.
+    """A paddle subscription object"""
 
-    :param name: The name of the subscription
-    :param paddle_id: The subscription's paddle id
-    :param is_active: Is this subscription active?
-    :param active_since: Datetime when the subscription became active
-    :param inactive_since: Datetime when the subscription became inactive
-    """
-    name = models.CharField(max_length=128)
-    paddle_id = models.CharField(max_length=256)
-    is_active = models.BooleanField()
-    active_since = models.DateTimeField()
-    inactive_since = models.DateTimeField()
+    class StatusValues(models.TextChoices):
+        # Empty value, non-paddle value
+        NONE = '', _('None')
 
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+        # Paddle values
+        ACTIVE = 'active', _('Active')
+        CANCELED = 'canceled', _('Canceled')
+        PAST_DUE = 'past_due', _('Past Due')
+        PAUSED = 'paused', _('Paused')
+        TRIALING = 'trialing', _('Trialing')
+
+    paddle_id = PaddleId(help_text=_('The subscription paddle id.'))
+    paddle_customer_id = PaddleId(help_text=_('The customer paddle id.'))
+    status = models.CharField(
+        max_length=256,
+        choices=StatusValues,
+        default=StatusValues.NONE,
+        null=True,
+        help_text=_('The current subscription status.'),
+    )
+
+    next_billed_at = models.DateTimeField(
+        null=True, help_text=_('date when the subscription is next schedule to be billed.')
+    )
+
+    current_billing_period_starts_at = models.DateTimeField(
+        null=True, help_text=_('date when the billing period starts.')
+    )
+    current_billing_period_ends_at = models.DateTimeField(null=True, help_text=_('date when the billing period ends.'))
+
+    user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
+
+    webhook_updated_at = models.DateTimeField(
+        null=True, help_text=_('date when this model was last updated by a paddle webhook.')
+    )
 
     def __str__(self):
-        return f"Subscription [{self.uuid}] {self.name}"
+        return f'Subscription [{self.uuid}] {self.paddle_id} - {self.user.display_name}'
 
     class Meta(BaseModel.Meta):
         indexes = [
             *BaseModel.Meta.indexes,
-            models.Index(fields=['name']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['active_since']),
-            models.Index(fields=['inactive_since']),
+            models.Index(fields=['status']),
+            models.Index(fields=['next_billed_at']),
+            models.Index(fields=['current_billing_period_starts_at', 'current_billing_period_ends_at']),
+        ]
+
+
+class Transaction(BaseModel):
+    class StatusValues(models.TextChoices):
+        # Empty value, non-paddle value
+        NONE = '', _('None')
+
+        # Paddle values
+        DRAFT = 'draft', _('Draft')
+        READY = 'ready', _('Ready')
+        BILLED = 'billed', _('Billed')
+        PAID = 'paid', _('Paid')
+        COMPLETED = 'completed', _('Completed')
+        CANCELED = 'canceled', _('Canceled')
+        PAST_DUE = 'past_due', _('Past Due')
+
+    class OriginValues(models.TextChoices):
+        """Values from https://developer.paddle.com/webhooks/transactions/transaction-created -> origin"""
+
+        NONE = '', _('None')
+
+        API = 'api', _('Api')
+        SUBSCRIPTION_CHARGE = (
+            'subscription_charge',
+            _('Subscription: Charge'),
+        )
+        SUBSCRIPTION_PAYMENT_METHOD_CHANGE = (
+            'subscription_payment_method_change',
+            _('Subscription: Payment method change'),
+        )
+        SUBSCRIPTION_RECURRING = 'subscription_recurring', _('Subscription: Recurring')
+        SUBSCRIPTION_UPDATE = 'subscription_update', _('Subscription: Update')
+        WEB = 'web', _('Web')
+
+    paddle_id = PaddleId(help_text=_('The transaction paddle id.'))
+    paddle_invoice_id = PaddleId(help_text=_('The invoice paddle id,'), null=True)
+    paddle_subscription_id = PaddleId(help_text=_('The subscription paddle id.'), null=True)
+
+    invoice_number = models.CharField(null=True, help_text=_('Invoice number for this transaction.'))
+
+    total = models.CharField(max_length=256, null=False, help_text=_('Total after discount and tax.'))
+    tax = models.CharField(max_length=256, null=False, help_text=_('Total tax on the subtotal.'))
+    currency = models.CharField(max_length=256, null=False, help_text=_('Three letter ISO 4217 currency code.'))
+
+    status = models.CharField(
+        max_length=256,
+        choices=StatusValues,
+        default=StatusValues.NONE,
+        null=False,
+        help_text=_('The current subscription status.'),
+    )
+
+    transaction_origin = models.CharField(
+        choices=OriginValues,
+        null=False,
+        default=OriginValues.NONE,
+        help_text=_('where the transaction first start from.'),
+    )
+
+    billed_at = models.DateTimeField(
+        null=True, help_text=_('date when the subscription is next schedule to be billed.')
+    )
+    revised_at = models.DateTimeField(
+        null=True, help_text=_('date when the subscription is next schedule to be billed.')
+    )
+    webhook_updated_at = models.DateTimeField(
+        null=True, help_text=_('date when this model was last updated by a paddle webhook.')
+    )
+
+    subscription = models.ForeignKey(Subscription, null=True, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'Transaction [{self.uuid}] {self.paddle_id}'
+
+    class Meta(BaseModel.Meta):
+        indexes = [
+            *BaseModel.Meta.indexes,
+            models.Index(fields=['invoice_number']),
+            models.Index(fields=['transaction_origin']),
+            models.Index(fields=['currency']),
+            models.Index(fields=['status']),
+            models.Index(fields=['billed_at']),
+            models.Index(fields=['revised_at']),
         ]

@@ -1,6 +1,6 @@
-import logging
 import time
 
+import sentry_sdk
 from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
@@ -49,7 +49,6 @@ class ClientSetAllowedHostsMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest):
-        logging.debug('---')
         start = time.perf_counter_ns()
 
         allowed_hosts = cache.get(settings.ALLOWED_HOSTS_CACHE_KEY)
@@ -65,7 +64,7 @@ class ClientSetAllowedHostsMiddleware:
 
         end = time.perf_counter_ns()
 
-        logging.debug(f'> total time {(end - start) / 1000000} ms')
+        sentry_sdk.set_measurement('cached_allowed_host_get_time', (end - start) / 1000000, 'millisecond')
 
         response = self.get_response(request)
 

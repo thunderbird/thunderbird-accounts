@@ -41,7 +41,7 @@ RUN ln -s /app/thunderbird_accounts src/thunderbird_accounts
 ADD src/thunderbird_accounts ./src/thunderbird_accounts
 
 # Install our package dependencies, with cli
-RUN uv sync --extra cli && \
+RUN uv sync --extra cli --extra subscription && \
     npm install && npm cache clean --force
 
 EXPOSE 8087
