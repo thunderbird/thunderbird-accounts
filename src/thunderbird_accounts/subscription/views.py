@@ -39,6 +39,8 @@ def handle_paddle_webhook(request: Request):
         case 'transaction.updated':
             tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=False)
         case 'subscription.created':
-            tasks.paddle_subscription_created(event_data, occurred_at)
+            tasks.paddle_subscription_event(event_data, occurred_at, is_create_event=True)
+        case 'subscription.updated':
+            tasks.paddle_subscription_event(event_data, occurred_at, is_create_event=False)
 
     return HttpResponse(content=_('Thank you!'), status=200)

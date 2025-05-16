@@ -57,11 +57,21 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
 
 
 class TransactionCreatedTaskTestCase(TestCase):
+    is_create_event: bool = True
+    celery_task_always_eager_setting: bool = False
+
     def setUp(self):
         super().setUp()
 
+        self.celery_task_always_eager_setting = settings.CELERY_TASK_ALWAYS_EAGER
+
         # Make sure tasks run in sync
         settings.CELERY_TASK_ALWAYS_EAGER = True
+
+    def tearDown(self):
+        super().tearDown()
+
+        settings.CELERY_TASK_ALWAYS_EAGER = self.celery_task_always_eager_setting
 
     def retrieve_webhook_fixture(self) -> dict:
         # Retrieve the webhook sample
@@ -79,7 +89,9 @@ class TransactionCreatedTaskTestCase(TestCase):
         event_data: dict = data.get('data')
         occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
 
-        task_results: dict | None = tasks.paddle_transaction_event.delay(event_data, occurred_at, True).get(timeout=10)
+        task_results: dict | None = tasks.paddle_transaction_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
@@ -93,7 +105,7 @@ class TransactionCreatedTaskTestCase(TestCase):
         # Check if the model actually exists
         self.assertTrue(models.Transaction.objects.filter(pk=task_results.get('model_uuid')).exists())
 
-    def test_transaction_already_exists(self):
+    def test_transaction_already_exists_or_out_of_date(self):
         self.assertEqual(models.Transaction.objects.count(), 0)
 
         # Retrieve the webhook sample
@@ -104,7 +116,7 @@ class TransactionCreatedTaskTestCase(TestCase):
 
         transaction = models.Transaction.objects.create(
             paddle_id=event_data.get('id'),
-            webhook_updated_at=occurred_at + datetime.timedelta(hours=1),
+            webhook_updated_at=occurred_at - datetime.timedelta(hours=1),
             total='0',
             tax='0',
             currency='CAD',
@@ -112,7 +124,9 @@ class TransactionCreatedTaskTestCase(TestCase):
 
         self.assertIsNotNone(transaction)
 
-        task_results: dict | None = tasks.paddle_transaction_event.delay(event_data, occurred_at, True).get(timeout=10)
+        task_results: dict | None = tasks.paddle_transaction_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
@@ -128,7 +142,9 @@ class TransactionCreatedTaskTestCase(TestCase):
 
         event_data.pop('details', '')
 
-        task_results: dict | None = tasks.paddle_transaction_event.delay(event_data, occurred_at, True).get(timeout=10)
+        task_results: dict | None = tasks.paddle_transaction_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
@@ -147,9 +163,96 @@ class TransactionCreatedTaskTestCase(TestCase):
         del event_data['details']['totals']['tax']
         del event_data['details']['totals']['currency_code']
 
-        task_results: dict | None = tasks.paddle_transaction_event.delay(event_data, occurred_at, True).get(timeout=10)
+        task_results: dict | None = tasks.paddle_transaction_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
         self.assertEqual(task_results.get('task_status'), 'failed')
         self.assertEqual(task_results.get('reason'), 'invalid total, tax, or currency strings')
+
+
+class TransactionUpdatedTaskTestCase(TransactionCreatedTaskTestCase):
+    is_create_event: bool = False
+
+    def retrieve_webhook_fixture(self) -> dict:
+        # Retrieve the webhook sample
+        fixture_path = Path(__file__).parent.joinpath('fixtures/webhook_paddle_transaction_updated.json')
+        with open(fixture_path, 'r') as fh:
+            data = json.loads(fh.read())
+        return data
+
+    def test_success(self):
+        self.assertEqual(models.Transaction.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        # An initial transaction we'll update
+        transaction = models.Transaction.objects.create(
+            paddle_id=event_data.get('id'),
+            webhook_updated_at=occurred_at - datetime.timedelta(hours=1),
+            total='0',
+            tax='0',
+            currency='CAD',
+        )
+
+        task_results: dict | None = tasks.paddle_transaction_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+
+        # Success results have model_created and model_uuid, so test this first
+        self.assertEqual(task_results.get('task_status'), 'success')
+
+        # This should be a new model
+        self.assertFalse(task_results.get('model_created'))
+
+        # Check if the model actually exists
+        self.assertTrue(models.Transaction.objects.filter(pk=task_results.get('model_uuid')).exists())
+
+        self.assertEqual(task_results.get('model_uuid'), transaction.uuid)
+
+        # Refresh the transaction now that we've updated it
+        transaction.refresh_from_db()
+
+        self.assertNotEqual(transaction.total, '0')
+        self.assertNotEqual(transaction.tax, '0')
+
+        self.assertEqual(transaction.total, event_data.get('details', {}).get('totals', {}).get('total'))
+        self.assertEqual(transaction.tax, event_data.get('details', {}).get('totals', {}).get('tax'))
+        self.assertEqual(transaction.currency, event_data.get('details', {}).get('totals', {}).get('currency_code'))
+
+    def test_transaction_already_exists_or_out_of_date(self):
+        self.assertEqual(models.Transaction.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        transaction = models.Transaction.objects.create(
+            paddle_id=event_data.get('id'),
+            webhook_updated_at=occurred_at + datetime.timedelta(hours=1),
+            total='0',
+            tax='0',
+            currency='CAD',
+        )
+
+        self.assertIsNotNone(transaction)
+
+        task_results: dict | None = tasks.paddle_transaction_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+        self.assertEqual(task_results.get('task_status'), 'failed')
+        self.assertEqual(task_results.get('reason'), 'webhook is out of date')

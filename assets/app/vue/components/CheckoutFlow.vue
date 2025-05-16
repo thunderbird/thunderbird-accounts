@@ -14,6 +14,7 @@ const paddlePriceIdLo = window._page.paddlePriceIdLo;
 const paddlePriceIdMd = window._page.paddlePriceIdMd;
 const paddlePriceIdHi = window._page.paddlePriceIdHi;
 const successRedirect = window._page.successRedirect;
+const signedUserId = window._page.signedUserId;
 
 const baseUrl = window.location.toString().replace(window.location.pathname, '');
 const successUrl = `${baseUrl}${successRedirect}`;
@@ -55,6 +56,9 @@ function openCheckout(priceId) {
         priceId,
       },
     ],
+    customData: {
+      signed_user_id: signedUserId,
+    },
   });
 }
 

@@ -107,6 +107,7 @@ PADDLE_PRICE_ID_LO: str = os.getenv('PADDLE_PRICE_ID_LO')
 PADDLE_PRICE_ID_MD: str = os.getenv('PADDLE_PRICE_ID_MD')
 PADDLE_PRICE_ID_HI: str = os.getenv('PADDLE_PRICE_ID_HI')
 PADDLE_WEBHOOK_KEY: str = os.getenv('PADDLE_WEBHOOK_KEY')
+PADDLE_API_KEY: str = os.getenv('PADDLE_API_KEY')
 
 ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
