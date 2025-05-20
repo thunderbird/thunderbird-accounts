@@ -4,13 +4,7 @@ import logging
 from celery import shared_task
 from django.core.signing import Signer, BadSignature
 
-from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Transaction, Subscription
-
-try:
-    from paddle_billing import Client
-except ImportError:
-    Client = None
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -117,10 +111,7 @@ def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datet
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
-@inject_paddle
-def paddle_subscription_event(
-    self, event_data: dict, occurred_at: datetime.datetime, is_create_event: bool, paddle: Client
-):
+def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.datetime, is_create_event: bool):
     """Handles subscription.created events.
     Docs: https://developer.paddle.com/webhooks/subscriptions/subscription-created
     Docs: https://developer.paddle.com/webhooks/subscriptions/subscription-updated
