@@ -14,6 +14,8 @@ from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
 
 
 class PaddleWebhookViewTestCase(DRF_APITestCase):
+    """Test the actual webhook route"""
+
     def setUp(self):
         self.client = APIClient()
 
@@ -22,6 +24,7 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
 
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
     def test_empty_webhook(self):
+        """Ensure a webhook that doesn't have any POST data errors out with an unexpected behaviour error."""
         with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()):
             with self.assertRaises(UnexpectedBehaviour) as ex:
                 self.client.post('http://testserver/api/v1/subscription/paddle/webhook')
@@ -29,6 +32,7 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
 
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
     def test_empty_occurred_at(self):
+        """Ensure a webhook will raise an unexpected behaviour error if there's occurred at."""
         with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()):
             with self.assertRaises(UnexpectedBehaviour) as ex:
                 self.client.post(
@@ -43,6 +47,7 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
 
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
     def test_success(self):
+        """Test the minimum amount of data needed to be passed to celery."""
         with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()) as tx_created_mock:
             response = self.client.post(
                 'http://testserver/api/v1/subscription/paddle/webhook',
@@ -58,6 +63,8 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
 
 
 class PaddleTestCase(TestCase):
+    """Base class for Paddle/Celery task unit tests."""
+
     celery_task_always_eager_setting: bool = False
     paddle_fixture = None
     test_user: User
