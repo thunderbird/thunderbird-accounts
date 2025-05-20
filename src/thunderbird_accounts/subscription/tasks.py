@@ -41,6 +41,7 @@ def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datet
                 reason = 'webhook is out of date'
 
             logging.info(err)
+
             return {
                 'paddle_id': paddle_id,
                 'occurred_at': occurred_at,
@@ -115,8 +116,8 @@ def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datet
     }
 
 
-@inject_paddle
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@inject_paddle
 def paddle_subscription_event(
     self, event_data: dict, occurred_at: datetime.datetime, is_create_event: bool, paddle: Client
 ):
@@ -146,6 +147,7 @@ def paddle_subscription_event(
                 reason = 'webhook is out of date'
 
             logging.info(err)
+
             return {
                 'paddle_id': paddle_id,
                 'occurred_at': occurred_at,
