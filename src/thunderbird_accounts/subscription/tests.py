@@ -360,3 +360,80 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
         self.assertEqual(task_results.get('task_status'), 'failed')
         self.assertEqual(task_results.get('reason'), 'no signed user id provided')
+
+
+class SubscriptionUpdatedTaskTestCase(SubscriptionCreatedTaskTestCase):
+    is_create_event: bool = False
+    paddle_fixture = 'fixtures/webhook_paddle_subscription_updated.json'
+
+    def test_success(self):
+        self.assertEqual(models.Subscription.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        subscription = models.Subscription.objects.create(
+            paddle_id=event_data.get('id'),
+            webhook_updated_at=occurred_at - datetime.timedelta(hours=1),
+        )
+
+        task_results: dict | None = tasks.paddle_subscription_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), subscription.paddle_id)
+
+        # Success results have model_created and model_uuid, so test this first
+        self.assertEqual(task_results.get('task_status'), 'success', msg=task_results)
+
+        # This should be a new model
+        self.assertFalse(task_results.get('model_created'))
+
+        # Check if the model actually exists
+        self.assertTrue(models.Subscription.objects.filter(pk=task_results.get('model_uuid')).exists())
+
+        subscription.refresh_from_db()
+
+        # Spot check some updated fields
+        self.assertEqual(event_data.get('status'), subscription.status)
+        self.assertEqual(event_data.get('customer_id'), subscription.paddle_customer_id)
+
+        # Check if the model is associated with the test user
+        self.assertIsNotNone(subscription.user_id)
+        self.assertIsNotNone(subscription.user)
+        self.assertEqual(subscription.user_id, self.test_user.uuid)
+        self.assertEqual(subscription.user.uuid, self.test_user.uuid)
+
+    def test_subscription_already_exists(self):
+        """Not needed for update webhook"""
+        pass
+
+    def test_subscription_out_of_date(self):
+        """We're testing if the transaction is out of date here."""
+        self.assertEqual(models.Transaction.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        subscription = models.Subscription.objects.create(
+            paddle_id=event_data.get('id'),
+            webhook_updated_at=occurred_at + datetime.timedelta(hours=1),
+        )
+
+        self.assertIsNotNone(subscription)
+
+        task_results: dict | None = tasks.paddle_subscription_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+        self.assertEqual(task_results.get('task_status'), 'failed')
+        self.assertEqual(task_results.get('reason'), 'webhook is out of date')
