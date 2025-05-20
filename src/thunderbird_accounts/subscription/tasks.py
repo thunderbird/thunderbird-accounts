@@ -160,7 +160,7 @@ def paddle_subscription_event(
     status = event_data.get('status')
     customer_id = event_data.get('customer_id')
     next_billed_at = event_data.get('next_billed_at')
-    custom_data = event_data.get('custom_data', {})
+    custom_data = event_data.get('custom_data', {}) or dict()
     signed_user_id = custom_data.get('signed_user_id')
 
     if not signed_user_id:

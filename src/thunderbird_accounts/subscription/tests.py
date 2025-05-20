@@ -300,13 +300,21 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
 
         # Success results have model_created and model_uuid, so test this first
-        self.assertEqual(task_results.get('task_status'), 'success')
+        self.assertEqual(task_results.get('task_status'), 'success', msg=task_results)
 
         # This should be a new model
         self.assertTrue(task_results.get('model_created'))
 
         # Check if the model actually exists
         self.assertTrue(models.Subscription.objects.filter(pk=task_results.get('model_uuid')).exists())
+
+        subscription = models.Subscription.objects.filter(pk=task_results.get('model_uuid')).get()
+
+        # Check if the model is associated with the test user
+        self.assertIsNotNone(subscription.user_id)
+        self.assertIsNotNone(subscription.user)
+        self.assertEqual(subscription.user_id, self.test_user.uuid)
+        self.assertEqual(subscription.user.uuid, self.test_user.uuid)
 
     def test_subscription_already_exists(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
@@ -332,3 +340,23 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
         self.assertEqual(task_results.get('task_status'), 'failed')
         self.assertEqual(task_results.get('reason'), 'subscription already exists')
+
+    def test_subscription_error_no_signed_user_id(self):
+        self.assertEqual(models.Subscription.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        event_data['custom_data'] = None
+
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        task_results: dict | None = tasks.paddle_subscription_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+        self.assertEqual(task_results.get('task_status'), 'failed')
+        self.assertEqual(task_results.get('reason'), 'no signed user id provided')
