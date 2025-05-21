@@ -82,6 +82,8 @@ resources:
         - paddle-price-id-lo
         - paddle-price-id-md
         - paddle-price-id-hi
+        - paddle-webhook-key
+        - paddle-api-key
         - redis-url
 
   tb:ec2:SshableInstance: {}
@@ -170,6 +172,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-YShIxp
               - name: PADDLE_PRICE_ID_HI
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08
+              - name: PADDLE_WEBHOOK_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-webhook-key-JuvcOr
+              - name: PADDLE_API_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-api-key-WlhcMj
               - name: REDIS_URL
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L
             environment:

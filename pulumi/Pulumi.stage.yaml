@@ -36,3 +36,7 @@ config:
     secure: AAABAG3r3zI76eGA/HsfWKEJ8UN13w8BDrHm3vQrEiixAG408dVFq0llEnTIBLpiXTEzXfuRv4IcUZLiZnA=
   accounts:redis-url:
     secure: AAABAIiHFjnoqDsrol7P6cdS/6HcGkS9Q6KZOuTw6OxAuh8j0nRZWSHvWFvDR49724lf0qZrwQWNn+45zNx1nx5LowyC8pZwoaL/yqH9SWXFA8BoAnPdY5wIKQBbgLLBvYOrQPYNQCp0
+  accounts:paddle-webhook-key:
+    secure: AAABALvrXmWRSnWv5rAY9ZOC0i+b1cjaHv3ON4xnrykNFC8AAl97TU3LW482PB1jAftoFRqgT0oxfkRle5gvxjfvz69qppZR6antftiGvwa3NXjf2yuPk16B95ephQBeszjr+lOR
+  accounts:paddle-api-key:
+    secure: AAABAGvRiB3sw8q8fjWKnbDYD+YWmIJ2FoTk911ZUtbSPvhgXSmSCdYfYdOqT4qqVn/btZm4RnqWb/ZKiHnTWz+uq5jcd3vHiIYHvNh/pAsVJTb/NPZwNiVBoMYQ6d4B7xGXoyY=
