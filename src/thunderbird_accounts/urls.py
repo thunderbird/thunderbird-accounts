@@ -54,7 +54,7 @@ urlpatterns = [
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/auth/logout/', logout_user, name='api_logout'),
     path('api/v1/auth/is-in-allow-list/', is_in_allow_list, name='api_is_in_allow_list'),
-    path('api/v1/subscription/paddle/webhook', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
+    path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
     path('health', infra_views.health_check),
 ]
 

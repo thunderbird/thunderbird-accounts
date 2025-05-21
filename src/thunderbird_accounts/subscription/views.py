@@ -17,7 +17,7 @@ from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
 def handle_paddle_webhook(request: Request):
     data = request.data
     event_type = data.get('event_type')
-    event_data: dict | None = data.get('event_data')
+    event_data: dict | None = data.get('data')
     occurred_at: str | None = data.get('occurred_at')
 
     if not event_data:

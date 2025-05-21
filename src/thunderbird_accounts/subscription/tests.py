@@ -39,7 +39,7 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
                     'http://testserver/api/v1/subscription/paddle/webhook',
                     {
                         'event_type': 'transaction.created',
-                        'event_data': {'not': 'empty'},
+                        'data': {'not': 'empty'},
                     },
                     content_type='application/json',
                 )
@@ -53,7 +53,7 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
                 'http://testserver/api/v1/subscription/paddle/webhook',
                 {
                     'event_type': 'transaction.created',
-                    'event_data': {'not': 'empty'},
+                    'data': {'not': 'empty'},
                     'occurred_at': '2024-04-12T10:18:49.621022Z',
                 },
                 content_type='application/json',
