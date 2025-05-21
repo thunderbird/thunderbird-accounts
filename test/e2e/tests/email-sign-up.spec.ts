@@ -54,3 +54,17 @@ test.describe('email sign-up', {
     await emailSignUpPage.signUpBtn.click();
   });
 });
+
+test.describe('cancel sign-up', {
+  tag: [PLAYWRIGHT_TAG_E2E_SUITE],
+}, () => {
+  test('able to cancel sign up flow', async ({ page }) => {
+    await page.route('*/**/self-serve/account-settings', async (route, request) => {
+      console.log('captured GET /self-serve/account-settings and mocking the response');
+
+      // now send a fake response to the sign-up request
+      await route.fulfill(MOCK_RESPONSE_OK);
+    });
+    await emailSignUpPage.cancelBtn.click();
+  })
+})

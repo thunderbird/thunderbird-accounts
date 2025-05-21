@@ -8,6 +8,7 @@ export class EmailSignUpPage {
   readonly loginUserNameEmail: Locator;
   readonly appPassword: Locator;
   readonly signUpBtn: Locator;
+  readonly cancelBtn: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -16,6 +17,7 @@ export class EmailSignUpPage {
     this.loginUserNameEmail = this.page.getByTestId('sign-up-login-username-input');
     this.appPassword = this.page.getByTestId('sign-up-app-password-input');
     this.signUpBtn = this.page.getByRole('button', { 'name': 'Sign Up' });
+    this.cancelBtn = this.page.getByRole('button', { 'name': 'Cancel' });
   }
 
   async navigateToEmailSignUpPage() {
