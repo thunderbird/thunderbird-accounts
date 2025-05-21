@@ -14,6 +14,12 @@ from thunderbird_accounts import settings
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.client.models import ClientEnvironment
 
+# We don't want hard requirements on having paddle package installed
+try:
+    from paddle_billing.Notifications import Verifier, Secret
+except ImportError:
+    Verifier, Secret = None, None
+
 
 class IsClient(BasePermission):
     """
@@ -100,7 +106,7 @@ class IsValidFXAWebhook(BaseAuthentication):
                 break
 
         if jwk_pem is None:
-            logging.error(f"Error decoding token. Key ID ({headers.get('kid')}) is missing from public list.")
+            logging.error(f'Error decoding token. Key ID ({headers.get("kid")}) is missing from public list.')
             raise AuthenticationFailed('Key ID is missing from the JWK list')
 
         # Amount of time over what the iat is issued for to allow
@@ -112,7 +118,7 @@ class IsValidFXAWebhook(BaseAuthentication):
 
         # Final verification
         if decoded_jwt.get('iss') != issuer:
-            logging.error(f"Issuer is not valid: ({decoded_jwt.get('iss')}) vs ({issuer})")
+            logging.error(f'Issuer is not valid: ({decoded_jwt.get("iss")}) vs ({issuer})')
             raise AuthenticationFailed('Issuer mismatch')
 
         try:
@@ -122,3 +128,19 @@ class IsValidFXAWebhook(BaseAuthentication):
 
         # Return user and decoded_jwt for request.user and request.auth
         return user, decoded_jwt
+
+
+class IsValidPaddleWebhook(BaseAuthentication):
+    def authenticate(self, request):
+        if not Verifier or not Secret:
+            logging.error('Paddle package is not installed. This webhook has been rejected.')
+            return None
+
+        integrity_check = Verifier().verify(request, Secret(settings.PADDLE_WEBHOOK_KEY))
+
+        if not integrity_check:
+            return None
+
+        # We need to return a user, but we don't need the user for these requests
+        # So return an empty user object
+        return User(), None

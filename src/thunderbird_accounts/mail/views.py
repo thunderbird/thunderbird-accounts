@@ -4,6 +4,7 @@ from urllib.parse import quote_plus
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.signing import Signer
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
@@ -131,6 +132,7 @@ def self_serve_connection_info(request: HttpRequest):
 def self_serve_subscription(request: HttpRequest):
     """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
     account = request.user.account_set.first()
+    signer = Signer()
     return TemplateResponse(
         request,
         'mail/self-serve/subscription.html',
@@ -142,6 +144,7 @@ def self_serve_subscription(request: HttpRequest):
             'paddle_price_id_lo': settings.PADDLE_PRICE_ID_LO,
             'paddle_price_id_md': settings.PADDLE_PRICE_ID_MD,
             'paddle_price_id_hi': settings.PADDLE_PRICE_ID_HI,
+            'signed_user_id': signer.sign(request.user.uuid.hex),
             **self_serve_common_options(False, account),
         },
     )
