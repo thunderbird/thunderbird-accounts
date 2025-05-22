@@ -64,7 +64,7 @@ class ClientSetAllowedHostsMiddleware:
 
         end = time.perf_counter_ns()
 
-        sentry_sdk.set_measurement('cached_allowed_host_get_time', (end - start) / 1000000, 'millisecond')
+        sentry_sdk.set_extra('cached_allowed_host_get_time_ms', (end - start) / 1000000)
 
         response = self.get_response(request)
 
