@@ -27,7 +27,7 @@ def handle_paddle_webhook(request: Request):
     if not occurred_at:
         # Delete the event_data struct as we don't need to send all that data up.
         cloned_data: dict = data.copy()
-        cloned_data.pop('event_data', '')
+        cloned_data.pop('data', '')
         sentry_sdk.set_context('request_data', cloned_data)
         raise UnexpectedBehaviour('Paddle webhook is missing occurred at')
 

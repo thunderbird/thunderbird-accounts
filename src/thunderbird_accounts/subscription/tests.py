@@ -27,7 +27,7 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
         """Ensure a webhook that doesn't have any POST data errors out with an unexpected behaviour error."""
         with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()):
             with self.assertRaises(UnexpectedBehaviour) as ex:
-                self.client.post('http://testserver/api/v1/subscription/paddle/webhook')
+                self.client.post('http://testserver/api/v1/subscription/paddle/webhook/')
                 self.assertEqual(ex.message, 'Paddle webhook is empty')
 
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
@@ -36,7 +36,7 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
         with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()):
             with self.assertRaises(UnexpectedBehaviour) as ex:
                 self.client.post(
-                    'http://testserver/api/v1/subscription/paddle/webhook',
+                    'http://testserver/api/v1/subscription/paddle/webhook/',
                     {
                         'event_type': 'transaction.created',
                         'data': {'not': 'empty'},
@@ -50,7 +50,7 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
         """Test the minimum amount of data needed to be passed to celery."""
         with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()) as tx_created_mock:
             response = self.client.post(
-                'http://testserver/api/v1/subscription/paddle/webhook',
+                'http://testserver/api/v1/subscription/paddle/webhook/',
                 {
                     'event_type': 'transaction.created',
                     'data': {'not': 'empty'},
@@ -323,6 +323,28 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
         self.assertEqual(subscription.user_id, self.test_user.uuid)
         self.assertEqual(subscription.user.uuid, self.test_user.uuid)
 
+        # Check for a related transaction
+        self.assertTrue(models.Transaction.objects.count() > 0)
+        self.assertTrue(models.Transaction.objects.filter(subscription_id=subscription.uuid).exists())
+
+        # Check for subscription items - Test data has 2!
+        self.assertTrue(subscription.subscriptionitem_set.count() == 2)
+
+        subscription_items = subscription.subscriptionitem_set.all()
+        self.assertEqual(subscription_items[0].paddle_price_id, 'pri_01gsz8x8sawmvhz1pv30nge1ke')
+        self.assertEqual(subscription_items[0].paddle_product_id, 'pro_01gsz4t5hdjse780zja8vvr7jg')
+        self.assertEqual(subscription_items[0].paddle_subscription_id, subscription.paddle_id)
+        self.assertEqual(subscription_items[0].quantity, 10)
+        self.assertIsNotNone(subscription_items[0].subscription)
+        self.assertIsNotNone(subscription_items[0].price)
+
+        self.assertEqual(subscription_items[1].paddle_price_id, 'pri_01h1vjfevh5etwq3rb416a23h2')
+        self.assertEqual(subscription_items[1].paddle_product_id, 'pro_01h1vjes1y163xfj1rh1tkfb65')
+        self.assertEqual(subscription_items[1].paddle_subscription_id, subscription.paddle_id)
+        self.assertEqual(subscription_items[1].quantity, 1)
+        self.assertIsNotNone(subscription_items[1].subscription)
+        self.assertIsNotNone(subscription_items[1].price)
+
     def test_subscription_already_exists(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
 
@@ -414,6 +436,35 @@ class SubscriptionUpdatedTaskTestCase(SubscriptionCreatedTaskTestCase):
         self.assertIsNotNone(subscription.user)
         self.assertEqual(subscription.user_id, self.test_user.uuid)
         self.assertEqual(subscription.user.uuid, self.test_user.uuid)
+
+        # Update does not create transaction_id
+        self.assertTrue(models.Transaction.objects.count() == 0)
+
+        # Check for subscription items - Test data has 3!
+        self.assertTrue(subscription.subscriptionitem_set.count() == 3)
+
+        subscription_items = subscription.subscriptionitem_set.all()
+        self.assertEqual(subscription_items[0].paddle_price_id, 'pri_01gsz8x8sawmvhz1pv30nge1ke')
+        self.assertEqual(subscription_items[0].paddle_product_id, 'pro_01gsz4t5hdjse780zja8vvr7jg')
+        self.assertEqual(subscription_items[0].paddle_subscription_id, subscription.paddle_id)
+        self.assertEqual(subscription_items[0].quantity, 20)  # Updated!
+        self.assertIsNotNone(subscription_items[0].subscription)
+        self.assertIsNotNone(subscription_items[0].price)
+
+        self.assertEqual(subscription_items[1].paddle_price_id, 'pri_01h1vjfevh5etwq3rb416a23h2')
+        self.assertEqual(subscription_items[1].paddle_product_id, 'pro_01h1vjes1y163xfj1rh1tkfb65')
+        self.assertEqual(subscription_items[1].paddle_subscription_id, subscription.paddle_id)
+        self.assertEqual(subscription_items[1].quantity, 1)
+        self.assertIsNotNone(subscription_items[1].subscription)
+        self.assertIsNotNone(subscription_items[1].price)
+
+        # New!
+        self.assertEqual(subscription_items[2].paddle_price_id, 'pri_01gsz95g2zrkagg294kpstx54r')
+        self.assertEqual(subscription_items[2].paddle_product_id, 'pro_01gsz92krfzy3hcx5h5rtgnfwz')
+        self.assertEqual(subscription_items[2].paddle_subscription_id, subscription.paddle_id)
+        self.assertEqual(subscription_items[2].quantity, 1)
+        self.assertIsNotNone(subscription_items[2].subscription)
+        self.assertIsNotNone(subscription_items[2].price)
 
     def test_subscription_already_exists(self):
         """Not needed for update webhook"""

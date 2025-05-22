@@ -4,7 +4,7 @@ import logging
 from celery import shared_task
 from django.core.signing import Signer, BadSignature
 
-from thunderbird_accounts.subscription.models import Transaction, Subscription
+from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -148,8 +148,10 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
     except Subscription.DoesNotExist:
         pass
 
+    subscription_items = event_data.get('items', [])
     status = event_data.get('status')
     customer_id = event_data.get('customer_id')
+    transaction_id = event_data.get('transaction_id')
     next_billed_at = event_data.get('next_billed_at')
     custom_data = event_data.get('custom_data', {}) or dict()
     signed_user_id = custom_data.get('signed_user_id')
@@ -199,8 +201,55 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             'current_billing_period_starts_at': current_billing_period_starts_at,
             'current_billing_period_ends_at': current_billing_period_ends_at,
             'user_id': user_uuid,
+            'webhook_updated_at': occurred_at,
         },
     )
+
+    # If a transaction_id is included, then update/create the association to this subscription
+    if transaction_id:
+        Transaction.objects.update_or_create(
+            paddle_id=transaction_id,
+            defaults={
+                'paddle_subscription_id': paddle_id,
+                'subscription_id': subscription.uuid,
+            },
+        )
+
+    for item in subscription_items:
+        # Note: These are reoccurring items only
+        # Slurp up the subscription items, these are only created if all three items are new
+
+        quantity = item.get('quantity')
+        price = item.get('price')
+        product = item.get('product')
+        price_obj = None
+
+        # If we have the data we can create a price object now and reference in the subscription item
+        if price:
+            unit_price = price.get('unit_price', {})
+            billing_cycle = price.get('billing_cycle', {})
+            price_obj, price_obj_created = Price.objects.update_or_create(
+                paddle_id=price.get('id'),
+                defaults={
+                    'paddle_product_id': product.get('id'),
+                    'name': price.get('name'),
+                    'amount': unit_price.get('amount'),
+                    'currency': unit_price.get('currency_code'),
+                    'price_type': price.get('type'),
+                    'billing_cycle_frequency': billing_cycle.get('frequency'),
+                    'billing_cycle_interval': billing_cycle.get('interval'),
+                    'webhook_updated_at': occurred_at,
+                },
+            )
+
+        SubscriptionItem.objects.update_or_create(
+            paddle_price_id=price.get('id'),
+            paddle_product_id=product.get('id'),
+            paddle_subscription_id=paddle_id,
+            subscription_id=subscription.uuid,
+            price_id=price_obj.uuid if price_obj else None,
+            defaults={'quantity': quantity},
+        )
 
     return {
         'paddle_id': paddle_id,

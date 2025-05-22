@@ -87,8 +87,9 @@ class SubscriptionItem(BaseModel):
     paddle_product_id = PaddleId()
     paddle_subscription_id = PaddleId()
 
+    # Subscription items MUST be related to a subscription object, but they can exclude price.
     subscription = models.ForeignKey('Subscription', on_delete=models.CASCADE)
-    price = models.ForeignKey('Price', on_delete=models.CASCADE)
+    price = models.ForeignKey('Price', null=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return f'Subscription Item [{self.uuid}] {self.subscription_id} - {self.paddle_product_id}'
@@ -215,7 +216,7 @@ class Transaction(BaseModel):
     subscription = models.ForeignKey(Subscription, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'Transaction [{self.uuid}] {self.paddle_id}'
+        return f'Transaction [{self.uuid}] {self.paddle_id} - ({self.status})'
 
     class Meta(BaseModel.Meta):
         indexes = [
