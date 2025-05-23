@@ -66,7 +66,7 @@ test.describe(
         paddleFrame = new PaddleFrame(page);
 
         // confirm that modal opens
-        expect(paddleFrame.modal).toContainText('Order summary');
+        await expect(paddleFrame.modal).toContainText('Order summary');
 
         // fill out form
         await paddleFrame.emailField.fill(CHECKOUT_EMAIL_ADDRESS, { timeout: TIMEOUT_2_SECONDS });
@@ -80,7 +80,7 @@ test.describe(
         await paddleFrame.cardExpiryField.fill(CHECKOUT_CC_EXP, { timeout: TIMEOUT_2_SECONDS });
         await paddleFrame.cardVerificationField.fill(CHECKOUT_CC_CVV, { timeout: TIMEOUT_2_SECONDS });
 
-        await Promise.all([page.waitForURL(ACCTS_CHECKOUT_SUCCESS_URL), await paddleFrame.finalCheckoutButton.click()]);
+        await Promise.all([await page.waitForURL(ACCTS_CHECKOUT_SUCCESS_URL), await paddleFrame.finalCheckoutButton.click()]);
 
         expect(page.url()).toBe(ACCTS_CHECKOUT_SUCCESS_URL);
       });
