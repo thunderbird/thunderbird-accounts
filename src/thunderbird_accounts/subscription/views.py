@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 import sentry_sdk
 from django.http import HttpResponse
@@ -31,6 +32,8 @@ def handle_paddle_webhook(request: Request):
     event_data: dict | None = data.get('data')
     occurred_at: str | None = data.get('occurred_at')
 
+    logging.debug(f'Received {event_type} from Paddle')
+
     if not event_data:
         sentry_sdk.set_context('request_data', data)
         raise UnexpectedBehaviour('Paddle webhook is empty')
@@ -46,6 +49,7 @@ def handle_paddle_webhook(request: Request):
 
     # Don't dispatch celery tasks if we know they're going to be ignored
     if not prefilter_paddle_webhook(event_type, event_data):
+        logging.debug(f'Ignored {event_type} webhook')
         return response
 
     match event_type:
@@ -58,4 +62,5 @@ def handle_paddle_webhook(request: Request):
         case 'subscription.updated':
             tasks.paddle_subscription_event(event_data, occurred_at, is_create_event=False)
 
+    logging.debug(f'Dispatched {event_type} webhook')
     return response
