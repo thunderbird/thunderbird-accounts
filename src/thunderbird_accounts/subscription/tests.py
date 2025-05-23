@@ -61,6 +61,39 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
             self.assertEqual(response.status_code, 200)
             tx_created_mock.delay.assert_called()
 
+    @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
+    def test_draft_transactions_are_ignored(self):
+        """Since this transaction.created event is a draft we ignore it."""
+        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()) as tx_created_mock:
+            response = self.client.post(
+                'http://testserver/api/v1/subscription/paddle/webhook/',
+                {
+                    'event_type': 'transaction.created',
+                    'data': {'status': 'draft'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            tx_created_mock.delay.assert_not_called()
+
+    @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
+    def test_draft_transactions_arent_ignored_if_they_are_updated(self):
+        """While we ignore transaction.created with the status of draft, we shouldn't ignore the unlikely
+        but possible scenario that a transaction updates to a draft."""
+        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()) as tx_created_mock:
+            response = self.client.post(
+                'http://testserver/api/v1/subscription/paddle/webhook/',
+                {
+                    'event_type': 'transaction.updated',
+                    'data': {'status': 'draft'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            tx_created_mock.delay.assert_called()
+
 
 class PaddleTestCase(TestCase):
     """Base class for Paddle/Celery task unit tests."""
