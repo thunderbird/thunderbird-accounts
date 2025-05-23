@@ -27,6 +27,7 @@ def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
 @authentication_classes([IsValidPaddleWebhook])
 def handle_paddle_webhook(request: Request):
     response = HttpResponse(content=_('Thank you!'), status=200)
+
     data = request.data
     event_type = data.get('event_type')
     event_data: dict | None = data.get('data')
@@ -52,15 +53,16 @@ def handle_paddle_webhook(request: Request):
         logging.debug(f'Ignored {event_type} webhook')
         return response
 
-    match event_type:
-        case 'transaction.created':
-            tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=True)
-        case 'transaction.updated':
-            tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=False)
-        case 'subscription.created':
-            tasks.paddle_subscription_event(event_data, occurred_at, is_create_event=True)
-        case 'subscription.updated':
-            tasks.paddle_subscription_event(event_data, occurred_at, is_create_event=False)
+    if event_type == 'transaction.created':
+        tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=True)
+    elif event_type == 'transaction.updated':
+        tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=False)
+    elif event_type == 'subscription.created':
+        tasks.paddle_subscription_event(event_data, occurred_at, is_create_event=True)
+    elif event_type == 'subscription.updated':
+        tasks.paddle_subscription_event(event_data, occurred_at, is_create_event=False)
+    else:
+        logging.debug(f"Skipping {event_type} as it's not supported")
 
     logging.debug(f'Dispatched {event_type} webhook')
     return response
