@@ -85,6 +85,11 @@ resources:
         - paddle-webhook-key
         - paddle-api-key
         - redis-url
+        - keycloak-database-host
+        - keycloak-database-name
+        - keycloak-database-password
+        - keycloak-database-user
+        - keycloak-admin-password
 
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
@@ -103,6 +108,81 @@ resources:
       apply_immediately: True
   
   tb:fargate:FargateClusterWithLogging:
+    # keycloak:
+    #   assign_public_ip: True
+    #   desired_count: 1
+    #   health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
+    #   internal: False
+    #   services:
+    #     keycloak:
+    #       listener_port: 443
+    #       listener_proto: HTTPS
+    #       listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/eed3b19b-d88c-40e4-9b75-8254c40f5198
+    #       container_port: 8080
+    #       container_name: keycloak
+    #       # "name" field is arbitrary, but must be unique and no longer than 32 chars
+    #       name: keycloak-stage
+    #       health_check:
+    #         healthy_threshold: 2
+    #         unhealthy_threshold: 5
+    #         interval: 30
+    #     keycloak-mgmt:
+    #       listener_port: 443
+    #       listener_proto: HTTPS
+    #       listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/3f5706a6-c790-4303-82b1-9766543c66f5
+    #       container_port: 9000
+    #       container_name: keycloak-mgmt
+    #       # "name" field is arbitrary, but must be unique and no longer than 32 chars
+    #       name: keycloak-mgmt-stage
+    #       health_check:
+    #         healthy_threshold: 2
+    #         unhealthy_threshold: 5
+    #         interval: 30
+    #         path: /health/ready
+    #   task_definition:
+    #     network_mode: awsvpc
+    #     cpu: 512
+    #     memory: 2048
+    #     requires_compatibilities:
+    #       - FARGATE
+    #     container_definitions:
+    #       accounts:
+    #         image: quay.io/keycloak/keycloak:26.2
+    #         portMappings:
+    #           - name: accounts
+    #             containerPort: 8080
+    #             hostPort: 8080
+    #             protocol: tcp
+    #             appProtocol: http
+    #         linuxParameters:
+    #           initProcessEnabled: True
+    #         secrets:
+    #           - name: KC_DB_PASSWORD
+    #             valueFrom: 
+    #           - name: KC_DB_URL_HOST
+    #             valueFrom: 
+    #           - name: KC_DB_URL_DATABASE
+    #             valueFrom: 
+    #           - name: KC_DB_USERNAME
+    #             valueFrom: 
+    #           - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+    #             valueFrom: 
+    #         environment:
+    #           - name: KC_DB
+    #             value: postgres
+    #           - name: KC_DB_PORT
+    #             value: 5432
+    #           - name: KC_HOSTNAME
+    #             value: keycloak-stage.tb.pro
+    #           - name: KC_HTTP_ENABLED
+    #             value: true
+    #           - name: KC_HEALTH_ENABLED
+    #             value: true
+    #           - name: KC_HTTP_MANAGEMENT_PORT
+    #             value: 9000
+    #           - name: KC_METRICS_ENABLED
+    #             value: true
+
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
       desired_count: 1
@@ -132,7 +212,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:e1bced21eb1c4ee2f2f25f416fe03a21e3f5f802
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c890f550d3db150ef20ad5dcf93bf58d2b788da4
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -255,7 +335,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts-celery-worker:e1bced21eb1c4ee2f2f25f416fe03a21e3f5f802
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts-celery-worker:c890f550d3db150ef20ad5dcf93bf58d2b788da4
             linuxParameters:
               initProcessEnabled: True
             secrets:
