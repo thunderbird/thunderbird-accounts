@@ -1,5 +1,5 @@
 import { expect, type Page, type Locator } from '@playwright/test';
-import { ACCTS_FXA_EMAIL, ACCTS_FXA_PWORD } from '../const/constants';
+import { ACCTS_FXA_EMAIL, ACCTS_FXA_PWORD, TIMEOUT_2_SECONDS } from '../const/constants';
 
 export class FxAPage {
   readonly page: Page;
@@ -22,12 +22,14 @@ export class FxAPage {
 
   async signIn() {
     // first fxa page is to enter email
+    await this.page.waitForTimeout(TIMEOUT_2_SECONDS);
     await expect(this.emailHeaderText).toBeVisible({ timeout: 30_000 }); // generous time
     await expect(this.signInButton).toBeVisible();
 
     // enter email and click sign-in button to continue to password page
     await this.emailInput.fill(ACCTS_FXA_EMAIL);
     await this.signInButton.click();
+    await this.page.waitForTimeout(TIMEOUT_2_SECONDS);
     await this.page.waitForLoadState('domcontentloaded');
 
     // now on the second fxa page, enter password and sign-in button
@@ -35,6 +37,7 @@ export class FxAPage {
     await expect(this.userAvatar).toBeVisible({ timeout: 30_000});
     await expect(this.signInButton).toBeVisible();
     await this.passwordInput.fill(ACCTS_FXA_PWORD);
+    await this.page.waitForTimeout(TIMEOUT_2_SECONDS);
     await this.signInButton.click();
   }
 }

@@ -24,9 +24,9 @@ export default defineConfig({
   // Global timeout: Playwright will timeout if the entire session (includes all test runs) exceeds this.
   // Must take into account running on mulitple browsers (and BrowserStack is much slower too!). Odds are the
   // tests will time out at the locator/test level first anyway; but there is no default so best to specify
-  globalTimeout: 5 * 60 * 1000,
+  globalTimeout: 10 * 60 * 1000,
   // Individual test timeout - a single test will time out if it is still running after this time (ms)
-  timeout: 90 * 1000, // 1.5 minutes
+  timeout: 150 * 1000, // 2.5 minutes
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [['html']],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */

@@ -1,5 +1,5 @@
 import { type Page, type Locator } from '@playwright/test';
-import { ACCTS_CHECKOUT_URL } from '../const/constants';
+import { ACCTS_CHECKOUT_URL, TIMEOUT_30_SECONDS, TIMEOUT_5_SECONDS } from '../const/constants';
 
 export class CheckoutPage {
   readonly page: Page;
@@ -17,6 +17,7 @@ export class CheckoutPage {
   }
 
   async navigateToCheckoutPage() {
-    await this.page.goto(ACCTS_CHECKOUT_URL);
+    await this.page.goto(ACCTS_CHECKOUT_URL, { timeout: TIMEOUT_30_SECONDS });
+    await this.page.waitForTimeout(TIMEOUT_5_SECONDS);
   }
 }

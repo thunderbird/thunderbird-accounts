@@ -11,7 +11,7 @@
 # Set 'projectName' to the name of your project. Example, Marketing Website
 projectName: Thunderbird Accounts
 # Set `buildName` as the name of the job / testsuite being run
-buildName: Build
+buildName: TB Accounts E2E Tests
 # `buildIdentifier` is a unique id to differentiate every execution that gets appended to
 # buildName. Choose your buildIdentifier format from the available expressions:
 # ${BUILD_NUMBER} (Default): Generates an incremental counter with every execution
