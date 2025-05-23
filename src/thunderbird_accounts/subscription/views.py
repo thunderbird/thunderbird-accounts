@@ -58,9 +58,9 @@ def handle_paddle_webhook(request: Request):
     elif event_type == 'transaction.updated':
         tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=False)
     elif event_type == 'subscription.created':
-        tasks.paddle_subscription_event(event_data, occurred_at, is_create_event=True)
+        tasks.paddle_subscription_event.delay(event_data, occurred_at, is_create_event=True)
     elif event_type == 'subscription.updated':
-        tasks.paddle_subscription_event(event_data, occurred_at, is_create_event=False)
+        tasks.paddle_subscription_event.delay(event_data, occurred_at, is_create_event=False)
     else:
         logging.debug(f"Skipping {event_type} as it's not supported")
 
