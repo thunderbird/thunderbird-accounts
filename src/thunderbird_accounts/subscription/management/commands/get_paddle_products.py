@@ -28,8 +28,7 @@ class Command(BaseCommand):
     class ReturnCodes(enum.StrEnum):
         OK = 'OK'
         ERROR = 'ERROR'  # Generic error, shouldn't normally be set
-        NOT_ENOUGH_PARAMS = 'NOT_ENOUGH_PARAMS'
-        ALREADY_EXISTS = 'ALREADY_EXISTS'
+        NOT_SETUP = 'NOT_SETUP'
 
     help = 'Retrieves and updates products defined in Paddle.'
 
@@ -38,6 +37,10 @@ class Command(BaseCommand):
 
     @inject_paddle
     def handle(self, paddle: Client, *args, **options):
+        if not paddle:
+            self.stdout.write(self.style.NOTICE('Paddle is not setup.'))
+            return self.ReturnCodes.NOT_SETUP
+
         dry_run = options.get('dry', False)
         verbosity = options.get('verbosity', 1)
 

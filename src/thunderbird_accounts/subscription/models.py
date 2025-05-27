@@ -99,7 +99,6 @@ class Plan(BaseModel):
     For now a plan has access to all clients
     """
 
-    paddle_product_id = PaddleId()
     name = models.CharField(max_length=256)
 
     # Plan parameters
@@ -115,7 +114,9 @@ class Plan(BaseModel):
     product = models.ForeignKey('Product', null=True, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'Plan [{self.uuid}] {self.name} - {self.paddle_product_id}'
+        if self.product:
+            return f'Plan [{self.uuid}] {self.name} - {self.product.name}'
+        return f'Plan [{self.uuid}] {self.name} - <Unassociated>'
 
 
 class SubscriptionItem(BaseModel):

@@ -223,6 +223,7 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
         price = item.get('price')
         product = item.get('product')
         price_obj = None
+        product_obj = None
 
         # If we have the data we can create a price object now and reference in the subscription item
         if price:
@@ -242,12 +243,19 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
                 },
             )
 
+        if product:
+            try:
+                product_obj = Product.objects.filter(paddle_id=product.get('id')).get()
+            except Product.DoesNotExist:
+                logging.warning(f'Product {product.get("id")} does not exist in db!')
+
         SubscriptionItem.objects.update_or_create(
             paddle_price_id=price.get('id'),
             paddle_product_id=product.get('id'),
             paddle_subscription_id=paddle_id,
             subscription_id=subscription.uuid,
             price_id=price_obj.uuid if price_obj else None,
+            product_id=product_obj.uuid if product_obj else None,
             defaults={'quantity': quantity},
         )
 
