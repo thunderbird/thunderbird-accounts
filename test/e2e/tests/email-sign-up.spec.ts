@@ -32,7 +32,7 @@ test.describe('email sign-up', {
       console.log('captured POST /sign-up/submit and mocking the response');
 
       // verify the captured request body is as expected
-      var capturedBody = request.postDataJSON();
+      var capturedBody = await request.postDataJSON();
       expect(capturedBody['email_address']).toBe(EMAIL_SIGN_UP_EMAIL_ADDRESS);
       expect(capturedBody['email_domain']).toBe(EMAIL_SIGN_UP_DOMAIN);
       expect(capturedBody['app_password']).toBe(EMAIL_SIGN_UP_APP_PWORD);

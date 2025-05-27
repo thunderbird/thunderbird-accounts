@@ -1,5 +1,5 @@
 import { expect, type Page, type Locator } from '@playwright/test';
-import { ACCTS_SELF_SERVE_URL, ACCTS_FXA_EMAIL, ACCTS_TARGET_ENV } from '../const/constants';
+import { ACCTS_SELF_SERVE_URL, ACCTS_FXA_EMAIL, ACCTS_TARGET_ENV, TIMEOUT_60_SECONDS, TIMEOUT_5_SECONDS } from '../const/constants';
 import { connectionInfo } from '../const/types';
 
 export class SelfServePage {
@@ -78,11 +78,13 @@ export class SelfServePage {
   }
 
   async navigateToSelfServeHub() {
-    await this.page.goto(ACCTS_SELF_SERVE_URL);
+    await this.page.waitForTimeout(TIMEOUT_5_SECONDS);
+    await this.page.goto(ACCTS_SELF_SERVE_URL, { timeout: TIMEOUT_60_SECONDS });
+    await this.page.waitForTimeout(TIMEOUT_5_SECONDS);
   }
 
   async checkIMAPInfo(expectedInfo: connectionInfo) {
-    expect(await this.imapServerName.innerText({ timeout: 5000 })).toBe(`Server Name: ${expectedInfo['hostName']}`);
+    expect(await this.imapServerName.innerText({ timeout: TIMEOUT_5_SECONDS })).toBe(`Server Name: ${expectedInfo['hostName']}`);
     expect(await this.imapServerPort.innerText()).toBe(`Server Port: ${expectedInfo['port']}`);
     expect(await this.imapSecurityType.innerText()).toBe(`Security: ${expectedInfo['securityType']}`);
     // when running on the stage env a thundermail email is required, but might not exist on the local dev env
@@ -93,7 +95,7 @@ export class SelfServePage {
   }
 
   async checkJMAPInfo(expectedInfo: connectionInfo) {
-    expect(await this.jmapServerName.innerText({ timeout: 5000 })).toBe(`Server Name: ${expectedInfo['hostName']}`);
+    expect(await this.jmapServerName.innerText({ timeout: TIMEOUT_5_SECONDS })).toBe(`Server Name: ${expectedInfo['hostName']}`);
     expect(await this.jmapServerPort.innerText()).toBe(`Server Port: ${expectedInfo['port']}`);
     expect(await this.jmapSecurityType.innerText()).toBe(`Security: ${expectedInfo['securityType']}`);
     // when running on the stage env a thundermail email is required, but might not exist on the local dev env
@@ -104,7 +106,7 @@ export class SelfServePage {
   }
 
   async checkSMTPInfo(expectedInfo: connectionInfo) {
-    expect(await this.smtpServerName.innerText({ timeout: 5000 })).toBe(`Server Name: ${expectedInfo['hostName']}`);
+    expect(await this.smtpServerName.innerText({ timeout: TIMEOUT_5_SECONDS })).toBe(`Server Name: ${expectedInfo['hostName']}`);
     expect(await this.smtpServerPort.innerText()).toBe(`Server Port: ${expectedInfo['port']}`);
     expect(await this.smtpSecurityType.innerText()).toBe(`Security: ${expectedInfo['securityType']}`);
     // when running on the stage env a thundermail email is required, but might not exist on the local dev env
