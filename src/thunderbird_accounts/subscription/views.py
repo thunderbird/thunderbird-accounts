@@ -29,7 +29,7 @@ def handle_paddle_webhook(request: Request):
     response = HttpResponse(content=_('Thank you!'), status=200)
 
     data = request.data
-    event_type = data.get('event_type')
+    event_type: str = data.get('event_type')
     event_data: dict | None = data.get('data')
     occurred_at: str | None = data.get('occurred_at')
 
@@ -53,14 +53,14 @@ def handle_paddle_webhook(request: Request):
         logging.debug(f'Ignored {event_type} webhook')
         return response
 
-    if event_type == 'transaction.created':
-        tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=True)
-    elif event_type == 'transaction.updated':
-        tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=False)
-    elif event_type == 'subscription.created':
-        tasks.paddle_subscription_event.delay(event_data, occurred_at, is_create_event=True)
-    elif event_type == 'subscription.updated':
-        tasks.paddle_subscription_event.delay(event_data, occurred_at, is_create_event=False)
+    is_create_event = event_type.endswith('.created')
+
+    if event_type == 'transaction.created' or event_type == 'transaction.updated':
+        tasks.paddle_transaction_event.delay(event_data, occurred_at, is_create_event=is_create_event)
+    elif event_type == 'subscription.created' or event_type == 'subscription.updated':
+        tasks.paddle_subscription_event.delay(event_data, occurred_at, is_create_event=is_create_event)
+    elif event_type == 'product.created' or event_type == 'product.updated':
+        tasks.paddle_product_event.delay(event_data, occurred_at, is_create_event=is_create_event)
     else:
         logging.debug(f"Skipping {event_type} as it's not supported")
 

@@ -13,6 +13,41 @@ class PaddleId(models.CharField):
         super().__init__(*args, **kwargs)
 
 
+class Product(BaseModel):
+    class TypeValues(models.TextChoices):
+        # Paddle values
+        STANDARD = 'standard', _('Standard')
+        CUSTOM = 'custom', _('Custom')
+
+    class StatusValues(models.TextChoices):
+        # Paddle values
+        ACTIVE = 'active', _('Active')
+        ARCHIVED = 'archived', _('Archived')
+
+    paddle_id = PaddleId()
+    name = models.CharField()
+    description = models.TextField(null=True)
+    product_type = models.CharField(
+        choices=TypeValues, help_text=_('Is this a catalog product (standard) or a custom product?')
+    )
+    status = models.CharField(choices=StatusValues, help_text=_('Is this product active or archived (cannot be used.)'))
+    webhook_updated_at = models.DateTimeField(
+        null=True, help_text=_('date when this model was last updated by a paddle webhook.')
+    )
+
+    def __str__(self):
+        return f'Product [{self.uuid}] {self.name} - {self.paddle_id} - ({self.status})'
+
+    class Meta(BaseModel.Meta):
+        indexes = [
+            *BaseModel.Meta.indexes,
+            models.Index(fields=['name']),
+            models.Index(fields=['product_type']),
+            models.Index(fields=['status']),
+            models.Index(fields=['webhook_updated_at']),
+        ]
+
+
 class Price(BaseModel):
     """Paddle price object. A product can have multiple of these."""
 
@@ -42,6 +77,8 @@ class Price(BaseModel):
         null=True, help_text=_('date when this model was last updated by a paddle webhook.')
     )
 
+    product = models.ForeignKey('Product', null=True, on_delete=models.CASCADE)
+
     def __str__(self):
         return f'Price [{self.uuid}] {self.name} - {self.paddle_id}'
 
@@ -51,6 +88,7 @@ class Price(BaseModel):
             models.Index(fields=['currency']),
             models.Index(fields=['billing_cycle_frequency']),
             models.Index(fields=['billing_cycle_interval']),
+            models.Index(fields=['webhook_updated_at']),
         ]
 
 
@@ -74,6 +112,8 @@ class Plan(BaseModel):
         null=True, help_text=_('Amount of send storage a user has access to (in GB).')
     )
 
+    product = models.ForeignKey('Product', null=True, on_delete=models.CASCADE)
+
     def __str__(self):
         return f'Plan [{self.uuid}] {self.name} - {self.paddle_product_id}'
 
@@ -90,6 +130,7 @@ class SubscriptionItem(BaseModel):
     # Subscription items MUST be related to a subscription object, but they can exclude price.
     subscription = models.ForeignKey('Subscription', on_delete=models.CASCADE)
     price = models.ForeignKey('Price', null=True, on_delete=models.CASCADE)
+    product = models.ForeignKey('Product', null=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return f'Subscription Item [{self.uuid}] {self.subscription_id} - {self.paddle_product_id}'
@@ -143,6 +184,7 @@ class Subscription(BaseModel):
             models.Index(fields=['status']),
             models.Index(fields=['next_billed_at']),
             models.Index(fields=['current_billing_period_starts_at', 'current_billing_period_ends_at']),
+            models.Index(fields=['webhook_updated_at']),
         ]
 
 
@@ -227,4 +269,5 @@ class Transaction(BaseModel):
             models.Index(fields=['status']),
             models.Index(fields=['billed_at']),
             models.Index(fields=['revised_at']),
+            models.Index(fields=['webhook_updated_at']),
         ]

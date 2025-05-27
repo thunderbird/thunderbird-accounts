@@ -4,7 +4,7 @@ import logging
 from celery import shared_task
 from django.core.signing import Signer, BadSignature
 
-from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price
+from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -257,4 +257,68 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
         'task_status': 'success',
         'model_uuid': subscription.uuid,
         'model_created': subscription_created,
+    }
+
+
+@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+def paddle_product_event(self, event_data: dict, occurred_at: datetime.datetime, is_create_event: bool):
+    """Handles product.created and product.updated events.
+    Docs: https://developer.paddle.com/webhooks/products/product-created
+    Docs: https://developer.paddle.com/webhooks/products/product-updated
+    """
+    paddle_id = event_data.get('id')
+
+    try:
+        query = Product.objects.filter(paddle_id=paddle_id)
+        if not is_create_event:
+            query = query.filter(webhook_updated_at__gt=occurred_at)
+        product = query.get()
+        if product:
+            if is_create_event:
+                err = (
+                    f'Ignoring webhook as transaction (uuid={product.uuid}, paddle_id={paddle_id}) exists when '
+                    f"it shouldn't exist."
+                )
+                reason = 'product already exists'
+            else:
+                err = (
+                    f'Ignoring webhook as transaction (uuid={product.uuid}, paddle_id={paddle_id}) update was '
+                    f'updated later than when the webhook occurred at.'
+                )
+                reason = 'webhook is out of date'
+
+            logging.info(err)
+
+            return {
+                'paddle_id': paddle_id,
+                'occurred_at': occurred_at,
+                'task_status': 'failed',
+                'reason': reason,
+            }
+    except Product.DoesNotExist:
+        pass
+
+    name = event_data.get('name')
+    description = event_data.get('description')
+    product_type = event_data.get('type')
+    status = event_data.get('status')
+
+    # Okay now we can just do a big update.
+    product, product_created = Product.objects.update_or_create(
+        paddle_id=paddle_id,
+        defaults={
+            'name': name,
+            'description': description,
+            'product_type': product_type,
+            'status': status,
+            'webhook_updated_at': occurred_at,
+        },
+    )
+
+    return {
+        'paddle_id': paddle_id,
+        'occurred_at': occurred_at,
+        'task_status': 'success',
+        'model_uuid': product.uuid,
+        'model_created': product_created,
     }

@@ -82,6 +82,22 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
                     'occurred_at': '2024-04-12T10:18:49.621022Z',
                 },
             ),
+            (
+                'thunderbird_accounts.subscription.tasks.paddle_product_event',
+                {
+                    'event_type': 'product.created',
+                    'data': {'name': 'hello world'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+            ),
+            (
+                'thunderbird_accounts.subscription.tasks.paddle_product_event',
+                {
+                    'event_type': 'product.updated',
+                    'data': {'name': 'hello world'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+            ),
         ]
 
         for paddle_event, event_data in event_types:
