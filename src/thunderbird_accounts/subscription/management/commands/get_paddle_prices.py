@@ -1,5 +1,5 @@
 """
-Create a new Client, with a Client Contact and optionally a Client Environment.
+Retrieves and updates prices defined in Paddle.
 """
 
 from django.core.management.base import BaseCommand
