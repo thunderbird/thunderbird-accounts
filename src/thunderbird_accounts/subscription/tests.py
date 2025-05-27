@@ -48,18 +48,51 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
     def test_success(self):
         """Test the minimum amount of data needed to be passed to celery."""
-        with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()) as tx_created_mock:
-            response = self.client.post(
-                'http://testserver/api/v1/subscription/paddle/webhook/',
+
+        event_types = [
+            (
+                'thunderbird_accounts.subscription.tasks.paddle_transaction_event',
                 {
                     'event_type': 'transaction.created',
                     'data': {'status': 'completed'},
                     'occurred_at': '2024-04-12T10:18:49.621022Z',
                 },
-                content_type='application/json',
-            )
-            self.assertEqual(response.status_code, 200)
-            tx_created_mock.delay.assert_called()
+            ),
+            (
+                'thunderbird_accounts.subscription.tasks.paddle_transaction_event',
+                {
+                    'event_type': 'transaction.updated',
+                    'data': {'status': 'completed'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+            ),
+            (
+                'thunderbird_accounts.subscription.tasks.paddle_subscription_event',
+                {
+                    'event_type': 'subscription.created',
+                    'data': {'status': 'completed'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+            ),
+            (
+                'thunderbird_accounts.subscription.tasks.paddle_subscription_event',
+                {
+                    'event_type': 'subscription.updated',
+                    'data': {'status': 'completed'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+            ),
+        ]
+
+        for paddle_event, event_data in event_types:
+            with patch(paddle_event, Mock()) as event_mock:
+                response = self.client.post(
+                    'http://testserver/api/v1/subscription/paddle/webhook/',
+                    event_data,
+                    content_type='application/json',
+                )
+                self.assertEqual(response.status_code, 200)
+                event_mock.delay.assert_called()
 
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
     def test_draft_transactions_are_ignored(self):
