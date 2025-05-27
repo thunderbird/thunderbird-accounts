@@ -10,8 +10,9 @@ npm run build
 # Run migrations
 ./manage.py migrate
 
-# Retrieve paddle products
+# Retrieve paddle products & prices
 ./manage.py get_paddle_products
+./manage.py get_paddle_prices
 
 # Classic Django devserver
 #./manage.py runserver 0.0.0.0:8087
