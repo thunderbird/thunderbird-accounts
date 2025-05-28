@@ -238,7 +238,7 @@ resources:
               - name: KC_DB_PORT
                 value: '5432'
               - name: KC_HOSTNAME
-                value: keycloak-stage.tb.pro
+                value: https://keycloak-stage.tb.pro
               - name: KC_HTTP_ENABLED
                 value: 'true'
               - name: KC_HEALTH_ENABLED
