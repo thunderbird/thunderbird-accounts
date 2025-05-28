@@ -143,11 +143,7 @@ resources:
         - keycloak-database-user
         - keycloak-admin-password
 
-  tb:ec2:SshableInstance:
-    rjung:
-      ssh_keypair_name: rjung-burrito
-      source_cidrs:
-        - 38.15.46.29/32
+  tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
   # tb:ec2:SshableInstance:
   #   bastion:
@@ -184,19 +180,6 @@ resources:
             interval: 30
             path: /health/ready
             port: 9000
-        # keycloak-mgmt:
-        #   listener_port: 443
-        #   listener_proto: HTTPS
-        #   listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/3f5706a6-c790-4303-82b1-9766543c66f5
-        #   container_port: 9000
-        #   container_name: keycloak
-        #   # "name" field is arbitrary, but must be unique and no longer than 32 chars
-        #   name: keycloak-mgmt-stage
-        #   health_check:
-        #     healthy_threshold: 2
-        #     unhealthy_threshold: 5
-        #     interval: 30
-        #     path: /health/ready
       task_definition:
         network_mode: awsvpc
         cpu: 512
