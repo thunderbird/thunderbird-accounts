@@ -638,7 +638,7 @@ class ProductCreatedTaskTestCase(PaddleTestCase):
         self.assertEqual(task_results.get('reason'), 'product already exists')
 
 
-class ProductUpdatedTaskTestCase(TransactionCreatedTaskTestCase):
+class ProductUpdatedTaskTestCase(ProductCreatedTaskTestCase):
     is_create_event: bool = False
     paddle_fixture = 'fixtures/webhook_paddle_product_updated.json'
 
