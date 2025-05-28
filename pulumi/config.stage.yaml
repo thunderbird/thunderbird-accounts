@@ -104,17 +104,6 @@ resources:
               protocol: tcp
               from_port: 0
               to_port: 65535
-      keycloak-mgmt:
-        rules:
-          # Manually adjust access to this; only ever grant access to private SSH bastions
-          ingress: []
-          egress:
-            - description: Allow traffic from the container out to the Internet
-              cidr_blocks:
-                - 0.0.0.0/0
-              protocol: tcp
-              from_port: 0
-              to_port: 65535
 
   tb:secrets:PulumiSecretsManager:
     pulumi:
