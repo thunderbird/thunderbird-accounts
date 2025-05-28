@@ -24,28 +24,35 @@ vpc = tb_pulumi.network.MultiCidrVpc(f'{project.name_prefix}-vpc', project, **vp
 pulumi_sm_opts = resources['tb:secrets:PulumiSecretsManager']['pulumi']
 pulumi_sm = tb_pulumi.secrets.PulumiSecretsManager(f'{project.name_prefix}-secrets', project, **pulumi_sm_opts)
 
-# Build a security group allowing access to the load balancer
-sg_lb_opts = resources['tb:network:SecurityGroupWithRules']['accounts-lb']
-sg_lb = tb_pulumi.network.SecurityGroupWithRules(
-    name=f'{project.name_prefix}-lb-sg',
-    project=project,
-    vpc_id=vpc.resources['vpc'].id,
-    opts=pulumi.ResourceOptions(depends_on=[vpc]),
-    **sg_lb_opts,
-)
+# Build security groups for load balancers
+lb_sgs = {
+    service: tb_pulumi.network.SecurityGroupWithRules(
+        name=f'{project.name_prefix}-sg-lb-{service}',
+        project=project,
+        vpc_id=vpc.resources['vpc'].id,
+        opts=pulumi.ResourceOptions(depends_on=[vpc]),
+        **sg,
+    )
+    if sg
+    else None
+    for service, sg in resources['tb:network:SecurityGroupWithRules']['load_balancers'].items()
+}
 
-# Build a security group allowing access from the load balancer to the container when we know its ID
-sg_opts = resources['tb:network:SecurityGroupWithRules']['accounts-container']
-sg_opts['rules']['ingress'][0]['source_security_group_id'] = sg_lb.resources['sg'].id
-sg_container = tb_pulumi.network.SecurityGroupWithRules(
-    name=f'{project.name_prefix}-container-sg',
-    project=project,
-    vpc_id=vpc.resources['vpc'].id,
-    opts=pulumi.ResourceOptions(depends_on=[sg_lb, vpc]),
-    **sg_opts,
-)
+# Build security groups for containers
+container_sgs = {}
+for service, sg in resources['tb:network:SecurityGroupWithRules']['containers'].items():
+    # Allow access from each load balancer to its respective container
+    for rule in sg['rules']['ingress']:
+        rule['source_security_group_id'] = lb_sgs[service].resources['sg'].id
+    depends_on = [lb_sgs[service].resources['sg'], vpc] if lb_sgs[service] else []
+    container_sgs[service] = tb_pulumi.network.SecurityGroupWithRules(
+        name=f'{project.name_prefix}-sg-cont-{service}',
+        project=project,
+        vpc_id=vpc.resources['vpc'].id,
+        opts=pulumi.ResourceOptions(depends_on=depends_on),
+        **sg,
+    )
 
-# Build out SSH-able instances if they are defined
 instances = {}
 for instance in resources['tb:ec2:SshableInstance'].keys():
     instance_opts = resources['tb:ec2:SshableInstance'][instance]
@@ -58,36 +65,36 @@ for instance in resources['tb:ec2:SshableInstance'].keys():
         **instance_opts,
     )
 
-# Build an ElastiCache Redis cluster
+# Build an ElastiCache Redis cluster allowing access from the Accounts containers
 redis_opts = resources['tb:elasticache:ElastiCacheReplicaGroup']['accounts']
 redis = tb_pulumi.elasticache.ElastiCacheReplicationGroup(
     name=f'{project.name_prefix}-redis',
     project=project,
-    source_sgids=[sg_container.resources['sg'].id],
-    # Swap above line with below if you build a jumphost
-    # source_sgids=[sg_container.resources['sg'].id, jumphost.resources['security_group'].resources['sg'].id],
+    source_sgids=[container_sgs['accounts'].resources['sg'].id],
     subnets=vpc.resources['subnets'],
-    opts=pulumi.ResourceOptions(depends_on=[vpc, sg_container]),
-    # Swap above line with below if you build a jumphost
-    # opts=pulumi.ResourceOptions(depends_on=[jumphost, vpc, sg_container]),
+    opts=pulumi.ResourceOptions(depends_on=[vpc, container_sgs['accounts']]),
     **redis_opts,
 )
 
 # Build Fargate clusters to run our containers
-fargate_clusters = {
-    cluster: tb_pulumi.fargate.FargateClusterWithLogging(
-        name=f'{project.name_prefix}-fargate-{cluster}',
+fargate_clusters = {}
+for service, opts in resources['tb:fargate:FargateClusterWithLogging'].items():
+    lb_sg_ids = [lb_sgs[service].resources['sg'].id] if lb_sgs[service] else []
+    depends_on = [
+        container_sgs[service].resources['sg'],
+        *vpc.resources['subnets'],
+    ]
+    if lb_sgs[service]:
+        depends_on.append(lb_sgs[service].resources['sg'])
+    fargate_clusters[service] = tb_pulumi.fargate.FargateClusterWithLogging(
+        name=f'{project.name_prefix}-fargate-{service}',
         project=project,
         subnets=vpc.resources['subnets'],
-        container_security_groups=[sg_container.resources['sg'].id],
-        load_balancer_security_groups=[sg_lb.resources['sg'].id],
-        opts=pulumi.ResourceOptions(
-            depends_on=[sg_lb.resources['sg'], sg_container.resources['sg'], *vpc.resources['subnets']]
-        ),
+        container_security_groups=[container_sgs[service].resources['sg'].id],
+        load_balancer_security_groups=lb_sg_ids,
+        opts=pulumi.ResourceOptions(depends_on=depends_on),
         **opts,
     )
-    for cluster, opts in resources['tb:fargate:FargateClusterWithLogging'].items()
-}
 
 cloudflare_backend_record = cloudflare.Record(
     f'{project.name_prefix}-dns-backend',

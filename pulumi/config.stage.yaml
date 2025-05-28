@@ -20,49 +20,101 @@ resources:
         - logs
         - secretsmanager
 
+  # The __main.py__ here is very specific in the following way:
+  # For each ECS cluster you eventually define, you **must** have one entry by the same exact name in the
+  # `load_balancers` and `containers` sections below. If the cluster does not expose a service (f/ex, uses
+  # `build_load_balancer: False`), you may set the `load_balancers` entry to `null`.
   tb:network:SecurityGroupWithRules:
-    accounts-lb:
-      rules:
-        ingress:
-          - description: TLS traffic to the load balancer from the world
-            cidr_blocks:
-              - 0.0.0.0/0
-            protocol: tcp
-            from_port: 443
-            to_port: 443
-        egress:
-          - description: Allow outbound traffic to anywhere
-            protocol: tcp
-            from_port: 0
-            to_port: 65535
-            cidr_blocks:
-              - 0.0.0.0/0
-
-    accounts-container:
-      rules:
-        ingress:
-          # Set the source in code to the accounts-lb SGID
-          - description: Allow traffic from the load balancer to the container
-            protocol: tcp
-            from_port: 8087
-            to_port: 8087
-        egress:
-          - description: Allow traffic from the container out to the Internet
-            cidr_blocks:
-              - 0.0.0.0/0
-            protocol: tcp
-            from_port: 0
-            to_port: 65535
-
-    accounts-redis:
-      rules:
-        ingress:
-          # Set the source in code to the accounts-container SGID
-          - description: Allow traffic from the accounts application to the container
-            protocol: tcp
-            from_port: 6379
-            to_port: 6379
-        egress: [ ]
+    load_balancers:
+      accounts:
+        rules:
+          ingress:
+            - description: TLS traffic to the load balancer from the world
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 443
+              to_port: 443
+          egress:
+            - description: Allow outbound traffic to anywhere
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+              cidr_blocks:
+                - 0.0.0.0/0
+      accounts-celery: null
+      keycloak:
+        rules:
+          ingress:
+            - description: TLS traffic to the load balancer from the world
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 443
+              to_port: 443
+          egress:
+            - description: Allow outbound traffic to anywhere
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+              cidr_blocks:
+                - 0.0.0.0/0
+      keycloak-mgmt: null
+    containers:
+      accounts:
+        rules:
+          ingress:
+            - description: Allow traffic from the load balancer to the container
+              protocol: tcp
+              from_port: 8087
+              to_port: 8087
+          egress:
+            - description: Allow traffic from the container out to the Internet
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+      accounts-celery:
+        rules:
+          ingress: []
+          egress:
+            - description: Allow traffic from the container out to the Internet
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+      keycloak:
+        rules:
+          ingress:
+            - description: Allow traffic from the load balancer to the service port
+              protocol: tcp
+              from_port: 8080
+              to_port: 8080
+            # KeyCloak exposes health checks on the management port. Don't route any real traffic here.
+            - description: Allow traffic from the load balancer to the management port
+              protocol: tcp
+              from_port: 9000
+              to_port: 9000
+          egress:
+            - description: Allow traffic from the container out to the Internet
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+      keycloak-mgmt:
+        rules:
+          # Manually adjust access to this; only ever grant access to private SSH bastions
+          ingress: []
+          egress:
+            - description: Allow traffic from the container out to the Internet
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
 
   tb:secrets:PulumiSecretsManager:
     pulumi:
@@ -91,7 +143,11 @@ resources:
         - keycloak-database-user
         - keycloak-admin-password
 
-  tb:ec2:SshableInstance: {}
+  tb:ec2:SshableInstance:
+    rjung:
+      ssh_keypair_name: rjung-burrito
+      source_cidrs:
+        - 38.15.46.29/32
   # Fill out this template to build an SSH bastion
   # tb:ec2:SshableInstance:
   #   bastion:
@@ -108,80 +164,89 @@ resources:
       apply_immediately: True
   
   tb:fargate:FargateClusterWithLogging:
-    # keycloak:
-    #   assign_public_ip: True
-    #   desired_count: 1
-    #   health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
-    #   internal: False
-    #   services:
-    #     keycloak:
-    #       listener_port: 443
-    #       listener_proto: HTTPS
-    #       listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/eed3b19b-d88c-40e4-9b75-8254c40f5198
-    #       container_port: 8080
-    #       container_name: keycloak
-    #       # "name" field is arbitrary, but must be unique and no longer than 32 chars
-    #       name: keycloak-stage
-    #       health_check:
-    #         healthy_threshold: 2
-    #         unhealthy_threshold: 5
-    #         interval: 30
-    #     keycloak-mgmt:
-    #       listener_port: 443
-    #       listener_proto: HTTPS
-    #       listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/3f5706a6-c790-4303-82b1-9766543c66f5
-    #       container_port: 9000
-    #       container_name: keycloak-mgmt
-    #       # "name" field is arbitrary, but must be unique and no longer than 32 chars
-    #       name: keycloak-mgmt-stage
-    #       health_check:
-    #         healthy_threshold: 2
-    #         unhealthy_threshold: 5
-    #         interval: 30
-    #         path: /health/ready
-    #   task_definition:
-    #     network_mode: awsvpc
-    #     cpu: 512
-    #     memory: 2048
-    #     requires_compatibilities:
-    #       - FARGATE
-    #     container_definitions:
-    #       accounts:
-    #         image: quay.io/keycloak/keycloak:26.2
-    #         portMappings:
-    #           - name: accounts
-    #             containerPort: 8080
-    #             hostPort: 8080
-    #             protocol: tcp
-    #             appProtocol: http
-    #         linuxParameters:
-    #           initProcessEnabled: True
-    #         secrets:
-    #           - name: KC_DB_PASSWORD
-    #             valueFrom: 
-    #           - name: KC_DB_URL_HOST
-    #             valueFrom: 
-    #           - name: KC_DB_URL_DATABASE
-    #             valueFrom: 
-    #           - name: KC_DB_USERNAME
-    #             valueFrom: 
-    #           - name: KC_BOOTSTRAP_ADMIN_PASSWORD
-    #             valueFrom: 
-    #         environment:
-    #           - name: KC_DB
-    #             value: postgres
-    #           - name: KC_DB_PORT
-    #             value: 5432
-    #           - name: KC_HOSTNAME
-    #             value: keycloak-stage.tb.pro
-    #           - name: KC_HTTP_ENABLED
-    #             value: true
-    #           - name: KC_HEALTH_ENABLED
-    #             value: true
-    #           - name: KC_HTTP_MANAGEMENT_PORT
-    #             value: 9000
-    #           - name: KC_METRICS_ENABLED
-    #             value: true
+    keycloak:
+      assign_public_ip: True
+      desired_count: 1
+      health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
+      internal: False
+      services:
+        keycloak:
+          listener_port: 443
+          listener_proto: HTTPS
+          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/eed3b19b-d88c-40e4-9b75-8254c40f5198
+          container_port: 8080
+          container_name: keycloak
+          # "name" field is arbitrary, but must be unique and no longer than 32 chars
+          name: keycloak-stage
+          health_check:
+            healthy_threshold: 2
+            unhealthy_threshold: 5
+            interval: 30
+            path: /health/ready
+            port: 9000
+        # keycloak-mgmt:
+        #   listener_port: 443
+        #   listener_proto: HTTPS
+        #   listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/3f5706a6-c790-4303-82b1-9766543c66f5
+        #   container_port: 9000
+        #   container_name: keycloak
+        #   # "name" field is arbitrary, but must be unique and no longer than 32 chars
+        #   name: keycloak-mgmt-stage
+        #   health_check:
+        #     healthy_threshold: 2
+        #     unhealthy_threshold: 5
+        #     interval: 30
+        #     path: /health/ready
+      task_definition:
+        network_mode: awsvpc
+        cpu: 512
+        memory: 2048
+        requires_compatibilities:
+          - FARGATE
+        container_definitions:
+          keycloak:
+            image: quay.io/keycloak/keycloak:26.2
+            command:
+              - start
+            portMappings:
+              - name: keycloak
+                containerPort: 8080
+                hostPort: 8080
+                protocol: tcp
+                appProtocol: http
+              - name: keycloak-mgmt
+                containerPort: 9000
+                hostPort: 9000
+                protocol: tcp
+                appProtocol: http
+            linuxParameters:
+              initProcessEnabled: True
+            secrets:
+              - name: KC_DB_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-database-password-RFT5w1
+              - name: KC_DB_URL_HOST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-database-host-FoJP4p
+              - name: KC_DB_URL_DATABASE
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-database-name-Scryci
+              - name: KC_DB_USERNAME
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-database-user-erIzAS
+              - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-password-hpVuxn
+            environment:
+              - name: KC_DB
+                value: postgres
+              - name: KC_DB_PORT
+                value: '5432'
+              - name: KC_HOSTNAME
+                value: keycloak-stage.tb.pro
+              - name: KC_HTTP_ENABLED
+                value: 'true'
+              - name: KC_HEALTH_ENABLED
+                value: 'true'
+              - name: KC_HTTP_MANAGEMENT_PORT
+                value: '9000'
+              - name: KC_METRICS_ENABLED
+                value: 'true'
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -212,7 +277,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c890f550d3db150ef20ad5dcf93bf58d2b788da4
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:ee91444bf650044955a507ba1ca2d98a98dac415
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -335,7 +400,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts-celery-worker:c890f550d3db150ef20ad5dcf93bf58d2b788da4
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts-celery-worker:ee91444bf650044955a507ba1ca2d98a98dac415
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -441,9 +506,3 @@ resources:
       fargate_task_role_arns:
         - arn:aws:iam::768512802988:role/accounts-stage-fargate-accounts
         - arn:aws:iam::768512802988:role/accounts-stage-fargate-accounts-celery
-
-  # tb:ec2:SshableInstance:
-  #   jumphost:
-  #     public_key: your pubkey goes here
-  #     source_cidrs:
-  #       - your IPv4 goes here (curl -4 https://curlmyip.net)
