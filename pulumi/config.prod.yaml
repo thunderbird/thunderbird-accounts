@@ -21,50 +21,92 @@ resources:
         - logs
         - secretsmanager
 
+  # The __main.py__ here is very specific in the following way:
+  # For each ECS cluster you eventually define, you **must** have one entry by the same exact name in the
+  # `load_balancers` and `containers` sections below. If the cluster does not expose a service (f/ex, uses
+  # `build_load_balancer: False`), you may set the `load_balancers` entry to `null`.
   tb:network:SecurityGroupWithRules:
-    accounts-lb:
-      rules:
-        ingress:
-          - description: TLS traffic to the load balancer from the world
-            cidr_blocks:
-              - 0.0.0.0/0
-            protocol: tcp
-            from_port: 443
-            to_port: 443
-        egress:
-          - description: Allow outbound traffic to anywhere
-            protocol: tcp
-            from_port: 0
-            to_port: 65535
-            cidr_blocks:
-              - 0.0.0.0/0
-
-    accounts-container:
-      rules:
-        ingress:
-            # Set the source in code to the accounts-lb SGID
-          - description: Allow traffic from the load balancer to the container
-            protocol: tcp
-            from_port: 8087
-            to_port: 8087
-        egress:
-          - description: Allow traffic from the container out to the Internet
-            cidr_blocks:
-              - 0.0.0.0/0
-            protocol: tcp
-            from_port: 0
-            to_port: 65535
+    load_balancers:
+      accounts:
+        rules:
+          ingress:
+            - description: TLS traffic to the load balancer from the world
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 443
+              to_port: 443
+          egress:
+            - description: Allow outbound traffic to anywhere
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+              cidr_blocks:
+                - 0.0.0.0/0
+      accounts-celery: null
+      keycloak:
+        rules:
+          ingress:
+            - description: TLS traffic to the load balancer from the world
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 443
+              to_port: 443
+          egress:
+            - description: Allow outbound traffic to anywhere
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+              cidr_blocks:
+                - 0.0.0.0/0
+      keycloak-mgmt: null
+    containers:
+      accounts:
+        rules:
+          ingress:
+              # Set the source in code to the accounts-lb SGID
+            - description: Allow traffic from the load balancer to the container
+              protocol: tcp
+              from_port: 8087
+              to_port: 8087
+          egress:
+            - description: Allow traffic from the container out to the Internet
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+      accounts-celery:
+        rules:
+          ingress: []
+          egress:
+            - description: Allow traffic from the container out to the Internet
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+      keycloak:
+        rules:
+          ingress:
+            - description: Allow traffic from the load balancer to the service port
+              protocol: tcp
+              from_port: 8080
+              to_port: 8080
+            # KeyCloak exposes health checks on the management port. Don't route any real traffic here.
+            - description: Allow traffic from the load balancer to the management port
+              protocol: tcp
+              from_port: 9000
+              to_port: 9000
+          egress:
+            - description: Allow traffic from the container out to the Internet
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
       
-    accounts-redis:
-      rules:
-        ingress:
-          # Set the source in code to the accounts-container SGID
-          - description: Allow traffic from the accounts application to the container
-            protocol: tcp
-            from_port: 6379
-            to_port: 6379
-        egress: []
-
   tb:secrets:PulumiSecretsManager:
     pulumi:
       secret_names:
@@ -84,6 +126,11 @@ resources:
         - paddle-price-id-md
         - paddle-price-id-hi
         - redis-url
+        - keycloak-database-host
+        - keycloak-database-name
+        - keycloak-database-password
+        - keycloak-database-user
+        - keycloak-admin-password
   
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
@@ -102,6 +149,77 @@ resources:
       apply_immediately: True
       
   tb:fargate:FargateClusterWithLogging:
+    keycloak:
+      assign_public_ip: True
+      desired_count: 1
+      health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
+      internal: False
+      services:
+        keycloak:
+          listener_port: 443
+          listener_proto: HTTPS
+          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/01b867bb-a94d-43b7-9ac5-034deee590b9
+          container_port: 8080
+          container_name: keycloak
+          # "name" field is arbitrary, but must be unique and no longer than 32 chars
+          name: keycloak-prod
+          health_check:
+            healthy_threshold: 2
+            unhealthy_threshold: 5
+            interval: 30
+            path: /health/ready
+            port: 9000
+      task_definition:
+        network_mode: awsvpc
+        cpu: 512
+        memory: 2048
+        requires_compatibilities:
+          - FARGATE
+        container_definitions:
+          keycloak:
+            image: quay.io/keycloak/keycloak:26.2
+            command:
+              - start
+            portMappings:
+              - name: keycloak
+                containerPort: 8080
+                hostPort: 8080
+                protocol: tcp
+                appProtocol: http
+              - name: keycloak-mgmt
+                containerPort: 9000
+                hostPort: 9000
+                protocol: tcp
+                appProtocol: http
+            linuxParameters:
+              initProcessEnabled: True
+            secrets:
+              - name: KC_DB_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-database-password-C9fHLJ
+              - name: KC_DB_URL_HOST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-database-host-t2EZeE
+              - name: KC_DB_URL_DATABASE
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-database-name-ZdZxMe
+              - name: KC_DB_USERNAME
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-database-user-sSptNx
+              - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-password-AnRwXP
+            environment:
+              - name: KC_DB
+                value: postgres
+              - name: KC_DB_PORT
+                value: '5432'
+              - name: KC_HOSTNAME
+                value: https://keycloak.tb.pro
+              - name: KC_HTTP_ENABLED
+                value: 'true'
+              - name: KC_HEALTH_ENABLED
+                value: 'true'
+              - name: KC_HTTP_MANAGEMENT_PORT
+                value: '9000'
+              - name: KC_METRICS_ENABLED
+                value: 'true'
+
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
       desired_count: 1

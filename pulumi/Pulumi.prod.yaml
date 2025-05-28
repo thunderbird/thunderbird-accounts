@@ -35,3 +35,13 @@ config:
     secure: AAABAJ5aDUnbsSAiDAC+pq2zJtOaZLewaGR0GllOsngkjjbnTfSsrMQ5yUE4ulnbsz1/TJnr755ylM2FiUXo58pG2/tej4Sp
   accounts:redis-url:
     secure: AAABAPbHXsa/mhEMGiZkJWa7mrfyM0CP2qh0sbWripJvUj9GMJjHFYIvgVEkFSECZNDv6mZZvxSN9PB9JGiVvmfoWy4guc5y4jrIaSMMvYf/ftDAdDnyTgWEDo7olqexesV7oEHZFaM=
+  accounts:keycloak-database-host:
+    secure: AAABAAAkcQEbgfkF/ymiZJLYISEjt9ND9vEGEfV2V9cB45ATdm0CJwy8T79mvjYWPtZnGgqXR3rpZVj0Hg6B25G96wZOEu39Xt2UT2B9lFzC/qdeKI6m
+  accounts:keycloak-database-name:
+    secure: AAABAG9eskqWunkfND085RievNhjyMR0O3GDlajPsw+9iCNaDxGyKQ==
+  accounts:keycloak-database-password:
+    secure: AAABABSeVqvrZoU4wiyAfCcIGTTQ00HSpTQnz/p9OzyoV2NyyJ6OGY4WN+iQKma4
+  accounts:keycloak-database-user:
+    secure: AAABAINLb25xY5cBm1i7SGl2g9JV0cQi6OHF8t8nODOm6Mm0fxYK4U2IrV3j2Q==
+  accounts:keycloak-admin-password:
+    secure: AAABAG3XQJR8zFKaeJNKYJ3I+8pJECdwSNeCOXjxhtNbjeIxNEgAFOrqxxDbr5xP3BGGS8zqzOSQtLg5Ua5B
