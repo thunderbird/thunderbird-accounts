@@ -1,18 +1,16 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import { initializePaddle } from '@paddle/paddle-js';
+import {ref, onMounted} from 'vue';
+import {initializePaddle} from '@paddle/paddle-js';
 
 const isLoading = ref(true);
-const priceItems = ref([]);
+const priceItems = ref({});
 const isPaddleTokenMissing = ref(false);
 const didReceivePaddleError = ref(false);
 const errorTitle = ref('');
 
 const paddleToken = window._page.paddleToken;
 const paddleEnvironment = window._page.paddleEnvironment;
-const paddlePriceIdLo = window._page.paddlePriceIdLo;
-const paddlePriceIdMd = window._page.paddlePriceIdMd;
-const paddlePriceIdHi = window._page.paddlePriceIdHi;
+const paddlePlanInfo = window._page.paddlePlanInfo;
 const successRedirect = window._page.successRedirect;
 const signedUserId = window._page.signedUserId;
 
@@ -21,7 +19,8 @@ const successUrl = `${baseUrl}${successRedirect}`;
 
 let Paddle; // The initialized Paddle instance.
 
-const paddleItems = [paddlePriceIdLo, paddlePriceIdMd, paddlePriceIdHi].map((priceId) => ({
+console.log(paddlePlanInfo)
+const paddleItems = paddlePlanInfo.map((priceId) => ({
   quantity: 1,
   priceId,
 }));
@@ -62,29 +61,38 @@ function openCheckout(priceId) {
   });
 }
 
-function initPaddle(items, fn) {
-  Paddle.PricePreview({ items })
-    .then((result) => {
-      const { lineItems } = result.data.details;
-      priceItems.value = lineItems.map((item) => {
-        const { total } = item.formattedTotals;
-        const { name, description, id } = item.price;
-        return {
-          total,
-          name,
-          description,
-          id,
-        };
-      });
-      isLoading.value = false;
-    })
-    .then(fn)
-    .catch((error) => {
-      didReceivePaddleError.value = true;
-      errorTitle.value = 'Server Error';
-      console.error(error);
-    })
-    .finally(() => (isLoading.value = false));
+async function initPaddle(items, fn) {
+  let result = null;
+  try {
+    result = await Promise.resolve(Paddle.PricePreview({items}));
+  } catch (error) {
+    didReceivePaddleError.value = true;
+    errorTitle.value = 'Server Error';
+    console.error(error);
+    isLoading.value = false;
+    return;
+  }
+  console.log('paddle', result);
+
+  const {lineItems} = result.data.details;
+  lineItems.forEach((item) => {
+    const productName = item.product.name;
+    const {total} = item.formattedTotals;
+    const {name, description, id} = item.price;
+    if (!priceItems.value.hasOwnProperty(productName)) {
+      priceItems.value[productName] = [];
+    }
+    priceItems.value[productName].push({
+      total,
+      name,
+      description,
+      id,
+    });
+  });
+
+  console.log(priceItems.value);
+
+  isLoading.value = false;
 }
 </script>
 <template>
@@ -97,13 +105,21 @@ function initPaddle(items, fn) {
     <div v-else-if="isLoading" class="loader-outside" data-testid="pricing-loader">
       <div class="loader-inside"></div>
     </div>
-    <div v-else-if="priceItems.length > 0" class="pricing-grid" data-testid="pricing-grid">
-      <div v-for="item in priceItems" data-testid="pricing-grid-price-item">
-        <h3>{{ item.name }}</h3>
-        <p>{{ item.description }}</p>
-        <p>{{ item.total }}</p>
-        <button @click="openCheckout(item.id)" data-testid="checkout-button">Select {{ item.total }}</button>
+    <div v-else-if="Object.values(priceItems).length > 0" class="pricing-grid" data-testid="pricing-grid">
+      <div v-for="(prices, productName) in priceItems" data-testid="pricing-grid-price-item">
+        <h2>{{ productName }}</h2>
+        <div v-for="item in prices">
+          <h3>{{ item.name }}</h3>
+          <p>{{ item.total }}</p>
+          <button @click="openCheckout(item.id)" data-testid="checkout-button">Select {{ item.total }}</button>
+        </div>
       </div>
     </div>
   </div>
 </template>
+<style scoped>
+.pricing-grid {
+  display: flex;
+  gap: 2rem;
+}
+</style>

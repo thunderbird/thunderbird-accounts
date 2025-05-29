@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.templatetags.helpers import get_admin_login_code
 from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.subscription.models import Plan, Price
 
 
 def raise_form_error(request, to_view: str, error_message: str):
@@ -133,6 +134,13 @@ def self_serve_subscription(request: HttpRequest):
     """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
     account = request.user.account_set.first()
     signer = Signer()
+
+    plan_info = []
+    plans = Plan.objects.filter(visible_on_subscription_page=True).exclude(product_id__isnull=True).all()
+    for plan in plans:
+        prices = plan.product.price_set.filter(status=Price.StatusValues.ACTIVE).all()
+        plan_info.extend([price.paddle_id for price in prices])
+
     return TemplateResponse(
         request,
         'mail/self-serve/subscription.html',
@@ -141,9 +149,7 @@ def self_serve_subscription(request: HttpRequest):
             'success_redirect': reverse('self_serve_subscription_success'),
             'paddle_token': settings.PADDLE_TOKEN,
             'paddle_environment': settings.PADDLE_ENV,
-            'paddle_price_id_lo': settings.PADDLE_PRICE_ID_LO,
-            'paddle_price_id_md': settings.PADDLE_PRICE_ID_MD,
-            'paddle_price_id_hi': settings.PADDLE_PRICE_ID_HI,
+            'paddle_plan_info': json.dumps(plan_info),
             'signed_user_id': signer.sign(request.user.uuid.hex),
             **self_serve_common_options(False, account),
         },
