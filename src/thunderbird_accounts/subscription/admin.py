@@ -37,8 +37,6 @@ class CustomReadonlyAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
 
         return None
 
-    pass
-
 
 # Data stores for Paddle information
 admin.site.register(Subscription, admin_class=CustomReadonlyAdmin)
