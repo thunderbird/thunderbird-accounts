@@ -82,6 +82,22 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
                     'occurred_at': '2024-04-12T10:18:49.621022Z',
                 },
             ),
+            (
+                'thunderbird_accounts.subscription.tasks.paddle_product_event',
+                {
+                    'event_type': 'product.created',
+                    'data': {'name': 'hello world'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+            ),
+            (
+                'thunderbird_accounts.subscription.tasks.paddle_product_event',
+                {
+                    'event_type': 'product.updated',
+                    'data': {'name': 'hello world'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+            ),
         ]
 
         for paddle_event, event_data in event_types:
@@ -556,6 +572,147 @@ class SubscriptionUpdatedTaskTestCase(SubscriptionCreatedTaskTestCase):
         task_results: dict | None = tasks.paddle_subscription_event.delay(
             event_data, occurred_at, self.is_create_event
         ).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+        self.assertEqual(task_results.get('task_status'), 'failed')
+        self.assertEqual(task_results.get('reason'), 'webhook is out of date')
+
+
+class ProductCreatedTaskTestCase(PaddleTestCase):
+    is_create_event: bool = True
+    paddle_fixture = 'fixtures/webhook_paddle_product_created.json'
+
+    def test_success(self):
+        self.assertEqual(models.Product.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        task_results: dict | None = tasks.paddle_product_event.delay(event_data, occurred_at, self.is_create_event).get(
+            timeout=10
+        )
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+
+        # Success results have model_created and model_uuid, so test this first
+        self.assertEqual(task_results.get('task_status'), 'success')
+
+        # This should be a new model
+        self.assertTrue(task_results.get('model_created'))
+
+        # Check if the model actually exists
+        self.assertTrue(models.Product.objects.filter(pk=task_results.get('model_uuid')).exists())
+
+    def test_already_exists(self):
+        """We're testing if the transaction already exists here."""
+        self.assertEqual(models.Product.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        product = models.Product.objects.create(
+            paddle_id=event_data.get('id'),
+            webhook_updated_at=occurred_at - datetime.timedelta(hours=1),
+            name='A product',
+            product_type=models.Product.TypeValues.STANDARD,
+            status=models.Product.StatusValues.ACTIVE,
+        )
+
+        self.assertIsNotNone(product)
+
+        task_results: dict | None = tasks.paddle_product_event.delay(event_data, occurred_at, self.is_create_event).get(
+            timeout=10
+        )
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+        self.assertEqual(task_results.get('task_status'), 'failed')
+        self.assertEqual(task_results.get('reason'), 'product already exists')
+
+
+class ProductUpdatedTaskTestCase(ProductCreatedTaskTestCase):
+    is_create_event: bool = False
+    paddle_fixture = 'fixtures/webhook_paddle_product_updated.json'
+
+    def test_success(self):
+        self.assertEqual(models.Transaction.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        # An initial transaction we'll update
+        product = models.Product.objects.create(
+            paddle_id=event_data.get('id'),
+            webhook_updated_at=occurred_at - datetime.timedelta(hours=1),
+            name='A product',
+            product_type=models.Product.TypeValues.STANDARD,
+            status=models.Product.StatusValues.ACTIVE,
+        )
+
+        task_results: dict | None = tasks.paddle_product_event.delay(event_data, occurred_at, self.is_create_event).get(
+            timeout=10
+        )
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+
+        # Success results have model_created and model_uuid, so test this first
+        self.assertEqual(task_results.get('task_status'), 'success')
+
+        # This should be a new model
+        self.assertFalse(task_results.get('model_created'))
+
+        # Check if the model actually exists
+        self.assertTrue(models.Product.objects.filter(pk=task_results.get('model_uuid')).exists())
+
+        self.assertEqual(task_results.get('model_uuid'), product.uuid)
+
+        # Refresh the transaction now that we've updated it
+        product.refresh_from_db()
+
+        self.assertEqual(product.name, event_data.get('name'))
+        self.assertEqual(product.description, event_data.get('description'))
+        self.assertEqual(product.status, event_data.get('status'))
+        self.assertEqual(product.product_type, event_data.get('type'))
+
+    def test_already_exists(self):
+        """This isn't needed in context of ProductUpdated, but we inherit it so we need to stub it out."""
+        pass
+
+    def test_out_of_date(self):
+        """We're testing if the transaction is out of date here."""
+        self.assertEqual(models.Product.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        product = models.Product.objects.create(
+            paddle_id=event_data.get('id'),
+            webhook_updated_at=occurred_at + datetime.timedelta(hours=1),
+            name='A product',
+            product_type=models.Product.TypeValues.STANDARD,
+            status=models.Product.StatusValues.ACTIVE,
+        )
+
+        self.assertIsNotNone(product)
+
+        task_results: dict | None = tasks.paddle_product_event.delay(event_data, occurred_at, self.is_create_event).get(
+            timeout=10
+        )
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
