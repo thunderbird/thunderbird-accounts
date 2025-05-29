@@ -3,6 +3,7 @@ export const ACCTS_TARGET_ENV = String(process.env.ACCTS_TARGET_ENV);
 
 // tb accounts urls
 export const ACCTS_SELF_SERVE_URL = String(process.env.ACCTS_SELF_SERVE_URL);
+export const ACCTS_SELF_SERVE_CONNECTION_INFO_URL = `${ACCTS_SELF_SERVE_URL}connection-info`;
 export const ACCTS_SELF_SERVE_ACCT_INFO_URL = `${ACCTS_SELF_SERVE_URL}account-settings`;
 export const ACCTS_EMAIL_SIGN_UP_URL = String(process.env.ACCTS_EMAIL_SIGN_UP_URL);
 export const ACCTS_CHECKOUT_URL = `${ACCTS_SELF_SERVE_URL}subscription`;

@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { CheckoutPage } from '../pages/checkout-page';
 import { PaddleFrame } from '../pages/paddle-frame';
-import { navigateToAccountsSelfServeHubAndSignIn } from '../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -31,7 +30,7 @@ test.describe(
     test.describe('with bad Paddle response', () => {
       test.beforeEach(async ({ page }) => {
         checkoutPage = new CheckoutPage(page);
-        await navigateToAccountsSelfServeHubAndSignIn(page);
+        // we are already signed into accounts via our auth.setup
         await page.route('**/pricing-preview', async (route) => {
           await route.fulfill(MOCK_PRICING_RESPONSE_BAD);
         });
@@ -51,7 +50,7 @@ test.describe(
     test.describe('with good Paddle response', () => {
       test.beforeEach(async ({ page }) => {
         checkoutPage = new CheckoutPage(page);
-        await navigateToAccountsSelfServeHubAndSignIn(page);
+        // we are already signed into accounts via our auth.setup
         await checkoutPage.navigateToCheckoutPage();
       });
 

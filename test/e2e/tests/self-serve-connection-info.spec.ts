@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { SelfServePage } from '../pages/self-serve-page';
 import { FxAPage } from '../pages/fxa-page';
-import { navigateToAccountsSelfServeHubAndSignIn } from '../utils/utils';
 import { connectionInfo } from '../const/types';
 
 import {
@@ -24,7 +23,8 @@ let fxaPage: FxAPage;
 test.beforeEach(async ({ page }) => {
   selfServePage = new SelfServePage(page);
   fxaPage = new FxAPage(page);
-  await navigateToAccountsSelfServeHubAndSignIn(page);
+  // we are already signed into accounts via our auth.setup
+  await selfServePage.navigateToSelfServeHub();
 });
 
 test.describe('self-serve hub connection info', {
