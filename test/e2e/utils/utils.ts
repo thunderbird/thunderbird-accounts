@@ -1,6 +1,6 @@
 // utility functions that may be used by any tests
 import { expect, type Page } from '@playwright/test';
-import { ACCTS_SELF_SERVE_URL, TIMEOUT_2_SECONDS } from '../const/constants';
+import { ACCTS_SELF_SERVE_CONNECTION_INFO_URL, ACCTS_SELF_SERVE_URL, TIMEOUT_2_SECONDS, TIMEOUT_60_SECONDS } from '../const/constants';
 import { SelfServePage } from '../pages/self-serve-page';
 import { FxAPage } from '../pages/fxa-page';
 
@@ -14,8 +14,16 @@ export const navigateToAccountsSelfServeHubAndSignIn = async (page: Page) => {
     const selfServePage = new SelfServePage(page);
     const fxaPage = new FxAPage(page);
     await selfServePage.navigateToSelfServeHub();
-    await fxaPage.signIn();
-    await page.waitForTimeout(TIMEOUT_2_SECONDS);
-    await expect(selfServePage.pageHeader).toBeVisible({ timeout: 30_000 }); // generous time
+
+    // if we are already signed in, the connection-info will be displayed, then we can just skip FxA
+    const visible = await selfServePage.pageHeader.isVisible();
+    if (visible && page.url() == ACCTS_SELF_SERVE_CONNECTION_INFO_URL) {
+        console.log('we are already signed into accounts self-serve hub');
+    } else {
+        await fxaPage.signIn();
+        await page.waitForTimeout(TIMEOUT_2_SECONDS);
+    }
+
+    await expect(selfServePage.pageHeader).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // generous time
     await expect(selfServePage.logoutLink).toBeVisible();
 }

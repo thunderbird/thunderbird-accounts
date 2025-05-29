@@ -78,7 +78,6 @@ export class SelfServePage {
   }
 
   async navigateToSelfServeHub() {
-    await this.page.waitForTimeout(TIMEOUT_5_SECONDS);
     await this.page.goto(ACCTS_SELF_SERVE_URL, { timeout: TIMEOUT_60_SECONDS });
     await this.page.waitForTimeout(TIMEOUT_5_SECONDS);
   }

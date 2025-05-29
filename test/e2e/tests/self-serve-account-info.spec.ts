@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { SelfServePage } from '../pages/self-serve-page';
 import { FxAPage } from '../pages/fxa-page';
-import { navigateToAccountsSelfServeHubAndSignIn } from '../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -14,7 +13,7 @@ let fxaPage: FxAPage;
 test.beforeEach(async ({ page }) => {
   selfServePage = new SelfServePage(page);
   fxaPage = new FxAPage(page);
-  await navigateToAccountsSelfServeHubAndSignIn(page);
+  // we are already signed into accounts via our auth.setup
   await page.goto(ACCTS_SELF_SERVE_ACCT_INFO_URL);
 });
 
