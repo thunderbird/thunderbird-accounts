@@ -87,7 +87,7 @@ async function initPaddle(items, fn) {
       id,
     });
   });
-  
+
   isLoading.value = false;
 }
 </script>
@@ -102,9 +102,9 @@ async function initPaddle(items, fn) {
       <div class="loader-inside"></div>
     </div>
     <div v-else-if="Object.values(priceItems).length > 0" class="pricing-grid" data-testid="pricing-grid">
-      <div v-for="(prices, productName) in priceItems" data-testid="pricing-grid-price-item">
+      <div v-for="(prices, productName) in priceItems" data-testid="pricing-grid-product-item">
         <h2>{{ productName }}</h2>
-        <div v-for="item in prices">
+        <div v-for="item in prices" data-testid="pricing-grid-price-item">
           <h3>{{ item.name }}</h3>
           <p>{{ item.total }}</p>
           <button @click="openCheckout(item.id)" data-testid="checkout-button">Select {{ item.total }}</button>
