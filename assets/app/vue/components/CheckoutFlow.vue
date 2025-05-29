@@ -19,7 +19,6 @@ const successUrl = `${baseUrl}${successRedirect}`;
 
 let Paddle; // The initialized Paddle instance.
 
-console.log(paddlePlanInfo)
 const paddleItems = paddlePlanInfo.map((priceId) => ({
   quantity: 1,
   priceId,
@@ -72,7 +71,6 @@ async function initPaddle(items, fn) {
     isLoading.value = false;
     return;
   }
-  console.log('paddle', result);
 
   const {lineItems} = result.data.details;
   lineItems.forEach((item) => {
@@ -89,9 +87,7 @@ async function initPaddle(items, fn) {
       id,
     });
   });
-
-  console.log(priceItems.value);
-
+  
   isLoading.value = false;
 }
 </script>
