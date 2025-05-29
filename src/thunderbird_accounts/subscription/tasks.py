@@ -237,6 +237,7 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
                     'amount': unit_price.get('amount'),
                     'currency': unit_price.get('currency_code'),
                     'price_type': price.get('type'),
+                    'status': price.get('status'),
                     'billing_cycle_frequency': billing_cycle.get('frequency'),
                     'billing_cycle_interval': billing_cycle.get('interval'),
                     'webhook_updated_at': occurred_at,

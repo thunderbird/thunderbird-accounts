@@ -45,6 +45,7 @@ class Command(PaddleCommand, BaseCommand):
             'amount': unit_price.amount,
             'currency': str(unit_price.currency_code),
             'price_type': str(paddle_obj.type),
+            'status': str(paddle_obj.status),
             'billing_cycle_frequency': billing_cycle.frequency,
             'billing_cycle_interval': str(billing_cycle.interval),
             'product_id': product.uuid,

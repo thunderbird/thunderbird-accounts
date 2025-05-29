@@ -63,12 +63,22 @@ class Price(BaseModel):
         MONTH = 'month', _('Month')
         YEAR = 'year', _('Year')
 
+    class StatusValues(models.TextChoices):
+        # Paddle values
+        ACTIVE = 'active', _('Active')
+        ARCHIVED = 'archived', _('Archived')
+
     paddle_id = PaddleId()
     paddle_product_id = PaddleId()
     name = models.CharField()
     amount = models.CharField(help_text=_('Amount in lowest denomination for currency. e.g. 10 USD = 1000 (cents).'))
     currency = models.CharField(help_text=_('Three letter ISO 4217 currency code.'))
     price_type = models.CharField(choices=TypeValues, help_text=_('Is this a one-off price?'))
+    status = models.CharField(
+        choices=StatusValues,
+        default=StatusValues.ACTIVE,
+        help_text=_('Is this price active or archived (cannot be used.)'),
+    )
     billing_cycle_frequency = models.CharField(help_text=_('Amount of time in a billing cycle.'))
     billing_cycle_interval = models.CharField(
         choices=IntervalValues, help_text=_('The unit of time in a billing cycle.')
@@ -100,6 +110,9 @@ class Plan(BaseModel):
     """
 
     name = models.CharField(max_length=256)
+    visible_on_subscription_page = models.BooleanField(
+        default=True, help_text=_('Is this plan visible on the subscription page?')
+    )
 
     # Plan parameters
     mail_address_count = models.IntegerField(null=True, help_text=_('Amount of mail addresses a user can create.'))
