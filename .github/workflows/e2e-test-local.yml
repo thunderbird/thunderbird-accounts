@@ -50,12 +50,6 @@ jobs:
       - name: Start appointment stack via docker
         run: docker compose up -d --build -V postgres redis backend frontend
 
-      - name: Create test plans
-        run: |
-          docker compose exec backend ./manage.py create_plan_for_e2e_test Low $PADDLE_PRODUCT_ID_LO
-          docker compose exec backend ./manage.py create_plan_for_e2e_test Medium $PADDLE_PRODUCT_ID_MD
-          docker compose exec backend ./manage.py create_plan_for_e2e_test High $PADDLE_PRODUCT_ID_HI
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
