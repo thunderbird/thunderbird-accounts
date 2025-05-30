@@ -28,7 +28,7 @@ test.describe(
     tag: [PLAYWRIGHT_TAG_E2E_SUITE],
   },
   () => {
-    test.describe('with bad Paddle response', () => {
+    test.describe('with bad Paddle response', { tag: '@paddle' },() => {
       test.beforeEach(async ({ page }) => {
         checkoutPage = new CheckoutPage(page);
         await navigateToAccountsSelfServeHubAndSignIn(page);
@@ -48,7 +48,7 @@ test.describe(
       });
     });
 
-    test.describe('with good Paddle response', () => {
+    test.describe('with good Paddle response', { tag: '@paddle' }, () => {
       test.beforeEach(async ({ page }) => {
         checkoutPage = new CheckoutPage(page);
         await navigateToAccountsSelfServeHubAndSignIn(page);
