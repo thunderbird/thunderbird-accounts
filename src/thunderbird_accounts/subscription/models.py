@@ -131,6 +131,29 @@ class Plan(BaseModel):
             return f'Plan [{self.uuid}] {self.name} - {self.product.name}'
         return f'Plan [{self.uuid}] {self.name} - <Unassociated>'
 
+    def save(self, **kwargs):
+        """Override save to quickly check if the mail_storage_gb field has changed,
+        if it has then ship off a task off to update each associated mail account.
+        FIXME: This probably could be in a util function, I'm just worried we might not catch all updates."""
+        from thunderbird_accounts.subscription import tasks
+
+        previous_mail_storage_gb = None
+        new_mail_storage_gb = None
+
+        # Make sure we don't crash if this is during a create
+        try:
+            old_plan = Plan.objects.get(pk=self.uuid)
+            previous_mail_storage_gb = old_plan.mail_storage_gb
+            new_mail_storage_gb = self.mail_storage_gb
+        except Plan.DoesNotExist:
+            pass
+
+        super().save(**kwargs)
+
+        # Only ship the task out if the field has changed
+        if previous_mail_storage_gb and new_mail_storage_gb and previous_mail_storage_gb != new_mail_storage_gb:
+            tasks.update_thundermail_quota.delay(self.uuid, new_mail_storage_gb)
+
 
 class SubscriptionItem(BaseModel):
     """An item from a subscription, a subscription should really only have one of these unless
