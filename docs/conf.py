@@ -14,11 +14,11 @@ print(f'Adding to path: {os.path.abspath("../src")}')
 # -- Project information
 
 project = 'Thunderbird Accounts'
-copyright = '2024, MZLA Technologies Corporation'
+copyright = '2025, MZLA Technologies Corporation'
 author = 'Thunderbird Services'
 
-release = '0.1'
-version = '0.1.0'
+release = '0.4'
+version = '0.4.0'
 
 # -- General configuration
 

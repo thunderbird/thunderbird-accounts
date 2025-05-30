@@ -104,9 +104,6 @@ In the template, the context variables are attached to the `window` object:
       window._page.paddleToken="{{ paddle_token }}";
       window._page.paddleEnvironment="{{ paddle_environment}}";
       window._page.successRedirect="{{ success_redirect }}";
-      window._page.paddlePriceIdLo="{{ paddle_price_id_lo }}";
-      window._page.paddlePriceIdMd="{{ paddle_price_id_md }}";
-      window._page.paddlePriceIdHi="{{ paddle_price_id_hi }}";
     </script>
   {% endblock %}
 
@@ -122,9 +119,6 @@ The SFC accesses and uses these values in the `<script setup>`:
 
   const paddleToken = window._page.paddleToken;
   const paddleEnvironment = window._page.paddleEnvironment;
-  const paddlePriceIdLo = window._page.paddlePriceIdLo;
-  const paddlePriceIdMd = window._page.paddlePriceIdMd;
-  const paddlePriceIdHi = window._page.paddlePriceIdHi;
   const successRedirect = window._page.successRedirect;
 
 

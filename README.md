@@ -8,7 +8,7 @@
 
 This project uses [uv](https://github.com/astral-sh/uv).
 
-Thunderbird Accounts is a Django 5.1 application. Please read up on Django before diving in.
+Thunderbird Accounts is a Django 5.2 application. Please read up on Django before diving in.
 
 Docker is the recommended way to run the server, though you have the option to run it locally.
 

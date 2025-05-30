@@ -76,6 +76,7 @@ class GetPaddlePriceTest(TestCase):
             billing_cycle = None
             type = 'standard'
             product_id = 'pro_abc123'
+            status = 'active'
 
             def __init__(self):
                 self.unit_price = UnitPriceObj()
@@ -121,6 +122,7 @@ class GetPaddlePriceTest(TestCase):
             billing_cycle = None
             type = 'standard'
             product_id = 'pro_abc123'
+            status = 'active'
 
             def __init__(self):
                 self.unit_price = UnitPriceObj()

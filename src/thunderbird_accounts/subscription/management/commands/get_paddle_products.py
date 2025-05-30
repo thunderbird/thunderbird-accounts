@@ -3,6 +3,9 @@ Retrieves and updates products defined in Paddle.
 """
 
 from django.core.management.base import BaseCommand
+from paddle_billing.Entities.Shared import Status
+from paddle_billing.Resources.Products.Operations import ListProducts
+
 from thunderbird_accounts.subscription.management.commands import PaddleCommand
 from thunderbird_accounts.subscription.models import Product
 
@@ -26,7 +29,7 @@ class Command(PaddleCommand, BaseCommand):
 
     def retrieve_paddle_data(self, paddle: Client):
         """Return a paddle object's .list() return value."""
-        return paddle.products.list()
+        return paddle.products.list(ListProducts(statuses=[Status.Active, Status.Archived]))
 
     def transform_paddle_data(self, paddle_obj):
         """Return a dict that will be passed in an update_or_create's default parameter.

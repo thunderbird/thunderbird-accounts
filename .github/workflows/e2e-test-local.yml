@@ -29,10 +29,8 @@ jobs:
       LOGIN_CODE_SECRET: ${{ secrets.E2E_ACCTS_LOGIN_CODE_SECRET }}
       FXA_ENCRYPT_SECRET: ${{ secrets.E2E_ACCTS_FXA_ENCRYPT_SECRET }}
       PADDLE_TOKEN: ${{ secrets.E2E_ACCTS_PADDLE_TOKEN }}
-      PADDLE_PRICE_ID_LO: ${{ secrets.E2E_ACCTS_PADDLE_PRICE_ID_LO }}
-      PADDLE_PRICE_ID_MD: ${{ secrets.E2E_ACCTS_PADDLE_PRICE_ID_MD }}
-      PADDLE_PRICE_ID_HI: ${{ secrets.E2E_ACCTS_PADDLE_PRICE_ID_HI }}
       EMAIL_SIGN_UP_ADDRESS: ${{ secrets.E2E_ACCTS_PADDLE_EMAIL_SIGN_UP_ADDRESS }}
+      PADDLE_API_KEY: ${{ secrets.E2E_ACCTS_PADDLE_API_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -47,9 +45,7 @@ jobs:
           echo "LOGIN_CODE_SECRET=$LOGIN_CODE_SECRET" >> .env
           echo "FXA_ENCRYPT_SECRET=$FXA_ENCRYPT_SECRET" >> .env
           echo "PADDLE_TOKEN=$PADDLE_TOKEN" >> .env
-          echo "PADDLE_PRICE_ID_LO=$PADDLE_PRICE_ID_LO" >> .env
-          echo "PADDLE_PRICE_ID_MD=$PADDLE_PRICE_ID_MD" >> .env
-          echo "PADDLE_PRICE_ID_HI=$PADDLE_PRICE_ID_HI" >> .env
+          echo "PADDLE_API_KEY=$PADDLE_API_KEY" >> .env
 
       - name: Start appointment stack via docker
         run: docker compose up -d --build -V postgres redis backend frontend
@@ -65,6 +61,15 @@ jobs:
           cd ./test/e2e
           npm install
           npx playwright install
+
+      #- name: Wait for 5 seconds until container is alive
+      #  run: sleep 5s
+
+      - name: Create test plans
+        run: |
+          docker compose exec backend ./manage.py create_plan_for_e2e_test Low ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_LO }}
+          docker compose exec backend ./manage.py create_plan_for_e2e_test Medium ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_MD }}
+          docker compose exec backend ./manage.py create_plan_for_e2e_test High ${{secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_HI }}
 
       - name: Run E2E tests against local stack
         id: e2e

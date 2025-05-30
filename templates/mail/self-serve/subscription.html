@@ -8,9 +8,7 @@
     window._page.paddleToken="{{ paddle_token }}";
     window._page.paddleEnvironment="{{ paddle_environment}}";
     window._page.successRedirect="{{ success_redirect }}";
-    window._page.paddlePriceIdLo="{{ paddle_price_id_lo }}";
-    window._page.paddlePriceIdMd="{{ paddle_price_id_md }}";
-    window._page.paddlePriceIdHi="{{ paddle_price_id_hi }}";
+    window._page.paddlePlanInfo={{ paddle_plan_info|safe }};
     window._page.signedUserId="{{ signed_user_id }}";
   </script>
 {% endblock %}
