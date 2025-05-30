@@ -33,6 +33,7 @@ jobs:
       PADDLE_PRICE_ID_MD: ${{ secrets.E2E_ACCTS_PADDLE_PRICE_ID_MD }}
       PADDLE_PRICE_ID_HI: ${{ secrets.E2E_ACCTS_PADDLE_PRICE_ID_HI }}
       EMAIL_SIGN_UP_ADDRESS: ${{ secrets.E2E_ACCTS_PADDLE_EMAIL_SIGN_UP_ADDRESS }}
+      PADDLE_API_KEY: ${{ secrets.E2E_ACCTS_PADDLE_API_KEY }}
 
     steps:
       - uses: actions/checkout@v4
