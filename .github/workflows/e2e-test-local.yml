@@ -29,9 +29,6 @@ jobs:
       LOGIN_CODE_SECRET: ${{ secrets.E2E_ACCTS_LOGIN_CODE_SECRET }}
       FXA_ENCRYPT_SECRET: ${{ secrets.E2E_ACCTS_FXA_ENCRYPT_SECRET }}
       PADDLE_TOKEN: ${{ secrets.E2E_ACCTS_PADDLE_TOKEN }}
-      PADDLE_PRODUCT_ID_LO: ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_LO }}
-      PADDLE_PRODUCT_ID_MD: ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_MD }}
-      PADDLE_PRODUCT_ID_HI: ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_HI }}
       EMAIL_SIGN_UP_ADDRESS: ${{ secrets.E2E_ACCTS_PADDLE_EMAIL_SIGN_UP_ADDRESS }}
       PADDLE_API_KEY: ${{ secrets.E2E_ACCTS_PADDLE_API_KEY }}
 
@@ -70,9 +67,9 @@ jobs:
 
       - name: Create test plans
         run: |
-          docker compose exec backend ./manage.py create_plan_for_e2e_test Low ${{ PADDLE_PRODUCT_ID_LO }}
-          docker compose exec backend ./manage.py create_plan_for_e2e_test Medium ${{ PADDLE_PRODUCT_ID_MD }}
-          docker compose exec backend ./manage.py create_plan_for_e2e_test High ${{ PADDLE_PRODUCT_ID_HI }}
+          docker compose exec backend ./manage.py create_plan_for_e2e_test Low ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_LO }}
+          docker compose exec backend ./manage.py create_plan_for_e2e_test Medium ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_MD }}
+          docker compose exec backend ./manage.py create_plan_for_e2e_test High ${{secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_HI }}
 
       - name: Run E2E tests against local stack
         id: e2e
