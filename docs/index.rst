@@ -19,7 +19,7 @@ Contents
     infra.rst
     frontend.rst
     mail.rst
-    tasks.py
+    tasks.rst
     webhooks.rst
     internal_client_env.rst
     building.rst

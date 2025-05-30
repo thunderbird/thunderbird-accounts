@@ -131,7 +131,16 @@ def self_serve_connection_info(request: HttpRequest):
 
 @login_required
 def self_serve_subscription(request: HttpRequest):
-    """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
+    """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay
+
+    This page requires a bit of setup before it can properly display:
+
+    #. Have Paddle's (Sandbox or Production) API key set, and Paddle's client-side token setup.
+    #. Pull a list of Paddle products and prices via the cli commands (these run on container boot.)
+    #. At least one :any:`thunderbird_accounts.subscription.models.Plan` instance that's set up with a
+        :any:`thunderbird_accounts.subscription.models.Product` relationship.
+
+    """
     account = request.user.account_set.first()
     signer = Signer()
 
