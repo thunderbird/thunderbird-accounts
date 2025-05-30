@@ -2,9 +2,11 @@ import datetime
 import logging
 
 from celery import shared_task
+from django.conf import settings
 from django.core.signing import Signer, BadSignature
 
-from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product
+from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product, Plan
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -330,4 +332,49 @@ def paddle_product_event(self, event_data: dict, occurred_at: datetime.datetime,
         'task_status': 'success',
         'model_uuid': product.uuid,
         'model_created': product_created,
+    }
+
+
+@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+def update_thundermail_quota(self, plan_uuid, mail_storage_gb):
+    """Since Stalwart only checks the db we have to manually propagate a plan change across the user's accounts."""
+    try:
+        plan = Plan.objects.get(pk=plan_uuid)
+    except Plan.DoesNotExist:
+        logging.error(f'Could not find Plan with pk={plan_uuid}!')
+        return {
+            'plan_uuid': plan_uuid,
+            'mail_storage_gb': mail_storage_gb,
+            'task_status': 'failed',
+            'reason': 'plan does not exist',
+        }
+
+    updated = 0
+    skipped = 0
+
+    # Stalwart stores it in bytes, we store it in gb because it's easier to read by human eyes.
+    mail_storage_bytes = mail_storage_gb * settings.ONE_GIGABYTE_IN_BYTES
+
+    if plan.product:
+        for item in plan.product.subscriptionitem_set.all():
+            # This actually can't happen due to db constraints, but covering our bases...
+            if not item.subscription or not item.subscription.user:
+                logging.warning(
+                    f'Subscription not found, or subscription user not found for subscription item={item.uuid}'
+                )
+                skipped += 1
+                continue
+
+            user: User = item.subscription.user
+            for account in user.account_set.all():
+                account.quota = mail_storage_bytes
+                account.save()
+                updated += 1
+
+    return {
+        'plan_uuid': plan_uuid,
+        'mail_storage_gb': mail_storage_gb,
+        'task_status': 'success',
+        'updated': updated,
+        'skipped': skipped,
     }
