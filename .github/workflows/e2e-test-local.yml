@@ -70,9 +70,9 @@ jobs:
 
       - name: Create test plans
         run: |
-          docker compose exec backend ./manage.py create_plan_for_e2e_test Low $PADDLE_PRODUCT_ID_LO
-          docker compose exec backend ./manage.py create_plan_for_e2e_test Medium $PADDLE_PRODUCT_ID_MD
-          docker compose exec backend ./manage.py create_plan_for_e2e_test High $PADDLE_PRODUCT_ID_HI
+          docker compose exec backend ./manage.py create_plan_for_e2e_test Low ${{ PADDLE_PRODUCT_ID_LO }}
+          docker compose exec backend ./manage.py create_plan_for_e2e_test Medium ${{ PADDLE_PRODUCT_ID_MD }}
+          docker compose exec backend ./manage.py create_plan_for_e2e_test High ${{ PADDLE_PRODUCT_ID_HI }}
 
       - name: Run E2E tests against local stack
         id: e2e
