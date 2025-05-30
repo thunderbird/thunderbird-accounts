@@ -4,7 +4,7 @@ import {initializePaddle} from '@paddle/paddle-js';
 
 const isLoading = ref(true);
 const priceItems = ref({});
-const isPaddleTokenMissing = ref(false);
+const isPaddleNotConfiguredCorrectly = ref(false);
 const didReceivePaddleError = ref(false);
 const errorTitle = ref('');
 
@@ -25,9 +25,10 @@ const paddleItems = paddlePlanInfo.map((priceId) => ({
 }));
 
 onMounted(() => {
-  if (!paddleToken) {
-    isPaddleTokenMissing.value = true;
+  if (!paddleToken || paddleItems.length === 0) {
+    isPaddleNotConfiguredCorrectly.value = true;
     errorTitle.value = 'Configuration Error';
+    isLoading.value = false;
     return;
   }
 
@@ -94,7 +95,7 @@ async function initPaddle(items, fn) {
 <template>
   <div class="pricing-page-container">
     <h1>Choose your plan</h1>
-    <div v-if="isPaddleTokenMissing || didReceivePaddleError" class="paddle-error" data-testid="pricing-error">
+    <div v-if="isPaddleNotConfiguredCorrectly || didReceivePaddleError" class="paddle-error" data-testid="pricing-error">
       <h3>{{ errorTitle }}</h3>
       <p>Cannot complete checkout at this time.</p>
     </div>
