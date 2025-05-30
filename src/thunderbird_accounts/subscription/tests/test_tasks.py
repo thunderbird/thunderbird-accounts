@@ -751,7 +751,7 @@ class UpdateThundermailQuotaTestCase(TestCase):
             paddle_id='sub_123',
             user_id=self.test_user.uuid,
         )
-        subscription_item = models.SubscriptionItem.objects.create(
+        _subscription_item = models.SubscriptionItem.objects.create(
             quantity=1,
             subscription_id=subscription.uuid,
             product_id=product.uuid,
