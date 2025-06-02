@@ -9,6 +9,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient, APITestCase as DRF_APITestCase
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.subscription import tasks, models
 from thunderbird_accounts.mail import models as mail_models
 from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
@@ -157,6 +158,12 @@ class PaddleTestCase(TestCase):
 
         self.celery_task_always_eager_setting = settings.CELERY_TASK_ALWAYS_EAGER
         self.test_user = User.objects.create_user('test', 'test@example.org', '1234')
+
+        # Create a mail account
+        self.test_mail_account = Account.objects.create(
+            name='Test Account',
+            django_user_id=self.test_user.uuid,
+        )
 
         # Make sure tasks run in sync
         settings.CELERY_TASK_ALWAYS_EAGER = True
@@ -427,6 +434,57 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
         self.assertEqual(subscription_items[1].quantity, 1)
         self.assertIsNotNone(subscription_items[1].subscription)
         self.assertIsNotNone(subscription_items[1].price)
+
+    def test_success_updates_account_quota(self):
+        self.assertEqual(models.Subscription.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        items = event_data.get('items')
+        self.assertIsNotNone(items)
+
+        product_id = items[0].get('product', {}).get('id')
+        product_name = items[0].get('product', {}).get('name')
+
+        self.assertIsNotNone(product_id)
+        self.assertIsNotNone(product_name)
+
+        product = models.Product.objects.create(paddle_id=product_id, name=product_name)
+
+        self.assertIsNotNone(product)
+
+        quota_in_gb = 1337
+        plan = models.Plan.objects.create(
+            name='Test Plan',
+            product_id=product.uuid,
+            mail_storage_gb=quota_in_gb,
+        )
+
+        self.assertIsNotNone(plan)
+
+        task_results: dict | None = tasks.paddle_subscription_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+
+        # Success results have model_created and model_uuid, so test this first
+        self.assertEqual(task_results.get('task_status'), 'success', msg=task_results)
+
+        # This should be a new model
+        self.assertTrue(task_results.get('model_created'))
+
+        # Check if the model actually exists
+        self.assertTrue(models.Subscription.objects.filter(pk=task_results.get('model_uuid')).exists())
+
+        self.assertEqual(self.test_mail_account.quota, 0)
+        self.test_mail_account.refresh_from_db()
+        self.assertEqual(self.test_mail_account.quota, 1_337_000_000_000)
 
     def test_subscription_already_exists(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
@@ -785,7 +843,7 @@ class UpdateThundermailQuotaTestCase(TestCase):
         account.refresh_from_db()
 
         # 1gb in bytes manually calculated
-        self.assertEqual(account.quota, 1_073_741_824)
+        self.assertEqual(account.quota, 1_000_000_000)
 
     def test_plan_does_not_exist(self):
         # Manually created this uuid, it should not exist

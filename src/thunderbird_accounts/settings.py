@@ -393,7 +393,7 @@ sentry_sdk.set_extra('CELERY_TASK_ALWAYS_EAGER', CELERY_TASK_ALWAYS_EAGER)
 CORS_PREFLIGHT_MAX_AGE = 0  # For debugging purposes
 CORS_ALLOWED_ORIGINS = [host for host in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if host]
 
-ONE_GIGABYTE_IN_BYTES = 1073741824  # 1<<30
+ONE_GIGABYTE_IN_BYTES = 1_000_000_000
 
 # For local docker usage
 if DEBUG:
