@@ -7,10 +7,10 @@ from thunderbird_accounts.subscription.models import Subscription, Plan, Subscri
 
 class ReadOnlyAdminMixin:
     def has_add_permission(self, request, obj=None):
-        return False
+        return settings.DEBUG
 
     def has_change_permission(self, request, obj=None):
-        return False
+        return settings.DEBUG
 
     # def has_delete_permission(self, request, obj=None):
     #    return False
@@ -19,9 +19,7 @@ class ReadOnlyAdminMixin:
 class CustomReadonlyAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
     def view_on_site(self, obj=None):
         """Handy link to the Paddle vendor site for various Paddle models"""
-        base_url = (
-            'https://sandbox-vendors.paddle.com' if settings.PADDLE_ENV == 'sandbox' else 'https://vendors.paddle.com'
-        )
+        base_url = settings.PADDLE_VENDOR_SITE
 
         if obj is None:
             return None
