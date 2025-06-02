@@ -124,7 +124,7 @@ class Plan(BaseModel):
         null=True, help_text=_('Amount of send storage a user has access to (in GB).')
     )
 
-    product = models.ForeignKey('Product', null=True, on_delete=models.CASCADE)
+    product = models.OneToOneField('Product', null=True, on_delete=models.CASCADE)
 
     def __str__(self):
         if self.product:
