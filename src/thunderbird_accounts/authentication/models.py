@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.db import models
@@ -88,3 +90,9 @@ class User(AbstractUser, BaseModel):
 
     def get_short_name(self):
         return self.display_name
+
+    @cached_property
+    def has_active_subscription(self):
+        from thunderbird_accounts.subscription.models import Subscription
+
+        return self.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).count() > 0

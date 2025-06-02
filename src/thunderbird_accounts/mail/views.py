@@ -12,8 +12,16 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 
+try:
+    from paddle_billing import Client
+    from paddle_billing.Resources.CustomerPortalSessions.Operations import CreateCustomerPortalSession
+except ImportError:
+    Client = None
+    CreateCustomerPortalSession = None
+
 from thunderbird_accounts.authentication.templatetags.helpers import get_admin_login_code
 from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
 
 
@@ -82,7 +90,12 @@ def sign_up_submit(request: HttpRequest):
 
 def self_serve_common_options(is_account_settings: bool, account: Account):
     """Common return params for self serve pages"""
-    return {'has_account': True if account else False, 'is_account_settings': is_account_settings}
+    user = account.django_user
+    return {
+        'has_account': True if account else False,
+        'is_account_settings': is_account_settings,
+        'has_active_subscription': user.has_active_subscription,
+    }
 
 
 @login_required
@@ -130,7 +143,8 @@ def self_serve_connection_info(request: HttpRequest):
 
 
 @login_required
-def self_serve_subscription(request: HttpRequest):
+@inject_paddle
+def self_serve_subscription(request: HttpRequest, paddle: Client):
     """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay
 
     This page requires a bit of setup before it can properly display:
@@ -141,8 +155,17 @@ def self_serve_subscription(request: HttpRequest):
         :any:`thunderbird_accounts.subscription.models.Product` relationship.
 
     """
+    user = request.user
     account = request.user.account_set.first()
     signer = Signer()
+
+    if user.has_active_subscription:
+        subscription = user.subscription_set.first()
+
+        customer_session = paddle.customer_portal_sessions.create(
+            subscription.paddle_customer_id, CreateCustomerPortalSession()
+        )
+        return HttpResponseRedirect(customer_session.urls.general.overview)
 
     plan_info = []
     plans = Plan.objects.filter(visible_on_subscription_page=True).exclude(product_id__isnull=True).all()

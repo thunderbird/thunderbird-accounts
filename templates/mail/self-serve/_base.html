@@ -2,6 +2,7 @@
 {% load helpers %}
 {% block extra_page_params %}
   hasAccount: {{ has_account|to_json }},
+  hasActiveSubscription: {{ has_active_subscription|to_json }}
 {% endblock %}
 {% block nav %}
   <p>Welcome back {{ user.display_name }}.</p>
