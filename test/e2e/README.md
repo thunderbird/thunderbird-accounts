@@ -34,7 +34,7 @@ In the top level `.env` file, add the values from the "Paddle Sandbox env vars" 
 
 ```dotenv
 PADDLE_TOKEN=<token>
-PADDLE_API=<token>
+PADDLE_API_KEY=<token>
 PADDLE_ENV=sandbox
 ```
 

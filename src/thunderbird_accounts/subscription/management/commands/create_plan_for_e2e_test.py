@@ -39,12 +39,12 @@ class Command(BaseCommand):
         paddle_product_id = options.get('paddle_product_id')
         verbosity = options.get('verbosity', 1)
 
-        try:
-            product = models.Product.objects.filter(paddle_id=paddle_product_id).first()
-        except models.Product.DoesNotExist:
+        product = models.Product.objects.filter(paddle_id=paddle_product_id).first()
+
+        if not product:
             if verbosity > 0:
                 self.stdout.write(self.style.ERROR('Failed to create test plan.'))
-            return self.ReturnCodes.PRODUCT_DOES_NOT_EXIST
+            return self.ReturnCodes.PRODUCT_DOES_NOT_EXIST.value
 
         plan = models.Plan.objects.create(
             name=name,
