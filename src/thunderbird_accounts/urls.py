@@ -1,3 +1,10 @@
+"""
+Thunderbird Accounts Urls
+-------------------------
+
+These are the routes and some light admin panel customization are located.
+"""
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin

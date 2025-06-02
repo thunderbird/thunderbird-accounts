@@ -2,7 +2,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.core.management import call_command
 
-from thunderbird_accounts.subscription.models import Product, Price
+from thunderbird_accounts.subscription.models import Product, Price, Plan
 
 
 class GetPaddleProductTest(TestCase):
@@ -76,6 +76,7 @@ class GetPaddlePriceTest(TestCase):
             billing_cycle = None
             type = 'standard'
             product_id = 'pro_abc123'
+            status = 'active'
 
             def __init__(self):
                 self.unit_price = UnitPriceObj()
@@ -121,6 +122,7 @@ class GetPaddlePriceTest(TestCase):
             billing_cycle = None
             type = 'standard'
             product_id = 'pro_abc123'
+            status = 'active'
 
             def __init__(self):
                 self.unit_price = UnitPriceObj()
@@ -160,3 +162,38 @@ class GetPaddlePriceTest(TestCase):
             self.assertIsNotNone(price.product)
             self.assertEqual(price.product.uuid, product.uuid)
             self.assertEqual(price.billing_cycle_interval, '7')
+
+
+class CreatePlanForE2ETestCase(TestCase):
+    def test_created_success(self):
+        product = Product.objects.create(
+            paddle_id='pro_abc123', name='Product A', product_type='standard', status='active'
+        )
+
+        self.assertTrue(product)
+        self.assertEqual(Plan.objects.count(), 0)
+
+        plan_name = 'Test Plan'
+
+        args = [plan_name, product.paddle_id]
+        opts = {}
+        call_command('create_plan_for_e2e_test', *args, **opts)
+
+        self.assertEqual(Plan.objects.count(), 1)
+
+        plan = Plan.objects.first()
+        self.assertEqual(plan.name, plan_name)
+        self.assertEqual(plan.product_id, product.uuid)
+
+    def test_product_not_found(self):
+        self.assertEqual(Plan.objects.count(), 0)
+        self.assertEqual(Product.objects.count(), 0)
+
+        plan_name = 'Test Plan'
+
+        args = [plan_name, 'pro_fakeid']
+        opts = {}
+        out = call_command('create_plan_for_e2e_test', *args, **opts)
+
+        self.assertEqual(Plan.objects.count(), 0)
+        self.assertEqual(out, 'PRODUCT_DOES_NOT_EXIST')

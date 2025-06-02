@@ -34,10 +34,8 @@ In the top level `.env` file, add the values from the "Paddle Sandbox env vars" 
 
 ```dotenv
 PADDLE_TOKEN=<token>
+PADDLE_API_KEY=<token>
 PADDLE_ENV=sandbox
-PADDLE_PRICE_ID_LO=<price id 1>
-PADDLE_PRICE_ID_MD=<price id 2>
-PADDLE_PRICE_ID_HI=<price id 3>
 ```
 
 ### Add FxA Account Information
@@ -58,6 +56,18 @@ ACCTS_FXA_EMAIL=<existing-stage-FxA-user-email>
 ACCTS_FXA_PWORD=<exisiting-stage-FxA-user-password>
 ```
 
+## Setup Paddle backend for subscription tests (optional)
+
+Retrieve the 3 product ids from the Paddle secure note in 1password and run the following command with each product id 
+while docker is running:
+
+```bash
+docker-compose exec backend ./manage.py create_plan_for_e2e_test <Plan Name> <Product ID>
+
+# Example/
+docker-compose exec backend ./manage.py create_plan_for_e2e_test Low pro_23edfsndfgjsn3kjn234n
+```
+
 ### Run the tests
 
 To run the E2E tests headless (still in `test/e2e`):
@@ -76,6 +86,15 @@ To run the E2E tests in debug mode (still in `test/e2e`):
 
 ```bash
 npm run e2e-test-debug
+```
+
+#### Skipping Paddle tests
+
+If you don't want to or cannot setup the backend for Paddle you can skip the Paddle specific tests by adding the param 
+`--grep-invert @paddle` to the test command. 
+
+```bash
+npm run e2e-test -- --grep-invert @paddle
 ```
 
 ## Running the E2E tests against the stage environmnent

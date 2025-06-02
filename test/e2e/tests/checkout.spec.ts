@@ -27,7 +27,7 @@ test.describe(
     tag: [PLAYWRIGHT_TAG_E2E_SUITE],
   },
   () => {
-    test.describe('with bad Paddle response', () => {
+    test.describe('with bad Paddle response', { tag: '@paddle' },() => {
       test.beforeEach(async ({ page }) => {
         checkoutPage = new CheckoutPage(page);
         // we are already signed into accounts via our auth.setup
@@ -47,7 +47,7 @@ test.describe(
       });
     });
 
-    test.describe('with good Paddle response', () => {
+    test.describe('with good Paddle response', { tag: '@paddle' }, () => {
       test.beforeEach(async ({ page }) => {
         checkoutPage = new CheckoutPage(page);
         // we are already signed into accounts via our auth.setup
@@ -56,10 +56,10 @@ test.describe(
 
       test('shows correct products when SDK calls /pricing-preview', async ({ page }) => {
         await expect(checkoutPage.pricingGrid).toBeVisible();
-        await expect(checkoutPage.priceCards).toHaveCount(3);
-        await expect(checkoutPage.priceCards.nth(0)).toContainText('Small');
-        await expect(checkoutPage.priceCards.nth(1)).toContainText('Medium');
-        await expect(checkoutPage.priceCards.nth(2)).toContainText('Big');
+        await expect(checkoutPage.planCards).toHaveCount(3);
+        await expect(checkoutPage.planCards.nth(0)).toContainText('Small');
+        await expect(checkoutPage.planCards.nth(1)).toContainText('Medium');
+        await expect(checkoutPage.planCards.nth(2)).toContainText('High');
       });
 
       test('able to complete a checkout', async ({ page }) => {

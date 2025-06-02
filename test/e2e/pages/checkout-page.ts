@@ -6,6 +6,7 @@ export class CheckoutPage {
   readonly checkoutHeader: Locator;
   readonly pricingGrid: Locator;
   readonly priceCards: Locator;
+  readonly planCards: Locator;
   readonly checkoutButtons: Locator;
 
   constructor(page: Page) {
@@ -13,6 +14,7 @@ export class CheckoutPage {
     this.checkoutHeader = this.page.getByRole('heading', { name: 'Self Serve - Subscription' });
     this.pricingGrid = this.page.getByTestId('pricing-grid');
     this.priceCards = this.page.getByTestId('pricing-grid-price-item');
+    this.planCards = this.page.getByTestId('pricing-grid-plan-item');
     this.checkoutButtons = this.page.getByTestId('checkout-button');
   }
 
