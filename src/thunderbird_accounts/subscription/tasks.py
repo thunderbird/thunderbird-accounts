@@ -2,11 +2,11 @@ import datetime
 import logging
 
 from celery import shared_task
-from django.conf import settings
 from django.core.signing import Signer, BadSignature
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product, Plan
+from thunderbird_accounts.subscription.utils import update_user_mail_quota, calculate_quota_in_bytes
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -250,7 +250,20 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             try:
                 product_obj = Product.objects.filter(paddle_id=product.get('id')).get()
             except Product.DoesNotExist:
+                product_obj = None
                 logging.warning(f'Product {product.get("id")} does not exist in db!')
+
+        if product_obj:
+            # Update quota
+            plan = product_obj.plan
+            if not plan:
+                logging.warning(f'Product {product.get("id")} has no plan attached!')
+            else:
+                try:
+                    user = User.objects.get(pk=user_uuid)
+                    update_user_mail_quota(user, plan)
+                except User.DoesNotExist:
+                    logging.warning(f'Product {product.get("id")} has no valid user attached!')
 
         SubscriptionItem.objects.update_or_create(
             paddle_price_id=price.get('id'),
@@ -353,7 +366,7 @@ def update_thundermail_quota(self, plan_uuid, mail_storage_gb):
     skipped = 0
 
     # Stalwart stores it in bytes, we store it in gb because it's easier to read by human eyes.
-    mail_storage_bytes = mail_storage_gb * settings.ONE_GIGABYTE_IN_BYTES
+    mail_storage_bytes = calculate_quota_in_bytes(mail_storage_gb)
 
     if plan.product:
         for item in plan.product.subscriptionitem_set.all():
