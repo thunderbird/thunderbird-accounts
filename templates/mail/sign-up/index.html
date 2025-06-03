@@ -17,6 +17,7 @@
   <div id="signUpFlowForm"></div>
   {% endif %}
   <script>
-  window._page.allowedDomains = {{ allowed_domains|safe }}
+  window._page.allowedDomains = {{ allowed_domains|safe }};
+  window._page.cancelRedirect="{{ cancel_redirect }}";
   </script>
 {% endblock %}
