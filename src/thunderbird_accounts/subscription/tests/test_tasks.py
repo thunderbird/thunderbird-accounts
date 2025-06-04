@@ -9,7 +9,9 @@ from django.test import TestCase
 from rest_framework.test import APIClient, APITestCase as DRF_APITestCase
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.subscription import tasks, models
+from thunderbird_accounts.mail import models as mail_models
 from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
 
 
@@ -156,6 +158,12 @@ class PaddleTestCase(TestCase):
 
         self.celery_task_always_eager_setting = settings.CELERY_TASK_ALWAYS_EAGER
         self.test_user = User.objects.create_user('test', 'test@example.org', '1234')
+
+        # Create a mail account
+        self.test_mail_account = Account.objects.create(
+            name='Test Account',
+            django_user_id=self.test_user.uuid,
+        )
 
         # Make sure tasks run in sync
         settings.CELERY_TASK_ALWAYS_EAGER = True
@@ -426,6 +434,57 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
         self.assertEqual(subscription_items[1].quantity, 1)
         self.assertIsNotNone(subscription_items[1].subscription)
         self.assertIsNotNone(subscription_items[1].price)
+
+    def test_success_updates_account_quota(self):
+        self.assertEqual(models.Subscription.objects.count(), 0)
+
+        # Retrieve the webhook sample
+        data = self.retrieve_webhook_fixture()
+
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        items = event_data.get('items')
+        self.assertIsNotNone(items)
+
+        product_id = items[0].get('product', {}).get('id')
+        product_name = items[0].get('product', {}).get('name')
+
+        self.assertIsNotNone(product_id)
+        self.assertIsNotNone(product_name)
+
+        product = models.Product.objects.create(paddle_id=product_id, name=product_name)
+
+        self.assertIsNotNone(product)
+
+        quota_in_gb = 1337
+        plan = models.Plan.objects.create(
+            name='Test Plan',
+            product_id=product.uuid,
+            mail_storage_gb=quota_in_gb,
+        )
+
+        self.assertIsNotNone(plan)
+
+        task_results: dict | None = tasks.paddle_subscription_event.delay(
+            event_data, occurred_at, self.is_create_event
+        ).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+
+        # Success results have model_created and model_uuid, so test this first
+        self.assertEqual(task_results.get('task_status'), 'success', msg=task_results)
+
+        # This should be a new model
+        self.assertTrue(task_results.get('model_created'))
+
+        # Check if the model actually exists
+        self.assertTrue(models.Subscription.objects.filter(pk=task_results.get('model_uuid')).exists())
+
+        self.assertEqual(self.test_mail_account.quota, 0)
+        self.test_mail_account.refresh_from_db()
+        self.assertEqual(self.test_mail_account.quota, 1_337_000_000_000)
 
     def test_subscription_already_exists(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
@@ -718,3 +777,88 @@ class ProductUpdatedTaskTestCase(ProductCreatedTaskTestCase):
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
         self.assertEqual(task_results.get('task_status'), 'failed')
         self.assertEqual(task_results.get('reason'), 'webhook is out of date')
+
+
+class UpdateThundermailQuotaTestCase(TestCase):
+    celery_task_always_eager_setting: bool = False
+    test_user: User = None
+
+    def setUp(self):
+        super().setUp()
+
+        self.celery_task_always_eager_setting = settings.CELERY_TASK_ALWAYS_EAGER
+        self.test_user = User.objects.create_user('test', 'test@example.org', '1234')
+
+        # Make sure tasks run in sync
+        settings.CELERY_TASK_ALWAYS_EAGER = True
+
+    def tearDown(self):
+        super().tearDown()
+
+        settings.CELERY_TASK_ALWAYS_EAGER = self.celery_task_always_eager_setting
+
+    def test_success(self):
+        # Create the paddle objects
+        product = models.Product.objects.create(
+            paddle_id='pro_123',
+            name='A product',
+            product_type=models.Product.TypeValues.STANDARD,
+            status=models.Product.StatusValues.ACTIVE,
+        )
+        subscription = models.Subscription.objects.create(
+            paddle_id='sub_123',
+            user_id=self.test_user.uuid,
+        )
+        _subscription_item = models.SubscriptionItem.objects.create(
+            quantity=1,
+            subscription_id=subscription.uuid,
+            product_id=product.uuid,
+        )
+        plan = models.Plan.objects.create(name='Test Plan', mail_storage_gb=1, product_id=product.uuid)
+
+        # Create the thundermail objects
+        # ...Why mail models?
+        account = mail_models.Account.objects.create(
+            name='Test Account',
+            type=mail_models.Account.AccountType.INDIVIDUAL,
+            django_user_id=self.test_user.uuid,
+            quota=0,
+        )
+
+        # Ensure no quota
+        self.assertEqual(account.quota, 0)
+
+        # Run the task
+        task_results: dict | None = tasks.update_thundermail_quota.delay(
+            plan_uuid=plan.uuid.hex, mail_storage_gb=plan.mail_storage_gb
+        ).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('plan_uuid'), plan.uuid.hex)
+        self.assertEqual(task_results.get('mail_storage_gb'), plan.mail_storage_gb)
+        self.assertEqual(task_results.get('task_status'), 'success')
+        self.assertEqual(task_results.get('updated'), 1)
+        self.assertEqual(task_results.get('skipped'), 0)
+
+        account.refresh_from_db()
+
+        # 1gb in bytes manually calculated
+        self.assertEqual(account.quota, 1_000_000_000)
+
+    def test_plan_does_not_exist(self):
+        # Manually created this uuid, it should not exist
+        plan_uuid = '13371337-aaaa-bbbb-cccc-123456789abc'
+        storage = 1
+        with self.assertRaises(models.Plan.DoesNotExist):
+            models.Plan.objects.get(pk=plan_uuid)
+
+        # Run the task
+        task_results: dict | None = tasks.update_thundermail_quota.delay(
+            plan_uuid=plan_uuid, mail_storage_gb=storage
+        ).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('plan_uuid'), plan_uuid)
+        self.assertEqual(task_results.get('mail_storage_gb'), storage)
+        self.assertEqual(task_results.get('task_status'), 'failed')
+        self.assertEqual(task_results.get('reason'), 'plan does not exist')

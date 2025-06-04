@@ -12,8 +12,18 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 
+from thunderbird_accounts.authentication.models import User
+
+try:
+    from paddle_billing import Client
+    from paddle_billing.Resources.CustomerPortalSessions.Operations import CreateCustomerPortalSession
+except ImportError:
+    Client = None
+    CreateCustomerPortalSession = None
+
 from thunderbird_accounts.authentication.templatetags.helpers import get_admin_login_code
 from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
 
 
@@ -80,9 +90,13 @@ def sign_up_submit(request: HttpRequest):
     return HttpResponseRedirect(reverse('sign_up'))
 
 
-def self_serve_common_options(is_account_settings: bool, account: Account):
+def self_serve_common_options(is_account_settings: bool, user: User, account: Account):
     """Common return params for self serve pages"""
-    return {'has_account': True if account else False, 'is_account_settings': is_account_settings}
+    return {
+        'has_account': True if account else False,
+        'is_account_settings': is_account_settings,
+        'has_active_subscription': user.has_active_subscription,
+    }
 
 
 @login_required
@@ -100,7 +114,7 @@ def self_serve_account_settings(request: HttpRequest):
     return TemplateResponse(
         request,
         'mail/self-serve/account-info.html',
-        self_serve_common_options(True, account),
+        self_serve_common_options(True, request.user, account),
     )
 
 
@@ -119,7 +133,7 @@ def self_serve_connection_info(request: HttpRequest):
         request,
         'mail/self-serve/connection-info.html',
         {
-            **self_serve_common_options(False, account),
+            **self_serve_common_options(False, request.user, account),
             'mail_address': email.address if email else None,
             'mail_username': account.name if account else None,
             'IMAP': settings.CONNECTION_INFO['IMAP'],
@@ -130,7 +144,8 @@ def self_serve_connection_info(request: HttpRequest):
 
 
 @login_required
-def self_serve_subscription(request: HttpRequest):
+@inject_paddle
+def self_serve_subscription(request: HttpRequest, paddle: Client):
     """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay
 
     This page requires a bit of setup before it can properly display:
@@ -141,8 +156,17 @@ def self_serve_subscription(request: HttpRequest):
         :any:`thunderbird_accounts.subscription.models.Product` relationship.
 
     """
+    user = request.user
     account = request.user.account_set.first()
     signer = Signer()
+
+    if user.has_active_subscription:
+        subscription = user.subscription_set.first()
+
+        customer_session = paddle.customer_portal_sessions.create(
+            subscription.paddle_customer_id, CreateCustomerPortalSession()
+        )
+        return HttpResponseRedirect(customer_session.urls.general.overview)
 
     plan_info = []
     plans = Plan.objects.filter(visible_on_subscription_page=True).exclude(product_id__isnull=True).all()
@@ -160,7 +184,7 @@ def self_serve_subscription(request: HttpRequest):
             'paddle_environment': settings.PADDLE_ENV,
             'paddle_plan_info': json.dumps(plan_info),
             'signed_user_id': signer.sign(request.user.uuid.hex),
-            **self_serve_common_options(False, account),
+            **self_serve_common_options(False, request.user, account),
         },
     )
 
@@ -172,7 +196,7 @@ def self_serve_subscription_success(request: HttpRequest):
     return TemplateResponse(
         request,
         'mail/self-serve/subscription-success.html',
-        {'is_subscription': True, **self_serve_common_options(False, account)},
+        {'is_subscription': True, **self_serve_common_options(False, request.user, account)},
     )
 
 
@@ -187,7 +211,7 @@ def self_serve_app_passwords(request: HttpRequest):
         request,
         'mail/self-serve/app-passwords.html',
         {
-            **self_serve_common_options(False, account),
+            **self_serve_common_options(False, request.user, account),
             'app_passwords': json.dumps(app_passwords),
         },
     )
