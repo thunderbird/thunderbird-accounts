@@ -36,9 +36,10 @@ elif not APP_ENV:
 APP_ENV = os.getenv('APP_ENV')
 
 IS_DOCS = APP_ENV == 'docs'
+IS_DEV = APP_ENV == 'dev'
 
 # Only allow DEBUG on dev or test envs.
-DEBUG: bool = os.getenv('APP_DEBUG') and (APP_ENV == 'dev' or APP_ENV == 'test')
+DEBUG: bool = os.getenv('APP_DEBUG') and (IS_DEV or APP_ENV == 'test')
 
 
 def before_send(event: Event, hint: Hint) -> Event | None:
@@ -108,6 +109,10 @@ PADDLE_PRICE_ID_MD: str = os.getenv('PADDLE_PRICE_ID_MD')
 PADDLE_PRICE_ID_HI: str = os.getenv('PADDLE_PRICE_ID_HI')
 PADDLE_WEBHOOK_KEY: str = os.getenv('PADDLE_WEBHOOK_KEY')
 PADDLE_API_KEY: str = os.getenv('PADDLE_API_KEY')
+# Used in admin panel to quick link to various subscriptions or product pages
+PADDLE_VENDOR_SITE: str = (
+    'https://sandbox-vendors.paddle.com' if PADDLE_ENV == 'sandbox' else 'https://vendors.paddle.com'
+)
 
 ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
@@ -387,6 +392,8 @@ sentry_sdk.set_extra('CELERY_TASK_ALWAYS_EAGER', CELERY_TASK_ALWAYS_EAGER)
 # Cors
 CORS_PREFLIGHT_MAX_AGE = 0  # For debugging purposes
 CORS_ALLOWED_ORIGINS = [host for host in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if host]
+
+ONE_GIGABYTE_IN_BYTES = 1_000_000_000
 
 # For local docker usage
 if DEBUG:
