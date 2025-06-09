@@ -82,6 +82,6 @@ const onCancel = () => {
 .button-container {
   display: flex;
   flex-direction: row;
-  gap: 0.25rem;
+  gap: 1rem;
 }
 </style>
