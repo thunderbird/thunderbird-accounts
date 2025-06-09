@@ -49,6 +49,7 @@ def sign_up(request: HttpRequest):
         'mail/sign-up/index.html',
         {
             'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS,
+            'cancel_redirect': reverse('self_serve_account_info'),
         },
     )
 
