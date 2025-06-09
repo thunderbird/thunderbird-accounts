@@ -17,7 +17,43 @@ permissions:
   contents: read    # This is required for actions/checkout
 
 jobs:
+  # This job detects which parts of the repo have been changed, setting future jobs up for conditional behavior.
+  detect-changes:
+    runs-on: ubuntu-latest
+    env:
+      IS_CI_AUTOMATION: "yes"
+    outputs:
+      src-changed: ${{ steps.check.outputs.src-changed }}
+      iac-changed: ${{ steps.check.outputs.iac-changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: dorny/paths-filter@v3
+        id: check
+        with:
+          filters: |
+            src-changed:
+              - 'assets/**'
+              - 'static/**'
+              - 'templates/**'
+              - 'scripts/dev-entry.sh'
+              - 'manage.py'
+              - 'MANIFEST.in'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'pyproject.toml'
+              - 'README.md'
+              - 'uv.lock'
+              - 'vite.config.mjs'
+            iac-changed:
+              - 'pulumi/**'
+  
   validate-backend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.src-changed == 'true'
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -38,3 +74,22 @@ jobs:
         continue-on-error: true
         run: |
           docker compose exec backend bash -c 'uv run coverage report'
+
+  validate-iac:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.iac-changed
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ruff formatting/linting checks
+        uses: chartboost/ruff-action@v1
+        with:
+          src: "pulumi"
+          args: "format --check"
+
+      - name: Ruff error checks
+        uses: chartboost/ruff-action@v1
+        with:
+          src: "pulumi"
