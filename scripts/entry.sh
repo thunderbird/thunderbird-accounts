@@ -28,11 +28,12 @@ fi
 if [[ "$TBA_CELERY" == "yes" ]]; then
     CMD="uv run celery -A thunderbird_accounts worker -l INFO"
 else
-    CMD="uv run uvicorn thunderbird_accounts.asgi:application $ARGS"
+    CMD="uv run uvicorn thunderbird_accounts.asgi:application"
     ARGS="--lifespan off --host 0.0.0.0 --port 8087"
     if [[ "$TBA_DEV" == "yes" ]]; then
         ARGS="$ARGS --reload --reload-include *.html"
     fi
+    CMD="$CMD $ARGS"
 fi
 
-$CMD $ARGS
+$CMD
