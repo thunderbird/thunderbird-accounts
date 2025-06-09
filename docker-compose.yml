@@ -2,12 +2,13 @@ x-env: &env
   POSTGRES_DB: accounts
   POSTGRES_USER: accounts
   POSTGRES_PASSWORD: accounts
+  TBA_DEV: yes
 services:
 
   postgres:
     image: postgres:17
     volumes:
-      - db:/var/lib/postgresql/data
+      - ./db:/var/lib/postgresql/data
     ports:
       - "5433:5432" # Note: host is exposed to 5433!
     environment:
@@ -47,14 +48,16 @@ services:
   celery:
     <<: *backend
     ports: []
-    command: uv run celery -A thunderbird_accounts worker -l INFO
+    environment:
+      <<: *env
+      TBA_CELERY: yes
 
   # Only used when APP_DEBUG=True
   frontend:
     build:
       context: .
       dockerfile: ./Dockerfile
-    command: npm run dev
+    entrypoint: npm run dev
     ports:
       - "5173:5173"
     volumes:
@@ -64,14 +67,6 @@ services:
       - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
       - ./assets:/app/assets
       - ./templates:/app/templates
-
-  #mailpit:
-  #  image: axllent/mailpit
-  #  environment:
-  #    - MP_SMTP_AUTH_ALLOW_INSECURE=true
-  #  ports:
-  #    - "8026:8025" # Web UI on port 8026
-  #    - "1026:1024" # SMTP on port 1026
 
   stalwart:
     image: stalwartlabs/mail-server:latest
