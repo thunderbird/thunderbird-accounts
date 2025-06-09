@@ -34,6 +34,7 @@ services:
       - "8087:8087"
     environment:
       <<: *env
+      ALLOWED_HOSTS: '*'
     volumes:
       - ./.env:/app/.env
       - ./.env.test:/app/.env.test
