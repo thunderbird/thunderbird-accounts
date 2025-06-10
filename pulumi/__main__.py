@@ -11,9 +11,9 @@ import tb_pulumi.network
 import tb_pulumi.secrets
 
 
-MSG_LB_MATCHING_CONTAINER='In this stack, container security groups must have matching load balancer security groups.'
-MSG_LB_MATCHING_CLUSTER='In this stack, Fargate clusters must have matching load balancer security groups.'
-MSG_CONTAINER_MATCHING_CLUSTER='In this stack, Fargate clusters must have matching container security groups.'
+MSG_LB_MATCHING_CONTAINER = 'In this stack, container security groups must have matching load balancer security groups.'
+MSG_LB_MATCHING_CLUSTER = 'In this stack, Fargate clusters must have matching load balancer security groups.'
+MSG_CONTAINER_MATCHING_CLUSTER = 'In this stack, Fargate clusters must have matching container security groups.'
 
 # Set up the project and convenient config access
 project = tb_pulumi.ThunderbirdPulumiProject()

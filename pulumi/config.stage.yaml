@@ -465,7 +465,7 @@ resources:
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
               - name: TBA_CELERY
-                value: yes
+                value: "yes"
 
   tb:ci:AwsAutomationUser:
     ci:

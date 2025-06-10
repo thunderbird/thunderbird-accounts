@@ -460,3 +460,5 @@ resources:
                 value: '0'
               - name: REDIS_SHARED_DB
                 value: '10'
+              - name: TBA_CELERY
+                value: "yes"
