@@ -20,7 +20,7 @@ jobs:
     env:
       IS_CI_AUTOMATION: "yes"
     outputs:
-      code-changed: ${{ steps.check.outputs.code-changed }}
+      src-changed: ${{ steps.check.outputs.src-changed }}
       iac-changed: ${{ steps.check.outputs.iac-changed }}
     steps:
       - uses: actions/checkout@v4
@@ -32,17 +32,26 @@ jobs:
         id: check
         with:
           filters: |
-            code-changed:
-              - 'src/**'
+            src-changed:
+              - 'assets/**'
+              - 'static/**'
+              - 'templates/**'
+              - 'scripts/dev-entry.sh'
+              - 'manage.py'
+              - 'MANIFEST.in'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'pyproject.toml'
+              - 'README.md'
+              - 'uv.lock'
+              - 'vite.config.mjs'
             iac-changed:
               - 'pulumi/**'
-              - '.github/workflows/validate.yml'
-              - '.github/workflows/deploy-stage.yml'
 
   # When accounts changes are merged in, build and push a new Docker image
   accounts-deploy:
     needs: detect-changes
-    if: needs.detect-changes.outputs.code-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true'
+    if: needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true'
     runs-on: ubuntu-latest
     env:
       IS_CI_AUTOMATION: "yes"
@@ -96,7 +105,7 @@ jobs:
           ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:${{ github.sha }}"
         run: |
           # Build a docker container and push it to ECR so that it can be deployed to ECS.
-          docker build -t $ECR_TAG -f ./Dockerfile.stage --platform="linux/amd64" .          
+          docker build -t $ECR_TAG --platform="linux/amd64" .          
           docker push $ECR_TAG
           echo "accounts-image=$ECR_TAG" >> $GITHUB_OUTPUT
           echo -n "$ECR_TAG" > ecr_tag.txt
@@ -108,30 +117,11 @@ jobs:
           name: ecr_tag
           path: ecr_tag.txt
 
-      - name: Build, tag, and push account's celery worker image to Amazon ECR
-        id: build-celery-worker
-        env:
-          ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}${{ env.CELERY_WORKER_TAG }}:${{ github.sha }}"
-        run: |
-          # Build a docker container and push it to ECR so that it can be deployed to ECS.
-          docker build -t $ECR_TAG -f ./Dockerfile.celery.stage --platform="linux/amd64" .          
-          docker push $ECR_TAG
-          echo "accounts-image=$ECR_TAG" >> $GITHUB_OUTPUT
-          echo -n "$ECR_TAG" > ecr_tag_celery_worker.txt
-
-      - name: Archive the ECR tag
-        id: tag-archive-celery
-        uses: actions/upload-artifact@v4
-        with:
-          name: ecr_tag_celery_worker
-          path: ecr_tag_celery_worker.txt
-
       # Deploy to stage
       - name: Deploy new image to stage
         shell: bash
         env:
           ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:${{ github.sha }}"
-          CELERY_WORKER_ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}${{ env.CELERY_WORKER_TAG }}:${{ github.sha }}"
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |
           # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
@@ -153,7 +143,7 @@ jobs:
                 task_definition:
                   container_definitions:
                     accounts:
-                      image: "$CELERY_WORKER_ECR_TAG"
+                      image: "$ECR_TAG"
           EOF
 
           # Use yq to merge the stump into the main config
@@ -161,11 +151,14 @@ jobs:
 
           source ./venv/bin/activate
           pulumi login
-          pulumi stack select thunderbird/accounts/stage
+          pulumi stack select thunderbird/stage
           pulumi up -y --diff \
             --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-taskdef' \
             --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-celery-taskdef' \
             --target-dependents
+        
+        # TODO: Write up something that can monitor the deployments. We don't want to run the e2e tests until we know
+        #       the deployment has completed. Can we get the deployment ID from the pulumi run?
 
   e2e-tests-browserstack-stage:
     name: e2e-tests-browserstack-stage
