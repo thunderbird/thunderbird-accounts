@@ -158,7 +158,7 @@ resources:
         keycloak:
           listener_port: 443
           listener_proto: HTTPS
-          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/01b867bb-a94d-43b7-9ac5-034deee590b9
+          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/893b44d1-c34c-4ad0-85e9-6ee099d5d93e
           container_port: 8080
           container_name: keycloak
           # "name" field is arbitrary, but must be unique and no longer than 32 chars
@@ -210,7 +210,7 @@ resources:
               - name: KC_DB_PORT
                 value: '5432'
               - name: KC_HOSTNAME
-                value: https://keycloak.tb.pro
+                value: https://auth.tb.pro
               - name: KC_HTTP_ENABLED
                 value: 'true'
               - name: KC_HEALTH_ENABLED
