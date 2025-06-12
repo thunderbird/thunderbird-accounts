@@ -119,7 +119,7 @@ jobs:
       - name: Produce an artifact containing the tag and version
         id: create-artifact
         run: |
-          echo '{"ecr_tag": "${{ steps.build-accounts.outputs.accounts-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.txt
+          echo '{"ecr_tag": "${{ steps.build-accounts.outputs.accounts-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
 
       - name: Archive the deployment artifact
         id: tag-archive
