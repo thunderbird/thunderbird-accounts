@@ -108,26 +108,37 @@ jobs:
           docker build -t $ECR_TAG --platform="linux/amd64" .          
           docker push $ECR_TAG
           echo "accounts-image=$ECR_TAG" >> $GITHUB_OUTPUT
-          echo -n "$ECR_TAG" > ecr_tag.txt
 
-      - name: Archive the ECR tag
+      - name: Get version from pyproject.toml
+        id: read-version
+        uses: SebRollen/toml-action@v1.2.0
+        with:
+          file: 'pyproject.toml'
+          field: 'project.version'
+
+      - name: Produce an artifact containing the tag and version
+        id: create-artifact
+        run: |
+          echo '{"ecr_tag": "${{ steps.build-accounts.outputs.accounts-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.txt
+
+      - name: Archive the deployment artifact
         id: tag-archive
         uses: actions/upload-artifact@v4
         with:
-          name: ecr_tag
-          path: ecr_tag.txt
+          name: deployment
+          path: deployment.json
 
       # Deploy to stage
       - name: Deploy new image to stage
         shell: bash
         env:
-          ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:${{ github.sha }}"
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |
           # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
           # to do with the GHA workflow "env" settings above.
           export PATH="/home/runner/.pulumi/bin:$PATH"
 
+          ECR_TAG=$(jq .ecr_tag < deployment.json)
           cd $PULUMI_DIR
 
           # Create a YAML config stump containing only the nested tree leading to the image tag update
@@ -137,7 +148,7 @@ jobs:
               accounts:
                 task_definition:
                   container_definitions:
-                    accounts: &accounts_def
+                    accounts:
                       image: "$ECR_TAG"
               accounts-celery:
                 task_definition:
