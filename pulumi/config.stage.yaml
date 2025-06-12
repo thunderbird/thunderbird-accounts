@@ -158,7 +158,7 @@ resources:
         keycloak:
           listener_port: 443
           listener_proto: HTTPS
-          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/eed3b19b-d88c-40e4-9b75-8254c40f5198
+          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/04074202-3992-4cda-a60c-e22459ef4445
           container_port: 8080
           container_name: keycloak
           # "name" field is arbitrary, but must be unique and no longer than 32 chars
@@ -210,7 +210,7 @@ resources:
               - name: KC_DB_PORT
                 value: '5432'
               - name: KC_HOSTNAME
-                value: https://keycloak-stage.tb.pro
+                value: https://auth-stage.tb.pro
               - name: KC_HTTP_ENABLED
                 value: 'true'
               - name: KC_HEALTH_ENABLED
@@ -249,7 +249,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:ee91444bf650044955a507ba1ca2d98a98dac415
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:b0c11395ee4fe13e8ade4f3bc5b2f6666835f0a1
             portMappings:
               - name: accounts
                 containerPort: 8087
