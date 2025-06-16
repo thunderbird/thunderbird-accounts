@@ -86,7 +86,7 @@ class User(AbstractUser, BaseModel):
         """Disable passwords for fxa"""
         if settings.AUTH_SCHEME == 'fxa':
             return False
-        return super(User).has_usable_password()
+        return super().has_usable_password()
 
     def get_short_name(self):
         return self.display_name

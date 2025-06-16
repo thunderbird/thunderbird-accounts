@@ -18,6 +18,21 @@ services:
     # set shared memory limit when using docker-compose
     shm_size: 128mb
 
+  # Keycloak's postgres database
+  kcpostgres:
+    image: postgres:17
+    volumes:
+      - kcdb:/var/lib/postgresql/data
+    ports:
+      - "5434:5434" # Note: host is exposed to 5434!
+    environment:
+      POSTGRES_USER: kc
+      POSTGRES_DB: keycloak
+      POSTGRES_PASSWORD: kc
+      PGPORT: 5434
+    # set shared memory limit when using docker-compose
+    shm_size: 128mb
+
   redis:
     image: redis/redis-stack
     volumes:
@@ -70,9 +85,12 @@ services:
       - ./templates:/app/templates
 
   stalwart:
-    image: stalwartlabs/mail-server:latest
+    #image: stalwartlabs/mail-server:latest
+    build:
+      context: ../stalwart
+      dockerfile: Dockerfile
     volumes:
-      - ./mail:/opt/stalwart-mail
+      - ./mail:/opt/stalwart
     ports:
       - "443:443"
       - "8080:8080"
@@ -86,8 +104,29 @@ services:
       - "995:995"
     environment:
       <<: *env
-      MAIL_ADMIN_SECRET: "{plain}accounts"
-      MAIL_STALWART_PATH: "/opt/stalwart-mail"
+      ADMIN_SECRET: "{plain}accounts"
+      MAIL_STALWART_PATH: "/opt/stalwart"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    ports:
+      - "8999:8999"
+      - "9000:9000"
+    command: start-dev
+    environment:
+      KC_HTTP_PORT: 8999
+      KC_HOSTNAME: keycloak
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "true"
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+      KC_LOG_LEVEL: info
+      KC_DB: "postgres"
+      KC_DB_URL_HOST: "kcpostgres"
+      KC_DB_URL_PORT: '5434'
+      KC_DB_USERNAME: "kc"
+      KC_DB_PASSWORD: "kc"
 volumes:
   db: {}
+  kcdb: {}
   cache: {}

@@ -15,7 +15,6 @@
 
 {% block content %}
     <section class="alternative-login-section">
-      {% get_admin_login_code as login_code %}
-      <a href="{% url 'fxa_login' login_code=login_code %}">Log in with Mozilla Accounts 🔗</a>
+      <a href="{% url 'oidc_authentication_init' %}">Log in with Thunderbird Accounts 🔗</a>
     </section>
 {% endblock %}

@@ -80,7 +80,7 @@ SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT')
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # These are url reverse keys
-LOGIN_URL = 'login'
+LOGIN_URL = 'oidc_authentication_init'
 LOGIN_REDIRECT_URL = 'self_serve_home'
 
 LOGIN_CODE_SECRET = os.getenv('LOGIN_CODE_SECRET')
@@ -143,6 +143,9 @@ INSTALLED_APPS = [
     # Django
     'django.contrib.admin',
     'django.contrib.auth',
+    # OIDC Auth
+    'mozilla_django_oidc',  # Load after auth
+    # Django
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -165,6 +168,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'mozilla_django_oidc.middleware.SessionRefresh',
 ]
 
 ROOT_URLCONF = 'thunderbird_accounts.urls'
@@ -237,7 +241,10 @@ REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
-    'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework_simplejwt.authentication.JWTAuthentication'],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'mozilla_django_oidc.contrib.drf.OIDCAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
 }
 
 REDIS_URL = os.getenv('REDIS_URL')
@@ -301,6 +308,9 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'DEBUG',
     },
+    'loggers': {
+        'mozilla_django_oidc': {'handlers': ['console'], 'level': 'DEBUG'},
+    },
 }
 
 SIMPLE_JWT = {
@@ -310,9 +320,15 @@ SIMPLE_JWT = {
 
 AUTH_SCHEME = os.getenv('AUTH_SCHEME', 'password')
 
-# If we're fxa use the fxa backend instead of standard user/pass
-if AUTH_SCHEME == 'fxa':
-    AUTHENTICATION_BACKENDS = ['thunderbird_accounts.authentication.middleware.FXABackend']
+if AUTH_SCHEME == 'oidc':
+    AUTHENTICATION_BACKENDS = ['mozilla_django_oidc.auth.OIDCAuthenticationBackend']
+    OIDC_RP_CLIENT_ID = os.getenv('OIDC_CLIENT_ID')
+    OIDC_RP_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET')
+    OIDC_RP_SIGN_ALGO = os.getenv('OIDC_SIGN_ALGO')
+    OIDC_OP_AUTHORIZATION_ENDPOINT = os.getenv('OIDC_URL_AUTH')
+    OIDC_OP_TOKEN_ENDPOINT = os.getenv('OIDC_URL_TOKEN')
+    OIDC_OP_USER_ENDPOINT = os.getenv('OIDC_URL_USER')
+    OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
