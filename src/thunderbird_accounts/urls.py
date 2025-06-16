@@ -11,6 +11,7 @@ from django.contrib import admin
 from django.shortcuts import redirect
 from django.urls import path, include, re_path
 from django.views.generic import RedirectView
+from mozilla_django_oidc.views import OIDCLogoutView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from thunderbird_accounts.authentication import views as auth_views
@@ -70,6 +71,7 @@ urlpatterns = [
 
 if settings.AUTH_SCHEME == 'oidc':
     urlpatterns.append(path('oidc/', include('mozilla_django_oidc.urls')))
+    urlpatterns.append(path('logout/', OIDCLogoutView.as_view(), name='logout'))
     urlpatterns.append(path('login/', lambda r: redirect(settings.LOGIN_URL), name='login'))
 
 if settings.DEBUG:
