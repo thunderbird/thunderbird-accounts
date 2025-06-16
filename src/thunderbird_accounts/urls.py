@@ -8,6 +8,7 @@ These are the routes and some light admin panel customization are located.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.shortcuts import redirect
 from django.urls import path, include, re_path
 from django.views.generic import RedirectView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
@@ -36,7 +37,6 @@ urlpatterns = [
     # Mail Views
     path('', mail_views.home),
     path('contact/', mail_views.contact, name='contact'),
-    path('login/', auth_views.login_view, name='login'),
     path('sign-up/', mail_views.sign_up, name='sign_up'),
     path('sign-up/submit', mail_views.sign_up_submit, name='sign_up_submit'),
     path('wait-list/', mail_views.wait_list),
@@ -67,6 +67,10 @@ urlpatterns = [
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
     path('health', infra_views.health_check),
 ]
+
+if settings.AUTH_SCHEME == 'oidc':
+    urlpatterns.append(path('oidc/', include('mozilla_django_oidc.urls')))
+    urlpatterns.append(path('login/', lambda r: redirect(settings.LOGIN_URL), name='login'))
 
 if settings.DEBUG:
     urlpatterns.append(path('docs/', include('rest_framework.urls')))
