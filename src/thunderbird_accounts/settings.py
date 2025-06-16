@@ -321,7 +321,7 @@ SIMPLE_JWT = {
 AUTH_SCHEME = os.getenv('AUTH_SCHEME', 'password')
 
 if AUTH_SCHEME == 'oidc':
-    AUTHENTICATION_BACKENDS = ['mozilla_django_oidc.auth.OIDCAuthenticationBackend']
+    AUTHENTICATION_BACKENDS = ['thunderbird_accounts.authentication.middleware.AccountsOIDCBackend']
     OIDC_RP_CLIENT_ID = os.getenv('OIDC_CLIENT_ID')
     OIDC_RP_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET')
     OIDC_RP_SIGN_ALGO = os.getenv('OIDC_SIGN_ALGO')
@@ -329,6 +329,12 @@ if AUTH_SCHEME == 'oidc':
     OIDC_OP_TOKEN_ENDPOINT = os.getenv('OIDC_URL_TOKEN')
     OIDC_OP_USER_ENDPOINT = os.getenv('OIDC_URL_USER')
     OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
+    ALLOW_LOGOUT_GET_METHOD = True
+
+    def oidc_logout(request):
+        return f'{os.getenv("OIDC_URL_LOGOUT")}?client_id={OIDC_RP_CLIENT_ID}'
+
+    OIDC_OP_LOGOUT_URL_METHOD = 'thunderbird_accounts.settings.oidc_logout'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
