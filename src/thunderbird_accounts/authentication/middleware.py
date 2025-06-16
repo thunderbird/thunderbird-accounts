@@ -10,6 +10,30 @@ from socket import gethostbyname, gethostname
 
 from ..client.models import ClientEnvironment
 
+from mozilla_django_oidc.auth import OIDCAuthenticationBackend
+
+
+class AccountsOIDCBackend(OIDCAuthenticationBackend):
+    def create_user(self, claims):
+        print(claims)
+        user = super().create_user(claims)
+
+        user.first_name = claims.get('given_name', '')
+        user.last_name = claims.get('family_name', '')
+        user.is_staff = claims.get('is_services_admin', 'no').lower() == 'yes'
+        user.save()
+
+        return user
+
+    def update_user(self, user, claims):
+        print(user, claims)
+        user.first_name = claims.get('given_name', '')
+        user.last_name = claims.get('family_name', '')
+        user.is_staff = claims.get('is_services_admin', 'no').lower() == 'yes'
+        user.save()
+
+        return user
+
 
 class FXABackend(BaseBackend):
     def authenticate(self, request, fxa_id=None, email=None):
