@@ -126,6 +126,8 @@ services:
       KC_DB_URL_PORT: '5434'
       KC_DB_USERNAME: "kc"
       KC_DB_PASSWORD: "kc"
+    volumes:
+      - "./keycloak/themes:/opt/keycloak/themes"
 volumes:
   db: {}
   kcdb: {}

@@ -17,6 +17,7 @@ htmlcov
 caldav
 screenshots
 
+_test
 
 # Mac noise
 **/.DS_Store
