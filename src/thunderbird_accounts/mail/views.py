@@ -101,6 +101,14 @@ def self_serve_common_options(is_account_settings: bool, user: User, account: Ac
 
 
 @login_required
+def contact(request: HttpRequest):
+    """Contact page for support requests (uses ZenDesk's API)
+    A user can always access this page even if they don't have a mail account setup
+    since they might encounter problems before the mail account setup itself."""
+    return TemplateResponse(request, 'mail/contact.html')
+
+
+@login_required
 def self_serve(request: HttpRequest):
     return HttpResponseRedirect(reverse('self_serve_connection_info'))
 
