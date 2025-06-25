@@ -1,4 +1,6 @@
 import json
+import requests
+import os
 from urllib.parse import quote_plus
 
 from django.conf import settings
@@ -106,6 +108,52 @@ def contact(request: HttpRequest):
     A user can always access this page even if they don't have a mail account setup
     since they might encounter problems before the mail account setup itself."""
     return TemplateResponse(request, 'mail/contact.html')
+
+
+@login_required
+@require_http_methods(['POST'])
+def contact_submit(request: HttpRequest):
+    if request.user.is_anonymous:
+        return JsonResponse({'success': False})
+
+    data = json.loads(request.body)
+
+    email = data.get('email')
+    subject = data.get('subject')
+    product = data.get('product')
+    ticket_type = data.get('type')
+    description = data.get('description')
+
+    if not all([email, subject, product, ticket_type, description]):
+        return raise_form_error(request, reverse('contact'), _('All fields are required'))
+
+    ZENDESK_SUBDOMAIN = os.getenv('ZENDESK_SUBDOMAIN')
+    ZENDESK_USER_EMAIL = os.getenv('ZENDESK_USER_EMAIL')
+    ZENDESK_API_TOKEN = os.getenv('ZENDESK_API_TOKEN')
+
+    print(ZENDESK_SUBDOMAIN, ZENDESK_USER_EMAIL, ZENDESK_API_TOKEN)
+
+    zendesk_api_response = requests.post(
+        f"https://{ZENDESK_SUBDOMAIN}.zendesk.com/api/v2/requests.json",
+        headers={ "Content-Type": "application/json" },
+        auth=(f'{ZENDESK_USER_EMAIL}/token', ZENDESK_API_TOKEN),
+        json={
+            "request": {
+                "subject": subject,
+                "comment": {
+                    "body": description
+                },
+                "requester": {
+                    "email": email
+                }
+            }
+        }
+    )
+
+    if zendesk_api_response.ok:
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'success': False}, status=500)
 
 
 @login_required

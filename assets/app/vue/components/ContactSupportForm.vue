@@ -1,29 +1,58 @@
 <script setup>
 import { ref } from "vue";
+import { NoticeBar } from "@thunderbirdops/services-ui";
+import CsrfToken from "@/components/CsrfToken.vue";
 
+const csrfToken = ref(window._page.csrfToken);
+const errorText = ref(window._page.formError);
 const form = ref({
-  // userEmail may be injected from the templates/base.html
   email: window._page?.userEmail || '',
   subject: '',
-  product: '-',
-  type: '-',
-  description: '',
-  attachments: []
+  product: '',
+  type: '',
+  description: ''
 })
 
-const handleSubmit = () => {
-  console.log('Submitting form:', form.value)
+const handleSubmit = async () => {
+  errorText.value = null
+
+  const { email, subject, product, type, description } = form.value;
+
+  const response = await fetch('/contact/submit', {
+    mode: "same-origin",
+    credentials: "include",
+    method: 'POST',
+    body: JSON.stringify({
+      email,
+      subject,
+      product,
+      type,
+      description,
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken.value
+    },
+  });
+
+  const data = await response.json();
+
+  if (!data.success) {
+    errorText.value = 'Failed to submit contact form';
+    return;
+  }
 }
 
 </script>
 
 <template>
-  <form @submit.prevent="handleSubmit">
+  <form @submit.prevent="handleSubmit" method="post" action="/contact/submit">
     <!-- Email -->
     <div class="form-group">
       <label for="email" class="form-label">Your email address(*)</label>
       <input
         id="email"
+        name="email"
         type="email"
         v-model="form.email"
         required
@@ -37,6 +66,7 @@ const handleSubmit = () => {
       <label for="subject" class="form-label">Subject*</label>
       <input
         id="subject"
+        name="subject"
         type="text"
         v-model="form.subject"
         required
@@ -49,11 +79,12 @@ const handleSubmit = () => {
       <label for="product" class="form-label">Product*</label>
       <select
         id="product"
+        name="product"
         v-model="form.product"
         required
         class="form-select"
       >
-        <option value="">-</option>
+        <option disabled value="">-</option>
         <option value="thunderbird_assist">Thunderbird Assist</option>
         <option value="thunderbird_appointment">Thunderbird Appointment</option>
         <option value="thunderbird_send">Thunderbird Send</option>
@@ -65,11 +96,12 @@ const handleSubmit = () => {
       <label for="type" class="form-label">Type of Request*</label>
       <select
         id="type"
+        name="type"
         v-model="form.type"
         required
         class="form-select"
       >
-        <option value="">-</option>
+        <option disabled value="">-</option>
         <option value="accounts_login">Accounts & Login</option>
         <option value="feedback_or_feature_request">Provide Feedback or Request Features</option>
         <option value="payments_billing">Payments & Billing</option>
@@ -80,17 +112,22 @@ const handleSubmit = () => {
     <!-- Description -->
     <div class="form-group">
       <label for="description" class="form-label">Description*</label>
-      <input
+      <textarea
         id="description"
+        name="description"
         v-model="form.description"
-        type="text"
-        class="form-input"
-      >
+        class="form-textarea"
+        rows="6"
+      ></textarea>
     </div>
+
+    <notice-bar type="error" v-if="errorText" class="error-notice">{{ errorText }}</notice-bar>
 
     <div class="form-group">
       <button type="submit" class="form-button">Submit</button>
     </div>
+
+    <csrf-token></csrf-token>
   </form>
 </template>
 
@@ -110,17 +147,25 @@ form {
 }
 
 .form-input,
-.form-select {
+.form-select,
+.form-textarea {
   width: 100%;
+  max-width: 100%;
   padding: 0.5rem;
   font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 4px;
+  display: block;
+  resize: vertical;
 }
 
 .form-button {
   padding: 0.6rem 1.2rem;
   font-size: 1rem;
   cursor: pointer;
+}
+
+.error-notice {
+  margin-bottom: 1rem;
 }
 </style>
