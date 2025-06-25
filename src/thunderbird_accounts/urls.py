@@ -52,6 +52,7 @@ urlpatterns = [
     ),
     # Post only
     path('contact/submit', mail_views.contact_submit, name='contact_submit'),
+    path('contact/attach_file', mail_views.contact_attach_file, name='contact_attach_file'),
     path('self-serve/app-passwords/add', mail_views.self_serve_app_password_add, name='app_password_add'),
     path('self-serve/app-passwords/remove', mail_views.self_serve_app_password_remove, name='app_password_remove'),
     # API

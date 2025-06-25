@@ -10,8 +10,49 @@ const form = ref({
   subject: '',
   product: '',
   type: '',
-  description: ''
+  description: '',
+  attachments: []
 })
+const fileInput = ref(null)
+
+const triggerFileSelect = () => {
+  fileInput.value?.click()
+}
+
+const handleFileSelect = async (event) => {
+  const files = event.target.files;
+  await uploadFiles(files)
+  event.target.value = ''
+}
+
+const handleDrop = async (event) => {
+  const files = event.dataTransfer.files
+  await uploadFiles(files)
+}
+
+const uploadFiles = async (files) => {
+  for (let file of files) {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const response = await fetch('/contact/attach_file', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': csrfToken.value
+        },
+      })
+
+      if (!response.ok) throw new Error('Upload failed')
+
+      const data = await response.json()
+      console.log(data);
+    } catch (err) {
+      console.error('Upload error:', err)
+    }
+  }
+}
 
 const handleSubmit = async () => {
   errorText.value = null
@@ -121,6 +162,30 @@ const handleSubmit = async () => {
       ></textarea>
     </div>
 
+    <div
+      class="form-group file-dropzone"
+      @dragover.prevent
+      @drop.prevent="handleDrop"
+      @click="triggerFileSelect"
+      role="button"
+      aria-label="Upload files"
+    >
+      <p>Drag & drop files here, or click to upload</p>
+      <input
+        type="file"
+        ref="fileInput"
+        class="hidden"
+        multiple
+        @change="handleFileSelect"
+      >
+    </div>
+
+    <ul v-if="form.attachments.length">
+      <li v-for="(attachment, index) in form.attachments" :key="index">
+        Uploaded: <a>{{ attachment }}</a>
+      </li>
+    </ul>
+
     <notice-bar type="error" v-if="errorText" class="error-notice">{{ errorText }}</notice-bar>
 
     <div class="form-group">
@@ -157,6 +222,23 @@ form {
   border-radius: 4px;
   display: block;
   resize: vertical;
+}
+
+.file-dropzone {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  outline: none;
+}
+
+.file-dropzone:hover {
+  border-color: #888;
+}
+
+.file-dropzone:focus {
+  border-color: #333;
 }
 
 .form-button {
