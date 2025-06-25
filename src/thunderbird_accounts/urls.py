@@ -51,6 +51,7 @@ urlpatterns = [
         name='self_serve_subscription_success',
     ),
     # Post only
+    path('contact/submit', mail_views.contact_submit, name='contact_submit'),
     path('self-serve/app-passwords/add', mail_views.self_serve_app_password_add, name='app_password_add'),
     path('self-serve/app-passwords/remove', mail_views.self_serve_app_password_remove, name='app_password_remove'),
     # API
