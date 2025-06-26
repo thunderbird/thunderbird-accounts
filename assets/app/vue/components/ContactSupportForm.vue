@@ -5,6 +5,7 @@ import CsrfToken from "@/components/CsrfToken.vue";
 
 const csrfToken = ref(window._page.csrfToken);
 const errorText = ref(window._page.formError);
+const successText = ref('');
 const form = ref({
   email: window._page?.userEmail || '',
   subject: '',
@@ -47,17 +48,41 @@ const uploadFiles = async (files) => {
       if (!response.ok) throw new Error('Upload failed')
 
       const data = await response.json()
-      console.log(data);
+
+      if (data.upload_token) {
+        form.value.attachments.push({
+          filename: data.filename || file.name,
+          token: data.upload_token
+        })
+      }
     } catch (err) {
       console.error('Upload error:', err)
     }
   }
 }
 
-const handleSubmit = async () => {
-  errorText.value = null
+const removeAttachment = (index) => {
+  form.value.attachments.splice(index, 1)
+}
 
-  const { email, subject, product, type, description } = form.value;
+const resetForm = () => {
+  form.value = {
+    email: window._page?.userEmail || '',
+    subject: '',
+    product: '',
+    type: '',
+    description: '',
+    attachments: []
+  }
+  errorText.value = ''
+  successText.value = ''
+}
+
+const handleSubmit = async () => {
+  errorText.value = ''
+  successText.value = ''
+
+  const { email, subject, product, type, description, attachments } = form.value;
 
   const response = await fetch('/contact/submit', {
     mode: "same-origin",
@@ -69,6 +94,7 @@ const handleSubmit = async () => {
       product,
       type,
       description,
+      attachments,
     }),
     headers: {
       'Content-Type': 'application/json',
@@ -82,6 +108,9 @@ const handleSubmit = async () => {
     errorText.value = 'Failed to submit contact form';
     return;
   }
+
+  resetForm()
+  successText.value = 'Your support request has been submitted successfully. We will get back to you soon.'
 }
 
 </script>
@@ -143,9 +172,10 @@ const handleSubmit = async () => {
         class="form-select"
       >
         <option disabled value="">-</option>
-        <option value="accounts_login">Accounts & Login</option>
-        <option value="feedback_or_feature_request">Provide Feedback or Request Features</option>
-        <option value="payments_billing">Payments & Billing</option>
+        <option value="accounts___login">Accounts & Login</option>
+        <option value="technical">Technical</option>
+        <option value="provide_feedback_or_request_features">Provide Feedback or Request Features</option>
+        <option value="payments___billing">Payments & Billing</option>
         <option value="not_listed">Not listed</option>
       </select>
     </div>
@@ -170,7 +200,8 @@ const handleSubmit = async () => {
       role="button"
       aria-label="Upload files"
     >
-      <p>Drag & drop files here, or click to upload</p>
+      <p v-if="form.attachments.length === 0">Drag & drop files here, or click to upload</p>
+      <p v-else>{{ form.attachments.length }} file(s) uploaded. Drag & drop more files here, or click to upload</p>
       <input
         type="file"
         ref="fileInput"
@@ -180,13 +211,15 @@ const handleSubmit = async () => {
       >
     </div>
 
-    <ul v-if="form.attachments.length">
+    <ul v-if="form.attachments.length" class="attachment-list">
       <li v-for="(attachment, index) in form.attachments" :key="index">
-        Uploaded: <a>{{ attachment }}</a>
+        <span class="attachment-filename">{{ attachment.filename }}</span>
+        <button @click="removeAttachment(index)" class="remove-attachment-btn">Remove</button>
       </li>
     </ul>
 
-    <notice-bar type="error" v-if="errorText" class="error-notice">{{ errorText }}</notice-bar>
+    <notice-bar type="error" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
+    <notice-bar type="success" v-if="successText" class="notice">{{ successText }}</notice-bar>
 
     <div class="form-group">
       <button type="submit" class="form-button">Submit</button>
@@ -247,7 +280,52 @@ form {
   cursor: pointer;
 }
 
-.error-notice {
+.notice {
   margin-bottom: 1rem;
+}
+
+.attachment-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.attachment-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  background-color: #f9f9f9;
+}
+
+.attachment-list a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.attachment-list a:hover {
+  text-decoration: underline;
+}
+
+.attachment-filename {
+  font-weight: 500;
+  color: #333;
+}
+
+.remove-attachment-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.remove-attachment-btn:hover {
+  background-color: #c82333;
 }
 </style>
