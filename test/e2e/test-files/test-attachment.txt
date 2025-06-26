@@ -1,0 +1,2 @@
+This is a test file for contact form attachment testing.
+It contains some sample text to verify file upload functionality. 
