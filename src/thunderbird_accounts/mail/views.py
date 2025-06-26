@@ -1,6 +1,4 @@
 import json
-import requests
-import os
 from urllib.parse import quote_plus
 
 from django.conf import settings
@@ -27,6 +25,7 @@ from thunderbird_accounts.authentication.templatetags.helpers import get_admin_l
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
+from thunderbird_accounts.mail.zendesk import ZendeskClient
 
 
 def raise_form_error(request, to_view: str, error_message: str):
@@ -113,6 +112,9 @@ def contact(request: HttpRequest):
 @login_required
 @require_http_methods(['POST'])
 def contact_submit(request: HttpRequest):
+    """ Uses Zendesk's Requests API to create a ticket
+        Ref https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#tickets-and-requests"""
+
     if request.user.is_anonymous:
         return JsonResponse({'success': False})
 
@@ -123,60 +125,22 @@ def contact_submit(request: HttpRequest):
     product = data.get('product')
     ticket_type = data.get('type')
     description = data.get('description')
+    attachments = data.get('attachments', [])
 
     if not all([email, subject, product, ticket_type, description]):
         return raise_form_error(request, reverse('contact'), _('All fields are required'))
 
-    ZENDESK_SUBDOMAIN = os.getenv('ZENDESK_SUBDOMAIN')
-    ZENDESK_USER_EMAIL = os.getenv('ZENDESK_USER_EMAIL')
-    ZENDESK_API_TOKEN = os.getenv('ZENDESK_API_TOKEN')
+    zendesk_client = ZendeskClient()
+    ticket_fields = {
+        'email': email,
+        'subject': subject,
+        'product': product,
+        'ticket_type': ticket_type,
+        'description': description,
+        'attachments': attachments
+    }
 
-    print(f'--->>>> {ticket_type}')
-
-    # TODO: For some reason, I can't seem to make this GET request work (it returns "Couldn't authorize you")
-    # Ref https://developer.zendesk.com/api-reference/introduction/security-and-auth/#api-token
-    rrrr = requests.get(
-        f"https://{ZENDESK_SUBDOMAIN}.zendesk.com/api/v2/ticket_fields.json",
-        auth=(f'{ZENDESK_USER_EMAIL}/token', ZENDESK_API_TOKEN),
-    )
-
-    print("Ticket fields response :", rrrr.text)
-    print("------ ------ ------ ------")
-
-    """Using Requests instead of Tickets API based off of their documentation
-       Ref https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#tickets-and-requests"""
-
-    zendesk_api_response = requests.post(
-        f"https://{ZENDESK_SUBDOMAIN}.zendesk.com/api/v2/requests.json",
-        headers={ "Content-Type": "application/json" },
-        auth=(f'{ZENDESK_USER_EMAIL}/token', ZENDESK_API_TOKEN),
-        json={
-            "request": {
-                "subject": subject,
-                "comment": {
-                    "body": description,
-                },
-                "requester": {
-                    "name": "Accounts Support",
-                    "email": email
-                },
-                "custom_fields": [
-                    # TODO: This works but is there a better way to reference custom fields?
-                    {
-                        "id": 38815672253843,
-                        "value": product
-                    },
-                    # TODO: This doesn't work at all – Validation complains that it is empty but its not
-                    {
-                        "id": 38214346931987,
-                        "value": ticket_type
-                    }
-                ]
-            }
-        }
-    )
-
-    print("Response JSON:", zendesk_api_response.json())
+    zendesk_api_response = zendesk_client.create_ticket(ticket_fields)
 
     if zendesk_api_response.ok:
         return JsonResponse({'success': True})
@@ -198,24 +162,20 @@ def contact_attach_file(request: HttpRequest):
         return JsonResponse({'success': False, 'error': 'No file uploaded'}, status=400)
 
     try:
-        response = requests.post(
-            f"https://{ZENDESK_SUBDOMAIN}.zendesk.com/api/v2/uploads.json",
-            auth=(f'{ZENDESK_USER_EMAIL}/token', ZENDESK_API_TOKEN),
-            # TODO: Content-type here apparently needs to match the file uploaded accurately
-            headers={ "Content-Type": "application/binary" },
-            data=uploaded_file.read(),
-            params={'filename': uploaded_file.name}
-        )
+        zendesk_client = ZendeskClient()
+        zendesk_api_response = zendesk_client.upload_file(uploaded_file)
 
-        if response.status_code != 201:
-            return JsonResponse({'success': False, 'error': 'Zendesk upload failed', 'details': response.text}, status=500)
-
-        data = response.json()
-        upload_token = data['upload']['token']
+        if zendesk_api_response['success']:
+            return JsonResponse({
+                'upload_token': zendesk_api_response['upload_token'],
+                'filename': zendesk_api_response['filename']
+            })
 
         return JsonResponse({
-            'attachment_url': f'https://{ZENDESK_SUBDOMAIN}.zendesk.com/attachments/token/{upload_token}/filename/{uploaded_file.name}'
-        })
+            'success': False,
+            'error': zendesk_api_response['error'],
+            'details': zendesk_api_response['details']
+        }, status=500)
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
