@@ -25,6 +25,7 @@ from thunderbird_accounts.authentication.templatetags.helpers import get_admin_l
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
+from thunderbird_accounts.mail.zendesk import ZendeskClient
 
 
 def raise_form_error(request, to_view: str, error_message: str):
@@ -98,6 +99,86 @@ def self_serve_common_options(is_account_settings: bool, user: User, account: Ac
         'is_account_settings': is_account_settings,
         'has_active_subscription': user.has_active_subscription,
     }
+
+
+@login_required
+def contact(request: HttpRequest):
+    """Contact page for support requests (uses ZenDesk's API)
+    A user can always access this page even if they don't have a mail account setup
+    since they might encounter problems before the mail account setup itself."""
+    return TemplateResponse(request, 'mail/contact.html')
+
+
+@login_required
+@require_http_methods(['POST'])
+def contact_submit(request: HttpRequest):
+    """ Uses Zendesk's Requests API to create a ticket
+        Ref https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#tickets-and-requests"""
+
+    if request.user.is_anonymous:
+        return JsonResponse({'success': False})
+
+    data = json.loads(request.body)
+
+    email = data.get('email')
+    subject = data.get('subject')
+    product = data.get('product')
+    ticket_type = data.get('type')
+    description = data.get('description')
+    attachments = data.get('attachments', [])
+
+    if not all([email, subject, product, ticket_type, description]):
+        return raise_form_error(request, reverse('contact'), _('All fields are required'))
+
+    zendesk_client = ZendeskClient()
+    ticket_fields = {
+        'email': email,
+        'subject': subject,
+        'product': product,
+        'ticket_type': ticket_type,
+        'description': description,
+        'attachments': attachments
+    }
+
+    zendesk_api_response = zendesk_client.create_ticket(ticket_fields)
+
+    if zendesk_api_response.ok:
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'success': False}, status=500)
+
+
+@login_required
+@require_http_methods(['POST'])
+def contact_attach_file(request: HttpRequest):
+    """ Uses Zendesk's API to generate a token to be used for contact form attachments
+        Ref https://developer.zendesk.com/api-reference/ticketing/tickets/ticket-attachments/#upload-files"""
+
+    if request.user.is_anonymous:
+        return JsonResponse({'success': False}, status=400)
+
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return JsonResponse({'success': False, 'error': 'No file uploaded'}, status=400)
+
+    try:
+        zendesk_client = ZendeskClient()
+        zendesk_api_response = zendesk_client.upload_file(uploaded_file)
+
+        if zendesk_api_response['success']:
+            return JsonResponse({
+                'upload_token': zendesk_api_response['upload_token'],
+                'filename': zendesk_api_response['filename']
+            })
+
+        return JsonResponse({
+            'success': False,
+            'error': zendesk_api_response['error'],
+            'details': zendesk_api_response['details']
+        }, status=500)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required
