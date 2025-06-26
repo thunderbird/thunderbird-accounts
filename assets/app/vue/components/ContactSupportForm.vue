@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { NoticeBar } from "@thunderbirdops/services-ui";
+import { NoticeBar, TextInput, SelectInput, PrimaryButton } from "@thunderbirdops/services-ui";
 import CsrfToken from "@/components/CsrfToken.vue";
 
 const csrfToken = ref(window._page.csrfToken);
@@ -15,6 +15,24 @@ const form = ref({
   attachments: []
 })
 const fileInput = ref(null)
+
+// Product options for SelectInput
+// These values are important to match the Zendesk ticket custom field type
+const productOptions = [
+  { label: 'Thunderbird Assist', value: 'thunderbird_assist' },
+  { label: 'Thunderbird Appointment', value: 'thunderbird_appointment' },
+  { label: 'Thunderbird Send', value: 'thunderbird_send' }
+];
+
+// Type options for SelectInput
+// These values are important to match the Zendesk ticket custom field type
+const typeOptions = [
+  { label: 'Accounts & Login', value: 'accounts___login' },
+  { label: 'Technical', value: 'technical' },
+  { label: 'Provide Feedback or Request Features', value: 'provide_feedback_or_request_features' },
+  { label: 'Payments & Billing', value: 'payments___billing' },
+  { label: 'Not listed', value: 'not_listed' }
+];
 
 const triggerFileSelect = () => {
   fileInput.value?.click()
@@ -118,79 +136,59 @@ const handleSubmit = async () => {
 <template>
   <form @submit.prevent="handleSubmit" method="post" action="/contact/submit">
     <!-- Email -->
-    <div class="form-group">
-      <label for="email" class="form-label">Your email address(*)</label>
-      <input
-        id="email"
-        name="email"
-        type="email"
-        v-model="form.email"
-        required
-        class="form-input"
-        :aria-invalid="!form.email"
-      >
-    </div>
+    <text-input
+      name="email"
+      type="email"
+      v-model="form.email"
+      required="required"
+      data-testid="contact-email-input"
+    >
+      Your email address(*)
+    </text-input>
 
     <!-- Subject -->
-    <div class="form-group">
-      <label for="subject" class="form-label">Subject*</label>
-      <input
-        id="subject"
-        name="subject"
-        type="text"
-        v-model="form.subject"
-        required
-        class="form-input"
-      >
-    </div>
+    <text-input
+      name="subject"
+      type="text"
+      v-model="form.subject"
+      required="required"
+      data-testid="contact-subject-input"
+    >
+      Subject*
+    </text-input>
 
     <!-- Product -->
-    <div class="form-group">
-      <label for="product" class="form-label">Product*</label>
-      <select
-        id="product"
-        name="product"
-        v-model="form.product"
-        required
-        class="form-select"
-      >
-        <option disabled value="">-</option>
-        <option value="thunderbird_assist">Thunderbird Assist</option>
-        <option value="thunderbird_appointment">Thunderbird Appointment</option>
-        <option value="thunderbird_send">Thunderbird Send</option>
-      </select>
-    </div>
+    <select-input
+      name="product"
+      :options="productOptions"
+      v-model="form.product"
+      required="required"
+      data-testid="contact-product-input"
+    >
+      Product*
+    </select-input>
 
     <!-- Type of Request -->
-    <div class="form-group">
-      <label for="type" class="form-label">Type of Request*</label>
-      <select
-        id="type"
-        name="type"
-        v-model="form.type"
-        required
-        class="form-select"
-      >
-        <option disabled value="">-</option>
-        <option value="accounts___login">Accounts & Login</option>
-        <option value="technical">Technical</option>
-        <option value="provide_feedback_or_request_features">Provide Feedback or Request Features</option>
-        <option value="payments___billing">Payments & Billing</option>
-        <option value="not_listed">Not listed</option>
-      </select>
-    </div>
+    <select-input
+      name="type"
+      :options="typeOptions"
+      v-model="form.type"
+      required="required"
+      data-testid="contact-type-input"
+    >
+      Type of Request*
+    </select-input>
 
     <!-- Description -->
-    <div class="form-group">
-      <label for="description" class="form-label">Description*</label>
-      <textarea
-        id="description"
-        name="description"
-        v-model="form.description"
-        class="form-textarea"
-        rows="6"
-      ></textarea>
-    </div>
+    <text-input
+      name="description"
+      type="textarea"
+      v-model="form.description"
+      required="required"
+      data-testid="contact-description-input"
+    >
+      Description*
+    </text-input>
 
     <div
       class="form-group file-dropzone"
@@ -222,7 +220,9 @@ const handleSubmit = async () => {
     <notice-bar type="success" v-if="successText" class="notice">{{ successText }}</notice-bar>
 
     <div class="form-group">
-      <button type="submit" class="form-button">Submit</button>
+      <primary-button @click.capture="handleSubmit" data-testid="contact-submit-btn">
+        Submit
+      </primary-button>
     </div>
 
     <csrf-token></csrf-token>
@@ -231,30 +231,17 @@ const handleSubmit = async () => {
 
 <style scoped>
 form {
+  margin-block-start: 1rem;
   max-width: 50%;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-block-end: 1rem;
 }
 
-.form-label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.form-input,
-.form-select,
-.form-textarea {
-  width: 100%;
+/* Bug fix: select-input's labels have a .wrapper class with a max-width of 320px */
+.wrapper {
   max-width: 100%;
-  padding: 0.5rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  display: block;
-  resize: vertical;
 }
 
 .file-dropzone {
@@ -272,12 +259,6 @@ form {
 
 .file-dropzone:focus {
   border-color: #333;
-}
-
-.form-button {
-  padding: 0.6rem 1.2rem;
-  font-size: 1rem;
-  cursor: pointer;
 }
 
 .notice {
