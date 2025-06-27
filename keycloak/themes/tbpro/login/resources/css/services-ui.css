@@ -209,7 +209,7 @@ button, input[type=submit] {
     box-shadow: none
   }
 
-  &:disabled {
+  &:disabled, &:read-only {
     background-color: var(--colour-neutral-border);
     border-color: var(--colour-neutral-border);
     color: var(--colour-ti-muted);
@@ -284,7 +284,7 @@ form {
       --colour-btn-border: var(--colour-ti-critical)
     }
 
-    &:disabled {
+    &:disabled, &:read-only {
       filter: grayscale(50%);
       cursor: not-allowed
     }
