@@ -80,3 +80,7 @@ form {
 #kc-info {
   margin-top: 1rem;
 }
+
+#zoneinfo, [for="zoneinfo"] {
+  /*display: none;*/
+}
