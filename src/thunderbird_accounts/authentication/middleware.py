@@ -50,6 +50,13 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
 
         return user
 
+    def filter_users_by_claims(self, claims):
+        """Return all users matching the specified oidc_id."""
+        sub = claims.get("sub")
+        if not sub:
+            return self.UserModel.objects.none()
+        return self.UserModel.objects.filter(oidc_id__iexact=sub)
+
 
 class FXABackend(BaseBackend):
     def authenticate(self, request, fxa_id=None, email=None):
