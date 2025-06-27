@@ -8,28 +8,44 @@ from django.contrib.auth.backends import BaseBackend
 from django.http import HttpRequest
 from socket import gethostbyname, gethostname
 
+from .models import User
 from ..client.models import ClientEnvironment
 
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
 
 class AccountsOIDCBackend(OIDCAuthenticationBackend):
-    def create_user(self, claims):
-        print(claims)
-        user = super().create_user(claims)
+    def _set_user_fields(self, user: User, claims: dict):
+        print('User -> ', user)
+        print('Claims -> ', claims)
 
+        # Standard OpenID connect fields
+        user.oidc_id = claims.get('sub')
         user.first_name = claims.get('given_name', '')
         user.last_name = claims.get('family_name', '')
+        user.timezone = claims.get('zoneinfo')
+        user.avatar_url = claims.get('picture')
+        user.display_name = claims.get('preferred_username')
+
+        # Non-standard
         user.is_staff = claims.get('is_services_admin', 'no').lower() == 'yes'
+
+        return user
+
+    def create_user(self, claims):
+        user = super().create_user(claims)
+        user = self._set_user_fields(user, claims)
         user.save()
 
         return user
 
     def update_user(self, user, claims):
-        print(user, claims)
-        user.first_name = claims.get('given_name', '')
-        user.last_name = claims.get('family_name', '')
-        user.is_staff = claims.get('is_services_admin', 'no').lower() == 'yes'
+        user = self._set_user_fields(user, claims)
+
+        # Update the email if it has changed
+        user.last_used_email = user.email
+        if claims.get('email') and user.email != claims.get('email'):
+            user.email = claims.get('email')
         user.save()
 
         return user

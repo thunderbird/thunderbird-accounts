@@ -135,33 +135,33 @@ class FXABackendTestCase(TestCase):
         self.backend = FXABackend()
 
         self.User = get_user_model()
-        self.user = self.User.objects.create(fxa_id='abc123', email='user@test.com')
+        self.user = self.User.objects.create(oidc_id='abc123', email='user@test.com')
 
-    def test_authenticate_with_matching_fxa_id(self):
+    def test_authenticate_with_matching_oidc_id(self):
         """Test authentication when fxa id matches existing user"""
-        user = self.backend.authenticate(self.request, self.user.fxa_id, 'new@test.com')
+        user = self.backend.authenticate(self.request, self.user.oidc_id, 'new@test.com')
 
         assert user
         self.assertEqual(user.uuid, self.user.uuid)
-        self.assertEqual(user.fxa_id, self.user.fxa_id)
+        self.assertEqual(user.oidc_id, self.user.oidc_id)
 
         # Confirm new email overwrites original when doing lookup by fxa id
         self.assertEqual(user.email, 'new@test.com')
 
     def test_authenticate_with_matching_email(self):
         """Test authentication when email matches existing user, but fxa id is new"""
-        user = self.backend.authenticate(self.request, 'new_fxa_id', self.user.email)
+        user = self.backend.authenticate(self.request, 'new_oidc_id', self.user.email)
 
         assert user
         self.assertEqual(user.uuid, self.user.uuid)
         self.assertEqual(user.email, self.user.email)
 
-        # Confirm new fxa_id overwrites original when doing lookup by email
-        self.assertEqual(user.fxa_id, 'new_fxa_id')
+        # Confirm new oidc_id overwrites original when doing lookup by email
+        self.assertEqual(user.oidc_id, 'new_oidc_id')
 
     def test_authenticate_with_no_match(self):
         """Test authentication with new user"""
-        user = self.backend.authenticate(self.request, 'new_fxa_id', 'new@test.com')
+        user = self.backend.authenticate(self.request, 'new_oidc_id', 'new@test.com')
 
         self.assertIsNone(user)
 
@@ -287,7 +287,7 @@ class ClientSetAllowedHostsMiddlewareTestCase(TestCase):
 class FXAWebhooksTestCase(DRF_APITestCase):
     def setUp(self):
         self.client = APIClient()
-        self.user = User.objects.create(username='Test', email='test@example.org', fxa_id='abc-123')
+        self.user = User.objects.create(username='Test', email='test@example.org', oidc_id='abc-123')
 
         # Clear cache before each test
         cache.clear()
@@ -432,7 +432,7 @@ class AllowListTestCase(DRF_APITestCase):
         cache.clear()
 
         self.api_client = APIClient()
-        self.user = User.objects.create(username='Test', email='test@example.org', fxa_id='abc-123')
+        self.user = User.objects.create(username='Test', email='test@example.org', oidc_id='abc-123')
 
         self.client = Client.objects.create(name='Test Client')
         self.client_env = ClientEnvironment.objects.create(
@@ -647,7 +647,7 @@ class LoginRequiredTestCase(TestCase):
 
     def test_logged_in(self):
         client = RequestClient()
-        user = User.objects.get_or_create(username='test', fxa_id='1234')[0]
+        user = User.objects.get_or_create(username='test', oidc_id='1234')[0]
         client.force_login(user)
 
         for key, status in self.login_required_keys:
