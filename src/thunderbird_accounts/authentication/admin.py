@@ -5,14 +5,14 @@ from .models import User
 
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('uuid', *UserAdmin.list_display, 'fxa_id', 'last_used_email', 'created_at', 'updated_at')
+    list_display = ('uuid', *UserAdmin.list_display, 'oidc_id', 'last_used_email', 'created_at', 'updated_at')
     fieldsets = (
         (None, {'fields': ('uuid',)}),
         *UserAdmin.fieldsets,
         (_('Profile Info'), {'fields': ('display_name', 'avatar_url', 'timezone')}),
         (
             _('External Account info'),
-            {'fields': ('fxa_id',)},
+            {'fields': ('oidc_id',)},
         ),
         (_('Timestamps'), {'fields': ('created_at', 'updated_at')}),
     )
@@ -20,7 +20,7 @@ class CustomUserAdmin(UserAdmin):
         'uuid',
         'display_name',
         'avatar_url',
-        'fxa_id',
+        'oidc_id',
         'created_at',
         'updated_at',
     )
