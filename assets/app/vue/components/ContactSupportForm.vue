@@ -131,7 +131,7 @@ const handleSubmit = async () => {
     }
 
     resetForm()
-    successText.value = 'Your support request has been submitted successfully. We will get back to you soon.'
+    successText.value = 'Your support request has been submitted successfully'
   } catch (error) {
     console.error('Submit error:', error)
     errorText.value = 'Failed to submit contact form. Please try again.'
