@@ -1,11 +1,12 @@
 <script setup>
 import { ref } from "vue";
-import { NoticeBar, TextInput, SelectInput, PrimaryButton } from "@thunderbirdops/services-ui";
+import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton } from "@thunderbirdops/services-ui";
 import CsrfToken from "@/components/CsrfToken.vue";
 
 const csrfToken = ref(window._page.csrfToken);
 const errorText = ref(window._page.formError);
 const successText = ref('');
+const isSubmitting = ref(false);
 const form = ref({
   email: window._page?.userEmail || '',
   subject: '',
@@ -14,6 +15,7 @@ const form = ref({
   description: '',
   attachments: []
 })
+const formRef = ref(null)
 const fileInput = ref(null)
 
 // Product options for SelectInput
@@ -40,41 +42,28 @@ const triggerFileSelect = () => {
 
 const handleFileSelect = async (event) => {
   const files = event.target.files;
-  await uploadFiles(files)
+  addFilesToForm(files)
   event.target.value = ''
 }
 
 const handleDrop = async (event) => {
   const files = event.dataTransfer.files
-  await uploadFiles(files)
+  addFilesToForm(files)
 }
 
-const uploadFiles = async (files) => {
+const addFilesToForm = (files) => {
   for (let file of files) {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    try {
-      const response = await fetch('/contact/attach_file', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-CSRFToken': csrfToken.value
-        },
+    // Check if file already exists to avoid duplicates
+    const existingFile = form.value.attachments.find(att => 
+      att.file.name === file.name && att.file.size === file.size
+    )
+    
+    if (!existingFile) {
+      form.value.attachments.push({
+        file: file,
+        filename: file.name,
+        size: file.size
       })
-
-      if (!response.ok) throw new Error('Upload failed')
-
-      const data = await response.json()
-
-      if (data.upload_token) {
-        form.value.attachments.push({
-          filename: data.filename || file.name,
-          token: data.upload_token
-        })
-      }
-    } catch (err) {
-      console.error('Upload error:', err)
     }
   }
 }
@@ -94,47 +83,66 @@ const resetForm = () => {
   }
   errorText.value = ''
   successText.value = ''
+
+  formRef.value.reset()
 }
 
 const handleSubmit = async () => {
+  if (isSubmitting.value) return;
+  
   errorText.value = ''
   successText.value = ''
+  isSubmitting.value = true
 
-  const { email, subject, product, type, description, attachments } = form.value;
+  try {
+    const { email, subject, product, type, description, attachments } = form.value;
 
-  const response = await fetch('/contact/submit', {
-    mode: "same-origin",
-    credentials: "include",
-    method: 'POST',
-    body: JSON.stringify({
-      email,
-      subject,
-      product,
-      type,
-      description,
-      attachments,
-    }),
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken.value
-    },
-  });
+    // Create FormData instead of JSON
+    const formData = new FormData()
+    formData.append('email', email)
+    formData.append('subject', subject)
+    formData.append('product', product)
+    formData.append('type', type)
+    formData.append('description', description)
 
-  const data = await response.json();
+    attachments.forEach((attachment) => {
+      formData.append('attachments', attachment.file)
+    })
 
-  if (!data.success) {
-    errorText.value = 'Failed to submit contact form';
-    return;
+    const response = await fetch('/contact/submit', {
+      mode: "same-origin",
+      credentials: "include",
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': csrfToken.value
+      },
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      errorText.value = 'Failed to submit contact form';
+      return;
+    }
+
+    resetForm()
+    successText.value = 'Your support request has been submitted successfully. We will get back to you soon.'
+  } catch (error) {
+    console.error('Submit error:', error)
+    errorText.value = 'Failed to submit contact form. Please try again.'
+  } finally {
+    isSubmitting.value = false
   }
-
-  resetForm()
-  successText.value = 'Your support request has been submitted successfully. We will get back to you soon.'
 }
 
 </script>
 
 <template>
-  <form @submit.prevent="handleSubmit" method="post" action="/contact/submit">
+  <notice-bar type="error" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
+  <notice-bar type="success" v-if="successText" class="notice">{{ successText }}</notice-bar>
+
+  <form @submit.prevent="handleSubmit" method="post" action="/contact/submit" ref="formRef">
     <!-- Email -->
     <text-input
       name="email"
@@ -180,15 +188,14 @@ const handleSubmit = async () => {
     </select-input>
 
     <!-- Description -->
-    <text-input
+    <text-area
       name="description"
-      type="textarea"
       v-model="form.description"
       required="required"
       data-testid="contact-description-input"
     >
       Description*
-    </text-input>
+    </text-area>
 
     <div
       class="form-group file-dropzone"
@@ -199,7 +206,7 @@ const handleSubmit = async () => {
       aria-label="Upload files"
     >
       <p v-if="form.attachments.length === 0">Drag & drop files here, or click to upload</p>
-      <p v-else>{{ form.attachments.length }} file(s) uploaded. Drag & drop more files here, or click to upload</p>
+      <p v-else>{{ form.attachments.length }} file(s) selected. Drag & drop more files here, or click to upload</p>
       <input
         type="file"
         ref="fileInput"
@@ -216,12 +223,13 @@ const handleSubmit = async () => {
       </li>
     </ul>
 
-    <notice-bar type="error" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
-    <notice-bar type="success" v-if="successText" class="notice">{{ successText }}</notice-bar>
-
     <div class="form-group">
-      <primary-button @click.capture="handleSubmit" data-testid="contact-submit-btn">
-        Submit
+      <primary-button 
+        @click.capture="handleSubmit" 
+        data-testid="contact-submit-btn"
+        :disabled="isSubmitting"
+      >
+        {{ isSubmitting ? 'Submitting...' : 'Submit' }}
       </primary-button>
     </div>
 
@@ -262,7 +270,8 @@ form {
 }
 
 .notice {
-  margin-bottom: 1rem;
+  margin-block: 1rem;
+  max-width: 50%;
 }
 
 .attachment-list {
