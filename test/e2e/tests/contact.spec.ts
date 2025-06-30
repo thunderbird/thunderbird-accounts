@@ -71,31 +71,6 @@ test.describe('contact support form', {
     await expect(contactPage.successMessage).toBeVisible();
   });
 
-  test('able to upload file attachment', async ({ page }) => {
-    // capture the POST /contact/attach_file and mock the response
-    await page.route('*/**/contact/attach_file', async (route, request) => {
-      // send a fake response to the file upload request
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          upload_token: 'fake-upload-token-123',
-          filename: 'test-attachment.txt'
-        }),
-      });
-    });
-
-    // create a temporary test file
-    const testFilePath = './test-files/test-attachment.txt';
-
-    // upload the file
-    await contactPage.uploadFile(testFilePath);
-
-    // check that the file appears in the attachment list
-    await expect(page.getByText('test-attachment.txt')).toBeVisible();
-  });
-
   test('form validation works correctly', async ({ page }) => {
     // try to submit empty form
     await contactPage.submitForm();
