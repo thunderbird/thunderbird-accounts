@@ -74,7 +74,7 @@ const removeAttachment = (index) => {
 
 const resetForm = () => {
   form.value = {
-    email: window._page?.userEmail || '',
+    email: '',
     subject: '',
     product: '',
     type: '',
@@ -92,20 +92,24 @@ const handleSubmit = async () => {
   
   errorText.value = ''
   successText.value = ''
+
+  if (!formRef.value.checkValidity()) {
+    formRef.value.reportValidity();
+    return;
+  }
+
   isSubmitting.value = true
 
   try {
-    const { email, subject, product, type, description, attachments } = form.value;
-
     // Create FormData instead of JSON
     const formData = new FormData()
-    formData.append('email', email)
-    formData.append('subject', subject)
-    formData.append('product', product)
-    formData.append('type', type)
-    formData.append('description', description)
+    formData.append('email', form.value.email)
+    formData.append('subject', form.value.subject)
+    formData.append('product', form.value.product)
+    formData.append('type', form.value.type)
+    formData.append('description', form.value.description)
 
-    attachments.forEach((attachment) => {
+    form.value.attachments.forEach((attachment) => {
       formData.append('attachments', attachment.file)
     })
 
@@ -151,7 +155,7 @@ const handleSubmit = async () => {
       required="required"
       data-testid="contact-email-input"
     >
-      Your email address(*)
+      Your email address
     </text-input>
 
     <!-- Subject -->
@@ -162,7 +166,7 @@ const handleSubmit = async () => {
       required="required"
       data-testid="contact-subject-input"
     >
-      Subject*
+      Subject
     </text-input>
 
     <!-- Product -->
@@ -173,7 +177,7 @@ const handleSubmit = async () => {
       required="required"
       data-testid="contact-product-input"
     >
-      Product*
+      Product
     </select-input>
 
     <!-- Type of Request -->
@@ -184,7 +188,7 @@ const handleSubmit = async () => {
       required="required"
       data-testid="contact-type-input"
     >
-      Type of Request*
+      Type of Request
     </select-input>
 
     <!-- Description -->
@@ -194,7 +198,7 @@ const handleSubmit = async () => {
       required="required"
       data-testid="contact-description-input"
     >
-      Description*
+      Description
     </text-area>
 
     <div
