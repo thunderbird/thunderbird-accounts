@@ -115,29 +115,54 @@ def contact_submit(request: HttpRequest):
     """ Uses Zendesk's Requests API to create a ticket
         Ref https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#tickets-and-requests"""
 
-    if request.user.is_anonymous:
-        return JsonResponse({'success': False})
+    email = request.POST.get('email')
+    subject = request.POST.get('subject')
+    product = request.POST.get('product')
+    ticket_type = request.POST.get('type')
+    description = request.POST.get('description')
+    uploaded_files = request.FILES.getlist('attachments')
 
-    data = json.loads(request.body)
-
-    email = data.get('email')
-    subject = data.get('subject')
-    product = data.get('product')
-    ticket_type = data.get('type')
-    description = data.get('description')
-    attachments = data.get('attachments', [])
-
-    if not all([email, subject, product, ticket_type, description]):
+    if not any([email, subject, product, ticket_type, description]):
         return raise_form_error(request, reverse('contact'), _('All fields are required'))
 
+    # Upload files to Zendesk and collect tokens
+    attachment_tokens = []
     zendesk_client = ZendeskClient()
+
+    for uploaded_file in uploaded_files:
+        try:
+            zendesk_api_response = zendesk_client.upload_file(uploaded_file)
+            
+            if not zendesk_api_response['success']:
+                return JsonResponse(
+                    {
+                        'success': False,
+                        'error': f'Failed to upload file {uploaded_file.name}: {
+                            zendesk_api_response.get("error", "Unknown error")
+                        }',
+                    },
+                    status=500,
+                )
+
+            attachment_tokens.append({
+                'token': zendesk_api_response['upload_token'],
+                'filename': zendesk_api_response['filename']
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Failed to upload file {uploaded_file.name}: {str(e)}'
+            }, status=500)
+
+    # Create ticket with attachment tokens
     ticket_fields = {
         'email': email,
         'subject': subject,
         'product': product,
         'ticket_type': ticket_type,
         'description': description,
-        'attachments': attachments
+        'attachments': attachment_tokens
     }
 
     zendesk_api_response = zendesk_client.create_ticket(ticket_fields)
@@ -146,39 +171,6 @@ def contact_submit(request: HttpRequest):
         return JsonResponse({'success': True})
 
     return JsonResponse({'success': False}, status=500)
-
-
-@login_required
-@require_http_methods(['POST'])
-def contact_attach_file(request: HttpRequest):
-    """ Uses Zendesk's API to generate a token to be used for contact form attachments
-        Ref https://developer.zendesk.com/api-reference/ticketing/tickets/ticket-attachments/#upload-files"""
-
-    if request.user.is_anonymous:
-        return JsonResponse({'success': False}, status=400)
-
-    uploaded_file = request.FILES.get('file')
-    if not uploaded_file:
-        return JsonResponse({'success': False, 'error': 'No file uploaded'}, status=400)
-
-    try:
-        zendesk_client = ZendeskClient()
-        zendesk_api_response = zendesk_client.upload_file(uploaded_file)
-
-        if zendesk_api_response['success']:
-            return JsonResponse({
-                'upload_token': zendesk_api_response['upload_token'],
-                'filename': zendesk_api_response['filename']
-            })
-
-        return JsonResponse({
-            'success': False,
-            'error': zendesk_api_response['error'],
-            'details': zendesk_api_response['details']
-        }, status=500)
-
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required
