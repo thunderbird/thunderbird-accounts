@@ -1,6 +1,8 @@
 import requests
 from django.conf import settings
 
+from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
+
 
 class MailClient:
     """A partial api client for Stalwart
@@ -59,7 +61,12 @@ class MailClient:
 
     def get_domain(self, domain):
         response = self._get_principal(domain)
+
         data = response.json()
+        error = data.get('error')
+
+        if error == 'notFound':
+            raise DomainNotFoundError(domain)
 
         assert data.get('data', {}).get('type') == 'domain'
 
@@ -88,6 +95,20 @@ class MailClient:
         data = {'type': 'individual', 'name': username, 'description': name, 'emails': [email], 'roles': ['user']}
         response = self._create_principal(data)
         data = response.json()
+
+        # Return the pkid
+        return data.get('data')
+
+    def get_account(self, username):
+        response = self._get_principal(username)
+
+        data = response.json()
+        error = data.get('error')
+
+        if error == 'notFound':
+            raise AccountNotFoundError(username)
+
+        assert data.get('data', {}).get('type') == 'individual'
 
         # Return the pkid
         return data.get('data')
