@@ -336,6 +336,11 @@ if AUTH_SCHEME == 'oidc':
 
     OIDC_OP_LOGOUT_URL_METHOD = 'thunderbird_accounts.settings.oidc_logout'
 
+
+STALWART_API_URL = os.getenv('STALWART_API_URL')
+STALWART_API_KEY = os.getenv('STALWART_API_KEY')
+STALWART_DKIM_ALGO = 'Ed25519'
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
