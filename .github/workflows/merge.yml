@@ -77,10 +77,10 @@ jobs:
         with:
           mask-password: "true"
 
-      - name: Set up Python 3.12
+      - name: Set up Python ${{ vars.PYTHON_VERSION}}
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: ${{ vars.PYTHON_VERSION}}
 
       - name: Set up virtual environment
         shell: bash

@@ -64,11 +64,11 @@ jobs:
           docker tag $source_tag $target_tag
           docker push $target_tag
 
-      - name: Set up Python 3.12
+      - name: Set up Python ${{ vars.PYTHON_VERSION}}
         if: contains(github.event.release.assets.*.name, 'deployment.zip')
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: ${{ vars.PYTHON_VERSION}}
 
       - name: Set up virtual environment
         if: contains(github.event.release.assets.*.name, 'deployment.zip')
