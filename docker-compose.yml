@@ -8,7 +8,7 @@ services:
   postgres:
     image: postgres:17
     volumes:
-      - ./db:/var/lib/postgresql/data
+      - db:/var/lib/postgresql/data
     ports:
       - "5433:5432" # Note: host is exposed to 5433!
     environment:

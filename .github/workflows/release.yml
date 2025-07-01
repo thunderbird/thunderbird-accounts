@@ -75,7 +75,7 @@ jobs:
         shell: bash
         run: |
           python -m pip install virtualenv
-          cd packages/send/pulumi
+          cd pulumi
           virtualenv ./venv
 
       - name: Set up Pulumi environment
@@ -83,7 +83,7 @@ jobs:
         id: pulumi-env
         shell: bash
         run: |
-          cd packages/send/pulumi
+          cd pulumi
           source ./venv/bin/activate
           curl -fsSL https://get.pulumi.com | sh
           pip install -Ur requirements.txt
@@ -100,7 +100,7 @@ jobs:
           target_tag="${{ steps.retag-image.outputs.target_tag }}"
 
           # Create a YAML config stump containing only the nested tree leading to the image tag update
-          cd packages/send/pulumi
+          cd pulumi
           cat << EOF > newimage.yaml
           resources:
             tb:fargate:FargateClusterWithLogging:
@@ -122,7 +122,7 @@ jobs:
 
           # Set up the Pulumi environment and update the service
           source ./venv/bin/activate
-          pulumi login s3://tb-send-suite-pulumi
+          pulumi login
           pulumi stack select prod
           TBPULUMI_DISABLE_PROTECTION=True \
             pulumi up -y --diff --target \
