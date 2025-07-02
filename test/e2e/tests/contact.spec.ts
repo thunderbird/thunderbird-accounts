@@ -1,3 +1,4 @@
+import path from 'path';
 import { test, expect } from '@playwright/test';
 import { ContactPage } from '../pages/contact-page';
 import { FxAPage } from '../pages/fxa-page';
@@ -44,6 +45,13 @@ test.describe('contact support form', {
 
       const contentType = request.headers()['content-type'];
       expect(contentType).toContain('multipart/form-data');
+
+      // Verify that the FormData contains the expected fields
+      expect(postData).toContain('email');
+      expect(postData).toContain('subject');
+      expect(postData).toContain('product');
+      expect(postData).toContain('type');
+      expect(postData).toContain('description');
 
       // send a fake response to the contact submit request
       await route.fulfill({
@@ -99,5 +107,73 @@ test.describe('contact support form', {
 
     // check for error message
     await expect(contactPage.errorMessage).toBeVisible();
+  });
+
+  test('able to submit contact form with attachments', async ({ page }) => {
+    // capture the POST /contact/submit and mock the response
+    await page.route('*/**/contact/submit', async (route, request) => {
+      const postData = request.postData();
+      expect(postData).not.toBeNull();
+
+      const contentType = request.headers()['content-type'];
+      expect(contentType).toContain('multipart/form-data');
+
+      // Verify that the FormData contains the expected fields and file
+      // For multipart/form-data, we need to check the raw post data
+      expect(postData).toContain('email');
+      expect(postData).toContain('subject');
+      expect(postData).toContain('product');
+      expect(postData).toContain('type');
+      expect(postData).toContain('description');
+      expect(postData).toContain('attachments');
+      expect(postData).toContain('test-attachment.txt');
+
+      // send a fake response to the contact submit request
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+    });
+
+    // fill out the contact form
+    await contactPage.fillContactForm(
+      ACCTS_FXA_EMAIL,
+      'Test Subject with Attachment',
+      'thunderbird_assist',
+      'technical',
+      'Test description with file attachment'
+    );
+
+    // upload a test file
+    const testFilePath = path.join(__dirname, '../test-files/test-attachment.txt');
+    await contactPage.uploadFile(testFilePath);
+
+    // submit the form
+    await contactPage.submitForm();
+
+    // check for success message
+    await expect(contactPage.successMessage).toBeVisible();
+  });
+
+  test('file upload UI works correctly', async ({ page }) => {
+    // Upload a test file
+    const testFilePath = path.join(__dirname, '../test-files/test-attachment.txt');
+    await contactPage.uploadFile(testFilePath);
+
+    // Check that the file appears in the attachment list
+    await expect(page.getByText('test-attachment.txt')).toBeVisible();
+    await expect(page.getByText('1 file(s) selected. Drag & drop more files here, or click to upload')).toBeVisible();
+
+    // Check that the remove button is present
+    const removeButton = page.locator('.remove-attachment-btn').first();
+    await expect(removeButton).toBeVisible();
+
+    // Remove the attachment
+    await removeButton.click();
+
+    // Check that the file is removed from the list
+    await expect(page.getByText('test-attachment.txt')).not.toBeVisible();
+    await expect(page.getByText('Drag & drop files here, or click to upload')).toBeVisible();
   });
 }); 
