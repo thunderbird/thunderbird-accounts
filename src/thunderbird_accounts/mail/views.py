@@ -26,6 +26,7 @@ from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
 from thunderbird_accounts.mail.zendesk import ZendeskClient
+from thunderbird_accounts.mail import tasks, utils
 
 
 def raise_form_error(request, to_view: str, error_message: str):
@@ -75,6 +76,19 @@ def sign_up_submit(request: HttpRequest):
     except Email.DoesNotExist:
         pass
 
+    user = request.user
+    app_password = request.POST['app_password']
+
+    # Send a task to create the inbox / account on stalwart's end
+    if app_password:
+        app_password = utils.save_app_password('Mail Client', app_password)
+
+    # Run this immediately for now, in the future we'll ship these to celery
+    tasks.create_stalwart_account.run(
+        user_uuid=user.uuid.hex, username=user.username, email=user.email, app_password=app_password
+    )
+
+    # TODO: I don't think we need account model anymore
     account = Account.objects.create(
         name=request.user.email,
         type='individual',
@@ -82,7 +96,7 @@ def sign_up_submit(request: HttpRequest):
         active=True,
         django_user=request.user,
     )
-    account.save_app_password('Mail Clients', request.POST['app_password'])
+    # account.save_app_password('Mail Clients', request.POST['app_password'])
 
     address = Email.objects.create(address=email_address, type='primary', name=account)
 

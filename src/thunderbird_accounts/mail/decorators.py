@@ -8,4 +8,4 @@ def inject_stalwart_client(func):
         kwargs['stalwart'] = MailClient()
         return func(*args, **kwargs)
 
-    return inject_stalwart_client
+    return _inject_stalwart_client

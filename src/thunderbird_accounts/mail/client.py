@@ -1,7 +1,9 @@
+import logging
+
 import requests
 from django.conf import settings
 
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
+from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError, StalwartError
 
 
 class MailClient:
@@ -17,6 +19,14 @@ class MailClient:
             'Authorization': f'Bearer {self.api_key}',
         }
 
+    def _raise_for_error(self, response):
+        data = response.json()
+        error = data.get('error')
+        # Only catch 'other' errors here
+        if error == 'other':
+            details_and_reason = ': '.join([data.get('details'), data.get('reason')])
+            raise StalwartError(details_and_reason)
+
     def _get_principal(self, principal_id: str) -> requests.Response:
         """Returns a response for a principal object from Stalwart
 
@@ -26,6 +36,10 @@ class MailClient:
         """
         response = requests.get(f'{self.api_url}/principal/{principal_id}', headers=self.authorized_headers)
         response.raise_for_status()
+        self._raise_for_error(response)
+
+        logging.info(f'[MailClient._get_principal({principal_id}]: {response.json()}')
+
         return response
 
     def _create_principal(self, principal_data: dict):
@@ -57,6 +71,10 @@ class MailClient:
             f'{self.api_url}/principal/deploy', json=principal_data, headers=self.authorized_headers
         )
         response.raise_for_status()
+        self._raise_for_error(response)
+
+        logging.info(f'[MailClient._create_principal({principal_data}]: {response.json()}')
+
         return response
 
     def get_domain(self, domain):
@@ -64,6 +82,8 @@ class MailClient:
 
         data = response.json()
         error = data.get('error')
+
+        logging.info(f'[MailClient.get_domain({domain}]: {data}')
 
         if error == 'notFound':
             raise DomainNotFoundError(domain)
@@ -77,6 +97,8 @@ class MailClient:
         response = requests.post(f'{self.api_url}/dkim', json=data, headers=self.authorized_headers)
         response.raise_for_status()
         data = response.json()
+        logging.info(f'[MailClient.create_dkim({domain}]: {data}')
+
         return data.get('data')
 
     def create_domain(self, domain, description=''):
@@ -87,12 +109,15 @@ class MailClient:
         }
         response = self._create_principal(data)
         data = response.json()
+        logging.info(f'[MailClient.create_domain({domain}]: {data}')
 
         # Return the pkid
         return data.get('data')
 
-    def create_account(self, email, username, name=''):
-        data = {'type': 'individual', 'name': username, 'description': name, 'emails': [email], 'roles': ['user']}
+    def create_account(self, email, username, uuid='', app_password=None):
+        data = {'type': 'individual', 'name': username, 'description': uuid, 'emails': [email], 'roles': ['user']}
+        if app_password:
+            data['secrets'] = [app_password]
         response = self._create_principal(data)
         data = response.json()
 
