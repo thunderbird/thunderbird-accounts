@@ -16,3 +16,11 @@ def save_app_password(label, password):
 
     secret_string = f'$app${label}${hashed_password}'
     return secret_string
+
+
+def decode_app_password(secret):
+    if not secret:
+        return ''
+
+    # We only care about the app password name here
+    return secret.replace('$app$', '').split('$')[0]
