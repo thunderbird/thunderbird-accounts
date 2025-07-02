@@ -5,6 +5,7 @@ https://stalw.art/docs/storage/backends/postgresql#initialization-statements
 """
 
 import uuid
+from warnings import deprecated
 
 from django.contrib.auth.hashers import make_password, identify_hasher
 from django.db import models
@@ -73,6 +74,7 @@ class Account(models.Model):
             app_passwords.append(password.split('$')[0])
         return app_passwords
 
+    @deprecated('Use utils.save_app_password')
     def save_app_password(self, label, password):
         """Hashes a given password, formats it with the label and saves it to the secret field."""
         hashed_password = make_password(password, hasher='argon2')

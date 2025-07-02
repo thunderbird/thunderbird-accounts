@@ -1,14 +1,15 @@
+from typing import Optional
+
 import sentry_sdk
 from celery import shared_task
 
 from thunderbird_accounts.mail.client import MailClient
-from thunderbird_accounts.mail.decorators import inject_stalwart_client
 from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
 
 
-@inject_stalwart_client
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
-def create_stalwart_account(self, user_uuid, username: str, email: str, stalwart: MailClient):
+def create_stalwart_account(self, user_uuid: str, username: str, email: str, app_password: Optional[str]):
+    stalwart = MailClient()
     domain = email.split('@')[1]
 
     # Check if we have the domain
@@ -26,7 +27,7 @@ def create_stalwart_account(self, user_uuid, username: str, email: str, stalwart
         stalwart.get_account(username)
     except AccountNotFoundError:
         # Okay cool we can create it
-        pkid = stalwart.create_account(email, username, username)
+        pkid = stalwart.create_account(email, username, user_uuid, app_password)
         return {
             'uuid': user_uuid,
             'stalwart_pkid': pkid,

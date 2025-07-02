@@ -26,6 +26,7 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         user.timezone = claims.get('zoneinfo')
         user.avatar_url = claims.get('picture')
         user.display_name = claims.get('preferred_username')
+        user.username = claims.get('preferred_username')
 
         # Non-standard
         user.is_staff = claims.get('is_services_admin', 'no').lower() == 'yes'
@@ -52,7 +53,7 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
 
     def filter_users_by_claims(self, claims):
         """Return all users matching the specified oidc_id."""
-        sub = claims.get("sub")
+        sub = claims.get('sub')
         if not sub:
             return self.UserModel.objects.none()
         return self.UserModel.objects.filter(oidc_id__iexact=sub)
