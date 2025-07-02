@@ -85,10 +85,10 @@ services:
       - ./templates:/app/templates
 
   stalwart:
-    #image: stalwartlabs/mail-server:latest
-    build:
-      context: ../stalwart
-      dockerfile: Dockerfile
+    image: stalwartlabs/stalwart:v0.12.5
+    #build:
+    #  context: ../stalwart
+    #  dockerfile: Dockerfile
     volumes:
       - ./mail:/opt/stalwart
     ports:
