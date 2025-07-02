@@ -38,9 +38,9 @@ const onDeleteAppPassword = async (evt) => {
     mode: "same-origin",
     credentials: "include",
     method: 'POST',
-    body: {
+    body: JSON.stringify({
       password: passwordLabel
-    },
+    }),
     headers: {
       'X-CSRFToken': csrfToken.value
     },

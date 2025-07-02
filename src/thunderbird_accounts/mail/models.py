@@ -59,6 +59,7 @@ class Account(models.Model):
         return f'Account - {self.name}'
 
     @property
+    @deprecated('Use utils.decode_app_password')
     def app_passwords(self) -> list[str]:
         """A list of app password labels"""
         if not self.secret:
