@@ -79,11 +79,17 @@ test.describe(
         await paddleFrame.postalCodeField.fill(CHECKOUT_POSTAL_CODE, { timeout: TIMEOUT_5_SECONDS });
         await paddleFrame.continueButton.click();
 
+        // next screen: payment info
         await page.waitForTimeout(TIMEOUT_5_SECONDS);
         await paddleFrame.cardNumberField.fill(CHECKOUT_CC_NUM, { timeout: TIMEOUT_30_SECONDS });
         await paddleFrame.cardNameField.fill(CHECKOUT_CC_NAME, { timeout: TIMEOUT_5_SECONDS });
         await paddleFrame.cardExpiryField.fill(CHECKOUT_CC_EXP, { timeout: TIMEOUT_5_SECONDS });
         await paddleFrame.cardVerificationField.fill(CHECKOUT_CC_CVV, { timeout: TIMEOUT_5_SECONDS });
+
+       if (await paddleFrame.consentCheckBox.isVisible() && await paddleFrame.consentCheckBox.isEditable()) {
+          await paddleFrame.consentCheckBox.check({ timeout: TIMEOUT_30_SECONDS });
+          await page.waitForTimeout(TIMEOUT_2_SECONDS);
+        }
 
         await paddleFrame.finalCheckoutButton.click();
         await page.waitForTimeout(TIMEOUT_5_SECONDS);
