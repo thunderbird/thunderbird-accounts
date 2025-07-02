@@ -77,6 +77,40 @@ class MailClient:
 
         return response
 
+    def _update_principal(self, principal_id: str, update_data: list[dict]):
+        patch_schema = {
+            'type': ('set',),
+            'name': ('set',),
+            'description': ('set',),
+            'quota': ('set',),
+            'secrets': ('addItem', 'removeItem'),
+            'emails': ('addItem', 'removeItem'),
+            'urls': ('addItem', 'removeItem'),
+            'memberOf': ('addItem', 'removeItem'),
+            'roles': ('addItem', 'removeItem'),
+            'lists': ('addItem', 'removeItem'),
+            'members': ('addItem', 'removeItem'),
+            'enabledPermissions': ('addItem', 'removeItem'),
+            'disabledPermissions': ('addItem', 'removeItem'),
+            'externalMembers': ('addItem', 'removeItem'),
+        }
+
+        # TODO: Look into bringing in pydantic to handle schema validation
+        for data in update_data:
+            allowed_actions = patch_schema.get(data.get('field'))
+            if data.get('action') not in allowed_actions:
+                raise TypeError(f'{data.get("action")} is not allowed in')
+
+        response = requests.patch(
+            f'{self.api_url}/principal/{principal_id}/deploy', json=update_data, headers=self.authorized_headers
+        )
+        response.raise_for_status()
+        self._raise_for_error(response)
+
+        logging.info(f'[MailClient._update_principal({update_data}]: {response.json()}')
+
+        return response
+
     def get_domain(self, domain):
         response = self._get_principal(domain)
 
@@ -137,3 +171,16 @@ class MailClient:
 
         # Return the pkid
         return data.get('data')
+
+    def delete_app_password(self, username, secret):
+        response = self._update_principal(
+            username,
+            [{'action': 'removeItem', 'field': 'secrets', 'value': secret}],
+        )
+        # Returns data: null on success...
+        data = response.json()
+        error = data.get('error')
+        # I have no idea what the error is yet
+        if error:
+            logging.error(f'err: {data}')
+            raise RuntimeError(data)

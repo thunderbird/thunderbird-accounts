@@ -13,6 +13,8 @@ from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.client import MailClient
+from thunderbird_accounts.mail.utils import decode_app_password
 
 try:
     from paddle_billing import Client
@@ -338,7 +340,13 @@ def self_serve_app_passwords(request: HttpRequest):
     """App Password page for Self Serve
     A user can create (if none exists), or delete an App Password which is used to connect to the mail server."""
     account = request.user.account_set.first()
-    app_passwords = account.app_passwords if account else []
+
+    stalwart_client = MailClient()
+    email_user = stalwart_client.get_account(request.user.username)
+
+    app_passwords = []
+    for secret in email_user.get('secrets', []):
+        app_passwords.append(decode_app_password(secret))
 
     return TemplateResponse(
         request,
@@ -353,13 +361,18 @@ def self_serve_app_passwords(request: HttpRequest):
 @login_required
 @require_http_methods(['POST'])
 def self_serve_app_password_remove(request: HttpRequest):
-    if request.user.is_anonymous:
-        return JsonResponse({'success': False})
-    account = request.user.account_set.first()
-    account.secret = None
-    account.save()
+    app_password_label = json.loads(request.body).get('password')
 
-    return JsonResponse({'success': True})
+    stalwart_client = MailClient()
+    email_user = stalwart_client.get_account(request.user.username)
+
+    for secret in email_user.get('secrets', []):
+        secret_label = decode_app_password(secret)
+        if secret_label == app_password_label:
+            stalwart_client.delete_app_password(request.user.username, secret)
+            return JsonResponse({'success': True})
+
+    return JsonResponse({'success': False})
 
 
 @login_required
