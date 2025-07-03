@@ -271,16 +271,12 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-allow-list-6iQipk
               - name: FXA_CLIENT_ID
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-client-id-ggzLOI
+              - name: FXA_ENCRYPT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-encrypt-secret-MXgdBx
               - name: FXA_SECRET
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-secret-yPR6T4
               - name: LOGIN_CODE_SECRET
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/login-code-secret-OSoact
-              - name: SECRET_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK
-              - name: FXA_ENCRYPT_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-encrypt-secret-MXgdBx
-              - name: SENTRY_DSN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV
               - name: PADDLE_TOKEN
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-token-aNOfo6
               - name: PADDLE_PRICE_ID_LO
@@ -291,18 +287,29 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-hi-0gHjja
               - name: REDIS_URL
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/redis-url-Nq3x1a
+              - name: SECRET_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK
+              - name: SENTRY_DSN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV
             environment:
-              - name: ADMIN_WEBSITE
-                value: https://www.thunderbird.net
               - name: ADMIN_CONTACT
                 value: dummy@example.org
+              - name: ADMIN_WEBSITE
+                value: https://www.thunderbird.net
+              - name: ALLOWED_EMAIL_DOMAINS
+                value: 'thundermail.com'
               - name: ALLOWED_HOSTS
-                # value: '*'
                 value: '*:8087,accounts.tb.pro,10.*,10.*:8087'
               - name: APP_ENV
                 value: stage
               - name: AUTH_SCHEME
                 value: fxa
+              - name: CSRF_HTTPONLY
+                value: 'True'
+              - name: CSRF_SECURE
+                value: 'True'
+              - name: CSRF_TRUSTED_ORIGINS
+                value: 'https://accounts.tb.pro'
               - name: FXA_CALLBACK
                 value: https://accounts.tb.pro/api/v1/auth/fxa/callback
               - name: FXA_OAUTH_SERVER_URL
@@ -311,29 +318,11 @@ resources:
                 value: https://accounts.firefox.com/.well-known/openid-configuration
               - name: FXA_PROFILE_SERVER_URL
                 value: https://profile.accounts.firefox.com/v1
-              - name: PUBLIC_BASE_URL
-                value: accounts.tb.pro
-              - name: SUPPORT_CONTACT
-                value: dummy@example.org
-              - name: CSRF_SECURE
-                value: 'True'
-              - name: CSRF_HTTPONLY
-                value: 'True'
-              - name: CSRF_TRUSTED_ORIGINS
-                value: 'https://accounts.tb.pro'
-              - name: ALLOWED_EMAIL_DOMAINS
-                value: 'thundermail.com'
               - name: IMAP_HOST
                 value: 'mail.thundermail.com'
               - name: IMAP_PORT
                 value: '993'
               - name: IMAP_TLS
-                value: 'True'
-              - name: SMTP_HOST
-                value: 'mail.thundermail.com'
-              - name: SMTP_PORT
-                value: '465'
-              - name: SMTP_TLS
                 value: 'True'
               - name: JMAP_HOST
                 value: 'mail.thundermail.com'
@@ -343,14 +332,24 @@ resources:
                 value: 'True'
               - name: PADDLE_ENV
                 value: 'sandbox'
-              - name: REDIS_INTERNAL_DB
-                value: '0'
+              - name: PUBLIC_BASE_URL
+                value: accounts.tb.pro
               - name: REDIS_CELERY_DB
                 value: '5'
               - name: REDIS_CELERY_RESULTS_DB
                 value: '6'
+              - name: REDIS_INTERNAL_DB
+                value: '0'
               - name: REDIS_SHARED_DB
                 value: '10'
+              - name: SMTP_HOST
+                value: 'mail.thundermail.com'
+              - name: SMTP_PORT
+                value: '465'
+              - name: SMTP_TLS
+                value: 'True'
+              - name: SUPPORT_CONTACT
+                value: dummy@example.org
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -368,7 +367,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts-celery-worker:e1bced21eb1c4ee2f2f25f416fe03a21e3f5f802
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:e1bced21eb1c4ee2f2f25f416fe03a21e3f5f802
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -384,16 +383,12 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-allow-list-6iQipk
               - name: FXA_CLIENT_ID
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-client-id-ggzLOI
+              - name: FXA_ENCRYPT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-encrypt-secret-MXgdBx
               - name: FXA_SECRET
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-secret-yPR6T4
               - name: LOGIN_CODE_SECRET
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/login-code-secret-OSoact
-              - name: SECRET_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK
-              - name: FXA_ENCRYPT_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-encrypt-secret-MXgdBx
-              - name: SENTRY_DSN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV
               - name: PADDLE_TOKEN
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-token-aNOfo6
               - name: PADDLE_PRICE_ID_LO
@@ -402,17 +397,29 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-md-HAbQbW
               - name: PADDLE_PRICE_ID_HI
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-hi-0gHjja
+              - name: SECRET_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK
+              - name: SENTRY_DSN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV
               - name: REDIS_URL
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/redis-url-Nq3x1a
             environment:
-              - name: ADMIN_WEBSITE
-                value: https://www.thunderbird.net
               - name: ADMIN_CONTACT
                 value: dummy@example.org
+              - name: ADMIN_WEBSITE
+                value: https://www.thunderbird.net
+              - name: ALLOWED_EMAIL_DOMAINS
+                value: 'thundermail.com'
               - name: APP_ENV
                 value: stage
               - name: AUTH_SCHEME
                 value: fxa
+              - name: CSRF_HTTPONLY
+                value: 'True'
+              - name: CSRF_SECURE
+                value: 'True'
+              - name: CSRF_TRUSTED_ORIGINS
+                value: 'https://accounts.tb.pro'
               - name: FXA_CALLBACK
                 value: https://accounts.tb.pro/api/v1/auth/fxa/callback
               - name: FXA_OAUTH_SERVER_URL
@@ -421,29 +428,11 @@ resources:
                 value: https://accounts.firefox.com/.well-known/openid-configuration
               - name: FXA_PROFILE_SERVER_URL
                 value: https://profile.accounts.firefox.com/v1
-              - name: PUBLIC_BASE_URL
-                value: accounts.tb.pro
-              - name: SUPPORT_CONTACT
-                value: dummy@example.org
-              - name: CSRF_SECURE
-                value: 'True'
-              - name: CSRF_HTTPONLY
-                value: 'True'
-              - name: CSRF_TRUSTED_ORIGINS
-                value: 'https://accounts.tb.pro'
-              - name: ALLOWED_EMAIL_DOMAINS
-                value: 'thundermail.com'
               - name: IMAP_HOST
                 value: 'mail.thundermail.com'
               - name: IMAP_PORT
                 value: '993'
               - name: IMAP_TLS
-                value: 'True'
-              - name: SMTP_HOST
-                value: 'mail.thundermail.com'
-              - name: SMTP_PORT
-                value: '465'
-              - name: SMTP_TLS
                 value: 'True'
               - name: JMAP_HOST
                 value: 'mail.thundermail.com'
@@ -453,11 +442,23 @@ resources:
                 value: 'True'
               - name: PADDLE_ENV
                 value: 'sandbox'
-              - name: REDIS_INTERNAL_DB
-                value: '0'
+              - name: PUBLIC_BASE_URL
+                value: accounts.tb.pro
+              - name: SMTP_HOST
+                value: 'mail.thundermail.com'
+              - name: SMTP_PORT
+                value: '465'
+              - name: SMTP_TLS
+                value: 'True'
+              - name: SUPPORT_CONTACT
+                value: dummy@example.org
               - name: REDIS_CELERY_DB
                 value: '5'
               - name: REDIS_CELERY_RESULTS_DB
                 value: '6'
+              - name: REDIS_INTERNAL_DB
+                value: '0'
               - name: REDIS_SHARED_DB
                 value: '10'
+              - name: TBA_CELERY
+                value: "yes"
