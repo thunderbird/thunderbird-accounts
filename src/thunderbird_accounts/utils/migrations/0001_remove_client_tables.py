@@ -7,10 +7,10 @@ from django.db import migrations, connection
 def remove_tables(apps, schema_editor):
     print('dropping client tables')
     with connection.cursor() as cursor:
-        cursor.execute('DROP TABLE IF EXISTS client_clientwebhook CASCADE')
-        cursor.execute('DROP TABLE IF EXISTS client_clientenvironment CASCADE')
-        cursor.execute('DROP TABLE IF EXISTS client_clientcontact CASCADE')
-        cursor.execute('DROP TABLE IF EXISTS client_client CASCADE')
+        cursor.execute('DROP TABLE IF EXISTS "client_clientwebhook"')
+        cursor.execute('DROP TABLE IF EXISTS "client_clientenvironment"')
+        cursor.execute('DROP TABLE IF EXISTS "client_clientcontact"')
+        cursor.execute('DROP TABLE IF EXISTS "client_client"')
         print('client tables dropped')
 
 
