@@ -36,6 +36,7 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
 
         # Non-standard
         user.is_staff = claims.get('is_services_admin', 'no').lower() == 'yes'
+        user.is_superuser = claims.get('is_services_admin', 'no').lower() == 'yes'
 
         return user
 

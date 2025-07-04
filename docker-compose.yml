@@ -115,12 +115,14 @@ services:
     ports:
       - "8999:8999"
       - "9000:9000"
+    # If you need to export the realm uncomment this. You'll see the data in ./keycloak/data/export
+    #entrypoint: '/opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/export'
     environment:
       KC_HTTP_PORT: 8999
       KC_HOSTNAME: keycloak
       KC_HOSTNAME_STRICT_BACKCHANNEL: "true"
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      #KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      #KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: "true"
       KC_LOG_LEVEL: info
       KC_DB: "postgres"
@@ -130,6 +132,7 @@ services:
       KC_DB_PASSWORD: "kc"
     volumes:
       - "./keycloak/themes:/opt/keycloak/themes"
+      - "./keycloak/data/export:/opt/keycloak/data/export"
 
   # Capturing keycloak emails for dev
   mailpit:
