@@ -1,6 +1,5 @@
 from functools import cached_property
 
-from cryptography.fernet import Fernet
 from django.conf import settings
 from django.db import models
 
@@ -8,20 +7,6 @@ from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.utils.models import BaseModel
-
-
-class UserSession(BaseModel):
-    """
-    User Session, mirrors the db cache for eventually showing the user which sessions they're logged into.
-    :param user: The session's related user
-    :param session_key: The session id/key the user logged in with
-    """
-
-    user = models.ForeignKey('User', on_delete=models.CASCADE)
-    session_key = models.CharField(max_length=256, null=False, help_text=_('Session Key'))
-
-    def __str__(self):
-        return f'User Session for {self.user.uuid} from {self.created_at}'
 
 
 class User(AbstractUser, BaseModel):
@@ -51,28 +36,6 @@ class User(AbstractUser, BaseModel):
     display_name = models.CharField(max_length=256, null=True, help_text=_('The display name from Mozilla Accounts'))
     avatar_url = models.CharField(max_length=2048, null=True, help_text=_('The avatar url from Mozilla Accounts'))
     timezone = models.CharField(max_length=128, default='UTC', help_text=_("The user's timezone"))
-
-    _fxa_token = models.BinaryField(
-        db_column='fxa_token',
-        null=True,
-    )
-
-    @property
-    def fxa_token(self) -> str | None:
-        if self._fxa_token is None:
-            return None
-
-        f = Fernet(settings.FXA_ENCRYPT_SECRET)
-        return f.decrypt(self._fxa_token).decode()
-
-    @fxa_token.setter
-    def fxa_token(self, value: str | None):
-        if value is None:
-            self._fxa_token = None
-            return
-
-        f = Fernet(settings.FXA_ENCRYPT_SECRET)
-        self._fxa_token = f.encrypt(value.encode())
 
     class Meta(BaseModel.Meta):
         indexes = [
