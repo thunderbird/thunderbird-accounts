@@ -4,6 +4,7 @@
     "id" : "5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2",
     "username" : "admin",
     "firstName" : "Admin",
+    "lastName" : "Example",
     "email" : "admin@example.org",
     "emailVerified" : true,
     "attributes" : {
@@ -14,7 +15,14 @@
     "enabled" : true,
     "createdTimestamp" : 1751660998121,
     "totp" : false,
-    "credentials" : [ ],
+    "credentials" : [ {
+      "id" : "b7e13dec-4dff-4caf-a4b2-4eb40f409eaf",
+      "type" : "password",
+      "userLabel" : "Dev default password",
+      "createdDate" : 1751661639614,
+      "secretData" : "{\"value\":\"fHhJDgx/gZUSNVwQguVF20nWPsVldMoz/aj5P4hYG8I=\",\"salt\":\"TP0LiZtQ/Rv1/RdeRLegdQ==\",\"additionalParameters\":{}}",
+      "credentialData" : "{\"hashIterations\":5,\"algorithm\":\"argon2\",\"additionalParameters\":{\"hashLength\":[\"32\"],\"memory\":[\"7168\"],\"type\":[\"id\"],\"version\":[\"1.3\"],\"parallelism\":[\"1\"]}}"
+    } ],
     "disableableCredentialTypes" : [ ],
     "requiredActions" : [ ],
     "realmRoles" : [ "default-roles-stalwart" ],
