@@ -128,6 +128,15 @@ services:
       KC_DB_PASSWORD: "kc"
     volumes:
       - "./keycloak/themes:/opt/keycloak/themes"
+
+  # Capturing keycloak emails for dev
+  mailpit:
+    image: axllent/mailpit
+    environment:
+      - MP_SMTP_AUTH_ALLOW_INSECURE=true
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1024" # SMTP
 volumes:
   db: {}
   kcdb: {}
