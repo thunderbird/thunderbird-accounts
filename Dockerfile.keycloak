@@ -1,0 +1,9 @@
+#
+# Keycloak dockerfile for local development
+#
+FROM quay.io/keycloak/keycloak:26.3
+
+# Load in our dev setup
+COPY --chown=keycloak:keycloak keycloak/data/import /opt/keycloak/data/import
+
+ENTRYPOINT ["/bin/bash", "/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]

@@ -80,7 +80,7 @@ SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT')
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # These are url reverse keys
-LOGIN_URL = 'login'
+LOGIN_URL = 'oidc_authentication_init'
 LOGIN_REDIRECT_URL = 'self_serve_home'
 
 LOGIN_CODE_SECRET = os.getenv('LOGIN_CODE_SECRET')
@@ -89,14 +89,7 @@ LOGIN_MAX_AGE_IN_SECONDS = 60 * 3
 IS_IN_ALLOW_LIST_CACHE_KEY = 'is_in_allow_list'
 IS_IN_ALLOW_LIST_CACHE_MAX_AGE_IN_SECONDS = 60 * 60 * 24
 
-FXA_CLIENT_ID: str = os.getenv('FXA_CLIENT_ID')
-FXA_SECRET: str = os.getenv('FXA_SECRET')
-FXA_CALLBACK: str = os.getenv('FXA_CALLBACK')
-FXA_OAUTH_SERVER_URL: str = os.getenv('FXA_OAUTH_SERVER_URL')
-FXA_PROFILE_SERVER_URL: str = os.getenv('FXA_PROFILE_SERVER_URL')
-FXA_ENCRYPT_SECRET: bytes = os.getenv('FXA_ENCRYPT_SECRET', '').encode()
-FXA_ALLOW_LIST: str = os.getenv('FXA_ALLOW_LIST')
-FXA_OPEN_ID_CONFIG_URL: str = os.getenv('FXA_OPEN_ID_CONFIG')
+AUTH_ALLOW_LIST: str = os.getenv('FXA_ALLOW_LIST')
 
 # MailChimp form URL for Wait List
 WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
@@ -131,13 +124,15 @@ if DEBUG:
 INSTALLED_APPS = [
     # Internal
     'thunderbird_accounts.authentication',
-    'thunderbird_accounts.client',
     'thunderbird_accounts.subscription',
     'thunderbird_accounts.mail',
     'thunderbird_accounts.utils',
     # Django
     'django.contrib.admin',
     'django.contrib.auth',
+    # OIDC Auth
+    'mozilla_django_oidc',  # Load after auth
+    # Django
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -149,8 +144,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # This needs to be first, as we're setting up our allowed hosts
-    'thunderbird_accounts.authentication.middleware.ClientSetAllowedHostsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'servestatic.middleware.ServeStaticMiddleware',
@@ -160,6 +153,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'mozilla_django_oidc.middleware.SessionRefresh',
 ]
 
 ROOT_URLCONF = 'thunderbird_accounts.urls'
@@ -232,7 +226,10 @@ REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
-    'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework_simplejwt.authentication.JWTAuthentication'],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'mozilla_django_oidc.contrib.drf.OIDCAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
 }
 
 REDIS_URL = os.getenv('REDIS_URL')
@@ -296,6 +293,9 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'DEBUG',
     },
+    'loggers': {
+        'mozilla_django_oidc': {'handlers': ['console'], 'level': 'DEBUG'},
+    },
 }
 
 SIMPLE_JWT = {
@@ -305,9 +305,26 @@ SIMPLE_JWT = {
 
 AUTH_SCHEME = os.getenv('AUTH_SCHEME', 'password')
 
-# If we're fxa use the fxa backend instead of standard user/pass
-if AUTH_SCHEME == 'fxa':
-    AUTHENTICATION_BACKENDS = ['thunderbird_accounts.authentication.middleware.FXABackend']
+if AUTH_SCHEME == 'oidc':
+    AUTHENTICATION_BACKENDS = ['thunderbird_accounts.authentication.middleware.AccountsOIDCBackend']
+    OIDC_RP_CLIENT_ID = os.getenv('OIDC_CLIENT_ID')
+    OIDC_RP_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET')
+    OIDC_RP_SIGN_ALGO = os.getenv('OIDC_SIGN_ALGO')
+    OIDC_OP_AUTHORIZATION_ENDPOINT = os.getenv('OIDC_URL_AUTH')
+    OIDC_OP_TOKEN_ENDPOINT = os.getenv('OIDC_URL_TOKEN')
+    OIDC_OP_USER_ENDPOINT = os.getenv('OIDC_URL_USER')
+    OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
+    ALLOW_LOGOUT_GET_METHOD = True
+
+    def oidc_logout(request):
+        return f'{os.getenv("OIDC_URL_LOGOUT")}?client_id={OIDC_RP_CLIENT_ID}'
+
+    OIDC_OP_LOGOUT_URL_METHOD = 'thunderbird_accounts.settings.oidc_logout'
+
+
+STALWART_API_URL = os.getenv('STALWART_API_URL')
+STALWART_API_KEY = os.getenv('STALWART_API_KEY')
+STALWART_DKIM_ALGO = 'Ed25519'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
