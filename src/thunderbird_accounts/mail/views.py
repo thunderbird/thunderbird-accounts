@@ -364,6 +364,7 @@ def self_serve_app_passwords(request: HttpRequest):
 @login_required
 @require_http_methods(['POST'])
 def self_serve_app_password_remove(request: HttpRequest):
+    """Removes an app password from a remote Stalwart account"""
     app_password_label = json.loads(request.body).get('password')
 
     stalwart_client = MailClient()
@@ -382,9 +383,7 @@ def self_serve_app_password_remove(request: HttpRequest):
 @require_http_methods(['POST'])
 @sensitive_post_parameters('password')
 def self_serve_app_password_add(request: HttpRequest):
-    if request.user.is_anonymous:
-        return JsonResponse({'success': False})
-
+    """Add an app password to the remote Stalwart account"""
     label = request.POST['name']
     password = request.POST['password']
 
