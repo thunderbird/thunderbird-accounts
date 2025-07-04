@@ -388,9 +388,15 @@ def self_serve_app_password_add(request: HttpRequest):
     if not label or not password:
         return raise_form_error(request, reverse('self_serve_app_password'), _('Label and password are required'))
 
-    account = request.user.account_set.first()
-    if not account.save_app_password(label, password):
-        return raise_form_error(request, reverse('self_serve_app_password'), _('Unsupported algorithm'))
+    stalwart_client = MailClient()
+    email_user = stalwart_client.get_account(request.user.username)
+    for secret in email_user.get('secrets', []):
+        secret_label = decode_app_password(secret)
+        if secret_label == label:
+            return raise_form_error(request, reverse('self_serve_app_password'), _('That label is already in-use'))
+
+    secret = utils.save_app_password(label, password)
+    stalwart_client.save_app_password(request.user.username, secret)
 
     return HttpResponseRedirect('/self-serve/app-passwords')
 

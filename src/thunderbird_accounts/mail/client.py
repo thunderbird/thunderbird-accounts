@@ -102,7 +102,7 @@ class MailClient:
                 raise TypeError(f'{data.get("action")} is not allowed in')
 
         response = requests.patch(
-            f'{self.api_url}/principal/{principal_id}/deploy', json=update_data, headers=self.authorized_headers
+            f'{self.api_url}/principal/{principal_id}', json=update_data, headers=self.authorized_headers
         )
         response.raise_for_status()
         self._raise_for_error(response)
@@ -182,5 +182,18 @@ class MailClient:
         error = data.get('error')
         # I have no idea what the error is yet
         if error:
-            logging.error(f'err: {data}')
+            logging.error(f'[delete_app_password] err: {data}')
+            raise RuntimeError(data)
+
+    def save_app_password(self, username, secret):
+        response = self._update_principal(
+            username,
+            [{'action': 'addItem', 'field': 'secrets', 'value': secret}],
+        )
+        # Returns data: null on success...
+        data = response.json()
+        error = data.get('error')
+        # I have no idea what the error is yet
+        if error:
+            logging.error(f'[save_app_password] err: {data}')
             raise RuntimeError(data)
