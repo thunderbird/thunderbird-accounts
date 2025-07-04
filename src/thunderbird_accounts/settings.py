@@ -89,14 +89,7 @@ LOGIN_MAX_AGE_IN_SECONDS = 60 * 3
 IS_IN_ALLOW_LIST_CACHE_KEY = 'is_in_allow_list'
 IS_IN_ALLOW_LIST_CACHE_MAX_AGE_IN_SECONDS = 60 * 60 * 24
 
-FXA_CLIENT_ID: str = os.getenv('FXA_CLIENT_ID')
-FXA_SECRET: str = os.getenv('FXA_SECRET')
-FXA_CALLBACK: str = os.getenv('FXA_CALLBACK')
-FXA_OAUTH_SERVER_URL: str = os.getenv('FXA_OAUTH_SERVER_URL')
-FXA_PROFILE_SERVER_URL: str = os.getenv('FXA_PROFILE_SERVER_URL')
-FXA_ENCRYPT_SECRET: bytes = os.getenv('FXA_ENCRYPT_SECRET', '').encode()
-FXA_ALLOW_LIST: str = os.getenv('FXA_ALLOW_LIST')
-FXA_OPEN_ID_CONFIG_URL: str = os.getenv('FXA_OPEN_ID_CONFIG')
+AUTH_ALLOW_LIST: str = os.getenv('FXA_ALLOW_LIST')
 
 # MailChimp form URL for Wait List
 WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
@@ -330,9 +323,6 @@ if AUTH_SCHEME == 'oidc':
     OIDC_OP_USER_ENDPOINT = os.getenv('OIDC_URL_USER')
     OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
     ALLOW_LOGOUT_GET_METHOD = True
-
-    def oidc_logout(request):
-        return f'{os.getenv("OIDC_URL_LOGOUT")}?client_id={OIDC_RP_CLIENT_ID}'
 
     OIDC_OP_LOGOUT_URL_METHOD = 'thunderbird_accounts.settings.oidc_logout'
 
