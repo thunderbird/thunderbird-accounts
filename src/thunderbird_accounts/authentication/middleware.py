@@ -1,3 +1,4 @@
+import logging
 import time
 
 import sentry_sdk
@@ -5,16 +6,29 @@ from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import BaseBackend
+from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest
 from socket import gethostbyname, gethostname
 
+
 from .models import User
+from .utils import is_email_in_allow_list
 from ..client.models import ClientEnvironment
 
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
 
 class AccountsOIDCBackend(OIDCAuthenticationBackend):
+    def _check_allow_list(self, claims: dict):
+        email = claims.get('email', '')
+        email_verified = claims.get('email_verified')
+
+        if not settings.IS_DEV and (not email_verified or not is_email_in_allow_list(email)):
+            logging.warning(f"Denied user {email} as they're not in the allow list.")
+            raise PermissionDenied()
+
+        return True
+
     def _set_user_fields(self, user: User, claims: dict):
         print('User -> ', user)
         print('Claims -> ', claims)
@@ -34,6 +48,8 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         return user
 
     def create_user(self, claims):
+        self._check_allow_list(claims)
+
         user = super().create_user(claims)
         user = self._set_user_fields(user, claims)
         user.save()
@@ -41,6 +57,8 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         return user
 
     def update_user(self, user, claims):
+        self._check_allow_list(claims)
+
         user = self._set_user_fields(user, claims)
 
         # Update the email if it has changed
