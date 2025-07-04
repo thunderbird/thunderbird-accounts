@@ -129,7 +129,6 @@ if DEBUG:
 INSTALLED_APPS = [
     # Internal
     'thunderbird_accounts.authentication',
-    'thunderbird_accounts.client',
     'thunderbird_accounts.subscription',
     'thunderbird_accounts.mail',
     'thunderbird_accounts.utils',
