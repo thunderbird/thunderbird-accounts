@@ -19,7 +19,7 @@ from thunderbird_accounts.mail import views as mail_views
 from thunderbird_accounts.subscription import views as subscription_views
 from django.utils.translation import gettext_lazy as _
 
-from thunderbird_accounts.authentication.api import get_login_code, get_user_profile, logout_user, is_in_allow_list
+from thunderbird_accounts.authentication.api import get_user_profile
 
 admin.site.site_header = _('Thunderbird Accounts Admin Panel')
 admin.site.site_title = _('Thunderbird Accounts Admin Panel')
@@ -54,10 +54,7 @@ urlpatterns = [
     # API
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-    path('api/v1/auth/get-login/', get_login_code, name='api_get_login'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
-    path('api/v1/auth/logout/', logout_user, name='api_logout'),
-    path('api/v1/auth/is-in-allow-list/', is_in_allow_list, name='api_is_in_allow_list'),
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
     path('health', infra_views.health_check),
 ]

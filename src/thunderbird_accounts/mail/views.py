@@ -1,5 +1,4 @@
 import json
-from urllib.parse import quote_plus
 
 from django.conf import settings
 from django.contrib import messages
@@ -23,7 +22,6 @@ except ImportError:
     Client = None
     CreateCustomerPortalSession = None
 
-from thunderbird_accounts.authentication.templatetags.helpers import get_admin_login_code
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
@@ -41,12 +39,11 @@ def home(request: HttpRequest):
     return TemplateResponse(request, 'mail/index.html', {})
 
 
+@login_required
 def sign_up(request: HttpRequest):
     # If we're posting ourselves, we're logging in
     if request.method == 'POST':
-        return HttpResponseRedirect(
-            reverse('fxa_login', kwargs={'login_code': get_admin_login_code(), 'redirect_to': quote_plus(request.path)})
-        )
+        return HttpResponseRedirect(reverse('self-serve'))
 
     return TemplateResponse(
         request,
