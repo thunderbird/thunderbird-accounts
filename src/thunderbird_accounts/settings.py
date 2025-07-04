@@ -321,6 +321,9 @@ if AUTH_SCHEME == 'oidc':
     OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
     ALLOW_LOGOUT_GET_METHOD = True
 
+    def oidc_logout(request):
+        return f'{os.getenv("OIDC_URL_LOGOUT")}?client_id={OIDC_RP_CLIENT_ID}'
+
     OIDC_OP_LOGOUT_URL_METHOD = 'thunderbird_accounts.settings.oidc_logout'
 
 
