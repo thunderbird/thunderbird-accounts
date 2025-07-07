@@ -84,7 +84,7 @@ def sign_up_submit(request: HttpRequest):
 
     # Run this immediately for now, in the future we'll ship these to celery
     tasks.create_stalwart_account.run(
-        user_uuid=user.uuid.hex, username=user.username, email=user.email, app_password=app_password
+        user_uuid=user.uuid.hex, username=email_address, email=user.email, app_password=app_password
     )
 
     # TODO: I don't think we need account model anymore

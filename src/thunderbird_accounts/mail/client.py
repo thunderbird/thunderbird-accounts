@@ -1,7 +1,9 @@
+import base64
 import logging
 
 import requests
 from django.conf import settings
+from django.utils.crypto import get_random_string
 
 from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError, StalwartError
 
@@ -197,3 +199,27 @@ class MailClient:
         if error:
             logging.error(f'[save_app_password] err: {data}')
             raise RuntimeError(data)
+
+    def make_api_key(self, username, password):
+        if not settings.IS_DEV:
+            raise RuntimeError('You can only make api keys in dev.')
+
+        basic_auth = base64.b64encode(f'{username}:{password}'.encode()).decode()
+        self.authorized_headers['Authorization'] = f'Basic {basic_auth}'
+
+        api_key_name = 'tb-accounts-api-key'
+        secret = get_random_string(32)
+        data = {'type': 'apiKey', 'name': api_key_name, 'secrets': [secret], 'roles': ['admin']}
+
+        response = self._create_principal(data)
+        data = response.json()
+        if data.get('error'):
+            raise RuntimeError(f'Error: {data.get("error")}\n{data}')
+
+        response = self._get_principal(api_key_name)
+        data = response.json()
+
+        if not data.get('data', {}).get('id'):
+            raise RuntimeError("Error calling stalwart's api")
+
+        return base64.b64encode(f'{api_key_name}:{secret}'.encode()).decode()
