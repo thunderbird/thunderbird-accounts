@@ -10,11 +10,11 @@ class LoginRequiredTestCase(TestCase):
     # (URL reverse key, expected response status code),
     login_required_keys = [
         ('self_serve_home', 302),  # This one is a redirect
-        ('self_serve_account_info', 200),
-        ('self_serve_app_password', 200),
-        ('self_serve_connection_info', 200),
-        ('self_serve_subscription', 200),
-        ('self_serve_subscription_success', 200),
+        ('self_serve_account_info', 302),
+        ('self_serve_app_password', 302),
+        ('self_serve_connection_info', 302),
+        ('self_serve_subscription', 302),
+        ('self_serve_subscription_success', 302),
     ]
 
     def test_logged_out(self):

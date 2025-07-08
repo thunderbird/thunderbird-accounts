@@ -3,6 +3,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
+from unittest.mock import patch
 
 from thunderbird_accounts.mail.models import Email, Account
 
@@ -20,8 +21,14 @@ class TestMail(TestCase):
         }
         self.sign_up_full_email = f'{self.sign_up_data["email_address"]}@{self.sign_up_data["email_domain"]}'
 
+        # Mock MailClient so we don't send Stalwart requests
+        # Note: We're mocking the import object in tasks.py not the actual class from client.py!
+        self.mail_client_mock = patch('thunderbird_accounts.mail.tasks.MailClient')
+        self.mail_client_mock.start()
+
     def tearDown(self):
         cache.clear()
+        self.mail_client_mock.stop()
 
     def does_account_exist(self, account_name):
         # check if given account exists in the db
