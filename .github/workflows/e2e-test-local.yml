@@ -46,6 +46,8 @@ jobs:
           echo "FXA_ENCRYPT_SECRET=$FXA_ENCRYPT_SECRET" >> .env
           echo "PADDLE_TOKEN=$PADDLE_TOKEN" >> .env
           echo "PADDLE_API_KEY=$PADDLE_API_KEY" >> .env
+          echo "127.0.0.1 keycloak" >> /etc/hosts
+          echo "127.0.0.1 stalwart" >> /etc/hosts
 
       - name: Start appointment stack via docker
         run: docker compose up -d --build -V postgres redis backend frontend
