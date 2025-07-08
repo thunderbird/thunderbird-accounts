@@ -43,11 +43,11 @@ class ZendeskClient(object):
                 },
                 "custom_fields": [
                     {
-                        "id": settings.ZENDESK_PRODUCT_FIELD_ID,
+                        "id": ticket_fields.get("product_field_id"),
                         "value": ticket_fields.get("product")
                     },
                     {
-                        "id": settings.ZENDESK_TYPE_OF_REQUEST_FIELD_ID,
+                        "id": ticket_fields.get("type_field_id"),
                         "value": ticket_fields.get("ticket_type")
                     }
                 ]
@@ -98,5 +98,28 @@ class ZendeskClient(object):
             return {
                 'success': False,
                 'error': 'Zendesk upload failed',
+                'details': response.text
+            }
+
+
+    def get_ticket_fields(self):
+        """Get ticket fields from Zendesk API."""
+        url = f"{self.base_url}/ticket_fields.json"
+
+        response = requests.get(
+            url,
+            auth=(f'{self.email}/token', self.token),
+            headers={"Content-Type": "application/json"}
+        )
+
+        if response.status_code == 200:
+            return {
+                'success': True,
+                'data': response.json()
+            }
+        else:
+            return {
+                'success': False,
+                'error': 'Failed to fetch ticket fields',
                 'details': response.text
             }

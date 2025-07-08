@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton } from "@thunderbirdops/services-ui";
 import CsrfToken from "@/components/CsrfToken.vue";
 
@@ -18,23 +18,13 @@ const form = ref({
 const formRef = ref(null)
 const fileInput = ref(null)
 
-// Product options for SelectInput
-// These values are important to match the Zendesk ticket custom field type
-const productOptions = [
-  { label: 'Thunderbird Assist', value: 'thunderbird_assist' },
-  { label: 'Thunderbird Appointment', value: 'thunderbird_appointment' },
-  { label: 'Thunderbird Send', value: 'thunderbird_send' }
-];
+// Dynamic options from API
+const productOptions = ref([]);
+const typeOptions = ref([]);
 
-// Type options for SelectInput
-// These values are important to match the Zendesk ticket custom field type
-const typeOptions = [
-  { label: 'Accounts & Login', value: 'accounts___login' },
-  { label: 'Technical', value: 'technical' },
-  { label: 'Provide Feedback or Request Features', value: 'provide_feedback_or_request_features' },
-  { label: 'Payments & Billing', value: 'payments___billing' },
-  { label: 'Not listed', value: 'not_listed' }
-];
+// Store field IDs for submission
+const productFieldId = ref(null);
+const typeFieldId = ref(null);
 
 const triggerFileSelect = () => {
   fileInput.value?.click()
@@ -72,6 +62,39 @@ const removeAttachment = (index) => {
   form.value.attachments.splice(index, 1)
 }
 
+const fetchTicketFields = async () => {
+  try {
+    const response = await fetch('/contact/fields', {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.ticket_fields) {
+      // Process the ticket fields to populate the dropdowns
+      data.ticket_fields.forEach(field => {
+        const options = field.custom_field_options.map(option => ({
+          label: option.name,
+          value: option.value
+        }));
+
+        // Map fields by title to populate the correct dropdowns and store field IDs
+        if (field.title === 'Product') {
+          productOptions.value = options;
+          productFieldId.value = field.id;
+        } else if (field.title === 'Type of request') {
+          typeOptions.value = options;
+          typeFieldId.value = field.id;
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching ticket fields:', error);
+    errorText.value = 'Failed to fetch ticket fields. Please try again.'
+  }
+}
+
 const resetForm = () => {
   form.value = {
     email: '',
@@ -106,7 +129,9 @@ const handleSubmit = async () => {
     formData.append('email', form.value.email)
     formData.append('subject', form.value.subject)
     formData.append('product', form.value.product)
+    formData.append('product_field_id', productFieldId.value)
     formData.append('type', form.value.type)
+    formData.append('type_field_id', typeFieldId.value)
     formData.append('description', form.value.description)
 
     form.value.attachments.forEach((attachment) => {
@@ -139,6 +164,10 @@ const handleSubmit = async () => {
     isSubmitting.value = false
   }
 }
+
+onMounted(() => {
+  fetchTicketFields();
+});
 
 </script>
 

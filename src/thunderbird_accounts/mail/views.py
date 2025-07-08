@@ -110,6 +110,47 @@ def contact(request: HttpRequest):
 
 
 @login_required
+@require_http_methods(['GET'])
+def contact_fields(request: HttpRequest):
+    """Get ticket fields from Zendesk API and filter for fields with custom options."""
+    zendesk_client = ZendeskClient()
+    result = zendesk_client.get_ticket_fields()
+
+    if not result['success']:
+        return JsonResponse({
+            'success': False,
+            'error': result.get('error', 'Failed to fetch ticket fields')
+        }, status=500)
+
+    ticket_fields = result['data']['ticket_fields']
+    fields_with_options = []
+
+    # Filter ticket fields to only include those with custom_field_options
+    for field in ticket_fields:
+        if 'custom_field_options' in field:
+
+            # Extract the id, title, and custom_field_options with id, name and value
+            field_data = {
+                'id': field['id'],
+                'title': field['title'],
+                'custom_field_options': [
+                    {
+                        'id': option['id'],
+                        'name': option['name'],
+                        'value': option['value']
+                    }
+                    for option in field['custom_field_options']
+                ]
+            }
+            fields_with_options.append(field_data)
+
+    return JsonResponse({
+        'success': True,
+        'ticket_fields': fields_with_options
+    })
+
+
+@login_required
 @require_http_methods(['POST'])
 def contact_submit(request: HttpRequest):
     """ Uses Zendesk's Requests API to create a ticket
@@ -118,7 +159,9 @@ def contact_submit(request: HttpRequest):
     email = request.POST.get('email')
     subject = request.POST.get('subject')
     product = request.POST.get('product')
+    product_field_id = request.POST.get('product_field_id')
     ticket_type = request.POST.get('type')
+    type_field_id = request.POST.get('type_field_id')
     description = request.POST.get('description')
     uploaded_files = request.FILES.getlist('attachments')
 
@@ -160,7 +203,9 @@ def contact_submit(request: HttpRequest):
         'email': email,
         'subject': subject,
         'product': product,
+        'product_field_id': product_field_id,
         'ticket_type': ticket_type,
+        'type_field_id': type_field_id,
         'description': description,
         'attachments': attachment_tokens
     }

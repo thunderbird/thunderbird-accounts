@@ -50,6 +50,7 @@ urlpatterns = [
         mail_views.self_serve_subscription_success,
         name='self_serve_subscription_success',
     ),
+    path('contact/fields', mail_views.contact_fields, name='contact_fields'),
     # Post only
     path('contact/submit', mail_views.contact_submit, name='contact_submit'),
     path('self-serve/app-passwords/add', mail_views.self_serve_app_password_add, name='app_password_add'),

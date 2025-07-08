@@ -118,9 +118,6 @@ PADDLE_VENDOR_SITE: str = (
 ZENDESK_SUBDOMAIN: str = os.getenv('ZENDESK_SUBDOMAIN')
 ZENDESK_USER_EMAIL: str = os.getenv('ZENDESK_USER_EMAIL')
 ZENDESK_API_TOKEN: str = os.getenv('ZENDESK_API_TOKEN')
-# Zendesk (contact support form) custom fields
-ZENDESK_PRODUCT_FIELD_ID: str = os.getenv('ZENDESK_PRODUCT_FIELD_ID')
-ZENDESK_TYPE_OF_REQUEST_FIELD_ID: str = os.getenv('ZENDESK_TYPE_OF_REQUEST_FIELD_ID')
 
 ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
