@@ -14,11 +14,16 @@ class MailClient:
 
     def __init__(self):
         self.api_url = settings.STALWART_API_URL
-        self.api_key = settings.STALWART_API_KEY
+        self.api_auth_string = settings.STALWART_API_AUTH_STRING
+        self.api_auth_method = settings.STALWART_API_AUTH_METHOD
+
+        # Sanity check
+        assert self.api_auth_method in ['basic', 'bearer']
+
         self.authorized_headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': f'Bearer {self.api_key}',
+            'Authorization': f'{self.api_auth_method} {self.api_auth_string}',
         }
 
     def _raise_for_error(self, response):
