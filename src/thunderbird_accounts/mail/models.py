@@ -27,6 +27,7 @@ class SmallTextField(models.TextField):
         )
 
 
+@deprecated('Most of the fields can be removed.')
 class Account(models.Model):
     """The Stalwart account model"""
 
@@ -96,6 +97,7 @@ class Account(models.Model):
         return True
 
 
+@deprecated('Unused and can be removed at a later date.')
 class GroupMember(models.Model):
     name = models.ForeignKey(Account, on_delete=models.CASCADE, db_column='name', to_field='name')
     member_of = models.TextField(help_text='The name of a group account (an account with the type of <b>group</b>.)')
@@ -112,6 +114,7 @@ class GroupMember(models.Model):
         return f'Group Member - {self.name} is member of {self.member_of}'
 
 
+@deprecated('Needs to be merged with Accounts or removed as we pull directly this data from Stalwart.')
 class Email(models.Model):
     class EmailType(models.TextChoices):
         PRIMARY = 'primary', _('Primary Email')
