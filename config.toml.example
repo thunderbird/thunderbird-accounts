@@ -7,6 +7,10 @@ bind = ["[::]:465"]
 protocol = "smtp"
 tls.implicit = true
 
+[server.listener."imap"]
+bind = ["[::]:143"]
+protocol = "imap"
+
 [server.listener."imaptls"]
 bind = ["[::]:993"]
 protocol = "imap"
