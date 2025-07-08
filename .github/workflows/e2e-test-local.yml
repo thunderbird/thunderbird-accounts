@@ -53,7 +53,7 @@ jobs:
 
 
       - name: Start appointment stack via docker
-        run: docker compose up -d --build -V postgres redis backend frontend
+        run: docker compose up -d --build -V keycloak kcpostgres postgres redis backend frontend
 
       - uses: actions/setup-node@v4
         with:
