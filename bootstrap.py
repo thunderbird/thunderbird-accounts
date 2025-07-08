@@ -34,7 +34,7 @@ def main():
 
     if not os.path.isfile('mail/etc/config.toml') or from_scratch:
         try:
-            shutil.copy('.env.example', '.env')
+            shutil.copy('config.toml.example', 'mail/etc/config.toml')
             print('\t* Copied config.toml.example to mail/etc/config.toml')
         except SameFileError:
             pass
