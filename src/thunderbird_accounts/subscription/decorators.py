@@ -18,7 +18,11 @@ def inject_paddle(func):
         else:
             options = None
 
-        kwargs['paddle'] = Client(settings.PADDLE_API_KEY, options=options) if Client else None
+        if not settings.PADDLE_API_KEY or not Client:
+            kwargs['paddle'] = None
+        else:
+            kwargs['paddle'] = Client(settings.PADDLE_API_KEY, options=options)
+
         return func(*args, **kwargs)
 
     return _inject_paddle
