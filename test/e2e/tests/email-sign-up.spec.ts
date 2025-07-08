@@ -1,21 +1,21 @@
 import { test, expect } from '@playwright/test';
-import { FxAPage } from '../pages/fxa-page';
+import { OIDCKeycloakPage } from '../pages/oidc/keycloak-login-page';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
   EMAIL_SIGN_UP_EMAIL_ADDRESS,
-  ACCTS_FXA_EMAIL,
+  ACCTS_OIDC_EMAIL,
   EMAIL_SIGN_UP_DOMAIN,
   EMAIL_SIGN_UP_APP_PWORD,
   MOCK_RESPONSE_OK,
  } from '../const/constants';
 import { EmailSignUpPage } from '../pages/email-sign-up-page';
 
-let fxaPage: FxAPage;
+let keycloakPage: OIDCKeycloakPage;
 let emailSignUpPage: EmailSignUpPage;
 
 test.beforeEach(async ({ page }) => {
-  fxaPage = new FxAPage(page);
+  keycloakPage = new OIDCKeycloakPage(page);
   // we are already signed into accounts via our auth.setup
   emailSignUpPage = new EmailSignUpPage(page);
   await emailSignUpPage.navigateToEmailSignUpPage();
@@ -46,7 +46,7 @@ test.describe('email sign-up', {
 
     // the login username/email field should already be filled with your tb accounts login email
     await expect(emailSignUpPage.loginUserNameEmail).not.toBeEditable();
-    await expect(emailSignUpPage.loginUserNameEmail).toHaveValue(ACCTS_FXA_EMAIL);
+    await expect(emailSignUpPage.loginUserNameEmail).toHaveValue(ACCTS_OIDC_EMAIL);
 
     // fill in app password then click sign up
     await emailSignUpPage.appPassword.fill(EMAIL_SIGN_UP_APP_PWORD, { timeout: 5000 });
