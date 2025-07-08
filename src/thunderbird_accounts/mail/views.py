@@ -95,7 +95,6 @@ def sign_up_submit(request: HttpRequest):
         active=True,
         django_user=request.user,
     )
-    # account.save_app_password('Mail Clients', request.POST['app_password'])
 
     address = Email.objects.create(address=email_address, type='primary', name=account)
 
