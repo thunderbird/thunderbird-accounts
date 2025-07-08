@@ -16,7 +16,7 @@ class Command(BaseCommand):
         env = None
         with open('.env') as fh:
             env = fh.read()
-            env = env.replace('STALWART_API_KEY=', f'STALWART_API_KEY={api_key}')
+            env = env.replace('STALWART_API_KEY=', f'STALWART_API_KEY=api_{api_key}')
 
         with open('.env', 'w') as fh:
             fh.write(env)
