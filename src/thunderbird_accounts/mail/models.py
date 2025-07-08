@@ -5,6 +5,7 @@ https://stalw.art/docs/storage/backends/postgresql#initialization-statements
 """
 
 import uuid
+from warnings import deprecated
 
 from django.contrib.auth.hashers import make_password, identify_hasher
 from django.db import models
@@ -26,6 +27,7 @@ class SmallTextField(models.TextField):
         )
 
 
+@deprecated('Most of the fields can be removed.')
 class Account(models.Model):
     """The Stalwart account model"""
 
@@ -58,6 +60,7 @@ class Account(models.Model):
         return f'Account - {self.name}'
 
     @property
+    @deprecated('Use utils.decode_app_password')
     def app_passwords(self) -> list[str]:
         """A list of app password labels"""
         if not self.secret:
@@ -73,6 +76,7 @@ class Account(models.Model):
             app_passwords.append(password.split('$')[0])
         return app_passwords
 
+    @deprecated('Use utils.save_app_password')
     def save_app_password(self, label, password):
         """Hashes a given password, formats it with the label and saves it to the secret field."""
         hashed_password = make_password(password, hasher='argon2')
@@ -93,6 +97,7 @@ class Account(models.Model):
         return True
 
 
+@deprecated('Unused and can be removed at a later date.')
 class GroupMember(models.Model):
     name = models.ForeignKey(Account, on_delete=models.CASCADE, db_column='name', to_field='name')
     member_of = models.TextField(help_text='The name of a group account (an account with the type of <b>group</b>.)')
@@ -109,6 +114,7 @@ class GroupMember(models.Model):
         return f'Group Member - {self.name} is member of {self.member_of}'
 
 
+@deprecated('Needs to be merged with Accounts or removed as we pull directly this data from Stalwart.')
 class Email(models.Model):
     class EmailType(models.TextChoices):
         PRIMARY = 'primary', _('Primary Email')
