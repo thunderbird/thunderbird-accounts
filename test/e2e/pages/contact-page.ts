@@ -29,7 +29,7 @@ export class ContactPage {
     this.fileInput = this.page.locator('input[type="file"]');
     this.submitButton = this.page.getByTestId('contact-submit-btn');
     this.successMessage = this.page.getByText('Your support request has been submitted successfully');
-    this.errorMessage = this.page.getByText('Failed to submit contact form');
+    this.errorMessage = this.page.getByText('Failed to submit contact form. Please try again.');
   }
 
   async navigateToContactPage() {

@@ -26,22 +26,22 @@ test.beforeEach(async ({ page }) => {
       contentType: 'application/json',
       body: JSON.stringify({
         success: true,
-        ticket_fields: [
-          {
+        ticket_fields: {
+          'Product': {
             id: 123456,
             title: 'Product',
             custom_field_options: [
               { id: 1, name: 'Thunderbird Appointment', value: MOCK_PRODUCT_VALUE },
             ]
           },
-          {
+          'Type of request': {
             id: 789012,
             title: 'Type of request',
             custom_field_options: [
               { id: 3, name: 'Technical Support', value: MOCK_TYPE_VALUE },
             ]
           }
-        ]
+        }
       })
     });
   });
@@ -124,7 +124,10 @@ test.describe('contact support form', {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ success: false }),
+        body: JSON.stringify({ 
+          success: false,
+          error: 'Failed to submit contact form. Please try again.'
+        }),
       });
     });
 
