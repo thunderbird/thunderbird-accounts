@@ -131,6 +131,9 @@ resources:
         - keycloak-database-password
         - keycloak-database-user
         - keycloak-admin-password
+        - zendesk-subdomain
+        - zendesk-user-email
+        - zendesk-api-token
 
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
@@ -295,6 +298,12 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-api-key-WlhcMj
               - name: REDIS_URL
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L
+              - name: ZENDESK_SUBDOMAIN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-subdomain-96tdDy
+              - name: ZENDESK_USER_EMAIL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-user-email-Irmh4I
+              - name: ZENDESK_API_TOKEN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-api-token-dOxdeo
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -408,6 +417,12 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08
               - name: REDIS_URL
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L
+              - name: ZENDESK_SUBDOMAIN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-subdomain-96tdDy
+              - name: ZENDESK_USER_EMAIL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-user-email-Irmh4I
+              - name: ZENDESK_API_TOKEN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-api-token-dOxdeo
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
