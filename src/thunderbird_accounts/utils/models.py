@@ -9,6 +9,7 @@ class BaseModel(models.Model):
     :param created_at: Datetime the model was created on (UTC)
     :param updated_at: Datetime the model was last updated on (UTC)
     """
+
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -20,4 +21,3 @@ class BaseModel(models.Model):
             models.Index(fields=['created_at']),
             models.Index(fields=['updated_at']),
         ]
-
