@@ -119,7 +119,7 @@ def contact_fields(request: HttpRequest):
     if not result['success']:
         return JsonResponse({
             'success': False,
-            'error': result.get('error', 'Failed to fetch ticket fields')
+            'error': result.get('error', _('Failed to fetch ticket fields'))
         }, status=500)
 
     ticket_fields = result['data']['ticket_fields']
@@ -175,14 +175,15 @@ def contact_submit(request: HttpRequest):
     for uploaded_file in uploaded_files:
         try:
             zendesk_api_response = zendesk_client.upload_file(uploaded_file)
-            
+
             if not zendesk_api_response['success']:
                 return JsonResponse(
                     {
                         'success': False,
-                        'error': f'Failed to upload file {uploaded_file.name}: {
-                            zendesk_api_response.get("error", "Unknown error")
-                        }',
+                        'error': _('Failed to upload file {uploaded_file_name}: {zendesk_api_response_error}').format(
+                            uploaded_file_name=uploaded_file.name,
+                            zendesk_api_response_error=zendesk_api_response.get('error', _('Unknown error')),
+                        ),
                     },
                     status=500,
                 )
@@ -195,7 +196,9 @@ def contact_submit(request: HttpRequest):
         except Exception as e:
             return JsonResponse({
                 'success': False,
-                'error': f'Failed to upload file {uploaded_file.name}: {str(e)}'
+                'error': _('Failed to upload file {uploaded_file_name}: {error}').format(
+                    uploaded_file_name=uploaded_file.name, error=str(e)
+                ),
             }, status=500)
 
     # Create ticket with attachment tokens

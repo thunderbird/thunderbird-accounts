@@ -151,7 +151,7 @@ const handleSubmit = async () => {
     const data = await response.json();
 
     if (!data.success) {
-      errorText.value = 'Failed to submit contact form';
+      errorText.value = data.error;
       return;
     }
 
