@@ -114,6 +114,11 @@ PADDLE_VENDOR_SITE: str = (
     'https://sandbox-vendors.paddle.com' if PADDLE_ENV == 'sandbox' else 'https://vendors.paddle.com'
 )
 
+# Zendesk integration
+ZENDESK_SUBDOMAIN: str = os.getenv('ZENDESK_SUBDOMAIN')
+ZENDESK_USER_EMAIL: str = os.getenv('ZENDESK_USER_EMAIL')
+ZENDESK_API_TOKEN: str = os.getenv('ZENDESK_API_TOKEN')
+
 ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
 # Settings for CSRF cookie.
