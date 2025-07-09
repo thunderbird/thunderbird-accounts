@@ -73,21 +73,27 @@ const fetchTicketFields = async () => {
 
     if (data.success && data.ticket_fields) {
       // Process the ticket fields to populate the dropdowns
-      data.ticket_fields.forEach(field => {
-        const options = field.custom_field_options.map(option => ({
+      const fields = data.ticket_fields;
+
+      // Set Product field options and ID
+      if (fields['Product']) {
+        const productField = fields['Product'];
+        productOptions.value = productField.custom_field_options.map(option => ({
           label: option.name,
           value: option.value
         }));
+        productFieldId.value = productField.id;
+      }
 
-        // Map fields by title to populate the correct dropdowns and store field IDs
-        if (field.title === 'Product') {
-          productOptions.value = options;
-          productFieldId.value = field.id;
-        } else if (field.title === 'Type of request') {
-          typeOptions.value = options;
-          typeFieldId.value = field.id;
-        }
-      });
+      // Set Type of request field options and ID
+      if (fields['Type of request']) {
+        const typeField = fields['Type of request'];
+        typeOptions.value = typeField.custom_field_options.map(option => ({
+          label: option.name,
+          value: option.value
+        }));
+        typeFieldId.value = typeField.id;
+      }
     }
   } catch (error) {
     console.error('Error fetching ticket fields:', error);

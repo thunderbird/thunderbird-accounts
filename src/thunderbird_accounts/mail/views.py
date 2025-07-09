@@ -123,7 +123,7 @@ def contact_fields(request: HttpRequest):
         }, status=500)
 
     ticket_fields = result['data']['ticket_fields']
-    fields_with_options = []
+    fields_by_title = {}
 
     # Filter ticket fields to only include those with custom_field_options
     for field in ticket_fields:
@@ -142,11 +142,11 @@ def contact_fields(request: HttpRequest):
                     for option in field['custom_field_options']
                 ]
             }
-            fields_with_options.append(field_data)
+            fields_by_title[field['title']] = field_data
 
     return JsonResponse({
         'success': True,
-        'ticket_fields': fields_with_options
+        'ticket_fields': fields_by_title
     })
 
 
