@@ -3,6 +3,11 @@ import { ref, onMounted } from "vue";
 import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton } from "@thunderbirdops/services-ui";
 import CsrfToken from "@/components/CsrfToken.vue";
 
+const TICKET_CUSTOM_FIELD_NAMES = {
+  PRODUCT: 'Product',
+  TYPE_OF_REQUEST: 'Type of request'
+};
+
 const csrfToken = ref(window._page.csrfToken);
 const errorText = ref(window._page.formError);
 const successText = ref('');
@@ -76,8 +81,8 @@ const fetchTicketFields = async () => {
       const fields = data.ticket_fields;
 
       // Set Product field options and ID
-      if (fields['Product']) {
-        const productField = fields['Product'];
+      if (fields[TICKET_CUSTOM_FIELD_NAMES.PRODUCT]) {
+        const productField = fields[TICKET_CUSTOM_FIELD_NAMES.PRODUCT];
         productOptions.value = productField.custom_field_options.map(option => ({
           label: option.name,
           value: option.value
@@ -86,8 +91,8 @@ const fetchTicketFields = async () => {
       }
 
       // Set Type of request field options and ID
-      if (fields['Type of request']) {
-        const typeField = fields['Type of request'];
+      if (fields[TICKET_CUSTOM_FIELD_NAMES.TYPE_OF_REQUEST]) {
+        const typeField = fields[TICKET_CUSTOM_FIELD_NAMES.TYPE_OF_REQUEST];
         typeOptions.value = typeField.custom_field_options.map(option => ({
           label: option.name,
           value: option.value
