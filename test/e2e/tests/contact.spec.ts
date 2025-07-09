@@ -11,11 +11,46 @@ import {
 let contactPage: ContactPage;
 let fxaPage: FxAPage;
 
+// Mock values for the contact form fields
+const MOCK_PRODUCT_VALUE = 'appointment';
+const MOCK_TYPE_VALUE = 'technical';
+
 test.beforeEach(async ({ page }) => {
   contactPage = new ContactPage(page);
   fxaPage = new FxAPage(page);
+
+  // Mock the /contact/fields endpoint to return predictable values
+  await page.route('*/**/contact/fields', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        ticket_fields: [
+          {
+            id: 123456,
+            title: 'Product',
+            custom_field_options: [
+              { id: 1, name: 'Thunderbird Appointment', value: MOCK_PRODUCT_VALUE },
+            ]
+          },
+          {
+            id: 789012,
+            title: 'Type of request',
+            custom_field_options: [
+              { id: 3, name: 'Technical Support', value: MOCK_TYPE_VALUE },
+            ]
+          }
+        ]
+      })
+    });
+  });
+
   // we are already signed into accounts via our auth.setup
   await contactPage.navigateToContactPage();
+
+  // Wait for the form to be ready
+  await contactPage.waitForFormFieldsToLoad();
 });
 
 test.describe('contact support form', {
@@ -65,8 +100,8 @@ test.describe('contact support form', {
     await contactPage.fillContactForm(
       ACCTS_FXA_EMAIL,
       'Test Subject',
-      'thunderbird_assist',
-      'technical',
+      MOCK_PRODUCT_VALUE,
+      MOCK_TYPE_VALUE,
       'Test description for contact form'
     );
 
@@ -97,8 +132,8 @@ test.describe('contact support form', {
     await contactPage.fillContactForm(
       ACCTS_FXA_EMAIL,
       'Test Subject',
-      'thunderbird_assist',
-      'technical',
+      MOCK_PRODUCT_VALUE,
+      MOCK_TYPE_VALUE,
       'Test description for contact form'
     );
 
@@ -140,8 +175,8 @@ test.describe('contact support form', {
     await contactPage.fillContactForm(
       ACCTS_FXA_EMAIL,
       'Test Subject with Attachment',
-      'thunderbird_assist',
-      'technical',
+      MOCK_PRODUCT_VALUE,
+      MOCK_TYPE_VALUE,
       'Test description with file attachment'
     );
 

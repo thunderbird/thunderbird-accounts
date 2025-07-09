@@ -36,6 +36,15 @@ export class ContactPage {
     await this.page.goto(ACCTS_CONTACT_URL);
   }
 
+  async waitForFormFieldsToLoad() {
+    // Wait for the select elements to be visible and ready
+    await this.productSelect.waitFor({ state: 'visible' });
+    await this.typeSelect.waitFor({ state: 'visible' });
+
+    // Give a moment for any async operations to complete
+    await this.page.waitForTimeout(500);
+  }
+
   async fillContactForm(email: string, subject: string, product: string, type: string, description: string) {
     await this.emailInput.fill(email);
     await this.subjectInput.fill(subject);
