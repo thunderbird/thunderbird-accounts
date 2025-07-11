@@ -24,9 +24,6 @@ jobs:
       iac-changed: ${{ steps.check.outputs.iac-changed }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
 
       - uses: dorny/paths-filter@v3
         id: check
@@ -36,13 +33,15 @@ jobs:
               - 'assets/**'
               - 'static/**'
               - 'templates/**'
-              - 'scripts/dev-entry.sh'
+              - 'scripts/entry.sh'
+              - 'Dockerfile'
               - 'manage.py'
               - 'MANIFEST.in'
               - 'package.json'
               - 'package-lock.json'
               - 'pyproject.toml'
               - 'README.md'
+              - 'src/**'
               - 'uv.lock'
               - 'vite.config.mjs'
             iac-changed:
