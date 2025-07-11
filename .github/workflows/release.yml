@@ -123,7 +123,7 @@ jobs:
           # Set up the Pulumi environment and update the service
           source ./venv/bin/activate
           pulumi login
-          pulumi stack select prod
+          pulumi stack select thunderbird/prod
           TBPULUMI_DISABLE_PROTECTION=True \
             pulumi up -y --diff --target \
             --target 'urn:pulumi:prod::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-prod-fargate-accounts-taskdef' \
