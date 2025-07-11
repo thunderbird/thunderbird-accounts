@@ -8,6 +8,7 @@ export class PaddleFrame {
   readonly countryField: Locator;
   readonly postalCodeField: Locator;
   readonly continueButton: Locator;
+  readonly consentCheckBox: Locator;
   readonly cardNumberField: Locator;
   readonly cardNameField: Locator;
   readonly cardExpiryField: Locator;
@@ -22,6 +23,7 @@ export class PaddleFrame {
     this.countryField = this.modal.getByTestId('countriesSelect');
     this.postalCodeField = this.modal.getByTestId('postcodeInput');
     this.continueButton = this.modal.getByTestId('combinedAuthenticationLocationFormSubmitButton');
+    this.consentCheckBox = this.modal.getByTestId('us-compliance-section-overlay').locator('label');
     this.cardNumberField = this.modal.getByTestId('cardNumberInput');
     this.cardNameField = this.modal.getByTestId('cardholderNameInput');
     this.cardExpiryField = this.modal.getByTestId('expiryDateField');

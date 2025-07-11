@@ -50,3 +50,9 @@ config:
     secure: AAABADZZBpSAN5LhftkPxRF5Kc0FhNgCU65V8Zp0VwxuhzQHuyySFMrleK5NDw/c
   accounts:keycloak-admin-password:
     secure: AAABAJickUKn6Zxpqow593gbQbotzoY+vNQBG0xXhOQrRsaCtCs6XpSN55UXSRpig5vBtFPO4vPopG+/rQ==
+  accounts:zendesk-subdomain:
+    secure: AAABAAobLNQr9tAqP2Lp65fB8nSerUOfd75Lwt9200gZsOAfyA==
+  accounts:zendesk-user-email:
+    secure: AAABAA/bJAJIj0E+Rs6FrcKMGsu0seaXMfQGtHZgoH0ZcHggW2hnwkhdm0k5TKO+wnJFtNKP
+  accounts:zendesk-api-token:
+    secure: AAABAB9PcTNFhOTmmkjIfhilLeKsbSicbV/fxAPoakKg8FK5wTHVZ9QNOMzrUgx2PLXgqdHERuXKD2CeCHw6RauxWDGxdnDx

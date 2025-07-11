@@ -8,6 +8,7 @@ export const ACCTS_SELF_SERVE_ACCT_INFO_URL = `${ACCTS_SELF_SERVE_URL}account-se
 export const ACCTS_EMAIL_SIGN_UP_URL = String(process.env.ACCTS_EMAIL_SIGN_UP_URL);
 export const ACCTS_CHECKOUT_URL = `${ACCTS_SELF_SERVE_URL}subscription`;
 export const ACCTS_CHECKOUT_SUCCESS_URL = `${ACCTS_CHECKOUT_URL}/success`;
+export const ACCTS_CONTACT_URL = String(process.env.ACCTS_CONTACT_URL);
 
 // sign-in credentials and corresponding account display name
 export const ACCTS_FXA_EMAIL = String(process.env.ACCTS_FXA_EMAIL);

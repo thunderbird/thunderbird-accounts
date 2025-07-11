@@ -5,6 +5,7 @@ import SignInToSignUpForm from '@/components/SignInToSignUpForm.vue';
 import SignUpFlowForm from '@/components/SignUpFlowForm.vue';
 import AccountInfoForm from '@/components/AccountInfoForm.vue';
 import CheckoutFlow from '@/components/CheckoutFlow.vue';
+import ContactSupportForm from '@/components/ContactSupportForm.vue';
 
 const vueApps = [
   // Self Serve - App Password Page
@@ -30,6 +31,10 @@ const vueApps = [
     id: 'checkoutFlow',
     sfc: CheckoutFlow,
   },
+  {
+    id: 'contactSupportForm',
+    sfc: ContactSupportForm,
+  }
 ];
 
 for (const app of vueApps) {
