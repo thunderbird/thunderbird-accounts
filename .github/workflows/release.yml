@@ -1,0 +1,131 @@
+---
+name: deploy-production
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    env:
+      IS_CI_AUTOMATION: "yes"
+    steps:
+      - name: Check out the code
+        if: contains(github.event.release.assets.*.name, 'deployment.zip')
+        uses: actions/checkout@v4
+
+      - name: Download deployment artifact
+        if: contains(github.event.release.assets.*.name, 'deployment.zip')
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          version: ${{ github.event.release.id }}
+          file: deployment.zip
+
+      - name: Configure AWS credentials
+        if: contains(github.event.release.assets.*.name, 'deployment.zip')
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        if: contains(github.event.release.assets.*.name, 'deployment.zip')
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: "true"
+
+      - name: Retag image
+        if: contains(github.event.release.assets.*.name, 'deployment.zip')
+        id: retag-image
+        shell: bash
+        run: |
+          # Gather info
+          unzip deployment.zip  # Produces deployment.json
+          source_tag=$(jq .ecr_tag < deployment.json)
+          semver=$(jq .version < deployment.json)
+          target_tag="${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:$semver"
+
+          # Output the target tag
+          echo "target_tag=$target_tag" >> $GITHUB_OUTPUT
+
+          # Retag the image and push it
+          docker pull $source_tag
+          docker tag $source_tag $target_tag
+          docker push $target_tag
+
+      - name: Set up Python ${{ vars.PYTHON_VERSION}}
+        if: contains(github.event.release.assets.*.name, 'deployment.zip')
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ vars.PYTHON_VERSION}}
+
+      - name: Set up virtual environment
+        if: contains(github.event.release.assets.*.name, 'deployment.zip')
+        shell: bash
+        run: |
+          python -m pip install virtualenv
+          cd pulumi
+          virtualenv ./venv
+
+      - name: Set up Pulumi environment
+        if: contains(github.event.release.assets.*.name, 'deployment.zip')
+        id: pulumi-env
+        shell: bash
+        run: |
+          cd pulumi
+          source ./venv/bin/activate
+          curl -fsSL https://get.pulumi.com | sh
+          pip install -Ur requirements.txt
+
+      - name: Deploy version-tagged image to prod
+        if: contains(github.event.release.assets.*.name, 'deployment.zip')
+        shell: bash
+        run: |
+          # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
+          # to do with the GHA workflow "env" settings.
+          export PATH="/home/runner/.pulumi/bin:$PATH"
+
+          # Pull the versioned tag from the previous step
+          target_tag="${{ steps.retag-image.outputs.target_tag }}"
+
+          # Create a YAML config stump containing only the nested tree leading to the image tag update
+          cd pulumi
+          cat << EOF > newimage.yaml
+          resources:
+            tb:fargate:FargateClusterWithLogging:
+              accounts:
+                task_definition:
+                  container_definitions:
+                    accounts:
+                      image: "$target_tag"
+              accounts-celery:
+                task_definition:
+                  container_definitions:
+                    accounts:
+                      image: "$target_tag"
+          EOF
+
+          # Use yq to merge the stump into the main config
+          yq -i '. *= load("newimage.yaml")' config.prod.yaml
+          export PULUMI_CONFIG_PASSPHRASE='${{ secrets.PULUMI_PASSPHRASE_PROD }}'
+
+          # Set up the Pulumi environment and update the service
+          source ./venv/bin/activate
+          pulumi login
+          pulumi stack select thunderbird/prod
+          TBPULUMI_DISABLE_PROTECTION=True \
+            pulumi up -y --diff --target \
+            --target 'urn:pulumi:prod::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-prod-fargate-accounts-taskdef' \
+            --target 'urn:pulumi:prod::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-prod-fargate-accounts-celery-taskdef' \
+            --target-dependents

@@ -1,3 +1,4 @@
+---
 name: validate
 
 concurrency:
@@ -17,7 +18,45 @@ permissions:
   contents: read    # This is required for actions/checkout
 
 jobs:
+  # This job detects which parts of the repo have been changed, setting future jobs up for conditional behavior.
+  detect-changes:
+    runs-on: ubuntu-latest
+    env:
+      IS_CI_AUTOMATION: "yes"
+    outputs:
+      src-changed: ${{ steps.check.outputs.src-changed }}
+      iac-changed: ${{ steps.check.outputs.iac-changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: dorny/paths-filter@v3
+        id: check
+        with:
+          filters: |
+            src-changed:
+              - 'assets/**'
+              - 'static/**'
+              - 'templates/**'
+              - 'scripts/entry.sh'
+              - 'Dockerfile'
+              - 'manage.py'
+              - 'MANIFEST.in'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'pyproject.toml'
+              - 'README.md'
+              - 'src/**'
+              - 'uv.lock'
+              - 'vite.config.mjs'
+            iac-changed:
+              - 'pulumi/**'
+  
   validate-backend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.src-changed == 'true'
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -38,3 +77,89 @@ jobs:
         continue-on-error: true
         run: |
           docker compose exec backend bash -c 'uv run coverage report'
+
+  validate-iac:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.iac-changed
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ruff formatting/linting checks
+        uses: chartboost/ruff-action@v1
+        with:
+          src: "pulumi"
+          args: "format --check"
+
+      - name: Ruff error checks
+        uses: chartboost/ruff-action@v1
+        with:
+          src: "pulumi"
+
+  run-e2e-tests-local:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.iac-changed
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      ACCTS_FXA_EMAIL: ${{ secrets.E2E_ACCTS_FXA_EMAIL }}
+      ACCTS_FXA_PWORD: ${{ secrets.E2E_ACCTS_FXA_PWORD }}
+      FXA_CLIENT_ID: ${{ secrets.E2E_ACCTS_FXA_CLIENT_ID }}
+      FXA_SECRET: ${{ secrets.E2E_ACCTS_FXA_SECRET }}
+      SECRET_KEY: ${{ secrets.E2E_ACCTS_SECRET_KEY }}
+      LOGIN_CODE_SECRET: ${{ secrets.E2E_ACCTS_LOGIN_CODE_SECRET }}
+      FXA_ENCRYPT_SECRET: ${{ secrets.E2E_ACCTS_FXA_ENCRYPT_SECRET }}
+      PADDLE_TOKEN: ${{ secrets.E2E_ACCTS_PADDLE_TOKEN }}
+      EMAIL_SIGN_UP_ADDRESS: ${{ secrets.E2E_ACCTS_PADDLE_EMAIL_SIGN_UP_ADDRESS }}
+      PADDLE_API_KEY: ${{ secrets.E2E_ACCTS_PADDLE_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up local environment
+        run: |
+          cp .env.example .env
+          mkdir -p mail/etc && cp config.toml.example mail/etc/config.toml
+          echo -e "\nFXA_CLIENT_ID=$FXA_CLIENT_ID" >> .env
+          echo "FXA_SECRET=$FXA_SECRET" >> .env
+          echo "SECRET_KEY=$SECRET_KEY" >> .env
+          echo "LOGIN_CODE_SECRET=$LOGIN_CODE_SECRET" >> .env
+          echo "FXA_ENCRYPT_SECRET=$FXA_ENCRYPT_SECRET" >> .env
+          echo "PADDLE_TOKEN=$PADDLE_TOKEN" >> .env
+          echo "PADDLE_API_KEY=$PADDLE_API_KEY" >> .env
+
+      - name: Start appointment stack via docker
+        run: docker compose up -d --build -V postgres redis backend frontend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'test/e2e/package-lock.json'
+
+      - name: Install E2E test dependencies
+        run: |
+          cd ./test/e2e
+          npm install
+          npx playwright install
+
+      - name: Create test plans
+        run: |
+          docker compose exec backend ./manage.py create_plan_for_e2e_test Low ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_LO }}
+          docker compose exec backend ./manage.py create_plan_for_e2e_test Medium ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_MD }}
+          docker compose exec backend ./manage.py create_plan_for_e2e_test High ${{secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_HI }}
+
+      - name: Run E2E tests against local stack
+        id: e2e
+        run: |
+          cd ./test/e2e
+          cp .env.dev.example .env
+          npm run e2e-test
+
+      - uses: actions/upload-artifact@v4
+        if: always() && ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: test/e2e/playwright-report/
+          retention-days: 7
