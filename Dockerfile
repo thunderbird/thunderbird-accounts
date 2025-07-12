@@ -30,19 +30,15 @@ COPY manage.py \
      vite.config.mjs \
      .
 COPY assets ./assets/
-COPY scripts/dev-entry.sh scripts/dev-entry.sh
+COPY scripts ./scripts/
+COPY src/thunderbird_accounts ./src/thunderbird_accounts/
 COPY static ./static/
 COPY templates ./templates/
 
-# Required for local dev work (and running tests locally)
-RUN ln -s /app/thunderbird_accounts src/thunderbird_accounts
-
-# Add our source code
-ADD src/thunderbird_accounts ./src/thunderbird_accounts
-
 # Install our package dependencies, with cli
 RUN uv sync --extra cli --extra subscription && \
-    npm install && npm cache clean --force
+    npm install && npm cache clean --force && \
+    chmod +x scripts/entry.sh
 
 EXPOSE 8087
-CMD ["/bin/sh", "./scripts/dev-entry.sh"]
+ENTRYPOINT ["./scripts/entry.sh"]
