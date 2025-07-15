@@ -16,7 +16,7 @@ import {
   TIMEOUT_30_SECONDS,
   CHECKOUT_COUNTRY,
 } from '../const/constants';
-import { MOCK_PRICING_RESPONSE_BAD } from '../const/mocks/paddle';
+import { MOCK_PRICING_RESPONSE_BAD, MOCK_SUBSCRIPTION_PAY_RESPONSE } from '../const/mocks/paddle';
 
 let checkoutPage: CheckoutPage;
 let paddleFrame: PaddleFrame;
@@ -42,7 +42,7 @@ test.describe(
       });
       test.afterEach(async ({ page }) => {
         // remove our mock/handler
-        await page.unroute('**/pricing-preview');
+        await page.unroute('**/');
         await page.waitForTimeout(TIMEOUT_2_SECONDS);
       });
     });
@@ -50,6 +50,14 @@ test.describe(
     test.describe('with good Paddle response', { tag: '@paddle' }, () => {
       test.beforeEach(async ({ page }) => {
         checkoutPage = new CheckoutPage(page);
+
+        // hijack the actual paddle subscription payment request and return an error instead, as we don't want the test
+        // to actually subscribe to a paddle plan because we cannot remove the subscription each time the test runs
+        await page.route('**/pay', async (route) => {
+          console.log('mocking paddle pay response to deliberately return an error')
+          await route.fulfill(MOCK_SUBSCRIPTION_PAY_RESPONSE);
+        });
+
         // we are already signed into accounts via our auth.setup
         await checkoutPage.navigateToCheckoutPage();
       });
@@ -62,7 +70,7 @@ test.describe(
         await expect(checkoutPage.planCards.nth(2)).toContainText('High');
       });
 
-      test('able to complete a checkout', async ({ page }) => {
+      test('able to checkout (mock payment error)', async ({ page }) => {
         // open modal for a product
         await checkoutPage.checkoutButtons.nth(0).click();
 
@@ -93,8 +101,14 @@ test.describe(
 
         await paddleFrame.finalCheckoutButton.click();
         await page.waitForTimeout(TIMEOUT_5_SECONDS);
-        await page.waitForURL(ACCTS_CHECKOUT_SUCCESS_URL, { timeout: TIMEOUT_30_SECONDS });
-        expect(page.url()).toBe(ACCTS_CHECKOUT_SUCCESS_URL);
+
+        // we expect the final checkout to have returned an error since we mocked the response
+        await expect(paddleFrame.checkoutErrText).toBeVisible();
+      });
+      test.afterEach(async ({ page }) => {
+        // remove our mock/handlers
+        await page.unroute('**/pay');
+        await page.waitForTimeout(TIMEOUT_2_SECONDS);
       });
     });
   }
