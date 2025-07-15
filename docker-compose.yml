@@ -85,10 +85,10 @@ services:
       - ./templates:/app/templates
 
   stalwart:
-    #image: stalwartlabs/stalwart:v0.12.5
-    build:
-      context: ../stalwart
-      dockerfile: Dockerfile
+    image: stalwartlabs/stalwart:v0.13.0
+    #build:
+    #  context: ../stalwart
+    #  dockerfile: Dockerfile
     volumes:
       - ./mail:/opt/stalwart
     ports:
@@ -121,8 +121,6 @@ services:
       KC_HTTP_PORT: 8999
       KC_HOSTNAME: keycloak
       KC_HOSTNAME_STRICT_BACKCHANNEL: "true"
-      #KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      #KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: "true"
       KC_LOG_LEVEL: info
       KC_DB: "postgres"

@@ -89,7 +89,7 @@ def sign_up_submit(request: HttpRequest):
 
     # TODO: I don't think we need account model anymore
     account = Account.objects.create(
-        name=request.user.email,
+        name=email_address,
         type='individual',
         quota=0,
         active=True,
@@ -338,7 +338,7 @@ def self_serve_app_passwords(request: HttpRequest):
     account = request.user.account_set.first()
 
     stalwart_client = MailClient()
-    email_user = stalwart_client.get_account(request.user.username)
+    email_user = stalwart_client.get_account(request.user.stalwart_username)
 
     app_passwords = []
     for secret in email_user.get('secrets', []):
@@ -361,12 +361,12 @@ def self_serve_app_password_remove(request: HttpRequest):
     app_password_label = json.loads(request.body).get('password')
 
     stalwart_client = MailClient()
-    email_user = stalwart_client.get_account(request.user.username)
+    email_user = stalwart_client.get_account(request.user.stalwart_username)
 
     for secret in email_user.get('secrets', []):
         secret_label = decode_app_password(secret)
         if secret_label == app_password_label:
-            stalwart_client.delete_app_password(request.user.username, secret)
+            stalwart_client.delete_app_password(request.user.stalwart_username, secret)
             return JsonResponse({'success': True})
 
     return JsonResponse({'success': False})
@@ -384,14 +384,14 @@ def self_serve_app_password_add(request: HttpRequest):
         return raise_form_error(request, reverse('self_serve_app_password'), _('Label and password are required'))
 
     stalwart_client = MailClient()
-    email_user = stalwart_client.get_account(request.user.username)
+    email_user = stalwart_client.get_account(request.user.stalwart_username)
     for secret in email_user.get('secrets', []):
         secret_label = decode_app_password(secret)
         if secret_label == label:
             return raise_form_error(request, reverse('self_serve_app_password'), _('That label is already in-use'))
 
     secret = utils.save_app_password(label, password)
-    stalwart_client.save_app_password(request.user.username, secret)
+    stalwart_client.save_app_password(request.user.stalwart_username, secret)
 
     return HttpResponseRedirect('/self-serve/app-passwords')
 

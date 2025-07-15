@@ -57,3 +57,8 @@ class User(AbstractUser, BaseModel):
         from thunderbird_accounts.subscription.models import Subscription
 
         return self.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).count() > 0
+
+    @cached_property
+    def stalwart_username(self):
+        account = self.account_set.first()
+        return account.name if account else None
