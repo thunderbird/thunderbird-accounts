@@ -87,16 +87,13 @@ def sign_up_submit(request: HttpRequest):
         user_uuid=user.uuid.hex, username=email_address, email=user.email, app_password=app_password
     )
 
-    # TODO: I don't think we need account model anymore
     account = Account.objects.create(
         name=email_address,
-        type='individual',
-        quota=0,
         active=True,
-        django_user=request.user,
+        user=request.user,
     )
 
-    address = Email.objects.create(address=email_address, type='primary', name=account)
+    address = Email.objects.create(address=email_address, type='primary', account=account)
 
     if account and address:
         return HttpResponseRedirect(reverse('self_serve_connection_info'))

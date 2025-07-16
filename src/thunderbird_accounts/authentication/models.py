@@ -59,6 +59,6 @@ class User(AbstractUser, BaseModel):
         return self.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).count() > 0
 
     @cached_property
-    def stalwart_username(self):
+    def stalwart_username(self) -> str | None:
         account = self.account_set.first()
         return account.name if account else None
