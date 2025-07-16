@@ -814,7 +814,7 @@ class UpdateThundermailQuotaTestCase(TestCase):
 
         # Create the thundermail objects
         # ...Why mail models?
-        account = mail_models.Account.objects.create(
+        mail_models.Account.objects.create(
             name='Test Account',
             user_id=self.test_user.uuid,
         )
