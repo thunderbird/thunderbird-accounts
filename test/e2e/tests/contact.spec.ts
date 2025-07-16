@@ -72,6 +72,28 @@ test.describe('contact support form', {
     await expect(contactPage.emailInput).toHaveValue(ACCTS_FXA_EMAIL);
   });
 
+  test('contact form displayed correctly without logging in', async ({ page }) => {
+    // clear authentication state for this test
+    await page.context().clearCookies();
+
+    await contactPage.navigateToContactPage();
+    await contactPage.waitForFormFieldsToLoad();
+
+    // check that the contact form is visible
+    await expect(contactPage.contactHeader).toBeVisible();
+    await expect(contactPage.requiredFieldsText).toBeVisible();
+    await expect(contactPage.emailInput).toBeVisible();
+    await expect(contactPage.subjectInput).toBeVisible();
+    await expect(contactPage.productSelect).toBeVisible();
+    await expect(contactPage.typeSelect).toBeVisible();
+    await expect(contactPage.descriptionInput).toBeVisible();
+    await expect(contactPage.fileDropzone).toBeVisible();
+    await expect(contactPage.submitButton).toBeVisible();
+
+    // check that email is not pre-filled with user's email
+    expect(contactPage.emailInput).toBeEmpty;
+  });
+
   test('able to submit contact form successfully', async ({ page }) => {
     // capture the POST /contact/submit and mock the response
     await page.route('*/**/contact/submit', async (route, request) => {
