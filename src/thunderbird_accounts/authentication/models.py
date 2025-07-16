@@ -45,7 +45,7 @@ class User(AbstractUser, BaseModel):
 
     def has_usable_password(self):
         """Disable passwords for fxa"""
-        if settings.AUTH_SCHEME == 'fxa':
+        if settings.AUTH_SCHEME == 'fxa' or settings.AUTH_SCHEME == 'oidc':
             return False
         return super().has_usable_password()
 
