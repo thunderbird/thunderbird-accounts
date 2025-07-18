@@ -57,7 +57,9 @@ class ZendeskClient(object):
         response = requests.post(
             url,
             headers={"Content-Type": "application/json"},
-            auth=(f'{self.email}/token', self.token),
+            # This needs to be the end user's email for the ticket to be tracked correctly
+            # within Zendesk, NOT the ZENDESK_USER_EMAIL
+            auth=(f'{ticket_fields.get("email")}/token', self.token),
             json=payload
         )
 
