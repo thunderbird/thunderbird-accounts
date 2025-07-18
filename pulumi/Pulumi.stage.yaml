@@ -53,6 +53,6 @@ config:
   accounts:zendesk-subdomain:
     secure: AAABAAobLNQr9tAqP2Lp65fB8nSerUOfd75Lwt9200gZsOAfyA==
   accounts:zendesk-user-email:
-    secure: AAABAA/bJAJIj0E+Rs6FrcKMGsu0seaXMfQGtHZgoH0ZcHggW2hnwkhdm0k5TKO+wnJFtNKP
+    secure: AAABAN1A4KfGTjbtJiFxkQBp6yI/49Nc1ZEyMl7my2DBgMjLKERhFImoeojVTaSM7YcNtsE=
   accounts:zendesk-api-token:
-    secure: AAABAB9PcTNFhOTmmkjIfhilLeKsbSicbV/fxAPoakKg8FK5wTHVZ9QNOMzrUgx2PLXgqdHERuXKD2CeCHw6RauxWDGxdnDx
+    secure: AAABADakN5/7T59A/pqhPqmX8BzZ9SKWvGZs5c45apxe5T7mtaA1OE5qar+0gIhA+HDxNR6TudtxgcqjUKieMszPuKJqjS1g
