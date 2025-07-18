@@ -20,6 +20,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'thunderbird_accounts.settings')
 def immutable_file_test(path, url):
     # Match vite (rollup)-generated hashes, à la, `some_file-CSliV9zW.js`
     import re
+
     return re.match(r'^.+[.-][0-9a-zA-Z_-]{8,12}\..+$', url)
 
 
