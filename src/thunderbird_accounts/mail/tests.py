@@ -3,6 +3,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
+from unittest.mock import patch
 
 from thunderbird_accounts.mail.models import Email, Account
 
@@ -12,7 +13,7 @@ class TestMail(TestCase):
         cache.clear()
         self.c = Client(enforce_csrf_checks=False)
         self.UserModel = get_user_model()
-        self.user = self.UserModel.objects.create(fxa_id='abc123', email='user@test.com')
+        self.user = self.UserModel.objects.create(oidc_id='abc123', email='user@test.com')
         self.sign_up_data = {
             'email_address': 'new-thundermail-address',
             'email_domain': settings.ALLOWED_EMAIL_DOMAINS[0],
@@ -20,22 +21,28 @@ class TestMail(TestCase):
         }
         self.sign_up_full_email = f'{self.sign_up_data["email_address"]}@{self.sign_up_data["email_domain"]}'
 
+        # Mock MailClient so we don't send Stalwart requests
+        # Note: We're mocking the import object in tasks.py not the actual class from client.py!
+        self.mail_client_mock = patch('thunderbird_accounts.mail.tasks.MailClient')
+        self.mail_client_mock.start()
+
     def tearDown(self):
         cache.clear()
+        self.mail_client_mock.stop()
 
-    def does_account_exist(self, account_name):
+    def does_account_exist(self, account_uuid):
         # check if given account exists in the db
         try:
-            Account.objects.get(name=account_name)
+            Account.objects.get(uuid=account_uuid)
             return True
         except Account.DoesNotExist:
             pass
         return False
 
-    def does_email_exist(self, account_name, email_to_check):
+    def does_email_exist(self, account_uuid, email_to_check):
         # check if given email exists in the db
         try:
-            Email.objects.get(name=account_name, address=email_to_check)
+            Email.objects.get(account__uuid__exact=account_uuid, address=email_to_check)
             return True
         except Email.DoesNotExist:
             pass
@@ -50,9 +57,14 @@ class TestMail(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp.url, '/self-serve/connection-info')
 
+        # Refresh the user and retrieve the new account
+        self.user.refresh_from_db()
+        account = self.user.account_set.first()
+        self.assertIsNotNone(account)
+
         # verify account and email were added to db
-        self.assertTrue(self.does_account_exist(self.user.email))
-        self.assertTrue(self.does_email_exist(self.user.email, self.sign_up_full_email))
+        self.assertTrue(self.does_account_exist(account.uuid))
+        self.assertTrue(self.does_email_exist(account.uuid, self.sign_up_full_email))
 
     def test_sign_up_missing_email(self):
         self.c.force_login(self.user)
@@ -126,14 +138,19 @@ class TestMail(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp.url, '/self-serve/connection-info')
 
+        # Refresh the user and retrieve the new account
+        self.user.refresh_from_db()
+        account = self.user.account_set.first()
+        self.assertIsNotNone(account)
+
         # verify account and email were added to db
-        self.assertTrue(self.does_account_exist(self.user.email))
-        self.assertTrue(self.does_email_exist(self.user.email, self.sign_up_full_email))
+        self.assertTrue(self.does_account_exist(account.uuid))
+        self.assertTrue(self.does_email_exist(account.uuid, self.sign_up_full_email))
 
         # now create a 2nd user
         second_client = Client(enforce_csrf_checks=False)
         second_user = self.UserModel.objects.create(
-            fxa_id='abc456', email='second-user@test.com', username='Second User'
+            oidc_id='abc456', email='second-user@test.com', username='Second User'
         )
 
         second_client.force_login(second_user)
@@ -145,6 +162,7 @@ class TestMail(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp.url, '/sign-up/')
 
-        # verify account and email weren't added to db
-        self.assertFalse(self.does_account_exist(second_user.email))
-        self.assertFalse(self.does_email_exist(second_user.email, self.sign_up_full_email))
+        # Refresh the user and retrieve the account count
+        self.user.refresh_from_db()
+        account_count = self.user.account_set.count()
+        self.assertEqual(account_count, 1)

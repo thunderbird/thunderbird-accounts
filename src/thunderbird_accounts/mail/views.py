@@ -1,5 +1,4 @@
 import json
-from urllib.parse import quote_plus
 
 from django.conf import settings
 from django.contrib import messages
@@ -13,6 +12,8 @@ from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.client import MailClient
+from thunderbird_accounts.mail.utils import decode_app_password
 
 try:
     from paddle_billing import Client
@@ -21,11 +22,11 @@ except ImportError:
     Client = None
     CreateCustomerPortalSession = None
 
-from thunderbird_accounts.authentication.templatetags.helpers import get_admin_login_code
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
 from thunderbird_accounts.mail.zendesk import ZendeskClient
+from thunderbird_accounts.mail import tasks, utils
 
 
 def raise_form_error(request, to_view: str, error_message: str):
@@ -38,12 +39,11 @@ def home(request: HttpRequest):
     return TemplateResponse(request, 'mail/index.html', {})
 
 
+@login_required
 def sign_up(request: HttpRequest):
     # If we're posting ourselves, we're logging in
     if request.method == 'POST':
-        return HttpResponseRedirect(
-            reverse('fxa_login', kwargs={'login_code': get_admin_login_code(), 'redirect_to': quote_plus(request.path)})
-        )
+        return HttpResponseRedirect(reverse('self-serve'))
 
     return TemplateResponse(
         request,
@@ -75,16 +75,25 @@ def sign_up_submit(request: HttpRequest):
     except Email.DoesNotExist:
         pass
 
-    account = Account.objects.create(
-        name=request.user.email,
-        type='individual',
-        quota=0,
-        active=True,
-        django_user=request.user,
-    )
-    account.save_app_password('Mail Clients', request.POST['app_password'])
+    user = request.user
+    app_password = request.POST['app_password']
 
-    address = Email.objects.create(address=email_address, type='primary', name=account)
+    # Send a task to create the inbox / account on stalwart's end
+    if app_password:
+        app_password = utils.save_app_password('Mail Client', app_password)
+
+    # Run this immediately for now, in the future we'll ship these to celery
+    tasks.create_stalwart_account.run(
+        user_uuid=user.uuid.hex, username=email_address, email=user.email, app_password=app_password
+    )
+
+    account = Account.objects.create(
+        name=email_address,
+        active=True,
+        user=request.user,
+    )
+
+    address = Email.objects.create(address=email_address, type='primary', account=account)
 
     if account and address:
         return HttpResponseRedirect(reverse('self_serve_connection_info'))
@@ -324,7 +333,13 @@ def self_serve_app_passwords(request: HttpRequest):
     """App Password page for Self Serve
     A user can create (if none exists), or delete an App Password which is used to connect to the mail server."""
     account = request.user.account_set.first()
-    app_passwords = account.app_passwords if account else []
+
+    stalwart_client = MailClient()
+    email_user = stalwart_client.get_account(request.user.stalwart_username)
+
+    app_passwords = []
+    for secret in email_user.get('secrets', []):
+        app_passwords.append(decode_app_password(secret))
 
     return TemplateResponse(
         request,
@@ -339,31 +354,41 @@ def self_serve_app_passwords(request: HttpRequest):
 @login_required
 @require_http_methods(['POST'])
 def self_serve_app_password_remove(request: HttpRequest):
-    if request.user.is_anonymous:
-        return JsonResponse({'success': False})
-    account = request.user.account_set.first()
-    account.secret = None
-    account.save()
+    """Removes an app password from a remote Stalwart account"""
+    app_password_label = json.loads(request.body).get('password')
 
-    return JsonResponse({'success': True})
+    stalwart_client = MailClient()
+    email_user = stalwart_client.get_account(request.user.stalwart_username)
+
+    for secret in email_user.get('secrets', []):
+        secret_label = decode_app_password(secret)
+        if secret_label == app_password_label:
+            stalwart_client.delete_app_password(request.user.stalwart_username, secret)
+            return JsonResponse({'success': True})
+
+    return JsonResponse({'success': False})
 
 
 @login_required
 @require_http_methods(['POST'])
 @sensitive_post_parameters('password')
 def self_serve_app_password_add(request: HttpRequest):
-    if request.user.is_anonymous:
-        return JsonResponse({'success': False})
-
+    """Add an app password to the remote Stalwart account"""
     label = request.POST['name']
     password = request.POST['password']
 
     if not label or not password:
         return raise_form_error(request, reverse('self_serve_app_password'), _('Label and password are required'))
 
-    account = request.user.account_set.first()
-    if not account.save_app_password(label, password):
-        return raise_form_error(request, reverse('self_serve_app_password'), _('Unsupported algorithm'))
+    stalwart_client = MailClient()
+    email_user = stalwart_client.get_account(request.user.stalwart_username)
+    for secret in email_user.get('secrets', []):
+        secret_label = decode_app_password(secret)
+        if secret_label == label:
+            return raise_form_error(request, reverse('self_serve_app_password'), _('That label is already in-use'))
+
+    secret = utils.save_app_password(label, password)
+    stalwart_client.save_app_password(request.user.stalwart_username, secret)
 
     return HttpResponseRedirect('/self-serve/app-passwords')
 

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { SelfServePage } from '../pages/self-serve-page';
-import { FxAPage } from '../pages/fxa-page';
+import { OIDCKeycloakPage } from '../pages/oidc/keycloak-login-page';
 import { connectionInfo } from '../const/types';
 
 import {
@@ -9,7 +9,9 @@ import {
   JMAP_PORT,
   SMTP_PORT,
   ACCTS_HOST,
-  SECURITY_SSL_TLS,
+  IMAP_TLS,
+  JMAP_TLS,
+  SMTP_TLS,
   APP_PASSWORD,
   YOUR_EMAIL_LBL,
   THUNDERMAIL_USERNAME,
@@ -18,11 +20,11 @@ import {
  } from '../const/constants';
 
 let selfServePage: SelfServePage;
-let fxaPage: FxAPage;
+let keycloakPage: OIDCKeycloakPage;
 
 test.beforeEach(async ({ page }) => {
   selfServePage = new SelfServePage(page);
-  fxaPage = new FxAPage(page);
+  keycloakPage = new OIDCKeycloakPage(page);
   // we are already signed into accounts via our auth.setup
   await selfServePage.navigateToSelfServeHub();
 });
@@ -39,7 +41,7 @@ test.describe('self-serve hub connection info', {
     var expectedInfo: connectionInfo = {
         'hostName': ACCTS_HOST,
         'port': IMAP_PORT,
-        'securityType': SECURITY_SSL_TLS,
+        'securityType': IMAP_TLS,
         'userName': THUNDERMAIL_USERNAME,
         'appPassword': APP_PASSWORD,
       };
@@ -54,10 +56,12 @@ test.describe('self-serve hub connection info', {
 
     // check jmap details
     expectedInfo['port'] = JMAP_PORT;
+    expectedInfo['securityType'] = JMAP_TLS;
     await selfServePage.checkJMAPInfo(expectedInfo);
 
     // check smtp details
     expectedInfo['port'] = SMTP_PORT;
+    expectedInfo['securityType'] = SMTP_TLS;
     await selfServePage.checkSMTPInfo(expectedInfo);
   });
 });

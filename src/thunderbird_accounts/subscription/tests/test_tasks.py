@@ -162,7 +162,7 @@ class PaddleTestCase(TestCase):
         # Create a mail account
         self.test_mail_account = Account.objects.create(
             name='Test Account',
-            django_user_id=self.test_user.uuid,
+            user_id=self.test_user.uuid,
         )
 
         # Make sure tasks run in sync
@@ -481,10 +481,6 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
 
         # Check if the model actually exists
         self.assertTrue(models.Subscription.objects.filter(pk=task_results.get('model_uuid')).exists())
-
-        self.assertEqual(self.test_mail_account.quota, 0)
-        self.test_mail_account.refresh_from_db()
-        self.assertEqual(self.test_mail_account.quota, 1_337_000_000_000)
 
     def test_subscription_already_exists(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
@@ -818,15 +814,10 @@ class UpdateThundermailQuotaTestCase(TestCase):
 
         # Create the thundermail objects
         # ...Why mail models?
-        account = mail_models.Account.objects.create(
+        mail_models.Account.objects.create(
             name='Test Account',
-            type=mail_models.Account.AccountType.INDIVIDUAL,
-            django_user_id=self.test_user.uuid,
-            quota=0,
+            user_id=self.test_user.uuid,
         )
-
-        # Ensure no quota
-        self.assertEqual(account.quota, 0)
 
         # Run the task
         task_results: dict | None = tasks.update_thundermail_quota.delay(
@@ -839,11 +830,6 @@ class UpdateThundermailQuotaTestCase(TestCase):
         self.assertEqual(task_results.get('task_status'), 'success')
         self.assertEqual(task_results.get('updated'), 1)
         self.assertEqual(task_results.get('skipped'), 0)
-
-        account.refresh_from_db()
-
-        # 1gb in bytes manually calculated
-        self.assertEqual(account.quota, 1_000_000_000)
 
     def test_plan_does_not_exist(self):
         # Manually created this uuid, it should not exist

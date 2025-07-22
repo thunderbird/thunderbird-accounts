@@ -565,6 +565,18 @@ wheels = [
 ]
 
 [[package]]
+name = "josepy"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a9/29/e7c14150f200c5cd49d1a71b413f61b97406f57872ad693857982c0869c9/josepy-2.0.0.tar.gz", hash = "sha256:e7d7acd2fe77435cda76092abe4950bb47b597243a8fb733088615fa6de9ec40", size = 55767 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/57/de/4e1509bdf222503941c6cfcfa79369aa00f385c02e55eef3bfcb84f5e0f8/josepy-2.0.0-py3-none-any.whl", hash = "sha256:eb50ec564b1b186b860c7738769274b97b19b5b831239669c0f3d5c86b62a4c0", size = 28923 },
+]
+
+[[package]]
 name = "kombu"
 version = "5.5.4"
 source = { registry = "https://pypi.org/simple" }
@@ -666,6 +678,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979 },
+]
+
+[[package]]
+name = "mozilla-django-oidc"
+version = "4.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "django" },
+    { name = "josepy" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/90/f9/1ca554a62bf8a4fd31b68209df8603075c2b7436400ea3f7ddd597f204a5/mozilla-django-oidc-4.0.1.tar.gz", hash = "sha256:4ff8c64069e3e05c539cecf9345e73225a99641a25e13b7a5f933ec897b58918", size = 49027 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/d6/2b75bf4e742c54028ae07a1fb5a2624e5a73e9cfd2185c2df0e22cbfe14e/mozilla_django_oidc-4.0.1-py2.py3-none-any.whl", hash = "sha256:04ef58759be69f22cdc402d082480aaebf193466cad385dc9e4f8df2a0b187ca", size = 29059 },
 ]
 
 [[package]]
@@ -1153,7 +1180,7 @@ wheels = [
 
 [[package]]
 name = "thunderbird-accounts"
-version = "0.4.0"
+version = "0.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "argon2-cffi" },
@@ -1168,6 +1195,7 @@ dependencies = [
     { name = "hiredis" },
     { name = "itsdangerous" },
     { name = "markdown" },
+    { name = "mozilla-django-oidc" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pyfxa" },
     { name = "pyjwt" },
@@ -1216,6 +1244,7 @@ requires-dist = [
     { name = "hiredis", specifier = ">=3.2.0" },
     { name = "itsdangerous", specifier = ">=2.2.0" },
     { name = "markdown", specifier = ">=3.8" },
+    { name = "mozilla-django-oidc", specifier = ">=4.0.1" },
     { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "paddle-python-sdk", marker = "extra == 'subscription'", specifier = ">=1.6.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.8" },

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thunderbird_accounts"
-version = "0.4.0"
+version = "0.6.0"
 dependencies = [
     "django>=5.2",
     "django-filter>=25.1",
@@ -27,6 +27,7 @@ dependencies = [
     "requests>=2.32.3",
     "celery[redis]>=5.5.2",
     "django-cors-headers>=4.7.0",
+    "mozilla-django-oidc>=4.0.1",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"

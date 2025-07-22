@@ -1,5 +1,5 @@
 import { expect, type Page, type Locator } from '@playwright/test';
-import { ACCTS_SELF_SERVE_URL, ACCTS_FXA_EMAIL, ACCTS_TARGET_ENV, TIMEOUT_60_SECONDS, TIMEOUT_5_SECONDS } from '../const/constants';
+import { ACCTS_SELF_SERVE_URL, ACCTS_OIDC_EMAIL, ACCTS_TARGET_ENV, TIMEOUT_60_SECONDS, TIMEOUT_5_SECONDS } from '../const/constants';
 import { connectionInfo } from '../const/types';
 
 export class SelfServePage {
@@ -41,7 +41,7 @@ export class SelfServePage {
     this.pageHeader = this.page.getByRole('heading', { name: 'Accounts Hub'});
     this.selfServeConnectionInfoHeader = this.page.getByRole('heading', { name: 'Self Serve - Connection Information'});
     this.selfServeAccountInfoHeader = this.page.getByRole('heading', { name: 'Self Serve - Account Information'});
-    this.userDisplayName = ACCTS_FXA_EMAIL.split('@')[0];
+    this.userDisplayName = ACCTS_OIDC_EMAIL.split('@')[0];
     this.welcomeBackHeader = this.page.getByText(`Welcome back ${this.userDisplayName}.`, { exact: true });
     this.logoutLink = this.page.getByRole('link', { name: 'Logout'});
     this.accountInfoLink = this.page.getByRole('link', { name: 'Account Info'});

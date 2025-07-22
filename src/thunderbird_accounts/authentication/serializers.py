@@ -29,7 +29,7 @@ class UserCacheSerializer(serializers.ModelSerializer):
         "display_name": "My Display Name",
         "full_name": "my full name",
         "email": "my@email.address",
-        "fxa_id": "123abc",
+        "oidc_id": "123abc",
         "language": "en",
         "avatar_url": "https://coolcatpics.local/cat.png",
         "timezone": "America/Vancouver",
@@ -60,7 +60,7 @@ class UserCacheSerializer(serializers.ModelSerializer):
             'display_name',
             'full_name',
             'email',
-            'fxa_id',
+            'oidc_id',
             # Pref fields
             'language',
             'avatar_url',

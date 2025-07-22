@@ -11,8 +11,8 @@ export const ACCTS_CHECKOUT_SUCCESS_URL = `${ACCTS_CHECKOUT_URL}/success`;
 export const ACCTS_CONTACT_URL = String(process.env.ACCTS_CONTACT_URL);
 
 // sign-in credentials and corresponding account display name
-export const ACCTS_FXA_EMAIL = String(process.env.ACCTS_FXA_EMAIL);
-export const ACCTS_FXA_PWORD = String(process.env.ACCTS_FXA_PWORD);
+export const ACCTS_OIDC_EMAIL = String(process.env.ACCTS_OIDC_EMAIL);
+export const ACCTS_OIDC_PWORD = String(process.env.ACCTS_OIDC_PWORD);
 
 // playwright test tags
 export const PLAYWRIGHT_TAG_E2E_SUITE = '@e2e-suite';
@@ -28,7 +28,9 @@ export const ACCTS_HOST = String(process.env.ACCTS_HOST);
 export const IMAP_PORT = Number(process.env.IMAP_PORT);
 export const JMAP_PORT = Number(process.env.JMAP_PORT);
 export const SMTP_PORT = Number(process.env.SMTP_PORT);
-export const SECURITY_SSL_TLS = 'SSL/TLS';
+export const IMAP_TLS = String(process.env.IMAP_TLS) ?? 'SSL/TLS';
+export const JMAP_TLS = String(process.env.JMAP_TLS) ?? 'SSL/TLS';
+export const SMTP_TLS = String(process.env.SMTP_TLS) ?? 'SSL/TLS';
 export const APP_PASSWORD = 'Your App Password';
 export const YOUR_EMAIL_LBL = 'Your email address:';
 export const THUNDERMAIL_USERNAME = String(process.env.THUNDERMAIL_USERNAME);
