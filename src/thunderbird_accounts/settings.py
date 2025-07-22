@@ -421,3 +421,6 @@ ONE_GIGABYTE_IN_BYTES = 1_000_000_000
 # For local docker usage
 if DEBUG:
     CORS_ALLOWED_ORIGINS += ['http://localhost', 'http://accounts']
+
+# Tell django to use secure in stage/prod
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not IS_DEV else None
