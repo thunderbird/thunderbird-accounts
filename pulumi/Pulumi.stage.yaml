@@ -56,3 +56,9 @@ config:
     secure: AAABAN1A4KfGTjbtJiFxkQBp6yI/49Nc1ZEyMl7my2DBgMjLKERhFImoeojVTaSM7YcNtsE=
   accounts:zendesk-api-token:
     secure: AAABADakN5/7T59A/pqhPqmX8BzZ9SKWvGZs5c45apxe5T7mtaA1OE5qar+0gIhA+HDxNR6TudtxgcqjUKieMszPuKJqjS1g
+  accounts:oidc-client-secret:
+    secure: AAABANecyPIzXdO+dhrAz8COqV+plPk+F7C0a8SSsdzvJd5oB5SIXK58ttLKkxPUHqkarW+rQQCtEU1REOVCQQ==
+  accounts:oidc-client-id:
+    secure: AAABANGb8Hn/C7QJLgdJYkIuPDyhWGkT+5XOC1QqY2JP4B1+qKjyaqMhYeKer8oG0fHtBg==
+  accounts:oidc-sign-algo:
+    secure: AAABAOYzpQGUrQUtCMJiWc2rSL7uqfYFPpfCP7IDdDfxYPdZZg==

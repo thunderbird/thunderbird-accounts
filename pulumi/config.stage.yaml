@@ -134,6 +134,9 @@ resources:
         - zendesk-subdomain
         - zendesk-user-email
         - zendesk-api-token
+        - oidc-client-secret
+        - oidc-client-id
+        - oidc-sign-algo
 
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
@@ -304,6 +307,12 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-user-email-Irmh4I
               - name: ZENDESK_API_TOKEN
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-api-token-dOxdeo
+              - name: OIDC_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-client-id-UzCPWF
+              - name: OIDC_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-client-secret-RzOIiH
+              - name: OIDC_SIGN_ALGO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-sign-algo-nEhTVJ
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -316,7 +325,7 @@ resources:
               - name: ALLOWED_EMAIL_DOMAINS
                 value: 'stage-thundermail.com'
               - name: AUTH_SCHEME
-                value: fxa
+                value: 'oidc'
               - name: CSRF_HTTPONLY
                 value: 'True'
               - name: CSRF_SECURE
@@ -363,6 +372,16 @@ resources:
                 value: 'True'
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
+              - name: OIDC_URL_AUTH
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/auth"
+              - name: OIDC_URL_TOKEN
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token"
+              - name: OIDC_URL_USER
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"
+              - name: OIDC_URL_JWKS
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"
+              - name: OIDC_URL_LOGOUT
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -422,6 +441,12 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-user-email-Irmh4I
               - name: ZENDESK_API_TOKEN
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-api-token-dOxdeo
+              - name: OIDC_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-client-id-UzCPWF
+              - name: OIDC_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-client-secret-RzOIiH
+              - name: OIDC_SIGN_ALGO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-sign-algo-nEhTVJ
             environment:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
@@ -432,7 +457,7 @@ resources:
               - name: APP_ENV
                 value: stage
               - name: AUTH_SCHEME
-                value: fxa
+                value: 'oidc'
               - name: CSRF_HTTPONLY
                 value: 'True'
               - name: CSRF_SECURE
@@ -481,6 +506,16 @@ resources:
                 value: dummy@example.org
               - name: TBA_CELERY
                 value: "yes"
+              - name: OIDC_URL_AUTH
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/auth"
+              - name: OIDC_URL_TOKEN
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token"
+              - name: OIDC_URL_USER
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"
+              - name: OIDC_URL_JWKS
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"
+              - name: OIDC_URL_LOGOUT
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
 
   tb:ci:AwsAutomationUser:
     ci:
