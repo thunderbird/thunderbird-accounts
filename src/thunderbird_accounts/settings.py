@@ -89,7 +89,7 @@ LOGIN_MAX_AGE_IN_SECONDS = 60 * 3
 IS_IN_ALLOW_LIST_CACHE_KEY = 'is_in_allow_list'
 IS_IN_ALLOW_LIST_CACHE_MAX_AGE_IN_SECONDS = 60 * 60 * 24
 
-AUTH_ALLOW_LIST: str = os.getenv('FXA_ALLOW_LIST')
+AUTH_ALLOW_LIST: str = os.getenv('AUTH_ALLOW_LIST')
 
 # MailChimp form URL for Wait List
 WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')

@@ -267,7 +267,7 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-password-YEuGDS
               - name: DATABASE_USER
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-user-aLCuis
-              - name: FXA_ALLOW_LIST
+              - name: AUTH_ALLOW_LIST
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-allow-list-6iQipk
               - name: FXA_CLIENT_ID
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-client-id-ggzLOI
@@ -379,7 +379,7 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-password-YEuGDS
               - name: DATABASE_USER
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-user-aLCuis
-              - name: FXA_ALLOW_LIST
+              - name: AUTH_ALLOW_LIST
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-allow-list-6iQipk
               - name: FXA_CLIENT_ID
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-client-id-ggzLOI

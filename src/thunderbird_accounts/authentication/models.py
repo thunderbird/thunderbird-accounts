@@ -14,8 +14,8 @@ class User(AbstractUser, BaseModel):
     :param oidc_id: The ID of the connected oidc account
     :param last_used_email: The last used email associated with this account
     :param language: The user's preferred language to view the ui/system emails in
-    :param display_name: Display name from FxA profile
-    :param avatar_url: Avatar URL from FxA profile
+    :param display_name: Display name from oidc profile
+    :param avatar_url: Avatar URL from oidc profile
     :param timezone: The user's timezone
     """
 
@@ -44,8 +44,8 @@ class User(AbstractUser, BaseModel):
         ]
 
     def has_usable_password(self):
-        """Disable passwords for fxa"""
-        if settings.AUTH_SCHEME == 'fxa' or settings.AUTH_SCHEME == 'oidc':
+        """Disable passwords for oidc"""
+        if settings.AUTH_SCHEME == 'oidc':
             return False
         return super().has_usable_password()
 
