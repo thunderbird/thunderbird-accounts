@@ -14,7 +14,6 @@ class TestMail(TestCase):
         self.c = Client(enforce_csrf_checks=False)
         self.UserModel = get_user_model()
         self.user = self.UserModel.objects.create(oidc_id='abc123', email='user@test.com')
-        # self.account = Account.objects.create(name=self.user.email, user=self.user)
         self.sign_up_data = {
             'email_address': 'new-thundermail-address',
             'email_domain': settings.ALLOWED_EMAIL_DOMAINS[0],

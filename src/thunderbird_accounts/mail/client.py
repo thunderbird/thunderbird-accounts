@@ -1,11 +1,25 @@
 import base64
 import logging
+from enum import StrEnum
 
 import requests
 from django.conf import settings
 from django.utils.crypto import get_random_string
 
 from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError, StalwartError
+
+
+class StalwartErrors(StrEnum):
+    """Errors defined in Stalwart's management api
+    https://github.com/stalwartlabs/stalwart/blob/4d819a1041b0adfce3757df50929764afa10e27b/crates/http/src/management/mod.rs#L58
+    """
+
+    FIELD_ALREADY_EXISTS = 'fieldAlreadyExists'
+    FIELD_MISSING = 'fieldMissing'
+    NOT_FOUND = 'notFound'
+    UNSUPPORTED = 'unsupported'
+    ASSERT_FAILED = 'assertFailed'
+    OTHER = 'other'
 
 
 class MailClient:
@@ -30,7 +44,7 @@ class MailClient:
         data = response.json()
         error = data.get('error')
         # Only catch 'other' errors here
-        if error == 'other':
+        if error == StalwartErrors.OTHER.value:
             details_and_reason = ': '.join([data.get('details'), data.get('reason')])
             raise StalwartError(details_and_reason)
 
@@ -126,7 +140,7 @@ class MailClient:
 
         logging.info(f'[MailClient.get_domain({domain}]: {data}')
 
-        if error == 'notFound':
+        if error == StalwartErrors.NOT_FOUND.value:
             raise DomainNotFoundError(domain)
 
         assert data.get('data', {}).get('type') == 'domain'
@@ -171,7 +185,7 @@ class MailClient:
         data = response.json()
         error = data.get('error')
 
-        if error == 'notFound':
+        if error == StalwartErrors.NOT_FOUND.value:
             raise AccountNotFoundError(username)
 
         assert data.get('data', {}).get('type') == 'individual'
@@ -219,7 +233,7 @@ class MailClient:
         response = self._create_principal(data)
         data = response.json()
         if data.get('error'):
-            raise RuntimeError(f'Error: {data.get("error")}\n{data}')
+            raise StalwartError(data.get('error'))
 
         response = self._get_principal(api_key_name)
         data = response.json()

@@ -1,15 +1,13 @@
 import path from 'path';
 import { test, expect } from '@playwright/test';
 import { ContactPage } from '../pages/contact-page';
-import { FxAPage } from '../pages/fxa-page';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
-  ACCTS_FXA_EMAIL,
+  ACCTS_OIDC_EMAIL,
 } from '../const/constants';
 
 let contactPage: ContactPage;
-let fxaPage: FxAPage;
 
 // Mock values for the contact form fields
 const MOCK_PRODUCT_VALUE = 'appointment';
@@ -17,7 +15,6 @@ const MOCK_TYPE_VALUE = 'technical';
 
 test.beforeEach(async ({ page }) => {
   contactPage = new ContactPage(page);
-  fxaPage = new FxAPage(page);
 
   // Mock the /contact/fields endpoint to return predictable values
   await page.route('*/**/contact/fields', async (route) => {
@@ -69,7 +66,7 @@ test.describe('contact support form', {
     await expect(contactPage.submitButton).toBeVisible();
 
     // check that email is pre-filled with user's email
-    await expect(contactPage.emailInput).toHaveValue(ACCTS_FXA_EMAIL);
+    await expect(contactPage.emailInput).toHaveValue(ACCTS_OIDC_EMAIL);
   });
 
   test('contact form displayed correctly without logging in', async ({ page }) => {
@@ -120,7 +117,7 @@ test.describe('contact support form', {
 
     // fill out the contact form
     await contactPage.fillContactForm(
-      ACCTS_FXA_EMAIL,
+      ACCTS_OIDC_EMAIL,
       'Test Subject',
       MOCK_PRODUCT_VALUE,
       MOCK_TYPE_VALUE,
@@ -155,7 +152,7 @@ test.describe('contact support form', {
 
     // fill out the contact form
     await contactPage.fillContactForm(
-      ACCTS_FXA_EMAIL,
+      ACCTS_OIDC_EMAIL,
       'Test Subject',
       MOCK_PRODUCT_VALUE,
       MOCK_TYPE_VALUE,
@@ -198,7 +195,7 @@ test.describe('contact support form', {
 
     // fill out the contact form
     await contactPage.fillContactForm(
-      ACCTS_FXA_EMAIL,
+      ACCTS_OIDC_EMAIL,
       'Test Subject with Attachment',
       MOCK_PRODUCT_VALUE,
       MOCK_TYPE_VALUE,
