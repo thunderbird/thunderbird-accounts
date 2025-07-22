@@ -18,7 +18,10 @@ def create_stalwart_account(self, user_uuid: str, username: str, email: str, app
 
         # It already exists? We should have caught that in our system.
         sentry_sdk.capture_message(
-            f'Error: Username already exists! Cannot create a Stalwart account with the username {username} for {email}.',
+            (
+                'Error: Username already exists!'
+                f' Cannot create a Stalwart account with the username {username} for {email}.'
+            ),
             level='error',
             user=user_uuid,
         )
