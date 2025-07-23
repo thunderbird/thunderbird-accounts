@@ -77,7 +77,7 @@ redis_opts = resources['tb:elasticache:ElastiCacheReplicaGroup']['accounts']
 redis = tb_pulumi.elasticache.ElastiCacheReplicationGroup(
     name=f'{project.name_prefix}-redis',
     project=project,
-    source_sgids=[container_sgs['accounts'].resources['sg'].id],
+    source_sgids=[container_sgs['accounts'].resources['sg'].id, container_sgs['accounts-celery'].resources['sg'].id],
     subnets=vpc.resources['subnets'],
     opts=pulumi.ResourceOptions(depends_on=[vpc, container_sgs['accounts']]),
     **redis_opts,
