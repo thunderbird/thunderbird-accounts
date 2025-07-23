@@ -30,7 +30,7 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         user.oidc_id = claims.get('sub')
         user.first_name = claims.get('given_name', '')
         user.last_name = claims.get('family_name', '')
-        user.timezone = claims.get('zoneinfo')
+        user.timezone = claims.get('zoneinfo', 'UTC')
         user.avatar_url = claims.get('picture')
         user.display_name = claims.get('preferred_username')
         user.username = claims.get('preferred_username')
