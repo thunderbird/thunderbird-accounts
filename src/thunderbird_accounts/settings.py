@@ -44,7 +44,11 @@ DEBUG: bool = os.getenv('APP_DEBUG') and (IS_DEV or APP_ENV == 'test')
 
 def before_send(event: Event, hint: Hint) -> Event | None:
     """Filter out any exceptions we don't want to pollute sentry"""
-    if hint.get('exc_info', [None])[0] in [DisallowedHost]:
+    exc_info = hint.get('exc_info', [None])
+    if DisallowedHost in exc_info:
+        if len(exc_info) > 2:
+            print(f'Disallowed host err: {exc_info[1]}')
+            print(f'Allowed hosts: {ALLOWED_HOSTS}')
         return None
 
     return event
