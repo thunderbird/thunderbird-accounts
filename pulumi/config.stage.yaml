@@ -516,6 +516,8 @@ resources:
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"
               - name: OIDC_URL_LOGOUT
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
+              - name: ALLOWED_HOSTS
+                value: 'accounts-stage.tb.pro,10.*'
 
   tb:ci:AwsAutomationUser:
     ci:

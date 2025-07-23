@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -424,3 +425,5 @@ if DEBUG:
 
 # Tell django to use secure in stage/prod
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not IS_DEV else None
+
+logging.info(f'Allowed hosts: {ALLOWED_HOSTS}')
