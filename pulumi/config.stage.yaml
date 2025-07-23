@@ -319,7 +319,7 @@ resources:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
               - name: ALLOWED_HOSTS
-                value: '*:8087,accounts-stage.tb.pro,10.*,10.*:8087'
+                value: 'accounts-stage.tb.pro,10.*'
               - name: APP_ENV
                 value: stage
               - name: ALLOWED_EMAIL_DOMAINS
