@@ -382,6 +382,8 @@ resources:
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"
               - name: OIDC_URL_LOGOUT
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
+              - name: OIDC_FALLBACK_MATCH_BY_EMAIL
+                value: 'True'
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG

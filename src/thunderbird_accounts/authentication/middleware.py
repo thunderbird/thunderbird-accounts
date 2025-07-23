@@ -68,7 +68,14 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         sub = claims.get('sub')
         if not sub:
             return self.UserModel.objects.none()
-        return self.UserModel.objects.filter(oidc_id__iexact=sub)
+
+        user_query = self.UserModel.objects.filter(oidc_id__iexact=sub)
+
+        # Fallback to matching by email if the env is set
+        if settings.OIDC_FALLBACK_MATCH_BY_EMAIL:
+            if user_query.count() == 0:
+                user_query = self.UserModel.objects.filter(email__iexact=claims.get('email'))
+        return user_query
 
 
 class SetHostIPInAllowedHostsMiddleware:
