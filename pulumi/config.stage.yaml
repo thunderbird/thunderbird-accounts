@@ -319,7 +319,7 @@ resources:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
               - name: ALLOWED_HOSTS
-                value: 'accounts-stage.tb.pro,10.*'
+                value: 'accounts-stage.tb.pro'
               - name: APP_ENV
                 value: stage
               - name: ALLOWED_EMAIL_DOMAINS
@@ -516,8 +516,6 @@ resources:
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"
               - name: OIDC_URL_LOGOUT
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
-              - name: ALLOWED_HOSTS
-                value: 'accounts-stage.tb.pro,10.*'
 
   tb:ci:AwsAutomationUser:
     ci:

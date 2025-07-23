@@ -299,7 +299,7 @@ resources:
               - name: ALLOWED_EMAIL_DOMAINS
                 value: 'thundermail.com'
               - name: ALLOWED_HOSTS
-                value: '*:8087,accounts.tb.pro,10.*,10.*:8087'
+                value: 'accounts.tb.pro'
               - name: APP_ENV
                 value: stage
               - name: AUTH_SCHEME
