@@ -46,9 +46,6 @@ def before_send(event: Event, hint: Hint) -> Event | None:
     """Filter out any exceptions we don't want to pollute sentry"""
     exc_info = hint.get('exc_info', [None])
     if DisallowedHost in exc_info:
-        if len(exc_info) > 2:
-            print(f'Disallowed host err: {exc_info[1]}')
-            print(f'Allowed hosts: {ALLOWED_HOSTS}')
         return None
 
     return event
@@ -153,7 +150,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'thunderbird_accounts.authentication.middleware.ClientSetAllowedHostsMiddleware',
+    'thunderbird_accounts.authentication.middleware.SetHostIPInAllowedHostsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'servestatic.middleware.ServeStaticMiddleware',
@@ -429,5 +426,3 @@ if DEBUG:
 
 # Tell django to use secure in stage/prod
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not IS_DEV else None
-
-print(f'Allowed hosts: {ALLOWED_HOSTS}')

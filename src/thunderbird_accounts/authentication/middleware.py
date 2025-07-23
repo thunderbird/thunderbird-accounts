@@ -1,8 +1,6 @@
 import logging
-import time
 from socket import gethostbyname, gethostname
 
-import sentry_sdk
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest
@@ -73,26 +71,20 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         return self.UserModel.objects.filter(oidc_id__iexact=sub)
 
 
-class ClientSetAllowedHostsMiddleware:
+class SetHostIPInAllowedHostsMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest):
-        start = time.perf_counter_ns()
-
         allowed_hosts = settings.ALLOWED_HOSTS
 
         # Get the IP of whatever machine is running this code and allow it as a hostname
         hostname = gethostbyname(gethostname())
         if hostname not in allowed_hosts:
-            allowed_hosts.append(gethostbyname(gethostname()))
+            allowed_hosts.append(hostname)
 
         # Set both django allowed hosts and cors allowed origins
         settings.ALLOWED_HOSTS = allowed_hosts
-
-        end = time.perf_counter_ns()
-
-        sentry_sdk.set_extra('allowed_host_get_time_ms', (end - start) / 1000000)
 
         response = self.get_response(request)
 
