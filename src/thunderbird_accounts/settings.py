@@ -330,7 +330,7 @@ if AUTH_SCHEME == 'oidc':
 
     # this should only be used to transition users from one oidc to another
     # ideally you should turn this off when you're done.
-    OIDC_FALLBACK_MATCH_BY_EMAIL = os.getenv('OIDC_FALLBACK_MATCH_BY_EMAIL', '').lower() == 'True'
+    OIDC_FALLBACK_MATCH_BY_EMAIL = os.getenv('OIDC_FALLBACK_MATCH_BY_EMAIL', '').lower() == 'true'
 
 
 STALWART_API_URL = os.getenv('STALWART_API_URL')
