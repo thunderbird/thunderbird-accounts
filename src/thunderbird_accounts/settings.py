@@ -328,6 +328,10 @@ if AUTH_SCHEME == 'oidc':
 
     OIDC_OP_LOGOUT_URL_METHOD = 'thunderbird_accounts.settings.oidc_logout'
 
+    # this should only be used to transition users from one oidc to another
+    # ideally you should turn this off when you're done.
+    OIDC_FALLBACK_MATCH_BY_EMAIL = os.getenv('OIDC_FALLBACK_MATCH_BY_EMAIL', '').lower() == 'true'
+
 
 STALWART_API_URL = os.getenv('STALWART_API_URL')
 STALWART_API_AUTH_STRING = os.getenv('STALWART_API_AUTH_STRING')
