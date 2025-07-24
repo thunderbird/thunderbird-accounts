@@ -19,12 +19,11 @@ npx playwright install
 
 ## E2E Test Prerequisites
 
-The E2E tests require an existing FxA account used to sign-in to TB Accounts, and reads this from your local .env file. This includes:
+The E2E tests require an existing TB Pro (keycloak) account used to sign-in to TB Accounts, and reads this from your local .env file. This includes:
 
-- Credentials for an existing Accounts (FxA) account (email address, password)
+- Credentials for an existing TB Pro (keycloak) account
 
-In addition, you will need the env vars for the Paddle sandbox.
-These can be found in the Services vault in 1Password in the secure note "Paddle Sandbox env vars".
+In addition, you will need the env vars for the Paddle sandbox (found in the Services vault in 1Password)
 
 ## Running the E2E tests against your local dev environment
 
@@ -38,9 +37,9 @@ PADDLE_API_KEY=<token>
 PADDLE_ENV=sandbox
 ```
 
-### Add FxA Account Information
+### Add TB Pro Account Information
 
-When running the TB Accounts local dev stack it uses the FxA stage env for sign-in, and then redirects back to your localhost afterwords. So you will use your FxA stage test account also when running the E2E tests against your local dev stack.
+When running the TB Accounts local dev stack it uses the TB Pro stage env for sign-in, and then redirects back to your localhost afterwords. So you will use your TB Pro stage test account (keycloak) also when running the E2E tests against your local dev stack.
 
 First copy over the provided `.env.dev.example` to a local `.env`:
 
@@ -52,8 +51,8 @@ cp .env.dev.example .env
 Then edit your local `.env` file and provide the following values:
 
 ```dotenv
-ACCTS_FXA_EMAIL=<existing-stage-FxA-user-email>
-ACCTS_FXA_PWORD=<exisiting-stage-FxA-user-password>
+ACCTS_OIDC_EMAIL=<existing-tbpro-stage-user-email>
+ACCTS_OIDC_PWORD=<exisiting-tbro-stage-password>
 ```
 
 ## Setup Paddle backend for subscription tests (optional)
@@ -111,9 +110,9 @@ cp .env.stage.example .env
 Then edit your local `.env` file and provide the following values:
 
 ```dotenv
-ACCTS_FXA_EMAIL=<existing-stage-FxA-user-email>
-ACCTS_FXA_PWORD=<exisiting-stage-FxA-user-password>
-THUNDERMAIL_USERNAME<thundermail username associated with the above acct>
+ACCTS_OIDC_EMAIL=<existing-tbpro-stage-user-email>
+ACCTS_OIDC_PWORD=<exisiting-tbro-stage-password>
+THUNDERMAIL_USERNAME=<thundermail username associated with the above acct>
 THUNDERMAIL_EMAIL_ADDRESS=<thundermail email address associated with the above acct>
 ```
 
@@ -139,14 +138,14 @@ npm run e2e-test-debug
 
 You can run the E2E tests from your local machine pointed at the stage environment, but against browsers provided in the BrowserStack Automate cloud.
 
-<b>For security reasons when running the tests on BrowserStack I recommend that you use a dedicated test TB Accounts FxA account / credentials (NOT your own personal TB Acccounts / FxA credentials).</b>
+<b>For security reasons when running the tests on BrowserStack I recommend that you use a dedicated TB Pro test account (NOT your own personal TB Pro account.</b>
 
 Once you have credentials for an existing TB Accounts test account, edit your local `.env` file (that you first copied from `.env.stage.example`) and add these details (more information found above):
 
 ```dotenv
-ACCTS_FXA_EMAIL=<existing-stage-FxA-user-email>
-ACCTS_FXA_PWORD=<exisiting-stage-FxA-user-password>
-THUNDERMAIL_USERNAME<thundermail username associated with the above acct>
+ACCTS_OIDC_EMAIL=<existing-tbpro-stage-user-email>
+ACCTS_OIDC_PWORD=<exisiting-tbro-stage-password>
+THUNDERMAIL_USERNAME=<thundermail username associated with the above acct>
 THUNDERMAIL_EMAIL_ADDRESS=<thundermail email address associated with the above acct>
 ```
 
