@@ -23,7 +23,7 @@
   "homepage": "https://github.com/thunderbird/thunderbird-accounts#readme",
   "dependencies": {
     "@paddle/paddle-js": "^1.4.0",
-    "@thunderbirdops/services-ui": "^0.6.10",
+    "@thunderbirdops/services-ui": "^0.6.18",
     "vue": "^3.5.13",
     "vue-router": "^4.5.1"
   },

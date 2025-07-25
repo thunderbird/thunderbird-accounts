@@ -82,10 +82,43 @@
             );
         </script>
     </#if>
+    <script>
+      // These aren't js string literals, they're freemarker template variables!
+      // Comment out any freemarker template ops for easier developing
+      window._page = {
+        pageId: '${pageId}',
+        realmTitle: '${kcSanitize(msg("loginTitleHtml",(realm.displayNameHtml!"")))?no_esc}',
+        clientUrl: '${client.baseUrl}',
+        //<#if displayMessage && message?has_content && (message.type != 'warning' || !isAppInitiatedAction??)>
+        message: {
+          type: '${message.type}',
+          summary: '${kcSanitize(message.summary)?no_esc}'
+        },
+        //<#else>
+        message: {
+          type: null,
+          summary: null,
+        },
+        //</#if>
+        currentLanguage: '${locale.current}',
+        languages: [
+          //<#assign i = 1>
+          //<#list locale.supported as l>
+          {
+            label: '${l.label}',
+            url: '${l.url}'
+          },
+          //<#assign i++>
+          //</#list>
+        ],
+        // This is filled in on the view template
+        currentView: {},
+      };
+    </script>
 </head>
 
 <body class="${properties.kcBodyClass!}" data-page-id="login-${pageId}">
-<div id="app">test</div>
+<div id="app"></div>
 
 <div class="${properties.kcLoginClass!}">
     <div id="kc-header" class="${properties.kcHeaderClass!}">
