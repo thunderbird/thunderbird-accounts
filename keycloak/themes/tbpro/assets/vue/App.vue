@@ -3,10 +3,18 @@
 </script>
 
 <template>
-  <h1>hello app!</h1>
-  <router-view/>
+  <section class="centre-panel">
+    <router-view/>
+  </section>
+
 </template>
 
 <style scoped>
+.centre-panel {
+  max-width: 37.5rem;
+  margin: auto;
 
+  border-radius: 0.5rem;
+  border: 0.0625rem solid #6a6e76;
+}
 </style>
