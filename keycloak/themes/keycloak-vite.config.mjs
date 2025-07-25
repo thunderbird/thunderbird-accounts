@@ -4,8 +4,10 @@ import vue from '@vitejs/plugin-vue';
 
 // https://vitejs.dev/config/
 export default defineConfig(({mode}) => {
+  const baseDir = 'keycloak/themes/tbpro';
+  const envPath = `${process.cwd()}/${baseDir}/../`;
   // Load env file based on `mode` in the current working directory.
-  const env = loadEnv(mode, process.cwd());
+  const env = loadEnv(mode, envPath);
 
   // Build watch options
   const watch = {
@@ -18,11 +20,10 @@ export default defineConfig(({mode}) => {
     watch.binaryInterval = Number(env.VITE_SERVER_WATCH_BINARY_INTERVAL);
   }
 
-  console.log(process.cwd())
-  const baseDir = 'keycloak/themes/tbpro';
   return {
     base: "/",
     root: "./",
+    envDir: envPath,
     plugins: [
       vue({
         script: {
@@ -32,7 +33,7 @@ export default defineConfig(({mode}) => {
     ],
     resolve: {
       alias: {
-        '@': fileURLToPath(new URL(`${baseDir}/assets/vue/`, import.meta.url)),
+        '@': fileURLToPath(new URL(`./tbpro/assets`, import.meta.url)),
       },
       extensions: ['.ts', '.js', '.vue'],
     },
