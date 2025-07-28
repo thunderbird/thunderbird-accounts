@@ -11,6 +11,7 @@
 
 <style scoped>
 .centre-panel {
+  height: 100%;
   max-width: 37.5rem;
   margin: auto;
 

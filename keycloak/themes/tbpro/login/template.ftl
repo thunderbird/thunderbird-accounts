@@ -114,6 +114,19 @@
         // This is filled in on the view template
         currentView: {},
       };
+      // We can't loop through the list of l10n, so manually add them here!
+      window._l10n = {
+        languages: '${msg("languages")}',
+        requiredFields: '${msg("requiredFields")}',
+        restartLoginTooltip: '${msg("restartLoginTooltip")}',
+        doTryAnotherWay: '${msg("doTryAnotherWay")}',
+      };
+    </script>
+    <#nested "js">
+    <script>
+      // Debug
+      console.log('page: ',window._page);
+      console.log('l10n: ',window._l10n);
     </script>
 </head>
 
