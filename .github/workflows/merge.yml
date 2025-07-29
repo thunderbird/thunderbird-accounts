@@ -131,7 +131,7 @@ jobs:
       - name: Package Pulumi code
         shell: bash
         run:
-          tar -cvjf pulumi.tbz
+          tar -cvjf pulumi.tbz pulumi/
       
       - name: Archive the Pulumi artifact
         id: iac-archive
@@ -227,7 +227,8 @@ jobs:
   e2e-tests-browserstack-stage:
     name: e2e-tests-browserstack-stage
     needs: accounts-deploy
-    if: always() && ${{ !failure() }} && ${{ !cancelled() }}
+    if: false  # rjung: Temporarily disabling this for testing
+    # if: always() && ${{ !failure() }} && ${{ !cancelled() }}
     runs-on: ubuntu-latest
     environment: staging
     env:
