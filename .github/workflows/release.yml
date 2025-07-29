@@ -24,7 +24,7 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           version: ${{ github.event.release.id }}
-          file: deployment  # Should pull "deployment.json"
+          file: deployment.json
 
       - name: Extract deployment values
         id: deployment-data
@@ -33,7 +33,6 @@ jobs:
           echo "semver=$(jq .version < deployment.json)" >> $GITHUB_OUTPUT
       
       - name: Configure AWS credentials
-        if: contains(github.event.release.assets.*.name, 'deployment.zip')
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: eu-central-1
@@ -42,7 +41,6 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        if: contains(github.event.release.assets.*.name, 'deployment.zip')
         uses: aws-actions/amazon-ecr-login@v2
         with:
           mask-password: "true"
@@ -70,7 +68,7 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           version: ${{ github.event.release.id }}
-          file: pulumi  # Should pull "pulumi.tbz"
+          file: pulumi.tbz
       
       - name: Decompress Pulumi code
         shell: bash
