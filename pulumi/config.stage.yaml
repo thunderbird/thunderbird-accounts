@@ -255,7 +255,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:cf7fc9c8b2cf37f6b1f0ae443779cc187f21cbb7
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:cd16087ea05b1a375f6017330b7a4a4eae0d9d0a
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -401,7 +401,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:cf7fc9c8b2cf37f6b1f0ae443779cc187f21cbb7
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:cd16087ea05b1a375f6017330b7a4a4eae0d9d0a
             linuxParameters:
               initProcessEnabled: True
             secrets:
