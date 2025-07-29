@@ -1,7 +1,9 @@
 <script setup>
 import { TextInput, PrimaryButton, CheckboxInput, NoticeBar } from "@thunderbirdops/services-ui";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
+const message = ref(window._page.message);
+const errors = ref(window._page.currentView?.errors);
 const firstError = ref(window._page.currentView?.firstError);
 const formAction = ref(window._page.currentView?.formAction);
 const rememberMe = ref(window._page.currentView?.rememberMe);
@@ -13,6 +15,12 @@ const onSubmit = () => {
   loginForm?.value?.submit();
 };
 
+const usernameError = computed(() => {
+  return firstError.value !== '' ? '' : null;
+});
+const passwordError = computed(() => {
+  return firstError.value !== '' ? '' : null;
+});
 
 </script>
 
@@ -27,9 +35,10 @@ export default {
     <h2>{{ $t('loginAccountTitle') }}</h2>
     <form id="kc-form-login" ref="loginForm" method="POST" :action="formAction" @submit.prevent="onSubmit" @keyup.enter="onSubmit">
       <notice-bar type="error" v-if="firstError">{{ firstError }}</notice-bar>
+      <notice-bar type="success" v-if="message?.type === 'success'">{{ message.summary }}</notice-bar>
       <div class="form-elements">
-        <text-input id="username" name="username" required autocomplete="username webauthn" autofocus>{{ $t('email') }}</text-input>
-        <text-input id="password" name="password" required autocomplete="current-password" type="password">{{ $t('password') }}</text-input>
+        <text-input id="username" name="username" required autocomplete="username webauthn" autofocus :error="usernameError">{{ $t('email') }}</text-input>
+        <text-input id="password" name="password" required autocomplete="current-password" type="password" :error="passwordError">{{ $t('password') }}</text-input>
       </div>
       <div class="post-password-options">
         <checkbox-input name="keep-me-signed-in" :label="$t('rememberMe')" v-model="rememberMe"></checkbox-input>
@@ -49,6 +58,10 @@ export default {
 </template>
 
 <style scoped>
+.notice-bar {
+  margin-bottom: var(--space-12);
+}
+
 .panel {
   margin: 30px
 }

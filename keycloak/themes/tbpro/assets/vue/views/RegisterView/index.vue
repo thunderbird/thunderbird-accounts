@@ -67,6 +67,10 @@ export default {
 </template>
 
 <style scoped>
+.notice-bar {
+  margin-bottom: var(--space-12);
+}
+
 .panel {
   margin: 30px
 }
@@ -75,21 +79,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 18px;
-}
-
-.post-password-options {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-
-  .wrapper {
-    padding-top: 21px;
-  }
-
-  a {
-    padding-top: 4px;
-    white-space: nowrap;
-  }
 }
 
 .buttons {
