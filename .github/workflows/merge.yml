@@ -51,6 +51,7 @@ jobs:
   accounts-deploy:
     needs: detect-changes
     if: needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true'
+    environment: staging
     runs-on: ubuntu-latest
     env:
       IS_CI_AUTOMATION: "yes"
@@ -148,6 +149,7 @@ jobs:
           # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
           # to do with the GHA workflow "env" settings above.
           export PATH="/home/runner/.pulumi/bin:$PATH"
+          export PULUMI_CONFIG_PASSPHRASE='${{ secrets.PULUMI_PASSPHRASE }}'
 
           ECR_TAG=$(jq -r .ecr_tag < deployment.json)
           cd $PULUMI_DIR
