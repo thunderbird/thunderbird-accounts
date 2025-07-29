@@ -137,7 +137,7 @@ jobs:
         id: iac-archive
         uses: actions/upload-artifact@v4
         with:
-          name: pulmi
+          name: pulumi
           path: pulumi.tbz
       
       # Deploy to stage
