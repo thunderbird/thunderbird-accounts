@@ -4,54 +4,28 @@
     <script>
       window._page['currentView'] = {
         formAction: '${url.loginAction}',
-        // <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
-        registerUrl: '${url.registrationUrl}',
-        // <#else>
-        registerUrl: null,
-        // </#if>
-        // <#if realm.resetPasswordAllowed>
-        forgotPasswordUrl: '${url.loginResetCredentialsUrl}',
-        // <#else>
-        forgotPasswordUrl: null,
-        // </#if>
-        rememberMe: '${(login.rememberMe)!"off"}' === 'on',
-        socialProviders: [
-            //<#if realm.password && social?? && social.providers?has_content>
-            //<#list social.providers as p>
-          {
-            name: '${p.displayName!}',
-            alias: '${p.alias}',
-            loginUrl: '${p.loginUrl}',
-            iconName: '${properties.kcCommonLogoIdP!}',
-            className: '${properties.kcFormSocialAccountNameClass!}',
-          },
-            //</#list>
-            //</#if>
-        ],
-        firstError: '${kcSanitize(messagesPerField.getFirstError("username","password"))?no_esc}',
+        attemptedUserName: '${(auth.attemptedUsername!)}',
+        errors: {
+          username: '${kcSanitize(messagesPerField.get("username"))?no_esc}',
+        },
+        loginUrl: '${url.loginUrl}',
       };
       window._l10n = {
         ...window._l10n,
-        loginAccountTitle: '${msg("loginAccountTitle")}',
+        emailForgotTitle: '${msg("emailForgotTitle")}',
         username: '${msg("username")}',
         usernameOrEmail: '${msg("usernameOrEmail")}',
         email: '${msg("email")}',
-        password: '${msg("password")}',
-        showPassword: '${msg("showPassword")}',
-        hidePassword: '${msg("hidePassword")}',
-        rememberMe: '${msg("rememberMe")}',
-        noAccount: '${msg("noAccount")}',
-        doLogIn: '${msg("doLogIn")}',
-        doRegister: '${msg("doRegister")}',
-        doForgotPassword: '${msg("doForgotPassword")}',
-        identityProviderLoginLabel: '${msg("identity-provider-login-label")}',
-        goToRegister: '${msg("goToRegister")}',
-        goToRegisterAction: '${msg("goToRegisterAction")}',
+        backToLogin: '${kcSanitize(msg("backToLogin"))?no_esc}',
+        doSubmit: '${msg("doSubmit")}',
+        emailInstructionUsername: '${msg("emailInstructionUsername")}',
+        emailInstruction: '${msg("emailInstruction")}',
+        forgotPasswordError: '${msg("forgotPasswordError")}'
       };
     </script>
-    <#elseif section = "header">
+    <#elseif section = "ignore-header">
         ${msg("emailForgotTitle")}
-    <#elseif section = "form">
+    <#elseif section = "ignore-form">
         <form id="kc-reset-password-form" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
             <div class="${properties.kcFormGroupClass!}">
                 <div class="${properties.kcLabelWrapperClass!}">
@@ -78,7 +52,7 @@
                 </div>
             </div>
         </form>
-    <#elseif section = "info" >
+    <#elseif section = "ignore-info" >
         <#if realm.duplicateEmailsAllowed>
             ${msg("emailInstructionUsername")}
         <#else>
