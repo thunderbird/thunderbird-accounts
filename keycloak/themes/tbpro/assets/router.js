@@ -12,7 +12,8 @@ const routes = [
     component: LoginView,
     alias: [
       // The main url when someone clicks login
-      '/protocol/openid-connect/auth'
+      '/protocol/openid-connect/auth',
+      '/login-actions/action-token',
     ]
   },
   {
