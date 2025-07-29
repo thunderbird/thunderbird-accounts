@@ -9,7 +9,6 @@ on:
   push:
     branches:
       - main
-      - ci-to-prod
   workflow_dispatch:
 
 permissions:
