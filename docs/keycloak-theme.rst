@@ -42,3 +42,13 @@ Localization can be modified via the ``messages_<locale>.properties`` file locat
 |
 
 If you add new localization you'll need to adjust the ``window._l10n`` variable in template.ftl
+
+l10n pain points
+----------------
+
+Since we're essentially piping strings from one localization system to another there's some quirks you should be aware
+of.
+
+* Avoid using single quotes: ``''`` as it can cause rendering problems. Instead use this character: ``’``.
+* Ensure you save the message properties file as UTF-8. Some editors don't do this.
+* If you need to use a special character defined in `vue-i18n <https://vue-i18n.intlify.dev/guide/essentials/syntax#literal-interpolation>`_ you'll need to specify the linear interpolation via a ``.replaceAll``. (e.g. ``@thundermail.com".replace('@', "{'@'}")``.) Using curly braces will trip up keycloak's template rendering.
