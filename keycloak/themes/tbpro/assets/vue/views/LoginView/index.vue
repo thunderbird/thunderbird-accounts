@@ -13,6 +13,7 @@ const onSubmit = () => {
   loginForm?.value?.submit();
 };
 
+
 </script>
 
 <script>
@@ -24,10 +25,10 @@ export default {
 <template>
   <div class="panel">
     <h2>{{ $t('loginAccountTitle') }}</h2>
-    <form id="kc-form-login" ref="loginForm" method="POST" :action="formAction">
+    <form id="kc-form-login" ref="loginForm" method="POST" :action="formAction" @submit.prevent="onSubmit" @keyup.enter="onSubmit">
       <notice-bar type="error" v-if="firstError">{{ firstError }}</notice-bar>
       <div class="form-elements">
-        <text-input id="username" name="username" required autocomplete="username webauthn">{{ $t('email') }}</text-input>
+        <text-input id="username" name="username" required autocomplete="username webauthn" autofocus>{{ $t('email') }}</text-input>
         <text-input id="password" name="password" required autocomplete="current-password" type="password">{{ $t('password') }}</text-input>
       </div>
       <div class="post-password-options">
@@ -39,9 +40,10 @@ export default {
       </div>
     </form>
     <template v-if="registerUrl">
-      <i18n-t keypath="doRegister" tag="p">
-        <a :href="registerUrl">{{ $t('doRegisterAction') }}</a>
+      <i18n-t keypath="goToRegister" tag="p">
+        <a :href="registerUrl">{{ $t('goToRegisterAction') }}</a>
       </i18n-t>
+
     </template>
   </div>
 </template>

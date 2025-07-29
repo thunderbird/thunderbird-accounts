@@ -44,9 +44,10 @@
         noAccount: '${msg("noAccount")}',
         doLogIn: '${msg("doLogIn")}',
         doRegister: '${msg("doRegister")}',
-        doRegisterAction: '${msg("doRegisterAction")}',
         doForgotPassword: '${msg("doForgotPassword")}',
         identityProviderLoginLabel: '${msg("identity-provider-login-label")}',
+        goToRegister: '${msg("goToRegister")}',
+        goToRegisterAction: '${msg("goToRegisterAction")}',
       };
     </script>
     <#elseif section = "ignore-header">
