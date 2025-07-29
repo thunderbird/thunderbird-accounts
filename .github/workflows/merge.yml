@@ -226,8 +226,7 @@ jobs:
   e2e-tests-browserstack-stage:
     name: e2e-tests-browserstack-stage
     needs: accounts-deploy
-    if: false  # rjung: Temporarily disabling this for testing
-    # if: always() && ${{ !failure() }} && ${{ !cancelled() }}
+    if: always() && ${{ !failure() }} && ${{ !cancelled() }}
     runs-on: ubuntu-latest
     environment: staging
     env:
