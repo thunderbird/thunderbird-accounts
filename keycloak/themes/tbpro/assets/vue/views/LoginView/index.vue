@@ -35,6 +35,7 @@ export default {
     <h2>{{ $t('loginAccountTitle') }}</h2>
     <form id="kc-form-login" ref="loginForm" method="POST" :action="formAction" @submit.prevent="onSubmit" @keyup.enter="onSubmit">
       <notice-bar type="error" v-if="firstError">{{ firstError }}</notice-bar>
+      <notice-bar type="error" v-if="message?.type === 'error'">{{ message.summary }}</notice-bar>
       <notice-bar type="success" v-if="message?.type === 'success'">{{ message.summary }}</notice-bar>
       <div class="form-elements">
         <text-input id="username" name="username" required autocomplete="username webauthn" autofocus :error="usernameError">{{ $t('email') }}</text-input>
