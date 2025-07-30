@@ -43,6 +43,10 @@ export default {
 </template>
 
 <style scoped>
+.notice-bar {
+  margin-bottom: var(--space-12);
+}
+
 .panel {
   margin: 30px
 }
@@ -54,6 +58,7 @@ export default {
 }
 
 .buttons {
+  margin-top: var(--space-24);
   width: 100%;
   .submit {
     margin-right: 0;
