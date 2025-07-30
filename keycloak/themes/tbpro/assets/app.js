@@ -17,9 +17,9 @@ const app = createApp(MainApp);
 app.use(router);
 app.use(i18n)
 
-// Push the current url to the router
+// Push the current path and query to the router
 const path = window.location.pathname.replace(import.meta.env.VITE_BASE_PATH, '/');
-router.push(path)
+router.push([path, window.location.search].join(''));
 console.log('current route: ', router.currentRoute?.value)
 
 // Small hack to get around BrowserHistoryHelper
@@ -30,7 +30,7 @@ window.history.replaceState = (state, title, url) => {
   window.history._replaceState(state, title, url);
   // Update our router
   const path = url.replace(window.location.origin, '').replace(import.meta.env.VITE_BASE_PATH, '/');
-  router.push(path);
+  router.push([path, window.location.search].join(''));
 }
 
 // This isn't a module, so wait until the document is loaded before mounting
