@@ -17,13 +17,22 @@ import router from "../router";
 
 <template>
   <section class="centre-panel">
-    {{pageId}}
+    <div class="debug-page-id">{{pageId}}</div>
     <router-view/>
   </section>
 
 </template>
 
 <style scoped>
+.debug-page-id {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background-color: black;
+  color: white;
+  border-radius: 1rem;
+  padding: 0.5rem;
+}
 .centre-panel {
   height: 100%;
   max-width: 37.5rem;
