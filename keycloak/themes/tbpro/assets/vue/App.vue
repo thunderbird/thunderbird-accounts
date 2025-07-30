@@ -2,22 +2,23 @@
 import { computed, ref } from "vue";
 import router from "../router";
 
-  console.log("And attached!!");
+console.log("And attached!!");
 
-  console.log('page id', window._page.pageId);
+console.log('page id', window._page.pageId);
 
-  // Work-around for pages that don't have unique routes
-  const pageId = ref(window._page.pageId);
-  if (pageId.value === 'login-page-expired') {
-    router.replace({ name: 'page-expired' });
-  }
+// Work-around for pages that don't have unique routes
+const pageId = ref(window._page.pageId);
+if (pageId.value) {
+  console.log('route:' ,pageId.value);
+  router.replace({name: pageId.value});
+}
 
 
 </script>
 
 <template>
   <section class="centre-panel">
-    <div class="debug-page-id">{{pageId}}</div>
+    <div class="debug-page-id">{{ pageId }}</div>
     <router-view/>
   </section>
 
@@ -33,6 +34,7 @@ import router from "../router";
   border-radius: 1rem;
   padding: 0.5rem;
 }
+
 .centre-panel {
   height: 100%;
   max-width: 37.5rem;
