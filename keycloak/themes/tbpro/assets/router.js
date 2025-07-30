@@ -4,6 +4,7 @@ import RegisterView from "@/vue/views/RegisterView/index.vue";
 import ForgotPasswordView from "@/vue/views/ForgotPasswordView/index.vue";
 import PageExpiredView from "@/vue/views/PageExpiredView/index.vue";
 import UpdatePasswordView from "@/vue/views/UpdatePasswordView/index.vue";
+import RouteNotImplementedView from "./vue/views/RouteNotImplementedView/index.vue";
 
 /**
  * Don't specify routes, as they're not absolute in keycloak.
@@ -30,6 +31,10 @@ const routes = [
   {
     name: 'login-page-expired',
     component: PageExpiredView,
+  },
+  {
+    name: 'route-not-implemented',
+    component: RouteNotImplementedView,
   }
 ];
 

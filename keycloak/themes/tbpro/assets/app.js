@@ -17,7 +17,6 @@ const app = createApp(MainApp);
 app.use(router);
 app.use(i18n)
 
-
 // This isn't a module, so wait until the document is loaded before mounting
 window.addEventListener('load', () => {
   // Load our l10n messages once the template is fully rendered.

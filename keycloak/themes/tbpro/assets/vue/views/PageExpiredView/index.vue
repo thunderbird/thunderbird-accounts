@@ -26,17 +26,8 @@ export default {
   margin: 30px
 }
 
-.form-elements {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
 .buttons {
+  margin-top: var(--space-24);
   width: 100%;
-  .submit {
-    margin-right: 0;
-    margin-left: auto;
-  }
 }
 </style>

@@ -2,17 +2,11 @@
 import { computed, ref } from "vue";
 import router from "../router";
 
-console.log("And attached!!");
-
-console.log('page id', window._page.pageId);
-
-// Work-around for pages that don't have unique routes
+// Match routes based on pageId / route name
 const pageId = ref(window._page.pageId);
-if (pageId.value) {
-  console.log('route:' ,pageId.value);
-  router.replace({name: pageId.value});
-}
-
+const routeName = pageId.value && router.hasRoute(pageId.value) ? pageId.value : 'route-not-implemented';
+console.log('route:', routeName);
+router.replace({name: routeName});
 
 </script>
 
