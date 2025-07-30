@@ -42,7 +42,7 @@ export default {
 <template>
   <div class="panel">
     <h2>{{ $t('registerTitle') }}</h2>
-    <form id="kc-register-form" ref="registerForm" method="POST" :action="formAction">
+    <form id="kc-register-form" ref="registerForm" method="POST" :action="formAction"  @submit.prevent="onSubmit" @keyup.enter="onSubmit">
       <notice-bar type="error" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">{{ $t('registerError') }}</notice-bar>
       <div class="form-elements">
         <text-input id="partialUsername" name="partialUsername" required autocomplete="username" :error="usernameError" :outerSuffix="$t('signUpUsernameSuffix')" :help="$t('signUpUsernameHelp')" v-model="username">{{ $t('username') }}</text-input>
