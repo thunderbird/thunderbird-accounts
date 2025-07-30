@@ -1,34 +1,34 @@
-import { createMemoryHistory, createRouter } from "vue-router";
+import { createMemoryHistory, createRouter, onBeforeRouteUpdate } from "vue-router";
 import LoginView from "@/vue/views/LoginView/index.vue";
 import RegisterView from "@/vue/views/RegisterView/index.vue";
-import ForgotPassword from "@/vue/views/ForgotPassword/index.vue";
-import PageExpiredView from "./vue/views/PageExpiredView/index.vue";
+import ForgotPasswordView from "@/vue/views/ForgotPasswordView/index.vue";
+import PageExpiredView from "@/vue/views/PageExpiredView/index.vue";
+import UpdatePasswordView from "@/vue/views/UpdatePasswordView/index.vue";
 
-
+/**
+ * Don't specify routes, as they're not absolute in keycloak.
+ * Just make sure the pageId and route name match, and App.vue will
+ * read/push the current route based on the template selected.
+ */
 const routes = [
   {
-    path: '/login-actions/authenticate',
     name: 'login',
     component: LoginView,
-    alias: [
-      // The main url when someone clicks login
-      '/protocol/openid-connect/auth',
-      '/login-actions/action-token',
-    ]
   },
   {
-    path: '/login-actions/registration',
     name: 'register',
-    component: RegisterView
+    component: RegisterView,
   },
   {
-    path: '/login-actions/reset-credentials',
-    name: 'forgot-password',
-    component: ForgotPassword,
+    name: 'login-reset-password',
+    component: ForgotPasswordView,
   },
   {
-    path: '/login-actions/reset-credentials',
-    name: 'page-expired',
+    name: 'login-update-password',
+    component: UpdatePasswordView,
+  },
+  {
+    name: 'login-page-expired',
     component: PageExpiredView,
   }
 ];

@@ -1,28 +1,14 @@
 <script setup>
 import { TextInput, PrimaryButton, CheckboxInput, NoticeBar } from "@thunderbirdops/services-ui";
-import { ref, computed } from "vue";
-
-const errors = ref(window._page.currentView?.errors);
-const formAction = ref(window._page.currentView?.formAction);
-const loginUrl = window._page.currentView?.loginUrl;
-const username = ref(window._page.currentView?.attemptedUserName);
-const resetPasswordForm = ref();
-
-
-const onSubmit = () => {
-  resetPasswordForm?.value?.submit();
-};
-const usernameError = computed(() => {
-  return errors.value?.username === '' ? null : errors.value?.username;
-});
 
 </script>
 
 <script>
 export default {
-  name: 'ForgotPasswordView'
+  name: 'UpdatePasswordView'
 }
 </script>
+
 
 <template>
   <div class="panel">
@@ -43,21 +29,5 @@ export default {
 </template>
 
 <style scoped>
-.panel {
-  margin: 30px
-}
 
-.form-elements {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.buttons {
-  width: 100%;
-  .submit {
-    margin-right: 0;
-    margin-left: auto;
-  }
-}
 </style>
