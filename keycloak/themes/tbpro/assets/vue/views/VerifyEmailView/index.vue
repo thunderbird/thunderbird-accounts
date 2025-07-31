@@ -1,10 +1,9 @@
 <script setup>
-import { TextInput, PrimaryButton, SecondaryButton, NoticeBar } from "@thunderbirdops/services-ui";
+import { PrimaryButton, SecondaryButton } from "@thunderbirdops/services-ui";
 import { ref, computed } from "vue";
 
-const errors = ref(window._page.currentView?.errors);
 const formAction = ref(window._page.currentView?.formAction);
-const showForm = computed(() => window._page.appInitiatedAction !== '');
+const showForm = computed(() => window._page.appInitiatedAction !== 'false');
 
 const verifyEmailInstruction = ref(window._page.currentView?.verifyEmailInstruction);
 const submitText = ref(window._page.currentView?.submitText);
@@ -13,7 +12,6 @@ const isCancelSubmit = ref(false);
 const verifyEmailForm = ref();
 
 const onSubmit = () => {
-  console.log("submitting with ", verifyEmailForm.value);
   verifyEmailForm?.value?.submit();
 };
 

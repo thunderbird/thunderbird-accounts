@@ -9,6 +9,7 @@ import LogoutView from "./vue/views/LogoutView/index.vue";
 import ErrorView from "./vue/views/ErrorView/index.vue";
 import InfoView from "./vue/views/InfoView/index.vue";
 import VerifyEmailView from "./vue/views/VerifyEmailView/index.vue";
+import ConfigToptView from "./vue/views/ConfigToptView/index.vue";
 
 /**
  * Don't specify routes, as they're not absolute in keycloak.
@@ -43,6 +44,10 @@ const routes = [
   {
     name: 'logout-confirm',
     component: LogoutView,
+  },
+  {
+    name: 'login-config-totp',
+    component: ConfigToptView,
   },
   {
     name: 'info',
