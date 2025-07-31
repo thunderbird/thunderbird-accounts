@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   detect-changes:
@@ -51,6 +51,7 @@ jobs:
   accounts-deploy:
     needs: detect-changes
     if: needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true'
+    environment: staging
     runs-on: ubuntu-latest
     env:
       IS_CI_AUTOMATION: "yes"
@@ -66,7 +67,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ vars.AWS_DEFAULT_REGION }}
+          aws-region: eu-central-1
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -126,7 +127,19 @@ jobs:
         with:
           name: deployment
           path: deployment.json
-
+      
+      - name: Package Pulumi code
+        shell: bash
+        run:
+          tar -cvjf pulumi.tbz pulumi/
+      
+      - name: Archive the Pulumi artifact
+        id: iac-archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: pulumi
+          path: pulumi.tbz
+      
       # Deploy to stage
       - name: Deploy new image to stage
         shell: bash
@@ -136,6 +149,7 @@ jobs:
           # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
           # to do with the GHA workflow "env" settings above.
           export PATH="/home/runner/.pulumi/bin:$PATH"
+          export PULUMI_CONFIG_PASSPHRASE='${{ secrets.PULUMI_PASSPHRASE }}'
 
           ECR_TAG=$(jq -r .ecr_tag < deployment.json)
           cd $PULUMI_DIR
@@ -166,6 +180,50 @@ jobs:
             --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-taskdef' \
             --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-celery-taskdef' \
             --target-dependents
+  
+  create-release:
+    needs: accounts-deploy
+    if: needs.accounts-deploy.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download deployment data
+        uses: actions/download-artifact@v4
+        with:
+            name: 
+              deployment  # Should pull "deployment.json"
+      
+      - name: Download Pulumi package
+        uses: actions/download-artifact@v4
+        with:
+            name: 
+              pulumi  # Should pull "pulumi.tbz"
+      
+      - name: Create release tag
+        id: create-release-tag
+        run: echo "tag_name=r-$(printf %04d $GITHUB_RUN_NUMBER)" >> $GITHUB_OUTPUT
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            ## Info
+            
+            Commit ${{ github.sha }} was deployed to `stage`. [See code diff](${{ github.event.compare }}).
+
+            It was initialized by [${{ github.event.sender.login }}](${{ github.event.sender.html_url }}).
+
+            ## How to Promote?
+
+            In order to promote this to prod, edit the draft and press **"Publish release"**.
+          draft: true
+          fail_on_unmatched_files: true
+          files: |
+            deployment.json
+            pulumi.tbz
+          name: Release ${{ steps.create-release-tag.outputs.tag_name }}
+          tag_name: ${{ steps.create-release-tag.outputs.tag_name }}
         
   e2e-tests-browserstack-stage:
     name: e2e-tests-browserstack-stage

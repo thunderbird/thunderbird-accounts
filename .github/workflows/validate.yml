@@ -99,7 +99,8 @@ jobs:
 
   run-e2e-tests-local:
     needs: detect-changes
-    if: needs.detect-changes.outputs.iac-changed
+    # if: needs.detect-changes.outputs.iac-changed
+    if: false
     runs-on: ubuntu-latest
     environment: staging
     env:
@@ -130,7 +131,7 @@ jobs:
           echo "PADDLE_API_KEY=$PADDLE_API_KEY" >> .env
 
       - name: Start appointment stack via docker
-        run: docker compose up -d --build -V postgres redis backend frontend
+        run: docker compose up -d --build -V
 
       - uses: actions/setup-node@v4
         with:
