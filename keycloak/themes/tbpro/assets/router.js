@@ -6,6 +6,8 @@ import PageExpiredView from "@/vue/views/PageExpiredView/index.vue";
 import UpdatePasswordView from "@/vue/views/UpdatePasswordView/index.vue";
 import RouteNotImplementedView from "./vue/views/RouteNotImplementedView/index.vue";
 import LogoutView from "./vue/views/LogoutView/index.vue";
+import ErrorView from "./vue/views/ErrorView/index.vue";
+import InfoView from "./vue/views/InfoView/index.vue";
 
 /**
  * Don't specify routes, as they're not absolute in keycloak.
@@ -36,6 +38,14 @@ const routes = [
   {
     name: 'logout-confirm',
     component: LogoutView,
+  },
+  {
+    name: 'info',
+    component: InfoView,
+  },
+  {
+    name: 'error',
+    component: ErrorView,
   },
   {
     name: 'route-not-implemented',
