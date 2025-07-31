@@ -88,8 +88,12 @@
       window._page = {
         pageId: '${pageId}',
         realmTitle: '${kcSanitize(msg("loginTitleHtml",(realm.displayNameHtml!"")))?no_esc}',
+        //<#if client?? && client.baseUrl?has_content>
         clientUrl: '${client.baseUrl}',
-        //<#if displayMessage && message?has_content && (message.type != 'warning' || !isAppInitiatedAction??)>
+        //<#else>
+        clientUrl: null,
+        //</#if>
+        //<#if message?has_content>
         message: {
           type: '${message.type}',
           summary: '${kcSanitize(message.summary)?no_esc}'
@@ -134,11 +138,11 @@
 <div id="app"></div>
 
 <div class="${properties.kcLoginClass!}">
-    <div id="kc-header" class="${properties.kcHeaderClass!}">
+    <div style="display: none;" id="kc-header" class="${properties.kcHeaderClass!}">
         <div id="kc-header-wrapper"
              class="${properties.kcHeaderWrapperClass!}">${kcSanitize(msg("loginTitleHtml",(realm.displayNameHtml!'')))?no_esc}</div>
     </div>
-    <div class="${properties.kcFormCardClass!}">
+    <div style="display: none;" class="${properties.kcFormCardClass!}">
         <header class="${properties.kcFormHeaderClass!}">
             <#if realm.internationalizationEnabled  && locale.supported?size gt 1>
                 <div class="${properties.kcLocaleMainClass!}" id="kc-locale">
