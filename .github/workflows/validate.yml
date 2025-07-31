@@ -131,7 +131,7 @@ jobs:
           echo "PADDLE_API_KEY=$PADDLE_API_KEY" >> .env
 
       - name: Start appointment stack via docker
-        run: docker compose up -d --build -V postgres redis backend frontend
+        run: docker compose up -d --build -V
 
       - uses: actions/setup-node@v4
         with:
