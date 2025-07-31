@@ -19,21 +19,25 @@
           type: '${totp.policy.type}',
           typeName: '${msg("loginTotp." + totp.policy.type)}',
           secret: '${totp.totpSecret}',
-          // <#if mode?? && mode == "manual">
-          secretQrCode: null,
-          manualUrl: null,
+          // if mode?? && mode == "manual"
+          //secretQrCode: null,
+          //manualUrl: null,
+          secretEncoded: '${totp.totpSecretEncoded}',
+          qrUrl: '${totp.qrUrl?no_esc}',
           algorithmKey: '${totp.policy.getAlgorithmKey()}',
           digits: '${totp.policy.digits}',
           period: '${totp.policy.period}',
           initialCounter: '${totp.policy.initialCounter}',
-          // <#else>
+          // else
           secretQrCode: '${totp.totpSecretQrCode}',
-          manualUrl: '${totp.manualUrl}',
-          algorithmKey: null,
-          digits: null,
-          period: null,
-          initialCounter: null,
-          // </#if>
+          manualUrl: '${totp.manualUrl?no_esc}',
+          //secretEncoded: null,
+          //qrUrl: null,
+          //algorithmKey: null,
+          //digits: null,
+          //period: null,
+          //initialCounter: null,
+          // /if
         }
       };
       window._l10n = {
