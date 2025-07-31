@@ -8,6 +8,7 @@ import RouteNotImplementedView from "./vue/views/RouteNotImplementedView/index.v
 import LogoutView from "./vue/views/LogoutView/index.vue";
 import ErrorView from "./vue/views/ErrorView/index.vue";
 import InfoView from "./vue/views/InfoView/index.vue";
+import VerifyEmailView from "./vue/views/VerifyEmailView/index.vue";
 
 /**
  * Don't specify routes, as they're not absolute in keycloak.
@@ -30,6 +31,10 @@ const routes = [
   {
     name: 'login-update-password',
     component: UpdatePasswordView,
+  },
+  {
+    name: 'login-verify-email',
+    component: VerifyEmailView,
   },
   {
     name: 'login-page-expired',
