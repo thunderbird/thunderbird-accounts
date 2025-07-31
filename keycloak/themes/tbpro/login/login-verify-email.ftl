@@ -1,8 +1,29 @@
 <#import "template.ftl" as layout>
 <@layout.registrationLayout displayInfo=true; section>
-    <#if section = "header">
+<#if section = "js">
+    <script>
+      window._page['currentView'] = {
+        formAction: '${url.loginAction}',
+        // <#if verifyEmail??>
+        verifyEmailInstruction: '${msg("emailVerifyInstruction1",verifyEmail)}',
+        submitText: '${msg("emailVerifyResend")}',
+        // <#else>
+        verifyEmailInstruction: '${msg("emailVerifyInstruction4",user.email)}',
+        submitText: '${msg("emailVerifySend")}',
+        // </#if>
+      };
+      window._l10n = {
+        ...window._l10n,
+        emailVerifyTitle: '${msg("emailVerifyTitle")}',
+        emailVerifyInstruction2: '${msg("emailVerifyInstruction2")}',
+        emailVerifyInstruction3: '${msg("emailVerifyInstruction3")}',
+        doCancel: '${msg("doCancel")}',
+        doClickHere: '${msg("doClickHere")}',
+      }
+    </script>
+    <#elseif section = "ignore-header">
         ${msg("emailVerifyTitle")}
-    <#elseif section = "form">
+    <#elseif section = "ignore-form">
         <p class="instruction">
             <#if verifyEmail??>
                 ${msg("emailVerifyInstruction1",verifyEmail)}
@@ -24,7 +45,7 @@
                 </div>
             </form>
         </#if>
-    <#elseif section = "info">
+    <#elseif section = "ignore-info">
         <#if !isAppInitiatedAction??>
             <p class="instruction">
                 ${msg("emailVerifyInstruction2")}

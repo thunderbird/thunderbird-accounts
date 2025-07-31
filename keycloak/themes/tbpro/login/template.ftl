@@ -115,6 +115,7 @@
           //<#assign i++>
           //</#list>
         ],
+        appInitiatedAction: '${isAppInitiatedAction!}',
         // This is filled in on the view template
         currentView: {},
       };
