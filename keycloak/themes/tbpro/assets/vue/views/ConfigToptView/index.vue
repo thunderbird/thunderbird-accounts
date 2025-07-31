@@ -4,6 +4,7 @@ import { computed, ref } from "vue";
 
 const formAction = ref(window._page.currentView?.formAction);
 const settingsForm = ref();
+const isManualMode = computed(() => window._page.currentView?.mode === 'manual');
 
 const showCancel = computed(() => window._page.appInitiatedAction !== 'false');
 const supportedApplications = ref(window._page.currentView?.supportedApplications ?? []);
@@ -11,6 +12,19 @@ const qrCodeSrc = computed(() => {
   return `data:image/png;base64, ${window._page.currentView?.loginTotp?.secretQrCode}`;
 });
 const manualUrl = ref(window._page.currentView?.loginTotp?.manualUrl);
+
+const totpType = ref(window._page.currentView?.loginTotp?.type);
+const totpTypeName = ref(window._page.currentView?.loginTotp?.typeName);
+
+// Manual mode settings
+const secretEncoded = ref(window._page.currentView?.loginTotp?.secretEncoded);
+const qrUrl = ref(window._page.currentView?.loginTotp?.qrUrl);
+const algorithmKey = ref(window._page.currentView?.loginTotp?.algorithmKey);
+const digits = ref(window._page.currentView?.loginTotp?.digits);
+const period = ref(window._page.currentView?.loginTotp?.period);
+const initialCounter = ref(window._page.currentView?.loginTotp?.initialCounter);
+
+// Messages
 
 const message = ref(window._page.message);
 const errors = ref(window._page.currentView?.errors);
@@ -53,7 +67,24 @@ export default {
         </li>
       </ul>
     </section>
-    <section>
+    <template v-if="isManualMode">
+      <section>
+        <p>{{ $t('loginTotpManualStep2') }}</p>
+        <p>{{secretEncoded}}</p>
+        <p><a :href="qrUrl" id="mode-barcode">{{ $t('loginTotpScanBarcode') }}</a></p>
+      </section>
+      <section>
+        <p>{{ $t('loginTotpManualStep3') }}</p>
+        <ul>
+              <li id="kc-totp-type">{{ $t("loginTotpType") }}: {{ totpTypeName }}</li>
+              <li id="kc-totp-algorithm">{{ $t("loginTotpAlgorithm") }}: {{ algorithmKey }}</li>
+              <li id="kc-totp-digits">{{ $t("loginTotpDigits") }}: {{ digits }}</li>
+              <li id="kc-totp-period" v-if="totpType === 'totp'">{{ $t("loginTotpInterval") }}: {{ period }}</li>
+              <li id="kc-totp-counter" v-else-if="totpType === 'hotp'">{{ $t("loginTotpCounter") }}: {{ initialCounter }}</li>
+        </ul>
+      </section>
+    </template>
+    <section v-else>
       <p>{{ $t('loginTotpStep2') }}</p>
       <img :src="qrCodeSrc" :alt="$t('qrCode')"/>
       <p><a :href="manualUrl" id="mode-manual">{{ $t('loginTotpUnableToScan') }}</a></p>
