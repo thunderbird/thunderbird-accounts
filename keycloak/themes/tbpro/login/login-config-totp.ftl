@@ -16,6 +16,7 @@
         ],
         mode: '${mode!}',
         loginTotp: {
+          username: '${totp.username}',
           type: '${totp.policy.type}',
           typeName: '${msg("loginTotp." + totp.policy.type)}',
           secret: '${totp.totpSecret}',
@@ -62,6 +63,19 @@
         logoutOtherSessions: '${msg("logoutOtherSessions")}',
         doSubmit: '${msg("doSubmit")}',
         doCancel: '${msg("doCancel")}',
+        doContinue: '${msg("doContinue")}',
+        doBack: '${msg("doBack")}',
+        // custom messages
+        scanTotp1: '${msg("scanTotp1")}',
+        scanTotp2: '${msg("scanTotp2")}',
+        scanTotp3: '${msg("scanTotp3")}',
+        scanTotp4: '${msg("scanTotp4")}',
+        manualTotp1: '${msg("manualTotp1")}',
+        labelTotp: '${msg("labelTotp")?no_esc}',
+        copyTotp: '${msg("copyTotp")}',
+        copiedToClipboard: '${msg("copiedToClipboard")}',
+        copiedToClipboardError: '${msg("copiedToClipboardError")}',
+
       };
     </script>
     <#elseif section = "header">
