@@ -137,7 +137,6 @@ export default {
   <div class="panel">
     <h2>{{ $t('loginTotpTitle') }}</h2>
     <notice-bar :type="message.type" v-if="message?.type">{{ message.summary }}</notice-bar>
-    {{showCancel && isCancelSubmit}}
     <form id="kc-totp-cancel-form" ref="cancelForm" method="POST" :action="formAction" v-if="showCancel && isCancelSubmit">
         <input type="hidden" id="cancelTOTPBtn" name="cancel-aia" value="true"/>
     </form>
@@ -204,45 +203,6 @@ export default {
         </div>
       </form>
     </section>
-    <!--
-        <section>
-          <p>{{ $t('loginTotpStep1') }}</p>
-          <ul>
-            <li v-for="app in supportedApplications">
-              {{ app }}
-            </li>
-          </ul>
-        </section>
-        <template v-if="isManualMode">
-          <section>
-            <p>{{ $t('loginTotpManualStep2') }}</p>
-            <p>{{ secretEncoded }}</p>
-            <p><a :href="qrUrl" id="mode-barcode">{{ $t('loginTotpScanBarcode') }}</a></p>
-          </section>
-          <section>
-            <p>{{ $t('loginTotpManualStep3') }}</p>
-            <ul>
-              <li id="kc-totp-type">{{ $t("loginTotpType") }}: {{ totpTypeName }}</li>
-              <li id="kc-totp-algorithm">{{ $t("loginTotpAlgorithm") }}: {{ algorithmKey }}</li>
-              <li id="kc-totp-digits">{{ $t("loginTotpDigits") }}: {{ digits }}</li>
-              <li id="kc-totp-period" v-if="totpType === 'totp'">{{ $t("loginTotpInterval") }}: {{ period }}</li>
-              <li id="kc-totp-counter" v-else-if="totpType === 'hotp'">{{ $t("loginTotpCounter") }}: {{
-                  initialCounter
-                }}
-              </li>
-            </ul>
-          </section>
-        </template>
-        <section v-else>
-          <p>{{ $t('loginTotpStep2') }}</p>
-          <img :src="qrCodeSrc" :alt="$t('qrCode')"/>
-          <p><a :href="manualUrl" id="mode-manual">{{ $t('loginTotpUnableToScan') }}</a></p>
-        </section>
-        <section>
-          <p>{{ $t('loginTotpStep3') }}</p>
-          <p>{{ $t('loginTotpStep3DeviceName') }}</p>
-        </section>
-    -->
   </div>
 
 </template>

@@ -1,8 +1,21 @@
 <#import "template.ftl" as layout>
 <@layout.registrationLayout displayMessage=false; section>
-    <#if section = "header">
+    <script>
+      window._page['currentView'] = {
+        formAction: '${url.loginAction}',
+        deleteCredentialTitle: '${msg("deleteCredentialTitle", credentialLabel)}',
+        deleteCredentialMessage: '${msg("deleteCredentialMessage", credentialLabel)}',
+
+      };
+      window._l10n = {
+        ...window._l10n,
+        doConfirmDelete: '${msg("doConfirmDelete")}',
+        doCancel: '${msg("doCancel")}',
+      };
+    </script>
+    <#if section = "ignore-header">
         ${msg("deleteCredentialTitle", credentialLabel)}
-    <#elseif section = "form">
+    <#elseif section = "ignore-form">
     <div id="kc-delete-text">
         ${msg("deleteCredentialMessage", credentialLabel)}
     </div>

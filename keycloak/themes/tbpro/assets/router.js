@@ -11,6 +11,7 @@ import InfoView from "./vue/views/InfoView/index.vue";
 import VerifyEmailView from "./vue/views/VerifyEmailView/index.vue";
 import ConfigToptView from "./vue/views/ConfigToptView/index.vue";
 import LoginTotpView from "./vue/views/LoginTotpView/index.vue";
+import DeleteCredentialView from "./vue/views/DeleteCredentialView/index.vue";
 
 /**
  * Don't specify routes, as they're not absolute in keycloak.
@@ -53,6 +54,10 @@ const routes = [
   {
     name: 'login-otp',
     component: LoginTotpView,
+  },
+  {
+    name: 'delete-credential',
+    component: DeleteCredentialView,
   },
   {
     name: 'info',
