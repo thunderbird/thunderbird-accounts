@@ -78,9 +78,9 @@
 
       };
     </script>
-    <#elseif section = "header">
+    <#elseif section = "ignore-header">
         ${msg("loginTotpTitle")}
-    <#elseif section = "form">
+    <#elseif section = "ignore-form">
         <ol id="kc-totp-settings">
             <li>
                 <p>${msg("loginTotpStep1")}</p>
