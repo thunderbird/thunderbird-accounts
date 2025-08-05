@@ -48,7 +48,8 @@ const onWiggle = async () => {
   max-width: 37.5rem;
   margin: auto;
 
+  background-color: var(--colour-neutral-base);
   border-radius: 0.5rem;
-  border: 0.0625rem solid #6a6e76;
+  border: 0.0625rem solid var(--colour-neutral-border);
 }
 </style>
