@@ -9,8 +9,6 @@
           password: '${kcSanitize(messagesPerField.get("password"))?no_esc}',
           passwordConfirm: '${kcSanitize(messagesPerField.get("password-confirm"))?no_esc}',
         },
-        // If true: display a cancel button
-        appInitiatedAction: '${isAppInitiatedAction!}',
       };
       window._l10n = {
         ...window._l10n,
