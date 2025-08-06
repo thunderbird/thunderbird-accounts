@@ -15,6 +15,12 @@ body {
   justify-content: center;
 }
 
+.route-found {
+  .hide-if-route-is-found {
+    display: none;
+  }
+}
+
 @keyframes wiggle {
     0% { transform: rotate(0deg); }
    25% { transform: rotate(-5deg); }

@@ -1,7 +1,7 @@
 <#import "footer.ftl" as loginFooter>
 <#macro registrationLayout bodyClass="" displayInfo=false displayMessage=true displayRequiredFields=false>
 <!DOCTYPE html>
-<html class="${properties.kcHtmlClass!}" lang="${lang}"<#if realm.internationalizationEnabled> dir="${(locale.rtl)?then('rtl','ltr')}"</#if>>
+<html class="route-found ${properties.kcHtmlClass!}" lang="${lang}"<#if realm.internationalizationEnabled> dir="${(locale.rtl)?then('rtl','ltr')}"</#if>>
 
 <head>
     <meta charset="utf-8">
@@ -138,10 +138,10 @@
 <body class="${properties.kcBodyClass!}" data-page-id="login-${pageId}">
 <div id="app"></div>
 
-<div class="${properties.kcLoginClass!}">
+<div class="hide-if-route-is-found ${properties.kcLoginClass!}">
     <div class="${properties.kcFormCardClass!}">
         <header class="${properties.kcFormHeaderClass!}">
-            <#if false && realm.internationalizationEnabled  && locale.supported?size gt 1>
+            <#if realm.internationalizationEnabled  && locale.supported?size gt 1>
                 <div class="${properties.kcLocaleMainClass!}" id="kc-locale">
                     <div id="kc-locale-wrapper" class="${properties.kcLocaleWrapperClass!}">
                         <div id="kc-locale-dropdown" class="menu-button-links ${properties.kcLocaleDropDownClass!}">

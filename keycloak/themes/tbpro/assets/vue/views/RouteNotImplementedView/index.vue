@@ -3,6 +3,8 @@ console.error('Route not implemented', {
   pageId: window?._page?.pageId,
   page: window?._page,
 })
+// Unhide the unformatted template
+window.document.documentElement.classList.remove('route-found');
 </script>
 
 <script>
