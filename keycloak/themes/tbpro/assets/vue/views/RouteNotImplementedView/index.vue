@@ -12,9 +12,15 @@ export default {
 </script>
 
 <template>
-<h1>Route Not Implemented</h1>
+  <div class="panel">
+    <h1>Route Not Implemented</h1>
+    <p>This route isn't implemented, please report this issue and the route name in the top left corner.</p>
+    <p>You can use the unformatted template below this panel to continue.</p>
+  </div>
 </template>
 
 <style scoped>
-
+.panel {
+  margin: 30px
+}
 </style>
