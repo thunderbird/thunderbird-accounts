@@ -1,3 +1,4 @@
+<#-- NOT IMPLEMENTED -->
 <#macro userProfileFormFields>
 	<#assign currentGroup="">
 	

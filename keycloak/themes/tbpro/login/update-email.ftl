@@ -1,3 +1,4 @@
+<#-- NOT IMPLEMENTED -->
 <#import "template.ftl" as layout>
 <#import "password-commons.ftl" as passwordCommons>
 <#import "user-profile-commons.ftl" as userProfileCommons>

@@ -1,3 +1,4 @@
+<#-- NOT IMPLEMENTED -->
 <#import "template.ftl" as layout>
 <#import "passkeys.ftl" as passkeys>
 <@layout.registrationLayout displayMessage=!messagesPerField.existsError('username') displayInfo=(realm.password && realm.registrationAllowed && !registrationDisabled??); section>

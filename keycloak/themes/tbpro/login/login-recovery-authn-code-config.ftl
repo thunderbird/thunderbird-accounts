@@ -1,3 +1,4 @@
+<#-- NOT IMPLEMENTED -->
 <#import "template.ftl" as layout>
 <#import "password-commons.ftl" as passwordCommons>
 <@layout.registrationLayout; section>

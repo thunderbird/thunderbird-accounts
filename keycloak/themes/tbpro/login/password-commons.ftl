@@ -1,3 +1,4 @@
+<#-- NOT IMPLEMENTED -->
 <#macro logoutOtherSessions>
     <div id="kc-form-options" class="${properties.kcFormOptionsClass!}">
         <div class="${properties.kcFormOptionsWrapperClass!}">

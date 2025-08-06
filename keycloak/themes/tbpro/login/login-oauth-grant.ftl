@@ -1,3 +1,4 @@
+<#-- NOT IMPLEMENTED -->
 <#import "template.ftl" as layout>
 <@layout.registrationLayout bodyClass="oauth"; section>
     <#if section = "header">

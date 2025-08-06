@@ -1,3 +1,4 @@
+<#-- NOT IMPLEMENTED -->
 <#macro termsAcceptance>
     <#if termsAcceptanceRequired??>
         <div class="form-group">

@@ -1,3 +1,4 @@
+<#-- NOT IMPLEMENTED -->
 <#import "template.ftl" as layout>
 <@layout.registrationLayout displayInfo=(realm.registrationAllowed && !registrationDisabled??); section>
     <#if section = "title">

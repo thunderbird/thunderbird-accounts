@@ -139,13 +139,9 @@
 <div id="app"></div>
 
 <div class="${properties.kcLoginClass!}">
-    <div style="display: none;" id="kc-header" class="${properties.kcHeaderClass!}">
-        <div id="kc-header-wrapper"
-             class="${properties.kcHeaderWrapperClass!}">${kcSanitize(msg("loginTitleHtml",(realm.displayNameHtml!'')))?no_esc}</div>
-    </div>
-    <div style="display: none;" class="${properties.kcFormCardClass!}">
+    <div class="${properties.kcFormCardClass!}">
         <header class="${properties.kcFormHeaderClass!}">
-            <#if realm.internationalizationEnabled  && locale.supported?size gt 1>
+            <#if false && realm.internationalizationEnabled  && locale.supported?size gt 1>
                 <div class="${properties.kcLocaleMainClass!}" id="kc-locale">
                     <div id="kc-locale-wrapper" class="${properties.kcLocaleWrapperClass!}">
                         <div id="kc-locale-dropdown" class="menu-button-links ${properties.kcLocaleDropDownClass!}">
@@ -249,8 +245,6 @@
           </#if>
         </div>
       </div>
-
-      <@loginFooter.content/>
     </div>
   </div>
 </body>

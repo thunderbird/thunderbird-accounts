@@ -1,3 +1,4 @@
+<#-- NOT IMPLEMENTED -->
 <#import "template.ftl" as layout>
 <@layout.registrationLayout displayInfo=false; section>
     <#if section = "header" || section = "show-username">
