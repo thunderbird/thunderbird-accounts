@@ -1,18 +1,17 @@
 <script setup>
-import { NoticeBar } from "@thunderbirdops/services-ui";
-import { ref } from "vue";
+import {NoticeBar} from "@thunderbirdops/services-ui";
 
 // For some reason message here is not set in the template only the view...
-const message = ref(window._page.message);
-const actionUrl = ref(window._page.currentView?.actionUrl);
-const actionText = ref(window._page.currentView?.actionText);
+const message = window._page.message;
+const actionUrl = window._page.currentView?.actionUrl;
+const actionText = window._page.currentView?.actionText;
 
 </script>
 
 <script>
 export default {
   name: 'ErrorView'
-}
+};
 </script>
 
 <template>
@@ -26,11 +25,4 @@ export default {
 </template>
 
 <style scoped>
-.panel {
-  margin: 30px
-}
-
-.notice-bar {
-  margin-bottom: var(--space-12);
-}
 </style>

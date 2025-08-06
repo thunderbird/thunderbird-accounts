@@ -1,22 +1,21 @@
 <script setup>
-import { DangerButton, SecondaryButton, NoticeBar } from "@thunderbirdops/services-ui";
-import { computed, ref } from "vue";
+import {DangerButton, SecondaryButton, NoticeBar} from "@thunderbirdops/services-ui";
+import {useTemplateRef} from "vue";
+import CancelForm from '@/vue/components/CancelForm.vue';
 
-const message = ref(window._page.message);
-const formAction = ref(window._page.currentView?.formAction);
-const loginForm = ref();
+const message = window._page.message;
+const formAction = window._page.currentView?.formAction;
+const loginForm = useTemplateRef('login-form');
+const cancelForm = useTemplateRef('cancel-form');
 
-const deleteCredentialTitle = ref(window._page.currentView?.deleteCredentialTitle);
-const deleteCredentialMessage = ref(window._page.currentView?.deleteCredentialMessage);
-
-const isCancelSubmit = ref(false);
+const deleteCredentialTitle = window._page.currentView?.deleteCredentialTitle;
+const deleteCredentialMessage = window._page.currentView?.deleteCredentialMessage;
 
 const onSubmit = () => {
   loginForm?.value?.submit();
 };
 const onCancel = () => {
-  isCancelSubmit.value = true;
-  onSubmit();
+  cancelForm?.value?.cancel();
 };
 
 </script>
@@ -24,18 +23,20 @@ const onCancel = () => {
 <script>
 export default {
   name: 'DeleteCredentialView'
-}
+};
 </script>
 
 <template>
   <div class="panel">
     <h2>{{ deleteCredentialTitle }}</h2>
+    <cancel-form ref="cancel-form" :action="formAction" cancelId="kc-decline" cancelValue="$t('doCancel')" cancelName="cancel-aia"/>
     <form id="kc-form-delete-credentials" ref="loginForm" method="POST" :action="formAction">
       <notice-bar :type="message.type" v-if="message?.type">{{ message.summary }}</notice-bar>
       <p>{{ deleteCredentialMessage }}</p>
       <div class="buttons">
-        <input type="hidden" name="cancel-aia" :value="$t('doCancel')" id="kc-decline" v-if="isCancelSubmit"/>
-        <danger-button class="submit" @click="onSubmit" name="accept" id="kc-accept" :value="$t('doConfirmDelete')">{{ $t('doConfirmDelete') }}</danger-button>
+        <danger-button class="submit" @click="onSubmit" name="accept" id="kc-accept" :value="$t('doConfirmDelete')">
+          {{ $t('doConfirmDelete') }}
+        </danger-button>
         <secondary-button class="submit" @click="onCancel">{{ $t('doCancel') }}</secondary-button>
       </div>
     </form>
@@ -43,14 +44,6 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  margin-bottom: var(--space-12);
-}
-
-.panel {
-  margin: 30px
-}
-
 .buttons {
   margin-top: var(--space-24);
   width: 100%;

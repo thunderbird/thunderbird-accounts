@@ -8,38 +8,51 @@ import {
   NoticeBar,
   CopyIcon,
 } from "@thunderbirdops/services-ui";
-import {computed, ref} from "vue";
+import {computed, ref, useTemplateRef} from "vue";
 import {i18n} from '@/composables/i18n.js';
+import CancelForm from '@/vue/components/CancelForm.vue';
 
-const formAction = ref(window._page.currentView?.formAction);
-const settingsForm = ref();
-const cancelForm = ref();
-const isManualMode = computed(() => window._page.currentView?.mode === 'manual');
+
+const isCancelSubmit = ref(false);
+const isManualMode = ref(false);
+
+const formAction = window._page.currentView?.formAction;
+const settingsForm = useTemplateRef('settings-form');
+const cancelForm = useTemplateRef('cancel-form');
 
 const showCancel = computed(() => window._page.appInitiatedAction !== 'false');
-const supportedApplications = ref(window._page.currentView?.supportedApplications ?? []);
 const qrCodeSrc = computed(() => {
   return `data:image/png;base64, ${window._page.currentView?.loginTotp?.secretQrCode}`;
 });
-const manualUrl = ref(window._page.currentView?.loginTotp?.manualUrl);
 
-const totpType = ref(window._page.currentView?.loginTotp?.type);
-const totpTypeName = ref(window._page.currentView?.loginTotp?.typeName);
+const totpType = window._page.currentView?.loginTotp?.type;
+const realmTitle = window._page.realmTitle;
+const username = window._page.currentView?.loginTotp?.username;
+const secretEncoded = window._page.currentView?.loginTotp?.secretEncoded;
+const secret = window._page.currentView?.loginTotp?.secret;
+const algorithmKey = window._page.currentView?.loginTotp?.algorithmKey;
+const digits = window._page.currentView?.loginTotp?.digits;
+const period = window._page.currentView?.loginTotp?.period;
+const initialCounter = window._page.currentView?.loginTotp?.initialCounter;
 
-// Manual mode settings
-const realmTitle = ref(window._page.realmTitle);
-const username = ref(window._page.currentView?.loginTotp?.username);
-const secretEncoded = ref(window._page.currentView?.loginTotp?.secretEncoded);
-const secret = ref(window._page.currentView?.loginTotp?.secret);
-const qrUrl = ref(window._page.currentView?.loginTotp?.qrUrl);
-const algorithmKey = ref(window._page.currentView?.loginTotp?.algorithmKey);
-const digits = ref(window._page.currentView?.loginTotp?.digits);
-const period = ref(window._page.currentView?.loginTotp?.period);
-const initialCounter = ref(window._page.currentView?.loginTotp?.initialCounter);
+// Copy the otpauth link settings
+const myLinkShow = ref(false);
+const myLinkTooltip = ref(i18n.t('copyTotp'));
 
-// new
+// Messages
+const message = window._page.message;
+const errors = window._page.currentView?.errors;
+const totpError = computed(() => {
+  return errors?.totp === '' ? null : errors?.totp;
+});
+const userLabelError = computed(() => {
+  return errors?.userLabel === '' ? null : errors?.userLabel;
+});
 
-const manualMode = ref(false);
+
+// If we have an error then start on step 2, otherwise show step 1
+const totpStep = ref(totpError.value || userLabelError.value ? 2 : 1);
+
 /**
  * Forms a manual otpauth uri.
  * Keycloak seems to just spit out a list of values, so lets format those values into a nice uri recognized by most authenticators.
@@ -48,48 +61,24 @@ const manualMode = ref(false);
  */
 const otpManualUrl = computed(() => {
   const queryParams = {
-    secret: secretEncoded.value.replaceAll(' ', ''),
-    algorithm: algorithmKey.value,
-    digits: digits.value,
-  }
+    secret: secretEncoded.replaceAll(' ', ''),
+    algorithm: algorithmKey,
+    digits: digits,
+  };
   if (totpType === 'hotp') {
-    queryParams['counter'] = initialCounter.value;
+    queryParams['counter'] = initialCounter;
   } else {
-    queryParams['period'] = period.value;
+    queryParams['period'] = period;
   }
-  return encodeURI(`otpauth://${totpType.value}/${realmTitle.value}:${username.value}?${new URLSearchParams(queryParams)}`)
+  return encodeURI(`otpauth://${totpType}/${realmTitle}:${username}?${new URLSearchParams(queryParams)}`);
 });
-
-const myLinkShow = ref(false);
-const myLinkTooltip = ref(i18n.t('copyTotp'));
-// Messages
-
-const message = ref(window._page.message);
-const errors = ref(window._page.currentView?.errors);
-const totpError = computed(() => {
-  return errors.value?.totp === '' ? null : errors.value?.totp;
-});
-const userLabelError = computed(() => {
-  return errors.value?.userLabel === '' ? null : errors.value?.userLabel;
-});
-
-const isCancelSubmit = ref(false);
-
-const totpStep = ref(totpError.value || userLabelError.value ? 2 : 1);
-
 
 const onSubmit = () => {
   settingsForm?.value?.submit();
 };
-
 const onCancel = () => {
-  isCancelSubmit.value = true;
-  // Need time for the ref to pick it up...
-  // FIXME: This should be nicer...
-  window.setTimeout(() => {
-    cancelForm?.value?.submit();
-  }, 100);
-}
+  cancelForm?.value?.cancel();
+};
 
 const copyLink = async () => {
   if (!navigator.clipboard?.writeText) {
@@ -116,33 +105,30 @@ const onNext = () => {
   if (totpStep.value >= 3) {
     onSubmit();
   }
-}
+};
 const onPrevious = () => {
   totpStep.value -= 1;
-
   if (totpStep.value <= 0) {
     onCancel();
   }
-}
+};
 </script>
 
 <script>
 export default {
   name: 'ConfigTotpView'
-}
+};
 </script>
 
 
 <template>
   <div class="panel">
     <h2>{{ $t('loginTotpTitle') }}</h2>
-    <notice-bar :type="message.type" v-if="message?.type">{{ message.summary }}</notice-bar>
-    <form id="kc-totp-cancel-form" ref="cancelForm" method="POST" :action="formAction" v-if="showCancel && isCancelSubmit">
-        <input type="hidden" id="cancelTOTPBtn" name="cancel-aia" value="true"/>
-    </form>
+    <notice-bar data-testid="notice-bar-txt" :type="message.type" v-if="message?.type">{{ message.summary }}</notice-bar>
+    <cancel-form ref="cancel-form" :action="formAction" cancelId="cancelTOTPBtn" cancelValue="true" cancelName="cancel-aia"/>
 
-    <section v-if="totpStep === 1" id="totpStep1">
-      <section class="split-view" v-if="!manualMode">
+    <section v-if="totpStep === 1" id="totpStep1" data-testid="totp-step-2">
+      <section class="split-view" v-if="!isManualMode">
         <article>
           <h3>{{ $t('scanTotp1') }}</h3>
           <p>{{ $t('scanTotp2') }}</p>
@@ -151,7 +137,10 @@ export default {
         </article>
         <aside class="qr-container">
           <img :src="qrCodeSrc" :alt="$t('qrCode')"/>
-          <link-button @click="() => manualMode = true" id="mode-manual">{{ $t('loginTotpUnableToScan') }}</link-button>
+          <link-button data-testid="switch-to-manual-mode-btn" @click="() => isManualMode = true" id="mode-manual">{{
+              $t('loginTotpUnableToScan')
+            }}
+          </link-button>
         </aside>
       </section>
       <section v-else>
@@ -159,44 +148,47 @@ export default {
           <p>{{ $t('manualTotp1') }}</p>
         </article>
         <aside>
-          <link-button class="my-link-btn" @click="copyLink" :tooltip="myLinkTooltip" :force-tooltip="myLinkShow">
+          <link-button data-testid="copy-otp-manual-url-btn" class="my-link-btn" @click="copyLink" :tooltip="myLinkTooltip" :force-tooltip="myLinkShow">
             <template v-slot:icon>
               <copy-icon/>
             </template>
             {{ otpManualUrl }}
           </link-button>
-          <link-button @click="() => manualMode = false" id="mode-barcode">{{
+          <link-button data-testid="switch-to-qrcode-mode-btn" @click="() => isManualMode = false" id="mode-barcode">{{
               $t('loginTotpScanBarcode')
             }}
           </link-button>
         </aside>
       </section>
       <div class="buttons">
-        <primary-button class="submit" @click="onNext">{{ $t('doContinue') }}</primary-button>
-        <secondary-button id="back" class="submit" @click="onPrevious" v-if="showCancel">{{
-              $t('doCancel')
-            }}
+        <primary-button data-testid="continue-btn" class="submit" @click="onNext">{{ $t('doContinue') }}</primary-button>
+        <secondary-button data-testid="cancel-btn" id="back" class="submit" @click="onPrevious" v-if="showCancel">{{
+            $t('doCancel')
+          }}
         </secondary-button>
       </div>
     </section>
-    <section v-else-if="totpStep === 2" id="totpStep2">
-      <form id="kc-totp-settings-form" ref="settingsForm" method="POST" :action="formAction" @submit.prevent="onSubmit"
+    <section v-else-if="totpStep === 2" id="totpStep2" data-testid="totp-step-2">
+      <form id="kc-totp-settings-form" ref="settings-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
             @keyup.enter="onSubmit">
         <p>{{ $t('labelTotp') }}</p>
         <div class="form-elements">
-          <text-input id="totp" name="totp" required autocomplete="off" type="text" :error="totpError">
+          <text-input data-testid="totp-input" id="totp" name="totp" required autocomplete="off" type="text" :error="totpError">
             {{ $t('authenticatorCode') }}
           </text-input>
-          <text-input id="userLabel" name="userLabel" required autocomplete="off" type="text" :error="userLabelError">
+          <text-input data-testid="user-label-input" id="userLabel" name="userLabel" required autocomplete="off" type="text" :error="userLabelError">
             {{ $t('loginTotpDeviceName') }}
           </text-input>
-          <checkbox-input id="logout-sessions" name="logout-sessions"
+          <checkbox-input data-testid="logout-other-sessions-btn" id="logout-sessions" name="logout-sessions"
                           :label="$t('logoutOtherSessions')"></checkbox-input>
-          <input type="hidden" id="totpSecret" name="totpSecret" :value="secret" />
+          <input type="hidden" id="totpSecret" name="totpSecret" :value="secret"/>
         </div>
         <div class="buttons">
-          <primary-button id="saveTOTPBtn" :value="$t('doSubmit')" class="submit" @click="onNext">{{ $t('doSubmit') }}</primary-button>
-          <secondary-button id="back" class="submit" @click="onPrevious">{{
+          <primary-button data-testid="submit-btn" id="saveTOTPBtn" :value="$t('doSubmit')" class="submit" @click="onNext">{{
+              $t('doSubmit')
+            }}
+          </primary-button>
+          <secondary-button data-testid="back-btn" id="back" class="submit" @click="onPrevious">{{
               $t('doBack')
             }}
           </secondary-button>
@@ -208,14 +200,6 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  margin-bottom: var(--space-12);
-}
-
-.panel {
-  margin: 30px
-}
-
 .form-elements {
   display: flex;
   flex-direction: column;
@@ -224,6 +208,7 @@ export default {
 
 .split-view {
   display: flex;
+
   h3 {
     font-size: var(--txt-input);
   }
@@ -243,19 +228,20 @@ export default {
   justify-content: space-between;
 }
 
-  .my-link-btn {
-    text-align: left !important;
-    width: 100%;
-  }
+.my-link-btn {
+  text-align: left !important;
+  width: 100%;
+  margin-bottom: var(--space-4);
+}
 
-  :deep(.my-link-btn .text) {
-    width: 100%;
-    overflow: scroll;
-    white-space: pre;
-    padding-bottom: var(--txt-input);
-  }
+:deep(.my-link-btn .text) {
+  width: 100%;
+  overflow: scroll;
+  white-space: pre;
+  padding-bottom: var(--txt-input);
+}
 
-  :deep(.my-link-btn .icon) {
-    padding-bottom: var(--txt-input);
-  }
+:deep(.my-link-btn .icon) {
+  padding-bottom: var(--txt-input);
+}
 </style>

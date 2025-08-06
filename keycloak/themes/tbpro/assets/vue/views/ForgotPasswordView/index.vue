@@ -1,11 +1,11 @@
 <script setup>
-import { TextInput, PrimaryButton, CheckboxInput, NoticeBar } from "@thunderbirdops/services-ui";
-import { ref, computed } from "vue";
+import {TextInput, PrimaryButton, NoticeBar} from "@thunderbirdops/services-ui";
+import {ref, computed} from "vue";
 
-const errors = ref(window._page.currentView?.errors);
-const formAction = ref(window._page.currentView?.formAction);
+const errors = window._page.currentView?.errors;
+const formAction = window._page.currentView?.formAction;
 const loginUrl = window._page.currentView?.loginUrl;
-const username = ref(window._page.currentView?.attemptedUserName);
+const username = window._page.currentView?.attemptedUserName;
 const resetPasswordForm = ref();
 
 
@@ -13,7 +13,7 @@ const onSubmit = () => {
   resetPasswordForm?.value?.submit();
 };
 const usernameError = computed(() => {
-  return errors.value?.username === '' ? null : errors.value?.username;
+  return errors?.username === '' ? null : errors?.username;
 });
 
 </script>
@@ -21,16 +21,19 @@ const usernameError = computed(() => {
 <script>
 export default {
   name: 'ForgotPasswordView'
-}
+};
 </script>
 
 <template>
   <div class="panel">
     <h2>{{ $t('emailForgotTitle') }}</h2>
-    <form id="kc-reset-password-form" ref="resetPasswordForm" method="POST" :action="formAction" @submit.prevent="onSubmit" @keyup.enter="onSubmit">
+    <form id="kc-reset-password-form" ref="resetPasswordForm" method="POST" :action="formAction"
+          @submit.prevent="onSubmit" @keyup.enter="onSubmit">
       <notice-bar type="error" v-if="usernameError">{{ $t('forgotPasswordError') }}</notice-bar>
       <div class="form-elements">
-        <text-input id="username" name="username" required autocomplete="username" autofocus v-model="username" :help="$t('emailInstruction')" :error="usernameError">{{ $t('email') }}</text-input>
+        <text-input id="username" name="username" required autocomplete="username" autofocus v-model="username"
+                    :help="$t('emailInstruction')" :error="usernameError">{{ $t('email') }}
+        </text-input>
       </div>
       <div class="buttons">
         <primary-button class="submit" @click="onSubmit">{{ $t('doSubmit') }}</primary-button>
@@ -43,14 +46,6 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  margin-bottom: var(--space-12);
-}
-
-.panel {
-  margin: 30px
-}
-
 .form-elements {
   display: flex;
   flex-direction: column;
@@ -60,6 +55,7 @@ export default {
 .buttons {
   margin-top: var(--space-24);
   width: 100%;
+
   .submit {
     margin-right: 0;
     margin-left: auto;
