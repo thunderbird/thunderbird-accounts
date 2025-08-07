@@ -1,12 +1,13 @@
 <script setup>
-import {TextInput, PrimaryButton, NoticeBar} from "@thunderbirdops/services-ui";
-import {ref, computed} from "vue";
+import { TextInput, PrimaryButton, NoticeBar } from "@thunderbirdops/services-ui";
+import { computed, useTemplateRef } from 'vue';
+import MessageBar from '@/vue/components/MessageBar.vue';
 
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
 const loginUrl = window._page.currentView?.loginUrl;
 const username = window._page.currentView?.attemptedUserName;
-const resetPasswordForm = ref();
+const resetPasswordForm = useTemplateRef('reset-password-form');
 
 
 const onSubmit = () => {
@@ -27,9 +28,10 @@ export default {
 <template>
   <div class="panel">
     <h2>{{ $t('emailForgotTitle') }}</h2>
-    <form id="kc-reset-password-form" ref="resetPasswordForm" method="POST" :action="formAction"
+    <form id="kc-reset-password-form" ref="reset-password-form" method="POST" :action="formAction"
           @submit.prevent="onSubmit" @keyup.enter="onSubmit">
       <notice-bar type="error" v-if="usernameError">{{ $t('forgotPasswordError') }}</notice-bar>
+      <message-bar v-else/>
       <div class="form-elements">
         <text-input id="username" name="username" required autocomplete="username" autofocus v-model="username"
                     :help="$t('emailInstruction')" :error="usernameError">{{ $t('email') }}

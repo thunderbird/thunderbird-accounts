@@ -1,40 +1,45 @@
 <script setup>
-import { PrimaryButton, SecondaryButton } from "@thunderbirdops/services-ui";
-import { ref, computed } from "vue";
+import { PrimaryButton, SecondaryButton } from '@thunderbirdops/services-ui';
+import { computed, useTemplateRef } from 'vue';
+import CancelForm from '@/vue/components/CancelForm.vue';
 
-const formAction = ref(window._page.currentView?.formAction);
+const formAction = window._page.currentView?.formAction;
 const showForm = computed(() => window._page.appInitiatedAction !== 'false');
 
-const verifyEmailInstruction = ref(window._page.currentView?.verifyEmailInstruction);
-const submitText = ref(window._page.currentView?.submitText);
-const isCancelSubmit = ref(false);
+const verifyEmailInstruction = window._page.currentView?.verifyEmailInstruction;
+const submitText = window._page.currentView?.submitText;
 
-const verifyEmailForm = ref();
+const verifyEmailForm = useTemplateRef('verify-email-form');
+const cancelForm = useTemplateRef('cancel-form');
 
 const onSubmit = () => {
   verifyEmailForm?.value?.submit();
 };
 
 const onCancel = () => {
-  isCancelSubmit.value = true;
-  onSubmit();
-}
+  cancelForm?.value?.cancel();
+};
 </script>
 
 <script>
 export default {
   name: 'VerifyEmailView'
-}
+};
 </script>
 
 <template>
   <div class="panel">
     <h2>{{ $t('emailVerifyTitle') }}</h2>
-    <form id="kc-verify-email-form" ref="verifyEmailForm" method="POST" :action="formAction" @submit.prevent="onSubmit" @keyup.enter="onSubmit" v-if="showForm">
+    <cancel-form ref="cancel-form" :action="formAction" cancelId="cancelBtn" cancelValue="true"
+                 cancelName="cancel-aia"/>
+    <form id="kc-verify-email-form" ref="verify-email-form" method="POST" :action="formAction"
+          @submit.prevent="onSubmit" @keyup.enter="onSubmit" v-if="showForm">
       <p>{{ verifyEmailInstruction }}</p>
       <div class="buttons">
-        <input v-if="isCancelSubmit" type="hidden" name="cancel-aia" value="true"/>
-        <primary-button id="submit" class="submit" @click="onSubmit" :value="submitText">{{ submitText }}</primary-button>
+        <primary-button id="submit" class="submit" @click="onSubmit" :value="submitText">{{
+            submitText
+          }}
+        </primary-button>
         <secondary-button id="cancel" class="submit" @click="onCancel">{{ $t('doCancel') }}</secondary-button>
       </div>
     </form>
@@ -46,14 +51,6 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  margin-bottom: var(--space-12);
-}
-
-.panel {
-  margin: 30px
-}
-
 .buttons {
   margin-top: var(--space-24);
   width: 100%;

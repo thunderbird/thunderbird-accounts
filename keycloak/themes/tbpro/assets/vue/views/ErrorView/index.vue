@@ -1,11 +1,8 @@
 <script setup>
-import {NoticeBar} from "@thunderbirdops/services-ui";
+import MessageBar from '@/vue/components/MessageBar.vue';
 
-// For some reason message here is not set in the template only the view...
-const message = window._page.message;
 const actionUrl = window._page.currentView?.actionUrl;
 const actionText = window._page.currentView?.actionText;
-
 </script>
 
 <script>
@@ -17,7 +14,7 @@ export default {
 <template>
   <div class="panel">
     <h2>{{ $t('errorTitle') }}</h2>
-    <notice-bar :type="message.type" v-if="message.type">{{ message.summary }}</notice-bar>
+    <message-bar/>
     <template v-if="actionUrl">
       <a :href="actionUrl">{{ actionText }}</a>
     </template>

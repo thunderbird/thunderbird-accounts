@@ -1,5 +1,5 @@
 <script setup>
-import {NoticeBar} from "@thunderbirdops/services-ui";
+import MessageBar from '@/vue/components/MessageBar.vue';
 
 const message = window._page.message;
 const messageHeader = window._page.currentView?.messageHeader;
@@ -23,7 +23,7 @@ export default {
         {{ message?.summary }}
       </template>
     </h2>
-    <notice-bar :type="message.type" v-if="message?.type">{{ message.summary }}</notice-bar>
+    <message-bar/>
     <template v-if="actionUrl">
       <a :href="actionUrl">{{ actionText }}</a>
     </template>

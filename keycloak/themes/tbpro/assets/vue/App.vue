@@ -53,10 +53,6 @@ const onWiggle = async () => {
   border: 0.0625rem solid var(--colour-neutral-border);
 }
 
-:deep(.notice-bar) {
-  margin-bottom: var(--space-12);
-}
-
 :deep(.panel) {
   margin: 30px
 }

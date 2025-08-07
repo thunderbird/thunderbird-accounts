@@ -83,9 +83,22 @@
         </script>
     </#if>
     <script>
+      /**
+       * A dumb work-around to decode html entities created by kcSanitize()?no_esc.
+       * @param str : string
+       * @returns string
+       */
       // These aren't js string literals, they're freemarker template variables!
       // Comment out any freemarker template ops for easier developing
       window._page = {
+        decodeHtmlEntities: (str) => {
+          const tag = document.createElement('div');
+          tag.innerHTML = str;
+          return tag.textContent;
+        }
+      };
+      window._page = {
+        ...window._page,
         pageId: '${pageId}',
         realmTitle: '${kcSanitize(msg("loginTitleHtml",(realm.displayNameHtml!"")))?no_esc}',
         //<#if client?? && client.baseUrl?has_content>
@@ -96,7 +109,7 @@
         //<#if message?has_content>
         message: {
           type: '${message.type}',
-          summary: '${kcSanitize(message.summary)?no_esc}'
+          summary: window._page.decodeHtmlEntities('${kcSanitize(message.summary)?no_esc}')
         },
         //<#else>
         message: {
@@ -115,7 +128,11 @@
           //<#assign i++>
           //</#list>
         ],
-        appInitiatedAction: '${isAppInitiatedAction!?c}',
+        //<#if isAppInitiatedAction??>
+        appInitiatedAction: '${isAppInitiatedAction?c}',
+        //<#else>
+        appInitiatedAction: 'false',
+        //</#if>
         // This is filled in on the view template
         currentView: {},
       };
@@ -125,6 +142,9 @@
         requiredFields: '${msg("requiredFields")}',
         restartLoginTooltip: '${msg("restartLoginTooltip")}',
         doTryAnotherWay: '${msg("doTryAnotherWay")}',
+        routeNotImplementedTitle: '${msg("routeNotImplementedTitle")}',
+        routeNotImplementedText1: '${msg("routeNotImplementedText1")}',
+        routeNotImplementedText2: '${msg("routeNotImplementedText2")}',
       };
     </script>
     <#nested "js">

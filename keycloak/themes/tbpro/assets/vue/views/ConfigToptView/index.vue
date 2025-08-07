@@ -8,12 +8,11 @@ import {
   NoticeBar,
   CopyIcon,
 } from "@thunderbirdops/services-ui";
-import {computed, ref, useTemplateRef} from "vue";
-import {i18n} from '@/composables/i18n.js';
+import { computed, ref, useTemplateRef } from "vue";
+import { i18n } from '@/composables/i18n.js';
 import CancelForm from '@/vue/components/CancelForm.vue';
+import MessageBar from "@/vue/components/MessageBar.vue";
 
-
-const isCancelSubmit = ref(false);
 const isManualMode = ref(false);
 
 const formAction = window._page.currentView?.formAction;
@@ -40,7 +39,6 @@ const myLinkShow = ref(false);
 const myLinkTooltip = ref(i18n.t('copyTotp'));
 
 // Messages
-const message = window._page.message;
 const errors = window._page.currentView?.errors;
 const totpError = computed(() => {
   return errors?.totp === '' ? null : errors?.totp;
@@ -124,8 +122,9 @@ export default {
 <template>
   <div class="panel">
     <h2>{{ $t('loginTotpTitle') }}</h2>
-    <notice-bar data-testid="notice-bar-txt" :type="message.type" v-if="message?.type">{{ message.summary }}</notice-bar>
-    <cancel-form ref="cancel-form" :action="formAction" cancelId="cancelTOTPBtn" cancelValue="true" cancelName="cancel-aia"/>
+    <message-bar/>
+    <cancel-form ref="cancel-form" :action="formAction" cancelId="cancelTOTPBtn" cancelValue="true"
+                 cancelName="cancel-aia"/>
 
     <section v-if="totpStep === 1" id="totpStep1" data-testid="totp-step-2">
       <section class="split-view" v-if="!isManualMode">
@@ -148,7 +147,8 @@ export default {
           <p>{{ $t('manualTotp1') }}</p>
         </article>
         <aside>
-          <link-button data-testid="copy-otp-manual-url-btn" class="my-link-btn" @click="copyLink" :tooltip="myLinkTooltip" :force-tooltip="myLinkShow">
+          <link-button data-testid="copy-otp-manual-url-btn" class="my-link-btn" @click="copyLink"
+                       :tooltip="myLinkTooltip" :force-tooltip="myLinkShow">
             <template v-slot:icon>
               <copy-icon/>
             </template>
@@ -161,7 +161,10 @@ export default {
         </aside>
       </section>
       <div class="buttons">
-        <primary-button data-testid="continue-btn" class="submit" @click="onNext">{{ $t('doContinue') }}</primary-button>
+        <primary-button data-testid="continue-btn" class="submit" @click="onNext">{{
+            $t('doContinue')
+          }}
+        </primary-button>
         <secondary-button data-testid="cancel-btn" id="back" class="submit" @click="onPrevious" v-if="showCancel">{{
             $t('doCancel')
           }}
@@ -173,10 +176,12 @@ export default {
             @keyup.enter="onSubmit">
         <p>{{ $t('labelTotp') }}</p>
         <div class="form-elements">
-          <text-input data-testid="totp-input" id="totp" name="totp" required autocomplete="off" type="text" :error="totpError">
+          <text-input data-testid="totp-input" id="totp" name="totp" required autocomplete="off" type="text"
+                      :error="totpError">
             {{ $t('authenticatorCode') }}
           </text-input>
-          <text-input data-testid="user-label-input" id="userLabel" name="userLabel" required autocomplete="off" type="text" :error="userLabelError">
+          <text-input data-testid="user-label-input" id="userLabel" name="userLabel" required autocomplete="off"
+                      type="text" :error="userLabelError">
             {{ $t('loginTotpDeviceName') }}
           </text-input>
           <checkbox-input data-testid="logout-other-sessions-btn" id="logout-sessions" name="logout-sessions"
@@ -184,7 +189,8 @@ export default {
           <input type="hidden" id="totpSecret" name="totpSecret" :value="secret"/>
         </div>
         <div class="buttons">
-          <primary-button data-testid="submit-btn" id="saveTOTPBtn" :value="$t('doSubmit')" class="submit" @click="onNext">{{
+          <primary-button data-testid="submit-btn" id="saveTOTPBtn" :value="$t('doSubmit')" class="submit"
+                          @click="onNext">{{
               $t('doSubmit')
             }}
           </primary-button>
