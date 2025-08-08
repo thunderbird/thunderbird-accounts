@@ -38,11 +38,11 @@ export default {
         </text-input>
       </div>
       <div class="buttons">
-        <primary-button class="submit" @click="onSubmit">{{ $t('doSubmit') }}</primary-button>
+        <primary-button class="submit" @click="onSubmit" data-testid="submit">{{ $t('doSubmit') }}</primary-button>
       </div>
     </form>
     <template v-if="loginUrl">
-      <a :href="loginUrl">{{ $t('backToLogin') }}</a>
+      <a :href="loginUrl" data-testid="back-url">{{ $t('backToLogin') }}</a>
     </template>
   </div>
 </template>

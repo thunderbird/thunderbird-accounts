@@ -36,15 +36,15 @@ export default {
           @submit.prevent="onSubmit" @keyup.enter="onSubmit" v-if="showForm">
       <p>{{ verifyEmailInstruction }}</p>
       <div class="buttons">
-        <primary-button id="submit" class="submit" @click="onSubmit" :value="submitText">{{
+        <primary-button data-testid="submit-btn" id="submit" class="submit" @click="onSubmit" :value="submitText">{{
             submitText
           }}
         </primary-button>
-        <secondary-button id="cancel" class="submit" @click="onCancel">{{ $t('doCancel') }}</secondary-button>
+        <secondary-button data-testid="cancel-btn" id="cancel" class="submit" @click="onCancel">{{ $t('doCancel') }}</secondary-button>
       </div>
     </form>
     <template v-else>
-      <a :href="formAction">{{ $t('doClickHere') }}</a>
+      <a :href="formAction" data-testid="action-url">{{ $t('doClickHere') }}</a>
       {{ $t('emailVerifyInstruction3') }}
     </template>
   </div>

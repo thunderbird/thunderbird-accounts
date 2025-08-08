@@ -16,8 +16,8 @@ export default {
     <h2>{{ $t('pageExpiredTitle') }}</h2>
     <message-bar/>
     <div class="buttons">
-      <p>{{ $t('pageExpiredMsg1') }} <a :href="restartFlowUrl">{{ $t('doClickHere') }}</a></p>
-      <p>{{ $t('pageExpiredMsg2') }} <a :href="loginUrl">{{ $t('doClickHere') }}</a></p>
+      <p>{{ $t('pageExpiredMsg1') }} <a data-testid="restart-flow-url" :href="restartFlowUrl">{{ $t('doClickHere') }}</a></p>
+      <p>{{ $t('pageExpiredMsg2') }} <a data-testid="login-url" :href="loginUrl">{{ $t('doClickHere') }}</a></p>
     </div>
   </div>
 </template>

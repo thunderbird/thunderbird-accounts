@@ -54,32 +54,32 @@ export default {
       </notice-bar>
       <message-bar v-else/>
       <div class="form-elements">
-        <text-input id="partialUsername" name="partialUsername" required autocomplete="username" :error="usernameError"
+        <text-input data-testid="username-input" id="partialUsername" name="partialUsername" required autocomplete="username" :error="usernameError"
                     :outerSuffix="$t('signUpUsernameSuffix')" :help="$t('signUpUsernameHelp')" v-model="username">
           {{ $t('username') }}
         </text-input>
-        <text-input id="email" name="email" required autocomplete="email" :error="recoveryEmailError"
+        <text-input data-testid="recovery-email-input" id="email" name="email" required autocomplete="email" :error="recoveryEmailError"
                     :help="$t('recoveryEmailHelp')">{{ $t('recoveryEmail') }}
         </text-input>
-        <text-input id="password" name="password" required autocomplete="new-password" type="password"
+        <text-input data-testid="password-input" id="password" name="password" required autocomplete="new-password" type="password"
                     :error="passwordError" :help="$t('signUpPasswordHelp')">{{ $t('password') }}
         </text-input>
-        <text-input id="password-confirm" name="password-confirm" required autocomplete="confirm-password"
+        <text-input data-testid="password-confirm-input" id="password-confirm" name="password-confirm" required autocomplete="confirm-password"
                     type="password" :error="passwordConfirmError" :help="$t('signUpPasswordConfirmHelp')">
           {{ $t('passwordConfirm') }}
         </text-input>
         <!-- These fields are dynamically filled out -->
-        <text-input id="username" name="username" type="hidden" v-model="email"></text-input>
-        <text-input id="locale" name="locale" type="hidden" v-model="locale"></text-input>
-        <text-input id="zoneinfo" name="zoneinfo" type="hidden" v-model="timezone"></text-input>
+        <text-input readonly data-testid="full-username-readonly-input" id="username" name="username" type="hidden" v-model="email"></text-input>
+        <text-input readonly data-testid="locale-readonly-input" id="locale" name="locale" type="hidden" v-model="locale"></text-input>
+        <text-input readonly data-testid="zoneinfo-readonly-input" id="zoneinfo" name="zoneinfo" type="hidden" v-model="timezone"></text-input>
       </div>
       <div class="buttons">
-        <primary-button class="submit" @click="onSubmit">{{ $t('doRegister') }}</primary-button>
+        <primary-button data-testid="submit" class="submit" @click="onSubmit">{{ $t('doRegister') }}</primary-button>
       </div>
     </form>
     <template v-if="loginUrl">
       <i18n-t keypath="goToLogin" tag="p">
-        <a :href="loginUrl">{{ $t('goToLoginAction') }}</a>
+        <a :href="loginUrl" data-testid="go-to-login-url">{{ $t('goToLoginAction') }}</a>
       </i18n-t>
     </template>
   </div>

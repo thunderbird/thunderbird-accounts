@@ -28,7 +28,7 @@ export default {
       <p>{{ $t('logoutConfirmHeader') }}</p>
       <div class="buttons">
         <input type="hidden" name="session_code" :value="sessionCode">
-        <primary-button name="confirmLogout" id="kc-logout" class="submit" @click="onSubmit">{{
+        <primary-button data-testid="submit-btn" name="confirmLogout" id="kc-logout" class="submit" @click="onSubmit">{{
             $t('doLogout')
           }}
         </primary-button>

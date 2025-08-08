@@ -32,12 +32,12 @@ export default {
     <form id="kc-passwd-update-form" ref="update-password-form" method="POST" :action="formAction" @submit.prevent="onSubmit" @keyup.enter="onSubmit">
       <message-bar/>
       <div class="form-elements">
-        <text-input id="password-new" name="password-new" required autocomplete="new-password" type="password" :error="passwordError">{{ $t('password') }}</text-input>
-        <text-input id="password-confirm" name="password-confirm" required autocomplete="confirm-password" type="password" :error="passwordConfirmError">{{ $t('passwordConfirm') }}</text-input>
-        <checkbox-input id="logout-sessions" name="logout-sessions" :label="$t('logoutOtherSessions')"></checkbox-input>
+        <text-input data-testid="password-new-input" id="password-new" name="password-new" required autocomplete="new-password" type="password" :error="passwordError">{{ $t('password') }}</text-input>
+        <text-input data-testid="password-confirm-input" id="password-confirm" name="password-confirm" required autocomplete="confirm-password" type="password" :error="passwordConfirmError">{{ $t('passwordConfirm') }}</text-input>
+        <checkbox-input data-testid="logout-all-sessions-input" id="logout-sessions" name="logout-sessions" :label="$t('logoutOtherSessions')"></checkbox-input>
        </div>
       <div class="buttons">
-        <primary-button class="submit" @click="onSubmit">{{ $t('doSubmit') }}</primary-button>
+        <primary-button data-testid="submit-btn" class="submit" @click="onSubmit">{{ $t('doSubmit') }}</primary-button>
       </div>
     </form>
     <template v-if="loginUrl">

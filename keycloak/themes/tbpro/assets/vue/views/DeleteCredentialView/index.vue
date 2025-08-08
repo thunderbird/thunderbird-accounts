@@ -35,10 +35,10 @@ export default {
       <message-bar/>
       <p>{{ deleteCredentialMessage }}</p>
       <div class="buttons">
-        <danger-button class="submit" @click="onSubmit" name="accept" id="kc-accept" :value="$t('doConfirmDelete')">
+        <danger-button class="submit" @click="onSubmit" name="accept" id="kc-accept" :value="$t('doConfirmDelete')" data-testid="submit-btn">
           {{ $t('doConfirmDelete') }}
         </danger-button>
-        <secondary-button class="submit" @click="onCancel">{{ $t('doCancel') }}</secondary-button>
+        <secondary-button class="submit" @click="onCancel" data-testid="cancel-btn">{{ $t('doCancel') }}</secondary-button>
       </div>
     </form>
   </div>

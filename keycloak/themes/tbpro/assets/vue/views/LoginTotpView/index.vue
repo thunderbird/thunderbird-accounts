@@ -33,16 +33,16 @@ export default {
           @keyup.enter="onSubmit">
       <message-bar/>
       <div class="form-elements">
-        <select-input :options="userOtpCredentials" v-model="OtpCredentialModel">{{
+        <select-input data-testid="device-input" :options="userOtpCredentials" v-model="OtpCredentialModel">{{
             $t('loginTotpDeviceName')
           }}
         </select-input>
-        <text-input id="otp" name="otp" autocomplete="one-time-code" required autofocus :error="totpError">
+        <text-input data-testid="otp-input" id="otp" name="otp" autocomplete="one-time-code" required autofocus :error="totpError">
           {{ $t('loginOtpOneTime') }}
         </text-input>
       </div>
       <div class="buttons">
-        <primary-button class="submit" @click="onSubmit">{{ $t('doLogIn') }}</primary-button>
+        <primary-button class="submit" @click="onSubmit" data-testid="submit-btn">{{ $t('doLogIn') }}</primary-button>
       </div>
     </form>
   </div>

@@ -31,30 +31,30 @@ export default {
 
 <template>
   <div class="panel">
-    <h2>{{ $t('loginAccountTitle') }}</h2>
+    <h2 data-testid="header-text">{{ $t('loginAccountTitle') }}</h2>
     <form id="kc-form-login" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
           @keyup.enter="onSubmit">
       <notice-bar type="error" v-if="firstError">{{ firstError }}</notice-bar>
       <message-bar v-else/>
       <div class="form-elements">
-        <text-input id="username" name="username" required autocomplete="username webauthn" autofocus
+        <text-input data-testid="username-input" id="username" name="username" required autocomplete="username webauthn" autofocus
                     :error="usernameError">{{ $t('email') }}
         </text-input>
-        <text-input id="password" name="password" required autocomplete="current-password" type="password"
+        <text-input data-testid="password-input" id="password" name="password" required autocomplete="current-password" type="password"
                     :error="passwordError">{{ $t('password') }}
         </text-input>
       </div>
       <div class="post-password-options">
-        <checkbox-input name="keep-me-signed-in" :label="$t('rememberMe')" v-model="rememberMe"></checkbox-input>
+        <checkbox-input data-testid="remember-me-input" name="keep-me-signed-in" :label="$t('rememberMe')" v-model="rememberMe"></checkbox-input>
         <a v-if="forgotPasswordUrl" :href="forgotPasswordUrl">{{ $t('doForgotPassword') }}</a>
       </div>
       <div class="buttons">
-        <primary-button class="submit" @click="onSubmit">{{ $t('doLogIn') }}</primary-button>
+        <primary-button data-testid="submit-btn" class="submit" @click="onSubmit">{{ $t('doLogIn') }}</primary-button>
       </div>
     </form>
     <template v-if="registerUrl">
       <i18n-t keypath="goToRegister" tag="p">
-        <a :href="registerUrl">{{ $t('goToRegisterAction') }}</a>
+        <a :href="registerUrl" data-testid="go-to-register-url">{{ $t('goToRegisterAction') }}</a>
       </i18n-t>
 
     </template>

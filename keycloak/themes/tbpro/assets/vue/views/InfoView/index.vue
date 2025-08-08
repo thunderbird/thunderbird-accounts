@@ -25,7 +25,7 @@ export default {
     </h2>
     <message-bar/>
     <template v-if="actionUrl">
-      <a :href="actionUrl">{{ actionText }}</a>
+      <a :href="actionUrl" data-testid="action-url">{{ actionText }}</a>
     </template>
   </div>
 </template>
