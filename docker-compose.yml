@@ -73,7 +73,8 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-    entrypoint: npm run dev
+    # Run both vite devserver for accounts frontend, and the keycloak theme builder
+    entrypoint: bash -c 'npm run dev & npm run dev-theme'
     ports:
       - "5173:5173"
     volumes:
@@ -83,6 +84,7 @@ services:
       - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
       - ./assets:/app/assets
       - ./templates:/app/templates
+      - ./keycloak/themes:/app/keycloak/themes
 
   stalwart:
     image: stalwartlabs/stalwart:v0.13.0
