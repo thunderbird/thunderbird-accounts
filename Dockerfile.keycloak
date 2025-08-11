@@ -10,6 +10,10 @@ COPY keycloak/themes/. /app/keycloak/themes/.
 RUN npm install
 RUN npm run build-theme
 
+# Remove the build files
+RUN rm -rf /app/keycloak/assets/*
+
+
 
 #
 # Keycloak dockerfile for local development
