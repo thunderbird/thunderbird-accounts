@@ -8,7 +8,9 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "dev-theme": "vite build --watch --mode=development --config keycloak/themes/keycloak-vite.config.mjs",
+    "build-theme": "vite build --config keycloak/themes/keycloak-vite.config.mjs"
   },
   "repository": {
     "type": "git",
@@ -22,8 +24,10 @@
   "homepage": "https://github.com/thunderbird/thunderbird-accounts#readme",
   "dependencies": {
     "@paddle/paddle-js": "^1.4.0",
-    "@thunderbirdops/services-ui": "^0.6.10",
-    "vue": "^3.5.13"
+    "@thunderbirdops/services-ui": "^0.6.19",
+    "vue": "^3.5.13",
+    "vue-i18n": "^11.1.11",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.3",

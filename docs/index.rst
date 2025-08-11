@@ -24,6 +24,7 @@ Contents
     internal_client_env.rst
     building.rst
     deploying-thundermail-waiting-list.rst
+    keycloak-theme.rst
 
 Indices and tables
 ==================

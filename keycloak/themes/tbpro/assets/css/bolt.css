@@ -1,0 +1,25 @@
+:root {
+  --bp-xs: 599px;
+  --bp-lg: 1280px;
+
+  --space-4: 0.25rem;/* 4px */
+  --space-8: 0.5rem;/* 8px */
+  --space-12: 0.75rem; /* 12px */
+  --space-24: 1rem; /* 24px */
+  --space-36: 1.5rem; /* 36px */
+  --space-48: 3rem; /* 48px */
+  --space-64: 4rem; /* 64px */
+  --space-96: 6rem; /* 96px */
+  --space-128: 8rem; /* 128px */
+  --space-192: 12rem; /* 192px */
+  --space-256: 16rem; /* 256px */
+  --space-max: 24rem; /* 384px */
+
+  --density-compact: var(--space-4);
+  --density-default: var(--space-8);
+  --density-relaxed: var(--space-12);
+}
+
+body {
+  font-size: var(--txt-default);
+}

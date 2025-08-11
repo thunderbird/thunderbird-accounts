@@ -1,0 +1,30 @@
+@import './fonts.css';
+@import './bolt.css';
+
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: Inter, "sans-serif";
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.route-found {
+  .hide-if-route-is-found {
+    display: none;
+  }
+}
+
+@keyframes wiggle {
+    0% { transform: rotate(0deg); }
+   25% { transform: rotate(-5deg); }
+   50% { transform: rotate(5deg); }
+   75% { transform: rotate(-5deg); }
+  100% { transform: rotate(0deg); }
+}

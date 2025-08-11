@@ -1,0 +1,99 @@
+<script setup>
+import { TextInput, PrimaryButton, CheckboxInput, NoticeBar } from '@thunderbirdops/services-ui';
+import { computed, useTemplateRef } from 'vue';
+import MessageBar from '@/vue/components/MessageBar.vue';
+
+const firstError = window._page.currentView?.firstError;
+const formAction = window._page.currentView?.formAction;
+const rememberMe = window._page.currentView?.rememberMe;
+const forgotPasswordUrl = window._page.currentView?.forgotPasswordUrl;
+const registerUrl = window._page.currentView?.registerUrl;
+const loginForm = useTemplateRef('login-form');
+
+const onSubmit = () => {
+  loginForm?.value?.submit();
+};
+
+const usernameError = computed(() => {
+  return firstError ? '' : null;
+});
+const passwordError = computed(() => {
+  return firstError ? '' : null;
+});
+
+</script>
+
+<script>
+export default {
+  name: 'LoginView'
+};
+</script>
+
+<template>
+  <div class="panel">
+    <h2 data-testid="header-text">{{ $t('loginAccountTitle') }}</h2>
+    <form id="kc-form-login" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
+          @keyup.enter="onSubmit">
+      <notice-bar type="error" v-if="firstError">{{ firstError }}</notice-bar>
+      <message-bar v-else/>
+      <div class="form-elements">
+        <text-input data-testid="username-input" id="username" name="username" required autocomplete="username webauthn" autofocus
+                    :error="usernameError">{{ $t('email') }}
+        </text-input>
+        <text-input data-testid="password-input" id="password" name="password" required autocomplete="current-password" type="password"
+                    :error="passwordError">{{ $t('password') }}
+        </text-input>
+      </div>
+      <div class="post-password-options">
+        <checkbox-input data-testid="remember-me-input" name="keep-me-signed-in" :label="$t('rememberMe')" v-model="rememberMe"></checkbox-input>
+        <a v-if="forgotPasswordUrl" :href="forgotPasswordUrl">{{ $t('doForgotPassword') }}</a>
+      </div>
+      <div class="buttons">
+        <primary-button data-testid="submit-btn" class="submit" @click="onSubmit">{{ $t('doLogIn') }}</primary-button>
+      </div>
+    </form>
+    <template v-if="registerUrl">
+      <i18n-t keypath="goToRegister" tag="p">
+        <a :href="registerUrl" data-testid="go-to-register-url">{{ $t('goToRegisterAction') }}</a>
+      </i18n-t>
+
+    </template>
+  </div>
+</template>
+
+<style scoped>
+.notice-bar {
+  margin-bottom: var(--space-12);
+}
+
+.form-elements {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.post-password-options {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+
+  .wrapper {
+    padding-top: 21px;
+  }
+
+  a {
+    padding-top: 4px;
+    white-space: nowrap;
+  }
+}
+
+.buttons {
+  margin-top: var(--space-24);
+  width: 100%;
+
+  .submit {
+    margin-right: 0;
+    margin-left: auto;
+  }
+}
+</style>
