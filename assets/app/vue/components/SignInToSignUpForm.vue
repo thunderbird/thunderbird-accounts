@@ -1,8 +1,7 @@
 <script setup lang="ts">
-
-import {NoticeBar, PrimaryButton} from "@thunderbirdops/services-ui";
-import {ref} from "vue";
-import CsrfToken from "@/components/CsrfToken.vue";
+import { NoticeBar, PrimaryButton } from '@thunderbirdops/services-ui';
+import { ref } from 'vue';
+import CsrfToken from '@/components/CsrfToken.vue';
 
 const signInToContinue = ref();
 const errorText = ref(null);
@@ -10,7 +9,6 @@ const errorText = ref(null);
 const onSubmit = () => {
   signInToContinue.value.submit();
 };
-
 </script>
 
 <template>

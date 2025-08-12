@@ -34,7 +34,7 @@ const vueApps = [
   {
     id: 'contactSupportForm',
     sfc: ContactSupportForm,
-  }
+  },
 ];
 
 for (const app of vueApps) {

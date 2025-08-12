@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {ref, onMounted} from 'vue';
-import {initializePaddle} from '@paddle/paddle-js';
+import { ref, onMounted } from 'vue';
+import { initializePaddle } from '@paddle/paddle-js';
 
 const isLoading = ref(true);
 const priceItems = ref({});
@@ -64,7 +64,7 @@ function openCheckout(priceId) {
 async function initPaddle(items, _fn) {
   let result = null;
   try {
-    result = await Promise.resolve(Paddle.PricePreview({items}));
+    result = await Promise.resolve(Paddle.PricePreview({ items }));
   } catch (error) {
     didReceivePaddleError.value = true;
     errorTitle.value = 'Server Error';
@@ -73,11 +73,11 @@ async function initPaddle(items, _fn) {
     return;
   }
 
-  const {lineItems} = result.data.details;
+  const { lineItems } = result.data.details;
   lineItems.forEach((item) => {
     const productName = item.product.name;
-    const {total} = item.formattedTotals;
-    const {name, description, id} = item.price;
+    const { total } = item.formattedTotals;
+    const { name, description, id } = item.price;
     if (!Object.prototype.hasOwnProperty.call(priceItems.value, productName)) {
       priceItems.value[productName] = [];
     }
@@ -95,7 +95,11 @@ async function initPaddle(items, _fn) {
 <template>
   <div class="pricing-page-container">
     <h1>Choose your plan</h1>
-    <div v-if="isPaddleNotConfiguredCorrectly || didReceivePaddleError" class="paddle-error" data-testid="pricing-error">
+    <div
+      v-if="isPaddleNotConfiguredCorrectly || didReceivePaddleError"
+      class="paddle-error"
+      data-testid="pricing-error"
+    >
       <h3>{{ errorTitle }}</h3>
       <p>Cannot complete checkout at this time.</p>
     </div>
