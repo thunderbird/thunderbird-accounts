@@ -119,21 +119,21 @@ cloudflare_backend_record = cloudflare.Record(
     opts=pulumi.ResourceOptions(depends_on=[*fargate_clusters.values()]),
 )
 
-# stack_access_policies = tb_pulumi.iam.StackAccessPolicies(
-#     name=f'{project.name_prefix}-sap',
-#     project=project,
-#     opts=pulumi.ResourceOptions(
-#         depends_on=[
-#             vpc,
-#             pulumi_sm,
-#             *[sg for sg in lb_sgs.values() if sg is not None],
-#             *[sg for sg in container_sgs.values() if sg is not None],
-#             *instances.values(),
-#             redis,
-#             *fargate_clusters.values(),
-#         ]
-#     ),
-# )
+stack_access_policies = tb_pulumi.iam.StackAccessPolicies(
+    name=f'{project.name_prefix}-sap',
+    project=project,
+    opts=pulumi.ResourceOptions(
+        depends_on=[
+            vpc,
+            pulumi_sm,
+            *[sg for sg in lb_sgs.values() if sg is not None],
+            *[sg for sg in container_sgs.values() if sg is not None],
+            *instances.values(),
+            redis,
+            *fargate_clusters.values(),
+        ]
+    ),
+)
 
 # This is only managed by a single stack, so a configuration may not exist for it
 if 'tb:ci:AwsAutomationUser' in resources and 'ci' in resources['tb:ci:AwsAutomationUser']:
