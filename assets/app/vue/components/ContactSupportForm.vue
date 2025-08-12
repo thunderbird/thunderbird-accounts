@@ -1,14 +1,14 @@
-<script setup>
-import { ref, onMounted } from "vue";
-import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton } from "@thunderbirdops/services-ui";
-import CsrfToken from "@/components/CsrfToken.vue";
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton } from '@thunderbirdops/services-ui';
+import CsrfToken from '@/components/CsrfToken.vue';
 
 const TICKET_CUSTOM_FIELD_NAMES = {
   PRODUCT: 'Product',
-  TYPE_OF_REQUEST: 'Type of request'
+  TYPE_OF_REQUEST: 'Type of request',
 };
 
-const csrfToken = ref(window._page.csrfToken);
+const csrfTokenVal = ref(window._page.csrfToken);
 const errorText = ref(window._page.formError);
 const successText = ref('');
 const isSubmitting = ref(false);
@@ -18,10 +18,10 @@ const form = ref({
   product: '',
   type: '',
   description: '',
-  attachments: []
-})
-const formRef = ref(null)
-const fileInput = ref(null)
+  attachments: [],
+});
+const formRef = ref(null);
+const fileInput = ref(null);
 
 // Dynamic options from API
 const productOptions = ref([]);
@@ -32,40 +32,40 @@ const productFieldId = ref(null);
 const typeFieldId = ref(null);
 
 const triggerFileSelect = () => {
-  fileInput.value?.click()
-}
+  fileInput.value?.click();
+};
 
 const handleFileSelect = async (event) => {
   const files = event.target.files;
-  addFilesToForm(files)
-  event.target.value = ''
-}
+  addFilesToForm(files);
+  event.target.value = '';
+};
 
 const handleDrop = async (event) => {
-  const files = event.dataTransfer.files
-  addFilesToForm(files)
-}
+  const files = event.dataTransfer.files;
+  addFilesToForm(files);
+};
 
 const addFilesToForm = (files) => {
-  for (let file of files) {
+  for (const file of files) {
     // Check if file already exists to avoid duplicates
-    const existingFile = form.value.attachments.find(att => 
-      att.file.name === file.name && att.file.size === file.size
-    )
-    
+    const existingFile = form.value.attachments.find(
+      (att) => att.file.name === file.name && att.file.size === file.size
+    );
+
     if (!existingFile) {
       form.value.attachments.push({
         file: file,
         filename: file.name,
-        size: file.size
-      })
+        size: file.size,
+      });
     }
   }
-}
+};
 
 const removeAttachment = (index) => {
-  form.value.attachments.splice(index, 1)
-}
+  form.value.attachments.splice(index, 1);
+};
 
 const fetchTicketFields = async () => {
   try {
@@ -83,9 +83,9 @@ const fetchTicketFields = async () => {
       // Set Product field options and ID
       if (fields[TICKET_CUSTOM_FIELD_NAMES.PRODUCT]) {
         const productField = fields[TICKET_CUSTOM_FIELD_NAMES.PRODUCT];
-        productOptions.value = productField.custom_field_options.map(option => ({
+        productOptions.value = productField.custom_field_options.map((option) => ({
           label: option.name,
-          value: option.value
+          value: option.value,
         }));
         productFieldId.value = productField.id;
       }
@@ -93,18 +93,18 @@ const fetchTicketFields = async () => {
       // Set Type of request field options and ID
       if (fields[TICKET_CUSTOM_FIELD_NAMES.TYPE_OF_REQUEST]) {
         const typeField = fields[TICKET_CUSTOM_FIELD_NAMES.TYPE_OF_REQUEST];
-        typeOptions.value = typeField.custom_field_options.map(option => ({
+        typeOptions.value = typeField.custom_field_options.map((option) => ({
           label: option.name,
-          value: option.value
+          value: option.value,
         }));
         typeFieldId.value = typeField.id;
       }
     }
   } catch (error) {
     console.error('Error fetching ticket fields:', error);
-    errorText.value = 'Failed to fetch ticket fields. Please try again.'
+    errorText.value = 'Failed to fetch ticket fields. Please try again.';
   }
-}
+};
 
 const resetForm = () => {
   form.value = {
@@ -113,49 +113,49 @@ const resetForm = () => {
     product: '',
     type: '',
     description: '',
-    attachments: []
-  }
-  errorText.value = ''
-  successText.value = ''
+    attachments: [],
+  };
+  errorText.value = '';
+  successText.value = '';
 
-  formRef.value.reset()
-}
+  formRef.value.reset();
+};
 
 const handleSubmit = async () => {
   if (isSubmitting.value) return;
-  
-  errorText.value = ''
-  successText.value = ''
+
+  errorText.value = '';
+  successText.value = '';
 
   if (!formRef.value.checkValidity()) {
     formRef.value.reportValidity();
     return;
   }
 
-  isSubmitting.value = true
+  isSubmitting.value = true;
 
   try {
     // Create FormData instead of JSON
-    const formData = new FormData()
-    formData.append('email', form.value.email)
-    formData.append('subject', form.value.subject)
-    formData.append('product', form.value.product)
-    formData.append('product_field_id', productFieldId.value)
-    formData.append('type', form.value.type)
-    formData.append('type_field_id', typeFieldId.value)
-    formData.append('description', form.value.description)
+    const formData = new FormData();
+    formData.append('email', form.value.email);
+    formData.append('subject', form.value.subject);
+    formData.append('product', form.value.product);
+    formData.append('product_field_id', productFieldId.value);
+    formData.append('type', form.value.type);
+    formData.append('type_field_id', typeFieldId.value);
+    formData.append('description', form.value.description);
 
     form.value.attachments.forEach((attachment) => {
-      formData.append('attachments', attachment.file)
-    })
+      formData.append('attachments', attachment.file);
+    });
 
     const response = await fetch('/contact/submit', {
-      mode: "same-origin",
-      credentials: "include",
+      mode: 'same-origin',
+      credentials: 'include',
       method: 'POST',
       body: formData,
       headers: {
-        'X-CSRFToken': csrfToken.value
+        'X-CSRFToken': csrfTokenVal.value,
       },
     });
 
@@ -166,20 +166,19 @@ const handleSubmit = async () => {
       return;
     }
 
-    resetForm()
-    successText.value = 'Your support request has been submitted successfully'
+    resetForm();
+    successText.value = 'Your support request has been submitted successfully';
   } catch (error) {
-    console.error('Submit error:', error)
-    errorText.value = 'Failed to submit contact form. Please try again.'
+    console.error('Submit error:', error);
+    errorText.value = 'Failed to submit contact form. Please try again.';
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
-}
+};
 
 onMounted(() => {
   fetchTicketFields();
 });
-
 </script>
 
 <template>
@@ -188,13 +187,7 @@ onMounted(() => {
 
   <form @submit.prevent="handleSubmit" method="post" action="/contact/submit" ref="formRef">
     <!-- Email -->
-    <text-input
-      name="email"
-      type="email"
-      v-model="form.email"
-      required="required"
-      data-testid="contact-email-input"
-    >
+    <text-input name="email" type="email" v-model="form.email" required="required" data-testid="contact-email-input">
       Your email address
     </text-input>
 
@@ -251,13 +244,7 @@ onMounted(() => {
     >
       <p v-if="form.attachments.length === 0">Drag & drop files here, or click to upload</p>
       <p v-else>{{ form.attachments.length }} file(s) selected. Drag & drop more files here, or click to upload</p>
-      <input
-        type="file"
-        ref="fileInput"
-        class="hidden"
-        multiple
-        @change="handleFileSelect"
-      >
+      <input type="file" ref="fileInput" class="hidden" multiple @change="handleFileSelect" />
     </div>
 
     <ul v-if="form.attachments.length" class="attachment-list">
@@ -268,11 +255,7 @@ onMounted(() => {
     </ul>
 
     <div class="form-group">
-      <primary-button 
-        @click.capture="handleSubmit" 
-        data-testid="contact-submit-btn"
-        :disabled="isSubmitting"
-      >
+      <primary-button @click.capture="handleSubmit" data-testid="contact-submit-btn" :disabled="isSubmitting">
         {{ isSubmitting ? 'Submitting...' : 'Submit' }}
       </primary-button>
     </div>

@@ -34,11 +34,11 @@ const vueApps = [
   {
     id: 'contactSupportForm',
     sfc: ContactSupportForm,
-  }
+  },
 ];
 
 for (const app of vueApps) {
-  if (document.getElementById(app.id)) {
+  if (window.document.getElementById(app.id)) {
     const form = createApp(app.sfc);
     form.mount(`#${app.id}`);
   }

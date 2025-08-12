@@ -1,6 +1,6 @@
-<script setup>
-import {ref, onMounted} from 'vue';
-import {initializePaddle} from '@paddle/paddle-js';
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { initializePaddle } from '@paddle/paddle-js';
 
 const isLoading = ref(true);
 const priceItems = ref({});
@@ -61,10 +61,10 @@ function openCheckout(priceId) {
   });
 }
 
-async function initPaddle(items, fn) {
+async function initPaddle(items, _fn) {
   let result = null;
   try {
-    result = await Promise.resolve(Paddle.PricePreview({items}));
+    result = await Promise.resolve(Paddle.PricePreview({ items }));
   } catch (error) {
     didReceivePaddleError.value = true;
     errorTitle.value = 'Server Error';
@@ -73,12 +73,12 @@ async function initPaddle(items, fn) {
     return;
   }
 
-  const {lineItems} = result.data.details;
+  const { lineItems } = result.data.details;
   lineItems.forEach((item) => {
     const productName = item.product.name;
-    const {total} = item.formattedTotals;
-    const {name, description, id} = item.price;
-    if (!priceItems.value.hasOwnProperty(productName)) {
+    const { total } = item.formattedTotals;
+    const { name, description, id } = item.price;
+    if (!Object.prototype.hasOwnProperty.call(priceItems.value, productName)) {
       priceItems.value[productName] = [];
     }
     priceItems.value[productName].push({
@@ -95,7 +95,11 @@ async function initPaddle(items, fn) {
 <template>
   <div class="pricing-page-container">
     <h1>Choose your plan</h1>
-    <div v-if="isPaddleNotConfiguredCorrectly || didReceivePaddleError" class="paddle-error" data-testid="pricing-error">
+    <div
+      v-if="isPaddleNotConfiguredCorrectly || didReceivePaddleError"
+      class="paddle-error"
+      data-testid="pricing-error"
+    >
       <h3>{{ errorTitle }}</h3>
       <p>Cannot complete checkout at this time.</p>
     </div>
@@ -103,9 +107,9 @@ async function initPaddle(items, fn) {
       <div class="loader-inside"></div>
     </div>
     <div v-else-if="Object.values(priceItems).length > 0" class="pricing-grid" data-testid="pricing-grid">
-      <div v-for="(prices, productName) in priceItems" data-testid="pricing-grid-plan-item">
+      <div v-for="(prices, productName) in priceItems" data-testid="pricing-grid-plan-item" v-bind:key="productName">
         <h2>{{ productName }}</h2>
-        <div v-for="item in prices" data-testid="pricing-grid-price-item">
+        <div v-for="item in prices" data-testid="pricing-grid-price-item" v-bind:key="item.name">
           <h3>{{ item.name }}</h3>
           <p>{{ item.total }}</p>
           <button @click="openCheckout(item.id)" data-testid="checkout-button">Select {{ item.total }}</button>
