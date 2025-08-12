@@ -48,6 +48,7 @@ jobs:
               - 'keycloak/themes/**'
             iac-changed:
               - 'pulumi/**'
+              - '.github/**'
 
   # When accounts changes are merged in, build and push a new Docker image
   accounts-deploy:
