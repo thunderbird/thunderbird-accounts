@@ -1,6 +1,6 @@
-<script setup>
+<script setup lang="ts">
 
-import {NoticeBar, PrimaryButton, SecondaryButton, TextInput} from "@thunderbirdops/services-ui";
+import {NoticeBar, PrimaryButton, SecondaryButton} from "@thunderbirdops/services-ui";
 import {ref} from "vue";
 
 const hasAccount = ref(window._page?.hasAccount);

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 
 import {NoticeBar, PrimaryButton, SecondaryButton, TextInput} from "@thunderbirdops/services-ui";
 import {ref} from "vue";
@@ -7,7 +7,7 @@ import CsrfToken from "@/components/CsrfToken.vue";
 const newAppPasswordFormRef = ref();
 const deleteAppPasswordFormRef = ref();
 
-const csrfToken = ref(window._page.csrfToken);
+const csrfTokenVal = ref(window._page.csrfToken);
 const appPasswords = ref(window._page.appPasswords);
 const errorText = ref(window._page.formError);
 
@@ -42,7 +42,7 @@ const onDeleteAppPassword = async (evt) => {
       password: passwordLabel
     }),
     headers: {
-      'X-CSRFToken': csrfToken.value
+      'X-CSRFToken': csrfTokenVal.value
     },
   });
 

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton } from "@thunderbirdops/services-ui";
 import CsrfToken from "@/components/CsrfToken.vue";
@@ -8,7 +8,7 @@ const TICKET_CUSTOM_FIELD_NAMES = {
   TYPE_OF_REQUEST: 'Type of request'
 };
 
-const csrfToken = ref(window._page.csrfToken);
+const csrfTokenVal = ref(window._page.csrfToken);
 const errorText = ref(window._page.formError);
 const successText = ref('');
 const isSubmitting = ref(false);
@@ -47,7 +47,7 @@ const handleDrop = async (event) => {
 }
 
 const addFilesToForm = (files) => {
-  for (let file of files) {
+  for (const file of files) {
     // Check if file already exists to avoid duplicates
     const existingFile = form.value.attachments.find(att => 
       att.file.name === file.name && att.file.size === file.size
@@ -155,7 +155,7 @@ const handleSubmit = async () => {
       method: 'POST',
       body: formData,
       headers: {
-        'X-CSRFToken': csrfToken.value
+        'X-CSRFToken': csrfTokenVal.value
       },
     });
 

@@ -27,7 +27,9 @@ COPY manage.py \
      pyproject.toml \
      README.md \
      uv.lock \
-     vite.config.mjs \
+     vite.config.mts \
+     tsconfig.json \
+     env.d.ts \
      .
 COPY assets ./assets/
 COPY scripts ./scripts/

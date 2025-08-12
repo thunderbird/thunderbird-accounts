@@ -47,7 +47,7 @@ export default defineConfig(({mode}) => {
       emptyOutDir: false,
       rollupOptions: {
         input: {
-          'app': 'assets/app/app.js'
+          'app': 'assets/app/app.ts'
         },
         output: {
           entryFileNames: (assetInfo) => {

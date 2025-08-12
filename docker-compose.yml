@@ -80,7 +80,8 @@ services:
     volumes:
       - ./.env:/app/.env
       - ./.env.test:/app/.env.test
-      - ./vite.config.mjs:/app/vite.config.mjs
+      - ./vite.config.mts:/app/vite.config.mts
+      - ./tsconfig.json:/app/tsconfig.json
       - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
       - ./assets:/app/assets
       - ./templates:/app/templates

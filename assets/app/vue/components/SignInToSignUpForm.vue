@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 
 import {NoticeBar, PrimaryButton} from "@thunderbirdops/services-ui";
 import {ref} from "vue";

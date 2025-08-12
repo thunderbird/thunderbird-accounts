@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import {ref, onMounted} from 'vue';
 import {initializePaddle} from '@paddle/paddle-js';
 
@@ -61,7 +61,7 @@ function openCheckout(priceId) {
   });
 }
 
-async function initPaddle(items, fn) {
+async function initPaddle(items, _fn) {
   let result = null;
   try {
     result = await Promise.resolve(Paddle.PricePreview({items}));
@@ -78,7 +78,7 @@ async function initPaddle(items, fn) {
     const productName = item.product.name;
     const {total} = item.formattedTotals;
     const {name, description, id} = item.price;
-    if (!priceItems.value.hasOwnProperty(productName)) {
+    if (!Object.prototype.hasOwnProperty.call(priceItems.value, productName)) {
       priceItems.value[productName] = [];
     }
     priceItems.value[productName].push({
@@ -103,9 +103,9 @@ async function initPaddle(items, fn) {
       <div class="loader-inside"></div>
     </div>
     <div v-else-if="Object.values(priceItems).length > 0" class="pricing-grid" data-testid="pricing-grid">
-      <div v-for="(prices, productName) in priceItems" data-testid="pricing-grid-plan-item">
+      <div v-for="(prices, productName) in priceItems" data-testid="pricing-grid-plan-item" v-bind:key="productName">
         <h2>{{ productName }}</h2>
-        <div v-for="item in prices" data-testid="pricing-grid-price-item">
+        <div v-for="item in prices" data-testid="pricing-grid-price-item" v-bind:key="item.name">
           <h3>{{ item.name }}</h3>
           <p>{{ item.total }}</p>
           <button @click="openCheckout(item.id)" data-testid="checkout-button">Select {{ item.total }}</button>
