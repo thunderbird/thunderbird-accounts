@@ -117,7 +117,7 @@
           summary: null,
         },
         //</#if>
-        currentLanguage: '${locale.current!en}',
+        currentLanguage: '${(locale.current)!en}',
         languages: [
           //<#assign i = 1>
           //<#list locale.supported as l>
