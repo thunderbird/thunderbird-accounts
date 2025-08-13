@@ -1,3 +1,4 @@
+import freezegun
 from django.conf import settings
 from django.test import TestCase, Client as RequestClient
 from django.urls import reverse
@@ -10,7 +11,10 @@ class AccountsOIDCBackendTestCase(TestCase):
     def setUp(self):
         self.claim_oidc_id = 'abc123'
         self.claim_email = 'user@example.org'
-        self.user = User.objects.create(oidc_id=self.claim_oidc_id, email=self.claim_email)
+        with freezegun.freeze_time('Apr 4th, 2000'):
+            self.user = User.objects.create(oidc_id=self.claim_oidc_id, username='test@example.org', email=self.claim_email)
+            self.user.save()
+            self.user.refresh_from_db()
         self.backend = AccountsOIDCBackend()
 
     def test_filter_users_by_claims_no_fallback(self):
@@ -18,12 +22,12 @@ class AccountsOIDCBackendTestCase(TestCase):
         settings.OIDC_FALLBACK_MATCH_BY_EMAIL = False
 
         query = self.backend.filter_users_by_claims({'sub': self.claim_oidc_id, 'email': self.claim_email})
-        assert query.count() == 1
+        assert len(query) == 1
 
         query = self.backend.filter_users_by_claims(
             {'sub': f'{self.claim_oidc_id}_not_the_actual_id_anymore', 'email': self.claim_email}
         )
-        assert query.count() == 0
+        assert len(query) == 0
 
         settings.OIDC_FALLBACK_MATCH_BY_EMAIL = _original_setting
 
@@ -32,12 +36,39 @@ class AccountsOIDCBackendTestCase(TestCase):
         settings.OIDC_FALLBACK_MATCH_BY_EMAIL = True
 
         query = self.backend.filter_users_by_claims({'sub': self.claim_oidc_id, 'email': self.claim_email})
-        assert query.count() == 1
+        assert len(query) == 1
 
         query = self.backend.filter_users_by_claims(
             {'sub': f'{self.claim_oidc_id}_not_the_actual_id_anymore', 'email': self.claim_email}
         )
-        assert query.count() == 1
+        assert len(query) == 1
+
+        settings.OIDC_FALLBACK_MATCH_BY_EMAIL = _original_setting
+
+    def test_filter_users_by_claims_with_fallback_with_duplicates(self):
+        _original_setting = settings.OIDC_FALLBACK_MATCH_BY_EMAIL
+        settings.OIDC_FALLBACK_MATCH_BY_EMAIL = True
+
+        # Ensure the user doesn't have an oidc id
+        self.user.oidc_id = None
+        self.user.save()
+
+        user_duplicates = [
+            User.objects.create(oidc_id=None, email=self.claim_email, username='test'),
+            User.objects.create(oidc_id=None, email=self.claim_email, username='test2'),
+            User.objects.create(oidc_id=None, email=self.claim_email, username='test3'),
+        ]
+
+        query = self.backend.filter_users_by_claims({'sub': self.claim_oidc_id, 'email': self.claim_email})
+
+        assert len(query) == 1
+        self.assertEqual(self.user.pk, query[0].pk)
+        self.assertEqual(self.claim_email, query[0].email)
+
+        # Ensure the older models were deleted
+        for user in user_duplicates:
+            with self.assertRaises(User.DoesNotExist):
+                user.refresh_from_db()
 
         settings.OIDC_FALLBACK_MATCH_BY_EMAIL = _original_setting
 
