@@ -137,4 +137,5 @@ pythonpath = "test"
 [dependency-groups]
 dev = [
     "faker>=33.1.0",
+    "freezegun>=1.5.5",
 ]
