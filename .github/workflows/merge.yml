@@ -239,7 +239,7 @@ jobs:
       - name: Build, tag, and push accounts image to Amazon ECR
         id: build-keycloak
         env:
-          ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:keycloak:${{ github.sha }}"
+          ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:keycloak-${{ github.sha }}"
         run: |
           # Build a docker container and push it to ECR so that it can be deployed to ECS.
           docker build -f Dockerfile.keycloak -t $ECR_TAG --platform="linux/amd64" .          
