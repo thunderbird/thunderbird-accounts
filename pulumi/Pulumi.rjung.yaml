@@ -1,0 +1,64 @@
+config:
+  aws:region: eu-central-1
+  accounts:secret-key:
+    secure: AAABAK0LcYMAfxlhxkfiZ8Q8RWOnUUNdF/aCt8alOOz9oWuI1nrivI/gmBosSw==
+  accounts:login-code-secret:
+    secure: AAABAD2cYaHrFxalNCBiWZiXcwCnVO2cEoKLv7Dkb1V2btmdpQSxS/Mnj1nhp+s=
+  accounts:fxa-client-id:
+    secure: AAABAEvH6gKuj7hltcC8cBPMg3bZhzTZb7+3zQLz1ShGZNA=
+  accounts:fxa-secret:
+    secure: AAABADp6mcfzqxkAdbcVBx9d6lfrmXIpFPOimh2WYmsvIrU=
+  accounts:fxa-allow-list:
+    secure: AAABADUbdjsIjW1AyFIBJ1VZDfuG1PyvPSW6wHXSm0rb2wiSz3YP/aFZbLnbbguPdMruB69OAn5J3wo=
+  accounts:database-name:
+    secure: AAABAGZQ85clgkO0d23cnJLKdPC9KOehngeHh4dmDCBl05uD1OvERw==
+  accounts:database-user:
+    secure: AAABAEqqQ0/jGy2+NoAZ5Va2Lkj1lx6T1OwtC7ODPEmRDHMPi26z05ONXadj8A==
+  accounts:database-password:
+    secure: AAABAJvmM0WkDPYwv23POkJhOH5OGqJj6zXJPWxM53bSdn1s
+  accounts:database-host:
+    secure: AAABAO+NI3YixpDsAEjI4T6oc9rcvYyJ/JRiZGtklYlU6/CClWKT8cI=
+  accounts:cloudflare_zone_id:
+    secure: AAABAEzlFtbADJfiOmMJ0TA3ncEUHdQagOI57awBUpQ5yvuIAbF1VFIKKhitlBEdcH8mggSb4hxY5qoWOQFA5Q==
+  cloudflare:apiToken:
+    secure: AAABAI2lUEExVpOwgciYn8HLG0CuMlRsTrivMsg0Pgi1xttcds3NX/MHgIEx3biAo/B7J62y5y5q1tQT1uJMweV4sqytdOOk
+  accounts:fxa-encrypt-secret:
+    secure: AAABAIyPPnnNDEE1JzvPLIycpvqr8nRcrjeTJVgSxHCRUIQ=
+  accounts:sentry-dsn:
+    secure: AAABACZ/g0kJhEYkMHWBqsCUtKtSn4ThCZL9+gPRrqTGShHcvDIBjPx/hozHeSdNnw==
+  accounts:paddle-token:
+    secure: AAABABJ6pHeaFZpFguostb+qq7zUcK1810B8mVjYSoseMRU=
+  accounts:paddle-price-id-lo:
+    secure: AAABAIfUdjacmoVQoaYOpd04gNj0TiOBkC9Sh38Rbt7Pllk=
+  accounts:paddle-price-id-md:
+    secure: AAABAK5f1L16vYZiOJMAvKBY0a4/2QzqnJM55YbKkxocjGc=
+  accounts:paddle-price-id-hi:
+    secure: AAABAAHyJpFhe5EahxcTZP8IJ5jBe/2s2WVkC6vVa1ItF6Y=
+  accounts:redis-url:
+    secure: AAABAGw/OD5N8SqjSlWM8rABMLu9+CgBENR4A+nc8BqLJ8k=
+  accounts:paddle-webhook-key:
+    secure: AAABANlpsxeGG6xz6ewmuo3Na2EZXjUjK7B7ueo1Vy8yaaw=
+  accounts:paddle-api-key:
+    secure: AAABAM3syKrV/G52/Th4+eFKmXAj9Nwu4B0wY6+eSxs1GJI=
+  accounts:keycloak-database-host:
+    secure: AAABAF0uVyEh8ZLrfB7pQbkQxVcnvmFq56qyT7mygDqpHok=
+  accounts:keycloak-database-name:
+    secure: AAABAFL2eMDPwwQAVo188pY0CiQ/h77Pb/08U1YEIWrPfII=
+  accounts:keycloak-database-user:
+    secure: AAABAMJvvix4j0XjWO/SVS6XFMq3UBBid9nFK8uhqZC75XY=
+  accounts:keycloak-database-password:
+    secure: AAABAHb4y6zw4BpO0UtakKb8k3efiP1OU2MYqclyz31Hw4U=
+  accounts:keycloak-admin-password:
+    secure: AAABAL3HO+QLghipRp8XVPw8XVIMQSMcxNi+KNTR5JfyUBA=
+  accounts:zendesk-subdomain:
+    secure: AAABAMRJU8XPGjAgmmVHgZxOEXGgfsY2dBzpACOqiXdvszA=
+  accounts:zendesk-user-email:
+    secure: AAABAEIamcmHpdyIhD0Zp6DxlybsiFQeb1lUnta/sHeSnyM=
+  accounts:zendesk-api-token:
+    secure: AAABAEbzi86wqa1tdqO6oDu17bjJCX8uSoww94pkdsZUE60=
+  accounts:oidc-client-secret:
+    secure: AAABAP+ATube00lW9jpIiqcYBzk6o+/ur1Wb/SMVsSXon+A=
+  accounts:oidc-client-id:
+    secure: AAABAAYhBorgPrtvfqnSpzflz9eKqzAeNqkxYeTac6/OesQ=
+  accounts:oidc-sign-algo:
+    secure: AAABAFMN+amg/ZgwR+4HSwMvYhBlKxbP/JyqlGiUjZ6oGMo=

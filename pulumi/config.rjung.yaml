@@ -1,0 +1,520 @@
+---
+resources:
+  domains:
+    accounts: accounts-rjung.tb.pro
+
+  tb:network:MultiCidrVpc:
+    vpc:
+      cidr_block: 10.11.0.0/16
+      subnets:
+        eu-central-1a:
+          - 10.11.0.0/17
+        eu-central-1b:
+          - 10.11.128.0/17
+      enable_internet_gateway: True
+      egress_via_internet_gateway: True
+      enable_dns_hostnames: True
+      endpoint_interfaces:
+        - ecr.api
+        - ecr.dkr
+        - logs
+        - secretsmanager
+
+  # The __main.py__ here is very specific in the following way:
+  # For each ECS cluster you eventually define, you **must** have one entry by the same exact name in the
+  # `load_balancers` and `containers` sections below. If the cluster does not expose a service (f/ex, uses
+  # `build_load_balancer: False`), you may set the `load_balancers` entry to `null`.
+  tb:network:SecurityGroupWithRules:
+    load_balancers:
+      accounts:
+        rules:
+          ingress:
+            - description: TLS traffic to the load balancer from the world
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 443
+              to_port: 443
+          egress:
+            - description: Allow outbound traffic to anywhere
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+              cidr_blocks:
+                - 0.0.0.0/0
+      accounts-celery: null
+      keycloak:
+        rules:
+          ingress:
+            - description: TLS traffic to the load balancer from the world
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 443
+              to_port: 443
+          egress:
+            - description: Allow outbound traffic to anywhere
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+              cidr_blocks:
+                - 0.0.0.0/0
+      keycloak-mgmt: null
+    containers:
+      accounts:
+        rules:
+          ingress:
+            - description: Allow traffic from the load balancer to the container
+              protocol: tcp
+              from_port: 8087
+              to_port: 8087
+          egress:
+            - description: Allow traffic from the container out to the Internet
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+      accounts-celery:
+        rules:
+          ingress: []
+          egress:
+            - description: Allow traffic from the container out to the Internet
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+      keycloak:
+        rules:
+          ingress:
+            - description: Allow traffic from the load balancer to the service port
+              protocol: tcp
+              from_port: 8080
+              to_port: 8080
+            # KeyCloak exposes health checks on the management port. Don't route any real traffic here.
+            - description: Allow traffic from the load balancer to the management port
+              protocol: tcp
+              from_port: 9000
+              to_port: 9000
+          egress:
+            - description: Allow traffic from the container out to the Internet
+              cidr_blocks:
+                - 0.0.0.0/0
+              protocol: tcp
+              from_port: 0
+              to_port: 65535
+
+  tb:secrets:PulumiSecretsManager:
+    pulumi:
+      secret_names:
+        - database-host
+        - database-name
+        - database-password
+        - database-user
+        - fxa-allow-list
+        - fxa-client-id
+        - fxa-secret
+        - login-code-secret
+        - secret-key
+        - fxa-encrypt-secret
+        - sentry-dsn
+        - paddle-token
+        - paddle-price-id-lo
+        - paddle-price-id-md
+        - paddle-price-id-hi
+        - paddle-webhook-key
+        - paddle-api-key
+        - redis-url
+        - keycloak-database-host
+        - keycloak-database-name
+        - keycloak-database-password
+        - keycloak-database-user
+        - keycloak-admin-password
+        - zendesk-subdomain
+        - zendesk-user-email
+        - zendesk-api-token
+        - oidc-client-secret
+        - oidc-client-id
+        - oidc-sign-algo
+
+  tb:ec2:SshableInstance: {}
+  # Fill out this template to build an SSH bastion
+  # tb:ec2:SshableInstance:
+  #   bastion:
+  #     ssh_keypair_name: your-ec2-keypair
+  #     source_cidrs:
+  #       - your.ip.addr.ess/32
+
+  tb:elasticache:ElastiCacheReplicaGroup:
+    accounts:
+      num_cache_clusters: 1
+      automatic_failover_enabled: False
+      transit_encryption_mode: required
+      transit_encryption_enabled: True
+      apply_immediately: True
+  
+  tb:fargate:FargateClusterWithLogging:
+    keycloak:
+      assign_public_ip: True
+      desired_count: 1
+      health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
+      internal: False
+      services:
+        keycloak:
+          listener_port: 443
+          listener_proto: HTTPS
+          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/04074202-3992-4cda-a60c-e22459ef4445
+          container_port: 8080
+          container_name: keycloak
+          # "name" field is arbitrary, but must be unique and no longer than 32 chars
+          name: keycloak-rjung
+          health_check:
+            healthy_threshold: 2
+            unhealthy_threshold: 5
+            interval: 30
+            path: /health/ready
+            port: 9000
+      task_definition:
+        network_mode: awsvpc
+        cpu: 512
+        memory: 2048
+        requires_compatibilities:
+          - FARGATE
+        container_definitions:
+          keycloak:
+            image: quay.io/keycloak/keycloak:26.2
+            command:
+              - start
+            portMappings:
+              - name: keycloak
+                containerPort: 8080
+                hostPort: 8080
+                protocol: tcp
+                appProtocol: http
+              - name: keycloak-mgmt
+                containerPort: 9000
+                hostPort: 9000
+                protocol: tcp
+                appProtocol: http
+            linuxParameters:
+              initProcessEnabled: True
+            secrets:
+              - name: KC_DB_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/keycloak-database-password-RFT5w1
+              - name: KC_DB_URL_HOST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/keycloak-database-host-FoJP4p
+              - name: KC_DB_URL_DATABASE
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/keycloak-database-name-Scryci
+              - name: KC_DB_USERNAME
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/keycloak-database-user-erIzAS
+              - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/keycloak-admin-password-hpVuxn
+            environment:
+              - name: KC_DB
+                value: postgres
+              - name: KC_DB_PORT
+                value: '5432'
+              - name: KC_HOSTNAME
+                value: https://auth-rjung.tb.pro
+              - name: KC_HTTP_ENABLED
+                value: 'true'
+              - name: KC_HEALTH_ENABLED
+                value: 'true'
+              - name: KC_HTTP_MANAGEMENT_PORT
+                value: '9000'
+              - name: KC_METRICS_ENABLED
+                value: 'true'
+
+    accounts:
+      assign_public_ip: True  # Necessary, or else it can't talk out through the IG
+      desired_count: 1
+      ecr_resources:
+        - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
+      health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
+      internal: False # This needs to be open to receive auth callbacks
+      services:
+        accounts:
+          listener_port: 443
+          listener_proto: HTTPS
+          listener_cert_arn: arn:aws:acm:eu-central-1:768512802988:certificate/c69c6b69-0185-4bba-bc59-4ed64374d45d
+          container_port: 8087
+          container_name: accounts
+          # "name" field is arbitrary, but must be unique and no longer than 32 chars
+          name: accounts-rjung
+          health_check:
+            healthy_threshold: 2
+            unhealthy_threshold: 5
+            interval: 30
+            path: /health
+      task_definition:
+        network_mode: awsvpc
+        cpu: 512
+        memory: 2048
+        requires_compatibilities:
+          - FARGATE
+        container_definitions:
+          accounts:
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:bf7c90982fbd75ca8dc1f944867ddad3e0b49b76
+            portMappings:
+              - name: accounts
+                containerPort: 8087
+                hostPort: 8087
+                protocol: tcp
+                appProtocol: http
+            linuxParameters:
+              initProcessEnabled: True
+            secrets:
+              - name: DATABASE_HOST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/database-host-zmv0GO
+              - name: DATABASE_NAME
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/database-name-ZCR7dN
+              - name: DATABASE_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/database-password-8RraYV
+              - name: DATABASE_USER
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/database-user-a99f03
+              - name: AUTH_ALLOW_LIST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/fxa-allow-list-Rjs24C
+              - name: FXA_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/fxa-client-id-XO3yvx
+              - name: FXA_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/fxa-secret-0JxgeP
+              - name: LOGIN_CODE_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/login-code-secret-g3HGZu
+              - name: FXA_ENCRYPT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/fxa-encrypt-secret-FZ0iVv
+              - name: PADDLE_TOKEN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/paddle-token-1Xo0np
+              - name: PADDLE_PRICE_ID_LO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/paddle-price-id-lo-BOxRwS
+              - name: PADDLE_PRICE_ID_MD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/paddle-price-id-md-YShIxp
+              - name: PADDLE_PRICE_ID_HI
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/paddle-price-id-hi-8muS08
+              - name: PADDLE_WEBHOOK_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/paddle-webhook-key-JuvcOr
+              - name: PADDLE_API_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/paddle-api-key-WlhcMj
+              - name: REDIS_URL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/redis-url-5zg81L
+              - name: SECRET_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/secret-key-RMUzrl
+              - name: SENTRY_DSN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/sentry-dsn-rgui8C
+              - name: ZENDESK_SUBDOMAIN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/zendesk-subdomain-96tdDy
+              - name: ZENDESK_USER_EMAIL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/zendesk-user-email-Irmh4I
+              - name: ZENDESK_API_TOKEN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/zendesk-api-token-dOxdeo
+              - name: OIDC_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/oidc-client-id-UzCPWF
+              - name: OIDC_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/oidc-client-secret-RzOIiH
+              - name: OIDC_SIGN_ALGO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/oidc-sign-algo-nEhTVJ
+            environment:
+              - name: ADMIN_WEBSITE
+                value: https://www.thunderbird.net
+              - name: ADMIN_CONTACT
+                value: dummy@example.org
+              - name: ALLOWED_HOSTS
+                value: 'accounts-rjung.tb.pro'
+              - name: APP_ENV
+                value: rjung
+              - name: ALLOWED_EMAIL_DOMAINS
+                value: 'rjung-thundermail.com'
+              - name: AUTH_SCHEME
+                value: 'oidc'
+              - name: CSRF_HTTPONLY
+                value: 'True'
+              - name: CSRF_SECURE
+                value: 'True'
+              - name: CSRF_TRUSTED_ORIGINS
+                value: 'https://accounts-rjung.tb.pro'
+              - name: FXA_CALLBACK
+                value: https://accounts-rjung.tb.pro/api/v1/auth/fxa/callback
+              - name: FXA_OAUTH_SERVER_URL
+                value: https://oauth.rjung.mozaws.net/v1
+              - name: FXA_OPEN_ID_CONFIG
+                value: https://accounts.rjung.mozaws.net/.well-known/openid-configuration
+              - name: FXA_PROFILE_SERVER_URL
+                value: https://profile.rjung.mozaws.net/v1
+              - name: IMAP_HOST
+                value: 'mail.rjung-thundermail.com'
+              - name: IMAP_PORT
+                value: '993'
+              - name: IMAP_TLS
+                value: 'True'
+              - name: JMAP_HOST
+                value: 'mail.rjung-thundermail.com'
+              - name: JMAP_PORT
+                value: '443'
+              - name: JMAP_TLS
+                value: 'True'
+              - name: PADDLE_ENV
+                value: 'sandbox'
+              - name: PUBLIC_BASE_URL
+                value: accounts-rjung.tb.pro
+              - name: REDIS_CELERY_DB
+                value: '5'
+              - name: REDIS_CELERY_RESULTS_DB
+                value: '6'
+              - name: REDIS_INTERNAL_DB
+                value: '0'
+              - name: REDIS_SHARED_DB
+                value: '10'
+              - name: SMTP_HOST
+                value: 'mail.rjung-thundermail.com'
+              - name: SMTP_PORT
+                value: '465'
+              - name: SMTP_TLS
+                value: 'True'
+              - name: SUPPORT_CONTACT
+                value: dummy@example.org
+              - name: OIDC_URL_AUTH
+                value: "https://auth-rjung.tb.pro/realms/tbpro/protocol/openid-connect/auth"
+              - name: OIDC_URL_TOKEN
+                value: "https://auth-rjung.tb.pro/realms/tbpro/protocol/openid-connect/token"
+              - name: OIDC_URL_USER
+                value: "https://auth-rjung.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"
+              - name: OIDC_URL_JWKS
+                value: "https://auth-rjung.tb.pro/realms/tbpro/protocol/openid-connect/certs"
+              - name: OIDC_URL_LOGOUT
+                value: "https://auth-rjung.tb.pro/realms/tbpro/protocol/openid-connect/logout"
+              - name: OIDC_FALLBACK_MATCH_BY_EMAIL
+                value: 'True'
+
+    accounts-celery:
+      assign_public_ip: True  # Necessary, or else it can't talk out through the IG
+      build_load_balancer: False  # This service has no network inputs and thus needs no LB
+      desired_count: 1
+      ecr_resources:
+        - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts-celery-worker*
+      internal: True
+      services: { }
+      task_definition:
+        network_mode: awsvpc
+        cpu: 512
+        memory: 2048
+        requires_compatibilities:
+          - FARGATE
+        container_definitions:
+          accounts:
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:bf7c90982fbd75ca8dc1f944867ddad3e0b49b76
+            linuxParameters:
+              initProcessEnabled: True
+            secrets:
+              - name: DATABASE_HOST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/database-host-zmv0GO
+              - name: DATABASE_NAME
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/database-name-ZCR7dN
+              - name: DATABASE_PASSWORD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/database-password-8RraYV
+              - name: DATABASE_USER
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/database-user-a99f03
+              - name: AUTH_ALLOW_LIST
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/fxa-allow-list-Rjs24C
+              - name: FXA_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/fxa-client-id-XO3yvx
+              - name: FXA_ENCRYPT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/fxa-encrypt-secret-FZ0iVv
+              - name: FXA_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/fxa-secret-0JxgeP
+              - name: LOGIN_CODE_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/login-code-secret-g3HGZu
+              - name: PADDLE_PRICE_ID_LO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/paddle-price-id-lo-BOxRwS
+              - name: PADDLE_PRICE_ID_MD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/paddle-price-id-md-YShIxp
+              - name: PADDLE_PRICE_ID_HI
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/paddle-price-id-hi-8muS08
+              - name: PADDLE_TOKEN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/paddle-token-1Xo0np
+              - name: SECRET_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/secret-key-RMUzrl
+              - name: SENTRY_DSN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/sentry-dsn-rgui8C
+              - name: REDIS_URL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/redis-url-5zg81L
+              - name: ZENDESK_SUBDOMAIN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/zendesk-subdomain-96tdDy
+              - name: ZENDESK_USER_EMAIL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/zendesk-user-email-Irmh4I
+              - name: ZENDESK_API_TOKEN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/zendesk-api-token-dOxdeo
+              - name: OIDC_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/oidc-client-id-UzCPWF
+              - name: OIDC_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/oidc-client-secret-RzOIiH
+              - name: OIDC_SIGN_ALGO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/rjung/oidc-sign-algo-nEhTVJ
+            environment:
+              - name: ADMIN_CONTACT
+                value: dummy@example.org
+              - name: ADMIN_WEBSITE
+                value: https://www.thunderbird.net
+              - name: ALLOWED_EMAIL_DOMAINS
+                value: 'rjung-thundermail.com'
+              - name: APP_ENV
+                value: rjung
+              - name: AUTH_SCHEME
+                value: 'oidc'
+              - name: CSRF_HTTPONLY
+                value: 'True'
+              - name: CSRF_SECURE
+                value: 'True'
+              - name: CSRF_TRUSTED_ORIGINS
+                value: 'https://accounts-rjung.tb.pro'
+              - name: FXA_CALLBACK
+                value: https://accounts-rjung.tb.pro/api/v1/auth/fxa/callback
+              - name: FXA_OAUTH_SERVER_URL
+                value: https://oauth.rjung.mozaws.net/v1
+              - name: FXA_OPEN_ID_CONFIG
+                value: https://accounts.rjung.mozaws.net/.well-known/openid-configuration
+              - name: FXA_PROFILE_SERVER_URL
+                value: https://profile.rjung.mozaws.net/v1
+              - name: IMAP_HOST
+                value: 'mail.rjung-thundermail.com'
+              - name: IMAP_PORT
+                value: '993'
+              - name: IMAP_TLS
+                value: 'True'
+              - name: JMAP_HOST
+                value: 'mail.rjung-thundermail.com'
+              - name: JMAP_PORT
+                value: '443'
+              - name: JMAP_TLS
+                value: 'True'
+              - name: PADDLE_ENV
+                value: 'sandbox'
+              - name: PUBLIC_BASE_URL
+                value: accounts-rjung.tb.pro
+              - name: REDIS_CELERY_DB
+                value: '5'
+              - name: REDIS_CELERY_RESULTS_DB
+                value: '6'
+              - name: REDIS_INTERNAL_DB
+                value: '0'
+              - name: REDIS_SHARED_DB
+                value: '10'
+              - name: SMTP_HOST
+                value: 'mail.rjung-thundermail.com'
+              - name: SMTP_PORT
+                value: '465'
+              - name: SMTP_TLS
+                value: 'True'
+              - name: SUPPORT_CONTACT
+                value: dummy@example.org
+              - name: TBA_CELERY
+                value: "yes"
+              - name: OIDC_URL_AUTH
+                value: "https://auth-rjung.tb.pro/realms/tbpro/protocol/openid-connect/auth"
+              - name: OIDC_URL_TOKEN
+                value: "https://auth-rjung.tb.pro/realms/tbpro/protocol/openid-connect/token"
+              - name: OIDC_URL_USER
+                value: "https://auth-rjung.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"
+              - name: OIDC_URL_JWKS
+                value: "https://auth-rjung.tb.pro/realms/tbpro/protocol/openid-connect/certs"
+              - name: OIDC_URL_LOGOUT
+                value: "https://auth-rjung.tb.pro/realms/tbpro/protocol/openid-connect/logout"
