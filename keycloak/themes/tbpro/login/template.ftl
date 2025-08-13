@@ -117,8 +117,9 @@
           summary: null,
         },
         //</#if>
-        currentLanguage: '${(locale.current)!en}',
+        currentLanguage: '${(locale.current)!"en"}',
         languages: [
+          //<#if (locale.supported)??>
           //<#assign i = 1>
           //<#list locale.supported as l>
           {
@@ -127,6 +128,7 @@
           },
           //<#assign i++>
           //</#list>
+          //</#if>
         ],
         //<#if isAppInitiatedAction??>
         appInitiatedAction: '${isAppInitiatedAction?c}',
