@@ -256,7 +256,7 @@ jobs:
       - name: Produce an artifact containing the tag and version
         id: create-artifact
         run: |
-          echo '{"ecr_tag": "${{ steps.build-accounts.outputs.keycloak-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
+          echo '{"ecr_tag": "${{ steps.build-keycloak.outputs.keycloak-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
 
       - name: Archive the deployment artifact
         id: tag-archive
