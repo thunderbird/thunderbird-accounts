@@ -360,7 +360,7 @@ jobs:
   e2e-tests-browserstack-stage:
     name: e2e-tests-browserstack-stage
     needs: accounts-deploy
-    if: always() && ${{ !failure() }} && ${{ !cancelled() }}
+    if: '!cancelled()'
     runs-on: ubuntu-latest
     environment: staging
     env:
