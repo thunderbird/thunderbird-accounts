@@ -23,7 +23,7 @@ def create_stalwart_account(self, user_uuid: str, username: str, email: str, app
                 f' Cannot create a Stalwart account with the username {username} for {email}.'
             ),
             level='error',
-            user=user_uuid,
+            user={'uuid': user_uuid},
         )
         return {
             'uuid': user_uuid,
