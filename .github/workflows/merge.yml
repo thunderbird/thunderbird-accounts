@@ -21,6 +21,7 @@ jobs:
       IS_CI_AUTOMATION: "yes"
     outputs:
       src-changed: ${{ steps.check.outputs.src-changed }}
+      keycloak-theme-changed: ${{ steps.check.outputs.keycloak-theme-changed }}
       iac-changed: ${{ steps.check.outputs.iac-changed }}
     steps:
       - uses: actions/checkout@v4
