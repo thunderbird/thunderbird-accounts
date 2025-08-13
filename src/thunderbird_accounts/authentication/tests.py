@@ -12,7 +12,9 @@ class AccountsOIDCBackendTestCase(TestCase):
         self.claim_oidc_id = 'abc123'
         self.claim_email = 'user@example.org'
         with freezegun.freeze_time('Apr 4th, 2000'):
-            self.user = User.objects.create(oidc_id=self.claim_oidc_id, username='test@example.org', email=self.claim_email)
+            self.user = User.objects.create(
+                oidc_id=self.claim_oidc_id, username='test@example.org', email=self.claim_email
+            )
             self.user.save()
             self.user.refresh_from_db()
         self.backend = AccountsOIDCBackend()

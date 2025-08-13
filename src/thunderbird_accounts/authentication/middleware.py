@@ -74,14 +74,15 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         # Fallback to matching by email if the env is set
         if settings.OIDC_FALLBACK_MATCH_BY_EMAIL:
             if len(user_query) == 0:
-                user_query = self.UserModel.objects.filter(email__iexact=claims.get('email')).order_by("created_at")
+                user_query = self.UserModel.objects.filter(email__iexact=claims.get('email')).order_by('created_at')
 
                 # Remove any weird duplicate accounts
                 # See issue #236 for context
                 if len(user_query) > 1:
                     to_remove = user_query[1:]
                     logging.warning(
-                        f'[AccountsOIDCBackend.filter_users_by_claims] Deleting {len(to_remove)} duplicate accounts!')
+                        f'[AccountsOIDCBackend.filter_users_by_claims] Deleting {len(to_remove)} duplicate accounts!'
+                    )
                     for user in to_remove:
                         user.delete()
 
