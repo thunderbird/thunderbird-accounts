@@ -45,3 +45,19 @@ config:
     secure: AAABAINLb25xY5cBm1i7SGl2g9JV0cQi6OHF8t8nODOm6Mm0fxYK4U2IrV3j2Q==
   accounts:keycloak-admin-password:
     secure: AAABAG3XQJR8zFKaeJNKYJ3I+8pJECdwSNeCOXjxhtNbjeIxNEgAFOrqxxDbr5xP3BGGS8zqzOSQtLg5Ua5B
+  accounts:paddle-api-key:
+    secure: AAABAOGIYxVrDZxN1Ef4V1p2KE7mPQ3BY86/k0fuQ7I12bnGuiRBuJGT+6gFyi4Onfdq4+tpptlk+n9V7ifv/zKvVheHOmdxg5rYlcnUL6QdE9phf3vEqJgUy76lbSitC49SBlM=
+  accounts:paddle-webhook-key:
+    secure: AAABADXyq6ZVVV20yTsJD9MVaGCX5a2N13dSfyJSthIZ/MPp5FDAsuRewvgLNrNGzoYFu4HE7R84iaMsURIN69e5MhPDjL0fMHNedrhXxEXVDLsjo/s63nqYEncmtErRDYbMyYLP
+  accounts:zendesk-api-token:
+    secure: AAABAFgybdwW/NP7cWagr5MANaN/5APh6X4ALA/pg79gzNAGxK8yHxYNzvOOLkpbD9MeI5Fuxa6LPx0DM58DgHDtlQm34BfW
+  accounts:oidc-client-secret:
+    secure: AAABAL/6sfjIYar+oiGCmoCPnChrD7S7L+x/T0bvyAt3dKOa1Fd2mvpUUxQY9WHm061FUUXRUGGLaoNjSqEBNA==
+  accounts:oidc-client-id:
+    secure: AAABALHNGG3n4NosesGwL0v28BblOpD6pTqJfDOmuT3KrmuGJ10wLXZDH9LIH70vqk3C3g==
+  accounts:zendesk-subdomain:
+    secure: AAABAIpmg5XwypCsQVhNKalf7E7PBJEVNbVQSorejQETnzk1Sw==
+  accounts:zendesk-user-email:
+    secure: AAABAHmGNAUpB5Cn2v3+E0BRX6IzJa9Z1xPc4hlOJUU7Ze77JIK/AA8M6WEHBx1HJOk2Pmo=
+  accounts:oidc-sign-algo:
+    secure: AAABAJII4yJIQGxGc07VLQJqqxDKszZ+RWg7fVvVzPLK5NeKqw==
