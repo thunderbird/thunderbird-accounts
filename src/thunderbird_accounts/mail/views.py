@@ -1,14 +1,12 @@
-import base64
 import json
 import logging
-import os
 
 import requests.exceptions
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.signing import Signer
-from django.http import HttpRequest, HttpResponseRedirect, JsonResponse, HttpResponse
+from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.views.decorators.debug import sensitive_post_parameters
