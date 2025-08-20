@@ -321,6 +321,7 @@ if AUTH_SCHEME == 'oidc':
     OIDC_OP_TOKEN_ENDPOINT = os.getenv('OIDC_URL_TOKEN')
     OIDC_OP_USER_ENDPOINT = os.getenv('OIDC_URL_USER')
     OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
+    OIDC_STORE_ACCESS_TOKEN = True # Needed to talk to jmap
     ALLOW_LOGOUT_GET_METHOD = True
 
     def oidc_logout(request):
@@ -333,6 +334,7 @@ if AUTH_SCHEME == 'oidc':
     OIDC_FALLBACK_MATCH_BY_EMAIL = os.getenv('OIDC_FALLBACK_MATCH_BY_EMAIL', '').lower() == 'true'
 
 
+STALWART_HTTP_URL = os.getenv('STALWART_HTTP_URL')
 STALWART_API_URL = os.getenv('STALWART_API_URL')
 STALWART_API_AUTH_STRING = os.getenv('STALWART_API_AUTH_STRING')
 STALWART_API_AUTH_METHOD = os.getenv('STALWART_API_AUTH_METHOD')

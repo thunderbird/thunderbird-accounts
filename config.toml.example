@@ -17,9 +17,8 @@ protocol = "imap"
 tls.implicit = true
 
 [server.listener."jmap"]
-bind = ["[::]:7768"]
+bind = ["[::]:8081"]
 protocol = "http"
-tls.implicit = true
 
 [server.listener."management"]
 bind = ["[::]:8080"]

@@ -1,10 +1,14 @@
+import base64
 import json
+import logging
+import os
 
+import requests.exceptions
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.signing import Signer
-from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
+from django.http import HttpRequest, HttpResponseRedirect, JsonResponse, HttpResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.views.decorators.debug import sensitive_post_parameters
@@ -13,6 +17,7 @@ from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.client import MailClient
+from thunderbird_accounts.mail.exceptions import AccessTokenNotFound
 from thunderbird_accounts.mail.utils import decode_app_password
 
 try:
@@ -135,7 +140,6 @@ def contact_fields(request: HttpRequest):
     # Filter ticket fields to only include those with custom_field_options
     for field in ticket_fields:
         if 'custom_field_options' in field:
-
             # Extract the id, title, and custom_field_options with id, name and value
             field_data = {
                 'id': field['id'],
@@ -395,3 +399,51 @@ def self_serve_app_password_add(request: HttpRequest):
 
 def wait_list(request: HttpRequest):
     return TemplateResponse(request, 'mail/wait-list.html', {'form_action': settings.WAIT_LIST_FORM_ACTION})
+
+
+@login_required
+def jmap_test_page(request: HttpRequest):
+    from thunderbird_accounts.mail.tiny_jmap_client import TinyJMAPClient
+    """A test script that should not be ran in non-dev environments.
+    This is based off the jmap spec sample code:
+    https://github.com/fastmail/JMAP-Samples/blob/main/python3/top-ten.py"""
+    user = request.user
+    access_token = request.session["oidc_access_token"]
+    inboxes = []
+
+    try:
+        if not access_token:
+            raise AccessTokenNotFound('Access token is not in session object. User may need to re-login.')
+
+        client = TinyJMAPClient(
+            hostname=settings.STALWART_HTTP_URL,
+            username=user.username,
+            token=access_token,
+        )
+        account_id = client.get_account_id()
+
+        inbox_res = client.make_jmap_call(
+            {
+                "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+                "methodCalls": [
+                    [
+                        "Mailbox/query",
+                        {
+                            "accountId": account_id,
+                            "filter": {"role": "inbox", "hasAnyRole": True},
+                        },
+                        "a",
+                    ]
+                ],
+            }
+        )
+        inboxes = inbox_res["methodResponses"][0][1]['ids']
+    except (AccessTokenNotFound, requests.exceptions.HTTPError, Exception) as ex:
+        logging.error('Jmap test route failed')
+        logging.exception(ex)
+
+    return JsonResponse({
+        'jmap_url': f'{settings.STALWART_HTTP_URL}/.well-known/jmap',
+        'username': user.username,
+        'connection': len(inboxes) > 0,
+    })

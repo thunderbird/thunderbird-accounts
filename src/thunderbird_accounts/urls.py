@@ -16,6 +16,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from thunderbird_accounts.infra import views as infra_views
 from thunderbird_accounts.mail import views as mail_views
+from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
 from django.utils.translation import gettext_lazy as _
 
@@ -63,6 +64,8 @@ if settings.AUTH_SCHEME == 'oidc':
     urlpatterns.append(path('oidc/', include('mozilla_django_oidc.urls')))
     urlpatterns.append(path('logout/', OIDCLogoutView.as_view(), name='logout'))
     urlpatterns.append(path('login/', lambda r: redirect(settings.LOGIN_URL), name='login'))
+    # Test url for ensuring jmap connection works
+    urlpatterns.append(path('test/jmap/', jmap_test_page, name='jmap-test'))
 
 if settings.DEBUG:
     urlpatterns.append(path('docs/', include('rest_framework.urls')))
