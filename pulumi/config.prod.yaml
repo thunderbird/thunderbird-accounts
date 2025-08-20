@@ -125,13 +125,21 @@ resources:
         - paddle-price-id-lo
         - paddle-price-id-md
         - paddle-price-id-hi
+        - paddle-webhook-key
+        - paddle-api-key
         - redis-url
         - keycloak-database-host
         - keycloak-database-name
         - keycloak-database-password
         - keycloak-database-user
         - keycloak-admin-password
-  
+        - zendesk-subdomain
+        - zendesk-user-email
+        - zendesk-api-token
+        - oidc-client-secret
+        - oidc-client-id
+        - oidc-sign-algo
+
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
   # tb:ec2:SshableInstance:
@@ -177,7 +185,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: quay.io/keycloak/keycloak:26.2
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-6238cb14a519f1873657c823e808209532f297fb
             command:
               - start
             portMappings:
@@ -249,7 +257,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:e1bced21eb1c4ee2f2f25f416fe03a21e3f5f802
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1e0e0694c7543e5dc7f45ebd108c074a6ef42df2
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -291,6 +299,22 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK
               - name: SENTRY_DSN
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV
+              - name: OIDC_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-client-secret-mg3bCN
+              - name: OIDC_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-client-id-HjOG4R
+              - name: OIDC_SIGN_ALGO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-sign-algo-N6vK9L
+              - name: ZENDESK_SUBDOMAIN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-subdomain-C2G7He
+              - name: ZENDESK_USER_EMAIL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-user-email-HR9Al8
+              - name: ZENDESK_API_TOKEN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-api-token-2rsztq
+              - name: PADDLE_WEBHOOK_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-webhook-key-vX5JHE
+              - name: PADDLE_API_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-api-key-yz3XNN
             environment:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
@@ -301,9 +325,9 @@ resources:
               - name: ALLOWED_HOSTS
                 value: 'accounts.tb.pro'
               - name: APP_ENV
-                value: stage
+                value: 'prod'
               - name: AUTH_SCHEME
-                value: fxa
+                value: 'oidc'
               - name: CSRF_HTTPONLY
                 value: 'True'
               - name: CSRF_SECURE
@@ -331,7 +355,7 @@ resources:
               - name: JMAP_TLS
                 value: 'True'
               - name: PADDLE_ENV
-                value: 'sandbox'
+                value: 'production'
               - name: PUBLIC_BASE_URL
                 value: accounts.tb.pro
               - name: REDIS_CELERY_DB
@@ -350,6 +374,22 @@ resources:
                 value: 'True'
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
+              - name: OIDC_URL_AUTH
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth"
+              - name: OIDC_URL_TOKEN
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/token"
+              - name: OIDC_URL_USER
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"
+              - name: OIDC_URL_JWKS
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs"
+              - name: OIDC_URL_LOGOUT
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout"
+              - name: OIDC_FALLBACK_MATCH_BY_EMAIL
+                value: 'True'
+              - name: STALWART_HTTP_URL
+                value: 'https://mail.thundermail.com'
+              - name: STALWART_API_URL
+                value: 'https://mail-i.thundermail.com'
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -367,7 +407,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:e1bced21eb1c4ee2f2f25f416fe03a21e3f5f802
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1e0e0694c7543e5dc7f45ebd108c074a6ef42df2
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -403,6 +443,22 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV
               - name: REDIS_URL
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/redis-url-Nq3x1a
+              - name: OIDC_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-client-secret-mg3bCN
+              - name: OIDC_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-client-id-HjOG4R
+              - name: OIDC_SIGN_ALGO
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-sign-algo-N6vK9
+              - name: ZENDESK_SUBDOMAIN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-subdomain-C2G7He
+              - name: ZENDESK_USER_EMAIL
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-user-email-HR9Al8
+              - name: ZENDESK_API_TOKEN
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-api-token-2rsztq
+              - name: PADDLE_WEBHOOK_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-webhook-key-vX5JHE
+              - name: PADDLE_API_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-api-key-yz3XNN
             environment:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
@@ -411,9 +467,9 @@ resources:
               - name: ALLOWED_EMAIL_DOMAINS
                 value: 'thundermail.com'
               - name: APP_ENV
-                value: stage
+                value: 'prod'
               - name: AUTH_SCHEME
-                value: fxa
+                value: 'oidc'
               - name: CSRF_HTTPONLY
                 value: 'True'
               - name: CSRF_SECURE
@@ -462,3 +518,31 @@ resources:
                 value: '10'
               - name: TBA_CELERY
                 value: "yes"
+              - name: OIDC_URL_AUTH
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth"
+              - name: OIDC_URL_TOKEN
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/token"
+              - name: OIDC_URL_USER
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"
+              - name: OIDC_URL_JWKS
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs"
+              - name: OIDC_URL_LOGOUT
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout"
+              - name: OIDC_FALLBACK_MATCH_BY_EMAIL
+                value: 'True'
+
+  tb:ci:AwsAutomationUser:
+    ci:
+      enable_ecr_image_push: true
+      ecr_repositories:
+        - thunderbird/accounts
+      enable_fargate_deployments: true
+      fargate_clusters:
+        - accounts-prod-fargate-keycloak
+        - accounts-prod-fargate-accounts
+        - accounts-prod-fargate-accounts-celery
+      fargate_task_role_arns:
+        - arn:aws:iam::768512802988:role/accounts-prod-fargate-keycloak
+        - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts
+        - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts-celery
+

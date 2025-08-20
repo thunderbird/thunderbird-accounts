@@ -183,7 +183,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: quay.io/keycloak/keycloak:26.2
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-6238cb14a519f1873657c823e808209532f297fb
             command:
               - start
             portMappings:
@@ -255,7 +255,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:cd16087ea05b1a375f6017330b7a4a4eae0d9d0a
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1e0e0694c7543e5dc7f45ebd108c074a6ef42df2
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -384,6 +384,11 @@ resources:
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
               - name: OIDC_FALLBACK_MATCH_BY_EMAIL
                 value: 'True'
+              - name: STALWART_HTTP_URL
+                value: 'https://mail.stage-thundermail.com'
+              - name: STALWART_API_URL
+                value: 'https://mail-i.stage-thundermail.com'
+
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -401,7 +406,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:cd16087ea05b1a375f6017330b7a4a4eae0d9d0a
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1e0e0694c7543e5dc7f45ebd108c074a6ef42df2
             linuxParameters:
               initProcessEnabled: True
             secrets:
