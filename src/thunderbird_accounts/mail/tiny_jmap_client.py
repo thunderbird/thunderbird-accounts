@@ -25,15 +25,15 @@ class TinyJMAPClient:
         if self.session:
             return self.session
         r = requests.get(
-            self.hostname + "/.well-known/jmap",
+            self.hostname + '/.well-known/jmap',
             headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.token}",
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {self.token}',
             },
         )
         r.raise_for_status()
         self.session = session = r.json()
-        self.api_url = session["apiUrl"]
+        self.api_url = session['apiUrl']
         return session
 
     def get_account_id(self):
@@ -43,7 +43,7 @@ class TinyJMAPClient:
 
         session = self.get_session()
 
-        account_id = session["primaryAccounts"]["urn:ietf:params:jmap:mail"]
+        account_id = session['primaryAccounts']['urn:ietf:params:jmap:mail']
         self.account_id = account_id
         return account_id
 
@@ -54,22 +54,20 @@ class TinyJMAPClient:
 
         identity_res = self.make_jmap_call(
             {
-                "using": [
-                    "urn:ietf:params:jmap:core",
-                    "urn:ietf:params:jmap:submission",
+                'using': [
+                    'urn:ietf:params:jmap:core',
+                    'urn:ietf:params:jmap:submission',
                 ],
-                "methodCalls": [
-                    ["Identity/get", {"accountId": self.get_account_id()}, "i"]
-                ],
+                'methodCalls': [['Identity/get', {'accountId': self.get_account_id()}, 'i']],
             }
         )
 
         identity_id = next(
             filter(
-                lambda i: i["email"] == self.username,
-                identity_res["methodResponses"][0][1]["list"],
+                lambda i: i['email'] == self.username,
+                identity_res['methodResponses'][0][1]['list'],
             )
-        )["id"]
+        )['id']
 
         self.identity_id = str(identity_id)
         return self.identity_id
@@ -80,8 +78,8 @@ class TinyJMAPClient:
         res = requests.post(
             self.api_url,
             headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.token}",
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {self.token}',
             },
             data=json.dumps(call),
         )

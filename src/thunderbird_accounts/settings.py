@@ -321,7 +321,7 @@ if AUTH_SCHEME == 'oidc':
     OIDC_OP_TOKEN_ENDPOINT = os.getenv('OIDC_URL_TOKEN')
     OIDC_OP_USER_ENDPOINT = os.getenv('OIDC_URL_USER')
     OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
-    OIDC_STORE_ACCESS_TOKEN = True # Needed to talk to jmap
+    OIDC_STORE_ACCESS_TOKEN = True  # Needed to talk to jmap
     ALLOW_LOGOUT_GET_METHOD = True
 
     def oidc_logout(request):

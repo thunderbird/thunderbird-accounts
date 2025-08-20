@@ -129,10 +129,9 @@ def contact_fields(request: HttpRequest):
     result = zendesk_client.get_ticket_fields()
 
     if not result['success']:
-        return JsonResponse({
-            'success': False,
-            'error': result.get('error', _('Failed to fetch ticket fields'))
-        }, status=500)
+        return JsonResponse(
+            {'success': False, 'error': result.get('error', _('Failed to fetch ticket fields'))}, status=500
+        )
 
     ticket_fields = result['data']['ticket_fields']
     fields_by_title = {}
@@ -145,26 +144,19 @@ def contact_fields(request: HttpRequest):
                 'id': field['id'],
                 'title': field['title'],
                 'custom_field_options': [
-                    {
-                        'id': option['id'],
-                        'name': option['name'],
-                        'value': option['value']
-                    }
+                    {'id': option['id'], 'name': option['name'], 'value': option['value']}
                     for option in field['custom_field_options']
-                ]
+                ],
             }
             fields_by_title[field['title']] = field_data
 
-    return JsonResponse({
-        'success': True,
-        'ticket_fields': fields_by_title
-    })
+    return JsonResponse({'success': True, 'ticket_fields': fields_by_title})
 
 
 @require_http_methods(['POST'])
 def contact_submit(request: HttpRequest):
-    """ Uses Zendesk's Requests API to create a ticket
-        Ref https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#tickets-and-requests"""
+    """Uses Zendesk's Requests API to create a ticket
+    Ref https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#tickets-and-requests"""
 
     email = request.POST.get('email')
     subject = request.POST.get('subject')
@@ -198,18 +190,20 @@ def contact_submit(request: HttpRequest):
                     status=500,
                 )
 
-            attachment_tokens.append({
-                'token': zendesk_api_response['upload_token'],
-                'filename': zendesk_api_response['filename']
-            })
+            attachment_tokens.append(
+                {'token': zendesk_api_response['upload_token'], 'filename': zendesk_api_response['filename']}
+            )
 
         except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'error': _('Failed to upload file {uploaded_file_name}: {error}').format(
-                    uploaded_file_name=uploaded_file.name, error=str(e)
-                ),
-            }, status=500)
+            return JsonResponse(
+                {
+                    'success': False,
+                    'error': _('Failed to upload file {uploaded_file_name}: {error}').format(
+                        uploaded_file_name=uploaded_file.name, error=str(e)
+                    ),
+                },
+                status=500,
+            )
 
     # Create ticket with attachment tokens
     ticket_fields = {
@@ -220,7 +214,7 @@ def contact_submit(request: HttpRequest):
         'ticket_type': ticket_type,
         'type_field_id': type_field_id,
         'description': description,
-        'attachments': attachment_tokens
+        'attachments': attachment_tokens,
     }
 
     zendesk_api_response = zendesk_client.create_ticket(ticket_fields)
@@ -404,11 +398,12 @@ def wait_list(request: HttpRequest):
 @login_required
 def jmap_test_page(request: HttpRequest):
     from thunderbird_accounts.mail.tiny_jmap_client import TinyJMAPClient
+
     """A test script that should not be ran in non-dev environments.
     This is based off the jmap spec sample code:
     https://github.com/fastmail/JMAP-Samples/blob/main/python3/top-ten.py"""
     user = request.user
-    access_token = request.session["oidc_access_token"]
+    access_token = request.session['oidc_access_token']
     inboxes = []
 
     try:
@@ -424,26 +419,28 @@ def jmap_test_page(request: HttpRequest):
 
         inbox_res = client.make_jmap_call(
             {
-                "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
-                "methodCalls": [
+                'using': ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
+                'methodCalls': [
                     [
-                        "Mailbox/query",
+                        'Mailbox/query',
                         {
-                            "accountId": account_id,
-                            "filter": {"role": "inbox", "hasAnyRole": True},
+                            'accountId': account_id,
+                            'filter': {'role': 'inbox', 'hasAnyRole': True},
                         },
-                        "a",
+                        'a',
                     ]
                 ],
             }
         )
-        inboxes = inbox_res["methodResponses"][0][1]['ids']
+        inboxes = inbox_res['methodResponses'][0][1]['ids']
     except (AccessTokenNotFound, requests.exceptions.HTTPError, Exception) as ex:
         logging.error('Jmap test route failed')
         logging.exception(ex)
 
-    return JsonResponse({
-        'jmap_url': f'{settings.STALWART_HTTP_URL}/.well-known/jmap',
-        'username': user.username,
-        'connection': len(inboxes) > 0,
-    })
+    return JsonResponse(
+        {
+            'jmap_url': f'{settings.STALWART_HTTP_URL}/.well-known/jmap',
+            'username': user.username,
+            'connection': len(inboxes) > 0,
+        }
+    )

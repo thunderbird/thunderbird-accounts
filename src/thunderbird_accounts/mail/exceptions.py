@@ -42,6 +42,7 @@ class AccountNotFoundError(StalwartError):
     def __str__(self):
         return f'AccountNotFoundError: {self.username}'
 
+
 class AccessTokenNotFound(StalwartError):
     def __str__(self):
         return f'AccessTokenNotFoundError: {self.details}'
