@@ -137,6 +137,8 @@ resources:
         - oidc-client-secret
         - oidc-client-id
         - oidc-sign-algo
+        - stalwart-api-auth-method
+        - stalwart-api-auth-key
 
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
@@ -313,6 +315,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-client-secret-RzOIiH
               - name: OIDC_SIGN_ALGO
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-sign-algo-nEhTVJ
+              - name: STALWART_API_AUTH_METHOD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm
+              - name: STALWART_API_AUTH_STRING
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -454,6 +460,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-client-secret-RzOIiH
               - name: OIDC_SIGN_ALGO
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-sign-algo-nEhTVJ
+              - name: STALWART_API_AUTH_METHOD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm
+              - name: STALWART_API_AUTH_STRING
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc
             environment:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
@@ -523,6 +533,10 @@ resources:
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"
               - name: OIDC_URL_LOGOUT
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
+              - name: STALWART_HTTP_URL
+                value: 'https://mail.stage-thundermail.com'
+              - name: STALWART_API_URL
+                value: 'https://mail-i.stage-thundermail.com'
 
   tb:ci:AwsAutomationUser:
     ci:

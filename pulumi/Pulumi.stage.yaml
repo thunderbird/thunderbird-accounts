@@ -62,3 +62,7 @@ config:
     secure: AAABANGb8Hn/C7QJLgdJYkIuPDyhWGkT+5XOC1QqY2JP4B1+qKjyaqMhYeKer8oG0fHtBg==
   accounts:oidc-sign-algo:
     secure: AAABAOYzpQGUrQUtCMJiWc2rSL7uqfYFPpfCP7IDdDfxYPdZZg==
+  accounts:stalwart-api-auth-method:
+    secure: AAABAL78KgJng5Hve//s4u+BeGcHTfFxak84BPRm0Dsjc9xBzMs=
+  accounts:stalwart-api-auth-key:
+    secure: AAABAJaFR8zn4sFd1EgD70rccVLIDkK751ouhyMrizaH884mbYNe+HdIfTAWw7YZ/qU1Z0c6PmsPQbkbnJoEzNRkghRGHUusPKVJrUaQoBnqzF5aKeHk/0IiUaAkLwrlQJlv50A3DOwwzFvxBrL9Rdb7EVE=
