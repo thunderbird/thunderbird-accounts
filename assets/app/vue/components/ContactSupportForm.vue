@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton } from '@thunderbirdops/services-ui';
+import { ref, onMounted, useTemplateRef } from 'vue';
+import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import CsrfToken from '@/components/CsrfToken.vue';
 
 const TICKET_CUSTOM_FIELD_NAMES = {
@@ -22,6 +22,11 @@ const form = ref({
 });
 const formRef = ref(null);
 const fileInput = ref(null);
+
+// services-ui's TextInput and TextArea field references for resetting form state
+const emailInput = useTemplateRef('emailInput');
+const subjectInput = useTemplateRef('subjectInput');
+const descriptionInput = useTemplateRef('descriptionInput');
 
 // Dynamic options from API
 const productOptions = ref([]);
@@ -118,6 +123,12 @@ const resetForm = () => {
   errorText.value = '';
   successText.value = '';
 
+  // services-ui's TextInput and TextArea components don't reset their internal state
+  // when the form is reset, so we need to reset them manually
+  emailInput.value.reset();
+  subjectInput.value.reset();
+  descriptionInput.value.reset();
+
   formRef.value.reset();
 };
 
@@ -182,21 +193,29 @@ onMounted(() => {
 </script>
 
 <template>
-  <notice-bar type="error" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
-  <notice-bar type="success" v-if="successText" class="notice">{{ successText }}</notice-bar>
+  <notice-bar :type="NoticeBarTypes.Error" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
+  <notice-bar :type="NoticeBarTypes.Success" v-if="successText" class="notice">{{ successText }}</notice-bar>
 
   <form @submit.prevent="handleSubmit" method="post" action="/contact/submit" ref="formRef">
     <!-- Email -->
-    <text-input name="email" type="email" v-model="form.email" required="required" data-testid="contact-email-input">
+    <text-input
+      ref="emailInput"
+      name="email"
+      type="email"
+      v-model="form.email"
+      :required="true"
+      data-testid="contact-email-input"
+    >
       Your email address
     </text-input>
 
     <!-- Subject -->
     <text-input
+      ref="subjectInput"
       name="subject"
       type="text"
       v-model="form.subject"
-      required="required"
+      :required="true"
       data-testid="contact-subject-input"
     >
       Subject
@@ -207,7 +226,7 @@ onMounted(() => {
       name="product"
       :options="productOptions"
       v-model="form.product"
-      required="required"
+      :required="true"
       data-testid="contact-product-input"
     >
       Product
@@ -218,7 +237,7 @@ onMounted(() => {
       name="type"
       :options="typeOptions"
       v-model="form.type"
-      required="required"
+      :required="true"
       data-testid="contact-type-input"
     >
       Type of Request
@@ -226,9 +245,10 @@ onMounted(() => {
 
     <!-- Description -->
     <text-area
+      ref="descriptionInput"
       name="description"
       v-model="form.description"
-      required="required"
+      :required="true"
       data-testid="contact-description-input"
     >
       Description
