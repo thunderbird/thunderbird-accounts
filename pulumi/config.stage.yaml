@@ -137,6 +137,8 @@ resources:
         - oidc-client-secret
         - oidc-client-id
         - oidc-sign-algo
+        - stalwart-api-auth-method
+        - stalwart-api-auth-key
 
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
@@ -183,7 +185,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: quay.io/keycloak/keycloak:26.2
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-6238cb14a519f1873657c823e808209532f297fb
             command:
               - start
             portMappings:
@@ -255,7 +257,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:cd16087ea05b1a375f6017330b7a4a4eae0d9d0a
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1e0e0694c7543e5dc7f45ebd108c074a6ef42df2
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -313,6 +315,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-client-secret-RzOIiH
               - name: OIDC_SIGN_ALGO
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-sign-algo-nEhTVJ
+              - name: STALWART_API_AUTH_METHOD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm
+              - name: STALWART_API_AUTH_STRING
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -384,6 +390,11 @@ resources:
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
               - name: OIDC_FALLBACK_MATCH_BY_EMAIL
                 value: 'True'
+              - name: STALWART_BASE_JMAP_URL
+                value: 'https://mail.stage-thundermail.com'
+              - name: STALWART_BASE_API_URL
+                value: 'https://mail-i.stage-thundermail.com'
+
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -401,7 +412,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:cd16087ea05b1a375f6017330b7a4a4eae0d9d0a
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1e0e0694c7543e5dc7f45ebd108c074a6ef42df2
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -449,6 +460,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-client-secret-RzOIiH
               - name: OIDC_SIGN_ALGO
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-sign-algo-nEhTVJ
+              - name: STALWART_API_AUTH_METHOD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm
+              - name: STALWART_API_AUTH_STRING
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc
             environment:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
@@ -518,6 +533,10 @@ resources:
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"
               - name: OIDC_URL_LOGOUT
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
+              - name: STALWART_BASE_JMAP_URL
+                value: 'https://mail.stage-thundermail.com'
+              - name: STALWART_BASE_API_URL
+                value: 'https://mail-i.stage-thundermail.com'
 
   tb:ci:AwsAutomationUser:
     ci:
