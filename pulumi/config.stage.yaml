@@ -390,9 +390,9 @@ resources:
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
               - name: OIDC_FALLBACK_MATCH_BY_EMAIL
                 value: 'True'
-              - name: STALWART_HTTP_URL
+              - name: STALWART_BASE_JMAP_URL
                 value: 'https://mail.stage-thundermail.com'
-              - name: STALWART_API_URL
+              - name: STALWART_BASE_API_URL
                 value: 'https://mail-i.stage-thundermail.com'
 
 
@@ -533,9 +533,9 @@ resources:
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"
               - name: OIDC_URL_LOGOUT
                 value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
-              - name: STALWART_HTTP_URL
+              - name: STALWART_BASE_JMAP_URL
                 value: 'https://mail.stage-thundermail.com'
-              - name: STALWART_API_URL
+              - name: STALWART_BASE_API_URL
                 value: 'https://mail-i.stage-thundermail.com'
 
   tb:ci:AwsAutomationUser:

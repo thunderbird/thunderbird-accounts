@@ -386,9 +386,9 @@ resources:
                 value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout"
               - name: OIDC_FALLBACK_MATCH_BY_EMAIL
                 value: 'True'
-              - name: STALWART_HTTP_URL
+              - name: STALWART_BASE_JMAP_URL
                 value: 'https://mail.thundermail.com'
-              - name: STALWART_API_URL
+              - name: STALWART_BASE_API_URL
                 value: 'https://mail-i.thundermail.com'
 
     accounts-celery:
@@ -530,6 +530,10 @@ resources:
                 value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout"
               - name: OIDC_FALLBACK_MATCH_BY_EMAIL
                 value: 'True'
+              - name: STALWART_BASE_JMAP_URL
+                value: 'https://mail.thundermail.com'
+              - name: STALWART_BASE_API_URL
+                value: 'https://mail-i.thundermail.com'
 
   tb:ci:AwsAutomationUser:
     ci:

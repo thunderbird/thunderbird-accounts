@@ -27,7 +27,7 @@ class MailClient:
     Docs: https://stalw.art/docs/api/management/endpoints"""
 
     def __init__(self):
-        self.api_url = f'{settings.STALWART_API_URL}/api'
+        self.api_url = f'{settings.STALWART_BASE_API_URL}/api'
         self.api_auth_string = settings.STALWART_API_AUTH_STRING
         self.api_auth_method = settings.STALWART_API_AUTH_METHOD
 

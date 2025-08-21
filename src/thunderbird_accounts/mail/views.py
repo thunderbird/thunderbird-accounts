@@ -409,7 +409,7 @@ def jmap_test_page(request: HttpRequest):
             raise AccessTokenNotFound('Access token is not in session object. User may need to re-login.')
 
         client = TinyJMAPClient(
-            hostname=settings.STALWART_HTTP_URL,
+            hostname=settings.STALWART_BASE_JMAP_URL,
             username=user.username,
             token=access_token,
         )
