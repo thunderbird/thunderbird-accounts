@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, useTemplateRef } from 'vue';
 import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import CsrfToken from '@/components/CsrfToken.vue';
 
@@ -24,9 +24,9 @@ const formRef = ref(null);
 const fileInput = ref(null);
 
 // services-ui's TextInput and TextArea field references for resetting form state
-const emailInput = ref(null);
-const subjectInput = ref(null);
-const descriptionInput = ref(null);
+const emailInput = useTemplateRef('emailInput');
+const subjectInput = useTemplateRef('subjectInput');
+const descriptionInput = useTemplateRef('descriptionInput');
 
 // Dynamic options from API
 const productOptions = ref([]);
