@@ -20,7 +20,7 @@ resources:
         - logs
         - secretsmanager
       peering_connections:
-        mailstrom:
+        mailstrom-stage:
           peered_cidrs:
             - 10.1.0.0/16
           peer_vpc_id: vpc-0e07e0c5c98fc75e1
