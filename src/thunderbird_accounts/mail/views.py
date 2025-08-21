@@ -437,7 +437,7 @@ def jmap_test_page(request: HttpRequest):
 
     return JsonResponse(
         {
-            'jmap_url': f'{settings.STALWART_HTTP_URL}/.well-known/jmap',
+            'jmap_url': f'{settings.STALWART_BASE_JMAP_URL}/.well-known/jmap',
             'username': user.username,
             'connection': len(inboxes) > 0,
         }
