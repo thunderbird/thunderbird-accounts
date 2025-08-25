@@ -8,6 +8,13 @@
   "dashboard": {
     "inline-input": {
       "change": "Change"
+    },
+    "fields": {
+      "email": "Email",
+      "password": "Password",
+      "mfa": "Multi-Factor Authentification",
+      "recovery-email": "Recovery email address",
+      "recovery-phone": "Recovery phone number"
     }
   },
   "services": {
