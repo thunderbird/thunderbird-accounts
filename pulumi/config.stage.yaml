@@ -19,6 +19,18 @@ resources:
         - ecr.dkr
         - logs
         - secretsmanager
+      peering_connections:
+        mailstrom-stage:
+          peered_cidrs:
+            - 10.1.0.0/16
+          peer_vpc_id: vpc-0e07e0c5c98fc75e1
+          auto_accept: True  # Requires both VPCs to be in same account and region
+          # Allow resolution of DNS records to private IPs (so we can use a private LB)
+          accepter:
+            allow_remote_vpc_dns_resolution: True
+          requester:
+            allow_remote_vpc_dns_resolution: True
+
 
   # The __main.py__ here is very specific in the following way:
   # For each ECS cluster you eventually define, you **must** have one entry by the same exact name in the
@@ -185,7 +197,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-6238cb14a519f1873657c823e808209532f297fb
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-57f14773e41d667c7948098270e9a5e62e9dced7
             command:
               - start
             portMappings:
@@ -257,7 +269,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1e0e0694c7543e5dc7f45ebd108c074a6ef42df2
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:6ae875996547b84f26482d829e9f50554714354a
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -412,7 +424,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1e0e0694c7543e5dc7f45ebd108c074a6ef42df2
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:6ae875996547b84f26482d829e9f50554714354a
             linuxParameters:
               initProcessEnabled: True
             secrets:
