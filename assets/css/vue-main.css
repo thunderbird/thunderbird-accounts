@@ -1,0 +1,14 @@
+/**
+ * Global css for the new vue app
+ */
+@import "fonts.css";
+
+html {
+  height: 100%;
+  background-color: var(--colour-neutral-lower);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+}

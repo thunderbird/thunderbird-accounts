@@ -1,0 +1,18 @@
+{
+  "navbar": {
+    "screenreader-skip-to-main-content": "Skip to main content."
+  },
+  "avatar": {
+    "alt-text": "{username}'s avatar."
+  },
+  "dashboard": {
+    "inline-input": {
+      "change": "Change"
+    }
+  },
+  "services": {
+    "appointment": "Appointment",
+    "send": "Send",
+    "thundermail": "Thundermail"
+  }
+}

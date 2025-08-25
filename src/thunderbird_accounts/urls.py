@@ -37,10 +37,9 @@ urlpatterns = [
     path('sign-up/', mail_views.sign_up, name='sign_up'),
     path('sign-up/submit', mail_views.sign_up_submit, name='sign_up_submit'),
     path('wait-list/', mail_views.wait_list),
-    path('self-serve/', mail_views.self_serve, name='self_serve_home'),
+    path('self-serve/', mail_views.self_serve_dashboard, name='self_serve_dashboard'),
     path('self-serve/account-settings', mail_views.self_serve_account_settings, name='self_serve_account_info'),
     path('self-serve/app-passwords', mail_views.self_serve_app_passwords, name='self_serve_app_password'),
-    path('self-serve/connection-info', mail_views.self_serve_connection_info, name='self_serve_connection_info'),
     path('self-serve/subscription', mail_views.self_serve_subscription, name='self_serve_subscription'),
     path(
         'self-serve/subscription/success',

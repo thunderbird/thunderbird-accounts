@@ -99,7 +99,7 @@ def sign_up_submit(request: HttpRequest):
     address = Email.objects.create(address=email_address, type='primary', account=account)
 
     if account and address:
-        return HttpResponseRedirect(reverse('self_serve_connection_info'))
+        return HttpResponseRedirect(reverse('self_serve_dashboard'))
 
     return HttpResponseRedirect(reverse('sign_up'))
 
@@ -222,12 +222,6 @@ def contact_submit(request: HttpRequest):
 
     return JsonResponse({'success': False}, status=500)
 
-
-@login_required
-def self_serve(request: HttpRequest):
-    return HttpResponseRedirect(reverse('self_serve_connection_info'))
-
-
 @login_required
 def self_serve_account_settings(request: HttpRequest):
     """Account Settings page for Self Serve
@@ -243,7 +237,7 @@ def self_serve_account_settings(request: HttpRequest):
 
 
 @login_required
-def self_serve_connection_info(request: HttpRequest):
+def self_serve_dashboard(request: HttpRequest):
     """Connection Info page for Self Serve
     This page displays information relating to the connection settings
     that a user may need to connect an external mail client."""
@@ -255,7 +249,7 @@ def self_serve_connection_info(request: HttpRequest):
 
     return TemplateResponse(
         request,
-        'mail/self-serve/connection-info.html',
+        'vue-base.html',
         {
             **self_serve_common_options(False, request.user, account),
             'mail_address': email.address if email else None,

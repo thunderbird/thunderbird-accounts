@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
 {% load helpers %}
+{% load static %}
 {% block extra_page_params %}
   hasAccount: {{ has_account|to_json }},
   hasActiveSubscription: {{ has_active_subscription|to_json }}
 {% endblock %}
-{% block nav %}
-  <p>Welcome back {{ user.display_name }}.</p>
-  {% include 'mail/self-serve/_nav.html' %}
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/vue-main.css' %}">
 {% endblock %}
-{% block body %}
+{% block header %}{% endblock %}
+{% block body_container %}
 <section id="app"></section>
 {% endblock %}
