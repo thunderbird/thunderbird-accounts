@@ -14,7 +14,10 @@
       "password": "Password",
       "mfa": "Multi-Factor Authentification",
       "recovery-email": "Recovery email address",
-      "recovery-phone": "Recovery phone number"
+      "recovery-phone": "Recovery phone number",
+      "on": "On",
+      "off": "Off",
+      "unset": "Unset"
     }
   },
   "services": {

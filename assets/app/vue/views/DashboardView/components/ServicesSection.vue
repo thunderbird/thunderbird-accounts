@@ -1,15 +1,21 @@
 <script setup lang="ts">
+import {Services} from "../../../../defines";
+import ServiceIcon from "@/views/DashboardView/components/ServiceIcon.vue";
 
+interface PropTypes {
+  subscribedServices: Array<string>
+}
+defineProps<PropTypes>();
 </script>
 
 <template>
-<section class="services">
-  <ul class="services-list">
-    <li>{{ $t('services.thundermail') }}</li>
-    <li>{{ $t('services.appointment') }}</li>
-    <li>{{ $t('services.send') }}</li>
-  </ul>
-</section>
+  <section class="services">
+    <ul class="services-list">
+      <li v-for="service in subscribedServices" v-bind:key="service">
+        <service-icon :service="service" v-if="Object.values(Services).includes(service as any)"/>
+      </li>
+    </ul>
+  </section>
 </template>
 
 <style scoped>

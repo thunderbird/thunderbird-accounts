@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 
@@ -14,7 +15,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.mail.client import MailClient
+from thunderbird_accounts.mail.client import MailClient, KeycloakClient
 from thunderbird_accounts.mail.exceptions import AccessTokenNotFound
 from thunderbird_accounts.mail.utils import decode_app_password
 
@@ -112,7 +113,8 @@ def self_serve_common_options(is_account_settings: bool, user: User, account: Ac
         'has_account': True if account else False,
         'is_account_settings': is_account_settings,
         'has_active_subscription': user.has_active_subscription,
-        'aia_url': settings.KEYCLOAK_AIA_ENDPOINT
+        'aia_url': settings.KEYCLOAK_AIA_ENDPOINT,
+        'redirect_uri': f'{settings.PUBLIC_BASE_URL}{reverse('oidc_authentication_callback')}',
     }
 
 
@@ -250,6 +252,17 @@ def self_serve_dashboard(request: HttpRequest):
     if account:
         email = account.email_set.first()
 
+    user = request.user
+
+    kc = KeycloakClient()
+    remote_credentials = kc.get_security_credentials(user.oidc_id)
+
+    # Map the credentials to something like { password: { type: password, userLabel: null }, otp: { ... etc ... } }
+    credentials = {cred.get('type'): {
+        'type': cred.get('type'),
+        'user_label': cred.get('userLabel')
+    } for cred in remote_credentials}
+
     return TemplateResponse(
         request,
         'vue-base.html',
@@ -260,6 +273,7 @@ def self_serve_dashboard(request: HttpRequest):
             'IMAP': settings.CONNECTION_INFO['IMAP'],
             'JMAP': settings.CONNECTION_INFO['JMAP'] if 'JMAP' in settings.CONNECTION_INFO else {},
             'SMTP': settings.CONNECTION_INFO['SMTP'],
+            'credentials': credentials,
         },
     )
 

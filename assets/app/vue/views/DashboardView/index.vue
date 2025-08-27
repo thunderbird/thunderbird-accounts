@@ -4,12 +4,21 @@ import InlineInput from "@/views/DashboardView/components/InlineInput.vue";
 import ContentSection from "@/views/DashboardView/components/ContentSection.vue";
 import Divider from "@/views/DashboardView/components/Divider.vue";
 import ServicesSection from "@/views/DashboardView/components/ServicesSection.vue";
+import {Services} from "../../../defines";
 
 const email = window._page.username;
-const password = '*************';
-const mfa = window._page.hasMfaEnabled;
+const password = !!window._page.credentials?.password;
+const mfa = !!window._page.credentials?.otp;
 const recoveryEmail = window._page.userEmail;
-const recoveryPhone = false;
+const recoveryPhone = !!window._page.credentials?.sms;
+
+// This will eventually come from backend via user entitlements.
+// But since we only support these services right now, it's hardcoded.
+const subscribedServices = [
+  Services.Thundermail,
+  Services.Appointment,
+  Services.Send
+];
 
 /**
  * This is keycloak specific functionality.
@@ -19,7 +28,7 @@ const keycloakChangeClick = ({ value }) => {
   const aiaUrl = new URL(window._page.aiaUrl);
   aiaUrl.searchParams.append('response_type', 'code');
   // Keycloak needs to be setup to allow this url as a redirect url
-  aiaUrl.searchParams.append('redirect_uri', window.location.href.split('?')[0]);
+  aiaUrl.searchParams.append('redirect_uri', window._page.redirectUri);
 
     switch (value) {
     case i18n.t('dashboard.fields.password'):
@@ -53,26 +62,26 @@ export default {
           <a href="http://keycloak:8999/realms/tbpro/protocol/openid-connect/auth?response_type=code&client_id=tb-accounts&redirect_uri=http://localhost:8087/oidc/callback/&kc_action=UPDATE_PASSWORD">Test</a>
           <inline-input :value="email" :label="$t('dashboard.fields.email')"></inline-input>
           <divider/>
-          <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="password" :label="$t('dashboard.fields.password')"></inline-input>
+          <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="password ? '*************' : $t('dashboard.fields.unset')" :label="$t('dashboard.fields.password')"></inline-input>
           <divider/>
-          <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="mfa" :label="$t('dashboard.fields.mfa')"></inline-input>
+          <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="mfa ? $t('dashboard.fields.on') : $t('dashboard.fields.off')" :label="$t('dashboard.fields.mfa')"></inline-input>
           <divider/>
           <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="recoveryEmail"
                         :label="$t('dashboard.fields.recovery-email')"></inline-input>
           <divider/>
-          <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="recoveryPhone"
+          <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="recoveryPhone ? $t('dashboard.fields.on') : $t('dashboard.fields.off')"
                         :label="$t('dashboard.fields.recovery-phone')"></inline-input>
         </div>
       </content-section>
       <content-section class="content-section">
         <h1>Privacy & Data</h1>
-        <inline-input v-model="email" label="Email"></inline-input>
+        <inline-input label="Email"></inline-input>
       </content-section>
     </section>
     <divider type="vertical"/>
     <section class="content-column">
       <h1>My Services</h1>
-      <services-section></services-section>
+      <services-section :subscribed-services="subscribedServices"/>
     </section>
   </div>
 </template>
