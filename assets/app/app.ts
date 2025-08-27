@@ -61,3 +61,8 @@ window.addEventListener('load', async () => {
   app.mount('#app');
   await router.replace(window.location.pathname);
 });
+
+// Define our `_page` namespace as a generic so typescript stops complaining about it
+declare global {
+    interface Window { _page: any; }
+}

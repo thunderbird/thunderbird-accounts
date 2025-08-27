@@ -1,26 +1,47 @@
 <script setup lang="ts">
-
+import { i18n } from "@/../composables/i18n";
 import InlineInput from "@/views/DashboardView/components/InlineInput.vue";
 import ContentSection from "@/views/DashboardView/components/ContentSection.vue";
 import Divider from "@/views/DashboardView/components/Divider.vue";
 import ServicesSection from "@/views/DashboardView/components/ServicesSection.vue";
+
+const email = window._page.username;
+const password = '*************';
+const mfa = window._page.hasMfaEnabled;
+const recoveryEmail = window._page.userEmail;
+const recoveryPhone = false;
+
+/**
+ * This is keycloak specific functionality.
+ * Generate an app initiated action url (aia url) and send the user to a secure flow to update their credentials
+ */
+const keycloakChangeClick = ({ value }) => {
+  const aiaUrl = new URL(window._page.aiaUrl);
+  aiaUrl.searchParams.append('response_type', 'code');
+  // Keycloak needs to be setup to allow this url as a redirect url
+  aiaUrl.searchParams.append('redirect_uri', window.location.href.split('?')[0]);
+
+    switch (value) {
+    case i18n.t('dashboard.fields.password'):
+      aiaUrl.searchParams.append('kc_action', 'UPDATE_PASSWORD')
+      break;
+    case i18n.t('dashboard.fields.mfa'):
+      aiaUrl.searchParams.append('kc_action', 'CONFIGURE_TOTP')
+      break;
+    default:
+      alert('Not implemented yet :(');
+      return;
+  }
+
+  window.open(aiaUrl.toString(), '_blank');
+}
+
 </script>
 
 <script lang="ts">
-import {reactive} from "vue";
-
 export default {
   name: 'DashboardView'
 };
-
-const formValues = reactive({
-  email: window._page.userEmail,
-  password: null,
-  mfa: null,
-  recoveryEmail: null,
-  recoveryPhone: null,
-});
-
 </script>
 
 <template>
@@ -29,20 +50,23 @@ const formValues = reactive({
       <content-section class="content-section">
         <h1>My Account</h1>
         <div class="fields">
-        <inline-input v-model="formValues.email" :label="$t('dashboard.fields.email')"></inline-input>
-        <divider/>
-        <inline-input v-model="formValues.password" :label="$t('dashboard.fields.password')"></inline-input>
-        <divider/>
-        <inline-input v-model="formValues.mfa" :label="$t('dashboard.fields.mfa')"></inline-input>
-        <divider/>
-        <inline-input v-model="formValues.recoveryEmail" :label="$t('dashboard.fields.recovery-email')"></inline-input>
-        <divider/>
-        <inline-input v-model="formValues.recoveryPhone" :label="$t('dashboard.fields.recovery-phone')"></inline-input>
+          <a href="http://keycloak:8999/realms/tbpro/protocol/openid-connect/auth?response_type=code&client_id=tb-accounts&redirect_uri=http://localhost:8087/oidc/callback/&kc_action=UPDATE_PASSWORD">Test</a>
+          <inline-input :value="email" :label="$t('dashboard.fields.email')"></inline-input>
+          <divider/>
+          <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="password" :label="$t('dashboard.fields.password')"></inline-input>
+          <divider/>
+          <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="mfa" :label="$t('dashboard.fields.mfa')"></inline-input>
+          <divider/>
+          <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="recoveryEmail"
+                        :label="$t('dashboard.fields.recovery-email')"></inline-input>
+          <divider/>
+          <inline-input @click="keycloakChangeClick" :show-change-link="true" :value="recoveryPhone"
+                        :label="$t('dashboard.fields.recovery-phone')"></inline-input>
         </div>
       </content-section>
       <content-section class="content-section">
         <h1>Privacy & Data</h1>
-        <inline-input v-model="formValues.email" label="Email"></inline-input>
+        <inline-input v-model="email" label="Email"></inline-input>
       </content-section>
     </section>
     <divider type="vertical"/>

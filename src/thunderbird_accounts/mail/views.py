@@ -39,6 +39,8 @@ def raise_form_error(request, to_view: str, error_message: str):
 
 
 def home(request: HttpRequest):
+    if request.user.is_authenticated:
+        return HttpResponseRedirect(reverse('self_serve_dashboard'))
     return TemplateResponse(request, 'mail/index.html', {})
 
 
@@ -46,7 +48,7 @@ def home(request: HttpRequest):
 def sign_up(request: HttpRequest):
     # If we're posting ourselves, we're logging in
     if request.method == 'POST':
-        return HttpResponseRedirect(reverse('self-serve'))
+        return HttpResponseRedirect(reverse('self_serve_dashboard'))
 
     return TemplateResponse(
         request,
@@ -110,6 +112,7 @@ def self_serve_common_options(is_account_settings: bool, user: User, account: Ac
         'has_account': True if account else False,
         'is_account_settings': is_account_settings,
         'has_active_subscription': user.has_active_subscription,
+        'aia_url': settings.KEYCLOAK_AIA_ENDPOINT
     }
 
 

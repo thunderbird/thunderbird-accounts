@@ -78,7 +78,7 @@ class AccountsOIDCBackendTestCase(TestCase):
 class LoginRequiredTestCase(TestCase):
     # (URL reverse key, expected response status code),
     login_required_keys = [
-        ('self_serve_home', 302),  # This one is a redirect
+        ('self_serve_dashboard', 302),
         ('self_serve_account_info', 302),
         ('self_serve_app_password', 302),
         ('self_serve_connection_info', 302),

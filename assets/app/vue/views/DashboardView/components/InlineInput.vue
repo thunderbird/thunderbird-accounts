@@ -1,24 +1,32 @@
 <script setup lang="ts">
-import {LinkButton, TextInput} from "@thunderbirdops/services-ui";
-import {ref} from "vue";
-
+/**
+ * Not actually an input anymore...
+ */
+import {LinkButton} from "@thunderbirdops/services-ui";
 
 interface PropTypes {
   label: string,
+  value: string,
+  showChangeLink?: boolean
 }
-defineProps<PropTypes>();
-const model = defineModel<string>();
-const readMode = ref<boolean>(true);
-const onChange = () => {
-  console.log('read me?', readMode.value);
-  readMode.value = false;
+
+const props = withDefaults(defineProps<PropTypes>(), {showChangeLink: false});
+const emit = defineEmits(['click']);
+const onChange = (evt: PointerEvent) => {
+  emit('click', { ...evt, value: props.label });
 }
 </script>
 
+
 <template>
   <div class="field">
-  <text-input v-model="model" :disabled="readMode" :name="label">{{ label }}</text-input>
-  <link-button @click="onChange">{{ $t('dashboard.inline-input.change') }}</link-button>
+    <div class="wrapper">
+      <span class="label">
+        {{ label }}
+      </span>
+      <span class="value">{{ value }}</span>
+    </div>
+    <link-button @click="onChange" v-if="showChangeLink">{{ $t('dashboard.inline-input.change') }}</link-button>
   </div>
 </template>
 
@@ -28,4 +36,24 @@ const onChange = () => {
   width: 100%;
   justify-content: space-between;
 }
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  color: var(--colour-ti-base);
+  line-height: var(--line-height-input);
+  font-weight: 400;
+  font-size: 16px;
+}
+
+.label {
+  width: 100%;
+  font-weight: 600;
+}
+
+.value {
+  line-height: 1.32;
+}
+
 </style>
