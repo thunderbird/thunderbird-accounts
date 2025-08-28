@@ -533,7 +533,7 @@ resources:
               - name: STALWART_BASE_JMAP_URL
                 value: 'https://mail.thundermail.com'
               - name: STALWART_BASE_API_URL
-                value: 'https://mail-i.thundermail.com:8080'
+                value: 'https://mailstrom-stage-management-i.thundermail.com:8080'
 
   tb:ci:AwsAutomationUser:
     ci:
