@@ -46,7 +46,7 @@ const username = window._page.username;
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
   box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.1);
-  background: linear-gradient(0deg, var(--colour-ti-base), #566a92);
+  background: linear-gradient(0deg, var(--colour-ti-base) -40%, #566a92 200%);
 }
 
 </style>

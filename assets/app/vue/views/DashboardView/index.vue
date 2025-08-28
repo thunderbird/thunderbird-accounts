@@ -35,7 +35,7 @@ const keycloakChangeClick = ({ value }) => {
       aiaUrl.searchParams.append('kc_action', 'UPDATE_PASSWORD')
       break;
     case i18n.t('dashboard.fields.mfa'):
-      aiaUrl.searchParams.append('kc_action', 'CONFIGURE_TOTP')
+      aiaUrl.searchParams.append('kc_action', !mfa ? 'CONFIGURE_TOTP' : 'delete_credential')
       break;
     default:
       alert('Not implemented yet :(');
