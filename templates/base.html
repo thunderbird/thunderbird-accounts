@@ -8,7 +8,9 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block page_title %}Thunderbird Accounts Hub{% endblock %}</title>
+  {% block css %}
   <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  {% endblock %}
   {% vite_hmr_client %}
   {% vite_asset 'assets/app/app.ts' %}
 </head>
@@ -23,6 +25,7 @@
     csrfToken: csrfToken.value,
     isAuthenticated: {{ user.is_authenticated|to_json }},
     userEmail: {{ user.email|to_json|safe }},
+    username: {{ user.username|to_json|safe }},
     formError: {{ form_error|to_json|safe|default:'null' }},
     {% block extra_page_params %}{% endblock %}
   };
@@ -34,6 +37,7 @@
     <h1>Accounts Hub</h1>
   </header>
 {% endblock %}
+{% block body_container %}
 <div class="base-container">
   {% block page_heading %}
   {% endblock %}
@@ -42,5 +46,6 @@
   {% block body %}
   {% endblock %}
 </div>
+{% endblock %}
 </body>
 </html>

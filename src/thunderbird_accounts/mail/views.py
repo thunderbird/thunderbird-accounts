@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 
@@ -18,7 +19,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.mail.client import MailClient
+from thunderbird_accounts.mail.client import MailClient, KeycloakClient
 from thunderbird_accounts.mail.exceptions import AccessTokenNotFound
 from thunderbird_accounts.mail.utils import decode_app_password
 
@@ -43,6 +44,8 @@ def raise_form_error(request, to_view: str, error_message: str):
 
 
 def home(request: HttpRequest):
+    if request.user.is_authenticated:
+        return HttpResponseRedirect(reverse('self_serve_dashboard'))
     return TemplateResponse(request, 'mail/index.html', {})
 
 
@@ -50,7 +53,7 @@ def home(request: HttpRequest):
 def sign_up(request: HttpRequest):
     # If we're posting ourselves, we're logging in
     if request.method == 'POST':
-        return HttpResponseRedirect(reverse('self-serve'))
+        return HttpResponseRedirect(reverse('self_serve_dashboard'))
 
     return TemplateResponse(
         request,
@@ -103,7 +106,7 @@ def sign_up_submit(request: HttpRequest):
     address = Email.objects.create(address=email_address, type='primary', account=account)
 
     if account and address:
-        return HttpResponseRedirect(reverse('self_serve_connection_info'))
+        return HttpResponseRedirect(reverse('self_serve_dashboard'))
 
     return HttpResponseRedirect(reverse('sign_up'))
 
@@ -114,6 +117,8 @@ def self_serve_common_options(is_account_settings: bool, user: User, account: Ac
         'has_account': True if account else False,
         'is_account_settings': is_account_settings,
         'has_active_subscription': user.has_active_subscription,
+        'aia_url': settings.KEYCLOAK_AIA_ENDPOINT,
+        'redirect_uri': f'{settings.PUBLIC_BASE_URL}{reverse('oidc_authentication_callback')}',
     }
 
 
@@ -226,12 +231,6 @@ def contact_submit(request: HttpRequest):
 
     return JsonResponse({'success': False}, status=500)
 
-
-@login_required
-def self_serve(request: HttpRequest):
-    return HttpResponseRedirect(reverse('self_serve_connection_info'))
-
-
 @login_required
 def self_serve_account_settings(request: HttpRequest):
     """Account Settings page for Self Serve
@@ -247,7 +246,7 @@ def self_serve_account_settings(request: HttpRequest):
 
 
 @login_required
-def self_serve_connection_info(request: HttpRequest):
+def self_serve_dashboard(request: HttpRequest):
     """Connection Info page for Self Serve
     This page displays information relating to the connection settings
     that a user may need to connect an external mail client."""
@@ -257,9 +256,20 @@ def self_serve_connection_info(request: HttpRequest):
     if account:
         email = account.email_set.first()
 
+    user = request.user
+
+    kc = KeycloakClient()
+    remote_credentials = kc.get_security_credentials(user.oidc_id)
+
+    # Map the credentials to something like { password: { type: password, userLabel: null }, otp: { ... etc ... } }
+    credentials = {cred.get('type'): {
+        'type': cred.get('type'),
+        'user_label': cred.get('userLabel')
+    } for cred in remote_credentials}
+
     return TemplateResponse(
         request,
-        'mail/self-serve/connection-info.html',
+        'vue-base.html',
         {
             **self_serve_common_options(False, request.user, account),
             'mail_address': email.address if email else None,
@@ -267,6 +277,7 @@ def self_serve_connection_info(request: HttpRequest):
             'IMAP': settings.CONNECTION_INFO['IMAP'],
             'JMAP': settings.CONNECTION_INFO['JMAP'] if 'JMAP' in settings.CONNECTION_INFO else {},
             'SMTP': settings.CONNECTION_INFO['SMTP'],
+            'credentials': credentials,
         },
     )
 
