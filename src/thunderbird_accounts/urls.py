@@ -73,3 +73,11 @@ if settings.DEBUG:
 # Needed with uvicorn dev server
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.ASSETS_ROOT)
+
+urlpatterns += [
+    path(
+        "mail/admin/stalwart/",
+        mail_views.AdminStalwartList.as_view(),
+        name="admin_stalwart_list",
+    ),
+]

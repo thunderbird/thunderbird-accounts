@@ -48,6 +48,25 @@ class MailClient:
             details_and_reason = ': '.join([data.get('details'), data.get('reason')])
             raise StalwartError(details_and_reason)
 
+    def _list_principals(self, page=1, limit=100) -> requests.Response:
+        """Returns a response for a principal object from Stalwart
+
+        Docs: https://stalw.art/docs/api/management/endpoints/#list-principals
+
+        Important: Don't use this directly!
+        """
+        response = requests.get(f'{self.api_url}/principal', verify=False, params={
+            'page': page,
+            'limit': limit,
+        }, headers=self.authorized_headers)
+        response.raise_for_status()
+        self._raise_for_error(response)
+
+        # Reduce log spam
+        #logging.info(f'[MailClient._list_principals()]: {response.json()}')
+
+        return response
+
     def _get_principal(self, principal_id: str) -> requests.Response:
         """Returns a response for a principal object from Stalwart
 

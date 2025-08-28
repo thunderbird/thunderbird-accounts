@@ -1,0 +1,33 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<section>
+  <h1>Stalwart Principals</h1>
+  <p>Displaying {{ items|length }} principal objects</p>
+  <table>
+    <thead>
+    <tr>
+      <td>ID</td>
+      <td>Type</td>
+      <td>Name</td>
+      <td>Description (OIDC ID for users)</td>
+      <td>Emails</td>
+      <td>Roles</td>
+      <td>Members</td>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in items %}
+    <tr>
+      <td>{{ item.id }}</td>
+      <td>{{ item.type }}</td>
+      <td>{{ item.name }}</td>
+      <td>{{ item.description }}</td>
+      <td>{{ item.emails }}</td>
+      <td>{{ item.roles }}</td>
+      <td>{{ item.members }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock content %}

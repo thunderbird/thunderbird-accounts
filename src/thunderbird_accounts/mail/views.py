@@ -4,14 +4,18 @@ import logging
 import requests.exceptions
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.signing import Signer
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
+from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.client import MailClient
@@ -442,3 +446,34 @@ def jmap_test_page(request: HttpRequest):
             'connection': len(inboxes) > 0,
         }
     )
+
+
+@method_decorator(never_cache, name="dispatch")
+@method_decorator(staff_member_required, name="dispatch")
+class AdminStalwartList(TemplateView):
+    template_name = "admin_stalwart_view.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        stalwart = MailClient()
+        response = stalwart._list_principals()
+        data = response.json().get('data', {}).get('items', [])
+
+        context.update({
+            'app_label': 'mail',
+            'items': [
+                {
+                    'id': principal.get('id'),
+                    'name': principal.get('name'),
+                    'type': principal.get('type'),
+                    'description': principal.get('description'),
+                    'emails': principal.get('emails'),
+                    'roles': principal.get('roles'),
+                    'members': principal.get('members'),
+                }
+                for principal in data
+            ]
+        })
+
+        return context
