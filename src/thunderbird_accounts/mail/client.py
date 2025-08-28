@@ -55,7 +55,7 @@ class MailClient:
 
         Important: Don't use this directly!
         """
-        response = requests.get(f'{self.api_url}/principal/{principal_id}', headers=self.authorized_headers)
+        response = requests.get(f'{self.api_url}/principal/{principal_id}', verify=False, headers=self.authorized_headers)
         response.raise_for_status()
         self._raise_for_error(response)
 
@@ -89,7 +89,7 @@ class MailClient:
         }
 
         response = requests.post(
-            f'{self.api_url}/principal/deploy', json=principal_data, headers=self.authorized_headers
+            f'{self.api_url}/principal/deploy', json=principal_data, verify=False, headers=self.authorized_headers
         )
         response.raise_for_status()
         self._raise_for_error(response)
@@ -123,7 +123,7 @@ class MailClient:
                 raise TypeError(f'{data.get("action")} is not allowed in')
 
         response = requests.patch(
-            f'{self.api_url}/principal/{principal_id}', json=update_data, headers=self.authorized_headers
+            f'{self.api_url}/principal/{principal_id}', json=update_data, verify=False, headers=self.authorized_headers
         )
         response.raise_for_status()
         self._raise_for_error(response)
@@ -149,7 +149,7 @@ class MailClient:
 
     def create_dkim(self, domain):
         data = {'id': None, 'algorithm': settings.STALWART_DKIM_ALGO, 'domain': domain, 'selector': None}
-        response = requests.post(f'{self.api_url}/dkim', json=data, headers=self.authorized_headers)
+        response = requests.post(f'{self.api_url}/dkim', json=data, verify=False, headers=self.authorized_headers)
         response.raise_for_status()
         data = response.json()
         logging.info(f'[MailClient.create_dkim({domain}]: {data}')
