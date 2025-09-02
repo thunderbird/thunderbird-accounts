@@ -63,7 +63,7 @@ class MailClient:
         self._raise_for_error(response)
 
         # Reduce log spam
-        #logging.info(f'[MailClient._list_principals()]: {response.json()}')
+        # logging.info(f'[MailClient._list_principals()]: {response.json()}')
 
         return response
 
@@ -74,7 +74,8 @@ class MailClient:
 
         Important: Don't use this directly!
         """
-        response = requests.get(f'{self.api_url}/principal/{principal_id}', verify=False, headers=self.authorized_headers)
+        response = requests.get(f'{self.api_url}/principal/{principal_id}', verify=False,
+                                headers=self.authorized_headers)
         response.raise_for_status()
         self._raise_for_error(response)
 
