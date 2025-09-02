@@ -20,6 +20,16 @@ resources:
         - ecr.dkr
         - logs
         - secretsmanager
+      peering_connections:
+        mailstrom-prod:
+          peered_cidrs:
+            - 10.0.0.0/16
+          peer_vpc_id: vpc-0b1bde8b45292eda7
+          auto_accept: True
+          accepter:
+            allow_remote_vpc_dns_resolution: True
+          requester:
+            allow_remote_vpc_dns_resolution: True
 
   # The __main.py__ here is very specific in the following way:
   # For each ECS cluster you eventually define, you **must** have one entry by the same exact name in the
@@ -389,7 +399,7 @@ resources:
               - name: STALWART_BASE_JMAP_URL
                 value: 'https://mail.thundermail.com'
               - name: STALWART_BASE_API_URL
-                value: 'https://mail-i.thundermail.com'
+                value: 'https://mailstrom-management-i.thundermail.com'
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
