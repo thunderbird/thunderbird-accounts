@@ -30,6 +30,7 @@ class TinyJMAPClient:
                 'Content-Type': 'application/json',
                 'Authorization': f'Bearer {self.token}',
             },
+            allow_redirects=True,
         )
         r.raise_for_status()
         self.session = session = r.json()
