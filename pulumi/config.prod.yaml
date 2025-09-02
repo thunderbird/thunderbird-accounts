@@ -399,7 +399,7 @@ resources:
               - name: STALWART_BASE_JMAP_URL
                 value: 'https://mail.thundermail.com'
               - name: STALWART_BASE_API_URL
-                value: 'https://mailstrom-management-i.thundermail.com'
+                value: 'https://mailstrom-management-i.thundermail.com:8080'
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
