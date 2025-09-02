@@ -1,4 +1,6 @@
 from django.contrib.auth.hashers import make_password, identify_hasher
+from thunderbird_accounts.mail import tasks
+from thunderbird_accounts.mail.models import Account, Email
 
 
 def save_app_password(label, password):
@@ -24,3 +26,25 @@ def decode_app_password(secret):
 
     # We only care about the app password name here
     return secret.replace('$app$', '').split('$')[0]
+
+
+def create_stalwart_account(user):
+    # Run this immediately for now, in the future we'll ship these to celery
+    tasks.create_stalwart_account.run(
+        user_uuid=user.uuid.hex, username=user.username, email=user.email
+    )
+
+    # Also create their account objects
+    account = Account.objects.create(
+        name=user.username,
+        active=True,
+        user=user,
+    )
+    Email.objects.create(address=user.username, type='primary', account=account)
+
+
+def add_email_address_to_stalwart_account(user, email):
+    # Run this immediately for now, in the future we'll ship these to celery
+    tasks.add_email_address_to_stalwart_account.run(
+        username=user.username, email=email
+    )
