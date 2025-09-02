@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load helpers %}
+{% load static %}
+{% block extra_page_params %}
+  hasAccount: {{ has_account|to_json }},
+  hasActiveSubscription: {{ has_active_subscription|to_json }},
+  hasMfaEnabled: {{ True|to_json }},
+  aiaUrl: {{ aia_url|to_json|safe }},
+  redirectUri: {{ redirect_uri|to_json|safe }},
+  {% if credentials %}
+  credentials: {{ credentials|to_json|safe }},
+  {% endif %}
+{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/vue-main.css' %}">
+{% endblock %}
+{% block header %}{% endblock %}
+{% block body_container %}
+<section id="app"></section>
+{% endblock %}
