@@ -35,6 +35,9 @@ class Account(BaseModel):
             models.Index(fields=['name']),
         ]
 
+    def __str__(self):
+        return f'Stalwart Account - {self.name}'
+
 
 class Email(BaseModel):
     """Slim representation of a Stalwart email address.
