@@ -63,7 +63,7 @@ class MailClient:
         self._raise_for_error(response)
 
         # Reduce log spam
-        #logging.info(f'[MailClient._list_principals()]: {response.json()}')
+        # logging.info(f'[MailClient._list_principals()]: {response.json()}')
 
         return response
 
@@ -74,7 +74,8 @@ class MailClient:
 
         Important: Don't use this directly!
         """
-        response = requests.get(f'{self.api_url}/principal/{principal_id}', verify=False, headers=self.authorized_headers)
+        response = requests.get(f'{self.api_url}/principal/{principal_id}', verify=False,
+                                headers=self.authorized_headers)
         response.raise_for_status()
         self._raise_for_error(response)
 
@@ -236,6 +237,20 @@ class MailClient:
         # I have no idea what the error is yet
         if error:
             logging.error(f'[save_app_password] err: {data}')
+            raise RuntimeError(data)
+
+    def save_email_address(self, username, email):
+        """Adds a new email address to a stalwart's individual principal by stalwart username."""
+        response = self._update_principal(
+            username,
+            [{'action': 'addItem', 'field': 'emails', 'value': email}],
+        )
+        # Returns data: null on success...
+        data = response.json()
+        error = data.get('error')
+        # I have no idea what the error is yet
+        if error:
+            logging.error(f'[save_email_address] err: {data}')
             raise RuntimeError(data)
 
     def make_api_key(self, username, password):

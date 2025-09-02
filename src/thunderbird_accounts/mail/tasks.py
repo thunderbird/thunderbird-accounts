@@ -8,13 +8,26 @@ from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNot
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
-def create_stalwart_account(self, user_uuid: str, username: str, email: str, app_password: Optional[str]):
+def create_stalwart_account(self, user_uuid: str, username: str, email: str, app_password: Optional[str] = None):
     stalwart = MailClient()
     domain = email.split('@')[1]
 
     # Make sure we don't have anyone with this username
     try:
-        stalwart.get_account(username)
+        account = stalwart.get_account(username)
+
+        # Make sure the account always has email in emails
+        emails = account.get('emails', [])
+        if email not in emails:
+            # Not in our account? We'll update the account and consider that a success.
+            stalwart.save_email_address(username, email)
+            return {
+                'uuid': user_uuid,
+                'stalwart_pkid': account.get('id'),
+                'username': username,
+                'email': email,
+                'task_status': 'success',
+            }
 
         # It already exists? We should have caught that in our system.
         sentry_sdk.capture_message(

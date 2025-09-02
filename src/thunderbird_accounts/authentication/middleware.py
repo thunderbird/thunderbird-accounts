@@ -10,6 +10,9 @@ from .utils import is_email_in_allow_list
 
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
+from thunderbird_accounts.mail import tasks
+from thunderbird_accounts.mail.models import Account, Email
+
 
 class AccountsOIDCBackend(OIDCAuthenticationBackend):
     def _check_allow_list(self, claims: dict):
@@ -21,6 +24,20 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
             raise PermissionDenied()
 
         return True
+
+    def create_stalwart_account(self, user):
+        # Run this immediately for now, in the future we'll ship these to celery
+        tasks.create_stalwart_account.run(
+            user_uuid=user.uuid.hex, username=user.username, email=user.email
+        )
+
+        # Also create their account objects
+        account = Account.objects.create(
+            name=user.username,
+            active=True,
+            user=user,
+        )
+        Email.objects.create(address=user.username, type='primary', account=account)
 
     def _set_user_fields(self, user: User, claims: dict):
         print('User -> ', user)
@@ -48,6 +65,8 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         user = self._set_user_fields(user, claims)
         user.save()
 
+        self.create_stalwart_account(user)
+
         return user
 
     def update_user(self, user, claims):
@@ -60,6 +79,12 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         if claims.get('email') and user.email != claims.get('email'):
             user.email = claims.get('email')
         user.save()
+
+        # If we somehow have an accounts user but don't have a stalwart account associated, create one.
+        # But make sure our username is within the allowed email domains!
+        if not user.stalwart_username and any(
+                [user.username.endswith(domain) for domain in settings.ALLOWED_EMAIL_DOMAINS]):
+            self.create_stalwart_account(user)
 
         return user
 
