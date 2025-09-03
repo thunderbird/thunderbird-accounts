@@ -33,7 +33,7 @@ from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
 from thunderbird_accounts.mail.zendesk import ZendeskClient
-from thunderbird_accounts.mail import tasks, utils
+from thunderbird_accounts.mail import utils
 
 
 def raise_form_error(request, to_view: str, error_message: str):
