@@ -7,6 +7,7 @@ import tb_pulumi.ci
 import tb_pulumi.ec2
 import tb_pulumi.elasticache
 import tb_pulumi.fargate
+import tb_pulumi.iam
 import tb_pulumi.network
 import tb_pulumi.secrets
 
@@ -122,3 +123,8 @@ cloudflare_backend_record = cloudflare.Record(
 if 'tb:ci:AwsAutomationUser' in resources and 'ci' in resources['tb:ci:AwsAutomationUser']:
     ci_opts = resources['tb:ci:AwsAutomationUser']['ci']
     ci_iam = tb_pulumi.ci.AwsAutomationUser(name=f'{project.project}-ci', project=project, **ci_opts)
+
+sap = tb_pulumi.iam.StackAccessPolicies(
+    f'{project.name_prefix}-sap',
+    project=project,
+)
