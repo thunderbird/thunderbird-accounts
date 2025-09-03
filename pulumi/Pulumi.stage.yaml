@@ -65,4 +65,4 @@ config:
   accounts:stalwart-api-auth-method:
     secure: AAABAL78KgJng5Hve//s4u+BeGcHTfFxak84BPRm0Dsjc9xBzMs=
   accounts:stalwart-api-auth-key:
-    secure: AAABAJaFR8zn4sFd1EgD70rccVLIDkK751ouhyMrizaH884mbYNe+HdIfTAWw7YZ/qU1Z0c6PmsPQbkbnJoEzNRkghRGHUusPKVJrUaQoBnqzF5aKeHk/0IiUaAkLwrlQJlv50A3DOwwzFvxBrL9Rdb7EVE=
+    secure: AAABAJ9go2Vf8PajyFfFNznYyfjIV319vgu/Qza/Ebs8/60pZsz1OP8bA4A+IOHiiE+dPvzp6ou47dcfOfeUxHtPN65PfyUjwSG1YOqdOqmHIog2p8OJCYIvxq2UbWWisU4Mo+NfxXFo0wFW
