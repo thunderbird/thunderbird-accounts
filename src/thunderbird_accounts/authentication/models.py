@@ -59,6 +59,10 @@ class User(AbstractUser, BaseModel):
         return self.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).count() > 0
 
     @cached_property
-    def stalwart_username(self) -> str | None:
+    def stalwart_primary_email(self) -> str | None:
+        """Returns the primary email address used for Stalwart."""
         account = self.account_set.first()
-        return account.name if account else None
+        if account:
+            email = account.email_set.filter(type=account.email_set.model.EmailType.PRIMARY).first()
+            return email.address
+        return None

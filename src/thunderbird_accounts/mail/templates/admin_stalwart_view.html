@@ -9,7 +9,7 @@
       <td>ID</td>
       <td>Type</td>
       <td>Name</td>
-      <td>Description (OIDC ID for users)</td>
+      <td>Description (Keycloak username for users)</td>
       <td>Emails</td>
       <td>Roles</td>
       <td>Members</td>
@@ -29,5 +29,43 @@
     {% endfor %}
     </tbody>
   </table>
+  <div>
+    <br/>
+    <br/>
+    <br/>
+    <br/>
+    {% csrf_token %}
+    <div class="submit-row">
+      <a class="deletelink" id="purge" href="#">Purge individuals</a>
+    </div>
+    <pre id="output"></pre>
+  </div>
 </section>
+<script>
+  // Allows up to clean up the test data before the proper oidc schema has been finallized.
+  const btn = document.getElementById('purge');
+  btn.addEventListener('click', async (evt) => {
+    const answer = confirm('Are you sure you want to delete all individuals?');
+    if (!answer) {
+      return;
+    }
+    const answer2 = confirm('Are you REALLY sure, there\'s no undoing this!');
+    if (!answer2) {
+      return;
+    }
+
+    const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+    const response = await fetch('/mail/admin/stalwart/purge', {
+      credentials: 'include',
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+      },
+    });
+
+    const data = await response.json();
+    const output = document.getElementById('output');
+    output.innerText = JSON.stringify(data, null, 2);
+  })
+</script>
 {% endblock content %}

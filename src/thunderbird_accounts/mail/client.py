@@ -1,6 +1,7 @@
 import base64
 import logging
 from enum import StrEnum
+from typing import Optional
 
 import requests
 from django.conf import settings
@@ -48,17 +49,22 @@ class MailClient:
             details_and_reason = ': '.join([data.get('details'), data.get('reason')])
             raise StalwartError(details_and_reason)
 
-    def _list_principals(self, page=1, limit=100) -> requests.Response:
+    def _list_principals(self, page=1, limit=100, type: Optional[str] = None) -> requests.Response:
         """Returns a response for a principal object from Stalwart
 
         Docs: https://stalw.art/docs/api/management/endpoints/#list-principals
 
         Important: Don't use this directly!
         """
-        response = requests.get(f'{self.api_url}/principal', verify=False, params={
+        params = {
             'page': page,
-            'limit': limit,
-        }, headers=self.authorized_headers)
+            'limit': limit
+        }
+        if type:
+            params['type'] = type
+
+        response = requests.get(f'{self.api_url}/principal', verify=False, params=params,
+                                headers=self.authorized_headers)
         response.raise_for_status()
         self._raise_for_error(response)
 
@@ -80,6 +86,22 @@ class MailClient:
         self._raise_for_error(response)
 
         logging.info(f'[MailClient._get_principal({principal_id}]: {response.json()}')
+
+        return response
+
+    def _delete_principal(self, principal_id: str) -> requests.Response:
+        """Deletes a principal object from Stalwart
+
+        Docs: https://stalw.art/docs/api/management/endpoints/#delete-principal
+
+        Important: Don't use this directly!
+        """
+        response = requests.delete(f'{self.api_url}/principal/{principal_id}', verify=False,
+                                   headers=self.authorized_headers)
+        response.raise_for_status()
+        self._raise_for_error(response)
+
+        logging.info(f'[MailClient._delete_principal({principal_id}]: {response.json()}')
 
         return response
 
@@ -189,8 +211,9 @@ class MailClient:
         # Return the pkid
         return data.get('data')
 
-    def create_account(self, email, username, uuid='', app_password=None):
-        data = {'type': 'individual', 'name': username, 'description': uuid, 'emails': [email], 'roles': ['user']}
+    def create_account(self, primary_email: str, username: str, oidc_id: str, app_password=None):
+        data = {'type': 'individual', 'name': oidc_id, 'description': username, 'emails': [primary_email],
+                'roles': ['user']}
         if app_password:
             data['secrets'] = [app_password]
         response = self._create_principal(data)
@@ -199,23 +222,23 @@ class MailClient:
         # Return the pkid
         return data.get('data')
 
-    def get_account(self, username):
-        response = self._get_principal(username)
+    def get_account(self, oidc_id: str):
+        response = self._get_principal(oidc_id)
 
         data = response.json()
         error = data.get('error')
 
         if error == StalwartErrors.NOT_FOUND.value:
-            raise AccountNotFoundError(username)
+            raise AccountNotFoundError(oidc_id)
 
         assert data.get('data', {}).get('type') == 'individual'
 
         # Return the pkid
         return data.get('data')
 
-    def delete_app_password(self, username, secret):
+    def delete_app_password(self, oidc_id, secret):
         response = self._update_principal(
-            username,
+            oidc_id,
             [{'action': 'removeItem', 'field': 'secrets', 'value': secret}],
         )
         # Returns data: null on success...
@@ -226,9 +249,9 @@ class MailClient:
             logging.error(f'[delete_app_password] err: {data}')
             raise RuntimeError(data)
 
-    def save_app_password(self, username, secret):
+    def save_app_password(self, oidc_id, secret):
         response = self._update_principal(
-            username,
+            oidc_id,
             [{'action': 'addItem', 'field': 'secrets', 'value': secret}],
         )
         # Returns data: null on success...
@@ -239,10 +262,10 @@ class MailClient:
             logging.error(f'[save_app_password] err: {data}')
             raise RuntimeError(data)
 
-    def save_email_address(self, username, email):
-        """Adds a new email address to a stalwart's individual principal by stalwart username."""
+    def save_email_address(self, oidc_id, email):
+        """Adds a new email address to a stalwart's individual principal by uuid."""
         response = self._update_principal(
-            username,
+            oidc_id,
             [{'action': 'addItem', 'field': 'emails', 'value': email}],
         )
         # Returns data: null on success...
