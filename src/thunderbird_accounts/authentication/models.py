@@ -64,5 +64,5 @@ class User(AbstractUser, BaseModel):
         account = self.account_set.first()
         if account:
             email = account.email_set.filter(type=account.email_set.model.EmailType.PRIMARY).first()
-            return email.address
+            return email.address if email else None
         return None

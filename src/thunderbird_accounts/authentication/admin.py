@@ -19,7 +19,7 @@ def admin_create_stalwart_account(modeladmin, request, queryset):
     for user in queryset:
         account_not_found = user.account_set.length == 0
 
-        if user.account_set.length == 0:
+        if account_not_found:
             # Yes relationship, let's check stalwart's side
             stalwart = MailClient()
             try:
