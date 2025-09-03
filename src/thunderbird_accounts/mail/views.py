@@ -33,7 +33,7 @@ from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
 from thunderbird_accounts.mail.zendesk import ZendeskClient
-from thunderbird_accounts.mail import tasks, utils
+from thunderbird_accounts.mail import utils
 
 
 def raise_form_error(request, to_view: str, error_message: str):
@@ -83,26 +83,21 @@ def sign_up_submit(request: HttpRequest):
         pass
 
     user = request.user
+
+    # Set the user's username to the new primary email address and save the user
+    user.username = email_address
+    user.save()
+
     app_password = request.POST['app_password']
 
     # Send a task to create the inbox / account on stalwart's end
     if app_password:
+        # Form the encrypted app password
         app_password = utils.save_app_password('Mail Client', app_password)
 
-    # Run this immediately for now, in the future we'll ship these to celery
-    tasks.create_stalwart_account.run(
-        user_uuid=user.uuid.hex, username=email_address, email=user.email, app_password=app_password
-    )
+    success = utils.create_stalwart_account(user, app_password)
 
-    account = Account.objects.create(
-        name=email_address,
-        active=True,
-        user=request.user,
-    )
-
-    address = Email.objects.create(address=email_address, type='primary', account=account)
-
-    if account and address:
+    if success:
         return HttpResponseRedirect(reverse('self_serve_connection_info'))
 
     return HttpResponseRedirect(reverse('sign_up'))
@@ -335,7 +330,7 @@ def self_serve_app_passwords(request: HttpRequest):
     account = request.user.account_set.first()
 
     stalwart_client = MailClient()
-    email_user = stalwart_client.get_account(request.user.stalwart_username)
+    email_user = stalwart_client.get_account(request.user.oidc_id)
 
     app_passwords = []
     for secret in email_user.get('secrets', []):
@@ -358,12 +353,12 @@ def self_serve_app_password_remove(request: HttpRequest):
     app_password_label = json.loads(request.body).get('password')
 
     stalwart_client = MailClient()
-    email_user = stalwart_client.get_account(request.user.stalwart_username)
+    email_user = stalwart_client.get_account(request.user.oidc_id)
 
     for secret in email_user.get('secrets', []):
         secret_label = decode_app_password(secret)
         if secret_label == app_password_label:
-            stalwart_client.delete_app_password(request.user.stalwart_username, secret)
+            stalwart_client.delete_app_password(request.user.oidc_id, secret)
             return JsonResponse({'success': True})
 
     return JsonResponse({'success': False})
@@ -381,14 +376,14 @@ def self_serve_app_password_add(request: HttpRequest):
         return raise_form_error(request, reverse('self_serve_app_password'), _('Label and password are required'))
 
     stalwart_client = MailClient()
-    email_user = stalwart_client.get_account(request.user.stalwart_username)
+    email_user = stalwart_client.get_account(request.user.oidc_id)
     for secret in email_user.get('secrets', []):
         secret_label = decode_app_password(secret)
         if secret_label == label:
             return raise_form_error(request, reverse('self_serve_app_password'), _('That label is already in-use'))
 
     secret = utils.save_app_password(label, password)
-    stalwart_client.save_app_password(request.user.stalwart_username, secret)
+    stalwart_client.save_app_password(request.user.oidc_id, secret)
 
     return HttpResponseRedirect('/self-serve/app-passwords')
 
@@ -444,6 +439,33 @@ def jmap_test_page(request: HttpRequest):
             'jmap_url': f'{settings.STALWART_BASE_JMAP_URL}/.well-known/jmap',
             'username': user.username,
             'connection': len(inboxes) > 0,
+        }
+    )
+
+
+@require_http_methods(['POST'])
+@staff_member_required()
+def purge_stalwart_accounts(request: HttpRequest):
+    """
+    Allows up to clean up the test data before the proper oidc schema has been finallized.
+    """
+    stalwart = MailClient()
+
+    # Grab list of individuals
+    response = stalwart._list_principals(type='individual')
+    data = response.json().get('data', {}).get('items', [])
+
+    # Loop through and delete them
+    for account in data:
+        stalwart._delete_principal(account.get('name'))
+
+    # Grab a fresh list of all principals to confirm
+    response = stalwart._list_principals()
+    rest_of_data = response.json().get('data', {}).get('items', [])
+    return JsonResponse(
+        {
+            'deleted_individuals': data,
+            'not_deleted_data': rest_of_data
         }
     )
 

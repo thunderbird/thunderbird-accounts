@@ -17,15 +17,15 @@ def admin_create_stalwart_account(modeladmin, request, queryset):
     errors = 0
 
     for user in queryset:
-        account_not_found = not user.stalwart_username
+        account_not_found = user.account_set.length == 0
 
-        if user.stalwart_username:
+        if account_not_found:
             # Yes relationship, let's check stalwart's side
             stalwart = MailClient()
             try:
-                account = stalwart.get_account(user.stalwart_username)
-                if user.stalwart_username not in account.get('emails', []):
-                    mail_utils.add_email_address_to_stalwart_account(user, user.stalwart_username)
+                account = stalwart.get_account(user.oidc_id)
+                if user.stalwart_primary_email not in account.get('emails', []):
+                    mail_utils.add_email_address_to_stalwart_account(user, user.stalwart_primary_email)
                     success_fixed_missing_email += 1
 
             except AccountNotFoundError:

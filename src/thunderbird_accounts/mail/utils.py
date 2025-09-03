@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.contrib.auth.hashers import make_password, identify_hasher
 from thunderbird_accounts.mail import tasks
 from thunderbird_accounts.mail.models import Account, Email
@@ -28,10 +30,10 @@ def decode_app_password(secret):
     return secret.replace('$app$', '').split('$')[0]
 
 
-def create_stalwart_account(user):
+def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
     # Run this immediately for now, in the future we'll ship these to celery
     tasks.create_stalwart_account.run(
-        user_uuid=user.uuid.hex, username=user.username, email=user.email
+        oidc_id=user.oidc_id, username=user.username, email=user.email, app_password=app_password
     )
 
     # Also create their account objects
@@ -40,11 +42,12 @@ def create_stalwart_account(user):
         active=True,
         user=user,
     )
-    Email.objects.create(address=user.username, type='primary', account=account)
+    email = Email.objects.create(address=user.username, type='primary', account=account)
+    return account and email
 
 
 def add_email_address_to_stalwart_account(user, email):
     # Run this immediately for now, in the future we'll ship these to celery
     tasks.add_email_address_to_stalwart_account.run(
-        username=user.username, email=email
+        uuid=user.oidc_id, email=email
     )
