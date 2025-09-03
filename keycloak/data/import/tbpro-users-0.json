@@ -2,10 +2,10 @@
   "realm" : "tbpro",
   "users" : [ {
     "id" : "5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2",
-    "username" : "admin",
+    "username" : "admin@example.org",
     "firstName" : "Admin",
     "lastName" : "Example",
-    "email" : "admin@example.org",
+    "email" : "admin@example.com",
     "emailVerified" : true,
     "attributes" : {
       "locale" : [ "en" ],
