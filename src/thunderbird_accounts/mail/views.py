@@ -18,7 +18,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.mail.client import MailClient
+from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import AccessTokenNotFound
 from thunderbird_accounts.mail.utils import decode_app_password
 

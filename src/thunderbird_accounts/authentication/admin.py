@@ -6,8 +6,8 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _, ngettext
 from thunderbird_accounts.mail import utils as mail_utils
 from .models import User
-from ..mail.client import MailClient
-from ..mail.exceptions import AccountNotFoundError
+from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.exceptions import AccountNotFoundError
 
 
 @admin.action(description="Fix Broken Stalwart Account")
