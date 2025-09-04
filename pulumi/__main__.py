@@ -124,6 +124,7 @@ if 'tb:ci:AwsAutomationUser' in resources and 'ci' in resources['tb:ci:AwsAutoma
     ci_opts = resources['tb:ci:AwsAutomationUser']['ci']
     ci_iam = tb_pulumi.ci.AwsAutomationUser(name=f'{project.project}-ci', project=project, **ci_opts)
 
+
 def __sap_on_apply(resources):
     ci_user_name = f'{project.name_prefix}-ci'
     tb_pulumi.iam.UserWithAccessKey(
@@ -131,8 +132,9 @@ def __sap_on_apply(resources):
         project=project,
         user_name=ci_user_name,
         groups=[resources['admin_group']],
-        opts=pulumi.ResourceOptions(depends_on=[sap])
+        opts=pulumi.ResourceOptions(depends_on=[sap]),
     )
+
 
 sap = tb_pulumi.iam.StackAccessPolicies(
     f'{project.name_prefix}-sap',
