@@ -126,7 +126,7 @@ if 'tb:ci:AwsAutomationUser' in resources and 'ci' in resources['tb:ci:AwsAutoma
 
 def __sap_on_apply(resources):
     ci_user_name = f'{project.name_prefix}-ci'
-    ci_user = tb_pulumi.iam.UserWithAccessKey(
+    tb_pulumi.iam.UserWithAccessKey(
         ci_user_name,
         project=project,
         user_name=ci_user_name,
