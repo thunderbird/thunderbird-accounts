@@ -333,6 +333,12 @@ if AUTH_SCHEME == 'oidc':
     # ideally you should turn this off when you're done.
     OIDC_FALLBACK_MATCH_BY_EMAIL = os.getenv('OIDC_FALLBACK_MATCH_BY_EMAIL', '').lower() == 'true'
 
+    KEYCLOAK_AIA_ENDPOINT = f'{OIDC_OP_AUTHORIZATION_ENDPOINT}?client_id={OIDC_RP_CLIENT_ID}'
+    KEYCLOAK_API_ENDPOINT = os.getenv('KEYCLOAK_URL_API')
+    KEYCLOAK_ADMIN_CLIENT_ID = os.getenv('KEYCLOAK_ADMIN_CLIENT_ID')
+    KEYCLOAK_ADMIN_CLIENT_SECRET = os.getenv('KEYCLOAK_ADMIN_CLIENT_SECRET')
+    KEYCLOAK_ADMIN_TOKEN_ENDPOINT = os.getenv('OIDC_URL_TOKEN').replace('tbpro', 'master')
+
 
 STALWART_BASE_JMAP_URL = os.getenv('STALWART_BASE_JMAP_URL')
 STALWART_BASE_API_URL = os.getenv('STALWART_BASE_API_URL')
@@ -432,3 +438,4 @@ if DEBUG:
 
 # Tell django to use secure in stage/prod
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not IS_DEV else None
+
