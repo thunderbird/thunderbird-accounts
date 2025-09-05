@@ -236,6 +236,9 @@ class MailClient:
         # Return the pkid
         return data.get('data')
 
+    def delete_account(self, oidc_id: str):
+        return self._delete_principal(oidc_id)
+
     def delete_app_password(self, oidc_id, secret):
         response = self._update_principal(
             oidc_id,
