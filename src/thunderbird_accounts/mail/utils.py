@@ -1,6 +1,8 @@
 from typing import Optional
 
 from django.contrib.auth.hashers import make_password, identify_hasher
+
+from thunderbird_accounts import settings
 from thunderbird_accounts.mail import tasks
 from thunderbird_accounts.mail.models import Account, Email
 
@@ -48,6 +50,9 @@ def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
 
 def add_email_address_to_stalwart_account(user, email):
     # Run this immediately for now, in the future we'll ship these to celery
-    tasks.add_email_address_to_stalwart_account.run(
-        uuid=user.oidc_id, email=email
-    )
+    tasks.add_email_address_to_stalwart_account.run(uuid=user.oidc_id, email=email)
+
+
+def is_allowed_domain(email_address: str) -> bool:
+    """Pass in an email address and see if it's a valid / allowed email domain"""
+    return any([email_address.endswith(domain) for domain in settings.ALLOWED_EMAIL_DOMAINS])
