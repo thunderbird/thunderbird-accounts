@@ -103,7 +103,7 @@ class CustomUserFormBase(forms.ModelForm):
         strip=False,
         widget=forms.EmailInput(),
         help_text=(f'This is the primary thundermail address. Please end with '
-                  f'{"@stage-thundermail.com" if settings.APP_ENV == "stage" else "@thundermail.com"}. '
+                  f'{settings.ALLOWED_EMAIL_DOMAINS[0]}. '
                   f'This must be unique!'),
     )
     email = forms.CharField(
@@ -232,12 +232,19 @@ class CustomUserAdmin(UserAdmin):
 
     add_fieldsets = (
         (
-            None,
+            _('Required Fields'),
             {
                 'classes': ('wide',),
                 'fields': ('username', 'email', 'timezone'),
             },
         ),
+        (
+            _('Optional Fields'),
+            {
+                'classes': ('wide',),
+                'fields': ('first_name', 'last_name'),
+            },
+        )
     )
 
     def delete_queryset(self, request, queryset):
