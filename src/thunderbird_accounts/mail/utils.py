@@ -50,9 +50,8 @@ def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
 
 def add_email_address_to_stalwart_account(user, email):
     # Run this immediately for now, in the future we'll ship these to celery
-    tasks.add_email_address_to_stalwart_account.run(
-        uuid=user.oidc_id, email=email
-    )
+    tasks.add_email_address_to_stalwart_account.run(uuid=user.oidc_id, email=email)
+
 
 def is_allowed_domain(email_address: str) -> bool:
     """Pass in an email address and see if it's a valid / allowed email domain"""

@@ -56,10 +56,7 @@ class MailClient:
 
         Important: Don't use this directly!
         """
-        params = {
-            'page': page,
-            'limit': limit
-        }
+        params = {'page': page, 'limit': limit}
         if type:
             params['type'] = type
 
@@ -212,8 +209,13 @@ class MailClient:
         return data.get('data')
 
     def create_account(self, primary_email: str, username: str, oidc_id: str, app_password=None):
-        data = {'type': 'individual', 'name': oidc_id, 'description': username, 'emails': [primary_email],
-                'roles': ['user']}
+        data = {
+            'type': 'individual',
+            'name': oidc_id,
+            'description': username,
+            'emails': [primary_email],
+            'roles': ['user'],
+        }
         if app_password:
             data['secrets'] = [app_password]
         response = self._create_principal(data)
