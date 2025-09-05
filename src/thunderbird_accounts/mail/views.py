@@ -462,18 +462,13 @@ def purge_stalwart_accounts(request: HttpRequest):
     # Grab a fresh list of all principals to confirm
     response = stalwart._list_principals()
     rest_of_data = response.json().get('data', {}).get('items', [])
-    return JsonResponse(
-        {
-            'deleted_individuals': data,
-            'not_deleted_data': rest_of_data
-        }
-    )
+    return JsonResponse({'deleted_individuals': data, 'not_deleted_data': rest_of_data})
 
 
-@method_decorator(never_cache, name="dispatch")
-@method_decorator(staff_member_required, name="dispatch")
+@method_decorator(never_cache, name='dispatch')
+@method_decorator(staff_member_required, name='dispatch')
 class AdminStalwartList(TemplateView):
-    template_name = "admin_stalwart_view.html"
+    template_name = 'admin_stalwart_view.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -482,20 +477,22 @@ class AdminStalwartList(TemplateView):
         response = stalwart._list_principals()
         data = response.json().get('data', {}).get('items', [])
 
-        context.update({
-            'app_label': 'mail',
-            'items': [
-                {
-                    'id': principal.get('id'),
-                    'name': principal.get('name'),
-                    'type': principal.get('type'),
-                    'description': principal.get('description'),
-                    'emails': principal.get('emails'),
-                    'roles': principal.get('roles'),
-                    'members': principal.get('members'),
-                }
-                for principal in data
-            ]
-        })
+        context.update(
+            {
+                'app_label': 'mail',
+                'items': [
+                    {
+                        'id': principal.get('id'),
+                        'name': principal.get('name'),
+                        'type': principal.get('type'),
+                        'description': principal.get('description'),
+                        'emails': principal.get('emails'),
+                        'roles': principal.get('roles'),
+                        'members': principal.get('members'),
+                    }
+                    for principal in data
+                ],
+            }
+        )
 
         return context

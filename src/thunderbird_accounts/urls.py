@@ -76,13 +76,13 @@ if settings.DEBUG:
 
 urlpatterns += [
     path(
-        "mail/admin/stalwart/",
+        'mail/admin/stalwart/',
         mail_views.AdminStalwartList.as_view(),
-        name="admin_stalwart_list",
+        name='admin_stalwart_list',
     ),
     path(
-        "mail/admin/stalwart/purge",
+        'mail/admin/stalwart/purge',
         mail_views.purge_stalwart_accounts,
-        name="purge_stalwart_accounts",
+        name='purge_stalwart_accounts',
     ),
 ]

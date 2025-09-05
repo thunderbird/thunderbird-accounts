@@ -56,15 +56,13 @@ class MailClient:
 
         Important: Don't use this directly!
         """
-        params = {
-            'page': page,
-            'limit': limit
-        }
+        params = {'page': page, 'limit': limit}
         if type:
             params['type'] = type
 
-        response = requests.get(f'{self.api_url}/principal', verify=False, params=params,
-                                headers=self.authorized_headers)
+        response = requests.get(
+            f'{self.api_url}/principal', verify=False, params=params, headers=self.authorized_headers
+        )
         response.raise_for_status()
         self._raise_for_error(response)
 
@@ -80,8 +78,9 @@ class MailClient:
 
         Important: Don't use this directly!
         """
-        response = requests.get(f'{self.api_url}/principal/{principal_id}', verify=False,
-                                headers=self.authorized_headers)
+        response = requests.get(
+            f'{self.api_url}/principal/{principal_id}', verify=False, headers=self.authorized_headers
+        )
         response.raise_for_status()
         self._raise_for_error(response)
 
@@ -96,8 +95,9 @@ class MailClient:
 
         Important: Don't use this directly!
         """
-        response = requests.delete(f'{self.api_url}/principal/{principal_id}', verify=False,
-                                   headers=self.authorized_headers)
+        response = requests.delete(
+            f'{self.api_url}/principal/{principal_id}', verify=False, headers=self.authorized_headers
+        )
         response.raise_for_status()
         self._raise_for_error(response)
 
@@ -212,8 +212,13 @@ class MailClient:
         return data.get('data')
 
     def create_account(self, primary_email: str, username: str, oidc_id: str, app_password=None):
-        data = {'type': 'individual', 'name': oidc_id, 'description': username, 'emails': [primary_email],
-                'roles': ['user']}
+        data = {
+            'type': 'individual',
+            'name': oidc_id,
+            'description': username,
+            'emails': [primary_email],
+            'roles': ['user'],
+        }
         if app_password:
             data['secrets'] = [app_password]
         response = self._create_principal(data)

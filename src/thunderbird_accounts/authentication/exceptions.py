@@ -40,6 +40,7 @@ class ImportUserError(KeycloakError):
     def __str__(self):
         return f'ImportUserError: {self.error} for {self.username}'
 
+
 class UpdateUserError(KeycloakError):
     username: str
     error: str
@@ -52,6 +53,7 @@ class UpdateUserError(KeycloakError):
     def __str__(self):
         return f'UpdateUserError: {self.error} for {self.username}'
 
+
 class DeleteUserError(KeycloakError):
     oidc_id: str
     error: str
@@ -63,6 +65,7 @@ class DeleteUserError(KeycloakError):
 
     def __str__(self):
         return f'DeleteUserError: {self.error} for {self.oidc_id}'
+
 
 class SendExecuteActionsEmailError(KeycloakError):
     action: str
