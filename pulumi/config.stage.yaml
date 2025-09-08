@@ -269,7 +269,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:fc05641eaffe2b2b2e876f71d78f2b4aff44df97
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:d31bf9141e11c7474ca820538fbb64af3f678931
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -424,7 +424,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:fc05641eaffe2b2b2e876f71d78f2b4aff44df97
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:d31bf9141e11c7474ca820538fbb64af3f678931
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -549,3 +549,18 @@ resources:
                 value: 'https://mail.stage-thundermail.com'
               - name: STALWART_BASE_API_URL
                 value: 'https://mail-i.stage-thundermail.com'
+
+  tb:ci:AwsAutomationUser:
+    ci:
+      enable_ecr_image_push: True
+      ecr_repositories:
+        - thunderbird/accounts
+      enable_fargate_deployments: True
+      fargate_clusters:
+        - accounts-stage-fargate-accounts
+        - accounts-stage-fargate-accounts-celery
+        - accounts-stage-fargate-keycloak
+      fargate_task_role_arns:
+        - arn:aws:iam::768512802988:role/accounts-stage-fargate-accounts
+        - arn:aws:iam::768512802988:role/accounts-stage-fargate-accounts-celery
+        - arn:aws:iam::768512802988:role/accounts-stage-fargate-keycloak
