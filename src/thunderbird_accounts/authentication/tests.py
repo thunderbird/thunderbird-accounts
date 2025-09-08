@@ -1,10 +1,127 @@
+from typing import Optional
+from unittest.mock import patch
+
 import freezegun
 from django.conf import settings
+from django.contrib.admin import AdminSite
+from django.http import HttpRequest
 from django.test import TestCase, Client as RequestClient
 from django.urls import reverse
+from requests import Response
 
+from thunderbird_accounts.authentication.admin import CustomUserAdmin
+from thunderbird_accounts.authentication.admin.forms import CustomNewUserForm
+from thunderbird_accounts.authentication.clients import RequestMethods
+from thunderbird_accounts.authentication.exceptions import InvalidDomainError
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.models import User
+
+FAKE_OIDC_UUID = '39a7b5e8-7a64-45e3-acf1-ca7d314bfcec'
+MOCKED_RESPONSE_HEADER = 'X-Mocked-Response'
+
+
+def mock_keycloak_client_request(_self,
+                                 endpoint: str,
+                                 method: RequestMethods = RequestMethods.GET,
+                                 json_data: Optional[dict] = None,
+                                 data: Optional[dict | list | str] = None,
+                                 params: Optional[dict] = None):
+    fake_uuid = FAKE_OIDC_UUID
+    fake_url = 'http://example.org/admin/realms/tbpro'
+
+    fake_response = Response()
+    fake_response.status_code = 200
+    fake_response.headers.update({
+        'MOCKED_RESPONSE_HEADER': 'True',
+    })
+
+    # If we need to override specific endpoints, here's where to do it!
+    if endpoint == 'users':
+        fake_response.status_code = 201
+        fake_response.headers.update({
+            'Location': f'{fake_url}/users/{fake_uuid}'
+        })
+
+    return fake_response
+
+
+@patch('thunderbird_accounts.authentication.clients.KeycloakClient.request', mock_keycloak_client_request)
+class AdminCreateUserTestCase(TestCase):
+    def setUp(self):
+        self.subdomain = settings.ALLOWED_EMAIL_DOMAINS[0] if len(settings.ALLOWED_EMAIL_DOMAINS) > 0 else 'example.org'
+        self.default_form_data = dict({k.name: None for k in User()._meta.fields})
+
+    def _build_form(self, form_data):
+        user_admin = CustomUserAdmin(User, AdminSite())
+        fake_request = HttpRequest()
+        return user_admin.get_form(fake_request)(form_data)
+
+    def test_failed_username_validation(self):
+        # Bad username
+        form_data = {
+            'username': f'frog',
+            'email': 'frog@example.com',
+            'timezone': 'America/Toronto',
+        }
+
+        form = self._build_form(form_data)
+
+        with self.assertRaises(ValueError):
+            form.save(True)
+
+    def test_failed_email_validation(self):
+        settings.ALLOWED_EMAIL_DOMAINS = ['example.org']
+
+        # Bad email domain
+        form_data = {
+            'username': 'frog@example.com',
+            'email': 'frog@example.com',
+            'timezone': 'America/Toronto',
+        }
+
+        form = self._build_form(form_data)
+
+        with self.assertRaises(InvalidDomainError):
+            form.save(True)
+
+        # No email
+        form_data = {
+            'username': 'frog@example.com',
+            'timezone': 'America/Toronto',
+        }
+
+        form = self._build_form(form_data)
+
+        self.assertTrue(len(form.errors) > 0)
+        self.assertIn('email', form.errors)
+
+    def test_failed_timezone_validation(self):
+        # Bad username
+        form_data = {
+            'username': f'frog',
+            'email': 'frog@example.com',
+            'timezone': 'America/Victoria',
+        }
+
+        form = self._build_form(form_data)
+
+        self.assertTrue(len(form.errors) > 0)
+        self.assertIn('timezone', form.errors)
+
+    def test_successful_minimum(self):
+        form_data = {
+            'username': f'frog@{self.subdomain}',
+            'email': 'frog@example.com',
+            'timezone': 'America/Toronto',
+        }
+
+        form = self._build_form(form_data)
+
+        user = form.save(True)
+        # We should have a user, they should have a pk (saved to db), and our fake oidc id
+        self.assertIsNotNone(user)
+        self.assertIsNotNone(user.pk)
+        self.assertEqual(user.oidc_id, FAKE_OIDC_UUID)
 
 
 class AccountsOIDCBackendTestCase(TestCase):
