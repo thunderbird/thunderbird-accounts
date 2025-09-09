@@ -21,7 +21,7 @@ def _stalwart_check_or_create_domain_entry(stalwart, domain):
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
-def add_email_address_to_stalwart_account(self, oidc_id: str, email: str):
+def add_email_address_to_stalwart_account(self, username: str, email: str):
     stalwart = MailClient()
     domain = email.split('@')[1]
 
@@ -29,9 +29,9 @@ def add_email_address_to_stalwart_account(self, oidc_id: str, email: str):
         # Make sure the domain is in stalwart, otherwise we can't save this address
         _stalwart_check_or_create_domain_entry(stalwart, domain)
 
-        stalwart.save_email_address(oidc_id, email)
+        stalwart.save_email_address(username, email)
         return {
-            'oidc_id': oidc_id,
+            'username': username,
             'email': email,
             'task_status': 'success',
         }
@@ -40,7 +40,7 @@ def add_email_address_to_stalwart_account(self, oidc_id: str, email: str):
         error = ex
 
     return {
-        'oidc_id': oidc_id,
+        'username': username,
         'email': email,
         'reason': error,
         'task_status': 'failed',
@@ -54,7 +54,7 @@ def create_stalwart_account(self, oidc_id: str, username: str, email: str, app_p
 
     # Make sure we don't have anyone with this username
     try:
-        account = stalwart.get_account(oidc_id)
+        account = stalwart.get_account(username)
 
         # Make sure the account always has email in emails
         emails = account.get('emails', [])
@@ -63,7 +63,7 @@ def create_stalwart_account(self, oidc_id: str, username: str, email: str, app_p
             _stalwart_check_or_create_domain_entry(stalwart, domain)
 
             # Not in our account? We'll update the account and consider that a success.
-            stalwart.save_email_address(oidc_id, email)
+            stalwart.save_email_address(username, email)
             return {
                 'oidc_id': oidc_id,
                 'stalwart_pkid': account.get('id'),

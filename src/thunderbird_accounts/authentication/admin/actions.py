@@ -24,7 +24,7 @@ def admin_create_stalwart_account(modeladmin, request, queryset):
             # So we need to check if Stalwart has anything on their end
             stalwart = MailClient()
             try:
-                account = stalwart.get_account(user.oidc_id)
+                account = stalwart.get_account(user.stalwart_primary_email)
                 if user.stalwart_primary_email not in account.get('emails', []):
                     # They have an account, but don't have an email address associated with their account.
                     # Fix that!
