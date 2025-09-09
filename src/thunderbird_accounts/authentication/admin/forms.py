@@ -21,7 +21,7 @@ class CustomUserFormBase(forms.ModelForm):
         strip=False,
         widget=forms.EmailInput(),
         help_text=(f'This is the primary thundermail address. Please end with '
-                   f'{settings.ALLOWED_EMAIL_DOMAINS[0]}. '
+                   f'{settings.ALLOWED_EMAIL_DOMAINS[0] if settings.ALLOWED_EMAIL_DOMAINS else 'example.org'}. '
                    f'This must be unique!'),
     )
     email = forms.CharField(
