@@ -17,7 +17,7 @@ def admin_create_stalwart_account(modeladmin, request, queryset):
     errors = 0
 
     for user in queryset:
-        account_not_found = user.account_set.length == 0
+        account_not_found = user.account_set.count() == 0
 
         if account_not_found:
             # We don't have a record of the Stalwart account associated with this user.
