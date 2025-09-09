@@ -544,3 +544,18 @@ resources:
                 value: 'https://mail.thundermail.com'
               - name: STALWART_BASE_API_URL
                 value: 'https://mailstrom-management-i.thundermail.com:8080'
+
+  tb:ci:AwsAutomationUser:
+    ci:
+      enable_ecr_image_push: true
+      ecr_repositories:
+        - thunderbird/accounts
+      enable_fargate_deployments: true
+      fargate_clusters:
+        - accounts-prod-fargate-keycloak
+        - accounts-prod-fargate-accounts
+        - accounts-prod-fargate-accounts-celery
+      fargate_task_role_arns:
+        - arn:aws:iam::768512802988:role/accounts-prod-fargate-keycloak
+        - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts
+        - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts-celery

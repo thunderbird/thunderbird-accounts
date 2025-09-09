@@ -3,6 +3,7 @@
 import pulumi
 import pulumi_cloudflare as cloudflare
 import tb_pulumi
+import tb_pulumi.ci
 import tb_pulumi.ec2
 import tb_pulumi.elasticache
 import tb_pulumi.fargate
@@ -119,19 +120,15 @@ cloudflare_backend_record = cloudflare.Record(
 )
 
 
-def __sap_on_apply(resources):
-    ci_user_name = f'{project.name_prefix}-ci'
-    tb_pulumi.iam.UserWithAccessKey(
-        ci_user_name,
+auto_users_opts = resources.get('tb:ci:AwsAutomationUser', {})
+for user, user_opts in auto_users_opts.items():
+    tb_pulumi.ci.AwsAutomationUser(
+        f'{project.name_prefix}-{user}',
         project=project,
-        user_name=ci_user_name,
-        groups=[resources['admin_group']],
-        opts=pulumi.ResourceOptions(depends_on=[sap]),
+        **user_opts,
     )
-
 
 sap = tb_pulumi.iam.StackAccessPolicies(
     f'{project.name_prefix}-sap',
     project=project,
-    on_apply=__sap_on_apply,
 )
