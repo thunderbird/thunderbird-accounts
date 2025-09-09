@@ -1,4 +1,3 @@
-from typing import Optional
 from unittest.mock import patch, MagicMock
 
 import freezegun
@@ -44,7 +43,7 @@ class AdminCreateUserTestCase(TestCase):
     def test_failed_username_validation(self, mock_requests: MagicMock):
         # Bad username
         form_data = {
-            'username': f'frog',
+            'username': 'frog',
             'email': 'frog@example.com',
             'timezone': 'America/Toronto',
         }
@@ -87,7 +86,7 @@ class AdminCreateUserTestCase(TestCase):
     def test_failed_timezone_validation(self, mock_requests: MagicMock):
         # Bad username
         form_data = {
-            'username': f'frog',
+            'username': 'frog',
             'email': 'frog@example.com',
             'timezone': 'America/Victoria',
         }
@@ -177,7 +176,7 @@ class AdminUpdateUserTestcase(TestCase):
 
     def test_failed_empty_username(self, mock_requests: MagicMock):
         form_data = {
-            'username': f'',
+            'username': '',
             'email': self.user.email,
             'timezone': self.user.timezone,
             # This is dumb, the fields are split into 2 and are populated via existing data
