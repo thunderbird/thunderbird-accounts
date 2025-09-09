@@ -83,7 +83,6 @@ class KeycloakClient:
                 'Authorization': f'Bearer {self.access_token}',
             },
         )
-        print('content: ', response.content.decode())
 
         response.raise_for_status()
         return response

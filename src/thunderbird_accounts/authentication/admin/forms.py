@@ -52,7 +52,6 @@ class CustomUserFormBase(forms.ModelForm):
 
 class CustomNewUserForm(CustomUserFormBase):
     def save(self, commit=True):
-        print('->', self.data)
         user = super().save(commit=False)
 
         # Create the user on keycloak's end

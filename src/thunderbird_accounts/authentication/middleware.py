@@ -24,9 +24,6 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         return True
 
     def _set_user_fields(self, user: User, claims: dict):
-        print('User -> ', user)
-        print('Claims -> ', claims)
-
         # Standard OpenID connect fields
         user.oidc_id = claims.get('sub')
         user.first_name = claims.get('given_name', '')
