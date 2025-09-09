@@ -4,7 +4,8 @@ import sentry_sdk
 from django import forms
 from django.conf import settings
 from thunderbird_accounts.authentication.clients import KeycloakClient
-from thunderbird_accounts.authentication.exceptions import InvalidDomainError, UpdateUserError
+from thunderbird_accounts.authentication.exceptions import InvalidDomainError, UpdateUserError, \
+    SendExecuteActionsEmailError
 from thunderbird_accounts.authentication.models import User
 
 
@@ -56,12 +57,19 @@ class CustomNewUserForm(CustomUserFormBase):
 
         # Create the user on keycloak's end
         keycloak = KeycloakClient()
-        keycloak_pkid = keycloak.import_user(
-            user.username, user.email, user.timezone, name=None, send_reset_password_email=True
-        )
+        try:
+            keycloak_pkid = keycloak.import_user(
+                user.username, user.email, user.timezone, name=None, send_reset_password_email=True
+            )
 
-        # Save the oidc id so it matches on login
-        user.oidc_id = keycloak_pkid
+            # Save the oidc id so it matches on login
+            user.oidc_id = keycloak_pkid
+        except SendExecuteActionsEmailError as ex:
+            sentry_sdk.capture_exception(ex)
+            # Don't think this will show
+            self.add_error(None, 'Failed to send update password email.')
+        # Let ImportError raise since we cannot handle error messages here
+        # TODO: Fix that...
 
         # Actually save the user
         if commit:
