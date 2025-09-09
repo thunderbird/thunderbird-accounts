@@ -206,11 +206,12 @@ class KeycloakClient:
         pkid = response_location.split('/')[-1]
 
         if send_reset_password_email:
+            action = 'UPDATE_PASSWORD'
             try:
                 self.request(
                     f'users/{pkid}/execute-actions-email',
                     RequestMethods.PUT,
-                    data=json.dumps(['UPDATE_PASSWORD']),
+                    data=json.dumps([action]),
                     params={
                         # Keycloak api docs don't specify a type, but will 404 is a float is given
                         'lifespan': int(datetime.timedelta(days=3).total_seconds()),
@@ -221,7 +222,7 @@ class KeycloakClient:
             except RequestException as exc:
                 sentry_sdk.capture_exception(exc)
                 raise SendExecuteActionsEmailError(
-                    username=username,
+                    action=action,
                     error=(f'Error<{exc.response.status_code}>: Cannot send email due to: '
                           f'{exc.response.content.decode()}'),
                 )

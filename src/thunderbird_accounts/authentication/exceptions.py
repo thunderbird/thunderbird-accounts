@@ -71,9 +71,9 @@ class SendExecuteActionsEmailError(KeycloakError):
     action: str
     error: str
 
-    def __init__(self, error, username: Optional[str] = None, *args, **kwargs):
+    def __init__(self, error, action: Optional[str] = None, *args, **kwargs):
         super().__init__(args, kwargs)
-        self.username = username
+        self.action = action
         self.error = error
 
     def __str__(self):
