@@ -69,4 +69,4 @@ config:
   accounts:keycloak-admin-client-id:
     secure: AAABAE9oRmGhKSDJL0/fvUIqwN/+zvZkPxdOwi5Nd9oglK8Mjk5w9+EkDuVmJpecbA==
   accounts:keycloak-admin-client-secret:
-    secure: AAABAPuzPkWip0G7df8BI6fppPCFhk/xViEUuZeOCP+lLkUafAgGxxMn5kqfwuqYrWVGykMDcJ5cxM3AGPbILg==
+    secure: AAABACh3RnRJFRb37U658qPm+wN8GUDqeZ/Ck90/qJnGWmULNhVtn5u/+BD8NtVVvaqiMhRmwzja7wLeYypciQ==
