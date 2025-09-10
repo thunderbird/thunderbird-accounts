@@ -223,8 +223,9 @@ class KeycloakClient:
                 sentry_sdk.capture_exception(exc)
                 raise SendExecuteActionsEmailError(
                     action=action,
-                    error=(f'Error<{exc.response.status_code}>: Cannot send email due to: '
-                          f'{exc.response.content.decode()}'),
+                    error=(
+                        f'Error<{exc.response.status_code}>: Cannot send email due to: {exc.response.content.decode()}'
+                    ),
                 )
 
         return pkid

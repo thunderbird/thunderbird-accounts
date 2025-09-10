@@ -9,7 +9,7 @@ from thunderbird_accounts.mail import utils as mail_utils
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError
 
 
-@admin.action(description='Fix Broken Stalwart Account')
+@admin.action(description=_('Fix Broken Stalwart Account'))
 def admin_create_stalwart_account(modeladmin, request, queryset):
     """Run through some common edge-cases to hopefully repair a broken relationship to a stalwart account"""
     success_new_account = 0

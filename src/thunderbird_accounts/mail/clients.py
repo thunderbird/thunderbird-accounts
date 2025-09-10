@@ -60,8 +60,7 @@ class MailClient:
         if type:
             params['type'] = type
 
-        response = requests.get(f'{self.api_url}/principal', params=params,
-                                headers=self.authorized_headers)
+        response = requests.get(f'{self.api_url}/principal', params=params, headers=self.authorized_headers)
         response.raise_for_status()
         self._raise_for_error(response)
 
@@ -77,8 +76,7 @@ class MailClient:
 
         Important: Don't use this directly!
         """
-        response = requests.get(f'{self.api_url}/principal/{principal_id}',
-                                headers=self.authorized_headers)
+        response = requests.get(f'{self.api_url}/principal/{principal_id}', headers=self.authorized_headers)
         response.raise_for_status()
         self._raise_for_error(response)
 
@@ -93,8 +91,7 @@ class MailClient:
 
         Important: Don't use this directly!
         """
-        response = requests.delete(f'{self.api_url}/principal/{principal_id}',
-                                   headers=self.authorized_headers)
+        response = requests.delete(f'{self.api_url}/principal/{principal_id}', headers=self.authorized_headers)
         response.raise_for_status()
         self._raise_for_error(response)
 

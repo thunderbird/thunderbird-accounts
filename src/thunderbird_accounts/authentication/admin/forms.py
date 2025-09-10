@@ -3,9 +3,14 @@ import zoneinfo
 import sentry_sdk
 from django import forms
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
+
 from thunderbird_accounts.authentication.clients import KeycloakClient
-from thunderbird_accounts.authentication.exceptions import InvalidDomainError, UpdateUserError, \
-    SendExecuteActionsEmailError
+from thunderbird_accounts.authentication.exceptions import (
+    InvalidDomainError,
+    UpdateUserError,
+    SendExecuteActionsEmailError,
+)
 from thunderbird_accounts.authentication.models import User
 
 
@@ -17,28 +22,42 @@ class CustomUserFormBase(forms.ModelForm):
         fields = '__all__'
 
     username = forms.CharField(
-        label='Thundermail Address',
+        label=_('Thundermail Address'),
         required=True,
         strip=False,
         widget=forms.EmailInput(),
-        help_text=(f'This is the primary thundermail address. Please end with '
-                   f'{settings.ALLOWED_EMAIL_DOMAINS[0] if settings.ALLOWED_EMAIL_DOMAINS else 'example.org'}. '
-                   f'This must be unique!'),
+        help_text=_(
+            f'This is the primary thundermail address. Please end with '
+            f'{settings.ALLOWED_EMAIL_DOMAINS[0] if settings.ALLOWED_EMAIL_DOMAINS else "example.org"}. '
+            f'This must be unique!'
+        ),
     )
     email = forms.CharField(
-        label='Recovery Email Address',
+        label=_('Recovery Email Address'),
         required=True,
         strip=False,
         widget=forms.EmailInput(),
-        help_text="This is the recovery email address. This should not be a thundermail address, but I can't stop you.",
+        help_text=_(
+            "This is the recovery email address. This should not be a thundermail address, but I can't stop you."
+        ),
+    )
+    timezone = forms.CharField(
+        label=_('Timezone'),
+        required=True,
+        strip=False,
+        widget=forms.TextInput(),
+        help_text=_(
+            'The user\'s timezone. Should be in <a href="{url}">tz format</a>.'.format(
+                url='https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List')
+        ),
     )
 
     def clean(self):
         if not self.data.get('email'):
-            self.add_error('email', 'A recovery email is required.')
+            self.add_error('email', _('A recovery email is required.'))
 
         if not self.data.get('timezone'):
-            self.add_error('timezone', 'A timezone (e.g. America/Vancouver or UTC) is required.')
+            self.add_error('timezone', _('A timezone (e.g. America/Vancouver or UTC) is required.'))
         else:
             try:
                 zoneinfo.ZoneInfo(self.data.get('timezone'))
@@ -67,7 +86,8 @@ class CustomNewUserForm(CustomUserFormBase):
         except SendExecuteActionsEmailError as ex:
             sentry_sdk.capture_exception(ex)
             # Don't think this will show
-            self.add_error(None, 'Failed to send update password email.')
+            self.add_error(None, _('Failed to send update password email.'))
+
         # Let ImportError raise since we cannot handle error messages here
         # TODO: Fix that...
 
@@ -90,7 +110,7 @@ class CustomUserChangeForm(CustomUserFormBase):
         user = super().save(commit=False)
         updated_keycloak_successfully = False
 
-        # Create the user on keycloak's end
+        # Update the user on keycloak's end
         keycloak = KeycloakClient()
         try:
             keycloak.update_user(
@@ -108,12 +128,13 @@ class CustomUserChangeForm(CustomUserFormBase):
             self.add_error('username', str(ex))
         except UpdateUserError as ex:
             sentry_sdk.capture_exception(ex)
-            self.add_error(None, f'There was an error updating in keycloak. Technical Error: {ex}')
+            self.add_error(None, _(f'There was an error updating in keycloak. Technical Error: {ex}'))
 
         if not updated_keycloak_successfully:
             raise ValueError('Keycloak was not updated successfully!')
 
         # Actually save the user
-        user.save()
+        if commit:
+            user.save()
 
         return user

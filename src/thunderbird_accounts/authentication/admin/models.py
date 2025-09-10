@@ -60,7 +60,7 @@ class CustomUserAdmin(UserAdmin):
                 'classes': ('wide',),
                 'fields': ('first_name', 'last_name'),
             },
-        )
+        ),
     )
 
     def delete_queryset(self, request, queryset):
@@ -70,7 +70,7 @@ class CustomUserAdmin(UserAdmin):
 
     def delete_model(self, request, obj: User):
         if obj.oidc_id:
-            # Create the user on keycloak's end
+            # Delete the user on keycloak's end
             keycloak = KeycloakClient()
             keycloak.delete_user(obj.oidc_id)
 
@@ -80,6 +80,3 @@ class CustomUserAdmin(UserAdmin):
                 stalwart.delete_account(obj.oidc_id)
         # Finally delete the rest of the model
         super().delete_model(request, obj)
-
-
-

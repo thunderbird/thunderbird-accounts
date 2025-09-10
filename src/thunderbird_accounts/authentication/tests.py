@@ -35,9 +35,7 @@ class AdminCreateUserTestCase(TestCase):
 
         fake_response = Response()
         fake_response.status_code = 201
-        fake_response.headers.update({
-            'Location': f'{fake_url}/users/{fake_uuid}'
-        })
+        fake_response.headers.update({'Location': f'{fake_url}/users/{fake_uuid}'})
         return fake_response
 
     def test_failed_username_validation(self, mock_requests: MagicMock):
@@ -162,7 +160,7 @@ class AdminUpdateUserTestcase(TestCase):
             # This is dumb, the fields are split into 2 and are populated via existing data
             # But we need to provide it as form data otherwise it'll error out.
             'date_joined_0': self.user.date_joined.date(),
-            'date_joined_1': self.user.date_joined.time()
+            'date_joined_1': self.user.date_joined.time(),
         }
 
         mock_requests.return_value = self._build_success_response()
@@ -182,7 +180,7 @@ class AdminUpdateUserTestcase(TestCase):
             # This is dumb, the fields are split into 2 and are populated via existing data
             # But we need to provide it as form data otherwise it'll error out.
             'date_joined_0': self.user.date_joined.date(),
-            'date_joined_1': self.user.date_joined.time()
+            'date_joined_1': self.user.date_joined.time(),
         }
 
         mock_requests.return_value = self._build_success_response()
@@ -202,7 +200,7 @@ class AdminUpdateUserTestcase(TestCase):
             # This is dumb, the fields are split into 2 and are populated via existing data
             # But we need to provide it as form data otherwise it'll error out.
             'date_joined_0': self.user.date_joined.date(),
-            'date_joined_1': self.user.date_joined.time()
+            'date_joined_1': self.user.date_joined.time(),
         }
 
         mock_requests.return_value = self._build_success_response()
@@ -222,7 +220,7 @@ class AdminUpdateUserTestcase(TestCase):
             # This is dumb, the fields are split into 2 and are populated via existing data
             # But we need to provide it as form data otherwise it'll error out.
             'date_joined_0': self.user.date_joined.date(),
-            'date_joined_1': self.user.date_joined.time()
+            'date_joined_1': self.user.date_joined.time(),
         }
 
         mock_requests.return_value = self._build_success_response()
@@ -279,10 +277,7 @@ class AdminDeleteUserTestCase(TestCase):
         1. Delete the User model.
         2. Send a delete request to Keycloak to remove their login.
         3. Send a delete request to Stalwart to remove their email/inbox."""
-        account = Account.objects.create(
-            name='test',
-            user=self.user
-        )
+        account = Account.objects.create(name='test', user=self.user)
         email = Email.objects.create(
             address=self.user.username,
             type=Email.EmailType.PRIMARY,
