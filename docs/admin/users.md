@@ -96,11 +96,8 @@ can assign users to permission groups so they can perform various actions on the
 Like the Add user page any invalid data will return you back to the form with error messages, and any successful changes
 will propagate to Keycloak.
 
-It's not recommended to change the Thundermail address at this time. If you **do** update the Thundermail address 
-the following will happen:
-* Accounts will look to see if the new address is an existing alias
-  * If so: Accounts will update that alias to primary, and the old address as an alias
-  * If not: Accounts will update the existing primary email with the new address
+It's not recommended to change the Thundermail address at this time. If you **do** update the Thundermail address you 
+will need to make a matching update on the User's Account's primary Email object.
 
 This is not an ideal flow, but it's needed for now.
 

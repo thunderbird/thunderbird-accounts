@@ -143,20 +143,6 @@ class CustomUserChangeForm(CustomUserFormBase):
                 if account:
                     stalwart.update_primary_email_address(old_username, user.username)
 
-                    email = account.email_set.filter(type=account.email_set.model.EmailType.PRIMARY).first()
-
-                    # Check if they have an email address of this thundermail field as an alias
-                    lookup_email = account.email_set.filter(address=user.username).first()
-                    if lookup_email:
-                        lookup_email.type = account.email_set.model.EmailType.PRIMARY
-                        lookup_email.save()
-                        email.type = account.email_set.model.EmailType.ALIAS
-                        email.save()
-                    else:
-                        # Otherwise overwrite the existing address
-                        email.address = user.username
-                        email.save()
-
         except (User.DoesNotExist, ValueError) as ex:
             sentry_sdk.capture_exception(ex)
             self.add_error(None, _(f'There was an error updating in stalwart. Technical Error: {ex}'))
