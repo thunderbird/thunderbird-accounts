@@ -333,6 +333,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm
               - name: STALWART_API_AUTH_STRING
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc
+              - name: KEYCLOAK_ADMIN_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-id-Qgsr8Y
+              - name: KEYCLOAK_ADMIN_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-secret-z97o1p
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -481,6 +485,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm
               - name: STALWART_API_AUTH_STRING
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc
+              - name: KEYCLOAK_ADMIN_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-id-Qgsr8Y
+              - name: KEYCLOAK_ADMIN_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-secret-z97o1p
             environment:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
