@@ -36,42 +36,9 @@ type = "rocksdb"
 path = "%{env:MAIL_STALWART_PATH}%/data"
 compression = "lz4"
 
-[store."tb-accounts"]
-compression = "lz4"
-database = "%{env:POSTGRES_DB}%"
-host = "postgres"
-password = "%{env:POSTGRES_PASSWORD}%"
-pool.max-connections = 10
-port = 5432
-purge.frequency = "0 3 *"
-query.emails = "SELECT address FROM mail_email WHERE name = $1 ORDER BY address ASC"
-query.members = "SELECT member_of FROM mail_groupmember WHERE name = $1"
-query.name = "SELECT name, type, description, quota, secret FROM mail_account WHERE name = $1 AND active = true"
-query.recipients = "SELECT name FROM mail_email WHERE address = $1 ORDER BY name ASC"
-#query.secrets = "SELECT secret FROM mail_secret WHERE account_name = $1"
-read-from-replicas = true
-timeout = "15s"
-tls.allow-invalid-certs = false
-tls.enable = false
-type = "postgresql"
-user = "%{env:POSTGRES_USER}%"
-
-
 [directory."internal"]
 type = "internal"
 store = "rocksdb"
-
-[directory."tb-accounts-mgnt"]
-cache.size = 1048576
-cache.ttl.negative = "10m"
-cache.ttl.positive = "1h"
-columns.class = "type"
-columns.description = "description"
-columns.email = "email"
-columns.quota = "quota"
-columns.secret = "secret"
-store = "tb-accounts"
-type = "sql"
 
 [directory."kc"]
 auth.method = "basic"
@@ -83,9 +50,8 @@ cache.ttl.negative = "10m"
 cache.ttl.positive = "1h"
 endpoint.method = "introspect"
 endpoint.url = "http://keycloak:8999/realms/tbpro/protocol/openid-connect/token/introspect"
-#endpoint.url = "http://keycloak:8082/realms/stalwart/.well-known/openid-configuration"
 fields.email = "username"
-fields.username = "sub"
+fields.username = "username"
 timeout = "15s"
 type = "oidc"
 

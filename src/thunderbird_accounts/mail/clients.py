@@ -208,8 +208,8 @@ class MailClient:
     def create_account(self, primary_email: str, username: str, oidc_id: str, app_password=None):
         data = {
             'type': 'individual',
-            'name': oidc_id,
-            'description': username,
+            'name': username,
+            'description': oidc_id,
             'emails': [primary_email],
             'roles': ['user'],
         }
@@ -221,26 +221,26 @@ class MailClient:
         # Return the pkid
         return data.get('data')
 
-    def get_account(self, oidc_id: str):
-        response = self._get_principal(oidc_id)
+    def get_account(self, username: str):
+        response = self._get_principal(username)
 
         data = response.json()
         error = data.get('error')
 
         if error == StalwartErrors.NOT_FOUND.value:
-            raise AccountNotFoundError(oidc_id)
+            raise AccountNotFoundError(username)
 
         assert data.get('data', {}).get('type') == 'individual'
 
         # Return the pkid
         return data.get('data')
 
-    def delete_account(self, oidc_id: str):
-        return self._delete_principal(oidc_id)
+    def delete_account(self, username: str):
+        return self._delete_principal(username)
 
-    def delete_app_password(self, oidc_id, secret):
+    def delete_app_password(self, username, secret):
         response = self._update_principal(
-            oidc_id,
+            username,
             [{'action': 'removeItem', 'field': 'secrets', 'value': secret}],
         )
         # Returns data: null on success...
@@ -251,9 +251,9 @@ class MailClient:
             logging.error(f'[delete_app_password] err: {data}')
             raise RuntimeError(data)
 
-    def save_app_password(self, oidc_id, secret):
+    def save_app_password(self, username, secret):
         response = self._update_principal(
-            oidc_id,
+            username,
             [{'action': 'addItem', 'field': 'secrets', 'value': secret}],
         )
         # Returns data: null on success...
@@ -264,10 +264,10 @@ class MailClient:
             logging.error(f'[save_app_password] err: {data}')
             raise RuntimeError(data)
 
-    def save_email_address(self, oidc_id, email):
+    def save_email_address(self, username, email):
         """Adds a new email address to a stalwart's individual principal by uuid."""
         response = self._update_principal(
-            oidc_id,
+            username,
             [{'action': 'addItem', 'field': 'emails', 'value': email}],
         )
         # Returns data: null on success...
