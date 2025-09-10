@@ -38,6 +38,10 @@ def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
         oidc_id=user.oidc_id, username=user.username, email=user.email, app_password=app_password
     )
 
+    # Don't create the account if we already have it
+    if user.account_set.count() > 0:
+        return True
+
     # Also create their account objects
     account = Account.objects.create(
         name=user.username,
@@ -45,7 +49,7 @@ def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
         user=user,
     )
     email = Email.objects.create(address=user.username, type='primary', account=account)
-    return account and email
+    return bool(account and email)
 
 
 def add_email_address_to_stalwart_account(user, email):
