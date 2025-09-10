@@ -48,7 +48,8 @@ class CustomUserFormBase(forms.ModelForm):
         widget=forms.TextInput(),
         help_text=_(
             'The user\'s timezone. Should be in <a href="{url}">tz format</a>.'.format(
-                url='https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List')
+                url='https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List'
+            )
         ),
     )
 

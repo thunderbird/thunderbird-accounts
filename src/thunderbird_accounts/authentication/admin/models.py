@@ -1,7 +1,10 @@
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 
-from thunderbird_accounts.authentication.admin.actions import admin_create_stalwart_account
+from thunderbird_accounts.authentication.admin.actions import (
+    admin_fix_broken_stalwart_account,
+    admin_fix_stalwart_account_relationships,
+)
 from thunderbird_accounts.authentication.admin.forms import CustomUserChangeForm, CustomNewUserForm
 from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.models import User
@@ -41,7 +44,7 @@ class CustomUserAdmin(UserAdmin):
         'created_at',
         'updated_at',
     )
-    actions = [admin_create_stalwart_account]
+    actions = [admin_fix_broken_stalwart_account, admin_fix_stalwart_account_relationships]
 
     form = CustomUserChangeForm
     add_form = CustomNewUserForm

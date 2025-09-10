@@ -206,8 +206,13 @@ class MailClient:
         return data.get('data')
 
     def create_account(self, primary_email: str, username: str, oidc_id: str, app_password=None):
-        data = {'type': 'individual', 'name': username, 'description': oidc_id, 'emails': [primary_email],
-                'roles': ['user']}
+        data = {
+            'type': 'individual',
+            'name': username,
+            'description': oidc_id,
+            'emails': [primary_email],
+            'roles': ['user'],
+        }
         if app_password:
             data['secrets'] = [app_password]
         response = self._create_principal(data)

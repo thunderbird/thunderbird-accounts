@@ -10,6 +10,7 @@ from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail import utils as mail_utils
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError
 
+
 @admin.action(description=_('Fix Stalwart Account Relationships (#266)'))
 def admin_fix_stalwart_account_relationships(modeladmin, request, queryset):
     """Fix the relationship revert noted in issue #266.
@@ -25,10 +26,13 @@ def admin_fix_stalwart_account_relationships(modeladmin, request, queryset):
     for user in queryset:
         try:
             account = stalwart.get_account(user.oidc_id)
-            stalwart._update_principal(account.name, [
-                {'action': 'set', 'field': 'description', 'value': user.oidc_id},
-                {'action': 'set', 'field': 'name', 'value': user.stalwart_primary_email}
-            ])
+            stalwart._update_principal(
+                account.name,
+                [
+                    {'action': 'set', 'field': 'description', 'value': user.oidc_id},
+                    {'action': 'set', 'field': 'name', 'value': user.stalwart_primary_email},
+                ],
+            )
             success += 1
         except RequestException as ex:
             sentry_sdk.capture_exception(ex)
@@ -107,8 +111,6 @@ def admin_fix_broken_stalwart_account(modeladmin, request, queryset):
             except Exception as ex:
                 logging.error(f'[admin_create_stalwart_account] Problem creating stalwart account {ex}')
                 errors += 1
-
-
 
     if success_new_account:
         modeladmin.message_user(
