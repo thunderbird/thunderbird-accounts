@@ -662,7 +662,7 @@
     "alwaysDisplayInConsole" : false,
     "clientAuthenticatorType" : "client-secret",
     "secret" : "KoPz6llGgyFJPJvn21i3FTtBiqLj2Zbd",
-    "redirectUris" : [ "http://localhost:8087/oidc/callback/" ],
+    "redirectUris" : [ "http://localhost:8087/oidc/callback/", "http://localhost:8087/login/" ],
     "webOrigins" : [ "http://localhost:8087/*" ],
     "notBefore" : 0,
     "bearerOnly" : false,
