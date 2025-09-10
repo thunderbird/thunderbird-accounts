@@ -11,7 +11,13 @@ Contents
 --------
 .. toctree::
     :maxdepth: 2
-    :caption: Documentation
+    :caption: Admin Panel
+
+    admin/users.md
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Developer Documentation
 
     readme.md
     modules.rst

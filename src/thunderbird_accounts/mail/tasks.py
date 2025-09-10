@@ -4,7 +4,7 @@ from typing import Optional
 import sentry_sdk
 from celery import shared_task
 
-from thunderbird_accounts.mail.client import MailClient
+from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
 
 

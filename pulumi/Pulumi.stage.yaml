@@ -66,3 +66,7 @@ config:
     secure: AAABAL78KgJng5Hve//s4u+BeGcHTfFxak84BPRm0Dsjc9xBzMs=
   accounts:stalwart-api-auth-key:
     secure: AAABAJ9go2Vf8PajyFfFNznYyfjIV319vgu/Qza/Ebs8/60pZsz1OP8bA4A+IOHiiE+dPvzp6ou47dcfOfeUxHtPN65PfyUjwSG1YOqdOqmHIog2p8OJCYIvxq2UbWWisU4Mo+NfxXFo0wFW
+  accounts:keycloak-admin-client-id:
+    secure: AAABAE9oRmGhKSDJL0/fvUIqwN/+zvZkPxdOwi5Nd9oglK8Mjk5w9+EkDuVmJpecbA==
+  accounts:keycloak-admin-client-secret:
+    secure: AAABAPuzPkWip0G7df8BI6fppPCFhk/xViEUuZeOCP+lLkUafAgGxxMn5kqfwuqYrWVGykMDcJ5cxM3AGPbILg==

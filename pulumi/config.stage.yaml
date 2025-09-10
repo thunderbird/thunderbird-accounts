@@ -151,6 +151,8 @@ resources:
         - oidc-sign-algo
         - stalwart-api-auth-method
         - stalwart-api-auth-key
+        - keycloak-admin-client-id
+        - keycloak-admin-client-secret
 
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
@@ -331,6 +333,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm
               - name: STALWART_API_AUTH_STRING
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc
+              - name: KEYCLOAK_ADMIN_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-id-Qgsr8Y
+              - name: KEYCLOAK_ADMIN_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-secret-z97o1p
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
@@ -391,22 +397,25 @@ resources:
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
               - name: OIDC_URL_AUTH
-                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/auth"
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/auth/"
               - name: OIDC_URL_TOKEN
-                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token"
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token/"
               - name: OIDC_URL_USER
-                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo/"
               - name: OIDC_URL_JWKS
-                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs/"
               - name: OIDC_URL_LOGOUT
-                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"
+                value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout/"
               - name: OIDC_FALLBACK_MATCH_BY_EMAIL
                 value: 'True'
               - name: STALWART_BASE_JMAP_URL
                 value: 'https://mail.stage-thundermail.com'
               - name: STALWART_BASE_API_URL
                 value: 'https://mailstrom-stage-management-i.stage-thundermail.com:8080'
-
+              - name: KEYCLOAK_URL_API
+                value: 'https://auth-stage.tb.pro/admin/realms/tbpro/'
+              - name: KEYCLOAK_ADMIN_URL_TOKEN
+                value: 'https://auth-stage.tb.pro/realms/master/protocol/openid-connect/token/'
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -476,6 +485,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm
               - name: STALWART_API_AUTH_STRING
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc
+              - name: KEYCLOAK_ADMIN_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-id-Qgsr8Y
+              - name: KEYCLOAK_ADMIN_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-secret-z97o1p
             environment:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
@@ -549,6 +562,10 @@ resources:
                 value: 'https://mail.stage-thundermail.com'
               - name: STALWART_BASE_API_URL
                 value: 'https://mail-i.stage-thundermail.com'
+              - name: KEYCLOAK_URL_API
+                value: 'https://auth-stage.tb.pro/admin/realms/tbpro/'
+              - name: KEYCLOAK_ADMIN_URL_TOKEN
+                value: 'https://auth-stage.tb.pro/realms/master/protocol/openid-connect/token/'
 
   tb:ci:AwsAutomationUser:
     ci:

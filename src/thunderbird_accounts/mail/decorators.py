@@ -1,4 +1,4 @@
-from thunderbird_accounts.mail.client import MailClient
+from thunderbird_accounts.mail.clients import MailClient
 
 
 def inject_stalwart_client(func):

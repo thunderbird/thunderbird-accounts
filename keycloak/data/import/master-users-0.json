@@ -22,5 +22,19 @@
     "realmRoles" : [ "admin", "default-roles-master" ],
     "notBefore" : 0,
     "groups" : [ ]
+  }, {
+    "id" : "81a0c3dc-8ff2-4d03-96b0-2efc1a764c0b",
+    "username" : "service-account-tb-accounts-admin",
+    "emailVerified" : false,
+    "enabled" : true,
+    "createdTimestamp" : 1756326905985,
+    "totp" : false,
+    "serviceAccountClientId" : "tb-accounts-admin",
+    "credentials" : [ ],
+    "disableableCredentialTypes" : [ ],
+    "requiredActions" : [ ],
+    "realmRoles" : [ "admin", "default-roles-master" ],
+    "notBefore" : 0,
+    "groups" : [ ]
   } ]
 }
