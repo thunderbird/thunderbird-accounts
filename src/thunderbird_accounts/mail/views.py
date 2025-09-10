@@ -19,7 +19,7 @@ from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
-from thunderbird_accounts.mail.exceptions import AccessTokenNotFound
+from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError
 from thunderbird_accounts.mail.utils import decode_app_password
 
 try:
@@ -330,11 +330,14 @@ def self_serve_app_passwords(request: HttpRequest):
     account = request.user.account_set.first()
 
     stalwart_client = MailClient()
-    email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
-
-    app_passwords = []
-    for secret in email_user.get('secrets', []):
-        app_passwords.append(decode_app_password(secret))
+    try:
+        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
+        app_passwords = []
+        for secret in email_user.get('secrets', []):
+            app_passwords.append(decode_app_password(secret))
+    except AccountNotFoundError:
+        app_passwords = []
+        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
     return TemplateResponse(
         request,
@@ -353,13 +356,16 @@ def self_serve_app_password_remove(request: HttpRequest):
     app_password_label = json.loads(request.body).get('password')
 
     stalwart_client = MailClient()
-    email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
+    try:
+        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
 
-    for secret in email_user.get('secrets', []):
-        secret_label = decode_app_password(secret)
-        if secret_label == app_password_label:
-            stalwart_client.delete_app_password(request.user.stalwart_primary_email, secret)
-            return JsonResponse({'success': True})
+        for secret in email_user.get('secrets', []):
+            secret_label = decode_app_password(secret)
+            if secret_label == app_password_label:
+                stalwart_client.delete_app_password(request.user.stalwart_primary_email, secret)
+                return JsonResponse({'success': True})
+    except AccountNotFoundError:
+        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
     return JsonResponse({'success': False})
 
@@ -376,14 +382,17 @@ def self_serve_app_password_add(request: HttpRequest):
         return raise_form_error(request, reverse('self_serve_app_password'), _('Label and password are required'))
 
     stalwart_client = MailClient()
-    email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
-    for secret in email_user.get('secrets', []):
-        secret_label = decode_app_password(secret)
-        if secret_label == label:
-            return raise_form_error(request, reverse('self_serve_app_password'), _('That label is already in-use'))
+    try:
+        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
+        for secret in email_user.get('secrets', []):
+            secret_label = decode_app_password(secret)
+            if secret_label == label:
+                return raise_form_error(request, reverse('self_serve_app_password'), _('That label is already in-use'))
 
-    secret = utils.save_app_password(label, password)
-    stalwart_client.save_app_password(request.user.stalwart_primary_email, secret)
+        secret = utils.save_app_password(label, password)
+        stalwart_client.save_app_password(request.user.stalwart_primary_email, secret)
+    except AccountNotFoundError:
+        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
     return HttpResponseRedirect('/self-serve/app-passwords')
 

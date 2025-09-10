@@ -14,6 +14,18 @@ body {
   margin: 1rem;
 }
 
+.messages {
+  padding: 0;
+  li {
+    list-style: none;
+    border: 1px black solid;
+  }
+  .error {
+    border: 1px darkred solid;
+    padding: 1.5rem;
+  }
+}
+
 .nav-list {
   padding: 0;
   display: flex;

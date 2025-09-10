@@ -25,12 +25,14 @@ def admin_fix_stalwart_account_relationships(modeladmin, request, queryset):
 
     for user in queryset:
         try:
-            account = stalwart.get_account(user.oidc_id)
+            thundermail_address = user.stalwart_primary_email or user.username
+
+            stalwart.get_account(user.oidc_id)
             stalwart._update_principal(
-                account.name,
+                user.oidc_id,
                 [
                     {'action': 'set', 'field': 'description', 'value': user.oidc_id},
-                    {'action': 'set', 'field': 'name', 'value': user.stalwart_primary_email},
+                    {'action': 'set', 'field': 'name', 'value': thundermail_address},
                 ],
             )
             success += 1
