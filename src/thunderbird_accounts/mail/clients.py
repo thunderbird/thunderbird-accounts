@@ -278,6 +278,23 @@ class MailClient:
             logging.error(f'[save_email_address] err: {data}')
             raise RuntimeError(data)
 
+    def update_primary_email_address(self, username: str, new_primary_address: str):
+        """Updates Stalwart and changes their primary email address"""
+        response = self._update_principal(
+            username,
+            [
+                {'action': 'set', 'field': 'name', 'value': new_primary_address},
+            ],
+        )
+
+        # Returns data: null on success...
+        data = response.json()
+        error = data.get('error')
+        # I have no idea what the error is yet
+        if error:
+            logging.error(f'[update_primary_email_address] err: {data}')
+            raise RuntimeError(data)
+
     def make_api_key(self, username, password):
         if not settings.IS_DEV:
             raise RuntimeError('You can only make api keys in dev.')

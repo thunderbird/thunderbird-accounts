@@ -125,6 +125,7 @@ class AdminCreateUserTestCase(TestCase):
         self.assertEqual(mock_requests.call_args_list[1][0][1], RequestMethods.PUT)
 
 
+@patch('thunderbird_accounts.mail.clients.MailClient._update_principal')
 @patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')
 class AdminUpdateUserTestcase(TestCase):
     """Tests the admin's user update form.
@@ -152,7 +153,7 @@ class AdminUpdateUserTestcase(TestCase):
         # We also need ot pass it to the form as well (under instance)
         return user_admin.get_form(fake_request, self.user, change=True)(form_data, instance=self.user)
 
-    def test_failed_invalid_timezone(self, mock_requests: MagicMock):
+    def test_failed_invalid_timezone(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': f'frog@{self.subdomain}',
             'email': 'frog@example.com',
@@ -172,7 +173,9 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertTrue(len(form.errors) > 0)
         self.assertIn('timezone', form.errors)
 
-    def test_failed_empty_username(self, mock_requests: MagicMock):
+        self.assertEqual(mock_update_principal.call_count, 0)
+
+    def test_failed_empty_username(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': '',
             'email': self.user.email,
@@ -192,7 +195,9 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertTrue(len(form.errors) > 0)
         self.assertIn('username', form.errors)
 
-    def test_failed_empty_email(self, mock_requests: MagicMock):
+        self.assertEqual(mock_update_principal.call_count, 0)
+
+    def test_failed_empty_email(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': self.user.username,
             'email': '',
@@ -212,7 +217,18 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertTrue(len(form.errors) > 0)
         self.assertIn('email', form.errors)
 
-    def test_success(self, mock_requests: MagicMock):
+        self.assertEqual(mock_update_principal.call_count, 0)
+
+    def test_success(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
+        account = Account.objects.create(name='test', user=self.user)
+        email = Email.objects.create(
+            address=self.user.username,
+            type=Email.EmailType.PRIMARY,
+            account=account,
+        )
+
+        old_username = self.user.username
+
         form_data = {
             'username': f'frog@{self.subdomain}',
             'email': 'frog@example.com',
@@ -224,6 +240,10 @@ class AdminUpdateUserTestcase(TestCase):
         }
 
         mock_requests.return_value = self._build_success_response()
+
+        # Set the json output to an empty object
+        mock_update_principal.return_value.json.return_value = {}
+
         form = self._build_form(form_data)
 
         user = form.save(True)
@@ -240,6 +260,90 @@ class AdminUpdateUserTestcase(TestCase):
         # ...yes it has that many tuples
         self.assertEqual(mock_requests.call_args[0][0], f'users/{self.user.oidc_id}')
         self.assertEqual(mock_requests.call_args[0][1], RequestMethods.PUT)
+
+        # 2. Updating stalwart
+        self.assertEqual(mock_update_principal.call_count, 1)
+        self.assertEqual(mock_update_principal.call_args[0][0], old_username)
+        self.assertEqual(mock_update_principal.call_args[0][1][0].get('value'), form_data.get('username'))
+
+    def test_success_without_stalwart_account(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
+        form_data = {
+            'username': f'frog@{self.subdomain}',
+            'email': 'frog@example.com',
+            'timezone': 'America/Toronto',
+            # This is dumb, the fields are split into 2 and are populated via existing data
+            # But we need to provide it as form data otherwise it'll error out.
+            'date_joined_0': self.user.date_joined.date(),
+            'date_joined_1': self.user.date_joined.time(),
+        }
+
+        mock_requests.return_value = self._build_success_response()
+
+        # Set the json output to an empty object
+        mock_update_principal.return_value.json.return_value = {}
+
+        form = self._build_form(form_data)
+
+        user = form.save(True)
+
+        # We should have a user, they should have a pk (saved to db), and our fake oidc id
+        self.assertIsNotNone(user)
+        self.assertIsNotNone(user.pk)
+        self.assertEqual(user.oidc_id, FAKE_OIDC_UUID)
+
+        # 1. Updating the user
+        self.assertEqual(mock_requests.call_count, 1)
+
+        # Ensure that our endpoint calls line up with our expectations above
+        # ...yes it has that many tuples
+        self.assertEqual(mock_requests.call_args[0][0], f'users/{self.user.oidc_id}')
+        self.assertEqual(mock_requests.call_args[0][1], RequestMethods.PUT)
+
+        # 2. No update to stalwart
+        self.assertEqual(mock_update_principal.call_count, 0)
+
+    def test_success_without_username_update(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
+        account = Account.objects.create(name='test', user=self.user)
+        email = Email.objects.create(
+            address=self.user.username,
+            type=Email.EmailType.PRIMARY,
+            account=account,
+        )
+
+        form_data = {
+            'username': f'test@{self.subdomain}',
+            'email': 'frog@example.com',
+            'timezone': 'America/Toronto',
+            # This is dumb, the fields are split into 2 and are populated via existing data
+            # But we need to provide it as form data otherwise it'll error out.
+            'date_joined_0': self.user.date_joined.date(),
+            'date_joined_1': self.user.date_joined.time(),
+        }
+
+        mock_requests.return_value = self._build_success_response()
+
+        # Set the json output to an empty object
+        mock_update_principal.return_value.json.return_value = {}
+
+        form = self._build_form(form_data)
+
+        user = form.save(True)
+
+        # We should have a user, they should have a pk (saved to db), and our fake oidc id
+        self.assertIsNotNone(user)
+        self.assertIsNotNone(user.pk)
+        self.assertEqual(user.oidc_id, FAKE_OIDC_UUID)
+
+        # 1. Updating the user
+        self.assertEqual(mock_requests.call_count, 1)
+
+        # Ensure that our endpoint calls line up with our expectations above
+        # ...yes it has that many tuples
+        self.assertEqual(mock_requests.call_args[0][0], f'users/{self.user.oidc_id}')
+        self.assertEqual(mock_requests.call_args[0][1], RequestMethods.PUT)
+
+        # 2. No update to stalwart
+        self.assertEqual(mock_update_principal.call_count, 0)
 
 
 @patch('thunderbird_accounts.mail.clients.MailClient._delete_principal')

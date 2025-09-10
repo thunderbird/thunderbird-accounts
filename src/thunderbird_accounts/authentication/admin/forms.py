@@ -12,6 +12,7 @@ from thunderbird_accounts.authentication.exceptions import (
     SendExecuteActionsEmailError,
 )
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.clients import MailClient
 
 
 class CustomUserFormBase(forms.ModelForm):
@@ -108,7 +109,7 @@ class CustomUserChangeForm(CustomUserFormBase):
             user_permissions.queryset = user_permissions.queryset.select_related('content_type')
 
     def save(self, commit=True):
-        user = super().save(commit=False)
+        user: User = super().save(commit=False)
         updated_keycloak_successfully = False
 
         # Update the user on keycloak's end
@@ -134,8 +135,38 @@ class CustomUserChangeForm(CustomUserFormBase):
         if not updated_keycloak_successfully:
             raise ValueError('Keycloak was not updated successfully!')
 
+        stalwart = MailClient()
+        try:
+            old_username = self.initial.get('username')
+            if old_username != user.username:
+                account = user.account_set.first()
+                if account:
+                    stalwart.update_primary_email_address(old_username, user.username)
+
+                    email = account.email_set.filter(type=account.email_set.model.EmailType.PRIMARY).first()
+
+                    # Check if they have an email address of this thundermail field as an alias
+                    lookup_email = account.email_set.filter(address=user.username).first()
+                    if lookup_email:
+                        lookup_email.type = account.email_set.model.EmailType.PRIMARY
+                        lookup_email.save()
+                        email.type = account.email_set.model.EmailType.ALIAS
+                        email.save()
+                    else:
+                        # Otherwise overwrite the existing address
+                        email.address = user.username
+                        email.save()
+
+        except (User.DoesNotExist, ValueError) as ex:
+            sentry_sdk.capture_exception(ex)
+            self.add_error(None, _(f'There was an error updating in stalwart. Technical Error: {ex}'))
+
+
         # Actually save the user
         if commit:
             user.save()
+
+
+
 
         return user
