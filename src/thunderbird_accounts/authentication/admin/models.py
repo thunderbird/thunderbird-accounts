@@ -77,6 +77,6 @@ class CustomUserAdmin(UserAdmin):
             # Delete the stalwart email too!
             if obj.stalwart_primary_email:
                 stalwart = MailClient()
-                stalwart.delete_account(obj.oidc_id)
+                stalwart.delete_account(obj.stalwart_primary_email)
         # Finally delete the rest of the model
         super().delete_model(request, obj)
