@@ -1,12 +1,44 @@
 <script setup lang="ts">
 import { ref, onMounted, useTemplateRef } from 'vue';
-import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes } from '@thunderbirdops/services-ui';
+import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes, CheckboxInput } from '@thunderbirdops/services-ui';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 
-const TICKET_CUSTOM_FIELD_NAMES = {
-  PRODUCT: 'Product',
-  TYPE_OF_REQUEST: 'Type of request',
+// Zendesk Ticket Field <-> Vue Component mapping
+// https://developer.zendesk.com/api-reference/ticketing/tickets/ticket_fields/#create-ticket-field
+const TICKET_FIELD_TYPE_TO_COMPONENT = {
+  'text': TextInput,
+  'textarea': TextArea,
+  'checkbox': CheckboxInput,
+  'date': '', // TODO: Define a data input component
+  'integer': '', // TODO: Define a number input component
+  'decimal': '', // TODO: Define a number input component
+  'regexp': '', // TODO: Define a regex input component
+  'partialcreditcard': '', // TODO: Define a partial credit card input component
+  'multiselect': '', // TODO: Define a multi-select input component
+  'tagger': SelectInput,
+  'lookup': '', // TODO: Define a lookup input component
+  'subject': TextInput,
+  'description': TextArea,
 };
+
+type TicketForm = {
+  id: number
+}
+
+type TicketField = {
+  id: number,
+  title: string,
+  description: string,
+  required: boolean,
+  type: keyof typeof TICKET_FIELD_TYPE_TO_COMPONENT,
+  custom_field_options?: { id: number, name: string, value: string }[]
+}
+
+interface ContactFieldsAPIResponse {
+  success: boolean,
+  ticket_form: TicketForm,
+  ticket_fields: TicketField[],
+}
 
 const csrfTokenVal = ref(window._page.csrfToken);
 const errorText = ref(window._page.formError);
@@ -14,10 +46,6 @@ const successText = ref('');
 const isSubmitting = ref(false);
 const form = ref({
   email: window._page?.userEmail || '',
-  subject: '',
-  product: '',
-  type: '',
-  description: '',
   attachments: [],
 });
 const formRef = ref(null);
@@ -25,16 +53,7 @@ const fileInput = ref(null);
 
 // services-ui's TextInput and TextArea field references for resetting form state
 const emailInput = useTemplateRef('emailInput');
-const subjectInput = useTemplateRef('subjectInput');
-const descriptionInput = useTemplateRef('descriptionInput');
-
-// Dynamic options from API
-const productOptions = ref([]);
-const typeOptions = ref([]);
-
-// Store field IDs for submission
-const productFieldId = ref(null);
-const typeFieldId = ref(null);
+const dynamicFields = ref<TicketField[]>([]);
 
 const triggerFileSelect = () => {
   fileInput.value?.click();
@@ -79,31 +98,17 @@ const fetchTicketFields = async () => {
       credentials: 'include',
     });
 
-    const data = await response.json();
+    const data: ContactFieldsAPIResponse = await response.json();
 
     if (data.success && data.ticket_fields) {
-      // Process the ticket fields to populate the dropdowns
-      const fields = data.ticket_fields;
+      dynamicFields.value = data.ticket_fields;
 
-      // Set Product field options and ID
-      if (fields[TICKET_CUSTOM_FIELD_NAMES.PRODUCT]) {
-        const productField = fields[TICKET_CUSTOM_FIELD_NAMES.PRODUCT];
-        productOptions.value = productField.custom_field_options.map((option) => ({
-          label: option.name,
-          value: option.value,
-        }));
-        productFieldId.value = productField.id;
-      }
-
-      // Set Type of request field options and ID
-      if (fields[TICKET_CUSTOM_FIELD_NAMES.TYPE_OF_REQUEST]) {
-        const typeField = fields[TICKET_CUSTOM_FIELD_NAMES.TYPE_OF_REQUEST];
-        typeOptions.value = typeField.custom_field_options.map((option) => ({
-          label: option.name,
-          value: option.value,
-        }));
-        typeFieldId.value = typeField.id;
-      }
+      // Initialize dynamic field values in the form object
+      data.ticket_fields.forEach((field) => {
+        if (!(field.title in form.value)) {
+          form.value[field.title] = '';
+        }
+      });
     }
   } catch (error) {
     console.error('Error fetching ticket fields:', error);
@@ -112,23 +117,23 @@ const fetchTicketFields = async () => {
 };
 
 const resetForm = () => {
+  // Reset fixed form fields (not dynamic fields)
   form.value = {
     email: '',
-    subject: '',
-    product: '',
-    type: '',
-    description: '',
     attachments: [],
   };
+
+  // Reset dynamic fields
+  dynamicFields.value.forEach((field) => {
+    form.value[field.title] = '';
+  });
+
   errorText.value = '';
   successText.value = '';
 
   // services-ui's TextInput and TextArea components don't reset their internal state
   // when the form is reset, so we need to reset them manually
   emailInput.value.reset();
-  subjectInput.value.reset();
-  descriptionInput.value.reset();
-
   formRef.value.reset();
 };
 
@@ -146,16 +151,33 @@ const handleSubmit = async () => {
   isSubmitting.value = true;
 
   try {
-    // Create FormData instead of JSON
-    const formData = new FormData();
-    formData.append('email', form.value.email);
-    formData.append('subject', form.value.subject);
-    formData.append('product', form.value.product);
-    formData.append('product_field_id', productFieldId.value);
-    formData.append('type', form.value.type);
-    formData.append('type_field_id', typeFieldId.value);
-    formData.append('description', form.value.description);
+    const jsonData = {
+      // Email is a fixed field
+      email: form.value.email,
+      fields: []
+    };
 
+    // Add all dynamic field values with structured data
+    dynamicFields.value.forEach((field) => {
+      const fieldValue = form.value[field.title];
+      if (fieldValue !== undefined && fieldValue !== '') {
+        jsonData.fields.push({
+          id: field.id,
+          title: field.title,
+          value: fieldValue,
+          type: field.type,
+          required: field.required,
+        });
+      }
+    });
+
+    // Create FormData for multipart/form-data request
+    const formData = new FormData();
+
+    // Add JSON data as a string field
+    formData.append('data', JSON.stringify(jsonData));
+
+    // Add each file attachment
     form.value.attachments.forEach((attachment) => {
       formData.append('attachments', attachment.file);
     });
@@ -198,70 +220,22 @@ onMounted(() => {
 
   <form @submit.prevent="handleSubmit" method="post" action="/contact/submit" ref="formRef">
     <!-- Email -->
-    <text-input
-      ref="emailInput"
-      name="email"
-      type="email"
-      v-model="form.email"
-      :required="true"
-      data-testid="contact-email-input"
-    >
+    <text-input ref="emailInput" name="email" type="email" v-model="form.email" :required="true"
+      data-testid="contact-email-input">
       Your email address
     </text-input>
 
-    <!-- Subject -->
-    <text-input
-      ref="subjectInput"
-      name="subject"
-      type="text"
-      v-model="form.subject"
-      :required="true"
-      data-testid="contact-subject-input"
-    >
-      Subject
-    </text-input>
+    <template v-for="field in dynamicFields" :key="field.id">
+      <component :is="TICKET_FIELD_TYPE_TO_COMPONENT[field.type]" :ref="field.id" :name="field.title"
+        v-model="form[field.title]" :required="field.required"
+        :options="field.custom_field_options?.map((option) => ({ label: option.name, value: option.value }))"
+        :data-testid="`contact-${field.title}-input`">
+        {{ field.title }}
+      </component>
+    </template>
 
-    <!-- Product -->
-    <select-input
-      name="product"
-      :options="productOptions"
-      v-model="form.product"
-      :required="true"
-      data-testid="contact-product-input"
-    >
-      Product
-    </select-input>
-
-    <!-- Type of Request -->
-    <select-input
-      name="type"
-      :options="typeOptions"
-      v-model="form.type"
-      :required="true"
-      data-testid="contact-type-input"
-    >
-      Type of Request
-    </select-input>
-
-    <!-- Description -->
-    <text-area
-      ref="descriptionInput"
-      name="description"
-      v-model="form.description"
-      :required="true"
-      data-testid="contact-description-input"
-    >
-      Description
-    </text-area>
-
-    <div
-      class="form-group file-dropzone"
-      @dragover.prevent
-      @drop.prevent="handleDrop"
-      @click="triggerFileSelect"
-      role="button"
-      aria-label="Upload files"
-    >
+    <div class="form-group file-dropzone" @dragover.prevent @drop.prevent="handleDrop" @click="triggerFileSelect"
+      role="button" aria-label="Upload files">
       <p v-if="form.attachments.length === 0">Drag & drop files here, or click to upload</p>
       <p v-else>{{ form.attachments.length }} file(s) selected. Drag & drop more files here, or click to upload</p>
       <input type="file" ref="fileInput" class="hidden" multiple @change="handleFileSelect" />
@@ -286,6 +260,9 @@ onMounted(() => {
 
 <style scoped>
 form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-block-start: 1rem;
   max-width: 50%;
 }

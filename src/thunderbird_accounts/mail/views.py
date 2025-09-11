@@ -172,17 +172,53 @@ def contact_submit(request: HttpRequest):
     """Uses Zendesk's Requests API to create a ticket
     Ref https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#tickets-and-requests"""
 
-    email = request.POST.get('email')
-    subject = request.POST.get('subject')
-    product = request.POST.get('product')
-    product_field_id = request.POST.get('product_field_id')
-    ticket_type = request.POST.get('type')
-    type_field_id = request.POST.get('type_field_id')
-    description = request.POST.get('description')
+    # Data comes in as multipart/form-data, so we need to parse the JSON data from the form
+    # using the 'data' field so that we can also send attachments in the same request
+    try:
+        data_json = json.loads(request.POST.get('data', '{}'))
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': _('Invalid form data')}, status=400)
+
+    email = data_json.get('email')
+    fields = data_json.get('fields', [])
+
+    # Extract subject and description from dynamic fields.
+    # Even though they come in as dynamic fields, they are special mandatory fields
+    # that should be sent differently in the Request API.
+    # https://developer.zendesk.com/api-reference/ticketing/tickets/ticket-requests/#json-format
+    subject = None
+    description = None
+
+    custom_fields = []
+    validation_errors = []
+
+    for field in fields:
+        field_type = field.get('type')
+        field_value = field.get('value')
+        field_id = field.get('id')
+        field_title = field.get('title')
+        field_required = field.get('required', False)
+
+        # Check if required field is empty
+        if field_required and (not field_value or field_value.strip() == ''):
+            validation_errors.append(f'{field_title} is required')
+
+        if field_type == 'subject':
+            subject = field_value
+        elif field_type == 'description':
+            description = field_value
+        else:
+            # This is a custom field
+            custom_fields.append({
+                'id': field_id,
+                'value': field_value
+            })
+
     uploaded_files = request.FILES.getlist('attachments')
 
-    if not any([email, subject, product, ticket_type, description]):
-        return raise_form_error(request, reverse('contact'), _('All fields are required'))
+    # Check for validation errors
+    if validation_errors:
+        return JsonResponse({'success': False, 'error': ', '.join(validation_errors)}, status=400)
 
     # Upload files to Zendesk and collect tokens
     attachment_tokens = []
@@ -223,12 +259,9 @@ def contact_submit(request: HttpRequest):
     ticket_fields = {
         'email': email,
         'subject': subject,
-        'product': product,
-        'product_field_id': product_field_id,
-        'ticket_type': ticket_type,
-        'type_field_id': type_field_id,
         'description': description,
         'attachments': attachment_tokens,
+        'custom_fields': custom_fields,
     }
 
     zendesk_api_response = zendesk_client.create_ticket(ticket_fields)
