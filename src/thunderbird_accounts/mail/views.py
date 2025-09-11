@@ -124,7 +124,7 @@ def contact(request: HttpRequest):
 
 @require_http_methods(['GET'])
 def contact_fields(request: HttpRequest):
-    """Get ticket fields from Zendesk API and filter for fields with custom options."""
+    """Get ticket fields from Zendesk API and filter based on Zendesk Admin."""
     zendesk_client = ZendeskClient()
     result = zendesk_client.get_ticket_fields()
 
@@ -133,24 +133,38 @@ def contact_fields(request: HttpRequest):
             {'success': False, 'error': result.get('error', _('Failed to fetch ticket fields'))}, status=500
         )
 
+    ticket_form = result['data']['ticket_form']
     ticket_fields = result['data']['ticket_fields']
-    fields_by_title = {}
 
-    # Filter ticket fields to only include those with custom_field_options
+    # For now, we only care about the id of the ticket form, since we need to pass it back to ticket creation
+    # Even though we could read this from the env var ZENDESK_FORM_ID directly, we might need more fields in the future
+    ticket_form_data = {
+        'id': ticket_form['id']
+    }
+
+    ticket_fields_data = []
+
+    # Filter ticket fields based on being editable / visible (controlled through Zendesk Admin)
     for field in ticket_fields:
-        if 'custom_field_options' in field:
-            # Extract the id, title, and custom_field_options with id, name and value
+        if field['active'] and field['visible_in_portal'] and field['editable_in_portal']:
             field_data = {
                 'id': field['id'],
                 'title': field['title'],
-                'custom_field_options': [
+                'description': field['description'],
+                'required': field['required'],
+                'type': field['type']
+            }
+
+            if 'custom_field_options' in field:
+                # Extract the id, name, and custom_field_options with id, name and value
+                field_data['custom_field_options'] = [
                     {'id': option['id'], 'name': option['name'], 'value': option['value']}
                     for option in field['custom_field_options']
-                ],
-            }
-            fields_by_title[field['title']] = field_data
+                ]
 
-    return JsonResponse({'success': True, 'ticket_fields': fields_by_title})
+            ticket_fields_data.append(field_data)
+
+    return JsonResponse({'success': True, 'ticket_form': ticket_form_data, 'ticket_fields': ticket_fields_data})
 
 
 @require_http_methods(['POST'])

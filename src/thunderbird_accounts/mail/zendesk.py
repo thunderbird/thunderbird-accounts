@@ -11,6 +11,7 @@ class ZendeskClient(object):
         self.email = settings.ZENDESK_USER_EMAIL
         self.token = settings.ZENDESK_API_TOKEN
         self.subdomain = settings.ZENDESK_SUBDOMAIN
+        self.form_id = settings.ZENDESK_FORM_ID
         self.base_url = f'https://{self.subdomain}.zendesk.com/api/v2'
 
     def create_ticket(self, ticket_fields):
@@ -85,8 +86,8 @@ class ZendeskClient(object):
             return {'success': False, 'error': 'Zendesk upload failed', 'details': response.text}
 
     def get_ticket_fields(self):
-        """Get ticket fields from Zendesk API."""
-        url = f'{self.base_url}/ticket_fields.json'
+        """Get ticket fields from the ZENDESK_FORM_ID through Zendesk API including fields."""
+        url = f'{self.base_url}/ticket_forms/{self.form_id}?include=ticket_fields'
 
         response = requests.get(
             url, auth=(f'{self.email}/token', self.token), headers={'Content-Type': 'application/json'}
