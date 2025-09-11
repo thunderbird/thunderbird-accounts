@@ -1,4 +1,5 @@
 import zoneinfo
+from typing import Optional
 
 import sentry_sdk
 from django import forms
@@ -9,7 +10,7 @@ from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.exceptions import (
     InvalidDomainError,
     UpdateUserError,
-    SendExecuteActionsEmailError,
+    SendExecuteActionsEmailError, ImportUserError,
 )
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
@@ -53,6 +54,13 @@ class CustomUserFormBase(forms.ModelForm):
             )
         ),
     )
+    oidc_id = forms.CharField(
+        label=_('Keycloak User ID'),
+        required=True,
+        strip=False,
+        widget=forms.TextInput(),
+        help_text=_('The user\'s Keycloak ID field. <b>Don\'t change this unless you know what you\'re doing!</b>'),
+    )
 
     def clean(self):
         if not self.data.get('email'):
@@ -73,25 +81,38 @@ class CustomUserFormBase(forms.ModelForm):
 
 
 class CustomNewUserForm(CustomUserFormBase):
-    def save(self, commit=True):
-        user = super().save(commit=False)
+    oidc_id: Optional[str] = None
+
+    def clean(self):
+        super().clean()
 
         # Create the user on keycloak's end
         keycloak = KeycloakClient()
         try:
+            name = f'{self.cleaned_data.get('first_name', '')} {self.cleaned_data.get('last_name', '')}'.strip()
             keycloak_pkid = keycloak.import_user(
-                user.username, user.email, user.timezone, name=None, send_reset_password_email=True
+                self.cleaned_data.get('username'), self.cleaned_data.get('email'), self.cleaned_data.get('timezone'),
+                name=name,
+                send_reset_password_email=True
             )
 
             # Save the oidc id so it matches on login
-            user.oidc_id = keycloak_pkid
+            self.oidc_id = keycloak_pkid
+        except (ValueError, InvalidDomainError) as ex:
+            # Only username errors raise ValueErrors right now
+            self.add_error('username', str(ex))
+        except ImportUserError as ex:
+            sentry_sdk.capture_exception(ex)
+            self.add_error(None, _(f'Could not create user in Keycloak. Tell a developer: {ex}'))
         except SendExecuteActionsEmailError as ex:
             sentry_sdk.capture_exception(ex)
-            # Don't think this will show
-            self.add_error(None, _('Failed to send update password email.'))
+            # We don't have a way to add a warning, and we don't want this error preventing user creation!
+            # self.add_error(None, _(f'User created in Keycloak but could not send them an email to add their password. Tell a developer: {ex}'))
 
-        # Let ImportError raise since we cannot handle error messages here
-        # TODO: Fix that...
+    def save(self, commit=True):
+        user = super().save(commit=False)
+
+        user.oidc_id = self.oidc_id
 
         # Actually save the user
         if commit:
@@ -108,51 +129,48 @@ class CustomUserChangeForm(CustomUserFormBase):
         if user_permissions:
             user_permissions.queryset = user_permissions.queryset.select_related('content_type')
 
-    def save(self, commit=True):
-        user: User = super().save(commit=False)
-        updated_keycloak_successfully = False
+    def clean(self):
+        super().clean()
+
+        username = self.cleaned_data.get('username')
 
         # Update the user on keycloak's end
         keycloak = KeycloakClient()
         try:
             keycloak.update_user(
-                user.oidc_id,
-                username=user.username,
-                email=user.email,
-                enabled=user.is_active,
-                timezone=user.timezone,
-                locale=user.language,
-                first_name=user.first_name,
-                last_name=user.last_name,
+                self.cleaned_data.get('oidc_id'),
+                username=username,
+                email=self.cleaned_data.get('email'),
+                enabled=self.cleaned_data.get('is_active'),
+                timezone=self.cleaned_data.get('timezone'),
+                locale=self.cleaned_data.get('language'),
+                first_name=self.cleaned_data.get('first_name'),
+                last_name=self.cleaned_data.get('last_name'),
             )
-            updated_keycloak_successfully = True
         except (ValueError, InvalidDomainError) as ex:
             self.add_error('username', str(ex))
         except UpdateUserError as ex:
             sentry_sdk.capture_exception(ex)
-            self.add_error(None, _(f'There was an error updating in keycloak. Technical Error: {ex}'))
-
-        if not updated_keycloak_successfully:
-            raise ValueError('Keycloak was not updated successfully!')
+            self.add_error(None, _(f'There was an error updating in keycloak. Tell a developer: {ex}'))
 
         stalwart = MailClient()
         try:
             old_username = self.initial.get('username')
-            if old_username != user.username:
-                account = user.account_set.first()
+            print('???', old_username, username)
+            if old_username != username:
+                account = self.instance.account_set.first()
                 if account:
-                    stalwart.update_primary_email_address(old_username, user.username)
+                    stalwart.update_primary_email_address(old_username, username)
 
-        except (User.DoesNotExist, ValueError) as ex:
+        except (User.DoesNotExist, ValueError, RuntimeError) as ex:
             sentry_sdk.capture_exception(ex)
-            self.add_error(None, _(f'There was an error updating in stalwart. Technical Error: {ex}'))
+            self.add_error(None, _(f'There was an error updating in stalwart. Tell a developer: {ex}'))
 
+    def save(self, commit=True):
+        user: User = super().save(commit=False)
 
         # Actually save the user
         if commit:
             user.save()
-
-
-
 
         return user

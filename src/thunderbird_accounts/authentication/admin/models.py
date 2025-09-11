@@ -40,7 +40,6 @@ class CustomUserAdmin(UserAdmin):
         'uuid',
         'display_name',
         'avatar_url',
-        'oidc_id',
         'created_at',
         'updated_at',
     )

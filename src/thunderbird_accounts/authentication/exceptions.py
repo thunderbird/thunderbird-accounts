@@ -68,13 +68,15 @@ class DeleteUserError(KeycloakError):
 
 
 class SendExecuteActionsEmailError(KeycloakError):
+    oidc_id: Optional[str] = None
     action: str
     error: str
 
-    def __init__(self, error, action: Optional[str] = None, *args, **kwargs):
+    def __init__(self, error, action: Optional[str] = None, oidc_id: Optional[str] = None, *args, **kwargs):
         super().__init__(args, kwargs)
         self.action = action
         self.error = error
+        self.oidc_id = oidc_id
 
     def __str__(self):
-        return f'SendExecuteActionsEmailError: {self.error} for {self.action}'
+        return f'SendExecuteActionsEmailError: {self.error} for {self.action}. <keycloak-id:{self.oidc_id}>'

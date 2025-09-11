@@ -71,6 +71,8 @@ class KeycloakClient:
 
         url = urljoin(settings.KEYCLOAK_API_ENDPOINT, endpoint)
 
+        print('json:',json_data)
+
         response = requests.request(
             method=method.value,
             url=url,
@@ -151,7 +153,7 @@ class KeycloakClient:
                 lambda x: x[1] is not None,
                 {
                     'zoneinfo': timezone,
-                    'locale': locale,
+                    'locale': locale or 'en',
                 }.items(),
             )
         )
@@ -163,8 +165,13 @@ class KeycloakClient:
             self.request(f'users/{oidc_id}', RequestMethods.PUT, json_data=update_data)
         except RequestException as exc:
             sentry_sdk.capture_exception(exc)
+            if exc.response is not None:
+                raise UpdateUserError(
+                    username=username, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
+                )
+
             raise UpdateUserError(
-                username=username, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
+                username=username, error=f'Error<{exc}>: No response!'
             )
 
         return True
@@ -216,13 +223,14 @@ class KeycloakClient:
                         # Keycloak api docs don't specify a type, but will 404 is a float is given
                         'lifespan': int(datetime.timedelta(days=3).total_seconds()),
                         'client_id': settings.OIDC_RP_CLIENT_ID,
-                        'redirect_uri': get_absolute_url(reverse('login')),
+                        'redirect_uri': (reverse('login')),
                     },
                 )
             except RequestException as exc:
                 sentry_sdk.capture_exception(exc)
                 raise SendExecuteActionsEmailError(
                     action=action,
+                    oidc_id=pkid, # If we encounter this error we want to make sure we pass this value back !
                     error=(
                         f'Error<{exc.response.status_code}>: Cannot send email due to: {exc.response.content.decode()}'
                     ),
