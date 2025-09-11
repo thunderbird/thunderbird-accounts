@@ -379,7 +379,7 @@ resources:
               - name: PADDLE_ENV
                 value: 'sandbox'
               - name: PUBLIC_BASE_URL
-                value: accounts-stage.tb.pro
+                value: 'https://accounts-stage.tb.pro'
               - name: REDIS_CELERY_DB
                 value: '5'
               - name: REDIS_CELERY_RESULTS_DB
@@ -529,7 +529,7 @@ resources:
               - name: PADDLE_ENV
                 value: 'sandbox'
               - name: PUBLIC_BASE_URL
-                value: accounts-stage.tb.pro
+                value: 'https://accounts-stage.tb.pro'
               - name: REDIS_CELERY_DB
                 value: '5'
               - name: REDIS_CELERY_RESULTS_DB

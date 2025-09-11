@@ -367,7 +367,7 @@ resources:
               - name: PADDLE_ENV
                 value: 'production'
               - name: PUBLIC_BASE_URL
-                value: accounts.tb.pro
+                value: 'https://accounts.tb.pro'
               - name: REDIS_CELERY_DB
                 value: '5'
               - name: REDIS_CELERY_RESULTS_DB
@@ -509,7 +509,7 @@ resources:
               - name: PADDLE_ENV
                 value: 'sandbox'
               - name: PUBLIC_BASE_URL
-                value: accounts.tb.pro
+                value: 'https://accounts.tb.pro'
               - name: SMTP_HOST
                 value: 'mail.thundermail.com'
               - name: SMTP_PORT
