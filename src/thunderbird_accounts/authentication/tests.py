@@ -221,7 +221,7 @@ class AdminUpdateUserTestcase(TestCase):
 
     def test_success(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         account = Account.objects.create(name='test', user=self.user)
-        email = Email.objects.create(
+        Email.objects.create(
             address=self.user.username,
             type=Email.EmailType.PRIMARY,
             account=account,
@@ -304,7 +304,7 @@ class AdminUpdateUserTestcase(TestCase):
 
     def test_success_without_username_update(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         account = Account.objects.create(name='test', user=self.user)
-        email = Email.objects.create(
+        Email.objects.create(
             address=self.user.username,
             type=Email.EmailType.PRIMARY,
             account=account,
