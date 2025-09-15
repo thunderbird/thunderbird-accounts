@@ -121,7 +121,7 @@ for service, opts in resources['tb:fargate:FargateClusterWithLogging'].items():
             opts=pulumi.ResourceOptions(depends_on=[fargate_clusters[service]]),
             **autoscaler_opts,
         )
-        
+
 
 cloudflare_backend_record = cloudflare.Record(
     f'{project.name_prefix}-dns-backend',
