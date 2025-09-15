@@ -545,6 +545,34 @@ resources:
               - name: STALWART_BASE_API_URL
                 value: 'https://mailstrom-management-i.thundermail.com:8080'
 
+  tb:autoscale:EcsServiceAutoscaler:
+    accounts:
+      cpu_threshold: 80
+      ram_threshold: 80
+      cooldown: 180
+      disable_scale_in: False
+      min_capacity: 2
+      max_capacity: 4
+      suspend: False
+    accounts-celery:
+      cpu_threshold: 80
+      ram_threshold: 80
+      cooldown: 180
+      disable_scale_in: False
+      min_capacity: 2
+      max_capacity: 4
+
+    # NOTE: Uncomment below when keycloak session sync is fixed
+    # Ref: https://github.com/thunderbird/thunderbird-accounts/issues/272
+    # keycloak:
+    #   cpu_threshold: 80
+    #   ram_threshold: 80
+    #   cooldown: 180
+    #   disable_scale_in: False
+    #   min_capacity: 2
+    #   max_capacity: 4
+    #   suspend: False
+
   tb:ci:AwsAutomationUser:
     ci:
       enable_ecr_image_push: true
