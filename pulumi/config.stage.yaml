@@ -199,7 +199,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-fc05641eaffe2b2b2e876f71d78f2b4aff44df97
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-6f807fa7427fdccd1757b65f4b53f106f51b94fe
             command:
               - start
             portMappings:
@@ -271,7 +271,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:d31bf9141e11c7474ca820538fbb64af3f678931
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:da25c40236dbfd2096624e8baff26aee21ad88e7
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -433,7 +433,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:d31bf9141e11c7474ca820538fbb64af3f678931
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:da25c40236dbfd2096624e8baff26aee21ad88e7
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -566,6 +566,24 @@ resources:
                 value: 'https://auth-stage.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
                 value: 'https://auth-stage.tb.pro/realms/master/protocol/openid-connect/token/'
+
+  tb:autoscale:EcsServiceAutoscaler:
+    accounts:
+      cpu_threshold: 80
+      ram_threshold: 80
+      cooldown: 180
+      disable_scale_in: False
+      min_capacity: 2
+      max_capacity: 4
+      suspend: False
+    keycloak:
+      cpu_threshold: 80
+      ram_threshold: 80
+      cooldown: 180
+      disable_scale_in: False
+      min_capacity: 2
+      max_capacity: 4
+      suspend: False
 
   tb:ci:AwsAutomationUser:
     ci:

@@ -3,6 +3,7 @@
 import pulumi
 import pulumi_cloudflare as cloudflare
 import tb_pulumi
+import tb_pulumi.autoscale
 import tb_pulumi.ci
 import tb_pulumi.ec2
 import tb_pulumi.elasticache
@@ -85,6 +86,7 @@ redis = tb_pulumi.elasticache.ElastiCacheReplicationGroup(
 )
 
 # Build Fargate clusters to run our containers
+autoscalers = {}
 fargate_clusters = {}
 for service, opts in resources['tb:fargate:FargateClusterWithLogging'].items():
     if service not in lb_sgs:
@@ -98,15 +100,28 @@ for service, opts in resources['tb:fargate:FargateClusterWithLogging'].items():
     ]
     if lb_sgs[service]:
         depends_on.append(lb_sgs[service].resources['sg'])
+
+    autoscaler_opts = resources.get('tb:autoscale:EcsServiceAutoscaler', {}).get(service)
+    desired_count = opts.pop('desired_count', None)
     fargate_clusters[service] = tb_pulumi.fargate.FargateClusterWithLogging(
         name=f'{project.name_prefix}-fargate-{service}',
         project=project,
         subnets=vpc.resources['subnets'],
         container_security_groups=[container_sgs[service].resources['sg'].id],
         load_balancer_security_groups=lb_sg_ids,
+        desired_count=None if autoscaler_opts is not None else desired_count,
         opts=pulumi.ResourceOptions(depends_on=depends_on),
         **opts,
     )
+    if autoscaler_opts is not None:
+        autoscalers[service] = tb_pulumi.autoscale.EcsServiceAutoscaler(
+            f'{project.name_prefix}-autoscl-{service}',
+            project=project,
+            service=fargate_clusters[service].resources.get('service'),
+            opts=pulumi.ResourceOptions(depends_on=[fargate_clusters[service]]),
+            **autoscaler_opts,
+        )
+        
 
 cloudflare_backend_record = cloudflare.Record(
     f'{project.name_prefix}-dns-backend',
