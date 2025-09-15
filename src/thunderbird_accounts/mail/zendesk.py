@@ -53,6 +53,27 @@ class ZendeskClient(object):
 
         return response
 
+    def update_ticket(self, ticket_id, ticket_fields):
+        """Update a ticket in Zendesk using the Tickets API."""
+        url = f'{self.base_url}/tickets/{ticket_id}'
+
+        # For the full payload format, see:
+        # https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#update-ticket
+        payload = {
+            'ticket': ticket_fields
+        }
+
+        # This request needs to be made on behalf of the agent (not the end user)
+        # so any fields can be updated (including hidden fields)
+        response = requests.put(
+            url,
+            headers={'Content-Type': 'application/json'},
+            auth=(f'{settings.ZENDESK_USER_EMAIL}/token', settings.ZENDESK_API_TOKEN),
+            json=payload,
+        )
+
+        return response
+
     def upload_file(self, uploaded_file):
         """Upload a file to Zendesk and return the upload token."""
         url = f'{self.base_url}/uploads.json'
