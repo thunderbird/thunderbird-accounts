@@ -47,6 +47,7 @@ jobs:
               - 'vite.config.mjs'
             keycloak-theme-changed:
               - 'keycloak/themes/**'
+              - 'Dockerfile.keycloak'
             iac-changed:
               - 'pulumi/**'
               - '.github/**'
