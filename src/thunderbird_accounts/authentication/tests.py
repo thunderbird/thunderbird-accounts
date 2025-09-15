@@ -10,7 +10,6 @@ from requests import Response
 
 from thunderbird_accounts.authentication.admin import CustomUserAdmin
 from thunderbird_accounts.authentication.clients import RequestMethods
-from thunderbird_accounts.authentication.exceptions import InvalidDomainError
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account, Email
@@ -65,8 +64,13 @@ class AdminCreateUserTestCase(TestCase):
 
         form = self._build_form(form_data)
 
-        with self.assertRaises(InvalidDomainError):
+        # ValueError: The User could not be created because the data didn't validate.
+        with self.assertRaises(ValueError):
             form.save(True)
+
+        # Check for invalid domain error
+        self.assertTrue(len(form.errors) > 0)
+        self.assertIn('InvalidDomainError', str(form.errors))
 
         # No email
         form_data = {
@@ -158,6 +162,7 @@ class AdminUpdateUserTestcase(TestCase):
             'username': f'frog@{self.subdomain}',
             'email': 'frog@example.com',
             'timezone': 'America/Victoria',  # Bad timezone!
+            'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
             # But we need to provide it as form data otherwise it'll error out.
             'date_joined_0': self.user.date_joined.date(),
@@ -180,6 +185,7 @@ class AdminUpdateUserTestcase(TestCase):
             'username': '',
             'email': self.user.email,
             'timezone': self.user.timezone,
+            'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
             # But we need to provide it as form data otherwise it'll error out.
             'date_joined_0': self.user.date_joined.date(),
@@ -202,6 +208,7 @@ class AdminUpdateUserTestcase(TestCase):
             'username': self.user.username,
             'email': '',
             'timezone': self.user.timezone,
+            'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
             # But we need to provide it as form data otherwise it'll error out.
             'date_joined_0': self.user.date_joined.date(),
@@ -233,6 +240,7 @@ class AdminUpdateUserTestcase(TestCase):
             'username': f'frog@{self.subdomain}',
             'email': 'frog@example.com',
             'timezone': 'America/Toronto',
+            'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
             # But we need to provide it as form data otherwise it'll error out.
             'date_joined_0': self.user.date_joined.date(),
@@ -271,6 +279,7 @@ class AdminUpdateUserTestcase(TestCase):
             'username': f'frog@{self.subdomain}',
             'email': 'frog@example.com',
             'timezone': 'America/Toronto',
+            'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
             # But we need to provide it as form data otherwise it'll error out.
             'date_joined_0': self.user.date_joined.date(),
@@ -314,6 +323,7 @@ class AdminUpdateUserTestcase(TestCase):
             'username': f'test@{self.subdomain}',
             'email': 'frog@example.com',
             'timezone': 'America/Toronto',
+            'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
             # But we need to provide it as form data otherwise it'll error out.
             'date_joined_0': self.user.date_joined.date(),

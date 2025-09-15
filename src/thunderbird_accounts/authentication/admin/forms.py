@@ -56,7 +56,7 @@ class CustomUserFormBase(forms.ModelForm):
     )
     oidc_id = forms.CharField(
         label=_('Keycloak User ID'),
-        required=True,
+        required=False,
         strip=False,
         widget=forms.TextInput(),
         help_text=_('The user\'s Keycloak ID field. <b>Don\'t change this unless you know what you\'re doing!</b>'),
@@ -85,6 +85,10 @@ class CustomNewUserForm(CustomUserFormBase):
 
     def clean(self):
         super().clean()
+
+        # Don't continue with clean
+        if len(self.errors) > 0:
+            return
 
         # Create the user on keycloak's end
         keycloak = KeycloakClient()
@@ -132,6 +136,10 @@ class CustomUserChangeForm(CustomUserFormBase):
     def clean(self):
         super().clean()
 
+        # Don't continue with clean
+        if len(self.errors) > 0:
+            return
+
         username = self.cleaned_data.get('username')
         full_name = f'{self.cleaned_data.get('first_name')} {self.cleaned_data.get('last_name')}'.strip()
 
@@ -156,21 +164,24 @@ class CustomUserChangeForm(CustomUserFormBase):
 
         stalwart = MailClient()
         try:
-            old_full_name = f'{self.initial.get('first_name')} {self.initial.get('last_name')}'.strip()
-            old_username = self.initial.get('username')
+            # We can only send stalwart updates if they actually have an account reference
+            account = self.instance.account_set.first()
+            if account:
+                old_full_name = f'{self.initial.get('first_name')} {self.initial.get('last_name')}'.strip()
+                old_username = self.initial.get('username')
 
-            new_primary_email_address = None
-            new_full_name = None
+                new_primary_email_address = None
+                new_full_name = None
 
-            if old_username != username:
-                new_primary_email_address = username
+                if old_username != username:
+                    new_primary_email_address = username
 
-            if old_full_name != full_name:
-                new_full_name = full_name
+                if old_full_name != full_name:
+                    new_full_name = full_name
 
-            if new_primary_email_address or new_full_name:
-                stalwart.update_individual(old_username, primary_email_address=new_primary_email_address,
-                                           full_name=new_full_name)
+                if new_primary_email_address or new_full_name:
+                    stalwart.update_individual(old_username, primary_email_address=new_primary_email_address,
+                                               full_name=new_full_name)
 
         except (User.DoesNotExist, ValueError, RuntimeError) as ex:
             sentry_sdk.capture_exception(ex)

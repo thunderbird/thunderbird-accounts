@@ -3,7 +3,10 @@
 
 {% block form_top %}
   {% if not is_popup %}
-    <p>{% translate "This will create a user in Keycloak!" %}</p>
+    {% blocktranslate %}
+      <p>This will create a Keycloak login and email them to add a password.</p>
+      <p><b>They will need to log in once</b> to set up their Stalwart email inbox.</p>
+    {% endblocktranslate %}
   {% endif %}
 {% endblock %}
 {% block extrahead %}

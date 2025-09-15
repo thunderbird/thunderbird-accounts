@@ -21,6 +21,8 @@ There are currently two available actions:
 * Delete selected user(s).
 * Fix Broken Stalwart Account.
 
+If you spot an option that's not documented or has an issue number, please ask a developer before using.
+
 ### Deleting Users
 
 Deleting a user will **remove their ability to login and access** Thunderbird Pro Services, as well as
@@ -82,7 +84,8 @@ error.
 ![A screenshot of the required fields highlighted in a red outline with different errors.](./users_5.png)
 
 If there are no issues with the data, you'll be brought to one of the three places you've selected and that user will be
-created on Keycloak and promptly sent an `Update your password` type email.
+created on Keycloak and promptly sent an `Update your password` type email. They **must** log in at least once to set up
+their Stalwart inbox.
 
 ## Changing Users
 
@@ -93,10 +96,11 @@ Keycloak. Some of these fields include the previous required fields, as well as 
 Unless you're a super admin you probably won't have access to many permission related actions, but here is where you
 can assign users to permission groups so they can perform various actions on the admin panel.
 
-Like the Add user page any invalid data will return you back to the form with error messages, and any successful changes
-will propagate to Keycloak.
+Like the Add user page any invalid data will send you back to the form with error messages, and any successful changes
+will propagate to Keycloak. If you've changed their primary email address or first or last name these changes will also
+propagate to Stalwart.
 
-It's not recommended to change the Thundermail address at this time. If you **do** update the Thundermail address you 
+It's not recommended to change the Thundermail address at this time. If you **do** update the Thundermail address you
 will need to make a matching update on the User's Account's primary Email object.
 
 This is not an ideal flow, but it's needed for now.
@@ -106,7 +110,7 @@ This is not an ideal flow, but it's needed for now.
 ## History
 
 On some pages you'll see a button called History. Here you can see an audit log of who performed an action, what that
-action was (high level), and when that action was performed. An even higher-level version of this page for all changes 
-is located on the main admin panel titled as `Recent Actions`. 
+action was (high level), and when that action was performed. An even higher-level version of this page for all changes
+is located on the main admin panel titled as `Recent Actions`.
 
 ![A screenshot of the history page. It shows the date and time, user who performed the action, and the action that was performed.](./users_7.png)
