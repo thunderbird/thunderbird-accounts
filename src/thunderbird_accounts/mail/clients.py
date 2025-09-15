@@ -25,7 +25,11 @@ class StalwartErrors(StrEnum):
 
 class MailClient:
     """A partial api client for Stalwart
-    Docs: https://stalw.art/docs/api/management/endpoints"""
+    Docs: https://stalw.art/docs/api/management/endpoints
+    Code: https://github.com/stalwartlabs/stalwart/tree/main/crates/http/src/management
+
+    Important note: The principal_id field is principal object's name, not auto-incremented id!
+    """
 
     def __init__(self):
         self.api_url = f'{settings.STALWART_BASE_API_URL}/api'
@@ -205,11 +209,12 @@ class MailClient:
         # Return the pkid
         return data.get('data')
 
-    def create_account(self, primary_email: str, username: str, oidc_id: str, app_password=None):
+    def create_account(self, primary_email: str, principal_id: str, full_name: Optional[str] = None,
+                       app_password: Optional[str] = None):
         data = {
             'type': 'individual',
-            'name': username,
-            'description': oidc_id,
+            'name': principal_id,
+            'description': full_name,
             'emails': [primary_email],
             'roles': ['user'],
         }
@@ -221,26 +226,27 @@ class MailClient:
         # Return the pkid
         return data.get('data')
 
-    def get_account(self, username: str):
-        response = self._get_principal(username)
+    def get_account(self, principal_id: str):
+        response = self._get_principal(principal_id)
 
         data = response.json()
         error = data.get('error')
 
         if error == StalwartErrors.NOT_FOUND.value:
-            raise AccountNotFoundError(username)
+            raise AccountNotFoundError(principal_id)
 
         assert data.get('data', {}).get('type') == 'individual'
 
         # Return the pkid
         return data.get('data')
 
-    def delete_account(self, username: str):
-        return self._delete_principal(username)
+    def delete_account(self, principal_id: str):
+        """Deletes a Stalwart principal object from the given principal_id"""
+        return self._delete_principal(principal_id)
 
-    def delete_app_password(self, username, secret):
+    def delete_app_password(self, principal_id: str, secret: str):
         response = self._update_principal(
-            username,
+            principal_id,
             [{'action': 'removeItem', 'field': 'secrets', 'value': secret}],
         )
         # Returns data: null on success...
@@ -251,9 +257,9 @@ class MailClient:
             logging.error(f'[delete_app_password] err: {data}')
             raise RuntimeError(data)
 
-    def save_app_password(self, username, secret):
+    def save_app_password(self, principal_id: str, secret: str):
         response = self._update_principal(
-            username,
+            principal_id,
             [{'action': 'addItem', 'field': 'secrets', 'value': secret}],
         )
         # Returns data: null on success...
@@ -264,10 +270,10 @@ class MailClient:
             logging.error(f'[save_app_password] err: {data}')
             raise RuntimeError(data)
 
-    def save_email_address(self, username, email):
+    def save_email_address(self, principal_id: str, email: str):
         """Adds a new email address to a stalwart's individual principal by uuid."""
         response = self._update_principal(
-            username,
+            principal_id,
             [{'action': 'addItem', 'field': 'emails', 'value': email}],
         )
         # Returns data: null on success...
@@ -310,12 +316,11 @@ class MailClient:
             logging.error(f'[update_individual] err: {data}')
             raise RuntimeError(data)
 
-
-    def make_api_key(self, username, password):
+    def make_api_key(self, principal_id, password):
         if not settings.IS_DEV:
             raise RuntimeError('You can only make api keys in dev.')
 
-        basic_auth = base64.b64encode(f'{username}:{password}'.encode()).decode()
+        basic_auth = base64.b64encode(f'{principal_id}:{password}'.encode()).decode()
         self.authorized_headers['Authorization'] = f'Basic {basic_auth}'
 
         api_key_name = 'tb-accounts-api-key'
