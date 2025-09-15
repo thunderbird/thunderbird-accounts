@@ -132,6 +132,7 @@ services:
       KC_DB_URL_PORT: '5434'
       KC_DB_USERNAME: "kc"
       KC_DB_PASSWORD: "kc"
+      KC_DEV: yes  # Run the container with start-dev instead of start
     volumes:
       - "./keycloak/themes:/opt/keycloak/themes"
       - "./keycloak/data/export:/opt/keycloak/data/export"
