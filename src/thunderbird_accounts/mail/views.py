@@ -257,6 +257,7 @@ def contact_submit(request: HttpRequest):
 
     # Create ticket with attachment tokens
     ticket_fields = {
+        'ticket_form_id': int(settings.ZENDESK_FORM_ID),
         'email': email,
         'subject': subject,
         'description': description,
@@ -267,7 +268,36 @@ def contact_submit(request: HttpRequest):
     zendesk_api_response = zendesk_client.create_ticket(ticket_fields)
 
     if zendesk_api_response.ok:
-        return JsonResponse({'success': True})
+        # Extract the ticket ID from the response
+        response_data = zendesk_api_response.json()
+        ticket_id = response_data['request']['id']
+
+        # Add browser and OS information to hidden custom fields
+        from thunderbird_accounts.utils.utils import parse_user_agent_info
+
+        user_agent_string = request.headers.get('User-Agent')
+        browser_string, os_string = parse_user_agent_info(user_agent_string)
+
+        # Hidden fields (e.g. fields with permissions set as 'Agents can edit')
+        # can't be submitted through the Requests API, so we need to update the ticket manually
+        # using the Tickets API instead on behalf of the agent (not the end user)
+        update_ticket_fields = {
+            'custom_fields': [{
+                'id': int(settings.ZENDESK_FORM_BROWSER_FIELD_ID),
+                'value': browser_string
+            },
+            {
+                'id': int(settings.ZENDESK_FORM_OS_FIELD_ID),
+                'value': os_string
+            }]
+        }
+
+        zendesk_api_response = zendesk_client.update_ticket(ticket_id, update_ticket_fields)
+
+        if zendesk_api_response.ok:
+            return JsonResponse({'success': True})
+
+        return JsonResponse({'success': False}, status=500)
 
     return JsonResponse({'success': False}, status=500)
 
