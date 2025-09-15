@@ -88,7 +88,7 @@ services:
       - ./keycloak/themes:/app/keycloak/themes
 
   stalwart:
-    image: stalwartlabs/stalwart:v0.13.0
+    image: stalwartlabs/stalwart:v0.13
     #build:
     #  context: ../stalwart
     #  dockerfile: Dockerfile

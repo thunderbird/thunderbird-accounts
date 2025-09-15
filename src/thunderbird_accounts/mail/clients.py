@@ -278,13 +278,28 @@ class MailClient:
             logging.error(f'[save_email_address] err: {data}')
             raise RuntimeError(data)
 
-    def update_primary_email_address(self, username: str, new_primary_address: str):
-        """Updates Stalwart and changes their primary email address"""
+    def update_individual(self,
+                          principal_id: str,
+                          primary_email_address: Optional[str] = None,
+                          full_name: Optional[str] = None,
+                          ):
+        """Updates Stalwart and changes their primary email address and/or full name"""
+
+        update_data = []
+        if primary_email_address:
+            update_data.append(
+                {'action': 'set', 'field': 'name', 'value': primary_email_address},
+            )
+        if full_name:
+            update_data.append(
+                {'action': 'set', 'field': 'description', 'value': full_name},
+            )
+
+        if len(update_data) == 0:
+            raise ValueError('You must provide at least one field to change.')
+
         response = self._update_principal(
-            username,
-            [
-                {'action': 'set', 'field': 'name', 'value': new_primary_address},
-            ],
+            principal_id, update_data
         )
 
         # Returns data: null on success...
@@ -292,8 +307,9 @@ class MailClient:
         error = data.get('error')
         # I have no idea what the error is yet
         if error:
-            logging.error(f'[update_primary_email_address] err: {data}')
+            logging.error(f'[update_individual] err: {data}')
             raise RuntimeError(data)
+
 
     def make_api_key(self, username, password):
         if not settings.IS_DEV:

@@ -133,6 +133,7 @@ class CustomUserChangeForm(CustomUserFormBase):
         super().clean()
 
         username = self.cleaned_data.get('username')
+        full_name = f'{self.cleaned_data.get('first_name')} {self.cleaned_data.get('last_name')}'.strip()
 
         # Update the user on keycloak's end
         keycloak = KeycloakClient()
@@ -155,12 +156,21 @@ class CustomUserChangeForm(CustomUserFormBase):
 
         stalwart = MailClient()
         try:
+            old_full_name = f'{self.initial.get('first_name')} {self.initial.get('last_name')}'.strip()
             old_username = self.initial.get('username')
-            print('???', old_username, username)
+
+            new_primary_email_address = None
+            new_full_name = None
+
             if old_username != username:
-                account = self.instance.account_set.first()
-                if account:
-                    stalwart.update_primary_email_address(old_username, username)
+                new_primary_email_address = username
+
+            if old_full_name != full_name:
+                new_full_name = full_name
+
+            if new_primary_email_address or new_full_name:
+                stalwart.update_individual(old_username, primary_email_address=new_primary_email_address,
+                                           full_name=new_full_name)
 
         except (User.DoesNotExist, ValueError, RuntimeError) as ex:
             sentry_sdk.capture_exception(ex)
