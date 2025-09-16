@@ -124,7 +124,7 @@ finished.
 Keycloak is the auth/OIDC provider that is setup by default. Two realms are imported the default `master` realm and the
 `tbpro` realm.
 
-If you like to login to Keycloak's admin interface you can access that at [http://keycloak:8999/](http://keycloak:8999/)
+If you like to login to Keycloak's admin interface you can access that at [http://keycloak:8999/admin/master/console/](http://keycloak:8999/admin/master/console/)
 with the following credentials:
 
 ```

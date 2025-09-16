@@ -243,6 +243,10 @@ resources:
                 value: '9000'
               - name: KC_METRICS_ENABLED
                 value: 'true'
+              - name: KC_SPI_THEME_WELCOME_THEME
+                value: "tbpro"
+              - name: KC_TBPRO_HOME
+                value: "https://accounts.tb.pro/self-serve/"
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG

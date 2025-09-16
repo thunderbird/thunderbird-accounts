@@ -133,6 +133,8 @@ services:
       KC_DB_USERNAME: "kc"
       KC_DB_PASSWORD: "kc"
       KC_DEV: yes  # Run the container with start-dev instead of start
+      KC_SPI_THEME_WELCOME_THEME: "tbpro"
+      KC_TBPRO_HOME: "http://localhost:8087/self-serve/"
     volumes:
       - "./keycloak/themes:/opt/keycloak/themes"
       - "./keycloak/data/export:/opt/keycloak/data/export"
