@@ -114,10 +114,7 @@ resources:
               protocol: tcp
               from_port: 7800
               to_port: 7800
-              # The following security group is self-referential. If you have to rebuild this env from scratch,
-              # you will have to uncomment this rule to do the initial build, then uncomment it and update this
-              # rule ID with the security group created by this config.
-              source_security_group_id: sg-0cf2676258c552f8c
+              self: True
           egress:
             - description: Allow traffic from the container out to the Internet
               cidr_blocks:
