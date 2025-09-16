@@ -35,7 +35,7 @@ def decode_app_password(secret):
 def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
     # Run this immediately for now, in the future we'll ship these to celery
     tasks.create_stalwart_account.run(
-        oidc_id=user.oidc_id, username=user.username, email=user.email, app_password=app_password
+        oidc_id=user.oidc_id, username=user.username, email=user.username, app_password=app_password
     )
 
     # Don't create the account if we already have it
