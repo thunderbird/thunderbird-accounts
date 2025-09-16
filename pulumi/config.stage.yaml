@@ -109,6 +109,15 @@ resources:
               protocol: tcp
               from_port: 9000
               to_port: 9000
+            # KeyCloak clustered nodes speak to each other on port 7800
+            - description: Allow clustered nodes to communicate
+              protocol: tcp
+              from_port: 7800
+              to_port: 7800
+              # The following security group is self-referential. If you have to rebuild this env from scratch,
+              # you will have to uncomment this rule to do the initial build, then uncomment it and update this
+              # rule ID with the security group created by this config.
+              source_security_group_id: sg-0cf2676258c552f8c
           egress:
             - description: Allow traffic from the container out to the Internet
               cidr_blocks:
@@ -199,7 +208,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-6f807fa7427fdccd1757b65f4b53f106f51b94fe
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-7af48fff73c4f5f29ec56b0b3e6b29079353bab0
             command:
               - start
             portMappings:
@@ -271,7 +280,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:da25c40236dbfd2096624e8baff26aee21ad88e7
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:7af48fff73c4f5f29ec56b0b3e6b29079353bab0
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -433,7 +442,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:da25c40236dbfd2096624e8baff26aee21ad88e7
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:7af48fff73c4f5f29ec56b0b3e6b29079353bab0
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -587,14 +596,14 @@ resources:
 
     # NOTE: Uncomment below when keycloak session sync is fixed
     # Ref: https://github.com/thunderbird/thunderbird-accounts/issues/272
-    # keycloak:
-    #   cpu_threshold: 80
-    #   ram_threshold: 80
-    #   cooldown: 180
-    #   disable_scale_in: False
-    #   min_capacity: 2
-    #   max_capacity: 4
-    #   suspend: False
+    keycloak:
+      cpu_threshold: 80
+      ram_threshold: 80
+      cooldown: 180
+      disable_scale_in: False
+      min_capacity: 2
+      max_capacity: 4
+      suspend: False
 
   tb:ci:AwsAutomationUser:
     ci:

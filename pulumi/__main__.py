@@ -54,6 +54,7 @@ for service, sg in resources['tb:network:SecurityGroupWithRules']['containers'].
     for rule in sg['rules']['ingress']:
         rule['source_security_group_id'] = lb_sgs[service].resources['sg'].id
     depends_on = [lb_sgs[service].resources['sg'], vpc] if lb_sgs[service] else []
+
     container_sgs[service] = tb_pulumi.network.SecurityGroupWithRules(
         name=f'{project.name_prefix}-sg-cont-{service}',
         project=project,
