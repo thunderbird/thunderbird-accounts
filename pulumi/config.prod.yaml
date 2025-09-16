@@ -109,6 +109,12 @@ resources:
               protocol: tcp
               from_port: 9000
               to_port: 9000
+            # KeyCloak clustered nodes speak to each other on port 7800
+            - description: Allow clustered nodes to communicate
+              protocol: tcp
+              from_port: 7800
+              to_port: 7800
+              self: True
           egress:
             - description: Allow traffic from the container out to the Internet
               cidr_blocks:

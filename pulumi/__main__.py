@@ -52,8 +52,10 @@ for service, sg in resources['tb:network:SecurityGroupWithRules']['containers'].
         raise ValueError(f'{MSG_LB_MATCHING_CONTAINER} Create a matching load_balancers entry for "{service}".')
     # Allow access from each load balancer to its respective container
     for rule in sg['rules']['ingress']:
-        rule['source_security_group_id'] = lb_sgs[service].resources['sg'].id
+        if 'self' not in rule or not rule['self']:
+            rule['source_security_group_id'] = lb_sgs[service].resources['sg'].id
     depends_on = [lb_sgs[service].resources['sg'], vpc] if lb_sgs[service] else []
+
     container_sgs[service] = tb_pulumi.network.SecurityGroupWithRules(
         name=f'{project.name_prefix}-sg-cont-{service}',
         project=project,
