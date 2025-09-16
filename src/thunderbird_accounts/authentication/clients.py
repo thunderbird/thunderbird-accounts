@@ -223,7 +223,7 @@ class KeycloakClient:
                         # Keycloak api docs don't specify a type, but will 404 is a float is given
                         'lifespan': int(datetime.timedelta(days=3).total_seconds()),
                         'client_id': settings.OIDC_RP_CLIENT_ID,
-                        'redirect_uri': (reverse('login')),
+                        'redirect_uri': get_absolute_url(reverse('login')),
                     },
                 )
             except RequestException as exc:
