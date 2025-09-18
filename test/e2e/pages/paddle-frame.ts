@@ -14,6 +14,7 @@ export class PaddleFrame {
   readonly cardExpiryField: Locator;
   readonly cardVerificationField: Locator;
   readonly finalCheckoutButton: Locator;
+  readonly checkoutErrText: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -29,5 +30,6 @@ export class PaddleFrame {
     this.cardExpiryField = this.modal.getByTestId('expiryDateField');
     this.cardVerificationField = this.modal.getByTestId('cardVerificationValueInput');
     this.finalCheckoutButton = this.modal.getByTestId('cardPaymentFormSubmitButton');
+    this.checkoutErrText = this.modal.getByText('We are unable to take payment at this time. Please try again, or use a different payment method.');
   }
 }
