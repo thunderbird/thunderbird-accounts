@@ -12,7 +12,7 @@ from thunderbird_accounts.mail.clients import MailClient
 
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('uuid', 'oidc_id', *UserAdmin.list_display, 'last_used_email', 'created_at', 'updated_at')
+    list_display = ('uuid', 'oidc_id', *UserAdmin.list_display,  'is_test_account', 'last_used_email', 'created_at', 'updated_at')
     fieldsets = (
         (None, {'fields': ('uuid', 'username')}),
         (
@@ -27,6 +27,7 @@ class CustomUserAdmin(UserAdmin):
                     'is_active',
                     'is_staff',
                     'is_superuser',
+                    'is_test_account',
                     'groups',
                     'user_permissions',
                 ),
@@ -44,6 +45,7 @@ class CustomUserAdmin(UserAdmin):
         'updated_at',
     )
     actions = [admin_fix_broken_stalwart_account, admin_fix_stalwart_account_relationships]
+    list_filter = ['is_staff', 'is_superuser', 'is_test_account', 'is_active']
 
     form = CustomUserChangeForm
     add_form = CustomNewUserForm
