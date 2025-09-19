@@ -71,8 +71,6 @@ class KeycloakClient:
 
         url = urljoin(settings.KEYCLOAK_API_ENDPOINT, endpoint)
 
-        print('json:',json_data)
-
         response = requests.request(
             method=method.value,
             url=url,
@@ -170,9 +168,7 @@ class KeycloakClient:
                     username=username, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
                 )
 
-            raise UpdateUserError(
-                username=username, error=f'Error<{exc}>: No response!'
-            )
+            raise UpdateUserError(username=username, error=f'Error<{exc}>: No response!')
 
         return True
 
@@ -230,7 +226,7 @@ class KeycloakClient:
                 sentry_sdk.capture_exception(exc)
                 raise SendExecuteActionsEmailError(
                     action=action,
-                    oidc_id=pkid, # If we encounter this error we want to make sure we pass this value back !
+                    oidc_id=pkid,  # If we encounter this error we want to make sure we pass this value back !
                     error=(
                         f'Error<{exc.response.status_code}>: Cannot send email due to: {exc.response.content.decode()}'
                     ),

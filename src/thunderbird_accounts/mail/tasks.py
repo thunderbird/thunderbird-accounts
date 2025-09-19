@@ -48,8 +48,9 @@ def add_email_address_to_stalwart_account(self, username: str, email: str):
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
-def create_stalwart_account(self, oidc_id: str, username: str, email: str, full_name: Optional[str] = None,
-                            app_password: Optional[str] = None):
+def create_stalwart_account(
+    self, oidc_id: str, username: str, email: str, full_name: Optional[str] = None, app_password: Optional[str] = None
+):
     """Creates a Stalwart Account with the given parameters. OIDC ID is currently just used for error logging,
     but is still required. App Passwords can be set now, or later.
 
