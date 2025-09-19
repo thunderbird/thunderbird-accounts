@@ -209,8 +209,9 @@ class MailClient:
         # Return the pkid
         return data.get('data')
 
-    def create_account(self, primary_email: str, principal_id: str, full_name: Optional[str] = None,
-                       app_password: Optional[str] = None):
+    def create_account(
+        self, primary_email: str, principal_id: str, full_name: Optional[str] = None, app_password: Optional[str] = None
+    ):
         data = {
             'type': 'individual',
             'name': principal_id,
@@ -284,11 +285,12 @@ class MailClient:
             logging.error(f'[save_email_address] err: {data}')
             raise RuntimeError(data)
 
-    def update_individual(self,
-                          principal_id: str,
-                          primary_email_address: Optional[str] = None,
-                          full_name: Optional[str] = None,
-                          ):
+    def update_individual(
+        self,
+        principal_id: str,
+        primary_email_address: Optional[str] = None,
+        full_name: Optional[str] = None,
+    ):
         """Updates Stalwart and changes their primary email address and/or full name"""
 
         update_data = []
@@ -304,9 +306,7 @@ class MailClient:
         if len(update_data) == 0:
             raise ValueError('You must provide at least one field to change.')
 
-        response = self._update_principal(
-            principal_id, update_data
-        )
+        response = self._update_principal(principal_id, update_data)
 
         # Returns data: null on success...
         data = response.json()
