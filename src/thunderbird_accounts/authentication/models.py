@@ -37,8 +37,9 @@ class User(AbstractUser, BaseModel):
     avatar_url = models.CharField(max_length=2048, null=True, help_text=_('The avatar url'))
     timezone = models.CharField(max_length=128, default='UTC', help_text=_("The user's timezone"))
 
-    is_test_account = models.BooleanField(_('Test Account'), default=False,
-                                          help_text=_('Whether this account is used for testing.'))
+    is_test_account = models.BooleanField(
+        _('Test Account'), default=False, help_text=_('Whether this account is used for testing.')
+    )
 
     class Meta(BaseModel.Meta):
         indexes = [

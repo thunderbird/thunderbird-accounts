@@ -12,7 +12,15 @@ from thunderbird_accounts.mail.clients import MailClient
 
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('uuid', 'oidc_id', *UserAdmin.list_display,  'is_test_account', 'last_used_email', 'created_at', 'updated_at')
+    list_display = (
+        'uuid',
+        'oidc_id',
+        *UserAdmin.list_display,
+        'is_test_account',
+        'last_used_email',
+        'created_at',
+        'updated_at',
+    )
     fieldsets = (
         (None, {'fields': ('uuid', 'username')}),
         (
