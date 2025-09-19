@@ -1152,7 +1152,7 @@ wheels = [
 
 [[package]]
 name = "thunderbird-accounts"
-version = "0.6.2"
+version = "0.7.2"
 source = { editable = "." }
 dependencies = [
     { name = "argon2-cffi" },
@@ -1196,11 +1196,9 @@ subscription = [
 ]
 
 [package.dev-dependencies]
-cli = [
-    { name = "freezegun" },
-]
 dev = [
     { name = "faker" },
+    { name = "freezegun" },
 ]
 
 [package.metadata]
@@ -1239,8 +1237,10 @@ requires-dist = [
 provides-extras = ["cli", "docs", "subscription"]
 
 [package.metadata.requires-dev]
-cli = [{ name = "freezegun", specifier = ">=1.5.5" }]
-dev = [{ name = "faker", specifier = ">=33.1.0" }]
+dev = [
+    { name = "faker", specifier = ">=33.1.0" },
+    { name = "freezegun", specifier = ">=1.5.5" },
+]
 
 [[package]]
 name = "typing-extensions"

@@ -33,9 +33,12 @@ class User(AbstractUser, BaseModel):
     )
 
     # profile information
-    display_name = models.CharField(max_length=256, null=True, help_text=_('The display name from Mozilla Accounts'))
-    avatar_url = models.CharField(max_length=2048, null=True, help_text=_('The avatar url from Mozilla Accounts'))
+    display_name = models.CharField(max_length=256, null=True, help_text=_('The display name'))
+    avatar_url = models.CharField(max_length=2048, null=True, help_text=_('The avatar url'))
     timezone = models.CharField(max_length=128, default='UTC', help_text=_("The user's timezone"))
+
+    is_test_account = models.BooleanField(_('Test Account'), default=False,
+                                          help_text=_('Whether this account is used for testing.'))
 
     class Meta(BaseModel.Meta):
         indexes = [
