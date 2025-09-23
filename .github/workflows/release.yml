@@ -122,7 +122,7 @@ jobs:
           pulumi login
           pulumi stack select thunderbird/prod
           TBPULUMI_DISABLE_PROTECTION=True \
-            pulumi up -y --diff --target \
+            pulumi up -y --diff \
             --target 'urn:pulumi:prod::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-prod-fargate-accounts-taskdef' \
             --target 'urn:pulumi:prod::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-prod-fargate-accounts-celery-taskdef' \
             --target-dependents
