@@ -55,7 +55,7 @@ jobs:
           # Get the URL for the image, replacing the tag for the semantic version
           IMAGE_BASE=$(echo $SOURCE_TAG | cut -d: -f1)
           SEMVER="v${{ steps.deployment-data.outputs.semver }}"
-          $TARGET_TAG="$IMAGE_BASE:$SEMVER"
+          TARGET_TAG="$IMAGE_BASE:$SEMVER"
           docker tag $SOURCE_TAG $TARGET_TAG
 
           # Push the new image
