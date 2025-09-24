@@ -61,3 +61,11 @@ config:
     secure: AAABAHmGNAUpB5Cn2v3+E0BRX6IzJa9Z1xPc4hlOJUU7Ze77JIK/AA8M6WEHBx1HJOk2Pmo=
   accounts:oidc-sign-algo:
     secure: AAABAJII4yJIQGxGc07VLQJqqxDKszZ+RWg7fVvVzPLK5NeKqw==
+  accounts:keycloak-admin-client-id:
+    secure: AAABALR7duQEQUXxGG1gnbN0YKjGUDW4rQgO2AUUXc/p6tuQUnWPS9J9fFCJAzCsFg==
+  accounts:keycloak-admin-client-secret:
+    secure: AAABAAdWkOjtE/Wu2kfRA+1keOz3Goc9LTSofyRvMV8vRdH8GI7iwMBcAKu/Or8B4KUFr6ET9bquylETyBzrLA==
+  accounts:stalwart-api-auth-key:
+    secure: AAABAL+jwS313yLJ4lPdw7sTUnDWz7JFxCdK7m3Ynexb9x15SZFRD6AzxUTrQTipTBoC1g5oM7j7aUNdnBMTtr7LbX0bYrYpcICG8syBMFbnHZWQg6j0983XbRc8ccGO5xQrFhOodpI=
+  accounts:stalwart-api-auth-method:
+    secure: AAABAIesea0SHkKIagR9AyMAr7sJPucCFdafKHZqGA25AXy/32Y=

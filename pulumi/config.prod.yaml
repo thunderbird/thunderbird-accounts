@@ -155,6 +155,11 @@ resources:
         - oidc-client-secret
         - oidc-client-id
         - oidc-sign-algo
+        - stalwart-api-auth-method
+        - stalwart-api-auth-key
+        - keycloak-admin-client-id
+        - keycloak-admin-client-secret
+
 
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
@@ -201,7 +206,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-6238cb14a519f1873657c823e808209532f297fb
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-1a25562dde49115f3461c5e77ad85e6d470a3bbc
             command:
               - start
             portMappings:
@@ -277,7 +282,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1e0e0694c7543e5dc7f45ebd108c074a6ef42df2
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1a25562dde49115f3461c5e77ad85e6d470a3bbc
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -335,6 +340,14 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-webhook-key-vX5JHE
               - name: PADDLE_API_KEY
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-api-key-yz3XNN
+              - name: KEYCLOAK_ADMIN_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-client-id-DOpTIZ
+              - name: KEYCLOAK_ADMIN_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-client-secret-3CMuUp
+              - name: STALWART_API_AUTH_STRING
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN
+              - name: STALWART_API_AUTH_METHOD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR
             environment:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
@@ -395,21 +408,25 @@ resources:
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
               - name: OIDC_URL_AUTH
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth"
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth/"
               - name: OIDC_URL_TOKEN
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/token"
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/token/"
               - name: OIDC_URL_USER
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/userinfo/"
               - name: OIDC_URL_JWKS
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs"
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs/"
               - name: OIDC_URL_LOGOUT
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout"
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout/"
               - name: OIDC_FALLBACK_MATCH_BY_EMAIL
                 value: 'True'
               - name: STALWART_BASE_JMAP_URL
                 value: 'https://mail.thundermail.com'
               - name: STALWART_BASE_API_URL
-                value: 'https://mailstrom-management-i.thundermail.com:8080'
+                value: 'https://mailstrom-prod-management-i.thundermail.com:8080'
+              - name: KEYCLOAK_URL_API
+                value: 'https://auth.tb.pro/admin/realms/tbpro/'
+              - name: KEYCLOAK_ADMIN_URL_TOKEN
+                value: 'https://auth.tb.pro/realms/master/protocol/openid-connect/token/'
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -427,7 +444,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1e0e0694c7543e5dc7f45ebd108c074a6ef42df2
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1a25562dde49115f3461c5e77ad85e6d470a3bbc
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -468,7 +485,7 @@ resources:
               - name: OIDC_CLIENT_ID
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-client-id-HjOG4R
               - name: OIDC_SIGN_ALGO
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-sign-algo-N6vK9
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-sign-algo-N6vK9L
               - name: ZENDESK_SUBDOMAIN
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-subdomain-C2G7He
               - name: ZENDESK_USER_EMAIL
@@ -479,6 +496,14 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-webhook-key-vX5JHE
               - name: PADDLE_API_KEY
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-api-key-yz3XNN
+              - name: KEYCLOAK_ADMIN_CLIENT_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-client-id-DOpTIZ
+              - name: KEYCLOAK_ADMIN_CLIENT_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-client-secret-3CMuUp
+              - name: STALWART_API_AUTH_STRING
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN
+              - name: STALWART_API_AUTH_METHOD
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR
             environment:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
@@ -539,21 +564,25 @@ resources:
               - name: TBA_CELERY
                 value: "yes"
               - name: OIDC_URL_AUTH
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth"
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth/"
               - name: OIDC_URL_TOKEN
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/token"
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/token/"
               - name: OIDC_URL_USER
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/userinfo/"
               - name: OIDC_URL_JWKS
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs"
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs/"
               - name: OIDC_URL_LOGOUT
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout"
+                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout/"
               - name: OIDC_FALLBACK_MATCH_BY_EMAIL
                 value: 'True'
               - name: STALWART_BASE_JMAP_URL
                 value: 'https://mail.thundermail.com'
               - name: STALWART_BASE_API_URL
-                value: 'https://mailstrom-management-i.thundermail.com:8080'
+                value: 'https://mailstrom-prod-management-i.thundermail.com:8080'
+              - name: KEYCLOAK_URL_API
+                value: 'https://auth.tb.pro/admin/realms/tbpro/'
+              - name: KEYCLOAK_ADMIN_URL_TOKEN
+                value: 'https://auth.tb.pro/realms/master/protocol/openid-connect/token/'
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:
