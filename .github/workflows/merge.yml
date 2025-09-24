@@ -136,7 +136,6 @@ jobs:
       - name: Package Pulumi code
         shell: bash
         run: |
-          rm -rf pulumi/venv
           tar -cvjf pulumi.tbz pulumi/
       
       - name: Archive the Pulumi artifact
@@ -271,7 +270,6 @@ jobs:
       - name: Package Pulumi code
         shell: bash
         run: |
-          rm -rf pulumi/venv
           tar -cvjf pulumi.tbz pulumi/
 
       - name: Archive the Pulumi artifact
