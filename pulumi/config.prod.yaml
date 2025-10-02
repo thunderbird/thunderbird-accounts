@@ -282,7 +282,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1a25562dde49115f3461c5e77ad85e6d470a3bbc
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:7165a3cb1534141c2717f63cb637738bd383bd96
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -444,7 +444,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:1a25562dde49115f3461c5e77ad85e6d470a3bbc
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:7165a3cb1534141c2717f63cb637738bd383bd96
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -600,17 +600,14 @@ resources:
       disable_scale_in: False
       min_capacity: 2
       max_capacity: 4
-
-    # NOTE: Uncomment below when keycloak session sync is fixed
-    # Ref: https://github.com/thunderbird/thunderbird-accounts/issues/272
-    # keycloak:
-    #   cpu_threshold: 80
-    #   ram_threshold: 80
-    #   cooldown: 180
-    #   disable_scale_in: False
-    #   min_capacity: 2
-    #   max_capacity: 4
-    #   suspend: False
+    keycloak:
+      cpu_threshold: 80
+      ram_threshold: 80
+      cooldown: 180
+      disable_scale_in: False
+      min_capacity: 2
+      max_capacity: 4
+      suspend: False
 
   tb:ci:AwsAutomationUser:
     ci:
