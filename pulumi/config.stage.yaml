@@ -594,9 +594,6 @@ resources:
       min_capacity: 2
       max_capacity: 4
       suspend: False
-
-    # NOTE: Uncomment below when keycloak session sync is fixed
-    # Ref: https://github.com/thunderbird/thunderbird-accounts/issues/272
     keycloak:
       cpu_threshold: 80
       ram_threshold: 80
