@@ -1,5 +1,5 @@
 <script setup>
-import { DangerButton, SecondaryButton, NoticeBar } from '@thunderbirdops/services-ui';
+import { DangerButton, PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
 import CancelForm from '@/vue/components/CancelForm.vue';
 import MessageBar from '@/vue/components/MessageBar.vue';
@@ -38,7 +38,7 @@ export default {
         <danger-button class="submit" @click="onSubmit" name="accept" id="kc-accept" :value="$t('doConfirmDelete')" data-testid="submit-btn">
           {{ $t('doConfirmDelete') }}
         </danger-button>
-        <secondary-button class="submit" @click="onCancel" data-testid="cancel-btn">{{ $t('doCancel') }}</secondary-button>
+        <primary-button variant="outline" class="submit" @click="onCancel" data-testid="cancel-btn">{{ $t('doCancel') }}</primary-button>
       </div>
     </form>
   </div>

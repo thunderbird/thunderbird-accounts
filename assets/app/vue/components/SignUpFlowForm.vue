@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NoticeBar, PrimaryButton, SecondaryButton, SelectInput, TextInput } from '@thunderbirdops/services-ui';
+import { NoticeBar, PrimaryButton, SelectInput, TextInput } from '@thunderbirdops/services-ui';
 import { ref } from 'vue';
 import CsrfToken from '@/components/CsrfToken.vue';
 
@@ -67,8 +67,8 @@ const onCancel = () => {
           <primary-button @click.capture="onSubmit" id="sign-up-btn" data-testid="sign-up-sign-up-btn"
             >Sign Up</primary-button
           >
-          <secondary-button @click.capture="onCancel" id="cancel-btn" data-testid="sign-up-cancel-btn"
-            >Cancel</secondary-button
+          <primary-button variant="outline" @click.capture="onCancel" id="cancel-btn" data-testid="sign-up-cancel-btn"
+            >Cancel</primary-button
           >
         </div>
         <csrf-token></csrf-token>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NoticeBar, PrimaryButton, SecondaryButton } from '@thunderbirdops/services-ui';
+import { NoticeBar, PrimaryButton, DangerButton } from '@thunderbirdops/services-ui';
 import { ref } from 'vue';
 
 const hasAccount = ref(window._page?.hasAccount);
@@ -36,8 +36,8 @@ const onDeleteAccount = () => {
       <p data-testid="account-info-delete-account-description">
         You can delete your account and all associated information (including your email address, and emails!)
       </p>
-      <secondary-button data-testid="account-info-delete-account-btn" @click.capture="onDeleteAccount"
-        >Delete Account</secondary-button
+      <danger-button data-testid="account-info-delete-account-btn" @click.capture="onDeleteAccount"
+        >Delete Account</danger-button
       >
     </div>
   </div>

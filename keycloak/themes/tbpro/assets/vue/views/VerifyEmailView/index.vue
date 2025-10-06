@@ -1,5 +1,5 @@
 <script setup>
-import { PrimaryButton, SecondaryButton } from '@thunderbirdops/services-ui';
+import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { computed, useTemplateRef } from 'vue';
 import CancelForm from '@/vue/components/CancelForm.vue';
 
@@ -40,7 +40,7 @@ export default {
             submitText
           }}
         </primary-button>
-        <secondary-button data-testid="cancel-btn" id="cancel" class="submit" @click="onCancel">{{ $t('doCancel') }}</secondary-button>
+        <primary-button variant="outline" data-testid="cancel-btn" id="cancel" class="submit" @click="onCancel">{{ $t('doCancel') }}</primary-button>
       </div>
     </form>
     <template v-else>

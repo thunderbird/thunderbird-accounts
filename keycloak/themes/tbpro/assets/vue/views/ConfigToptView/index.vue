@@ -2,10 +2,8 @@
 import {
   TextInput,
   PrimaryButton,
-  SecondaryButton,
   LinkButton,
   CheckboxInput,
-  NoticeBar,
   CopyIcon,
 } from "@thunderbirdops/services-ui";
 import { computed, ref, useTemplateRef } from "vue";
@@ -165,10 +163,10 @@ export default {
             $t('doContinue')
           }}
         </primary-button>
-        <secondary-button data-testid="cancel-btn" id="back" class="submit" @click="onPrevious" v-if="showCancel">{{
+        <primary-button variant="outline" data-testid="cancel-btn" id="back" class="submit" @click="onPrevious" v-if="showCancel">{{
             $t('doCancel')
           }}
-        </secondary-button>
+        </primary-button>
       </div>
     </section>
     <section v-else-if="totpStep === 2" id="totpStep2" data-testid="totp-step-2">
