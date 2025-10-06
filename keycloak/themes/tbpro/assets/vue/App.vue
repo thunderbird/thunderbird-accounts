@@ -20,14 +20,17 @@ const onWiggle = async () => {
 </script>
 
 <template>
-  <section class="centre-panel">
+  <section>
     <div class="debug-page-id" @click="onWiggle" :class="{wiggle: playingAnimation}">{{ pageId }}</div>
     <router-view/>
   </section>
-
 </template>
 
 <style scoped>
+section {
+  height: 100%;
+}
+
 .wiggle {
   animation: wiggle 1s
 }
@@ -41,16 +44,6 @@ const onWiggle = async () => {
   color: white;
   border-radius: 1rem;
   padding: 0.5rem;
-}
-
-.centre-panel {
-  height: 100%;
-  max-width: 37.5rem;
-  margin: auto;
-
-  background-color: var(--colour-neutral-base);
-  border-radius: 0.5rem;
-  border: 0.0625rem solid var(--colour-neutral-border);
 }
 
 :deep(.panel) {

@@ -5,6 +5,8 @@
     <script>
       window._page['currentView'] = {
         formAction: '${url.loginAction}',
+        <#-- TODO: Make supportUrl dynamic -->
+        supportUrl: 'https://accounts.tb.pro/contact',
         // <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
         registerUrl: '${url.registrationUrl}',
         // <#else>
@@ -48,6 +50,8 @@
         identityProviderLoginLabel: '${msg("identity-provider-login-label")}',
         goToRegister: '${msg("goToRegister")}',
         goToRegisterAction: '${msg("goToRegisterAction")}',
+        needHelp: '${msg("needHelp")}',
+        needHelpAction: '${msg("needHelpAction")}',
       };
     </script>
     </#if>

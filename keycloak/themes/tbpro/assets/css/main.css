@@ -2,8 +2,13 @@
 @import './bolt.css';
 
 
+* {
+  box-sizing: border-box;
+}
+
 html,
-body {
+body,
+div#app {
   height: 100%;
   margin: 0;
   font-family: Inter, "sans-serif";
@@ -12,7 +17,7 @@ body {
 body {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  background-color: var(--colour-neutral-base);
 }
 
 .route-found {
