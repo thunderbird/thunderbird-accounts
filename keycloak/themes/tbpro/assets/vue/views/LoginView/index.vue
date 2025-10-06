@@ -11,6 +11,7 @@ const rememberMe = window._page.currentView?.rememberMe;
 const forgotPasswordUrl = window._page.currentView?.forgotPasswordUrl;
 const registerUrl = window._page.currentView?.registerUrl;
 const supportUrl = window._page.currentView?.supportUrl;
+const clientUrl = window._page.currentView?.clientUrl;
 const loginForm = useTemplateRef('login-form');
 
 const onSubmit = () => {
@@ -37,7 +38,7 @@ export default {
     <notice-bar :type="NoticeBarTypes.Critical" v-if="firstError">{{ firstError }}</notice-bar>
     <message-bar v-else/>
   
-    <a href="https://thunderbird.net" class="logo-link">
+    <a :href="clientUrl" class="logo-link">
       <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
     </a>
 
@@ -120,7 +121,6 @@ export default {
 
 .logo-link {
   display: block;
-  margin-bottom: var(--space-24, 24px);
   text-decoration: none;
   margin-block-end: 2.8125rem;
 

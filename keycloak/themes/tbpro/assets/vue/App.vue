@@ -84,7 +84,7 @@ section {
         display: block;
         flex: 1;
         max-width: 556px;
-        height: 100%;
+        height: auto;
 
         .orb-graphic {
           display: block;
@@ -110,8 +110,9 @@ section {
     background-color: var(--colour-ti-base);
 
     .card {
-      max-width: 1280px;
-      max-height: 720px;
+      width: 1280px;
+      height: fit-content;
+      min-height: 720px;
       border-radius: 2rem;
       align-items: initial;
       border: 0.0625rem solid var(--colour-neutral-border-intense);

@@ -1,11 +1,13 @@
 <script setup>
-import { TextInput, PrimaryButton, NoticeBar } from '@thunderbirdops/services-ui';
+import { TextInput, BrandButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { computed, ref, useTemplateRef } from 'vue';
+import { PhArrowRight } from '@phosphor-icons/vue';
 import MessageBar from '@/vue/components/MessageBar.vue';
+import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
 
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
-const loginUrl = window._page.currentView?.loginUrl;
+const clientUrl = window._page.currentView?.clientUrl;
 
 // Fixed values
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
@@ -46,13 +48,18 @@ export default {
 
 <template>
   <div class="register-view-container">
+    <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
+      {{ $t('registerError') }}
+    </notice-bar>
+    <message-bar v-else/>
+
+    <a :href="clientUrl" class="logo-link">
+      <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
+    </a>
+
     <h2>{{ $t('registerTitle') }}</h2>
     <form id="kc-register-form" ref="register-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
           @keyup.enter="onSubmit">
-      <notice-bar type="error" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
-        {{ $t('registerError') }}
-      </notice-bar>
-      <message-bar v-else/>
       <div class="form-elements">
         <text-input data-testid="username-input" id="partialUsername" name="partialUsername" required autocomplete="username" :error="usernameError"
                     :outerSuffix="$t('signUpUsernameSuffix')" :help="$t('signUpUsernameHelp')" v-model="username">
@@ -74,14 +81,15 @@ export default {
         <text-input readonly data-testid="zoneinfo-readonly-input" id="zoneinfo" name="zoneinfo" class="screen-reader-only" v-model="timezone"></text-input>
       </div>
       <div class="buttons">
-        <primary-button data-testid="submit" class="submit" @click="onSubmit">{{ $t('doRegister') }}</primary-button>
+        <brand-button data-testid="submit" class="submit" @click="onSubmit">
+          {{ $t('doRegister') }}
+
+          <template #iconRight>
+            <ph-arrow-right size="20" />
+          </template>
+        </brand-button>
       </div>
     </form>
-    <template v-if="loginUrl">
-      <i18n-t keypath="goToLogin" tag="p">
-        <a :href="loginUrl" data-testid="go-to-login-url">{{ $t('goToLoginAction') }}</a>
-      </i18n-t>
-    </template>
   </div>
 </template>
 
@@ -91,7 +99,37 @@ export default {
 }
 
 .notice-bar {
-  margin-bottom: var(--space-12);
+  position: absolute;
+  top: 1rem;
+  left: 1.5rem;
+  right: 1.5rem;
+  z-index: 1;
+}
+
+.logo-link {
+  display: block;
+  text-decoration: none;
+  margin-block-end: 2.8125rem;
+
+  .logo {
+    height: 36px;
+    width: auto;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+}
+
+h2 {
+  font-size: 2.25rem;
+  font-family: metropolis;
+  font-weight: normal;
+  letter-spacing: -0.36px;
+  line-height: 1.2;
+  color: var(--colour-primary-default);
+  margin: 0 0 1.5rem 0;
 }
 
 .form-elements {
@@ -112,7 +150,7 @@ export default {
 
 @media (min-width: 1280px) {
   .register-view-container {
-    padding: 4rem 10rem 5.625rem 6rem;
+    padding: 6rem 10rem 5.625rem 6rem;
   }
 }
 </style>

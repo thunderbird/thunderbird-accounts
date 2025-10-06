@@ -1,7 +1,8 @@
 <script setup>
-import { TextInput, PrimaryButton, NoticeBar } from "@thunderbirdops/services-ui";
+import { TextInput, PrimaryButton, NoticeBar, NoticeBarTypes } from "@thunderbirdops/services-ui";
 import { computed, useTemplateRef } from 'vue';
 import MessageBar from '@/vue/components/MessageBar.vue';
+import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
 
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
@@ -27,10 +28,14 @@ export default {
 
 <template>
   <div class="forgot-password-view-container">
+    <a :href="clientUrl" class="logo-link">
+      <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
+    </a>
+
     <h2>{{ $t('emailForgotTitle') }}</h2>
     <form id="kc-reset-password-form" ref="reset-password-form" method="POST" :action="formAction"
           @submit.prevent="onSubmit" @keyup.enter="onSubmit">
-      <notice-bar type="error" v-if="usernameError">{{ $t('forgotPasswordError') }}</notice-bar>
+      <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError">{{ $t('forgotPasswordError') }}</notice-bar>
       <message-bar v-else/>
       <div class="form-elements">
         <text-input id="username" name="username" required autocomplete="username" autofocus v-model="username"
@@ -38,18 +43,44 @@ export default {
         </text-input>
       </div>
       <div class="buttons">
+        <template v-if="loginUrl">
+          <a :href="loginUrl" data-testid="back-url">{{ $t('backToLogin') }}</a>
+        </template>
+  
         <primary-button class="submit" @click="onSubmit" data-testid="submit">{{ $t('doSubmit') }}</primary-button>
       </div>
     </form>
-    <template v-if="loginUrl">
-      <a :href="loginUrl" data-testid="back-url">{{ $t('backToLogin') }}</a>
-    </template>
   </div>
 </template>
 
 <style scoped>
 .forgot-password-view-container {
   padding: 2rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-family: metropolis;
+  font-weight: normal;
+  line-height: 1.1;
+  color: var(--colour-primary-default);
+  margin: 0 0 1.5rem 0;
+}
+
+.logo-link {
+  display: block;
+  text-decoration: none;
+  margin-block-end: 2.8125rem;
+
+  .logo {
+    height: 36px;
+    width: auto;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
 }
 
 .form-elements {
@@ -59,8 +90,9 @@ export default {
 }
 
 .buttons {
+  display: flex;
+  align-items: center;
   margin-top: var(--space-24);
-  width: 100%;
 
   .submit {
     margin-right: 0;
@@ -70,7 +102,7 @@ export default {
 
 @media (min-width: 1280px) {
   .forgot-password-view-container {
-    padding: 4rem 10rem 5.625rem 6rem;
+    padding: 6rem 10rem 5.625rem 6rem;
   }
 }
 </style>
