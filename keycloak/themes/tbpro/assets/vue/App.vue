@@ -84,13 +84,14 @@ section {
         display: block;
         flex: 1;
         max-width: 556px;
-        height: auto;
+        height: 100%;
+        background-color: var(--colour-ti-base);
 
         .orb-graphic {
           display: block;
           width: 100%;
           height: 100%;
-          object-fit: contain;
+          object-fit: cover;
         }
       }
 
@@ -116,6 +117,14 @@ section {
       border-radius: 2rem;
       align-items: initial;
       border: 0.0625rem solid var(--colour-neutral-border-intense);
+
+      .left-side {
+        background-color: unset;
+
+        .orb-graphic {
+          border-radius: 2rem 0 0 2rem;
+        }
+      }
 
       .right-side {
         border-radius: 0 2rem 2rem 0;
