@@ -26,7 +26,7 @@ export default {
 </script>
 
 <template>
-  <div class="panel">
+  <div class="forgot-password-view-container">
     <h2>{{ $t('emailForgotTitle') }}</h2>
     <form id="kc-reset-password-form" ref="reset-password-form" method="POST" :action="formAction"
           @submit.prevent="onSubmit" @keyup.enter="onSubmit">
@@ -48,6 +48,10 @@ export default {
 </template>
 
 <style scoped>
+.forgot-password-view-container {
+  padding: 2rem;
+}
+
 .form-elements {
   display: flex;
   flex-direction: column;
@@ -61,6 +65,12 @@ export default {
   .submit {
     margin-right: 0;
     margin-left: auto;
+  }
+}
+
+@media (min-width: 1280px) {
+  .forgot-password-view-container {
+    padding: 4rem 10rem 5.625rem 6rem;
   }
 }
 </style>

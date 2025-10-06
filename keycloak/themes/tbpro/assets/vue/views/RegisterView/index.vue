@@ -45,7 +45,7 @@ export default {
 </script>
 
 <template>
-  <div class="panel">
+  <div class="register-view-container">
     <h2>{{ $t('registerTitle') }}</h2>
     <form id="kc-register-form" ref="register-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
           @keyup.enter="onSubmit">
@@ -69,9 +69,9 @@ export default {
           {{ $t('passwordConfirm') }}
         </text-input>
         <!-- These fields are dynamically filled out -->
-        <text-input readonly data-testid="full-username-readonly-input" id="username" name="username" type="hidden" v-model="email"></text-input>
-        <text-input readonly data-testid="locale-readonly-input" id="locale" name="locale" type="hidden" v-model="locale"></text-input>
-        <text-input readonly data-testid="zoneinfo-readonly-input" id="zoneinfo" name="zoneinfo" type="hidden" v-model="timezone"></text-input>
+        <text-input readonly data-testid="full-username-readonly-input" id="username" name="username" class="screen-reader-only" v-model="email"></text-input>
+        <text-input readonly data-testid="locale-readonly-input" id="locale" name="locale" class="screen-reader-only" v-model="locale"></text-input>
+        <text-input readonly data-testid="zoneinfo-readonly-input" id="zoneinfo" name="zoneinfo" class="screen-reader-only" v-model="timezone"></text-input>
       </div>
       <div class="buttons">
         <primary-button data-testid="submit" class="submit" @click="onSubmit">{{ $t('doRegister') }}</primary-button>
@@ -86,12 +86,12 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  margin-bottom: var(--space-12);
+.register-view-container {
+  padding: 2rem;
 }
 
-.panel {
-  margin: 30px
+.notice-bar {
+  margin-bottom: var(--space-12);
 }
 
 .form-elements {
@@ -107,6 +107,12 @@ export default {
   .submit {
     margin-right: 0;
     margin-left: auto;
+  }
+}
+
+@media (min-width: 1280px) {
+  .register-view-container {
+    padding: 4rem 10rem 5.625rem 6rem;
   }
 }
 </style>
