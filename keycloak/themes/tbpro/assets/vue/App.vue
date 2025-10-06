@@ -120,6 +120,7 @@ section {
 
       .left-side {
         background-color: unset;
+        height: auto;
 
         .orb-graphic {
           border-radius: 2rem 0 0 2rem;
