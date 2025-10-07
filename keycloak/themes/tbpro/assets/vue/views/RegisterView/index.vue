@@ -47,55 +47,87 @@ export default {
 </script>
 
 <template>
-  <div class="register-view-container">
-    <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
-      {{ $t('registerError') }}
-    </notice-bar>
-    <message-bar v-else/>
+  <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
+    {{ $t('registerError') }}
+  </notice-bar>
+  <message-bar v-else/>
 
-    <a :href="clientUrl" class="logo-link">
-      <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-    </a>
+  <a :href="clientUrl" class="logo-link">
+    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
+  </a>
 
-    <h2>{{ $t('registerTitle') }}</h2>
-    <form id="kc-register-form" ref="register-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
-          @keyup.enter="onSubmit">
-      <div class="form-elements">
-        <text-input data-testid="username-input" id="partialUsername" name="partialUsername" required autocomplete="username" :error="usernameError"
-                    :outerSuffix="$t('signUpUsernameSuffix')" :help="$t('signUpUsernameHelp')" v-model="username">
-          {{ $t('username') }}
-        </text-input>
-        <text-input data-testid="recovery-email-input" id="email" name="email" required autocomplete="email" :error="recoveryEmailError"
-                    :help="$t('recoveryEmailHelp')">{{ $t('recoveryEmail') }}
-        </text-input>
-        <text-input data-testid="password-input" id="password" name="password" required autocomplete="new-password" type="password"
-                    :error="passwordError" :help="$t('signUpPasswordHelp')">{{ $t('password') }}
-        </text-input>
-        <text-input data-testid="password-confirm-input" id="password-confirm" name="password-confirm" required autocomplete="confirm-password"
-                    type="password" :error="passwordConfirmError" :help="$t('signUpPasswordConfirmHelp')">
-          {{ $t('passwordConfirm') }}
-        </text-input>
-        <!-- These fields are dynamically filled out -->
-        <text-input readonly data-testid="full-username-readonly-input" id="username" name="username" class="screen-reader-only" v-model="email"></text-input>
-        <text-input readonly data-testid="locale-readonly-input" id="locale" name="locale" class="screen-reader-only" v-model="locale"></text-input>
-        <text-input readonly data-testid="zoneinfo-readonly-input" id="zoneinfo" name="zoneinfo" class="screen-reader-only" v-model="timezone"></text-input>
-      </div>
-      <div class="buttons">
-        <brand-button data-testid="submit" class="submit" @click="onSubmit">
-          {{ $t('doRegister') }}
+  <h2>{{ $t('registerTitle') }}</h2>
+  <form id="kc-register-form" ref="register-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
+        @keyup.enter="onSubmit">
+    <div class="form-elements">
+      <text-input
+        data-testid="username-input"
+        id="partialUsername"
+        name="partialUsername"
+        required
+        autocomplete="username" 
+        :error="usernameError"
+        :outerSuffix="$t('signUpUsernameSuffix')"
+        :help="$t('signUpUsernameHelp')"
+        v-model="username"
+      >
+        {{ $t('username') }}
+      </text-input>
+      <text-input
+        data-testid="recovery-email-input"
+        id="email"
+        name="email"
+        required
+        autocomplete="email"
+        :error="recoveryEmailError"
+        :help="$t('recoveryEmailHelp')"
+      >
+        {{ $t('recoveryEmail') }}
+      </text-input>
+      <text-input
+        data-testid="password-input"
+        id="password"
+        name="password"
+        required
+        autocomplete="new-password"
+        type="password"
+        :error="passwordError"
+        :help="$t('signUpPasswordHelp')"
+      >
+        {{ $t('password') }}
+      </text-input>
+      <text-input
+        data-testid="password-confirm-input"
+        id="password-confirm"
+        name="password-confirm"
+        required
+        autocomplete="confirm-password"
+        type="password"
+        :error="passwordConfirmError"
+        :help="$t('signUpPasswordConfirmHelp')"
+      >
+        {{ $t('passwordConfirm') }}
+      </text-input>
+      <!-- These fields are dynamically filled out -->
+      <text-input readonly data-testid="full-username-readonly-input" id="username" name="username" class="hidden" v-model="email"></text-input>
+      <text-input readonly data-testid="locale-readonly-input" id="locale" name="locale" class="hidden" v-model="locale"></text-input>
+      <text-input readonly data-testid="zoneinfo-readonly-input" id="zoneinfo" name="zoneinfo" class="hidden" v-model="timezone"></text-input>
+    </div>
+    <div class="buttons">
+      <brand-button data-testid="submit" class="submit" @click="onSubmit">
+        {{ $t('doRegister') }}
 
-          <template #iconRight>
-            <ph-arrow-right size="20" />
-          </template>
-        </brand-button>
-      </div>
-    </form>
-  </div>
+        <template #iconRight>
+          <ph-arrow-right size="20" />
+        </template>
+      </brand-button>
+    </div>
+  </form>
 </template>
 
 <style scoped>
-.register-view-container {
-  padding: 2rem;
+.hidden {
+  display: none;
 }
 
 .notice-bar {
@@ -145,12 +177,6 @@ h2 {
   .submit {
     margin-right: 0;
     margin-left: auto;
-  }
-}
-
-@media (min-width: 1280px) {
-  .register-view-container {
-    padding: 6rem 10rem 5.625rem 6rem;
   }
 }
 </style>

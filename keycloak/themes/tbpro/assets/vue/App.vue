@@ -32,7 +32,9 @@ const onWiggle = async () => {
 
       <!-- Right side: Panel -->
       <div class="right-side">
-        <router-view />
+        <div class="panel">
+          <router-view />
+        </div>
       </div>
     </div>
   </section>
@@ -73,6 +75,10 @@ section {
       display: flex;
       flex-direction: column;
       background-color: var(--colour-neutral-base, #ffffff);
+    }
+
+    .panel {
+      padding: 2rem;
     }
   }
 }
@@ -129,6 +135,10 @@ section {
 
       .right-side {
         border-radius: 0 2rem 2rem 0;
+
+        .panel {
+          padding: 6rem 10rem 5.625rem 6rem;
+        }
       }
     }
   }

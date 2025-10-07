@@ -1,5 +1,5 @@
 <script setup>
-import { computed, useTemplateRef } from 'vue';
+import { ref, computed, useTemplateRef } from 'vue';
 import { TextInput, BrandButton, CheckboxInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { PhArrowRight } from '@phosphor-icons/vue';
 import MessageBar from '@/vue/components/MessageBar.vue';
@@ -25,6 +25,8 @@ const passwordError = computed(() => {
   return firstError ? '' : null;
 });
 
+// CheckboxInput requires a valid ref as a model to show the check icon
+const rememberMeChecked = ref(rememberMe);
 </script>
 
 <script>
@@ -34,83 +36,82 @@ export default {
 </script>
 
 <template>
-  <div class="login-view-container">
-    <notice-bar :type="NoticeBarTypes.Critical" v-if="firstError">{{ firstError }}</notice-bar>
-    <message-bar v-else/>
-  
-    <a :href="clientUrl" class="logo-link">
-      <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
+  <notice-bar :type="NoticeBarTypes.Critical" v-if="firstError">{{ firstError }}</notice-bar>
+  <message-bar v-else/>
+
+  <a :href="clientUrl" class="logo-link">
+    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
+  </a>
+
+  <h2 data-testid="header-text">{{ $t('loginAccountTitle') }}</h2>
+  <form id="kc-form-login" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
+        @keyup.enter="onSubmit">
+    <div class="form-elements">
+      <text-input
+        data-testid="username-input"
+        id="username"
+        name="username"
+        required
+        autocomplete="username webauthn"
+        autofocus
+        :error="usernameError"
+        outerSuffix="@thundermail.com"
+      >
+        {{ $t('email') }}
+      </text-input>
+      <text-input
+        data-testid="password-input"
+        id="password"
+        name="password"
+        required
+        autocomplete="current-password"
+        type="password"
+        :error="passwordError"
+      >
+        {{ $t('password') }}
+      </text-input>
+    </div>
+
+    <a
+      v-if="forgotPasswordUrl"
+      :href="forgotPasswordUrl"
+      class="forgot-password-link"
+    >
+      {{ $t('doForgotPassword') }}
     </a>
 
-    <h2 data-testid="header-text">{{ $t('loginAccountTitle') }}</h2>
-    <form id="kc-form-login" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
-          @keyup.enter="onSubmit">
-      <div class="form-elements">
-        <text-input
-          data-testid="username-input"
-          id="username"
-          name="username"
-          required
-          autocomplete="username webauthn"
-          autofocus
-          :error="usernameError"
-          outerSuffix="@thundermail.com"
-        >
-          {{ $t('email') }}
-        </text-input>
-        <text-input
-          data-testid="password-input"
-          id="password"
-          name="password"
-          required
-          autocomplete="current-password"
-          type="password"
-          :error="passwordError"
-        >
-          {{ $t('password') }}
-        </text-input>
-      </div>
+    <checkbox-input
+      data-testid="remember-me-input"
+      name="keep-me-signed-in"
+      :label="$t('rememberMe')"
+      v-model="rememberMeChecked"
+    ></checkbox-input>
 
-      <a
-        v-if="forgotPasswordUrl"
-        :href="forgotPasswordUrl"
-        class="forgot-password-link"
-      >
-        {{ $t('doForgotPassword') }}
-      </a>
+    <div class="buttons">
+      <brand-button data-testid="submit-btn" class="submit" @click="onSubmit">
+        {{ $t('doLogIn') }}
 
-      <checkbox-input data-testid="remember-me-input" name="keep-me-signed-in" :label="$t('rememberMe')" v-model="rememberMe"></checkbox-input>
-
-      <div class="buttons">
-        <brand-button data-testid="submit-btn" class="submit" @click="onSubmit">
-          {{ $t('doLogIn') }}
-
-          <template #iconRight>
-            <ph-arrow-right size="20" />
-          </template>
-        </brand-button>
-      </div>
-    </form>
-    <div class="footer-link-container">
-      <template v-if="registerUrl">
-        <i18n-t keypath="goToRegister" tag="span">
-          <a :href="registerUrl" data-testid="go-to-register-url">{{ $t('goToRegisterAction') }}</a>
-        </i18n-t>
-
-        •
-      </template>
-      <i18n-t keypath="needHelp" tag="span">
-        <a :href="supportUrl" data-testid="go-to-support-url">{{ $t('needHelpAction') }}</a>
-      </i18n-t>
+        <template #iconRight>
+          <ph-arrow-right size="20" />
+        </template>
+      </brand-button>
     </div>
+  </form>
+  <div class="footer-link-container">
+    <template v-if="registerUrl">
+      <i18n-t keypath="goToRegister" tag="span">
+        <a :href="registerUrl" data-testid="go-to-register-url">{{ $t('goToRegisterAction') }}</a>
+      </i18n-t>
+
+      •
+    </template>
+    <i18n-t keypath="needHelp" tag="span">
+      <a :href="supportUrl" data-testid="go-to-support-url">{{ $t('needHelpAction') }}</a>
+    </i18n-t>
   </div>
 </template>
 
 <style scoped>
-.login-view-container {
-  padding: 2rem;
-}
-
 .notice-bar {
   position: absolute;
   top: 1rem;
@@ -183,12 +184,6 @@ form {
   .submit {
     margin-right: 0;
     margin-left: auto;
-  }
-}
-
-@media (min-width: 1280px) {
-  .login-view-container {
-    padding: 6rem 10rem 5.625rem 6rem;
   }
 }
 </style>

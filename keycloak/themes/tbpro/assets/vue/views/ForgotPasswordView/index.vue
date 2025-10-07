@@ -27,35 +27,38 @@ export default {
 </script>
 
 <template>
-  <div class="forgot-password-view-container">
-    <a :href="clientUrl" class="logo-link">
-      <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-    </a>
+  <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError">{{ $t('forgotPasswordError') }}</notice-bar>
+  <message-bar v-else/>
 
-    <h2>{{ $t('emailForgotTitle') }}</h2>
-    <form id="kc-reset-password-form" ref="reset-password-form" method="POST" :action="formAction"
-          @submit.prevent="onSubmit" @keyup.enter="onSubmit">
-      <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError">{{ $t('forgotPasswordError') }}</notice-bar>
-      <message-bar v-else/>
-      <div class="form-elements">
-        <text-input id="username" name="username" required autocomplete="username" autofocus v-model="username"
-                    :help="$t('emailInstruction')" :error="usernameError">{{ $t('email') }}
-        </text-input>
-      </div>
-      <div class="buttons">
-        <template v-if="loginUrl">
-          <a :href="loginUrl" data-testid="back-url">{{ $t('backToLogin') }}</a>
-        </template>
-  
-        <primary-button class="submit" @click="onSubmit" data-testid="submit">{{ $t('doSubmit') }}</primary-button>
-      </div>
-    </form>
-  </div>
+  <a :href="clientUrl" class="logo-link">
+    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
+  </a>
+
+  <h2>{{ $t('emailForgotTitle') }}</h2>
+  <form id="kc-reset-password-form" ref="reset-password-form" method="POST" :action="formAction"
+        @submit.prevent="onSubmit" @keyup.enter="onSubmit">
+    <div class="form-elements">
+      <text-input id="username" name="username" required autocomplete="username" autofocus v-model="username"
+                  :help="$t('emailInstruction')" :error="usernameError">{{ $t('email') }}
+      </text-input>
+    </div>
+    <div class="buttons">
+      <template v-if="loginUrl">
+        <a :href="loginUrl" data-testid="back-url">{{ $t('backToLogin') }}</a>
+      </template>
+
+      <primary-button class="submit" @click="onSubmit" data-testid="submit">{{ $t('doSubmit') }}</primary-button>
+    </div>
+  </form>
 </template>
 
 <style scoped>
-.forgot-password-view-container {
-  padding: 2rem;
+.notice-bar {
+  position: absolute;
+  top: 1rem;
+  left: 1.5rem;
+  right: 1.5rem;
+  z-index: 1;
 }
 
 h2 {
@@ -97,12 +100,6 @@ h2 {
   .submit {
     margin-right: 0;
     margin-left: auto;
-  }
-}
-
-@media (min-width: 1280px) {
-  .forgot-password-view-container {
-    padding: 6rem 10rem 5.625rem 6rem;
   }
 }
 </style>
