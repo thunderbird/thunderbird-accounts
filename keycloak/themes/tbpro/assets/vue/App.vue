@@ -68,7 +68,7 @@ section {
     height: auto;
     min-height: 100vh;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
     background-color: inherit;
 
@@ -82,11 +82,16 @@ section {
       flex-direction: column;
       justify-content: center;
       min-height: 100vh;
+      flex: 1;
       background-color: var(--colour-neutral-base, #ffffff);
     }
 
     .panel {
       padding: 0 2rem;
+
+      &:has(.notice-bar) {
+        padding: 6rem 2rem;
+      }
     }
   }
 }
@@ -108,11 +113,6 @@ section {
           min-height: 100vh;
           object-fit: cover;
         }
-      }
-
-      .right-side {
-        flex: 1;
-        min-height: 100vh;
       }
     }
   }
@@ -152,6 +152,10 @@ section {
 
         .panel {
           padding: 6rem 10rem 5.625rem 6rem;
+
+          &:has(.notice-bar) {
+            padding: 6rem 10rem 5.625rem 6rem;
+          }
         }
       }
     }
