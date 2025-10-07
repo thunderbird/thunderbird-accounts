@@ -57,10 +57,14 @@ const onWiggle = async () => {
 }
 
 section {
-  height: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   .card {
-    height: 100%;
+    width: 100%;
+    height: auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -90,13 +94,14 @@ section {
         display: block;
         flex: 1;
         max-width: 556px;
-        height: 100%;
+        min-height: 100vh;
         background-color: var(--colour-ti-base);
 
         .orb-graphic {
           display: block;
           width: 100%;
           height: 100%;
+          min-height: 100vh;
           object-fit: cover;
         }
       }
@@ -113,12 +118,13 @@ section {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    min-height: 100vh;
     background-color: var(--colour-ti-base);
+    padding: 1rem;
 
     .card {
       width: 1280px;
-      height: fit-content;
+      height: auto;
       min-height: 720px;
       border-radius: 2rem;
       align-items: initial;
@@ -127,8 +133,10 @@ section {
       .left-side {
         background-color: unset;
         height: auto;
+        min-height: auto;
 
         .orb-graphic {
+          min-height: auto;
           border-radius: 2rem 0 0 2rem;
         }
       }
