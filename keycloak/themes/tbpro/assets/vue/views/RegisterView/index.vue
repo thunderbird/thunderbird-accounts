@@ -35,7 +35,9 @@ const recoveryEmailError = computed(() => {
 const registerForm = useTemplateRef('register-form');
 
 const onSubmit = () => {
-  registerForm?.value?.submit();
+  if (registerForm.value.checkValidity()) {
+    registerForm?.value?.submit();
+  }
 };
 
 </script>

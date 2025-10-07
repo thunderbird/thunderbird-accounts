@@ -1,6 +1,6 @@
 <script setup>
 import { TextInput, PrimaryButton, NoticeBar, NoticeBarTypes } from "@thunderbirdops/services-ui";
-import { computed, useTemplateRef } from 'vue';
+import { ref, computed, useTemplateRef } from 'vue';
 import MessageBar from '@/vue/components/MessageBar.vue';
 import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
 
@@ -8,12 +8,16 @@ const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
 const loginUrl = window._page.currentView?.loginUrl;
 const username = window._page.currentView?.attemptedUserName;
+const clientUrl = window._page.currentView?.clientUrl;
 const resetPasswordForm = useTemplateRef('reset-password-form');
 
-
 const onSubmit = () => {
-  resetPasswordForm?.value?.submit();
+  if (resetPasswordForm.value.checkValidity()) {
+    resetPasswordForm?.value?.submit();
+  }
 };
+
+const usernameRef = ref(username);
 const usernameError = computed(() => {
   return errors?.username === '' ? null : errors?.username;
 });
@@ -38,7 +42,7 @@ export default {
   <form id="kc-reset-password-form" ref="reset-password-form" method="POST" :action="formAction"
         @submit.prevent="onSubmit" @keyup.enter="onSubmit">
     <div class="form-elements">
-      <text-input id="username" name="username" required autocomplete="username" autofocus v-model="username"
+      <text-input id="username" name="username" required autocomplete="username" autofocus v-model="usernameRef"
                   :help="$t('emailInstruction')" :error="usernameError">{{ $t('email') }}
       </text-input>
     </div>
