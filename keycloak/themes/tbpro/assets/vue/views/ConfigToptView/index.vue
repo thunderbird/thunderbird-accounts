@@ -2,19 +2,18 @@
 import {
   TextInput,
   PrimaryButton,
-  SecondaryButton,
   LinkButton,
   CheckboxInput,
-  NoticeBar,
   CopyIcon,
 } from "@thunderbirdops/services-ui";
 import { computed, ref, useTemplateRef } from "vue";
 import { i18n } from '@/composables/i18n.js';
 import CancelForm from '@/vue/components/CancelForm.vue';
 import MessageBar from "@/vue/components/MessageBar.vue";
+import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
 
 const isManualMode = ref(false);
-
+const clientUrl = window._page.currentView?.clientUrl;
 const formAction = window._page.currentView?.formAction;
 const settingsForm = useTemplateRef('settings-form');
 const cancelForm = useTemplateRef('cancel-form');
@@ -120,92 +119,113 @@ export default {
 
 
 <template>
-  <div class="panel">
-    <h2>{{ $t('loginTotpTitle') }}</h2>
-    <message-bar/>
-    <cancel-form ref="cancel-form" :action="formAction" cancelId="cancelTOTPBtn" cancelValue="true"
-                 cancelName="cancel-aia"/>
+  <message-bar/>
+  <a :href="clientUrl" class="logo-link">
+    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
+  </a>
+  <h2>{{ $t('loginTotpTitle') }}</h2>
+  <cancel-form ref="cancel-form" :action="formAction" cancelId="cancelTOTPBtn" cancelValue="true"
+                cancelName="cancel-aia"/>
 
-    <section v-if="totpStep === 1" id="totpStep1" data-testid="totp-step-2">
-      <section class="split-view" v-if="!isManualMode">
-        <article>
-          <h3>{{ $t('scanTotp1') }}</h3>
-          <p>{{ $t('scanTotp2') }}</p>
-          <h3>{{ $t('scanTotp3') }}</h3>
-          <p>{{ $t('scanTotp4') }}</p>
-        </article>
-        <aside class="qr-container">
-          <img :src="qrCodeSrc" :alt="$t('qrCode')"/>
-          <link-button data-testid="switch-to-manual-mode-btn" @click="() => isManualMode = true" id="mode-manual">{{
-              $t('loginTotpUnableToScan')
-            }}
-          </link-button>
-        </aside>
-      </section>
-      <section v-else>
-        <article>
-          <p>{{ $t('manualTotp1') }}</p>
-        </article>
-        <aside>
-          <link-button data-testid="copy-otp-manual-url-btn" class="my-link-btn" @click="copyLink"
-                       :tooltip="myLinkTooltip" :force-tooltip="myLinkShow">
-            <template v-slot:icon>
-              <copy-icon/>
-            </template>
-            {{ otpManualUrl }}
-          </link-button>
-          <link-button data-testid="switch-to-qrcode-mode-btn" @click="() => isManualMode = false" id="mode-barcode">{{
-              $t('loginTotpScanBarcode')
-            }}
-          </link-button>
-        </aside>
-      </section>
+  <section v-if="totpStep === 1" id="totpStep1" data-testid="totp-step-2">
+    <section class="split-view" v-if="!isManualMode">
+      <article>
+        <h3>{{ $t('scanTotp1') }}</h3>
+        <p>{{ $t('scanTotp2') }}</p>
+        <h3>{{ $t('scanTotp3') }}</h3>
+        <p>{{ $t('scanTotp4') }}</p>
+      </article>
+      <aside class="qr-container">
+        <img :src="qrCodeSrc" :alt="$t('qrCode')"/>
+        <link-button data-testid="switch-to-manual-mode-btn" @click="() => isManualMode = true" id="mode-manual">{{
+            $t('loginTotpUnableToScan')
+          }}
+        </link-button>
+      </aside>
+    </section>
+    <section v-else>
+      <article>
+        <p>{{ $t('manualTotp1') }}</p>
+      </article>
+      <aside>
+        <link-button data-testid="copy-otp-manual-url-btn" class="my-link-btn" @click="copyLink"
+                      :tooltip="myLinkTooltip" :force-tooltip="myLinkShow">
+          <template v-slot:icon>
+            <copy-icon/>
+          </template>
+          {{ otpManualUrl }}
+        </link-button>
+        <link-button data-testid="switch-to-qrcode-mode-btn" @click="() => isManualMode = false" id="mode-barcode">{{
+            $t('loginTotpScanBarcode')
+          }}
+        </link-button>
+      </aside>
+    </section>
+    <div class="buttons">
+      <primary-button data-testid="continue-btn" class="submit" @click="onNext">{{
+          $t('doContinue')
+        }}
+      </primary-button>
+      <primary-button variant="outline" data-testid="cancel-btn" id="back" class="submit" @click="onPrevious" v-if="showCancel">{{
+          $t('doCancel')
+        }}
+      </primary-button>
+    </div>
+  </section>
+  <section v-else-if="totpStep === 2" id="totpStep2" data-testid="totp-step-2">
+    <form id="kc-totp-settings-form" ref="settings-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
+          @keyup.enter="onSubmit">
+      <p>{{ $t('labelTotp') }}</p>
+      <div class="form-elements">
+        <text-input data-testid="totp-input" id="totp" name="totp" required autocomplete="off" type="text"
+                    :error="totpError">
+          {{ $t('authenticatorCode') }}
+        </text-input>
+        <text-input data-testid="user-label-input" id="userLabel" name="userLabel" required autocomplete="off"
+                    type="text" :error="userLabelError">
+          {{ $t('loginTotpDeviceName') }}
+        </text-input>
+        <checkbox-input data-testid="logout-other-sessions-btn" id="logout-sessions" name="logout-sessions"
+                        :label="$t('logoutOtherSessions')"></checkbox-input>
+        <input type="hidden" id="totpSecret" name="totpSecret" :value="secret"/>
+      </div>
       <div class="buttons">
-        <primary-button data-testid="continue-btn" class="submit" @click="onNext">{{
-            $t('doContinue')
+        <primary-button data-testid="submit-btn" id="saveTOTPBtn" :value="$t('doSubmit')" class="submit"
+                        @click="onNext">{{
+            $t('doSubmit')
           }}
         </primary-button>
-        <secondary-button data-testid="cancel-btn" id="back" class="submit" @click="onPrevious" v-if="showCancel">{{
-            $t('doCancel')
+        <secondary-button data-testid="back-btn" id="back" class="submit" @click="onPrevious">{{
+            $t('doBack')
           }}
         </secondary-button>
       </div>
-    </section>
-    <section v-else-if="totpStep === 2" id="totpStep2" data-testid="totp-step-2">
-      <form id="kc-totp-settings-form" ref="settings-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
-            @keyup.enter="onSubmit">
-        <p>{{ $t('labelTotp') }}</p>
-        <div class="form-elements">
-          <text-input data-testid="totp-input" id="totp" name="totp" required autocomplete="off" type="text"
-                      :error="totpError">
-            {{ $t('authenticatorCode') }}
-          </text-input>
-          <text-input data-testid="user-label-input" id="userLabel" name="userLabel" required autocomplete="off"
-                      type="text" :error="userLabelError">
-            {{ $t('loginTotpDeviceName') }}
-          </text-input>
-          <checkbox-input data-testid="logout-other-sessions-btn" id="logout-sessions" name="logout-sessions"
-                          :label="$t('logoutOtherSessions')"></checkbox-input>
-          <input type="hidden" id="totpSecret" name="totpSecret" :value="secret"/>
-        </div>
-        <div class="buttons">
-          <primary-button data-testid="submit-btn" id="saveTOTPBtn" :value="$t('doSubmit')" class="submit"
-                          @click="onNext">{{
-              $t('doSubmit')
-            }}
-          </primary-button>
-          <secondary-button data-testid="back-btn" id="back" class="submit" @click="onPrevious">{{
-              $t('doBack')
-            }}
-          </secondary-button>
-        </div>
-      </form>
-    </section>
-  </div>
-
+    </form>
+  </section>
 </template>
 
 <style scoped>
+.logo-link {
+  display: block;
+  text-decoration: none;
+  margin-block-end: 2.8125rem;
+
+  .logo {
+    height: 36px;
+    width: auto;
+    transition: opacity 0.2s ease;
+  }
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-family: metropolis;
+  font-weight: normal;
+  line-height: 1.1;
+  color: var(--colour-primary-default);
+  margin: 0 0 1.5rem 0;
+}
+
 .form-elements {
   display: flex;
   flex-direction: column;

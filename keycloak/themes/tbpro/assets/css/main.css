@@ -2,9 +2,14 @@
 @import './bolt.css';
 
 
+* {
+  box-sizing: border-box;
+}
+
 html,
-body {
-  height: 100%;
+body,
+div#app {
+  min-height: 100vh;
   margin: 0;
   font-family: Inter, "sans-serif";
 }
@@ -12,13 +17,25 @@ body {
 body {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  background-color: var(--colour-neutral-base);
 }
 
 .route-found {
   .hide-if-route-is-found {
     display: none;
   }
+}
+
+.screen-reader-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 @keyframes wiggle {

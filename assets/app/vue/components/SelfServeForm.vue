@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NoticeBar, PrimaryButton, SecondaryButton, TextInput } from '@thunderbirdops/services-ui';
+import { NoticeBar, PrimaryButton, TextInput } from '@thunderbirdops/services-ui';
 import { ref } from 'vue';
 import CsrfToken from '@/components/CsrfToken.vue';
 
