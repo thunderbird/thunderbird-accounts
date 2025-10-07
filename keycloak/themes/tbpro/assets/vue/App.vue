@@ -54,6 +54,7 @@ const onWiggle = async () => {
   color: white;
   border-radius: 1rem;
   padding: 0.5rem;
+  z-index: 2;
 }
 
 section {
@@ -65,6 +66,7 @@ section {
   .card {
     width: 100%;
     height: auto;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -78,11 +80,13 @@ section {
       position: relative;
       display: flex;
       flex-direction: column;
+      justify-content: center;
+      min-height: 100vh;
       background-color: var(--colour-neutral-base, #ffffff);
     }
 
     .panel {
-      padding: 2rem;
+      padding: 0 2rem;
     }
   }
 }
@@ -108,6 +112,7 @@ section {
 
       .right-side {
         flex: 1;
+        min-height: 100vh;
       }
     }
   }
@@ -143,6 +148,7 @@ section {
 
       .right-side {
         border-radius: 0 2rem 2rem 0;
+        min-height: auto;
 
         .panel {
           padding: 6rem 10rem 5.625rem 6rem;

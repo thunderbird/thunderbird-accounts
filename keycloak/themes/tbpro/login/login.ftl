@@ -5,8 +5,7 @@
     <script>
       window._page['currentView'] = {
         formAction: '${url.loginAction}',
-        <#-- TODO: Make supportUrl dynamic -->
-        supportUrl: 'https://accounts.tb.pro/contact',
+        supportUrl: '${client.baseUrl}contact',
         clientUrl: '${client.baseUrl}',
         // <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
         registerUrl: '${url.registrationUrl}',

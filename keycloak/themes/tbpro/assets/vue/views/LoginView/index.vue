@@ -15,7 +15,9 @@ const clientUrl = window._page.currentView?.clientUrl;
 const loginForm = useTemplateRef('login-form');
 
 const onSubmit = () => {
-  loginForm?.value?.submit();
+  if (loginForm.value.checkValidity()) {
+    loginForm?.value?.submit();
+  }
 };
 
 const usernameError = computed(() => {
