@@ -43,6 +43,14 @@
       }
     }
   },
+  "components": {
+    "needSupportCard": {
+      "needSupport": "Need Support?"
+    },
+    "yourServices": {
+      "yourServices": "Your Services"
+    }
+  },
   "views": {
     "dashboard": {
       "accountCard": {
@@ -67,9 +75,6 @@
         "deleteAccountText": "This will permanently delete your Thunderbird Pro account and Thunderbird Pro services data. You will not be able to reactivate this account.",
         "deleteAccountButtonLabel": "Delete account and all data"
       },
-      "yourServices": {
-        "yourServices": "Your Services"
-      },
       "yourCurrentSubscription": {
         "yourCurrentSubscription": "Your Current Subscription",
         "mailStorage": "of Mail Storage",
@@ -80,6 +85,21 @@
         "changePaymentMethodButtonLabel": "Change payment method",
         "footerText": "You’ll be taken to Paddle, our secure payment provider."
       }
+    },
+    "privacyAndData": {
+      "deleteAccountData": "Delete Account Data",
+      "deleteAccountDataText": "This will permanently delete your Thunderbird Pro account and all data. You cannot reactivate your account.",
+      "deleteAccountWill": "Deleting your Thunderbird Pro account will:",
+      "deleteAccountWillOne": "Permanently erase your account and all data (emails, contacts, attachments, events, passwords, files)",
+      "deleteAccountWillTwo": "Log you out of all devices and end access to Thunderbird Pro services.",
+      "deleteAccountImportant": "Important:",
+      "deleteAccountImportantOne": "Deleting your data does not cancel your subscription. Unsubscribe first to stop billing and service access.",
+      "deleteAccountImportantTwo": "After X days, all data will be erased and your Thundermail address may be reassigned. Emails sent during this time will be rejected.",
+      "deleteAccountExport": "Export anything you want to keep before continuing.",
+      "deleteAccountCheckbox": "I understand my data will be permanently deleted",
+      "enterPassword": "Enter your password to confirm",
+      "deleteAccountButtonLabel": "Request to delete data",
+      "cancelButtonLabel": "Cancel"
     }
   },
   "footer": {
