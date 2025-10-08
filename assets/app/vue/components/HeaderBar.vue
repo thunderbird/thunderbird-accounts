@@ -40,7 +40,7 @@ const currentRoute = useRoute();
     </nav>
 
     <!-- TODO: Update with actual user data & add dropdown -->
-    <user-avatar username="test" />
+    <user-avatar username="test" class="avatar" />
   </header>
 </template>
 
@@ -57,6 +57,13 @@ header {
 
   nav.desktop {
     display: none;
+  }
+
+  /* TODO: Temporary fix for UserAvatar color bug */
+  .avatar {
+    & :first-child {
+      color: #eeeef0 /* var(--colour-ti-base) dark mode */
+    }
   }
 
   ul {
