@@ -20,6 +20,7 @@ import FooterBar from '@/components/FooterBar.vue';
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: var(--colour-neutral-lower);
 }
 
 main {

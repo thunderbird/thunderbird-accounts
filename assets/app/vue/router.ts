@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import HomeView from '@/views/HomeView.vue';
-import DashboardView from '@/views/DashboardView.vue';
+import DashboardView from '@/views/DashboardView/index.vue';
 import ManageMfaView from '@/views/ManageMfaView.vue';
 import PrivacyAndDataView from '@/views/PrivacyAndDataView.vue';
 import PrivacyView from '@/views/PrivacyView.vue';
