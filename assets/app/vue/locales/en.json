@@ -52,7 +52,10 @@
         "mfa": "Multi-Factor Authentication",
         "manage": "Manage",
         "recoveryEmailAddress": "Recovery Email Address",
-        "recoveryPhoneNumber": "Recovery Phone Number"
+        "recoveryPhoneNumber": "Recovery Phone Number",
+        "change": "change",
+        "set": "Set",
+        "on": "On"
       },
       "privacyAndDataCard": {
         "privacyAndData": "Privacy and Data",
