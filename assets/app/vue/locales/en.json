@@ -63,6 +63,9 @@
         "deleteAccount": "Delete Account",
         "deleteAccountText": "This will permanently delete your Thunderbird Pro account and Thunderbird Pro services data. You will not be able to reactivate this account.",
         "deleteAccountButtonLabel": "Delete account and all data"
+      },
+      "yourServices": {
+        "yourServices": "Your Services"
       }
     }
   },
