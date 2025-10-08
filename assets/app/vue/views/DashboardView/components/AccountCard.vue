@@ -22,7 +22,7 @@ const { t } = useI18n();
         <strong>{{ t('views.dashboard.accountCard.password') }}</strong>
         <div class="my-account-card-field-with-link-button">
           <p>*********</p>
-          <link-button>change</link-button>
+          <link-button>{{ t('views.dashboard.accountCard.change') }}</link-button>
         </div>
       </div>
 
@@ -31,7 +31,7 @@ const { t } = useI18n();
       <div class="my-account-card-field with-outline-button">
         <div>
           <strong>{{ t('views.dashboard.accountCard.mfa') }}</strong>
-          <p>On</p>
+          <p>{{ t('views.dashboard.accountCard.on') }}</p>
         </div>
 
         <primary-button variant="outline" size="small">{{ t('views.dashboard.accountCard.manage') }}</primary-button>
@@ -42,8 +42,8 @@ const { t } = useI18n();
       <div class="my-account-card-field">
         <strong>{{ t('views.dashboard.accountCard.recoveryEmailAddress') }}</strong>
         <div class="my-account-card-field-with-link-button">
-          <base-badge :type="BaseBadgeTypes.Set">SET</base-badge>
-          <link-button>change</link-button>
+          <base-badge :type="BaseBadgeTypes.Set">{{ t('views.dashboard.accountCard.set') }}</base-badge>
+          <link-button>{{ t('views.dashboard.accountCard.change') }}</link-button>
         </div>
       </div>
 
@@ -52,8 +52,8 @@ const { t } = useI18n();
       <div class="my-account-card-field">
         <strong>{{ t('views.dashboard.accountCard.recoveryPhoneNumber') }}</strong>
         <div class="my-account-card-field-with-link-button">
-          <base-badge :type="BaseBadgeTypes.Set">SET</base-badge>
-          <link-button>change</link-button>
+          <base-badge :type="BaseBadgeTypes.Set">{{ t('views.dashboard.accountCard.set') }}</base-badge>
+          <link-button>{{ t('views.dashboard.accountCard.change') }}</link-button>
         </div>
       </div>
     </div>
