@@ -43,6 +43,19 @@
       }
     }
   },
+  "views": {
+    "dashboard": {
+      "accountCard": {
+        "myAccount": "My Account",
+        "email": "Email",
+        "password": "Password",
+        "mfa": "Multi-Factor Authentication",
+        "manage": "Manage",
+        "recoveryEmailAddress": "Recovery Email Address",
+        "recoveryPhoneNumber": "Recovery Phone Number"
+      }
+    }
+  },
   "footer": {
     "copywrite": "Thunderbird is part of {mzlaLink}, a wholly owned subsidiary of Mozilla Foundation. Portions of this content are ©1998–{currentYear} by individual contributors. Content available under a {creativeCommonsLink}.",
     "creativeCommonsLinkText": "Creative Commons license",
