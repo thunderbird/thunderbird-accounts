@@ -59,6 +59,12 @@ h2 {
     gap: 0.5rem;
     text-decoration: none;
 
+    &:focus {
+      outline: .125rem solid var(--colour-primary-default);
+      outline-offset: .25rem;
+      border-radius: 0.5rem;
+    }
+
     img {
       filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.15));
 
