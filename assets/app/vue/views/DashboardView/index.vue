@@ -36,8 +36,9 @@ export default {
 .dashboard-view {
   display: flex;
   justify-content: center;
-  gap: 2.5rem;
+  gap: 2rem;
   flex-wrap: wrap;
+  align-items: stretch;
 
   .dashboard-view-cards {
     display: flex;
@@ -51,6 +52,8 @@ export default {
 
 @media (min-width: 768px) {
   .dashboard-view {
+    gap: 4rem;
+
     .dashboard-view-cards {
       max-width: 568px;
       width: auto;
@@ -58,9 +61,20 @@ export default {
   }
 }
 
+@media (min-width: 1024px) {
+  .dashboard-view {
+    gap: 2rem;
+  }
+}
+
 @media (min-width: 1280px) {
   .hidden-sm {
     display: block;
+  }
+
+  .divider {
+    align-self: stretch;
+    height: auto;
   }
 }
 </style>
