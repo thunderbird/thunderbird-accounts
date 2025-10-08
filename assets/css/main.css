@@ -6,8 +6,17 @@
   box-sizing: border-box;
 }
 
+* {
+  margin: 0;
+}
+
 body {
   font-family: 'Inter', sans-serif;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
 }
 
 .base-container {
