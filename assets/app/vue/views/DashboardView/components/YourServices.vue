@@ -1,22 +1,30 @@
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+</script>
+
 <template>
-  <h2>Your Services</h2>
+  <section>
+    <h2>{{ t('views.dashboard.yourServices.yourServices') }}</h2>
 
-  <div class="your-services-card">
-    <a class="service-icon-link" href="#">
-      <img src="@/assets/svg/thundermail-icon.svg" alt="Thundermail Logo" />
-      <p>Thundermail</p>
-    </a>
+    <div class="your-services-card">
+      <a class="service-icon-link" href="#">
+        <img src="@/assets/svg/thundermail-icon.svg" alt="Thundermail Logo" />
+        <p>Thundermail</p>
+      </a>
 
-    <a class="service-icon-link" href="#">
-      <img src="@/assets/svg/thundermail-icon.svg" alt="Appointment Logo" />
-      <p>Appointment</p>
-    </a>
+      <a class="service-icon-link" href="#">
+        <img src="@/assets/svg/thundermail-icon.svg" alt="Appointment Logo" />
+        <p>Appointment</p>
+      </a>
 
-    <a class="service-icon-link" href="#">
-      <img src="@/assets/svg/thundermail-icon.svg" alt="Send Logo" />
-      <p>Send</p>
-    </a>
-  </div>
+      <a class="service-icon-link" href="#">
+        <img src="@/assets/svg/thundermail-icon.svg" alt="Send Logo" />
+        <p>Send</p>
+      </a>
+    </div>
+  </section>
 </template>
 
 <style scoped>
@@ -26,6 +34,7 @@ h2 {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.42px;
+  line-height: 1.2;
   margin-block-end: 1rem;
   color: var(--colour-ti-secondary);
 }

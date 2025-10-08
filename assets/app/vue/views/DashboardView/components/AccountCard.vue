@@ -62,7 +62,7 @@ const { t } = useI18n();
 
 <style scoped>
 .my-account-card {
-  min-width: 568px;
+  min-width: 100%;
   color: var(--colour-ti-secondary);
 
   h2 {
@@ -105,6 +105,12 @@ const { t } = useI18n();
         }
       }
     }
+  }
+}
+
+@media (min-width: 1024px) {
+  .my-account-card {
+    min-width: 568px;
   }
 }
 </style>

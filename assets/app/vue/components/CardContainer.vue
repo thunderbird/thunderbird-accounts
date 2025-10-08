@@ -1,5 +1,19 @@
+<script setup lang="ts">
+
+withDefaults(defineProps<{
+  dark?: boolean;
+  padding?: 'small' | 'default';
+}>(), {
+  padding: 'default',
+});
+</script>
+
 <template>
-  <section>
+  <section :class="{
+    'dark': dark,
+    'padding-small': padding === 'small',
+    'padding-default': padding === 'default',
+  }">
     <slot />
   </section>
 </template>
@@ -7,8 +21,20 @@
 <style scoped>
 section {
   background-color: var(--colour-neutral-base);
-  padding: 2rem 1.5rem;
   border-radius: 1.5rem;
   box-shadow: 0.25rem 0.25rem 1rem 0 rgba(0, 0, 0, 0.04);
+
+  &.dark {
+    background-color: transparent;
+    background-image: linear-gradient(191deg, #16395f, #171b24);
+  }
+
+  &.padding-small {
+    padding: 1.5rem 1rem;
+  }
+
+  &.padding-default {
+    padding: 2rem 1.5rem;
+  }
 }
 </style>

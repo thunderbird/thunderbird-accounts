@@ -35,7 +35,7 @@ const { t } = useI18n();
 
 <style scoped>
 .privacy-and-data-card {
-  min-width: 568px;
+  min-width: unset;
   color: var(--colour-ti-secondary);
 
   .privacy-and-data-card-details {
@@ -69,6 +69,12 @@ const { t } = useI18n();
     display: flex;
     align-items: center;
     gap: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .privacy-and-data-card {
+    min-width: 568px;
   }
 }
 </style>
