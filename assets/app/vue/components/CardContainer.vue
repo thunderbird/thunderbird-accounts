@@ -26,7 +26,7 @@ section {
 
   &.dark {
     background-color: transparent;
-    background-image: linear-gradient(191deg, #16395f, #171b24);
+    background-image: linear-gradient(to bottom left, #16395f 5%, #171b24 60%);
   }
 
   &.padding-small {

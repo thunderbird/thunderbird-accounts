@@ -27,6 +27,16 @@
       },
       "yourServices": {
         "yourServices": "Your Services"
+      },
+      "yourCurrentSubscription": {
+        "yourCurrentSubscription": "Your Current Subscription",
+        "mailStorage": "of Mail Storage",
+        "sendStorage": "of Send Storage",
+        "domains": "Domains",
+        "emailAddresses": "Email Addresses",
+        "autoRenewsOn": "Auto-renews on",
+        "changePaymentMethodButtonLabel": "Change payment method",
+        "footerText": "You’ll be taken to Paddle, our secure payment provider."
       }
     }
   },
