@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { VisualDivider } from '@thunderbirdops/services-ui';
+import YourServices from '@/components/YourServices.vue';
 import AccountCard from './components/AccountCard.vue';
 import PrivacyAndDataCard from './components/PrivacyAndDataCard.vue';
-import YourServices from './components/YourServices.vue';
 import YourCurrentSubscription from './components/YourCurrentSubscription.vue';
 </script>
 

@@ -6,7 +6,7 @@ const { t } = useI18n();
 
 <template>
   <section>
-    <h2>{{ t('views.dashboard.yourServices.yourServices') }}</h2>
+    <h2>{{ t('components.yourServices.yourServices') }}</h2>
 
     <div class="your-services-card">
       <a class="service-icon-link" href="#">
