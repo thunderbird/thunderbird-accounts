@@ -91,11 +91,13 @@ dialog {
     padding-inline: 1rem;
 
     h2 {
-      font-size: 1.55rem;
-      font-weight: normal;
+      font-family: metropolis;
+      font-size: 1.5rem;
+      font-weight: 500;
+      line-height: 1.2;
       color: var(--colour-ti-highlight);
       padding-inline: 2rem;
-      margin-block: 1.5rem 2rem;
+      margin-block: 1.5rem 1.75rem;
       text-align: center;
     }
   }

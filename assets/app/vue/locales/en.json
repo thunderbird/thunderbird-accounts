@@ -96,6 +96,19 @@
           "oneTimeCode": "One-time code",
           "authenticatorAppCodeDescription": "Enter the code from your authenticator app:",
           "recoveryEmailAddressCodeDescription": "Enter the code from your email:"
+        },
+        "manageAuthenticatorApp": {
+          "title": "Manage Authenticator App",
+          "description": "Open your authenticator app and scan the QR code to link it to your account.",
+          "descriptionTwo": "This device will be remembered, so next time you sign in, you won’t need to scan again. Just enter the one-time code from your app.",
+          "qrNote": "Setting up a new authenticator app will remove your current one.",
+          "enterCodeManually": "Enter code manually",
+          "cantScan": "Can't scan?",
+          "continue": "Continue",
+          "oneTimeCode": "One-time code",
+          "authenticatorAppCodeDescription": "Enter the code from your authenticator app:",
+          "signOutFromOtherDevices": "Sign out from other devices",
+          "didntGetCode": "Didn't get the code?"
         }
       }
     },

@@ -3,9 +3,18 @@ import { computed, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhCheckCircle } from '@phosphor-icons/vue';
 import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton } from '@thunderbirdops/services-ui';
+
+// Modals
+import ManageAuthenticatorAppModal from './ManageAuthenticatorAppModal.vue';
 import VerifyYourIdentityModal from './VerifyYourIdentityModal.vue';
 
 const { t } = useI18n();
+
+enum AUTHENTICATION_METHODS {
+  AUTHENTICATOR_APP = 'authenticatorApp',
+  RECOVERY_PHONE_NUMBER = 'recoveryPhoneNumber',
+  RECOVERY_EMAIL_ADDRESS = 'recoveryEmailAddress'
+}
 
 interface AuthenticationMethodData {
   set: boolean;
@@ -15,16 +24,16 @@ interface AuthenticationMethodData {
   emailAddress?: string;
 }
 
-const authenticationMethods: Record<string, AuthenticationMethodData> = {
-  authenticatorApp: {
+const authenticationMethods: Record<AUTHENTICATION_METHODS, AuthenticationMethodData> = {
+  [AUTHENTICATION_METHODS.AUTHENTICATOR_APP]: {
     set: true,
     setupDate: '2025-01-13 09:32',
     lastUsedDate: '2025-06-23 17:28'
   },
-  recoveryPhoneNumber: {
+  [AUTHENTICATION_METHODS.RECOVERY_PHONE_NUMBER]: {
     set: false,
   },
-  recoveryEmailAddress: {
+  [AUTHENTICATION_METHODS.RECOVERY_EMAIL_ADDRESS]: {
     set: true,
     setupDate: '2025-01-13 09:32',
     lastUsedDate: '2025-06-23 17:28',
@@ -33,11 +42,16 @@ const authenticationMethods: Record<string, AuthenticationMethodData> = {
 }
 
 const verifyYourIdentityModal = useTemplateRef<InstanceType<typeof VerifyYourIdentityModal>>('verifyYourIdentityModal');
+const manageAuthenticatorAppModal = useTemplateRef<InstanceType<typeof ManageAuthenticatorAppModal>>('manageAuthenticatorAppModal');
 
 const authenticationMethodEntries = computed(() => Object.entries(authenticationMethods));
 
-const handleEdit = (_method: string) => {
-  verifyYourIdentityModal.value.open();
+const handleEdit = (method: string) => {
+  if (method === AUTHENTICATION_METHODS.AUTHENTICATOR_APP) {
+    manageAuthenticatorAppModal.value.open();
+  } else {
+    verifyYourIdentityModal.value.open();
+  }
 }
 </script>
 
@@ -100,6 +114,7 @@ const handleEdit = (_method: string) => {
 
   <!-- Modals -->
   <verify-your-identity-modal ref="verifyYourIdentityModal" />
+  <manage-authenticator-app-modal ref="manageAuthenticatorAppModal" />
 </template>
 
 <style scoped>

@@ -5,17 +5,26 @@ import { PrimaryButton, TextInput } from '@thunderbirdops/services-ui';
 import { PhKey, PhEnvelope } from '@phosphor-icons/vue';
 import GenericModal from '@/components/GenericModal.vue';
 
-const genericModal = useTemplateRef<InstanceType<typeof GenericModal>>('genericModal');
+enum MODAL_STEPS {
+  SELECT = 'select',
+  CODE = 'code',
+}
+
+enum METHODS {
+  AUTHENTICATOR_APP = 'authenticator-app',
+  RECOVERY_EMAIL_ADDRESS = 'recovery-email-address',
+}
 
 const { t } = useI18n();
 
-const step = ref<'select' | 'code'>('select');
-const method = ref<'authenticator-app' | 'recovery-email-address'>();
+const step = ref<MODAL_STEPS>(MODAL_STEPS.SELECT);
+const method = ref<METHODS>();
 const code = ref('');
+const genericModal = useTemplateRef<InstanceType<typeof GenericModal>>('genericModal');
 
 const goToCodeStep = () => {
   if (!method.value) return;
-  step.value = 'code';
+  step.value = MODAL_STEPS.CODE;
 };
 
 const submitOneTimeCode = () => {
@@ -25,7 +34,7 @@ const submitOneTimeCode = () => {
 
 defineExpose({
   open: () => {
-    step.value = 'select';
+    step.value = MODAL_STEPS.SELECT;
     method.value = undefined;
     code.value = '';
     genericModal.value.open();
@@ -38,7 +47,7 @@ defineExpose({
     ref="genericModal"
     :title="t('views.manageMfa.modals.verifyYourIdentity.title')"
   >
-    <template v-if="step === 'select'">
+    <template v-if="step === MODAL_STEPS.SELECT">
       <p>{{ t('views.manageMfa.modals.verifyYourIdentity.description') }}</p>
 
       <div class="verify-your-identity-options">
@@ -99,7 +108,7 @@ defineExpose({
       <div class="verify-your-identity-code-step">
         <p>
           {{
-            method === 'authenticator-app'
+            method === METHODS.AUTHENTICATOR_APP
               ? t('views.manageMfa.modals.verifyYourIdentity.authenticatorAppCodeDescription')
               : t('views.manageMfa.modals.verifyYourIdentity.recoveryEmailAddressCodeDescription')
           }}
