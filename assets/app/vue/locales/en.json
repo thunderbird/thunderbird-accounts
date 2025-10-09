@@ -90,7 +90,7 @@
       "deleteAccountData": "Delete Account Data",
       "deleteAccountDataText": "This will permanently delete your Thunderbird Pro account and all data. You cannot reactivate your account.",
       "deleteAccountWill": "Deleting your Thunderbird Pro account will:",
-      "deleteAccountWillOne": "Permanently erase your account and all data (emails, contacts, attachments, events, passwords, files)",
+      "deleteAccountWillOne": "Permanently erase your account and all data (emails, contacts, attachments, events, passwords, files).",
       "deleteAccountWillTwo": "Log you out of all devices and end access to Thunderbird Pro services.",
       "deleteAccountImportant": "Important:",
       "deleteAccountImportantOne": "Deleting your data does not cancel your subscription. Unsubscribe first to stop billing and service access.",
