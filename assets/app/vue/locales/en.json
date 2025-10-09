@@ -2,7 +2,7 @@
   "navigationLinks": {
     "dashboard": "Dashboard",
     "manageMfa": "Manage MFA",
-    "privacyAndData": "Privacy and Data"
+    "privacyAndData": "Privacy & Data"
   },
   "views": {
     "dashboard": {
@@ -19,7 +19,7 @@
         "on": "On"
       },
       "privacyAndDataCard": {
-        "privacyAndData": "Privacy and Data",
+        "privacyAndData": "Privacy & Data",
         "manageDevices": "Manage Devices",
         "manageDevicesText": "See which devices are signed in. Use the button below to log out of selected devices, or log out of all devices using the link.",
         "manageDevicesButtonLabel": "Manage devices",
