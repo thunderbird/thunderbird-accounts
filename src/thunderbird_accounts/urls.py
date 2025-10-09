@@ -10,7 +10,6 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.urls import path, include, re_path
-from django.views.generic import RedirectView
 from mozilla_django_oidc.views import OIDCLogoutView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
@@ -26,13 +25,9 @@ admin.site.site_header = _('Thunderbird Accounts Admin Panel')
 admin.site.site_title = _('Thunderbird Accounts Admin Panel')
 admin.site.index_title = _('Accounts Administration')
 
-favicon_view = RedirectView.as_view(url='/static/favicon.ico', permanent=True)
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-    re_path(r'^favicon\.ico$', favicon_view),
-    # Mail Views
-    path('', mail_views.home),
+    # Django-specific routes (not handled by Vue)
     path('contact/', mail_views.contact, name='contact'),
     path('sign-up/', mail_views.sign_up, name='sign_up'),
     path('sign-up/submit', mail_views.sign_up_submit, name='sign_up_submit'),
@@ -85,4 +80,9 @@ urlpatterns += [
         mail_views.purge_stalwart_accounts,
         name='purge_stalwart_accounts',
     ),
+]
+
+urlpatterns += [
+    # Vue App catch-all: keep this last so all explicit Django routes above take precedence
+    re_path(r'^.*$', mail_views.home, name='app'),
 ]

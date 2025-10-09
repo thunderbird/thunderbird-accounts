@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, useTemplateRef } from 'vue';
 import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes } from '@thunderbirdops/services-ui';
-import CsrfToken from '@/components/CsrfToken.vue';
+import CsrfToken from '@/components/forms/CsrfToken.vue';
 
 const TICKET_CUSTOM_FIELD_NAMES = {
   PRODUCT: 'Product',

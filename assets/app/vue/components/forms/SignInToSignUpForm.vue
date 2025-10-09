@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NoticeBar, PrimaryButton } from '@thunderbirdops/services-ui';
 import { ref } from 'vue';
-import CsrfToken from '@/components/CsrfToken.vue';
+import CsrfToken from '@/components/forms/CsrfToken.vue';
 
 const signInToContinue = ref();
 const errorText = ref(null);

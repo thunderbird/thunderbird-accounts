@@ -1,0 +1,53 @@
+{
+  "navigationLinks": {
+    "dashboard": "Dashboard",
+    "manageMfa": "Manage MFA",
+    "privacyAndData": "Privacy & Data"
+  },
+  "views": {
+    "dashboard": {
+      "accountCard": {
+        "myAccount": "My Account",
+        "email": "Email",
+        "password": "Password",
+        "mfa": "Multi-Factor Authentication",
+        "manage": "Manage",
+        "recoveryEmailAddress": "Recovery Email Address",
+        "recoveryPhoneNumber": "Recovery Phone Number",
+        "change": "change",
+        "set": "Set",
+        "on": "On"
+      },
+      "privacyAndDataCard": {
+        "privacyAndData": "Privacy & Data",
+        "manageDevices": "Manage Devices",
+        "manageDevicesText": "See which devices are signed in. Use the button below to log out of selected devices, or log out of all devices using the link.",
+        "manageDevicesButtonLabel": "Manage devices",
+        "logoutFromAllDevicesButtonLabel": "Log out from all devices",
+        "deleteAccount": "Delete Account",
+        "deleteAccountText": "This will permanently delete your Thunderbird Pro account and Thunderbird Pro services data. You will not be able to reactivate this account.",
+        "deleteAccountButtonLabel": "Delete account and all data"
+      },
+      "yourServices": {
+        "yourServices": "Your Services"
+      },
+      "yourCurrentSubscription": {
+        "yourCurrentSubscription": "Your Current Subscription",
+        "mailStorage": "of Mail Storage",
+        "sendStorage": "of Send Storage",
+        "domains": "Domains",
+        "emailAddresses": "Email Addresses",
+        "autoRenewsOn": "Auto-renews on",
+        "changePaymentMethodButtonLabel": "Change payment method",
+        "footerText": "You’ll be taken to Paddle, our secure payment provider."
+      }
+    }
+  },
+  "footer": {
+    "copywrite": "Thunderbird is part of {mzlaLink}, a wholly owned subsidiary of Mozilla Foundation. Portions of this content are ©1998–{currentYear} by individual contributors. Content available under a {creativeCommonsLink}.",
+    "creativeCommonsLinkText": "Creative Commons license",
+    "mzlaLinkText": "MZLA Technologies Corporation",
+    "privacyPolicy": "Privacy Policy",
+    "legal": "Legal"
+  }
+}
