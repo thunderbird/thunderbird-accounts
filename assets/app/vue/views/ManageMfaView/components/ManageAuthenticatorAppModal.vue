@@ -114,8 +114,8 @@ p {
   margin-block-start: 0.5rem;
 
   .qr-image {
-    width: 224px;
-    height: 224px;
+    width: 210px;
+    height: 180px;
     border: 1px solid var(--colour-neutral-border);
     border-radius: 0.5rem;
     background-color: var(--colour-neutral-base);

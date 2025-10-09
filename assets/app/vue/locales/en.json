@@ -109,6 +109,15 @@
           "authenticatorAppCodeDescription": "Enter the code from your authenticator app:",
           "signOutFromOtherDevices": "Sign out from other devices",
           "didntGetCode": "Didn't get the code?"
+        },
+        "manageEmailRecovery": {
+          "title": "Manage Email Recovery",
+          "description": "Enter your email to receive an authentication code. Once you get a message with the code, select continue.",
+          "email": "Email",
+          "sendCode": "Send code",
+          "sentTo": "Code sent to {email}",
+          "didntGetCode": "Didn't get the code?",
+          "continue": "Continue"
         }
       }
     },

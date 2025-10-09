@@ -7,6 +7,7 @@ import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton } f
 // Modals
 import ManageAuthenticatorAppModal from './ManageAuthenticatorAppModal.vue';
 import VerifyYourIdentityModal from './VerifyYourIdentityModal.vue';
+import ManageEmailRecoveryModal from './ManageEmailRecoveryModal.vue';
 
 const { t } = useI18n();
 
@@ -43,14 +44,24 @@ const authenticationMethods: Record<AUTHENTICATION_METHODS, AuthenticationMethod
 
 const verifyYourIdentityModal = useTemplateRef<InstanceType<typeof VerifyYourIdentityModal>>('verifyYourIdentityModal');
 const manageAuthenticatorAppModal = useTemplateRef<InstanceType<typeof ManageAuthenticatorAppModal>>('manageAuthenticatorAppModal');
+const manageEmailRecoveryModal = useTemplateRef<InstanceType<typeof ManageEmailRecoveryModal>>('manageEmailRecoveryModal');
 
 const authenticationMethodEntries = computed(() => Object.entries(authenticationMethods));
 
+const handleSetUp = (_method: string) => {
+  verifyYourIdentityModal.value.open();
+}
+
 const handleEdit = (method: string) => {
-  if (method === AUTHENTICATION_METHODS.AUTHENTICATOR_APP) {
-    manageAuthenticatorAppModal.value.open();
-  } else {
-    verifyYourIdentityModal.value.open();
+  switch (method) {
+    case AUTHENTICATION_METHODS.AUTHENTICATOR_APP:
+      manageAuthenticatorAppModal.value.open();
+      break;
+    case AUTHENTICATION_METHODS.RECOVERY_EMAIL_ADDRESS:
+      manageEmailRecoveryModal.value.open();
+      break;
+    default:
+      break;
   }
 }
 </script>
@@ -97,7 +108,7 @@ const handleEdit = (method: string) => {
               </link-button>
             </template>
             <template v-else>
-              <primary-button variant="outline" size="small">
+              <primary-button variant="outline" size="small" @click="handleSetUp(method)">
                 {{ t('views.manageMfa.actions.setUp') }}
               </primary-button>
             </template>
@@ -115,6 +126,7 @@ const handleEdit = (method: string) => {
   <!-- Modals -->
   <verify-your-identity-modal ref="verifyYourIdentityModal" />
   <manage-authenticator-app-modal ref="manageAuthenticatorAppModal" />
+  <manage-email-recovery-modal ref="manageEmailRecoveryModal" />
 </template>
 
 <style scoped>
