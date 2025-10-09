@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhCheckCircle } from '@phosphor-icons/vue';
 import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton } from '@thunderbirdops/services-ui';
+import VerifyYourIdentityModal from './VerifyYourIdentityModal.vue';
 
 const { t } = useI18n();
 
@@ -31,7 +32,13 @@ const authenticationMethods: Record<string, AuthenticationMethodData> = {
   }
 }
 
+const verifyYourIdentityModal = useTemplateRef<InstanceType<typeof VerifyYourIdentityModal>>('verifyYourIdentityModal');
+
 const authenticationMethodEntries = computed(() => Object.entries(authenticationMethods));
+
+const handleEdit = (_method: string) => {
+  verifyYourIdentityModal.value.open();
+}
 </script>
 
 <template>
@@ -68,7 +75,7 @@ const authenticationMethodEntries = computed(() => Object.entries(authentication
 
           <div class="authentication-method-actions">
             <template v-if="methodData.set">
-              <primary-button variant="outline" size="small">
+              <primary-button variant="outline" size="small" @click="handleEdit(method)">
                 {{ t('views.manageMfa.actions.edit') }}
               </primary-button>
               <link-button size="small">
@@ -90,6 +97,9 @@ const authenticationMethodEntries = computed(() => Object.entries(authentication
       </template>
     </div>
   </div>
+
+  <!-- Modals -->
+  <verify-your-identity-modal ref="verifyYourIdentityModal" />
 </template>
 
 <style scoped>

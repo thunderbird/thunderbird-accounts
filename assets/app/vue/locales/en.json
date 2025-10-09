@@ -83,6 +83,20 @@
           "set": "One-time codes will be sent to {emailAddress}. Email recovery is enabled.",
           "notSet": "Set a recovery email address to avoid being locked out of your account."
         }
+      },
+      "modals": {
+        "verifyYourIdentity": {
+          "title": "Verify your identity",
+          "description": "To keep your account secure, please verify your identity before making changes to sensitive information.",
+          "authenticatorApp": "Authenticator App",
+          "authenticatorAppDescription": "Use your authenticator app to generate and enter a recovery code.",
+          "recoveryEmailAddress": "Recovery Email Address",
+          "recoveryEmailAddressDescription": "Get a verification code at {emailAddress}",
+          "verify": "Verify",
+          "oneTimeCode": "One-time code",
+          "authenticatorAppCodeDescription": "Enter the code from your authenticator app:",
+          "recoveryEmailAddressCodeDescription": "Enter the code from your email:"
+        }
       }
     },
     "privacyAndData": {
