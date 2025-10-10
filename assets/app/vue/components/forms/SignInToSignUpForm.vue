@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NoticeBar, PrimaryButton } from '@thunderbirdops/services-ui';
+import { NoticeBar, NoticeBarTypes, PrimaryButton } from '@thunderbirdops/services-ui';
 import { ref } from 'vue';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 
@@ -13,7 +13,7 @@ const onSubmit = () => {
 
 <template>
   <div class="form-container">
-    <notice-bar type="error" v-if="errorText">{{ errorText }}</notice-bar>
+    <notice-bar :type="NoticeBarTypes.Critical" v-if="errorText">{{ errorText }}</notice-bar>
     <div class="container">
       <form id="sign-in-form" ref="signInToContinue" method="POST">
         <primary-button @click.capture="onSubmit" id="sign-in-btn">Sign-in to continue</primary-button>

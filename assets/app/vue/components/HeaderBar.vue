@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { UserAvatar } from '@thunderbirdops/services-ui';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
+import { BrandButton } from '@thunderbirdops/services-ui';
+import UserMenu from '@/components/UserMenu.vue';
 
 const { t } = useI18n();
+
+const isAuthenticated = ref(window._page?.isAuthenticated);
+const userEmail = ref(window._page?.userEmail);
+
 
 const navItems = [
   {
@@ -29,18 +35,28 @@ const currentRoute = useRoute();
       <img src="@/assets/svg/thunderbird-pro-dark.svg" alt="Thunderbird Pro Logo" />
     </router-link>
 
-    <nav class="desktop">
-      <ul>
-        <li v-for="navItem in navItems" :key="navItem.route">
-          <router-link :to="navItem.route" :class="{ active: currentRoute.path === navItem.route }">
-            {{ t(`navigationLinks.${navItem.i18nKey}`) }}
-          </router-link>
-        </li>
-      </ul>
-    </nav>
+    <template v-if="isAuthenticated">
+      <nav class="desktop">
+        <ul>
+          <li v-for="navItem in navItems" :key="navItem.route">
+            <router-link :to="navItem.route" :class="{ active: currentRoute.path === navItem.route }">
+              {{ t(`navigationLinks.${navItem.i18nKey}`) }}
+            </router-link>
+          </li>
+        </ul>
+      </nav>
+  
+      <user-menu :username="userEmail" />
+    </template>
 
-    <!-- TODO: Update with actual user data & add dropdown -->
-    <user-avatar username="test" class="avatar" />
+    <template v-else>
+      <!-- Login is done through Django routing and not Vue router -->
+      <a href="/login/" class="login-button-link">
+        <brand-button variant="outline">
+          {{ t('login') }}
+        </brand-button>
+      </a>
+    </template>
   </header>
 </template>
 
@@ -59,10 +75,11 @@ header {
     display: none;
   }
 
-  /* TODO: Temporary fix for UserAvatar color bug */
-  .avatar {
-    & :first-child {
-      color: #eeeef0 /* var(--colour-ti-base) dark mode */
+  .login-button-link {
+    text-decoration: none;
+
+    .brand.outline {
+      color: #eeeef0; /* var(--colour-ti-base) dark mode */
     }
   }
 

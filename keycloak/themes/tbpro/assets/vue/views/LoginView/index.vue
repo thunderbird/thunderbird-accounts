@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, useTemplateRef } from 'vue';
 import { TextInput, BrandButton, CheckboxInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { PhArrowRight } from '@phosphor-icons/vue';
@@ -31,7 +31,7 @@ const passwordError = computed(() => {
 const rememberMeChecked = ref(rememberMe);
 </script>
 
-<script>
+<script lang="ts">
 export default {
   name: 'LoginView'
 };
@@ -57,7 +57,6 @@ export default {
         autocomplete="username webauthn"
         autofocus
         :error="usernameError"
-        outerSuffix="@thundermail.com"
       >
         {{ $t('email') }}
       </text-input>

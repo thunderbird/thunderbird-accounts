@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from "vue";
 import OrbGraphic from '@/images/orb-graphic.png';
 import router from "../router";

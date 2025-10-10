@@ -193,7 +193,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <notice-bar :type="NoticeBarTypes.Error" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
+  <notice-bar :type="NoticeBarTypes.Critical" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
   <notice-bar :type="NoticeBarTypes.Success" v-if="successText" class="notice">{{ successText }}</notice-bar>
 
   <form @submit.prevent="handleSubmit" method="post" action="/contact/submit" ref="formRef">

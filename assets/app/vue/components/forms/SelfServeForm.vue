@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NoticeBar, PrimaryButton, TextInput } from '@thunderbirdops/services-ui';
+import { NoticeBar, NoticeBarTypes, PrimaryButton, TextInput } from '@thunderbirdops/services-ui';
 import { ref } from 'vue';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 
@@ -62,7 +62,7 @@ const onDeleteAppPassword = async (evt) => {
 
 <template>
   <div class="form-container">
-    <notice-bar type="error" v-if="errorText">{{ errorText }}</notice-bar>
+    <notice-bar :type="NoticeBarTypes.Critical" v-if="errorText">{{ errorText }}</notice-bar>
     <p data-testid="app-passwords-create-description">
       Create App Passwords to login to mail clients like Thunderbird! You cannot view the password after creating it, so
       make sure to save it.

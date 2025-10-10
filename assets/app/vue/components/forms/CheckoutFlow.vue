@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { initializePaddle } from '@paddle/paddle-js';
+import { Environments, initializePaddle } from '@paddle/paddle-js';
+
+interface PriceItem {
+  total: string;
+  name: string;
+  description: string;
+  id: string;
+}
 
 const isLoading = ref(true);
-const priceItems = ref({});
+const priceItems = ref<Record<string, PriceItem[]>>({});
 const isPaddleNotConfiguredCorrectly = ref(false);
 const didReceivePaddleError = ref(false);
 const errorTitle = ref('');
@@ -33,7 +40,7 @@ onMounted(() => {
   }
 
   initializePaddle({
-    environment: paddleEnvironment,
+    environment: paddleEnvironment as Environments,
     token: paddleToken,
   }).then((paddleInstance) => {
     if (!paddleInstance) {
@@ -61,7 +68,7 @@ function openCheckout(priceId) {
   });
 }
 
-async function initPaddle(items, _fn) {
+async function initPaddle(items) {
   let result = null;
   try {
     result = await Promise.resolve(Paddle.PricePreview({ items }));
