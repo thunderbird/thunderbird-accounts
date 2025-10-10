@@ -84,5 +84,5 @@ urlpatterns += [
 
 urlpatterns += [
     # Vue App catch-all: keep this last so all explicit Django routes above take precedence
-    re_path(r'^.*$', mail_views.home, name='app'),
+    re_path(r'^.*$', mail_views.home, name='vue_app'),
 ]
