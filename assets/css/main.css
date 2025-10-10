@@ -14,6 +14,11 @@ body {
   font-family: 'Inter', sans-serif;
 }
 
+/* Prevent scrolling of the body when a HTML dialog is open */
+body:has(dialog[open]) {
+  overflow: hidden;
+}
+
 ul {
   padding: 0;
   list-style: none;

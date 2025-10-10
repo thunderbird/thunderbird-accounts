@@ -5,6 +5,7 @@ import CardContainer from '@/components/CardContainer.vue';
 import NeedSupportCard from '@/components/NeedSupportCard.vue';
 import YourServices from '@/components/YourServices.vue';
 
+/* TODO: Not in i18n yet as these are TBD */
 const supportLinks = [
   { label: 'Need help with your account?', link: '#' },
   { label: 'Trouble receiving or sending emails?', link: '#' },
