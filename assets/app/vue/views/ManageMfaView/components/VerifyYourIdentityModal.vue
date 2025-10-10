@@ -106,12 +106,12 @@ defineExpose({
 
     <template v-else>
       <div class="verify-your-identity-code-step">
-        <p>
-          {{
-            method === METHODS.AUTHENTICATOR_APP
-              ? t('views.manageMfa.modals.verifyYourIdentity.authenticatorAppCodeDescription')
-              : t('views.manageMfa.modals.verifyYourIdentity.recoveryEmailAddressCodeDescription')
-          }}
+        <p v-if="method === METHODS.AUTHENTICATOR_APP">
+          {{ t('views.manageMfa.modals.verifyYourIdentity.authenticatorAppCodeDescription') }}
+        </p>
+
+        <p v-else>
+          {{ t('views.manageMfa.modals.verifyYourIdentity.recoveryEmailAddressCodeDescription') }}
         </p>
   
         <text-input name="one-time-code" v-model="code" :required="true">

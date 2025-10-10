@@ -81,7 +81,7 @@ const handleEdit = (method: string) => {
                 {{ methodData.set ? t('views.manageMfa.states.set') : t('views.manageMfa.states.notSet') }}
     
                 <template #icon v-if="methodData.set">
-                  <PhCheckCircle size="16" weight="fill" />
+                  <ph-check-circle size="16" weight="fill" />
                 </template>
               </base-badge>
             </div>

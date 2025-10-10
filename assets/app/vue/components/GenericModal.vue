@@ -33,7 +33,7 @@ defineExpose({
 <template>
   <dialog ref="modal" @click="handleBackdropClick">
     <button class="close-button" @click="handleClose">
-      <PhX size="24" />
+      <ph-x size="24" />
     </button>
 
     <div class="modal-content">
