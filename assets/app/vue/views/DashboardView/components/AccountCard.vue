@@ -4,6 +4,7 @@ import { BaseBadge, BaseBadgeTypes, LinkButton, PrimaryButton, VisualDivider } f
 import CardContainer from '@/components/CardContainer.vue';
 
 const { t } = useI18n();
+
 </script>
 
 <template>
@@ -22,7 +23,7 @@ const { t } = useI18n();
         <strong>{{ t('views.dashboard.accountCard.password') }}</strong>
         <div class="my-account-card-field-with-link-button">
           <p>*********</p>
-          <link-button>{{ t('views.dashboard.accountCard.change') }}</link-button>
+          <a class="fake-button-link" href="/reset-password/">{{ t('views.dashboard.accountCard.change') }}</a>
         </div>
       </div>
 
@@ -112,5 +113,22 @@ const { t } = useI18n();
   .my-account-card {
     min-width: 568px;
   }
+}
+
+.fake-button-link {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: .5rem;
+  border: 0;
+  border-radius: var(--border-radius);
+  font-family: Inter,"sans-serif";
+  font-size: var(--txt-input);
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
 }
 </style>

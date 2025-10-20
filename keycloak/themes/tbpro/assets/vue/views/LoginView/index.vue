@@ -29,6 +29,10 @@ const passwordError = computed(() => {
 
 // CheckboxInput requires a valid ref as a model to show the check icon
 const rememberMeChecked = ref(rememberMe);
+
+defineProps({
+  hidePassword: 'bool',
+});
 </script>
 
 <script>
@@ -62,6 +66,7 @@ export default {
         {{ $t('email') }}
       </text-input>
       <text-input
+        v-if="!hidePassword"
         data-testid="password-input"
         id="password"
         name="password"
@@ -75,7 +80,7 @@ export default {
     </div>
 
     <a
-      v-if="forgotPasswordUrl"
+      v-if="forgotPasswordUrl && !hidePassword"
       :href="forgotPasswordUrl"
       class="forgot-password-link"
     >
