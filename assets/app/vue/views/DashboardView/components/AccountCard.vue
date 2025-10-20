@@ -116,6 +116,7 @@ const { t } = useI18n();
 }
 
 .fake-button-link {
+  color: var(--colour-service-primary);
   display: flex;
   justify-content: center;
   align-items: center;
