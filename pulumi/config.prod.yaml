@@ -612,6 +612,13 @@ resources:
     #   max_capacity: 4
     #   suspend: False
 
+  tb:cloudwatch:CloudWatchMonitoringGroup:
+    cloudwatch:
+      notify_emails:
+        - thunderbird-services-monitoring@thunderbird.net
+      config:
+        alarms: {}
+
   tb:ci:AwsAutomationUser:
     ci:
       access_keys: {}

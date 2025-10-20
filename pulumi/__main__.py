@@ -5,6 +5,7 @@ import pulumi_cloudflare as cloudflare
 import tb_pulumi
 import tb_pulumi.autoscale
 import tb_pulumi.ci
+import tb_pulumi.cloudwatch
 import tb_pulumi.ec2
 import tb_pulumi.elasticache
 import tb_pulumi.fargate
@@ -136,6 +137,12 @@ cloudflare_backend_record = cloudflare.Record(
     opts=pulumi.ResourceOptions(depends_on=[*fargate_clusters.values()]),
 )
 
+
+# Monitoring
+monitoring_opts = resources.get('tb:cloudwatch:CloudWatchMonitoringGroup', {}).get('cloudwatch', {})
+monitoring = tb_pulumi.cloudwatch.CloudWatchMonitoringGroup(
+    name=f'{project.name_prefix}-monitoring', project=project, **monitoring_opts
+)
 
 auto_users_opts = resources.get('tb:ci:AwsAutomationUser', {})
 for user, user_opts in auto_users_opts.items():

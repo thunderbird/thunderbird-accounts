@@ -205,7 +205,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-7165a3cb1534141c2717f63cb637738bd383bd96
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-3059299f4a5ca3809b7b1e2708874024ffa7210b
             command:
               - start
             portMappings:
@@ -281,7 +281,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:7165a3cb1534141c2717f63cb637738bd383bd96
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c2726a0ab43ffdd0af1fcc9170a7dac938212074
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -443,7 +443,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:7165a3cb1534141c2717f63cb637738bd383bd96
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c2726a0ab43ffdd0af1fcc9170a7dac938212074
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -605,6 +605,13 @@ resources:
       min_capacity: 2
       max_capacity: 4
       suspend: False
+
+  tb:cloudwatch:CloudWatchMonitoringGroup:
+    cloudwatch:
+      notify_emails:
+        - thunderbird-services-monitoring@thunderbird.net
+      config:
+        alarms: {}
 
   tb:ci:AwsAutomationUser:
     ci:
