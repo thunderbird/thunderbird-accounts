@@ -10,6 +10,10 @@
     },
     "yourServices": {
       "yourServices": "Your Services"
+    },
+    "userMenu": {
+      "contact": "Contact",
+      "logout": "Logout"
     }
   },
   "views": {

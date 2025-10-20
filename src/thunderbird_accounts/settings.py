@@ -82,7 +82,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 # These are url reverse keys
 LOGIN_URL = 'oidc_authentication_init'
-LOGIN_REDIRECT_URL = 'self_serve_home'
+LOGIN_REDIRECT_URL = 'vue_app'
 
 LOGIN_CODE_SECRET = os.getenv('LOGIN_CODE_SECRET')
 LOGIN_MAX_AGE_IN_SECONDS = 60 * 3
