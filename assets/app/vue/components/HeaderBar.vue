@@ -10,7 +10,6 @@ const { t } = useI18n();
 const isAuthenticated = ref(window._page?.isAuthenticated);
 const userEmail = ref(window._page?.userEmail);
 
-
 const navItems = [
   {
     route: '/dashboard',
@@ -53,7 +52,7 @@ const currentRoute = useRoute();
       <!-- Login is done through Django routing and not Vue router -->
       <a href="/login/" class="login-button-link">
         <brand-button variant="outline">
-          {{ t('login') }}
+          {{ t('components.userMenu.login') }}
         </brand-button>
       </a>
     </template>
