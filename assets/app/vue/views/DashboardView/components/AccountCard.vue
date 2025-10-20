@@ -4,7 +4,7 @@ import { BaseBadge, BaseBadgeTypes, LinkButton, PrimaryButton, VisualDivider } f
 import CardContainer from '@/components/CardContainer.vue';
 
 const { t } = useI18n();
-
+const userEmail = window._page?.userEmail;
 </script>
 
 <template>
@@ -14,7 +14,7 @@ const { t } = useI18n();
     <div class="my-account-card-details">
       <div class="my-account-card-field">
         <strong>{{ t('views.dashboard.accountCard.email') }}</strong>
-        <p>johnny.mneumonic@thundermail.com</p>
+        <p>{{ userEmail }}</p>
       </div>
 
       <visual-divider />
