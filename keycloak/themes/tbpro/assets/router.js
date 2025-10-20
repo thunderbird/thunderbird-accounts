@@ -56,6 +56,13 @@ const routes = [
     component: LoginTotpView,
   },
   {
+    name: 'login-username',
+    component: LoginView,
+    props: {
+      hidePassword: true,
+    }
+  },
+  {
     name: 'delete-credential',
     component: DeleteCredentialView,
   },

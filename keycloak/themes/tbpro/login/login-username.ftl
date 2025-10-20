@@ -1,93 +1,59 @@
-<#-- NOT IMPLEMENTED -->
 <#import "template.ftl" as layout>
 <#import "passkeys.ftl" as passkeys>
-<@layout.registrationLayout displayMessage=!messagesPerField.existsError('username') displayInfo=(realm.password && realm.registrationAllowed && !registrationDisabled??); section>
-    <#if section = "header">
-        ${msg("loginAccountTitle")}
-    <#elseif section = "form">
-        <div id="kc-form">
-            <div id="kc-form-wrapper">
-                <#if realm.password>
-                    <form id="kc-form-login" onsubmit="login.disabled = true; return true;" action="${url.loginAction}"
-                          method="post">
-                        <#if !usernameHidden??>
-                            <div class="${properties.kcFormGroupClass!}">
-                                <label for="username"
-                                       class="${properties.kcLabelClass!}"><#if !realm.loginWithEmailAllowed>${msg("username")}<#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}<#else>${msg("email")}</#if></label>
-
-                                <input tabindex="1" id="username"
-                                       aria-invalid="<#if messagesPerField.existsError('username')>true</#if>"
-                                       class="${properties.kcInputClass!}" name="username"
-                                       value="${(login.username!'')}"
-                                       type="text" autofocus
-                                       autocomplete="${(enableWebAuthnConditionalUI?has_content)?then('username webauthn', 'username')}"
-                                       dir="ltr"/>
-
-                                <#if messagesPerField.existsError('username')>
-                                    <span id="input-error-username" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
-                                        ${kcSanitize(messagesPerField.get('username'))?no_esc}
-                                    </span>
-                                </#if>
-                            </div>
-                        </#if>
-
-                        <div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
-                            <div id="kc-form-options">
-                                <#if realm.rememberMe && !usernameHidden??>
-                                    <div class="checkbox">
-                                        <label>
-                                            <#if login.rememberMe??>
-                                                <input tabindex="3" id="rememberMe" name="rememberMe" type="checkbox"
-                                                       checked> ${msg("rememberMe")}
-                                            <#else>
-                                                <input tabindex="3" id="rememberMe" name="rememberMe"
-                                                       type="checkbox"> ${msg("rememberMe")}
-                                            </#if>
-                                        </label>
-                                    </div>
-                                </#if>
-                            </div>
-                        </div>
-
-                        <div id="kc-form-buttons" class="${properties.kcFormGroupClass!}">
-                            <input tabindex="4"
-                                   class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
-                                   name="login" id="kc-login" type="submit" value="${msg("doLogIn")}"/>
-                        </div>
-                    </form>
-                </#if>
-            </div>
-        </div>
-        <@passkeys.conditionalUIData />
-
-    <#elseif section = "info" >
-        <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
-            <div id="kc-registration">
-                <span>${msg("noAccount")} <a tabindex="6" href="${url.registrationUrl}">${msg("doRegister")}</a></span>
-            </div>
-        </#if>
-    <#elseif section = "socialProviders" >
-        <#if realm.password && social?? && social.providers?has_content>
-            <div id="kc-social-providers" class="${properties.kcFormSocialAccountSectionClass!}">
-                <hr/>
-                <h4>${msg("identity-provider-login-label")}</h4>
-
-                <ul class="${properties.kcFormSocialAccountListClass!} <#if social.providers?size gt 3>${properties.kcFormSocialAccountListGridClass!}</#if>">
-                    <#list social.providers as p>
-                        <a data-once-link data-disabled-class="${properties.kcFormSocialAccountListButtonDisabledClass!}" id="social-${p.alias}"
-                                class="${properties.kcFormSocialAccountListButtonClass!} <#if social.providers?size gt 3>${properties.kcFormSocialAccountGridItem!}</#if>"
-                                type="button" href="${p.loginUrl}">
-                            <#if p.iconClasses?has_content>
-                                <i class="${properties.kcCommonLogoIdP!} ${p.iconClasses!}" aria-hidden="true"></i>
-                                <span class="${properties.kcFormSocialAccountNameClass!} kc-social-icon-text">${p.displayName!}</span>
-                            <#else>
-                                <span class="${properties.kcFormSocialAccountNameClass!}">${p.displayName!}</span>
-                            </#if>
-                        </a>
-                    </#list>
-                </ul>
-            </div>
-        </#if>
+<@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=realm.password && realm.registrationAllowed && !registrationDisabled??; section>
+    <#if section = "js">
+    <script>
+      window._page['currentView'] = {
+        formAction: '${url.loginAction}',
+        supportUrl: '${client.baseUrl}contact',
+        clientUrl: '${client.baseUrl}',
+        // <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
+        registerUrl: '${url.registrationUrl}',
+        // <#else>
+        registerUrl: null,
+        // </#if>
+        // <#if realm.resetPasswordAllowed>
+        forgotPasswordUrl: '${url.loginResetCredentialsUrl}',
+        // <#else>
+        forgotPasswordUrl: null,
+        // </#if>
+        rememberMe: '${(login.rememberMe)!"off"}' === 'on',
+        socialProviders: [
+            //<#if realm.password && social?? && social.providers?has_content>
+            //<#list social.providers as p>
+          {
+            name: '${p.displayName!}',
+            alias: '${p.alias}',
+            loginUrl: '${p.loginUrl}',
+            iconName: '${properties.kcCommonLogoIdP!}',
+            className: '${properties.kcFormSocialAccountNameClass!}',
+          },
+            //</#list>
+            //</#if>
+        ],
+        firstError: '${kcSanitize(messagesPerField.getFirstError("username","password"))?no_esc}',
+      };
+      window._l10n = {
+        ...window._l10n,
+        loginAccountTitle: '${msg("loginAccountTitle")}',
+        username: '${msg("username")}',
+        usernameOrEmail: '${msg("usernameOrEmail")}',
+        email: '${msg("email")}',
+        password: '${msg("password")}',
+        showPassword: '${msg("showPassword")}',
+        hidePassword: '${msg("hidePassword")}',
+        rememberMe: '${msg("rememberMe")}',
+        noAccount: '${msg("noAccount")}',
+        doLogIn: '${msg("doLogIn")}',
+        doRegister: '${msg("doRegister")}',
+        doForgotPassword: '${msg("doForgotPassword")}',
+        identityProviderLoginLabel: '${msg("identity-provider-login-label")}',
+        goToRegister: '${msg("goToRegister")}',
+        goToRegisterAction: '${msg("goToRegisterAction")}',
+        needHelp: '${msg("needHelp")}',
+        needHelpAction: '${msg("needHelpAction")}',
+      };
+    </script>
     </#if>
 
 </@layout.registrationLayout>
