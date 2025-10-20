@@ -609,8 +609,17 @@ resources:
       max_capacity: 4
       suspend: False
 
+  tb:cloudwatch:CloudWatchMonitoringGroup:
+    cloudwatch:
+      notify_emails:
+        - thunderbird-services-monitoring@thunderbird.net
+      config:
+        alarms: {}
+
   tb:ci:AwsAutomationUser:
     ci:
+      access_keys: {}
+      enable_legacy_access_key: True
       enable_ecr_image_push: true
       ecr_repositories:
         - thunderbird/accounts

@@ -13,7 +13,7 @@
           password: '${kcSanitize(messagesPerField.get("password"))?no_esc}',
           passwordConfirm: '${kcSanitize(messagesPerField.get("password-confirm"))?no_esc}',
         },
-        loginUrl: '${url.loginUrl}',
+        clientUrl: '${client.baseUrl}',
         currentLocale: '${(locale.currentLanguageTag)!"en"}',
       };
       window._l10n = {

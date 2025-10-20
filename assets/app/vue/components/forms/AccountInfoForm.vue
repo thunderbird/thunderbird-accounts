@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NoticeBar, PrimaryButton, SecondaryButton } from '@thunderbirdops/services-ui';
+import { NoticeBar, NoticeBarTypes, PrimaryButton, DangerButton } from '@thunderbirdops/services-ui';
 import { ref } from 'vue';
 
 const hasAccount = ref(window._page?.hasAccount);
@@ -7,7 +7,7 @@ const errorText = ref(null);
 
 // This should be an anchor tag, but we don't have a button anchor in services-ui yet.
 const onSetUp = () => {
-  window.location = '/sign-up/';
+  window.location.href = '/sign-up/';
 };
 
 // Placeholder for now
@@ -23,7 +23,7 @@ const onDeleteAccount = () => {
 
 <template>
   <div class="form-container">
-    <notice-bar type="error" v-if="errorText">{{ errorText }}</notice-bar>
+    <notice-bar :type="NoticeBarTypes.Critical" v-if="errorText">{{ errorText }}</notice-bar>
     <div v-if="!hasAccount">
       <h3>Email</h3>
       <p data-testid="account-info-no-email-setup-text">
@@ -36,8 +36,8 @@ const onDeleteAccount = () => {
       <p data-testid="account-info-delete-account-description">
         You can delete your account and all associated information (including your email address, and emails!)
       </p>
-      <secondary-button data-testid="account-info-delete-account-btn" @click.capture="onDeleteAccount"
-        >Delete Account</secondary-button
+      <danger-button data-testid="account-info-delete-account-btn" @click.capture="onDeleteAccount"
+        >Delete Account</danger-button
       >
     </div>
   </div>

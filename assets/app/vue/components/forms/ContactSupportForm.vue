@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, useTemplateRef } from 'vue';
 import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes } from '@thunderbirdops/services-ui';
-import CsrfToken from '@/components/CsrfToken.vue';
+import CsrfToken from '@/components/forms/CsrfToken.vue';
 
 const TICKET_CUSTOM_FIELD_NAMES = {
   PRODUCT: 'Product',
@@ -193,7 +193,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <notice-bar :type="NoticeBarTypes.Error" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
+  <notice-bar :type="NoticeBarTypes.Critical" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
   <notice-bar :type="NoticeBarTypes.Success" v-if="successText" class="notice">{{ successText }}</notice-bar>
 
   <form @submit.prevent="handleSubmit" method="post" action="/contact/submit" ref="formRef">
