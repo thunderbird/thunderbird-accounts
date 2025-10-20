@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
 import MessageBar from '@/vue/components/MessageBar.vue';
@@ -14,7 +14,7 @@ const onSubmit = () => {
 };
 </script>
 
-<script>
+<script lang="ts">
 export default {
   name: 'LogoutView'
 };

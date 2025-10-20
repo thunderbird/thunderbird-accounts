@@ -30,9 +30,9 @@ const passwordError = computed(() => {
 // CheckboxInput requires a valid ref as a model to show the check icon
 const rememberMeChecked = ref(rememberMe);
 
-defineProps({
-  hidePassword: 'bool',
-});
+defineProps<{
+  hidePassword: boolean;
+}>();
 </script>
 
 <script lang="ts">

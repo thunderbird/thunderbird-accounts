@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { TextInput, PrimaryButton, SelectInput } from "@thunderbirdops/services-ui";
 import { computed, ref, useTemplateRef } from "vue";
 import MessageBar from '@/vue/components/MessageBar.vue';
@@ -20,7 +20,7 @@ const totpError = computed(() => {
 
 </script>
 
-<script>
+<script lang="ts">
 export default {
   name: 'LoginTotpView'
 };
@@ -33,7 +33,7 @@ export default {
           @keyup.enter="onSubmit">
       <message-bar/>
       <div class="form-elements">
-        <select-input data-testid="device-input" :options="userOtpCredentials" v-model="OtpCredentialModel">{{
+        <select-input name="device-input" data-testid="device-input" :options="userOtpCredentials" v-model="OtpCredentialModel">{{
             $t('loginTotpDeviceName')
           }}
         </select-input>
