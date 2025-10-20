@@ -55,5 +55,5 @@ def create_aia_url(action: KeycloakRequiredAction):
     redirect_uri = quote(get_absolute_url(reverse('login')))
     return urljoin(
         settings.KEYCLOAK_AIA_ENDPOINT,
-        f'?response_type=code&client_id=tb-accounts&kc_action={action.value}&redirect_uri={redirect_uri}',
+        f'?response_type=code&client_id={settings.OIDC_RP_CLIENT_ID}&kc_action={action.value}&redirect_uri={redirect_uri}',
     )
