@@ -31,7 +31,7 @@ class CustomUserFormBase(forms.ModelForm):
         widget=forms.EmailInput(),
         help_text=_(
             f'This is the primary thundermail address. Please end with '
-            f'{settings.ALLOWED_EMAIL_DOMAINS[0] if settings.ALLOWED_EMAIL_DOMAINS else "example.org"}. '
+            f'{settings.PRIMARY_EMAIL_DOMAIN}. '
             f'This must be unique!'
         ),
     )

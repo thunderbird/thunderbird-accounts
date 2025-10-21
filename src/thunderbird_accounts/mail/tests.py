@@ -16,7 +16,7 @@ class TestMail(TestCase):
         self.user = self.UserModel.objects.create(oidc_id='abc123', email='user@test.com')
         self.sign_up_data = {
             'email_address': 'new-thundermail-address',
-            'email_domain': settings.ALLOWED_EMAIL_DOMAINS[0],
+            'email_domain': settings.PRIMARY_EMAIL_DOMAIN,
             'app_password': 'password',
         }
         self.sign_up_full_email = f'{self.sign_up_data["email_address"]}@{self.sign_up_data["email_domain"]}'
