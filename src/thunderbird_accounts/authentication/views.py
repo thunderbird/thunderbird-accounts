@@ -38,6 +38,7 @@ def start_oidc_logout(request: HttpRequest):
     return HttpResponseRedirect(redirect_url)
 
 
+@login_required
 def oidc_logout_callback(request: HttpRequest):
     """Finalize logout locally after the user confirmed the logout."""
     django_logout(request)
