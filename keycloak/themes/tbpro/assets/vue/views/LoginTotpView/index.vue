@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { TextInput, PrimaryButton, SelectInput } from "@thunderbirdops/services-ui";
 import { computed, ref, useTemplateRef } from "vue";
 import MessageBar from '@/vue/components/MessageBar.vue';
@@ -20,7 +20,7 @@ const totpError = computed(() => {
 
 </script>
 
-<script lang="ts">
+<script>
 export default {
   name: 'LoginTotpView'
 };
