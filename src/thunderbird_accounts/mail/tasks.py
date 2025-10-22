@@ -54,6 +54,17 @@ def _base_email_address_to_stalwart_account(fn_name, username, emails):
 
     fn(username, emails)
 
+    # Update our main account
+    try:
+        account = Account.objects.get(name=username)
+        now = datetime.datetime.now(datetime.UTC)
+        if account.stalwart_updated_at < now:
+            account.stalwart_updated_at = now
+            account.save()
+    except Account.DoesNotExist:
+        logging.warning(f'Could not find account with the name {username}, skipping stalwart timestamp updates.')
+        pass
+
     return {
         'username': username,
         'emails': emails,

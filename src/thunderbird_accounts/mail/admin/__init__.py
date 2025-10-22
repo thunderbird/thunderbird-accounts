@@ -5,4 +5,3 @@ from thunderbird_accounts.mail.models import Account
 
 # Register your models here.
 admin.site.register(Account, AccountAdmin)
-#admin.site.register(Email, EmailAdmin)

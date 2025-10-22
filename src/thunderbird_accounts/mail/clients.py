@@ -234,7 +234,7 @@ class MailClient:
         # Return the pkid
         return data.get('data')
 
-    def get_account(self, principal_id: str):
+    def get_account(self, principal_id: str) -> dict:
         response = self._get_principal(principal_id)
 
         data = response.json()

@@ -42,8 +42,6 @@ class CustomEmailBaseForm(forms.BaseInlineFormSet):
             address = form.instance
             initial_address = form.initial.get('address')
 
-            print('form ->', form.is_valid(), address, initial_address, form.changed_data)
-
             try:
                 validate_email(address.address)
             except ValidationError as ex:
@@ -53,10 +51,10 @@ class CustomEmailBaseForm(forms.BaseInlineFormSet):
 
             if not initial_address:
                 new_addresses = [address.address]
-            elif initial_address != address.address:
-                update_addresses = [(initial_address, address.address)]
             elif 'DELETE' in form.changed_data:
                 delete_addresses = [initial_address]
+            elif initial_address != address.address:
+                update_addresses = [(initial_address, address.address)]
 
         # Don't do anything because we have errors on the form!
         if has_errors:
