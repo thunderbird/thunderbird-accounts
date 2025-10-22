@@ -45,7 +45,7 @@ const vueForms = [
 if (window.document.getElementById('app')) {
   (async () => {
 
-    // Only import router when we're actually on an app/ route
+    // Only import router when we're actually on a Vue app route
     const { default: router } = await import('@/router');
     const { default: i18n } = await import('@/composables/i18n');
 

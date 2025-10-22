@@ -25,12 +25,12 @@ import FooterBar from '@/components/FooterBar.vue';
 
 main {
   flex: 1 1 auto;
-  margin: 0 auto;
   padding: 3rem 1rem;
 }
 
 @media (min-width: 1024px) {
   main {
+    margin: 0 auto;
     padding: 3rem 3.5rem;
   }
 }
