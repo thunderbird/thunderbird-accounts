@@ -1,5 +1,6 @@
 import datetime
 import enum
+import logging
 
 from thunderbird_accounts.subscription.decorators import inject_paddle
 
@@ -73,19 +74,20 @@ class PaddleCommand:
 
             model_data = self.transform_paddle_data(paddle_obj)
 
-            # Okay now we can just do a big update.
-            product, product_created = model.objects.update_or_create(
-                paddle_id=paddle_id,
-                defaults={
-                    **model_data,
-                    'webhook_updated_at': occurred_at,
-                },
-            )
-
-            if product_created:
+            item = model.objects.filter(paddle_id=paddle_id)
+            if not item:
+                item = model(**model_data, webhook_updated_at=occurred_at)
+                item.save()
                 created += 1
-            else:
-                updated += 1
+                continue
+            elif len(item) > 1:
+                logging.warning(
+                    f'[PaddleCommand] Paddle ID <{paddle_id}> returned more than one item! Using first one.'
+                )
+
+            item = item[0]
+            model.objects.filter(uuid=item.uuid).update(**model_data, webhook_updated_at=occurred_at)
+            updated += 1
 
         if verbosity > 0:
             self.stdout.write(self.style.SUCCESS(f'Finished retrieving Paddle {model_name}:'))
