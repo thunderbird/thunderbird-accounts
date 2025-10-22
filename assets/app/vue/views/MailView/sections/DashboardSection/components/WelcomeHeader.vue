@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 const userEmail = computed(() => window._page?.userEmail);
+const userFullName = computed(() => window._page?.userFullName);
 
 const { t } = useI18n();
 
@@ -13,7 +14,7 @@ const planStorageProgress = computed(() => '50%');
   <header>
     <div class="welcome-container">
       <p class="welcome">{{ t('views.mail.sections.dashboard.welcomeHeader.welcome') }},</p>
-      <p class="name">Johnny Mnemonic</p>
+      <p class="name">{{ userFullName }}</p>
       <p class="email">{{ userEmail }}</p>
     </div>
 

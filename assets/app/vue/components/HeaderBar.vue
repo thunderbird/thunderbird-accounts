@@ -61,9 +61,16 @@ const logoSrc = computed(() => {
 
 <template>
   <header>
-    <router-link to="/">
-      <img :src="logoSrc" :alt="isThundermail ? 'Thundermail' : 'Thunderbird Pro'" />
-    </router-link>
+    <template v-if="isThundermail">
+      <router-link to="/mail">
+        <img :src="logoSrc" alt="Thundermail" />
+      </router-link>
+    </template>
+    <template v-else>
+      <router-link to="/">
+        <img :src="logoSrc" alt="Thunderbird Pro" />
+      </router-link>
+    </template>
 
     <template v-if="isAuthenticated">
       <nav class="desktop">

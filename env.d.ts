@@ -6,6 +6,7 @@ declare global {
       pageId?: string;
       isAuthenticated?: boolean;
       userEmail?: string;
+      userFullName?: string;
       formError?: string | null;
       csrfToken?: string;
       paddleToken?: string;
