@@ -8,13 +8,13 @@ const { t } = useI18n();
 // Placeholder data for now
 const subscription = {
   name: 'Standard',
-  price: '96',
+  price: '108',
   currency: '$',
   period: 'Annually',
   description: 'Morbi vulputate lacus nec orci vehicula, nec hendrerit libero',
   features: {
-    mailStorage: '60 GB',
-    sendStorage: '500 GB',
+    mailStorage: '30 GB',
+    sendStorage: '300 GB',
     domains: '3',
     emailAddresses: '15',
   },

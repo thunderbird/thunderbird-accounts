@@ -33,7 +33,7 @@ export default {
           @keyup.enter="onSubmit">
       <message-bar/>
       <div class="form-elements">
-        <select-input data-testid="device-input" :options="userOtpCredentials" v-model="OtpCredentialModel">{{
+        <select-input name="device-input" data-testid="device-input" :options="userOtpCredentials" v-model="OtpCredentialModel">{{
             $t('loginTotpDeviceName')
           }}
         </select-input>
