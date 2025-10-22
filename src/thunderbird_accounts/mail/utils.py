@@ -3,8 +3,8 @@ from typing import Optional
 from django.contrib.auth.hashers import make_password, identify_hasher
 
 from thunderbird_accounts import settings
+from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail import tasks
-from thunderbird_accounts.mail.models import Account, Email
 
 
 def save_app_password(label, password):
@@ -34,27 +34,26 @@ def decode_app_password(secret):
 
 def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
     # Run this immediately for now, in the future we'll ship these to celery
+    if user.account_set.count() > 0:
+        return False
+
     tasks.create_stalwart_account.run(
         oidc_id=user.oidc_id, username=user.username, email=user.username, app_password=app_password
     )
 
-    # Don't create the account if we already have it
-    if user.account_set.count() > 0:
-        return True
-
-    # Also create their account objects
-    account = Account.objects.create(
-        name=user.username,
-        active=True,
-        user=user,
-    )
-    email = Email.objects.create(address=user.username, type='primary', account=account)
-    return bool(account and email)
+    return True
 
 
-def add_email_address_to_stalwart_account(user, email):
-    # Run this immediately for now, in the future we'll ship these to celery
-    tasks.add_email_address_to_stalwart_account.run(uuid=user.oidc_id, email=email)
+def add_email_addresses_to_stalwart_account(user: User, emails):
+    tasks.add_email_addresses_to_stalwart_account.delay(username=user.username, emails=emails)
+
+
+def replace_email_addresses_on_stalwart_account(user: User, emails):
+    tasks.replace_email_addresses_on_stalwart_account.delay(username=user.username, emails=emails)
+
+
+def delete_email_addresses_from_stalwart_account(user: User, emails):
+    tasks.delete_email_addresses_from_stalwart_account.delay(username=user.username, emails=emails)
 
 
 def is_allowed_domain(email_address: str) -> bool:

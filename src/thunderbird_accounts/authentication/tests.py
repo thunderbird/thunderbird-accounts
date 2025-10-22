@@ -20,7 +20,7 @@ FAKE_OIDC_UUID = '39a7b5e8-7a64-45e3-acf1-ca7d314bfcec'
 @patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')
 class AdminCreateUserTestCase(TestCase):
     def setUp(self):
-        self.subdomain = settings.ALLOWED_EMAIL_DOMAINS[0] if len(settings.ALLOWED_EMAIL_DOMAINS) > 0 else 'example.org'
+        self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
         self.default_form_data = dict({k.name: None for k in User()._meta.fields})
 
     def _build_form(self, form_data):
@@ -136,7 +136,7 @@ class AdminUpdateUserTestcase(TestCase):
     We're mainly trying to make sure updates hit Keycloak as well."""
 
     def setUp(self):
-        self.subdomain = settings.ALLOWED_EMAIL_DOMAINS[0] if len(settings.ALLOWED_EMAIL_DOMAINS) > 0 else 'example.org'
+        self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
         # Create a test user so we can update it later
         self.user = User.objects.create(
             oidc_id=FAKE_OIDC_UUID, username=f'test@{self.subdomain}', email='test@example.com'
@@ -363,7 +363,7 @@ class AdminDeleteUserTestCase(TestCase):
     This is just a function/unit test as there's no form involved here."""
 
     def setUp(self):
-        self.subdomain = settings.ALLOWED_EMAIL_DOMAINS[0] if len(settings.ALLOWED_EMAIL_DOMAINS) > 0 else 'example.org'
+        self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
 
         self.user = User.objects.create(
             oidc_id=FAKE_OIDC_UUID, username=f'test@{self.subdomain}', email='test@example.com'

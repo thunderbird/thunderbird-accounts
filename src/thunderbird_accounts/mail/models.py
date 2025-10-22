@@ -23,7 +23,38 @@ class SmallTextField(models.TextField):
         )
 
 
-class Account(BaseModel):
+class BaseStalwartObject(BaseModel):
+    """Models that link to Stalwart principal objects should use this as the base class"""
+
+    stalwart_id = models.CharField(
+        null=True,
+        help_text=_(
+            'The unique ID in Stalwart. '
+            "(Note: That this isn't useful for anything besides verifying that it exists in Stalwart.",
+        ),
+        editable=False,
+    )
+    stalwart_created_at = models.DateTimeField(
+        null=True,
+        help_text=_('Date that this object was created by this system in Stalwart.'),
+        editable=False,
+    )
+    stalwart_updated_at = models.DateTimeField(
+        null=True,
+        help_text=_('Date that this object was last updated by this system in Stalwart.'),
+        editable=False,
+    )
+
+    class Meta:
+        abstract = True
+        indexes = [
+            models.Index(fields=['stalwart_id']),
+            models.Index(fields=['stalwart_created_at']),
+            models.Index(fields=['stalwart_updated_at']),
+        ]
+
+
+class Account(BaseStalwartObject):
     """Slim representation of a Stalwart individual account (inbox)."""
 
     name = SmallTextField(unique=True, help_text=_('The account name (this must be unique.)'))

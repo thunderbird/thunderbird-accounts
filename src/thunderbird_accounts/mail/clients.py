@@ -217,13 +217,13 @@ class MailClient:
         return data.get('data')
 
     def create_account(
-        self, primary_email: str, principal_id: str, full_name: Optional[str] = None, app_password: Optional[str] = None
+        self, emails: list[str], principal_id: str, full_name: Optional[str] = None, app_password: Optional[str] = None
     ):
         data = {
             'type': 'individual',
             'name': principal_id,
             'description': full_name,
-            'emails': [primary_email],
+            'emails': emails,
             'roles': ['user'],
         }
         if app_password:
@@ -234,7 +234,7 @@ class MailClient:
         # Return the pkid
         return data.get('data')
 
-    def get_account(self, principal_id: str):
+    def get_account(self, principal_id: str) -> dict:
         response = self._get_principal(principal_id)
 
         data = response.json()
@@ -278,18 +278,57 @@ class MailClient:
             logging.error(f'[save_app_password] err: {data}')
             raise RuntimeError(data)
 
-    def save_email_address(self, principal_id: str, email: str):
+    def save_email_addresses(self, principal_id: str, emails: str | list[str]):
         """Adds a new email address to a stalwart's individual principal by uuid."""
+
+        if isinstance(emails, str):
+            emails = [emails]
+
         response = self._update_principal(
             principal_id,
-            [{'action': 'addItem', 'field': 'emails', 'value': email}],
+            [{'action': 'addItem', 'field': 'emails', 'value': email} for email in emails],
         )
         # Returns data: null on success...
         data = response.json()
         error = data.get('error')
         # I have no idea what the error is yet
         if error:
-            logging.error(f'[save_email_address] err: {data}')
+            logging.error(f'[save_email_addresses] err: {data}')
+            raise RuntimeError(data)
+
+    def replace_email_addresses(self, principal_id: str, emails: list[tuple[str, str]]):
+        """Replaces an email address with a new one from a stalwart's individual principal by uuid."""
+
+        actions = []
+        for old_email, email in emails:
+            actions.append({'action': 'removeItem', 'field': 'emails', 'value': old_email})
+            actions.append({'action': 'addItem', 'field': 'emails', 'value': email})
+
+        response = self._update_principal(principal_id, actions)
+        # Returns data: null on success...
+        data = response.json()
+        error = data.get('error')
+        # I have no idea what the error is yet
+        if error:
+            logging.error(f'[replace_email_addresses] err: {data}')
+            raise RuntimeError(data)
+
+    def delete_email_addresses(self, principal_id: str, emails: str | list[str]):
+        """Deletes an address from a stalwart's individual principal by uuid."""
+
+        if isinstance(emails, str):
+            emails = [emails]
+
+        response = self._update_principal(
+            principal_id,
+            [{'action': 'removeItem', 'field': 'emails', 'value': email} for email in emails],
+        )
+        # Returns data: null on success...
+        data = response.json()
+        error = data.get('error')
+        # I have no idea what the error is yet
+        if error:
+            logging.error(f'[delete_email_addresses] err: {data}')
             raise RuntimeError(data)
 
     def update_individual(

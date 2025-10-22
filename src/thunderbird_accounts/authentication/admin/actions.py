@@ -1,71 +1,12 @@
 import logging
 
-import sentry_sdk
 from django.conf import settings
 from django.contrib import messages, admin
 from django.utils.translation import gettext_lazy as _, ngettext
-from requests import RequestException
 
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail import utils as mail_utils
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError
-
-
-@admin.action(description=_('Fix Stalwart Account Relationships (#266)'))
-def admin_fix_stalwart_account_relationships(modeladmin, request, queryset):
-    """Fix the relationship revert noted in issue #266.
-    https://github.com/thunderbird/thunderbird-accounts/issues/266
-
-    This can be removed once this action is ran at least one per environment.
-    """
-    stalwart = MailClient()
-
-    success = 0
-    errors = 0
-
-    for user in queryset:
-        try:
-            thundermail_address = user.stalwart_primary_email or user.username
-
-            stalwart.get_account(user.oidc_id)
-            stalwart._update_principal(
-                user.oidc_id,
-                [
-                    {'action': 'set', 'field': 'description', 'value': user.oidc_id},
-                    {'action': 'set', 'field': 'name', 'value': thundermail_address},
-                ],
-            )
-            success += 1
-        except RequestException as ex:
-            sentry_sdk.capture_exception(ex)
-            errors += 1
-        except AccountNotFoundError:
-            # No account, no problem!
-            continue
-
-    if success:
-        modeladmin.message_user(
-            request,
-            ngettext(
-                'Fixed %d Stalwart account relationship.',
-                'Fixed %d Stalwart account relationships.',
-                success,
-            )
-            % success,
-            messages.SUCCESS,
-        )
-
-    if errors:
-        modeladmin.message_user(
-            request,
-            ngettext(
-                'Could not fix %d Stalwart account relationship.',
-                'Could not fix %d Stalwart account relationships.',
-                errors,
-            )
-            % errors,
-            messages.ERROR,
-        )
 
 
 @admin.action(description=_('Fix Broken Stalwart Account'))
@@ -85,10 +26,19 @@ def admin_fix_broken_stalwart_account(modeladmin, request, queryset):
             # So we need to check if Stalwart has anything on their end
             try:
                 account = stalwart.get_account(user.stalwart_primary_email)
-                if user.stalwart_primary_email not in account.get('emails', []):
+
+                missing_emails = []
+                primary_email_address = user.stalwart_primary_email
+                for _domain in settings.ALLOWED_EMAIL_DOMAINS:
+                    # This will also check primary_email_address so we don't skip it
+                    email_to_check = primary_email_address.replace(f'@{settings.PRIMARY_EMAIL_DOMAIN}', f'@{_domain}')
+                    if email_to_check not in account.get('emails', []):
+                        missing_emails.append(email_to_check)
+
+                if len(missing_emails) > 0:
                     # They have an account, but don't have an email address associated with their account.
                     # Fix that!
-                    mail_utils.add_email_address_to_stalwart_account(user, user.stalwart_primary_email)
+                    mail_utils.add_email_addresses_to_stalwart_account(user, missing_emails)
                     success_fixed_missing_email += 1
 
             except AccountNotFoundError:
@@ -108,6 +58,7 @@ def admin_fix_broken_stalwart_account(modeladmin, request, queryset):
         if account_not_found and any([user.username.endswith(domain) for domain in settings.ALLOWED_EMAIL_DOMAINS]):
             # No Accounts/Email model relationship
             try:
+                print('Created stalwart account')
                 mail_utils.create_stalwart_account(user)
                 success_new_account += 1
             except Exception as ex:
