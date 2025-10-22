@@ -35,6 +35,7 @@ export default defineConfig(({mode}) => {
       extensions: ['.ts', '.js', '.vue'],
     },
     server: {
+      hmr: false,
       host: '0.0.0.0',
       watch: watch,
       // This is the "default" value, but when unspecified CORS seems to activate and get angry at me.
