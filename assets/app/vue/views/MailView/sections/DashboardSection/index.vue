@@ -12,6 +12,9 @@ import WelcomeHeader from './components/WelcomeHeader.vue';
 import ViewServerSettings from './components/ViewServerSettings.vue';
 
 const { t } = useI18n();
+
+// https://vite.dev/guide/assets.html#new-url-url-import-meta-url
+const thunderbirdClientImage = new URL('@/assets/png/thundermail-dashboard-client.png', import.meta.url).href;
 </script>
 
 <script lang="ts">
@@ -38,8 +41,8 @@ export default {
               {{ t('views.mail.sections.dashboard.downloadButtonLabel') }}
             </primary-button>
           </div>
-  
-          <!-- <img src="@/assets/png/thundermail-dashboard-client.png" alt="Thunderbird client" /> -->
+
+          <img :src="thunderbirdClientImage" :alt="t('views.mail.sections.dashboard.thunderbirdClientAlt')" />
         </div>
   
         <details-summary :title="t('views.mail.sections.dashboard.connectYourAccount')" :expandable="false">
@@ -75,6 +78,8 @@ h2 {
 }
 
 .download-card {
+  display: flex;
+  flex-wrap: wrap;
   border-radius: 8px;
   background-image:
     linear-gradient(125deg, rgba(88, 201, 255, 0) 74%, rgba(88, 201, 255, 1) 135%),
@@ -82,6 +87,11 @@ h2 {
 
   .content {
     padding: 1.5rem 1rem;
+  }
+
+  > img {
+    max-width: 400px;
+    object-fit: cover;
   }
 
   p {

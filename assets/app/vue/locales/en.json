@@ -65,6 +65,7 @@
           "setUpAnEmailApp": "Set up an Email app",
           "downloadDescription": "For a quick and easy setup, we recommend using Thunderbird. Just download the app, enter your email address and password, and you're ready to go.",
           "downloadButtonLabel": "Download",
+          "thunderbirdClientAlt": "Thunderbird client",
           "connectYourAccount": "Connect your account",
           "connectYourAccountFirstLine": "Many email apps can configure your account automatically. Enter your email address and password to get started.",
           "connectYourAccountSecondLine": "If setup doesn’t work, try connecting manually using server settings.",

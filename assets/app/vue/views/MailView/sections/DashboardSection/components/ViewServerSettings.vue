@@ -183,7 +183,7 @@ const copyValue = async (value: string | number) => {
 <style scoped>
 .view-server-settings-content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
 
   header {
@@ -266,6 +266,12 @@ const copyValue = async (value: string | number) => {
       color: var(--colour-ti-muted);
       font-size: 0.75rem;
     }
+  }
+}
+
+@media (min-width: 1024px) {
+  .view-server-settings-content {
+    grid-template-columns: 1fr 1fr;
   }
 }
 </style>
