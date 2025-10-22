@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhSliders, PhGlobe, PhCopySimple, PhKey, PhInfo } from '@phosphor-icons/vue';
+import { ToolTip } from '@thunderbirdops/services-ui';
 import DetailsSummary from '@/components/DetailsSummary.vue';
 
 const { t } = useI18n();
@@ -119,12 +120,20 @@ const copyValue = async (value: string | number) => {
           <router-link class="what-is-link" to="#">
             <ph-info size="24" weight="fill" />
             <span>{{ t('views.mail.sections.dashboard.whatIsImap') }}</span>
+
+            <tool-tip :alt="t('views.mail.sections.dashboard.whatIsImap')" @click.prevent>
+              {{ t('views.mail.sections.dashboard.whatIsImap') }}
+            </tool-tip>
           </router-link>
         </template>
         <template v-else>
           <router-link class="what-is-link" to="#">
             <ph-info size="24" weight="fill" />
             <span>{{ t('views.mail.sections.dashboard.whatIsJmap') }}</span>
+
+            <tool-tip :alt="t('views.mail.sections.dashboard.whatIsJmap')" @click.prevent>
+              {{ t('views.mail.sections.dashboard.whatIsJmap') }}
+            </tool-tip>
           </router-link>
         </template>
       </div>
@@ -171,6 +180,10 @@ const copyValue = async (value: string | number) => {
         <router-link class="what-is-link" to="#">
           <ph-info size="24" weight="fill" />
           <span>{{ t('views.mail.sections.dashboard.whatIsSmtp') }}</span>
+
+          <tool-tip :alt="t('views.mail.sections.dashboard.whatIsSmtp')" @click.prevent>
+            {{ t('views.mail.sections.dashboard.whatIsSmtp') }}
+          </tool-tip>
         </router-link>
       </div>
     </div>
@@ -252,12 +265,23 @@ const copyValue = async (value: string | number) => {
   }
 
   .what-is-link {
-    display: flex;
+    position: relative;
+    display: inline-flex;
     align-items: center;
     gap: 0.25rem;
     cursor: pointer;
     text-decoration: none;
     color: var(--colour-ti-base);
+
+   .tooltip {
+     opacity: 0;
+     width: 150px;
+     top: -3rem;
+   }
+
+    &:hover .tooltip {
+      opacity: 1;
+    }
 
     span {
       color: var(--colour-ti-muted);
