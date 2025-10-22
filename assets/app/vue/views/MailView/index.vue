@@ -34,7 +34,7 @@ export default {
 @media (min-width: 1024px) {
   .mail-view {
     section {
-      min-width: 971px;
+      width: 971px;
     }
   }
 }

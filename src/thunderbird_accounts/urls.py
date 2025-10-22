@@ -47,6 +47,7 @@ urlpatterns = [
     path('contact/submit', mail_views.contact_submit, name='contact_submit'),
     path('self-serve/app-passwords/add', mail_views.self_serve_app_password_add, name='app_password_add'),
     path('self-serve/app-passwords/remove', mail_views.self_serve_app_password_remove, name='app_password_remove'),
+    path('self-serve/app-passwords/set', mail_views.self_serve_app_password_set, name='app_password_set'),
     # API
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),

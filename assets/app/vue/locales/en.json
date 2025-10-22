@@ -89,12 +89,22 @@
           "password": "Password",
           "change": "change",
           "set": "Set",
+          "notSet": "Not set",
           "changePasswordDescription": "Your password lets you sign in to email apps with your primary address.",
           "changePasswordDescriptionTwo": "Once set, it can't be viewed or recovered.",
           "changePasswordButtonLabel": "Change app password",
+          "addPasswordButtonLabel": "Add app password",
           "emailAliases": "Email aliases",
           "emailAliasesDescription": "All emails will deliver mail to your primary email mailbox.",
-          "emailAliasesDescriptionTwo": "{aliasUsed} of {aliasLimit} aliases used"
+          "emailAliasesDescriptionTwo": "{aliasUsed} of {aliasLimit} aliases used",
+          "newPassword": "New password",
+          "confirmNewPassword": "Confirm new password",
+          "save": "Save",
+          "saving": "Saving...",
+          "cancel": "Cancel",
+          "passwordsDoNotMatch": "Passwords do not match",
+          "anErrorOccurred": "An error occurred",
+          "anErrorOccurredWhileChangingPassword": "An error occurred while changing the password"
         },
         "customDomains": {
           "customDomains": "Custom Domains"

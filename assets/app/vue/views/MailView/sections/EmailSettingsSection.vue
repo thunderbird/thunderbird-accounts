@@ -1,15 +1,67 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhSliders } from '@phosphor-icons/vue';
-import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton } from '@thunderbirdops/services-ui';
+import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 import DetailsSummary from '@/components/DetailsSummary.vue';
 
 const { t } = useI18n();
 
+const showPasswordForm = ref(false);
+const appPassword = ref('');
+const errorMessage = ref(window._page?.formError || '');
+const isSubmitting = ref(false);
+
 const userEmail = computed(() => window._page?.userEmail);
 const userFullName = computed(() => window._page?.userFullName);
+
+const appPasswords = window._page?.appPasswords || [];
+
+const onSetPasswordSubmit = async () => {
+  if (isSubmitting.value) return;
+
+  errorMessage.value = '';
+  isSubmitting.value = true;
+
+  try {
+    const response = await fetch('/self-serve/app-passwords/set', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': window._page.csrfToken,
+      },
+      body: JSON.stringify({
+        name: userEmail.value,
+        password: appPassword.value,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Reset form and close
+      appPassword.value = '';
+      showPasswordForm.value = false;
+
+      // Reload the page to reflect changes
+      window.location.reload();
+    } else {
+      errorMessage.value = data.error || t('views.mail.sections.emailSettings.anErrorOccurred');
+    }
+  } catch (error) {
+    console.error('Error changing password:', error);
+    errorMessage.value = t('views.mail.sections.emailSettings.anErrorOccurredWhileChangingPassword');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+const onCancelSetPassword = () => {
+  errorMessage.value = '';
+  appPassword.value = '';
+  showPasswordForm.value = false;
+};
 </script>
 
 <template>
@@ -37,14 +89,47 @@ const userFullName = computed(() => window._page?.userFullName);
   
           <div>
             <strong>{{ t('views.mail.sections.emailSettings.password') }}:</strong>
-            <base-badge :type="BaseBadgeTypes.Set">{{ t('views.mail.sections.emailSettings.set') }}</base-badge>
+            <template v-if="appPasswords.length > 0">
+              <base-badge :type="BaseBadgeTypes.Set">{{ t('views.mail.sections.emailSettings.set') }}</base-badge>
+            </template>
+            <template v-else>
+              <base-badge :type="BaseBadgeTypes.NotSet">{{ t('views.mail.sections.emailSettings.notSet') }}</base-badge>
+            </template>
           </div>
         </div>
 
         <div class="email-settings-right">
           <p>{{ t('views.mail.sections.emailSettings.changePasswordDescription') }}</p>
           <p>{{ t('views.mail.sections.emailSettings.changePasswordDescriptionTwo') }}</p>
-          <primary-button variant="outline">{{ t('views.mail.sections.emailSettings.changePasswordButtonLabel') }}</primary-button>
+
+          <template v-if="showPasswordForm">
+            <form
+              ref="appPasswordFormRef"
+              method="post"
+              action="/self-serve/app-passwords/set"
+            >
+              <input type="hidden" name="name" :value="userEmail" />
+
+              <text-input v-model="appPassword" name="password" type="password" data-testid="app-passwords-add-password-input">
+                {{ t('views.mail.sections.emailSettings.newPassword') }}:
+              </text-input>
+
+              <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">{{ errorMessage }}</notice-bar>
+
+              <div class="set-password-buttons-container">
+                <primary-button variant="outline" @click="onCancelSetPassword" :disabled="isSubmitting">{{ t('views.mail.sections.emailSettings.cancel') }}</primary-button>
+                <primary-button @click="onSetPasswordSubmit" :disabled="isSubmitting" data-testid="app-passwords-add-btn">
+                  {{ isSubmitting ? t('views.mail.sections.emailSettings.saving') : t('views.mail.sections.emailSettings.save') }}
+                </primary-button>
+              </div>
+            </form>
+          </template>
+          <template v-else-if="appPasswords.length > 0">
+            <primary-button variant="outline" @click="showPasswordForm = true">{{ t('views.mail.sections.emailSettings.changePasswordButtonLabel') }}</primary-button>
+          </template>
+          <template v-else>
+            <primary-button @click="showPasswordForm = true">{{ t('views.mail.sections.emailSettings.addPasswordButtonLabel') }}</primary-button>
+          </template>
         </div>
       </div>
 
@@ -96,6 +181,18 @@ h2 {
       line-height: 1.32;
       color: var(--colour-ti-secondary);
     }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .set-password-buttons-container {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
   }
 
   .display-name-content {
@@ -122,7 +219,7 @@ h2 {
 
 @media (min-width: 768px) {
   .email-settings-content {
-    grid-template-columns: 50% 50%;
+    grid-template-columns: 1fr 1fr;
   }
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NoticeBar, NoticeBarTypes, PrimaryButton, TextInput } from '@thunderbirdops/services-ui';
+import { NoticeBar, NoticeBarTypes, PrimaryButton, TextInput, DangerButton } from '@thunderbirdops/services-ui';
 import { ref } from 'vue';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 
@@ -84,13 +84,13 @@ const onDeleteAppPassword = async (evt) => {
               :data-testid="'app-passwords-existing-password-' + password"
             >
               {{ password }}
-              <secondary-button
+              <danger-button
                 size="small"
                 :value="password"
                 @click.capture="onDeleteAppPassword"
                 :data-testid="'app-passwords-delete-app-password-btn-' + password"
                 :aria-label="`Delete ${password} app password.`"
-                >Delete</secondary-button
+                >Delete</danger-button
               >
             </li>
           </ul>

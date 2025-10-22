@@ -43,8 +43,22 @@ def raise_form_error(request, to_view: str, error_message: str):
 
 
 def home(request: HttpRequest):
+    account = request.user.account_set.first()
+
+    if account:
+        stalwart_client = MailClient()
+    try:
+        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
+        app_passwords = []
+        for secret in email_user.get('secrets', []):
+            app_passwords.append(decode_app_password(secret))
+    except AccountNotFoundError:
+        app_passwords = []
+        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
+
     return TemplateResponse(request, 'mail/index.html', {
         'connection_info': settings.CONNECTION_INFO,
+        'app_passwords': json.dumps(app_passwords),
     })
 
 
@@ -370,6 +384,58 @@ def self_serve_app_password_remove(request: HttpRequest):
         messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
     return JsonResponse({'success': False})
+
+
+@login_required
+@require_http_methods(['POST'])
+@sensitive_post_parameters('password')
+def self_serve_app_password_set(request: HttpRequest):
+    """Sets an app password for a remote Stalwart account"""
+
+    try:
+        data = json.loads(request.body)
+        new_password = data.get('password')
+        label = data.get('name')
+
+        if not new_password or not label:
+            return JsonResponse({
+                'success': False,
+                'error': str(_('Label and password are required'))
+            }, status=400)
+
+        stalwart_client = MailClient()
+
+        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
+
+        # Find and delete all previously existing app passwords
+        for secret in email_user.get('secrets', []):
+            stalwart_client.delete_app_password(request.user.stalwart_primary_email, secret)
+
+        # Create and save the new app password
+        new_secret = utils.save_app_password(label, new_password)
+        stalwart_client.save_app_password(request.user.stalwart_primary_email, new_secret)
+
+        return JsonResponse({
+            'success': True,
+            'message': str(_('Password set successfully'))
+        })
+
+    except AccountNotFoundError:
+        return JsonResponse({
+            'success': False,
+            'error': str(_('Could not connect to Thundermail, please try again later.'))
+        }, status=500)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': str(_('Invalid request data'))
+        }, status=400)
+    except Exception as e:
+        logging.error(f'Error setting app password: {e}')
+        return JsonResponse({
+            'success': False,
+            'error': str(_('An error occurred while setting the password. Please try again.'))
+        }, status=500)
 
 
 @login_required

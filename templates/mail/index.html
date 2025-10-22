@@ -27,6 +27,7 @@
     userFullName: {{ user.get_full_name|to_json|safe }},
     formError: {{ form_error|to_json|safe|default:'null' }},
     connectionInfo: {{ connection_info|to_json|safe }},
+    appPasswords: {{ app_passwords|safe }},
     {% block extra_page_params %}{% endblock %}
   };
   csrfToken.remove();
