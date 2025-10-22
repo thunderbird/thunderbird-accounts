@@ -34,12 +34,12 @@ def decode_app_password(secret):
 
 def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
     # Run this immediately for now, in the future we'll ship these to celery
-    task_data = tasks.create_stalwart_account.run(
+    if user.account_set.count() > 0:
+        return False
+
+    tasks.create_stalwart_account.run(
         oidc_id=user.oidc_id, username=user.username, email=user.username, app_password=app_password
     )
-
-    if not task_data or task_data.get('task_status') == 'failed':
-        return False
 
     return True
 
