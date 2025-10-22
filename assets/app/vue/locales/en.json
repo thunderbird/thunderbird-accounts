@@ -104,7 +104,11 @@
           "cancel": "Cancel",
           "passwordsDoNotMatch": "Passwords do not match",
           "anErrorOccurred": "An error occurred",
-          "anErrorOccurredWhileChangingPassword": "An error occurred while changing the password"
+          "anErrorOccurredWhileChangingPassword": "An error occurred while changing the password",
+          "anErrorOccurredWhileChangingDisplayName": "An error occurred while changing the display name",
+          "newDisplayName": "New display name",
+          "displayNamePlaceholder": "Enter your display name",
+          "displayNameRequired": "Display name is required"
         },
         "customDomains": {
           "customDomains": "Custom Domains"

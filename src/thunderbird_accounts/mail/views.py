@@ -49,7 +49,9 @@ def home(request: HttpRequest):
         stalwart_client = MailClient()
     try:
         email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
+        user_display_name = email_user.get('description')
         app_passwords = []
+
         for secret in email_user.get('secrets', []):
             app_passwords.append(decode_app_password(secret))
     except AccountNotFoundError:
@@ -59,6 +61,7 @@ def home(request: HttpRequest):
     return TemplateResponse(request, 'mail/index.html', {
         'connection_info': settings.CONNECTION_INFO,
         'app_passwords': json.dumps(app_passwords),
+        'user_display_name': user_display_name,
     })
 
 
@@ -436,6 +439,39 @@ def self_serve_app_password_set(request: HttpRequest):
             'success': False,
             'error': str(_('An error occurred while setting the password. Please try again.'))
         }, status=500)
+
+
+@login_required
+@require_http_methods(['POST'])
+@sensitive_post_parameters('display-name')
+def self_serve_display_name_set(request: HttpRequest):
+    """Sets a display name for a remote Stalwart account"""
+
+    try:
+        data = json.loads(request.body)
+        display_name = data.get('display-name')
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': str(_('Invalid request data'))
+        }, status=400)
+
+    if not display_name:
+        return JsonResponse({
+            'success': False,
+            'error': str(_('Display name is required'))
+        }, status=400)
+
+    stalwart_client = MailClient()
+    try:
+        stalwart_client.update_individual(request.user.stalwart_primary_email, full_name=display_name)
+    except AccountNotFoundError:
+        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
+
+    return JsonResponse({
+        'success': True,
+        'message': str(_('Display name set successfully'))
+    })
 
 
 @login_required

@@ -25,6 +25,7 @@
     isAuthenticated: {{ user.is_authenticated|to_json }},
     userEmail: {{ user.email|to_json|safe }},
     userFullName: {{ user.get_full_name|to_json|safe }},
+    userDisplayName: {{ user_display_name|to_json|safe }},
     formError: {{ form_error|to_json|safe|default:'null' }},
     connectionInfo: {{ connection_info|to_json|safe }},
     appPasswords: {{ app_passwords|safe }},
