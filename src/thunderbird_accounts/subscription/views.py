@@ -43,7 +43,7 @@ def get_paddle_information(request: Request):
     return JsonResponse({
         'paddle_token': settings.PADDLE_TOKEN,
         'paddle_environment': settings.PADDLE_ENV,
-        'paddle_plan_info': json.dumps(plan_info),
+        'paddle_plan_info': plan_info,
     })
 
 
