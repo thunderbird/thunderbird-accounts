@@ -54,8 +54,11 @@ urlpatterns = [
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
+    path('api/v1/subscription/paddle/info', subscription_views.get_paddle_information, name='paddle_info'),
+    path('api/v1/subscription/paddle/portal', subscription_views.get_paddle_portal_link, name='paddle_portal'),
     path('health', infra_views.health_check),
 ]
+
 
 if settings.AUTH_SCHEME == 'oidc':
     urlpatterns.append(path('oidc/', include('mozilla_django_oidc.urls')))

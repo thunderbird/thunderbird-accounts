@@ -23,6 +23,7 @@
   window._page = {
     csrfToken: csrfToken.value,
     isAuthenticated: {{ user.is_authenticated|to_json }},
+    hasActiveSubscription: {{ user.has_active_subscription|default:False|to_json|safe }},
     userEmail: {{ user.email|to_json|safe }},
     userFullName: {{ user.get_full_name|to_json|safe }},
     userDisplayName: {{ user_display_name|to_json|safe }},
