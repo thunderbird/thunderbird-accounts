@@ -50,10 +50,10 @@ const navItems = computed(() => isThundermail.value ? navItemsMail : navItemsAcc
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const logoSrc = computed(() => {
   if (isThundermail.value) {
-    return new URL('../assets/svg/thundermail-logo.svg', import.meta.url).href;
+    return new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).href;
   }
 
-  return new URL('../assets/svg/thunderbird-pro-dark.svg', import.meta.url).href;
+  return new URL('@/assets/svg/thunderbird-pro-dark.svg', import.meta.url).href;
 })
 </script>
 
