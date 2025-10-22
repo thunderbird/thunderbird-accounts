@@ -1,6 +1,7 @@
 """
 Retrieves and updates prices defined in Paddle.
 """
+import logging
 
 from django.core.management.base import BaseCommand
 from paddle_billing.Entities.Shared import Status
@@ -41,8 +42,12 @@ class Command(PaddleCommand, BaseCommand):
             product = Product.objects.filter(paddle_id=paddle_obj.product_id).get()
         except Product.DoesNotExist:
             pass
+        except Product.MultipleObjectsReturned:
+            logging.warning(f"Product <{paddle_obj.product_id}> has multiple entries! Using first one.")
+            product = Product.objects.filter(paddle_id=paddle_obj.product_id).first()
 
         return {
+            'paddle_id': paddle_obj.id,
             'paddle_product_id': paddle_obj.product_id,
             'name': paddle_obj.name,
             'amount': unit_price.amount,
