@@ -31,7 +31,7 @@ const navItemsMail = [
     i18nKey: 'dashboard',
   },
   {
-    route: '#manage-emails',
+    route: '#email-settings',
     i18nKey: 'manageEmails',
   },
   {

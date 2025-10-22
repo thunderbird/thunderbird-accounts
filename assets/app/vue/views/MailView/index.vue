@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DashboardSection from './sections/DashboardSection/index.vue';
-import ManageEmailsSection from './sections/ManageEmailsSection.vue';
+import EmailSettingsSection from './sections/EmailSettingsSection.vue';
 import CustomDomainsSection from './sections/CustomDomainsSection.vue';
 import SecuritySettingsSection from './sections/SecuritySettingsSection.vue';
 </script>
@@ -14,7 +14,7 @@ export default {
 <template>
   <div class="mail-view">
     <dashboard-section />
-    <manage-emails-section />
+    <email-settings-section />
     <custom-domains-section />
     <security-settings-section />
   </div>

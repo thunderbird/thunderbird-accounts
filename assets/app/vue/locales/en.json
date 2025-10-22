@@ -82,8 +82,19 @@
           "whatIsImap": "What is IMAP?",
           "whatIsJmap": "What is JMAP?"
         },
-        "manageEmails": {
-          "manageEmails": "Manage Emails"
+        "emailSettings": {
+          "emailSettings": "Email Settings",
+          "primaryEmail": "Primary email",
+          "displayName": "Display name",
+          "password": "Password",
+          "change": "change",
+          "set": "Set",
+          "changePasswordDescription": "Your password lets you sign in to email apps with your primary address.",
+          "changePasswordDescriptionTwo": "Once set, it can't be viewed or recovered.",
+          "changePasswordButtonLabel": "Change app password",
+          "emailAliases": "Email aliases",
+          "emailAliasesDescription": "All emails will deliver mail to your primary email mailbox.",
+          "emailAliasesDescriptionTwo": "{aliasUsed} of {aliasLimit} aliases used"
         },
         "customDomains": {
           "customDomains": "Custom Domains"
