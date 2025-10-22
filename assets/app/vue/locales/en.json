@@ -2,7 +2,11 @@
   "navigationLinks": {
     "dashboard": "Dashboard",
     "manageMfa": "Manage MFA",
-    "privacyAndData": "Privacy & Data"
+    "privacyAndData": "Privacy & Data",
+    "manageEmails": "Manage Emails",
+    "customDomains": "Custom Domains",
+    "securitySettings": "Security Settings",
+    "login": "Login"
   },
   "components": {
     "needSupportCard": {
@@ -13,7 +17,6 @@
     },
     "userMenu": {
       "contact": "Contact",
-      "login": "Login",
       "logout": "Logout"
     }
   },
@@ -50,6 +53,44 @@
         "autoRenewsOn": "Auto-renews on",
         "changePaymentMethodButtonLabel": "Change payment method",
         "footerText": "You’ll be taken to Paddle, our secure payment provider."
+      }
+    },
+    "mail": {
+      "sections": {
+        "dashboard": {
+          "welcomeHeader": {
+            "welcome": "Welcome",
+            "storageOf": "of"
+          },
+          "setUpAnEmailApp": "Set up an Email app",
+          "downloadDescription": "For a quick and easy setup, we recommend using Thunderbird. Just download the app, enter your email address and password, and you're ready to go.",
+          "downloadButtonLabel": "Download",
+          "thunderbirdClientAlt": "Thunderbird client",
+          "connectYourAccount": "Connect your account",
+          "connectYourAccountFirstLine": "Many email apps can configure your account automatically. Enter your email address and password to get started.",
+          "connectYourAccountSecondLine": "If setup doesn’t work, try connecting manually using server settings.",
+          "viewServerSettings": "View server settings",
+          "incomingServer": "Incoming server",
+          "outgoingServer": "Outgoing server",
+          "imap": "IMAP (Recommended)",
+          "jmap": "JMAP",
+          "protocol": "Protocol",
+          "hostname": "Hostname",
+          "port": "Port",
+          "authentication": "Authentication",
+          "whatIsSmtp": "What is SMTP?",
+          "whatIsImap": "What is IMAP?",
+          "whatIsJmap": "What is JMAP?"
+        },
+        "manageEmails": {
+          "manageEmails": "Manage Emails"
+        },
+        "customDomains": {
+          "customDomains": "Custom Domains"
+        },
+        "securitySettings": {
+          "securitySettings": "Security Settings"
+        }
       }
     },
     "manageMfa": {

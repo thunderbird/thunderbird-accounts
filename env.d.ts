@@ -6,6 +6,12 @@ declare global {
       pageId?: string;
       isAuthenticated?: boolean;
       userEmail?: string;
+      userFullName?: string;
+      connectionInfo?: {
+        'SMTP': {'HOST': string, 'PORT': number, 'TLS': boolean},
+        'IMAP': {'HOST': string, 'PORT': number, 'TLS': boolean},
+        'JMAP': {'HOST': string, 'PORT': number, 'TLS': boolean},
+      };
       formError?: string | null;
       csrfToken?: string;
       paddleToken?: string;

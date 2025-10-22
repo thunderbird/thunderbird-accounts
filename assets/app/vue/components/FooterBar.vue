@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import { StandardFooter } from '@thunderbirdops/services-ui';
 
 const { t } = useI18n();
 
-const navItems = [
+const isAuthenticated = ref(window._page?.isAuthenticated);
+
+const navItemsAccounts = [
   {
     route: '/dashboard',
     i18nKey: 'dashboard',
@@ -18,6 +22,39 @@ const navItems = [
     i18nKey: 'privacyAndData',
   },
 ];
+
+const navItemsMail = [
+  {
+    route: '#dashboard',
+    i18nKey: 'dashboard',
+  },
+  {
+    route: '#manage-emails',
+    i18nKey: 'manageEmails',
+  },
+  {
+    route: '#custom-domains',
+    i18nKey: 'customDomains',
+  },
+  {
+    route: '#security-settings',
+    i18nKey: 'securitySettings',
+  },
+];
+
+const currentRoute = useRoute();
+
+const isThundermail = computed(() => currentRoute.path.startsWith('/mail'));
+const navItems = computed(() => isThundermail.value ? navItemsMail : navItemsAccounts);
+
+// https://vite.dev/guide/assets.html#new-url-url-import-meta-url
+const logoSrc = computed(() => {
+  if (isThundermail.value) {
+    return new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).href;
+  }
+
+  return new URL('@/assets/svg/thunderbird-pro-dark.svg', import.meta.url).href;
+})
 </script>
 
 <template>
@@ -25,14 +62,24 @@ const navItems = [
     <template #default>
       <nav>
         <router-link to="/">
-          <img src="@/assets/svg/thunderbird-pro-dark.svg" alt="Thunderbird Pro Logo" />
+          <img :src="logoSrc" :alt="isThundermail ? 'Thundermail' : 'Thunderbird Pro'" />
         </router-link>
         <ul>
-          <li v-for="navItem in navItems" :key="navItem.route">
-            <router-link :to="navItem.route">
-              {{ t(`navigationLinks.${navItem.i18nKey}`) }}
-            </router-link>
-          </li>
+          <template v-if="isAuthenticated">
+            <li v-for="navItem in navItems" :key="navItem.route">
+              <router-link :to="navItem.route">
+                {{ t(`navigationLinks.${navItem.i18nKey}`) }}
+              </router-link>
+            </li>
+          </template>
+          <template v-else>
+            <li>
+              <!-- Login is done through Django routing and not Vue router -->
+              <a href="/login/" class="login-button-link">
+                {{ t('navigationLinks.login') }}
+              </a>
+            </li>
+          </template>
         </ul>
       </nav>
     </template>

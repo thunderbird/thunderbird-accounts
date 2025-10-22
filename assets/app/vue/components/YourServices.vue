@@ -9,18 +9,18 @@ const { t } = useI18n();
     <h2>{{ t('components.yourServices.yourServices') }}</h2>
 
     <div class="your-services-card">
-      <a class="service-icon-link" href="#">
-        <img src="@/assets/svg/thundermail-icon.svg" alt="Thundermail Logo" />
+      <router-link class="service-icon-link" to="/mail">
+        <img src="@/assets/svg/thundermail-icon.svg" alt="Thundermail" />
         <p>Thundermail</p>
-      </a>
+      </router-link>
 
       <a class="service-icon-link" href="#">
-        <img src="@/assets/svg/appointment-icon.svg" alt="Appointment Logo" />
+        <img src="@/assets/svg/appointment-icon.svg" alt="Appointment" />
         <p>Appointment</p>
       </a>
 
       <a class="service-icon-link" href="#">
-        <img src="@/assets/svg/send-icon.svg" alt="Send Logo" />
+        <img src="@/assets/svg/send-icon.svg" alt="Send" />
         <p>Send</p>
       </a>
     </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import { UserAvatar } from '@thunderbirdops/services-ui';
 import { PhArrowSquareOut } from '@phosphor-icons/vue';
 
@@ -9,6 +10,8 @@ defineProps<{
 }>();
 
 const { t } = useI18n();
+const router = useRouter();
+const currentRoute = useRoute();
 
 const externalMenuItems = [
   {
@@ -26,6 +29,11 @@ const showMenu = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 
 const toggleMenu = () => {
+  if (currentRoute.path.startsWith('/mail')) {
+    router.push('/');
+    return;
+  }
+
   showMenu.value = !showMenu.value;
 };
 

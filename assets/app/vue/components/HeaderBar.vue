@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { BrandButton } from '@thunderbirdops/services-ui';
@@ -10,7 +10,7 @@ const { t } = useI18n();
 const isAuthenticated = ref(window._page?.isAuthenticated);
 const userEmail = ref(window._page?.userEmail);
 
-const navItems = [
+const navItemsAccounts = [
   {
     route: '/dashboard',
     i18nKey: 'dashboard',
@@ -25,14 +25,52 @@ const navItems = [
   },
 ];
 
+const navItemsMail = [
+  {
+    route: '#dashboard',
+    i18nKey: 'dashboard',
+  },
+  {
+    route: '#manage-emails',
+    i18nKey: 'manageEmails',
+  },
+  {
+    route: '#custom-domains',
+    i18nKey: 'customDomains',
+  },
+  {
+    route: '#security-settings',
+    i18nKey: 'securitySettings',
+  },
+];
+
 const currentRoute = useRoute();
+
+const isThundermail = computed(() => currentRoute.path.startsWith('/mail'));
+const navItems = computed(() => isThundermail.value ? navItemsMail : navItemsAccounts);
+
+// https://vite.dev/guide/assets.html#new-url-url-import-meta-url
+const logoSrc = computed(() => {
+  if (isThundermail.value) {
+    return new URL('../assets/svg/thundermail-logo.svg', import.meta.url).href;
+  }
+
+  return new URL('../assets/svg/thunderbird-pro-dark.svg', import.meta.url).href;
+})
 </script>
 
 <template>
   <header>
-    <router-link to="/">
-      <img src="@/assets/svg/thunderbird-pro-dark.svg" alt="Thunderbird Pro Logo" />
-    </router-link>
+    <template v-if="isThundermail">
+      <router-link to="/mail">
+        <img :src="logoSrc" alt="Thundermail" />
+      </router-link>
+    </template>
+    <template v-else>
+      <router-link to="/">
+        <img :src="logoSrc" alt="Thunderbird Pro" />
+      </router-link>
+    </template>
 
     <template v-if="isAuthenticated">
       <nav class="desktop">
@@ -52,7 +90,7 @@ const currentRoute = useRoute();
       <!-- Login is done through Django routing and not Vue router -->
       <a href="/login/" class="login-button-link">
         <brand-button variant="outline">
-          {{ t('components.userMenu.login') }}
+          {{ t('navigationLinks.login') }}
         </brand-button>
       </a>
     </template>
