@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { PhDownloadSimple } from '@phosphor-icons/vue';
+import { PhDownloadSimple, PhGlobe } from '@phosphor-icons/vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
+
+// Shared components
 import CardContainer from '@/components/CardContainer.vue';
+import DetailsSummary from '@/components/DetailsSummary.vue';
+
+// Local components
 import WelcomeHeader from './components/WelcomeHeader.vue';
+import ViewServerSettings from './components/ViewServerSettings.vue';
 
 const { t } = useI18n();
 </script>
@@ -21,18 +27,33 @@ export default {
     <card-container>
       <h2>{{ t('views.mail.sections.dashboard.setUpAnEmailApp') }}</h2>
 
-      <div class="download-card">
-        <div class="content">
-          <p>{{ t('views.mail.sections.dashboard.downloadDescription') }}</p>
-          <primary-button>
-            <template #iconLeft>
-              <ph-download-simple size="16"/>
-            </template>
-            {{ t('views.mail.sections.dashboard.downloadButtonLabel') }}
-          </primary-button>
+      <div class="dashboard-section-content">
+        <div class="download-card">
+          <div class="content">
+            <p>{{ t('views.mail.sections.dashboard.downloadDescription') }}</p>
+            <primary-button>
+              <template #iconLeft>
+                <ph-download-simple size="16"/>
+              </template>
+              {{ t('views.mail.sections.dashboard.downloadButtonLabel') }}
+            </primary-button>
+          </div>
+  
+          <!-- <img src="@/assets/png/thundermail-dashboard-client.png" alt="Thunderbird client" /> -->
         </div>
+  
+        <details-summary :title="t('views.mail.sections.dashboard.connectYourAccount')" :expandable="false">
+          <template #icon>
+            <ph-globe size="24" />
+          </template>
+  
+          <div class="connect-your-account-content">
+            <p>{{ t('views.mail.sections.dashboard.connectYourAccountFirstLine') }}</p>
+            <p>{{ t('views.mail.sections.dashboard.connectYourAccountSecondLine') }}</p>
+          </div>
+        </details-summary>
 
-        <!-- <img src="@/assets/png/thundermail-dashboard-client.png" alt="Thunderbird client" /> -->
+        <view-server-settings />
       </div>
     </card-container>
   </section>
@@ -45,6 +66,12 @@ h2 {
   font-family: metropolis;
   color: var(--colour-ti-highlight);
   margin-block-end: 1rem;
+}
+
+.dashboard-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
 }
 
 .download-card {
@@ -70,5 +97,16 @@ h2 {
     width: 1rem;
     height: 1rem;
   }
+}
+
+.connect-your-account-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  font-family: Inter;
+  font-size: 1rem;
+  line-height: 1.32;
+  color: var(--colour-ti-secondary);
+  max-width: 729px;
 }
 </style>

@@ -83,7 +83,7 @@ const logoSrc = computed(() => {
       <!-- Login is done through Django routing and not Vue router -->
       <a href="/login/" class="login-button-link">
         <brand-button variant="outline">
-          {{ t('components.userMenu.login') }}
+          {{ t('navigationLinks.login') }}
         </brand-button>
       </a>
     </template>
