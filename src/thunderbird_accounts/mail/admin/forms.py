@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
@@ -15,6 +16,16 @@ class CustomAccountBaseForm(forms.ModelForm):
 
     def clean(self):
         # TODO: Check for active stalwart / active subscription account here!
+
+        account_name = self.data.get('name')
+
+        try:
+            validate_email(account_name)
+        except ValidationError as ex:
+            self.add_error('name', ex)
+
+        if not account_name.endswith(f'@{settings.PRIMARY_EMAIL_DOMAIN}'):
+            self.add_error('name', f'The account name must use the {settings.PRIMARY_EMAIL_DOMAIN} domain.')
 
         return super().clean()
 
@@ -35,12 +46,24 @@ class CustomEmailBaseForm(forms.BaseInlineFormSet):
 
         has_errors = False
 
+        print('self.instance.email_set.all() -> ', self.instance.email_set.all())
+
         for form in self.forms:
             if not form.is_valid() or not form.instance.address or len(form.changed_data) == 0:
                 continue
 
             address = form.instance
             initial_address = form.initial.get('address')
+
+            if (
+                not address.address.endswith(f'@{settings.PRIMARY_EMAIL_DOMAIN}')
+                and address.type == Email.EmailType.PRIMARY.value
+            ):
+                form.add_error('type', f'The primary email must use the {settings.PRIMARY_EMAIL_DOMAIN} domain.')
+                continue
+            elif address.address != self.instance.name and address.type == Email.EmailType.PRIMARY.value:
+                form.add_error('type', 'The primary email must the same as the Account name.')
+                continue
 
             try:
                 validate_email(address.address)
