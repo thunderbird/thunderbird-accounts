@@ -11,30 +11,29 @@ enum INCOMING_SERVER_TABS {
   JMAP = 'jmap',
 }
 
+const connectionInfo = computed(() => window._page?.connectionInfo);
+
 const incomingServerSelectedTab = ref<INCOMING_SERVER_TABS>(INCOMING_SERVER_TABS.IMAP);
 
 const imapServerDetails = {
   protocol: 'IMAP',
-  hostname: 'imap.thundermail.com',
-  domain: 'thundermail.com',
-  port: 993,
-  authentication: 'SSL/TLS',
+  hostname: connectionInfo.value.IMAP.HOST,
+  port: connectionInfo.value.IMAP.PORT,
+  authentication: connectionInfo.value.IMAP.TLS ? 'SSL/TLS' : 'None',
 };
 
 const jmapServerDetails = {
   protocol: 'JMAP',
-  hostname: 'jmap.thundermail.com',
-  domain: 'thundermail.com',
-  port: 443,
-  authentication: 'SSL/TLS',
+  hostname: connectionInfo.value.JMAP.HOST,
+  port: connectionInfo.value.JMAP.PORT,
+  authentication: connectionInfo.value.JMAP.TLS ? 'SSL/TLS' : 'None',
 }
 
 const smtpServerDetails = {
   protocol: 'SMTP',
-  hostname: 'smtp.thundermail.com',
-  domain: 'thundermail.com',
-  port: 993,
-  authentication: 'SSL/TLS',
+  hostname: connectionInfo.value.SMTP.HOST,
+  port: connectionInfo.value.SMTP.PORT,
+  authentication: connectionInfo.value.SMTP.TLS ? 'SSL/TLS' : 'None',
 }
 
 const incomingServerDetails = computed(() => {
@@ -92,9 +91,7 @@ const copyValue = async (value: string | number) => {
         <div class="server-detail-item">
           <ph-globe size="20" />
           <strong>{{ t('views.mail.sections.dashboard.hostname') }}</strong>
-          <span>
-            {{ incomingServerDetails.hostname.split('.').slice(0, -2).join('.') }}.<strong>{{ incomingServerDetails.domain }}</strong>
-          </span>
+          <span>{{ incomingServerDetails.hostname }}</span>
           <button type="button" class="copy-btn" @click="copyValue(incomingServerDetails.hostname)">
             <ph-copy-simple size="20" />
           </button>
