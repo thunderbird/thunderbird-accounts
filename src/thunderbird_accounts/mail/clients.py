@@ -88,8 +88,6 @@ class MailClient:
         response.raise_for_status()
         self._raise_for_error(response)
 
-        logging.info(f'[MailClient._get_principal({principal_id}]: {response.json()}')
-
         return response
 
     def _delete_principal(self, principal_id: str) -> requests.Response:
@@ -104,8 +102,6 @@ class MailClient:
         )
         response.raise_for_status()
         self._raise_for_error(response)
-
-        logging.info(f'[MailClient._delete_principal({principal_id}]: {response.json()}')
 
         return response
 
@@ -141,8 +137,6 @@ class MailClient:
         response.raise_for_status()
         self._raise_for_error(response)
 
-        logging.info(f'[MailClient._create_principal({principal_data}]: {response.json()}')
-
         return response
 
     def _update_principal(self, principal_id: str, update_data: list[dict]):
@@ -175,8 +169,6 @@ class MailClient:
         response.raise_for_status()
         self._raise_for_error(response)
 
-        logging.info(f'[MailClient._update_principal({update_data}]: {response.json()}')
-
         return response
 
     def get_domain(self, domain):
@@ -199,8 +191,6 @@ class MailClient:
         response = requests.post(f'{self.api_url}/dkim', json=data, headers=self.authorized_headers, verify=False)
         response.raise_for_status()
         data = response.json()
-        logging.info(f'[MailClient.create_dkim({domain}]: {data}')
-
         return data.get('data')
 
     def create_domain(self, domain, description=''):
@@ -211,7 +201,6 @@ class MailClient:
         }
         response = self._create_principal(data)
         data = response.json()
-        logging.info(f'[MailClient.create_domain({domain}]: {data}')
 
         # Return the pkid
         return data.get('data')
