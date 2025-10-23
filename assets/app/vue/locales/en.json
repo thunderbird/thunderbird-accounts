@@ -136,7 +136,17 @@
           "recordsTableHeaderActions": "Actions",
           "noRecentDevices": "No recent devices signed in to your account.",
           "signOut": "Sign out",
-          "allowList": "Allow List"
+          "allowList": "Allow List",
+          "allowListDescription": "Ensure important senders aren’t marked as spam. Emails on your allow list skip junk filtering, but may still be rejected if they’re flagged or improperly formatted.",
+          "manageAllowList": "Manage allow list",
+          "showMore": "Show more",
+          "manageAllowListLabel": "Enter email or domain",
+          "manageAllowListPlaceholder": "{'placeholder@example.com'}",
+          "manageAllowListHelperText": "{'Enter a full email address (name@example.com)'}",
+          "addToAllowList": "Add to allow list",
+          "save": "Save",
+          "removedSuccessfully": "Removed {email} from allow list",
+          "undo": "Undo"
         }
       }
     },
