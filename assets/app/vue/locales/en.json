@@ -282,10 +282,10 @@
     "subscribe": {
       "lineItems": {
         "annualLong": "Annual Subscription",
+        "dueOn": "Due {0}",
         "quantity": "Qty: {0}",
         "subtotal": "Subtotal",
         "taxes": "Taxes",
-        "dueOn": "Due {0}",
         "today": "Today"
       },
       "title": "Order Summary"

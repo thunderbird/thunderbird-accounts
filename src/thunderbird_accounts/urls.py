@@ -56,6 +56,11 @@ urlpatterns = [
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
     path('api/v1/subscription/paddle/info', subscription_views.get_paddle_information, name='paddle_info'),
     path('api/v1/subscription/paddle/portal', subscription_views.get_paddle_portal_link, name='paddle_portal'),
+    path(
+        'api/v1/subscription/paddle/complete',
+        subscription_views.notify_paddle_checkout_complete,
+        name='paddle_complete',
+    ),
     path('health', infra_views.health_check),
 ]
 
