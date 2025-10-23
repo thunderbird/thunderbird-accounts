@@ -23,6 +23,7 @@ declare global {
       appPasswords?: string[];
       cancelRedirect?: string;
       allowedDomains?: string[];
+      customDomains?: { name: string, status: string, emailsCount: number }[];
       currentView?: Record<string, any>;
     };
   }

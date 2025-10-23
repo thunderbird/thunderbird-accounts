@@ -1,8 +1,40 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { PhGlobe, PhDotsThreeVertical, PhCheckCircle } from '@phosphor-icons/vue';
+import { BaseBadge, BaseBadgeTypes } from '@thunderbirdops/services-ui';
+
+// Shared components
 import CardContainer from '@/components/CardContainer.vue';
 
+// Local components
+import CustomDomainForm from './components/CustomDomainForm.vue';
+
 const { t } = useI18n();
+
+enum DOMAIN_STATUS {
+  VERIFIED = 'verified',
+  PENDING = 'pending',
+  FAILED = 'failed',
+}
+
+const placeholderDomains = [
+  {
+    name: 'sipes.us',
+    status: DOMAIN_STATUS.VERIFIED,
+    emailsCount: 10,
+  },
+  {
+    name: 'funndomain.lol',
+    status: DOMAIN_STATUS.PENDING,
+  },
+  {
+    name: 'domain.new',
+    status: DOMAIN_STATUS.FAILED,
+  }
+]
+
+const customDomains = computed(() => window._page?.customDomains || placeholderDomains);
 </script>
 
 <script lang="ts">
@@ -16,32 +48,100 @@ export default {
     <card-container>
       <h2>{{ t('views.mail.sections.customDomains.customDomains') }}</h2>
       <p>{{ t('views.mail.sections.customDomains.customDomainsDescription') }}</p>
-      <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: 2, domainLimit: 3 }) }}</strong>
+      <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: 3 }) }}</strong>
+
+      <div class="custom-domains-list" v-if="customDomains.length > 0">
+        <div class="custom-domain-item" v-for="domain in customDomains" :key="domain.name">
+          <ph-globe size="20" />
+          <p>{{ domain.name }}</p>
+
+          <template v-if="domain.status === DOMAIN_STATUS.VERIFIED">
+            <base-badge :type="BaseBadgeTypes.Verified">
+              <template #icon>
+                <ph-check-circle size="16" weight="fill" />
+              </template>
+              {{ t('views.mail.sections.customDomains.verified') }}
+            </base-badge>
+          </template>
+          <template v-else-if="domain.status === DOMAIN_STATUS.FAILED">
+            <base-badge :type="BaseBadgeTypes.NotSet">{{ t('views.mail.sections.customDomains.failed') }}</base-badge>
+          </template>
+          <template v-else>
+            <base-badge :type="BaseBadgeTypes.Pending">{{ t('views.mail.sections.customDomains.pending') }}</base-badge>
+          </template>
+
+          <template v-if="domain.emailsCount > 0">
+            <base-badge :type="BaseBadgeTypes.Emails">{{ t('views.mail.sections.customDomains.emailsCount', domain.emailsCount) }}</base-badge>
+          </template>
+
+          <button class="kebab-menu-button">
+            <ph-dots-three-vertical size="20" />
+          </button>
+        </div>
+      </div>
+
+      <custom-domain-form />
     </card-container>
   </section>
 </template>
 
 <style scoped>
-h2 {
-  font-size: 1.5rem;
-  font-weight: 500;
-  font-family: metropolis;
-  color: var(--colour-ti-highlight);
-  margin-block-end: 0.25rem;
-}
-
-p {
-  font-family: Inter;
-  line-height: 1.32;
+section#custom-domains {
   color: var(--colour-ti-secondary);
-  margin-block-end: 1.5rem;
-}
 
-strong {
-  font-family: Inter;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.48px;
-  color: var(--colour-ti-secondary);
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    font-family: metropolis;
+    color: var(--colour-ti-highlight);
+    margin-block-end: 0.25rem;
+  }
+
+  p {
+    font-family: Inter;
+    line-height: 1.32;
+    margin-block-end: 1.5rem;
+  }
+
+  strong {
+    display: block;
+    font-family: Inter;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.48px;
+    margin-block-end: 1rem;
+  }
+
+  .custom-domains-list {
+    border-block-start: 1px solid var(--colour-neutral-border);
+    border-block-end: 1px solid var(--colour-neutral-border);
+    margin-block-end: 1.5rem;
+
+    .custom-domain-item {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 1rem 0.5rem;
+      gap: 0.5rem;
+
+      & + .custom-domain-item {
+        border-block-start: 1px solid var(--colour-neutral-border);
+      }
+
+      p {
+        flex: 1;
+        margin-block-end: 0;
+      }
+
+      .kebab-menu-button {
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        color: inherit;
+        cursor: pointer;
+      }
+    }
+  }
 }
 </style>
