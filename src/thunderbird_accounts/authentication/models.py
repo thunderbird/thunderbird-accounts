@@ -24,14 +24,12 @@ class User(AbstractUser, BaseModel):
         GERMAN = 'de', _('German')
 
     username = models.CharField(
-        _("username"),
+        _('username'),
         max_length=150,
         unique=True,
-        help_text=_(
-            "Required. 150 characters or fewer."
-        ),
+        help_text=_('Required. 150 characters or fewer.'),
         error_messages={
-            "unique": _("A user with that username already exists."),
+            'unique': _('A user with that username already exists.'),
         },
     )
 
@@ -71,7 +69,6 @@ class User(AbstractUser, BaseModel):
     @cached_property
     def has_active_subscription(self):
         from thunderbird_accounts.subscription.models import Subscription
-        print('hello?')
 
         return self.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).count() > 0
 
