@@ -278,6 +278,17 @@
       "enterPassword": "Enter your password to confirm",
       "deleteAccountButtonLabel": "Request to delete data",
       "cancelButtonLabel": "Cancel"
+    },
+    "subscribe": {
+      "lineItems": {
+        "annualLong": "Annual Subscription",
+        "quantity": "Qty: {0}",
+        "subtotal": "Subtotal",
+        "taxes": "Taxes",
+        "dueOn": "Due {0}",
+        "today": "Today"
+      },
+      "title": "Order Summary"
     }
   },
   "footer": {

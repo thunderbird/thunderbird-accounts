@@ -38,6 +38,10 @@ def get_paddle_information(request: Request):
     plans = Plan.objects.filter(visible_on_subscription_page=True).exclude(product_id__isnull=True).all()
     for plan in plans:
         prices = plan.product.price_set.filter(status=Price.StatusValues.ACTIVE).all()
+        plan_info.append({
+            'name': plan.name,
+            'prices': [price.paddle_id for price in prices]
+        })
         plan_info.extend([price.paddle_id for price in prices])
 
     return JsonResponse({
