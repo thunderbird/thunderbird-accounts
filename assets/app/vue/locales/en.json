@@ -82,8 +82,34 @@
           "whatIsImap": "What is IMAP?",
           "whatIsJmap": "What is JMAP?"
         },
-        "manageEmails": {
-          "manageEmails": "Manage Emails"
+        "emailSettings": {
+          "emailSettings": "Email Settings",
+          "primaryEmail": "Primary email",
+          "displayName": "Display name",
+          "password": "Password",
+          "change": "change",
+          "set": "Set",
+          "notSet": "Not set",
+          "changePasswordDescription": "Use this password to connect apps that don't support secure sign-in.",
+          "changePasswordDescriptionTwo": "Once set, it can't be viewed or recovered.",
+          "changePasswordButtonLabel": "Change app password",
+          "createPasswordButtonLabel": "Create app password",
+          "emailAliases": "Email aliases",
+          "emailAliasesDescription": "All emails will deliver mail to your primary email mailbox.",
+          "emailAliasesDescriptionTwo": "{aliasUsed} of {aliasLimit} aliases used",
+          "newPassword": "New password",
+          "confirmPassword": "Confirm password",
+          "save": "Save",
+          "saving": "Saving...",
+          "cancel": "Cancel",
+          "passwordsDoNotMatch": "Passwords do not match",
+          "passwordSetSuccessfully": "App password saved",
+          "anErrorOccurred": "An error occurred",
+          "anErrorOccurredWhileChangingPassword": "An error occurred while changing the password",
+          "anErrorOccurredWhileChangingDisplayName": "An error occurred while changing the display name",
+          "newDisplayName": "New display name",
+          "displayNamePlaceholder": "Enter your display name",
+          "displayNameRequired": "Display name is required"
         },
         "customDomains": {
           "customDomains": "Custom Domains"

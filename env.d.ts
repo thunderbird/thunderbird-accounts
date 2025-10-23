@@ -7,6 +7,7 @@ declare global {
       isAuthenticated?: boolean;
       userEmail?: string;
       userFullName?: string;
+      userDisplayName?: string;
       connectionInfo?: {
         'SMTP': {'HOST': string, 'PORT': number, 'TLS': boolean},
         'IMAP': {'HOST': string, 'PORT': number, 'TLS': boolean},

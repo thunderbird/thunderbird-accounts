@@ -8,7 +8,7 @@ import UserMenu from '@/components/UserMenu.vue';
 const { t } = useI18n();
 
 const isAuthenticated = ref(window._page?.isAuthenticated);
-const userEmail = ref(window._page?.userEmail);
+const avatarUsername = ref(window._page?.userDisplayName || window._page?.userEmail);
 
 const navItemsAccounts = [
   {
@@ -31,7 +31,7 @@ const navItemsMail = [
     i18nKey: 'dashboard',
   },
   {
-    route: '#manage-emails',
+    route: '#email-settings',
     i18nKey: 'manageEmails',
   },
   {
@@ -82,8 +82,8 @@ const logoSrc = computed(() => {
           </li>
         </ul>
       </nav>
-  
-      <user-menu :username="userEmail" />
+
+      <user-menu :username="avatarUsername" />
     </template>
 
     <template v-else>
