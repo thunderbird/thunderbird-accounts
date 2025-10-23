@@ -90,7 +90,7 @@
           "change": "change",
           "set": "Set",
           "notSet": "Not set",
-          "changePasswordDescription": "Your password lets you sign in to email apps with your primary address.",
+          "changePasswordDescription": "Use this password to connect apps that don't support secure sign-in.",
           "changePasswordDescriptionTwo": "Once set, it can't be viewed or recovered.",
           "changePasswordButtonLabel": "Change app password",
           "createPasswordButtonLabel": "Create app password",
