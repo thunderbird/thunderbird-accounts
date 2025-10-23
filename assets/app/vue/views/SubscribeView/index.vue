@@ -5,7 +5,7 @@ import {initializePaddle} from "@paddle/paddle-js";
 import CardContainer from "@/components/CardContainer.vue";
 import {computed, ref} from "vue";
 
-//const {t} = useI18n();
+const {t} = useI18n();
 
 const csrfToken = window._page.csrfToken;
 
@@ -16,7 +16,8 @@ const initCurrencyFormatter = (code: string) => {
   });
 }
 
-let currency_formatter = initCurrencyFormatter('USD');
+let currencyFormatter = initCurrencyFormatter('USD');
+let planName = ref();
 
 const order_summary = ref({
   currency_code: null,
@@ -36,22 +37,22 @@ const updatePricing = async (evt) => {
     return;
   }
 
-  if (evt.name == 'checkout.loaded') {
+  if (evt.name.indexOf('checkout.') === 0) {
     const data = evt.data;
 
-    currency_formatter = initCurrencyFormatter(data.currency_code);
+    currencyFormatter = initCurrencyFormatter(data.currency_code);
 
     order_summary.value = {
       currency_code: data.currency_code,
-      total: currency_formatter.format(data.totals.total),
-      planName: data.items[0].product.name,
+      total: currencyFormatter.format(data.totals.total),
+      planName: planName.value,
       planDuration: data.items[0].price_name,
-      planDurationLong: 'annual subscription',
+      planDurationLong: t('views.subscribe.lineItems.annualLong').toLowerCase(),
       quantity: 1,
-      subtotal: currency_formatter.format(data.totals.subtotal),
-      taxes: currency_formatter.format(data.totals.tax),
-      dueToday: currency_formatter.format(data.totals.total),
-      dueOnRenewal: currency_formatter.format(data.recurring_totals.total),
+      subtotal: currencyFormatter.format(data.totals.subtotal),
+      taxes: currencyFormatter.format(data.totals.tax),
+      dueToday: currencyFormatter.format(data.totals.total),
+      dueOnRenewal: currencyFormatter.format(data.recurring_totals.total),
     }
 
   }
@@ -79,10 +80,13 @@ const setupPaddle = async () => {
 
   let Paddle; // The initialized Paddle instance.
 
-  const paddleItems = paddlePlanInfo.map((priceId) => ({
+  // We'll just grab the first plan and use those prices (really it's just 1 price here)
+  const paddleItems = paddlePlanInfo[0]['prices'].map((priceId) => ({
     quantity: 1,
     priceId,
   }));
+
+  planName.value = paddlePlanInfo[0]['name'];
 
   initializePaddle({
     environment: paddleEnvironment,
@@ -107,11 +111,9 @@ const setupPaddle = async () => {
     function openCheckout() {
       Paddle.Checkout.open({
         items: paddleItems,
-
       });
     }
 
-    console.log("opening checkout");
     openCheckout();
   });
 }
@@ -126,53 +128,69 @@ export default {
 </script>
 
 <template>
-  <div class="manage-mfa-view">
-    <card-container class="summary-card">
-      <ul class="summary">
-        <li class="summary__total-price">
-          <h2>{{ order_summary.currency_code }}{{ order_summary.total }}</h2>
-        </li>
-        <li class="summary__plan-duration-long">{{ order_summary.planDurationLong }}</li>
-        <li class="summary__plan_name">{{ order_summary.planName }}</li>
-        <li class="summary__plan-duration">{{ order_summary.planDuration }}</li>
-        <li aria-hidden="true">
-          <visual-divider></visual-divider>
-        </li>
-        <li class="summary__total-amount">Qty: {{ order_summary.quantity }}</li>
-        <li class="summary__line-item">
-          <p>Subtotal</p>
-          <p>{{ order_summary.currency_code }}{{ order_summary.subtotal }}</p>
-        </li>
-        <li aria-hidden="true">
-          <visual-divider></visual-divider>
-        </li>
-        <li class="summary__line-item">
-          <p>Taxes</p>
-          <p>{{ order_summary.currency_code }}{{ order_summary.taxes }}</p>
-        </li>
-        <li class="summary__line-item">
-          <p>Due today</p>
-          <p>{{ order_summary.currency_code }}{{ order_summary.dueToday }}</p>
-        </li>
-        <li class="summary__line-item">
-          <p>Due on ????</p>
-          <p>{{ order_summary.currency_code }}{{ order_summary.dueOnRenewal }}</p>
-        </li>
-      </ul>
-    </card-container>
-    <card-container class="checkout-container">
-      <h2>Payment</h2>
-    </card-container>
+  <div class="subscribe-view">
+    <h2>{{ t('views.subscribe.title') }}</h2>
+    <div class="container">
+      <card-container class="summary-card">
+        <ul class="summary">
+          <li class="summary__total-price">
+            <h3>{{ order_summary.total }}</h3>
+          </li>
+          <li class="summary__plan-duration-long">{{ order_summary.planDurationLong }}</li>
+          <li aria-hidden="true">
+            <visual-divider></visual-divider>
+          </li>
+          <li class="summary__plan_name">{{ order_summary.planName }}</li>
+          <li class="summary__plan-duration">{{ order_summary.planDuration }}</li>
+          <li class="summary__total-amount">{{ t('views.subscribe.lineItems.quantity', [order_summary.quantity]) }}</li>
+          <li class="summary__line-item">
+            <p>{{ t('views.subscribe.lineItems.subtotal') }}</p>
+            <p>{{ order_summary.subtotal }}</p>
+          </li>
+          <li aria-hidden="true">
+            <visual-divider></visual-divider>
+          </li>
+          <li class="summary__line-item">
+            <p>{{ t('views.subscribe.lineItems.taxes') }}</p>
+            <p>{{ order_summary.taxes }}</p>
+          </li>
+          <li class="summary__line-item">
+            <p>{{ t('views.subscribe.lineItems.dueOn', [t('views.subscribe.lineItems.today').toLowerCase()]) }}</p>
+            <p>{{ order_summary.dueToday }}</p>
+          </li>
+          <li class="summary__line-item">
+            <p>{{ t('views.subscribe.lineItems.dueOn', ['???']) }}</p>
+            <p>{{ order_summary.dueOnRenewal }}</p>
+          </li>
+        </ul>
+      </card-container>
+      <card-container class="checkout-container">
+        <h2>Payment</h2>
+      </card-container>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.manage-mfa-view {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1rem;
+.subscribe-view {
   width: 100%;
+
+  .container {
+    width: 100%;
+    gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  h2 {
+    font-family: metropolis;
+    font-weight: 400;
+    font-size: 1.5rem;
+    line-height: 1.2;
+    color: var(--colour-ti-highlight);
+    margin-block-end: 1rem;
+  }
 
   .checkout-container {
     width: 50%;
@@ -192,49 +210,14 @@ export default {
       justify-content: space-between;
     }
   }
-
-  .manage-mfa-view-left-column {
-    h2 {
-      font-family: metropolis;
-      font-size: 1.5rem;
-      font-weight: 500;
-      color: var(--colour-ti-highlight);
-      margin-block-end: 1rem;
-    }
-
-    p {
-      line-height: 1.32;
-      color: var(--colour-ti-base);
-      margin-block-end: 2rem;
-
-      a {
-        color: var(--colour-ti-highlight);
-      }
-    }
-  }
-
-  .manage-mfa-view-right-column {
-    max-width: 345px;
-  }
 }
 
 
 @media (min-width: 1024px) {
-  .hidden-sm {
-    display: block;
-  }
-
-  .divider {
-    align-self: stretch;
-    height: auto;
-  }
-
-  .manage-mfa-view {
-    flex-direction: row;
-    gap: 2rem;
-
-    .manage-mfa-view-left-column {
-      max-width: 567px;
+  .subscribe-view {
+    .container {
+      flex-direction: row;
+      gap: 2rem;
     }
   }
 }
