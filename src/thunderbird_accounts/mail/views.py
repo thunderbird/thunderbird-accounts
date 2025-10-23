@@ -43,27 +43,30 @@ def raise_form_error(request, to_view: str, error_message: str):
 
 
 def home(request: HttpRequest):
-    account = request.user.account_set.first()
+    app_passwords = []
+    user_display_name = None
 
-    if account:
-        stalwart_client = MailClient()
-    try:
-        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
-        user_display_name = email_user.get('description')
-        app_passwords = []
+    if request.user.is_authenticated:
+        account = request.user.account_set.first()
 
-        for secret in email_user.get('secrets', []):
-            app_passwords.append(decode_app_password(secret))
-    except AccountNotFoundError:
-        app_passwords = []
-        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
+        if account:
+            stalwart_client = MailClient()
+        try:
+            email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
+            user_display_name = email_user.get('description')
+            app_passwords = []
+
+            for secret in email_user.get('secrets', []):
+                app_passwords.append(decode_app_password(secret))
+        except AccountNotFoundError:
+            app_passwords = []
+            messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
     return TemplateResponse(request, 'mail/index.html', {
         'connection_info': settings.CONNECTION_INFO,
         'app_passwords': json.dumps(app_passwords),
         'user_display_name': user_display_name,
     })
-
 
 @login_required
 def sign_up(request: HttpRequest):
