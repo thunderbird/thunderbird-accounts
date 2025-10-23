@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhGlobe, PhDotsThreeVertical, PhCheckCircle } from '@phosphor-icons/vue';
+import { PhGlobe, PhCheckCircle } from '@phosphor-icons/vue';
 import { BaseBadge, BaseBadgeTypes } from '@thunderbirdops/services-ui';
 
 // Shared components
@@ -9,6 +9,7 @@ import CardContainer from '@/components/CardContainer.vue';
 
 // Local components
 import CustomDomainForm from './components/CustomDomainForm.vue';
+import ActionsMenu from './components/ActionsMenu.vue';
 
 const { t } = useI18n();
 
@@ -74,9 +75,7 @@ export default {
             <base-badge :type="BaseBadgeTypes.Emails">{{ t('views.mail.sections.customDomains.emailsCount', domain.emailsCount) }}</base-badge>
           </template>
 
-          <button class="kebab-menu-button">
-            <ph-dots-three-vertical size="20" />
-          </button>
+          <actions-menu :domain="domain" />
         </div>
       </div>
 
@@ -131,15 +130,6 @@ section#custom-domains {
       p {
         flex: 1;
         margin-block-end: 0;
-      }
-
-      .kebab-menu-button {
-        background: none;
-        border: none;
-        padding: 0;
-        margin: 0;
-        color: inherit;
-        cursor: pointer;
       }
     }
   }
