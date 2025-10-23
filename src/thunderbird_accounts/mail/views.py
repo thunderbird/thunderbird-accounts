@@ -68,6 +68,7 @@ def home(request: HttpRequest):
         'user_display_name': user_display_name,
     })
 
+
 @login_required
 def sign_up(request: HttpRequest):
     # If we're posting ourselves, we're logging in
