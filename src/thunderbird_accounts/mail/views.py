@@ -43,9 +43,13 @@ def raise_form_error(request, to_view: str, error_message: str):
 
 
 def home(request: HttpRequest):
-    return TemplateResponse(request, 'mail/index.html', {
-        'connection_info': settings.CONNECTION_INFO,
-    })
+    return TemplateResponse(
+        request,
+        'mail/index.html',
+        {
+            'connection_info': settings.CONNECTION_INFO,
+        },
+    )
 
 
 @login_required

@@ -71,6 +71,7 @@ class User(AbstractUser, BaseModel):
     @cached_property
     def has_active_subscription(self):
         from thunderbird_accounts.subscription.models import Subscription
+        print('hello?')
 
         return self.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).count() > 0
 
