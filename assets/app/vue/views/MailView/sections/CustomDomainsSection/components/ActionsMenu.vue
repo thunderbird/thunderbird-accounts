@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { PhDotsThreeVertical } from '@phosphor-icons/vue';
 
 const props = defineProps<{
@@ -12,6 +13,8 @@ const props = defineProps<{
 
 const showMenu = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
+
+const { t } = useI18n();
 
 const toggleMenu = () => {
   showMenu.value = !showMenu.value;
@@ -51,8 +54,8 @@ onBeforeUnmount(() => {
     </button>
 
     <div v-if="showMenu" class="dropdown">
-      <button @click="handleRetry">Retry</button>
-      <button @click="handleDelete">Delete</button>
+      <button @click="handleRetry">{{ t('views.mail.sections.customDomains.retry') }}</button>
+      <button @click="handleDelete">{{ t('views.mail.sections.customDomains.delete') }}</button>
     </div>
   </div>
 </template>
