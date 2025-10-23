@@ -20,7 +20,9 @@ const { t } = useI18n();
 // Password form
 const showPasswordForm = ref(false);
 const appPassword = ref('');
+const appPasswordConfirm = ref('');
 const errorMessage = ref(window._page?.formError || '');
+const successMessage = ref('');
 const isSubmitting = ref(false);
 
 // Display name form
@@ -36,6 +38,11 @@ const appPasswords = window._page?.appPasswords || [];
 
 const onSetPasswordSubmit = async () => {
   if (isSubmitting.value) return;
+
+  if (appPassword.value !== appPasswordConfirm.value) {
+    errorMessage.value = t('views.mail.sections.emailSettings.passwordsDoNotMatch');
+    return;
+  }
 
   errorMessage.value = '';
   isSubmitting.value = true;
@@ -60,8 +67,11 @@ const onSetPasswordSubmit = async () => {
       appPassword.value = '';
       showPasswordForm.value = false;
 
-      // Reload the page to reflect changes
-      window.location.reload();
+      successMessage.value = t('views.mail.sections.emailSettings.passwordSetSuccessfully');
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } else {
       errorMessage.value = data.error || t('views.mail.sections.emailSettings.anErrorOccurred');
     }
@@ -183,6 +193,8 @@ const onCancelSetDisplayName = () => {
           <p>{{ t('views.mail.sections.emailSettings.changePasswordDescription') }}</p>
           <p>{{ t('views.mail.sections.emailSettings.changePasswordDescriptionTwo') }}</p>
 
+          <notice-bar :type="NoticeBarTypes.Success" v-if="successMessage" class="success-message">{{ successMessage }}</notice-bar>
+
           <template v-if="showPasswordForm">
             <form
               ref="appPasswordFormRef"
@@ -193,6 +205,10 @@ const onCancelSetDisplayName = () => {
 
               <text-input v-model="appPassword" name="password" type="password" data-testid="app-passwords-add-password-input">
                 {{ t('views.mail.sections.emailSettings.newPassword') }}:
+              </text-input>
+
+              <text-input v-model="appPasswordConfirm" name="password-confirm" type="password" data-testid="app-passwords-add-password-confirm-input">
+                {{ t('views.mail.sections.emailSettings.confirmPassword') }}:
               </text-input>
 
               <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">{{ errorMessage }}</notice-bar>
@@ -209,7 +225,7 @@ const onCancelSetDisplayName = () => {
             <primary-button variant="outline" @click="showPasswordForm = true">{{ t('views.mail.sections.emailSettings.changePasswordButtonLabel') }}</primary-button>
           </template>
           <template v-else>
-            <primary-button @click="showPasswordForm = true">{{ t('views.mail.sections.emailSettings.addPasswordButtonLabel') }}</primary-button>
+            <primary-button @click="showPasswordForm = true">{{ t('views.mail.sections.emailSettings.createPasswordButtonLabel') }}</primary-button>
           </template>
         </div>
       </div>
@@ -273,6 +289,10 @@ h2 {
       display: flex;
       justify-content: flex-end;
       gap: 1rem;
+    }
+
+    .success-message {
+      margin-block-end: 1rem;
     }
   }
 
