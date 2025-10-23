@@ -19,15 +19,15 @@ const { t } = useI18n();
 
 // Password form
 const showPasswordForm = ref(false);
-const appPassword = ref<string | null>(null);
-const appPasswordConfirm = ref<string | null>(null);
+const appPassword = ref<string>(null);
+const appPasswordConfirm = ref<string>(null);
 const errorMessage = ref(window._page?.formError || '');
-const successMessage = ref<string | null>(null);
+const successMessage = ref<string>(null);
 const isSubmitting = ref(false);
 
 // Display name form
 const showDisplayNameForm = ref(false);
-const displayName = ref<string | null>(null);
+const displayName = ref<string>(null);
 const errorMessageDisplayName = ref(window._page?.formError || '');
 const isSubmittingDisplayName = ref(false);
 
