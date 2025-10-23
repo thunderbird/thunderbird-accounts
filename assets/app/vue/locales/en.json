@@ -112,7 +112,9 @@
           "displayNameRequired": "Display name is required"
         },
         "customDomains": {
-          "customDomains": "Custom Domains"
+          "customDomains": "Custom Domains",
+          "customDomainsDescription": "Use your own domain to create personalized email addresses.",
+          "domainsAdded": "{domainCount} / {domainLimit} domains added"
         },
         "securitySettings": {
           "securitySettings": "Security Settings"

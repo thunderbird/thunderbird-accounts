@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import DashboardSection from './sections/DashboardSection/index.vue';
 import EmailSettingsSection from './sections/EmailSettingsSection.vue';
-import CustomDomainsSection from './sections/CustomDomainsSection.vue';
+import CustomDomainsSection from './sections/CustomDomainsSection/index.vue';
 import SecuritySettingsSection from './sections/SecuritySettingsSection.vue';
 </script>
 
