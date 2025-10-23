@@ -49,6 +49,7 @@ a {
 
 .security-settings-content {
   display: flex;
+  flex-wrap: wrap;
   gap: 2rem;
   align-items: flex-start;
   color: var(--colour-ti-secondary);
@@ -64,5 +65,10 @@ a {
     line-height: 1.32;
     margin-block-end: 1rem;
   }
+}
+
+.security-settings-left,
+.security-settings-right {
+  flex: 1 1 300px;
 }
 </style>
