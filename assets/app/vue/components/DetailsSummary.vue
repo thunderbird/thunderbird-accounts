@@ -28,6 +28,7 @@ function toggle() {
     <button
       v-if="expandable"
       class="accordion__header"
+      :class="{ 'open': isOpen }"
       type="button"
       :aria-expanded="isOpen ? 'true' : 'false'"
       @click="toggle"
@@ -38,12 +39,12 @@ function toggle() {
         </span>
         <span class="accordion__title">{{ title }}</span>
       </span>
-      <span class="accordion__chevron" :class="{ 'accordion__chevron--open': isOpen }" aria-hidden="true">
+      <span class="accordion__chevron" :class="{ 'open': isOpen }" aria-hidden="true">
         <ph-caret-down size="20" />
       </span>
     </button>
 
-    <div v-else class="accordion__header">
+    <div v-else class="accordion__header open">
       <span class="accordion__left">
         <span v-if="$slots.icon" class="accordion__icon">
           <slot name="icon" />
@@ -70,11 +71,15 @@ function toggle() {
     width: 100%;
     background-color: var(--colour-neutral-lower);
     border: 1px solid var(--colour-neutral-border);
-    border-radius: 0.5rem 0.5rem 0 0;
+    border-radius: 0.5rem;
     padding: 1rem 0.5rem;
     text-align: left;
     color: var(--colour-ti-base);
     cursor: pointer;
+
+    &.open {
+      border-radius: 0.5rem 0.5rem 0 0;
+    }
 
     &:focus-visible {
       outline: 2px solid var(--colour-ti-secondary);
@@ -112,6 +117,10 @@ function toggle() {
       width: 1.25rem;
       height: 1.25rem;
       margin-inline-end: 0.5rem;
+
+      &.open {
+        transform: rotate(180deg);
+      }
     }
   }
 
