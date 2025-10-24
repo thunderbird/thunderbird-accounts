@@ -25,19 +25,19 @@ const navItemsAccounts = [
 
 const navItemsMail = [
   {
-    route: '#dashboard',
+    route: '/mail#dashboard',
     i18nKey: 'dashboard',
   },
   {
-    route: '#manage-emails',
+    route: '/mail#manage-emails',
     i18nKey: 'manageEmails',
   },
   {
-    route: '#custom-domains',
+    route: '/mail#custom-domains',
     i18nKey: 'customDomains',
   },
   {
-    route: '#security-settings',
+    route: '/mail/security-settings',
     i18nKey: 'securitySettings',
   },
 ];

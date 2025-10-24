@@ -115,7 +115,38 @@
           "customDomains": "Custom Domains"
         },
         "securitySettings": {
-          "securitySettings": "Security Settings"
+          "securitySettings": "Security Settings",
+          "accountActivity": "Account Activity",
+          "accountActivityDescriptionOne": "Many email apps can configure your account automatically. Enter your email address and password to get started.",
+          "accountActivityDescriptionTwo": "If setup doesn’t work, try connecting manually using server settings.",
+          "viewActivity": "View activity",
+          "allowList": "Allow List",
+          "allowListDescription": "Ensure important senders aren’t marked as spam. Emails on your allow list skip junk filtering, but may still be rejected if they’re flagged or improperly formatted.",
+          "manageAllowList": "Manage allow list"
+        }
+      },
+      "views": {
+        "securitySettings": {
+          "securitySettings": "Security Settings",
+          "accountActivity": "Account Activity",
+          "accountActivityDescription": "Recent devices signed in to your account.",
+          "recordsTableHeaderDevice": "Device – App",
+          "recordsTableHeaderLocation": "Location",
+          "recordsTableHeaderLastActive": "Last active",
+          "recordsTableHeaderActions": "Actions",
+          "noRecentDevices": "No recent devices signed in to your account.",
+          "signOut": "Sign out",
+          "allowList": "Allow List",
+          "allowListDescription": "Ensure important senders aren’t marked as spam. Emails on your allow list skip junk filtering, but may still be rejected if they’re flagged or improperly formatted.",
+          "manageAllowList": "Manage allow list",
+          "showMore": "Show more",
+          "manageAllowListLabel": "Enter email or domain",
+          "manageAllowListPlaceholder": "{'placeholder@example.com'}",
+          "manageAllowListHelperText": "{'Enter a full email address (name@example.com)'}",
+          "addToAllowList": "Add to allow list",
+          "save": "Save",
+          "removedSuccessfully": "Removed {email} from allow list",
+          "undo": "Undo"
         }
       }
     },

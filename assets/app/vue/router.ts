@@ -10,6 +10,7 @@ import TermsView from '@/views/TermsView.vue';
 
 // Thundermail Routes
 import MailView from '@/views/MailView/index.vue';
+import SecuritySettingsView from '@/views/MailView/views/SecuritySettingsView/index.vue';
 
 const router = createRouter({
   history: createWebHistory('/'),
@@ -40,6 +41,11 @@ const router = createRouter({
       path: '/mail',
       name: 'mail',
       component: MailView,
+    },
+    {
+      path: '/mail/security-settings',
+      name: 'mail-security-settings',
+      component: SecuritySettingsView,
     },
     // Footer links (shared between Accounts and Thundermail)
     {
