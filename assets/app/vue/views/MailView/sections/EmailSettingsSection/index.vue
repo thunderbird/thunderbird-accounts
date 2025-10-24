@@ -9,6 +9,7 @@ import DetailsSummary from '@/components/DetailsSummary.vue';
 // Local components
 import AppPasswordSide from './components/AppPasswordSide.vue';
 import UserInfoSide from './components/UserInfoSide.vue';
+import EmailAliases from './components/EmailAliases.vue';
 
 const { t } = useI18n();
 
@@ -36,10 +37,7 @@ export default {
           <ph-sliders size="24" />
         </template>
 
-        <div class="email-aliases-content">
-          <p>{{ t('views.mail.sections.emailSettings.emailAliasesDescription') }}</p>
-          <p>{{ t('views.mail.sections.emailSettings.emailAliasesDescriptionTwo', { aliasUsed: 3, aliasLimit: 10 }) }}</p>
-        </div>
+        <email-aliases />
       </details-summary>
     </card-container>
   </section>
@@ -60,21 +58,6 @@ h2 {
   column-gap: 2rem;
   margin-block-end: 2.25rem;
   color: var(--colour-ti-secondary);
-}
-
-.email-aliases-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  line-height: 1.32;
-  color: var(--colour-ti-secondary);
-
-  & :last-child {
-    font-style: italic;
-    font-size: 0.75rem;
-    color: var(--colour-ti-muted);
-    line-height: normal;
-  }
 }
 
 @media (min-width: 768px) {
