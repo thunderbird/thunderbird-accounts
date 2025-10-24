@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { VisualDivider } from '@thunderbirdops/services-ui';
+import { LoadingSkeleton, NoticeBar, NoticeBarTypes, VisualDivider } from '@thunderbirdops/services-ui';
 import { initializePaddle } from '@paddle/paddle-js';
 import CardContainer from '@/components/CardContainer.vue';
 import { ref } from 'vue';
@@ -18,18 +18,22 @@ const initCurrencyFormatter = (code: string) => {
 
 let currencyFormatter = initCurrencyFormatter('USD');
 const planName = ref();
+const planSystemError = ref(false);
+const paymentComplete = ref(false);
+const paddleLoading = ref(true);
 
+// Placeholder information for the skeletons
 const order_summary = ref({
-  currency_code: null,
-  total: null,
-  planName: null,
+  currency_code: 'USD',
+  total: 'US$000.00',
+  planName: 'Placeholder plan name',
   planDuration: null,
   planDurationLong: null,
-  quantity: null,
-  subtotal: null,
-  taxes: null,
-  dueToday: null,
-  dueOnRenewal: null,
+  quantity: 1,
+  subtotal: 'US$000.00',
+  taxes: 'US$000.00',
+  dueToday: 'US$000.00',
+  dueOnRenewal: 'US$000.00',
 });
 
 const updatePricing = async (evt) => {
@@ -40,6 +44,8 @@ const updatePricing = async (evt) => {
   if (evt.name == 'checkout.completed') {
     const data = evt.data;
     if (data.status === 'completed') {
+      paymentComplete.value = true;
+
       const response = await fetch('/api/v1/subscription/paddle/complete', {
         mode: 'same-origin',
         credentials: 'include',
@@ -76,9 +82,8 @@ const updatePricing = async (evt) => {
       dueToday: currencyFormatter.format(data.totals.total),
       dueOnRenewal: currencyFormatter.format(data.recurring_totals.total),
     };
+    paddleLoading.value = false;
   }
-
-  console.log(evt);
 };
 
 const setupPaddle = async () => {
@@ -98,9 +103,11 @@ const setupPaddle = async () => {
     signed_user_id: signedUserId,
   } = await response.json();
 
-  console.log(paddleEnvironment, paddlePlanInfo, paddleToken);
+  if (paddlePlanInfo.length === 0) {
+    planSystemError.value = true;
+  }
 
-  let Paddle; // The initialized Paddle instance.
+  console.log(paddleEnvironment, paddlePlanInfo, paddleToken);
 
   // We'll just grab the first plan and use those prices (really it's just 1 price here)
   const paddleItems = paddlePlanInfo[0]['prices'].map((priceId) => ({
@@ -127,11 +134,11 @@ const setupPaddle = async () => {
     if (!paddleInstance) {
       return;
     }
-    Paddle = paddleInstance;
+    const paddle = paddleInstance;
 
     // open checkout
     function openCheckout() {
-      Paddle.Checkout.open({
+      paddle.Checkout.open({
         items: paddleItems,
         customData: {
           signed_user_id: signedUserId,
@@ -155,37 +162,77 @@ export default {
 <template>
   <div class="subscribe-view">
     <h2>{{ t('views.subscribe.title') }}</h2>
+    <notice-bar v-if="paymentComplete" :type="NoticeBarTypes.Info">{{
+      t('views.subscribe.paymentComplete')
+    }}</notice-bar>
+    <notice-bar v-if="planSystemError" :type="NoticeBarTypes.Critical">{{
+      t('views.subscribe.planSystemError')
+    }}</notice-bar>
     <div class="container">
       <card-container class="summary-card">
         <ul class="summary">
           <li class="summary__total-price">
-            <h3>{{ order_summary.total }}</h3>
+            <loading-skeleton :is-loading="paddleLoading">
+              <h3>{{ order_summary.total }}</h3>
+            </loading-skeleton>
           </li>
-          <li class="summary__plan-duration-long">{{ order_summary.planDurationLong }}</li>
+          <li class="summary__plan-duration-long">
+            <loading-skeleton :is-loading="paddleLoading">
+              {{ order_summary.planDurationLong }}
+            </loading-skeleton>
+          </li>
           <li aria-hidden="true" class="visual-divider">
             <visual-divider></visual-divider>
           </li>
-          <li class="summary__plan_name">{{ order_summary.planName }}</li>
-          <li class="summary__plan-duration">{{ order_summary.planDuration }}</li>
-          <li class="summary__total-amount">{{ t('views.subscribe.lineItems.quantity', [order_summary.quantity]) }}</li>
+          <li class="summary__plan_name">
+            <loading-skeleton :is-loading="paddleLoading">
+              {{ order_summary.planName }}
+            </loading-skeleton>
+          </li>
+          <li class="summary__plan-duration">
+            <loading-skeleton :is-loading="paddleLoading">
+              {{ order_summary.planDuration }}
+            </loading-skeleton>
+          </li>
+          <li class="summary__total-amount">
+            <loading-skeleton :is-loading="paddleLoading">
+              {{ t('views.subscribe.lineItems.quantity', [order_summary.quantity]) }}
+            </loading-skeleton>
+          </li>
           <li class="summary__line-item">
             <p>{{ t('views.subscribe.lineItems.subtotal') }}</p>
-            <p class="summary__cost-amount">{{ order_summary.subtotal }}</p>
+            <p class="summary__cost-amount">
+              <loading-skeleton :is-loading="paddleLoading">
+                {{ order_summary.subtotal }}
+              </loading-skeleton>
+            </p>
           </li>
           <li aria-hidden="true" class="visual-divider">
             <visual-divider></visual-divider>
           </li>
           <li class="summary__line-item">
             <p>{{ t('views.subscribe.lineItems.taxes') }}</p>
-            <p class="summary__cost-amount">{{ order_summary.taxes }}</p>
+            <p class="summary__cost-amount">
+              <loading-skeleton :is-loading="paddleLoading">
+                {{ order_summary.taxes }}
+              </loading-skeleton>
+            </p>
           </li>
           <li class="summary__line-item">
             <p>{{ t('views.subscribe.lineItems.dueOn', [t('views.subscribe.lineItems.today').toLowerCase()]) }}</p>
-            <p class="summary__cost-amount">{{ order_summary.dueToday }}</p>
+            <p class="summary__cost-amount">
+              <loading-skeleton :is-loading="paddleLoading">
+                {{ order_summary.dueToday }}
+              </loading-skeleton>
+            </p>
           </li>
           <li class="summary__line-item">
             <p>{{ t('views.subscribe.lineItems.dueOn', ['???']) }}</p>
-            <p class="summary__cost-amount">{{ order_summary.dueOnRenewal }}</p>
+            <p class="summary__cost-amount">
+              <loading-skeleton :is-loading="paddleLoading">
+                {{ order_summary.dueOnRenewal }}
+              </loading-skeleton>
+            </p>
           </li>
         </ul>
       </card-container>
