@@ -37,6 +37,14 @@ const onMakePrimary = (alias: EmailAlias) => {
 
 const onDeleteAlias = (alias: EmailAlias) => {
   placeholderAliases.value = placeholderAliases.value.filter(item => item.id !== alias.id);
+
+  // Make the subscription alias the primary one if there is no primary alias
+  if (placeholderAliases.value.every(item => !item.isPrimary)) {
+    placeholderAliases.value = placeholderAliases.value.map(item => ({
+      ...item,
+      isPrimary: item.isSubscription
+    }));
+  }
 };
 </script>
 
@@ -71,7 +79,7 @@ const onDeleteAlias = (alias: EmailAlias) => {
       </div>
     </div>
 
-    <email-alias-form :allowed-domains="allowedDomains" @add-alias="onAddAlias" />
+    <email-alias-form :allowed-domains="allowedDomains" @add-alias="onAddAlias" v-if="placeholderAliases.length < aliasLimit" />
   </div>
 </template>
 
