@@ -48,7 +48,7 @@ export default {
   <section id="custom-domains">
     <card-container>
       <h2>{{ t('views.mail.sections.customDomains.customDomains') }}</h2>
-      <p>{{ t('views.mail.sections.customDomains.customDomainsDescription') }}</p>
+      <p class="custom-domains-description">{{ t('views.mail.sections.customDomains.customDomainsDescription') }}</p>
       <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: 3 }) }}</strong>
 
       <div class="custom-domains-list" v-if="customDomains.length > 0">
@@ -100,6 +100,10 @@ section#custom-domains {
     font-family: Inter;
     line-height: 1.32;
     margin-block-end: 1.5rem;
+
+    &.custom-domains-description {
+      max-width: 730px;
+    }
   }
 
   strong {

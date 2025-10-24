@@ -113,7 +113,7 @@
         },
         "customDomains": {
           "customDomains": "Custom Domains",
-          "customDomainsDescription": "Use your own domain to create personalized email addresses.",
+          "customDomainsDescription": "Adding a domain you own to your account allows you to create aliases using your custom domains.",
           "domainsAdded": "{domainCount} / {domainLimit} domains added",
           "verified": "Verified",
           "pending": "Pending",
