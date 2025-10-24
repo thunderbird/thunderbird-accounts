@@ -97,6 +97,7 @@ h2 {
   }
 
   > img {
+    width: 100%;
     max-width: 400px;
     object-fit: cover;
   }
