@@ -25,7 +25,7 @@ const navItemsAccounts = [
 
 const navItemsMail = [
   {
-    route: '/mail#dashboard',
+    route: '/mail',
     i18nKey: 'dashboard',
   },
   {
