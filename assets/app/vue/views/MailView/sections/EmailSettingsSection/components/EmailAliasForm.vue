@@ -20,17 +20,46 @@ const step = ref<EMAIL_ALIAS_STEP>(EMAIL_ALIAS_STEP.INITIAL);
 const emailAlias = ref(null);
 const selectedDomain = ref(null);
 const formRef = useTemplateRef('formRef');
+const validationError = ref<string | null>(null);
 
 const allowedDomainsOptions = computed(() => props.allowedDomains.map((domain) => ({
   label: domain,
   value: domain,
 })));
 
+const validateEmailAlias = (value: string): string | null => {
+  if (!value) {
+    return null; // Let built-in required validation handle empty values
+  }
+
+  if (value.length < 3) {
+    return t('views.mail.sections.emailSettings.nameValidationErrorMinLength');
+  }
+
+  if (value.length > 40) {
+    return t('views.mail.sections.emailSettings.nameValidationErrorMaxLength');
+  }
+
+  const validPattern = /^[a-z0-9_]+$/;
+  if (!validPattern.test(value)) {
+    return t('views.mail.sections.emailSettings.nameValidationErrorPattern');
+  }
+
+  return null;
+};
+
+const onEmailAliasInput = () => {
+  validationError.value = validateEmailAlias(emailAlias.value);
+};
+
 const onSubmit = () => {
-  if (formRef.value.checkValidity()) {
+  validationError.value = validateEmailAlias(emailAlias.value);
+
+  if (!validationError.value && formRef.value.checkValidity()) {
     emit('add-alias', emailAlias.value, selectedDomain.value);
     emailAlias.value = null;
     selectedDomain.value = null;
+    validationError.value = null;
     step.value = EMAIL_ALIAS_STEP.INITIAL;
   }
 };
@@ -46,7 +75,14 @@ const onSubmit = () => {
   <template v-else-if="step === EMAIL_ALIAS_STEP.SUBMIT">
     <form @submit.prevent="onSubmit" ref="formRef">
       <div class="email-alias-input-wrapper">
-        <text-input name="email-alias" v-model="emailAlias" :help="t('views.mail.sections.emailSettings.nameHelp')" required>
+        <text-input
+          name="email-alias"
+          v-model="emailAlias"
+          @input="onEmailAliasInput"
+          :help="t('views.mail.sections.emailSettings.nameHelp')"
+          :error="validationError"
+          required
+        >
           {{ t('views.mail.sections.emailSettings.name') }}
         </text-input>
         <span>@</span>
