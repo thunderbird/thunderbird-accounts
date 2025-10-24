@@ -117,7 +117,8 @@ const onDeleteAlias = (alias: EmailAlias) => {
       align-items: center;
       padding: 1rem 0.5rem;
       gap: 0.5rem;
-      height: 60px;
+      height: 100%;
+      min-height: 60px;
 
       & + .alias-item {
         border-block-start: 1px solid var(--colour-neutral-border);

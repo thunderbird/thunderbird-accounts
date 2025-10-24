@@ -235,7 +235,7 @@ const copyValue = async (value: string | number) => {
 
   .server-detail-item {
     display: grid;
-    grid-template-columns: 1.5rem 30% 1fr auto;
+    grid-template-columns: 1.5rem 1fr 1fr auto;
     align-items: center;
     padding: 0.625rem 0.5rem;
     color: var(--colour-ti-secondary);
@@ -293,6 +293,10 @@ const copyValue = async (value: string | number) => {
 @media (min-width: 1024px) {
   .view-server-settings-content {
     grid-template-columns: 1fr 1fr;
+
+    .server-detail-item {
+      grid-template-columns: 1.5rem 30% 1fr auto;
+    }
   }
 }
 </style>

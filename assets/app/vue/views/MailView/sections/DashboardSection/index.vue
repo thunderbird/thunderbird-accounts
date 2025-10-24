@@ -34,12 +34,14 @@ export default {
         <div class="download-card">
           <div class="content">
             <p>{{ t('views.mail.sections.dashboard.downloadDescription') }}</p>
-            <primary-button>
-              <template #iconLeft>
-                <ph-download-simple size="16"/>
-              </template>
-              {{ t('views.mail.sections.dashboard.downloadButtonLabel') }}
-            </primary-button>
+            <a class="download-link" href="https://www.thunderbird.net/thunderbird/all/" target="_blank">
+              <primary-button>
+                <template #iconLeft>
+                  <ph-download-simple size="16"/>
+                </template>
+                {{ t('views.mail.sections.dashboard.downloadButtonLabel') }}
+              </primary-button>
+            </a>
           </div>
 
           <img :src="thunderbirdClientImage" :alt="t('views.mail.sections.dashboard.thunderbirdClientAlt')" />
@@ -87,9 +89,15 @@ h2 {
 
   .content {
     padding: 1.5rem 1rem;
+
+    .download-link {
+      display: inline-block;
+      text-decoration: none;
+    }
   }
 
   > img {
+    width: 100%;
     max-width: 400px;
     object-fit: cover;
   }
