@@ -36,16 +36,26 @@ const order_summary = ref({
   dueOnRenewal: 'US$000.00',
 });
 
-const updatePricing = async (evt) => {
+/**
+ * Callback to handle Paddle checkout events
+ * Once the checkout process is complete a POST request will be made to verify (and do some work on dev env)
+ * the subscription and transactions exist. This should be near instant, but our system relies on the trans/sub existing
+ * in order to declare the user as "subscribed".
+ * @param evt
+ */
+const onPaddleEvent = async (evt) => {
   if (!evt.name) {
     return;
   }
 
+  // Check if the checkout is completed, and the transaction is marked as completed.
   if (evt.name == 'checkout.completed') {
     const data = evt.data;
     if (data.status === 'completed') {
       paymentComplete.value = true;
 
+      /* This POST will basically just stall for a bit, on dev environments it retrieves the actual webhook
+      call from Paddle and runs the "handle webhook" tasks. */
       const response = await fetch('/api/v1/subscription/paddle/complete', {
         mode: 'same-origin',
         credentials: 'include',
@@ -65,6 +75,7 @@ const updatePricing = async (evt) => {
     }
   }
 
+  // Just update the cart, every checkout.* event has all the information on it.
   if (evt.name.indexOf('checkout.') === 0) {
     const data = evt.data;
 
@@ -86,6 +97,10 @@ const updatePricing = async (evt) => {
   }
 };
 
+/**
+ * Retrieve the paddle info (environment, plans, client token, and signed user id) and initialize the paddle checkout
+ * module.
+ */
 const setupPaddle = async () => {
   const response = await fetch('/api/v1/subscription/paddle/info', {
     mode: 'same-origin',
@@ -120,12 +135,12 @@ const setupPaddle = async () => {
   initializePaddle({
     environment: paddleEnvironment,
     token: paddleToken,
-    eventCallback: updatePricing,
+    eventCallback: onPaddleEvent,
     checkout: {
       settings: {
         displayMode: 'inline',
         frameTarget: 'checkout-container',
-        frameInitialHeight: 450,
+        frameInitialHeight: 992,
         frameStyle: 'width: 100%; min-width: 312px; background-color: transparent; border: none;',
         variant: 'one-page',
       },
@@ -141,6 +156,7 @@ const setupPaddle = async () => {
       paddle.Checkout.open({
         items: paddleItems,
         customData: {
+          // This will tie the transaction and subscription to our user uuid
           signed_user_id: signedUserId,
         },
       });
@@ -227,7 +243,7 @@ export default {
             </p>
           </li>
           <li class="summary__line-item">
-            <p>{{ t('views.subscribe.lineItems.dueOn', ['???']) }}</p>
+            <p>{{ t('views.subscribe.lineItems.dueOn', [t('views.subscribe.lineItems.renewal').toLowerCase()]) }}</p>
             <p class="summary__cost-amount">
               <loading-skeleton :is-loading="paddleLoading">
                 {{ order_summary.dueOnRenewal }}
@@ -247,12 +263,17 @@ export default {
 .subscribe-view {
   width: 100%;
 
+  /* Used in the notice-bar component */
+  .notice-bar {
+    margin-bottom: 1rem;
+  }
+
   .container {
     width: 100%;
     gap: 1rem;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
   }
 
   h2 {
@@ -265,11 +286,14 @@ export default {
   }
 
   .checkout-container {
-    width: 50%;
+    width: 100%;
+    max-width: 60%;
   }
 
   .summary-card {
-    width: 50%;
+    width: 100%;
+    max-width: 60%;
+    min-height: 340px;
   }
 
   .summary {
@@ -340,6 +364,7 @@ export default {
 @media (min-width: 1024px) {
   .subscribe-view {
     .container {
+      align-items: flex-start;
       flex-direction: row;
       gap: 2rem;
     }

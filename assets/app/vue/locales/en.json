@@ -286,7 +286,8 @@
         "quantity": "Qty: {0}",
         "subtotal": "Subtotal",
         "taxes": "Taxes",
-        "today": "Today"
+        "today": "Today",
+        "renewal": "On renewal"
       },
       "planSystemError": "No plan exists or the plan is incorrectly setup. Please correct this in the admin panel.",
       "paymentComplete": "Please wait while we verify payment, you will be redirected shortly.",
