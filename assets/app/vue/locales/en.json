@@ -288,6 +288,8 @@
         "taxes": "Taxes",
         "today": "Today"
       },
+      "planSystemError": "No plan exists or the plan is incorrectly setup. Please correct this in the admin panel.",
+      "paymentComplete": "Please wait while we verify payment, you will be redirected shortly.",
       "title": "Order Summary"
     }
   },
