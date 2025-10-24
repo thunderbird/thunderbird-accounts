@@ -50,7 +50,7 @@ const onShowMore = () => {
       <ph-shield-check size="24" />
     </template>
 
-    <p class="allow-list-description">{{ t('views.mail.views.securitySettings.allowListDescription') }}</p>
+    <p>{{ t('views.mail.views.securitySettings.allowListDescription') }}</p>
 
     <notice-bar :type="NoticeBarTypes.Success" class="recently-removed-item-notice-bar" v-if="recentlyRemovedItem">
       <p>{{ t('views.mail.views.securitySettings.removedSuccessfully', { email: recentlyRemovedItem.email }) }}</p>
@@ -172,7 +172,13 @@ p {
 
 .allow-list-items-wrapper {
   overflow-x: auto;
-  margin-block-end: 1.25rem;
+  padding: 0.25rem;
+  margin: -0.25rem;
+  margin-block-end: 1rem;
+
+  .show-more-button {
+    margin-block-start: 0.55rem;
+  }
 }
 
 .manage-allow-list-form-wrapper {
