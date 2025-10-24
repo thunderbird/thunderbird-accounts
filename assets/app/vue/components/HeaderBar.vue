@@ -39,7 +39,7 @@ const navItemsMail = [
     i18nKey: 'customDomains',
   },
   {
-    route: '/mail#security-settings',
+    route: '/mail/security-settings',
     i18nKey: 'securitySettings',
   },
 ];
