@@ -1,20 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { PhX } from '@phosphor-icons/vue';
 
-enum STEP {
-  INITIAL = 'initial',
-  ADD = 'add',
-  VERIFY_DOMAIN = 'verify',
-}
+// Types
+import { STEP } from '../types';
 
 const { t } = useI18n();
+
+const emit = defineEmits<{
+  'step-change': [step: STEP]
+}>();
 
 const step = ref<STEP>(STEP.INITIAL);
 const customDomain = ref(null);
 const showNoticeBar = ref(true);
+
+watch(step, (newStep) => {
+  emit('step-change', newStep);
+}, { immediate: true });
 
 const recordsInfo = [
   {

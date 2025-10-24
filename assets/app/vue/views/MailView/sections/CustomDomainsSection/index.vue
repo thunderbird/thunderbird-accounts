@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhGlobe, PhCheckCircle } from '@phosphor-icons/vue';
 import { BaseBadge, BaseBadgeTypes } from '@thunderbirdops/services-ui';
+
+// Types
+import { DOMAIN_STATUS, STEP } from './types';
 
 // Shared components
 import CardContainer from '@/components/CardContainer.vue';
@@ -12,12 +15,6 @@ import CustomDomainForm from './components/CustomDomainForm.vue';
 import ActionsMenu from './components/ActionsMenu.vue';
 
 const { t } = useI18n();
-
-enum DOMAIN_STATUS {
-  VERIFIED = 'verified',
-  PENDING = 'pending',
-  FAILED = 'failed',
-}
 
 const placeholderDomains = [
   {
@@ -35,7 +32,17 @@ const placeholderDomains = [
   }
 ]
 
+const currentStep = ref<STEP>(STEP.INITIAL);
 const customDomains = computed(() => window._page?.customDomains || placeholderDomains);
+const customDomainsDescription = computed(() =>
+  currentStep.value === STEP.INITIAL
+  ? t('views.mail.sections.customDomains.customDomainsDescriptionInitial')
+  : t('views.mail.sections.customDomains.customDomainsDescriptionAdd')
+);
+
+const handleStepChange = (step: STEP) => {
+  currentStep.value = step;
+};
 </script>
 
 <script lang="ts">
@@ -48,7 +55,7 @@ export default {
   <section id="custom-domains">
     <card-container>
       <h2>{{ t('views.mail.sections.customDomains.customDomains') }}</h2>
-      <p class="custom-domains-description">{{ t('views.mail.sections.customDomains.customDomainsDescription') }}</p>
+      <p class="custom-domains-description">{{ customDomainsDescription }}</p>
       <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: 3 }) }}</strong>
 
       <div class="custom-domains-list" v-if="customDomains.length > 0">
@@ -79,7 +86,7 @@ export default {
         </div>
       </div>
 
-      <custom-domain-form />
+      <custom-domain-form @step-change="handleStepChange" />
     </card-container>
   </section>
 </template>
