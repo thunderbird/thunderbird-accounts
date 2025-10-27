@@ -16,24 +16,8 @@ import ActionsMenu from './components/ActionsMenu.vue';
 
 const { t } = useI18n();
 
-const placeholderDomains = [
-  {
-    name: 'sipes.us',
-    status: DOMAIN_STATUS.VERIFIED,
-    emailsCount: 10,
-  },
-  {
-    name: 'funndomain.lol',
-    status: DOMAIN_STATUS.PENDING,
-  },
-  {
-    name: 'domain.new',
-    status: DOMAIN_STATUS.FAILED,
-  }
-]
-
 const currentStep = ref<STEP>(STEP.INITIAL);
-const customDomains = computed(() => window._page?.customDomains || placeholderDomains);
+const customDomains = computed(() => window._page?.customDomains || []);
 const customDomainsDescription = computed(() =>
   currentStep.value === STEP.INITIAL
   ? t('views.mail.sections.customDomains.customDomainsDescriptionInitial')
