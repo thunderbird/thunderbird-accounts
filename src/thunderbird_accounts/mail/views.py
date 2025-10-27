@@ -29,7 +29,7 @@ except ImportError:
     Client = None
     CreateCustomerPortalSession = None
 
-from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
 from thunderbird_accounts.mail.zendesk import ZendeskClient
@@ -45,6 +45,7 @@ def raise_form_error(request, to_view: str, error_message: str):
 def home(request: HttpRequest):
     app_passwords = []
     user_display_name = None
+    custom_domains = []
 
     if request.user.is_authenticated:
         try:
@@ -64,10 +65,21 @@ def home(request: HttpRequest):
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
+        # Get user's custom domains
+        domains = request.user.domains.all()
+        custom_domains = [
+            {
+                'name': domain.name,
+                'status': domain.status,
+            }
+            for domain in domains
+        ]
+
     return TemplateResponse(request, 'mail/index.html', {
         'connection_info': settings.CONNECTION_INFO,
         'app_passwords': json.dumps(app_passwords),
         'user_display_name': user_display_name,
+        'custom_domains': json.dumps(custom_domains),
     })
 
 
