@@ -36,7 +36,7 @@ const toggleMenu = () => {
 const handleRetry = async () => {
   try {
     const data = await verifyDomain(props.domain.name);
-  
+
     if (data.success) {
       emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.VERIFIED });
     } else {
