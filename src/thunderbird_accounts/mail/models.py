@@ -123,3 +123,39 @@ class Email(BaseModel):
         elif self.type == self.EmailType.LIST:
             return f'Mailing List - {self.address}'
         return f'Primary Address - {self.address}'
+
+
+class Domain(BaseStalwartObject):
+    """Custom domain that can be used for email addresses."""
+
+    class DomainStatus(models.TextChoices):
+        PENDING = 'pending', _('Pending Verification')
+        VERIFIED = 'verified', _('Verified')
+        FAILED = 'failed', _('Verification Failed')
+
+    name = SmallTextField(
+        unique=True,
+        help_text=_('The domain name (e.g., example.com)')
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=DomainStatus,
+        default=DomainStatus.PENDING,
+        help_text=_('Current verification status of the domain')
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='domains',
+        help_text=_('The user who owns this domain')
+    )
+    verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('Date and time when the domain was verified')
+    )
+    last_verification_attempt = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('Date and time of the last verification attempt')
+    )
