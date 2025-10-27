@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 
@@ -19,7 +20,7 @@ from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
-from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError
+from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError, DomainAlreadyExistsError
 from thunderbird_accounts.mail.utils import decode_app_password
 
 try:
@@ -517,6 +518,72 @@ def self_serve_app_password_add(request: HttpRequest):
         messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
     return HttpResponseRedirect('/self-serve/app-passwords')
+
+
+@login_required
+@require_http_methods(['POST'])
+def create_custom_domain(request: HttpRequest):
+    """Creates a custom domain for the user"""
+    data = json.loads(request.body)
+    domain_name = data.get('domain-name')
+
+    if not domain_name:
+        return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
+
+    stalwart_client = MailClient()
+
+    try:
+        domain_id = stalwart_client.create_domain(domain_name)
+        now = datetime.datetime.now(datetime.UTC)
+        Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
+    except DomainAlreadyExistsError:
+        return JsonResponse({'success': False, 'error': _('Domain already exists')}, status=400)
+    except Exception as e:
+        logging.error(f'Error creating custom domain: {e}')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(['GET'])
+def get_dns_records(request: HttpRequest):
+    """Gets the DNS records for a custom domain"""
+    domain = request.user.domains.get(name=request.GET.get('domain-name'))
+    if not domain:
+        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    stalwart_client = MailClient()
+
+    try:
+        dns_records = stalwart_client.get_dns_records(domain.name)
+        return JsonResponse({'success': True, 'dns_records': dns_records})
+    except Exception as e:
+        logging.error(f'Error getting DNS records: {e}')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(['POST'])
+def verify_custom_domain(request: HttpRequest):
+    """Verifies a custom domain"""
+    data = json.loads(request.body)
+    domain_name = data.get('domain-name')
+    if not domain_name:
+        return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
+
+    domain = request.user.domains.get(name=domain_name)
+    if not domain:
+        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    stalwart_client = MailClient()
+
+    try:
+        verification_status = stalwart_client.verify_domain(domain.name)
+        return JsonResponse({'success': True, 'verification_status': verification_status})
+    except Exception as e:
+        logging.error(f'Error verifying domain: {e}')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 def wait_list(request: HttpRequest):

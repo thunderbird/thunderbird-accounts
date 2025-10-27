@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 from enum import StrEnum
 from typing import Optional
@@ -395,3 +396,91 @@ class MailClient:
             raise RuntimeError("Error calling stalwart's api")
 
         return base64.b64encode(f'{api_key_name}:{secret}'.encode()).decode()
+
+
+    def get_dns_records(self, domain_name: str) -> list[dict]:
+        response = requests.get(
+            f'{self.api_url}/dns/records/{domain_name}', headers=self.authorized_headers, verify=False
+        )
+        response.raise_for_status()
+        self._raise_for_error(response)
+        data = response.json()
+        return data.get('data')
+
+
+    def verify_domain(self, domain_name: str):
+        """Verify domain using Stalwart's troubleshooting API with SSE streaming.
+
+        This implementation follows the Stalwart web-admin approach:
+        1. Get a troubleshooting token
+        2. Stream delivery stages via SSE
+        3. Collect stages until completion
+
+        Args:
+            domain_name: The domain to verify/troubleshoot
+
+        Returns:
+            list: List of delivery stages collected during troubleshooting
+        """
+        # Step 1: Get troubleshooting token
+        token_response = requests.get(
+            f'{self.api_url}/troubleshoot/token',
+            headers=self.authorized_headers,
+            verify=False
+        )
+        token_response.raise_for_status()
+        auth_token = token_response.json()
+
+        # Step 2: Stream delivery stages via SSE
+        sse_url = f'{self.api_url}/troubleshoot/delivery/{domain_name}?token={auth_token}'
+        sse_response = requests.get(
+            sse_url,
+            headers={
+                **self.authorized_headers,
+                'Accept': 'text/event-stream',
+            },
+            stream=True,
+            verify=False
+        )
+        sse_response.raise_for_status()
+
+        # Step 3: Parse SSE events and collect delivery stages
+        delivery_stages = []
+        current_event = None
+        event_data = []
+
+        for line in sse_response.iter_lines(decode_unicode=True):
+            if line is None:
+                continue
+
+            # Empty line signals end of event
+            if not line.strip():
+                if event_data and current_event == 'event':
+                    # Parse the JSON data
+                    data_content = '\n'.join(event_data)
+                    try:
+                        stages = json.loads(data_content)
+                        if isinstance(stages, list):
+                            for stage in stages:
+                                delivery_stages.append(stage)
+                                # Check for completion
+                                if isinstance(stage, dict) and stage.get('type') == 'Completed':
+                                    return delivery_stages
+                                elif isinstance(stage, str) and stage == 'Completed':
+                                    return delivery_stages
+                    except json.JSONDecodeError as e:
+                        logging.warning(f'Failed to parse SSE data: {e}')
+
+                # Reset for next event
+                event_data = []
+                current_event = None
+                continue
+
+            # Parse SSE fields
+            if line.startswith('event:'):
+                current_event = line[6:].strip()
+            elif line.startswith('data:'):
+                event_data.append(line[5:].strip())
+
+        # Return collected stages even if we didn't get explicit completion
+        return delivery_stages

@@ -3,6 +3,8 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhDotsThreeVertical } from '@phosphor-icons/vue';
 
+import { verifyDomain } from '../api'
+
 const props = defineProps<{
   domain: {
     name: string;
@@ -20,9 +22,8 @@ const toggleMenu = () => {
   showMenu.value = !showMenu.value;
 };
 
-const handleRetry = () => {
-  // TODO: Implement retry functionality
-  console.log('Retry clicked', props.domain);
+const handleRetry = async () => {
+  await verifyDomain(props.domain.name);
   showMenu.value = false;
 };
 

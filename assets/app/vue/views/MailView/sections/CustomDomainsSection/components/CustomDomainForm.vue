@@ -5,7 +5,10 @@ import { PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbir
 import { PhX } from '@phosphor-icons/vue';
 
 // Types
-import { STEP } from '../types';
+import { DNSRecord, STEP } from '../types';
+
+// API
+import { addCustomDomain, verifyDomain, getDNSRecords } from '../api';
 
 const { t } = useI18n();
 
@@ -16,35 +19,63 @@ const emit = defineEmits<{
 const step = ref<STEP>(STEP.INITIAL);
 const customDomain = ref(null);
 const showNoticeBar = ref(true);
+const isAddingCustomDomain = ref(false);
+const isVerifyingDomain = ref(false);
 
 watch(step, (newStep) => {
   emit('step-change', newStep);
 }, { immediate: true });
 
-const recordsInfo = [
-  {
-    type: 'MX',
-    name: '@',
-    value: 'mail.thundermail.com',
-    priority: 10,
-  },
-  {
-    type: 'TXT',
-    name: '_dmarc',
-    value: 'v=spf1 include:thundermail.com ~all',
-    priority: '-',
-  },
-  {
-    type: 'SRV',
-    name: '_autodiscover._tcp',
-    value: '0 0 443 autodiscover.thundermail.com',
-    priority: '-',
-  },
-]
+const recordsInfo = ref<DNSRecord[]>([]);
 
-const onVerifyDomain = () => {
-  // TODO: Make API call to save the domain for verification
-  step.value = STEP.INITIAL;
+const onCreateCustomDomain = async () => {
+  isAddingCustomDomain.value = true;
+
+  try {
+    const data = await addCustomDomain(customDomain.value);
+
+    if (data.success) {
+      const dnsRecordsData = await getDNSRecords(customDomain.value);
+      if (dnsRecordsData.success) {
+        recordsInfo.value = dnsRecordsData.dns_records.map((record: DNSRecord) => {
+          return {
+            type: record.type,
+            name: record.name,
+            content: record.content,
+            priority: record.priority || '-',
+          }
+        });
+
+        step.value = STEP.VERIFY_DOMAIN;
+      } else {
+        console.error(dnsRecordsData.error);
+      }
+    } else {
+      console.error(data.error);
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isAddingCustomDomain.value = false;
+  }
+};
+
+const onVerifyDomain = async () => {
+  isVerifyingDomain.value = true;
+
+  try {
+    const data = await verifyDomain(customDomain.value);
+
+    if (data.success) {
+      step.value = STEP.INITIAL;
+    } else {
+      console.error(data.error);
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isVerifyingDomain.value = false;
+  }
 };
 </script>
 
@@ -63,7 +94,9 @@ const onVerifyDomain = () => {
       {{ t('views.mail.sections.customDomains.enterCustomDomain') }}
     </text-input>
 
-    <primary-button variant="outline" @click="step = STEP.VERIFY_DOMAIN">{{ t('views.mail.sections.customDomains.continue') }}</primary-button>
+    <primary-button variant="outline" @click="onCreateCustomDomain" :disabled="isAddingCustomDomain">
+      {{ t('views.mail.sections.customDomains.continue') }}
+    </primary-button>
   </template>
   <template v-else-if="step === STEP.VERIFY_DOMAIN">
     <h3>{{ t('views.mail.sections.customDomains.verifyStepTitle') }}</h3>
@@ -81,10 +114,10 @@ const onVerifyDomain = () => {
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderValueData') }}</p>
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderPriority') }}</p>
       </div>
-      <div class="records-table-row" v-for="record in recordsInfo" :key="record.value">
+      <div class="records-table-row" v-for="record in recordsInfo" :key="`${record.type}-${record.name}-${record.content}`">
         <p>{{ record.type }}</p>
         <p>{{ record.name }}</p>
-        <p>{{ record.value }}</p>
+        <p>{{ record.content }}</p>
         <p>{{ record.priority }}</p>
       </div>
     </div>

@@ -9,3 +9,10 @@ export enum STEP {
   ADD = 'add',
   VERIFY_DOMAIN = 'verify',
 }
+
+export type DNSRecord = {
+  type: string;
+  name: string;
+  content: string;
+  priority?: number;
+}
