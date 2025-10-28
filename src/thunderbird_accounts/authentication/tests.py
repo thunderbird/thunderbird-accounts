@@ -53,12 +53,10 @@ class AdminCreateUserTestCase(TestCase):
         mock_requests.assert_not_called()
 
     def test_failed_email_validation(self, mock_requests: MagicMock):
-        settings.ALLOWED_EMAIL_DOMAINS = ['example.org']
-
         # Bad email domain
         form_data = {
-            'username': 'frog@example.com',
-            'email': 'frog@example.com',
+            'username': 'frog@badexample.com',
+            'email': 'frog@badexample.com',
             'timezone': 'America/Toronto',
         }
 

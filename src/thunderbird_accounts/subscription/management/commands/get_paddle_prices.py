@@ -1,6 +1,7 @@
 """
 Retrieves and updates prices defined in Paddle.
 """
+
 import logging
 
 from django.core.management.base import BaseCommand
@@ -43,7 +44,7 @@ class Command(PaddleCommand, BaseCommand):
         except Product.DoesNotExist:
             pass
         except Product.MultipleObjectsReturned:
-            logging.warning(f"Product <{paddle_obj.product_id}> has multiple entries! Using first one.")
+            logging.warning(f'Product <{paddle_obj.product_id}> has multiple entries! Using first one.')
             product = Product.objects.filter(paddle_id=paddle_obj.product_id).first()
 
         return {

@@ -129,9 +129,7 @@ def update_quota_on_stalwart_account(self, username: str, quota: int):
         stalwart = MailClient()
         stalwart.update_quota(username, quota)
     except RuntimeError as ex:
-        logging.error(
-            f'[update_quota_on_stalwart_account] Error updating quota on stalwart account {ex}'
-        )
+        logging.error(f'[update_quota_on_stalwart_account] Error updating quota on stalwart account {ex}')
         return {
             'username': username,
             'quota': quota,
@@ -161,6 +159,8 @@ def create_stalwart_account(
     Note: Email should be Thundermail address. Stalwart does not need your recovery email."""
     stalwart = MailClient()
     domain = email.split('@')[1]
+
+    print('creating stlawart account now')
 
     if domain != settings.PRIMARY_EMAIL_DOMAIN:
         error = f'Cannot create Stalwart account with non-primary email domain: {domain}'
@@ -209,26 +209,55 @@ def create_stalwart_account(
     _stalwart_check_or_create_domain_entry(stalwart, domain)
     for alias in emails[1:]:
         _domain = alias.split('@')[1]
-        logging.debug(f'checking domain {_domain}')
+        print(f'checking domain {_domain}')
         _stalwart_check_or_create_domain_entry(stalwart, _domain)
 
     # We need to create this after dkim and domain records exist
     pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
 
     user = User.objects.get(oidc_id=oidc_id)
+    now = datetime.datetime.now(datetime.UTC)
 
     # Don't create the account if we already have it
     # Also create their account objects
-    account = Account.objects.create(name=user.username, active=True, user=user, quota=quota)
-    Email.objects.create(address=user.username, type=Email.EmailType.PRIMARY.value, account=account)
-    for alias in emails[1:]:
-        Email.objects.create(address=alias, type=Email.EmailType.ALIAS.value, account=account)
+    account, _created = Account.objects.update_or_create(
+        name=user.username,
+        defaults={
+            'active': True,
+            'quota': quota,
+            'stalwart_id': pkid,
+            'stalwart_updated_at': now,
+        },
+        create_defaults={
+            'active': True,
+            'quota': quota,
+            'stalwart_id': pkid,
+            'stalwart_updated_at': now,
+            'user_id': user.uuid,
+            'stalwart_created_at': now,
+        },
+    )
 
-    now = datetime.datetime.now(datetime.UTC)
-    account.stalwart_id = pkid
-    account.stalwart_created_at = now
-    account.stalwart_updated_at = now
-    account.save()
+    # Edge-case: don't override an existing stalwart_created_at timestamp
+    if not account.stalwart_created_at:
+        account.stalwart_created_at = now
+        account.save()
+
+    Email.objects.update_or_create(
+        address=user.username,
+        create_defaults={
+            'type': Email.EmailType.PRIMARY.value,
+            'account_id': account.uuid,
+        },
+    )
+    for alias in emails[1:]:
+        Email.objects.update_or_create(
+            address=alias,
+            create_defaults={
+                'type': Email.EmailType.ALIAS.value,
+                'account_id': account.uuid,
+            },
+        )
 
     return {
         'oidc_id': oidc_id,

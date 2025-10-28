@@ -8,6 +8,7 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product, Plan
 from thunderbird_accounts.subscription.utils import activate_subscription_features
 
+
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
 def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datetime, is_create_event: bool):
     """Handles transaction.created and transaction.updated events.

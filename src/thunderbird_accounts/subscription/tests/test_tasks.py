@@ -157,7 +157,7 @@ class PaddleTestCase(TestCase):
         super().setUp()
 
         self.celery_task_always_eager_setting = settings.CELERY_TASK_ALWAYS_EAGER
-        self.test_user = User.objects.create_user('test', 'test@example.org', '1234')
+        self.test_user = User.objects.create_user('test@example.org', 'test@example.org', '1234')
 
         # Create a mail account
         self.test_mail_account = Account.objects.create(

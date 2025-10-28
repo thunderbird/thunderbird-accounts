@@ -91,12 +91,7 @@ class Account(BaseStalwartObject):
         super().save(**kwargs)
 
         # Only ship the task out if the field has changed
-        if (
-            self.user
-            and previous_quota
-            and new_quota
-            and previous_quota != new_quota
-        ):
+        if self.user and previous_quota and new_quota and previous_quota != new_quota:
             utils.update_quota_on_stalwart_account(self.user, new_quota)
 
 
