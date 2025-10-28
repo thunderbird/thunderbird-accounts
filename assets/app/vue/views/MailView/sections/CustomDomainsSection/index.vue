@@ -17,7 +17,7 @@ import ActionsMenu from './components/ActionsMenu.vue';
 const { t } = useI18n();
 
 const currentStep = ref<STEP>(STEP.INITIAL);
-const customDomains = computed(() => window._page?.customDomains || []);
+const customDomains = ref(window._page?.customDomains || []);
 const customDomainsDescription = computed(() =>
   currentStep.value === STEP.INITIAL
   ? t('views.mail.sections.customDomains.customDomainsDescriptionInitial')
@@ -26,6 +26,18 @@ const customDomainsDescription = computed(() =>
 
 const handleStepChange = (step: STEP) => {
   currentStep.value = step;
+};
+
+const handleCustomDomainAdded = (customDomain: string) => {
+  customDomains.value.push({ name: customDomain, status: DOMAIN_STATUS.PENDING });
+};
+
+const handleCustomDomainVerified = (customDomain: { name: string, status: DOMAIN_STATUS }) => {
+  const index = customDomains.value.findIndex((domain) => domain.name === customDomain.name);
+
+  if (index !== -1) {
+    customDomains.value[index] = customDomain;
+  }
 };
 </script>
 
@@ -70,7 +82,11 @@ export default {
         </div>
       </div>
 
-      <custom-domain-form @step-change="handleStepChange" />
+      <custom-domain-form
+        @step-change="handleStepChange"
+        @custom-domain-added="handleCustomDomainAdded"
+        @custom-domain-verified="handleCustomDomainVerified"
+      />
     </card-container>
   </section>
 </template>

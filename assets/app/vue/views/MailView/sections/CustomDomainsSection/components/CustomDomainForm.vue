@@ -5,7 +5,7 @@ import { PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbir
 import { PhX } from '@phosphor-icons/vue';
 
 // Types
-import { DNSRecord, STEP } from '../types';
+import { DNSRecord, STEP, DOMAIN_STATUS } from '../types';
 
 // API
 import { addCustomDomain, verifyDomain, getDNSRecords } from '../api';
@@ -14,6 +14,8 @@ const { t } = useI18n();
 
 const emit = defineEmits<{
   'step-change': [step: STEP]
+  'custom-domain-added': [customDomain: string]
+  'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }]
 }>();
 
 const step = ref<STEP>(STEP.INITIAL);
@@ -35,6 +37,8 @@ const onCreateCustomDomain = async () => {
     const data = await addCustomDomain(customDomain.value);
 
     if (data.success) {
+      emit('custom-domain-added', customDomain.value);
+
       const dnsRecordsData = await getDNSRecords(customDomain.value);
       if (dnsRecordsData.success) {
         recordsInfo.value = dnsRecordsData.dns_records.map((record: DNSRecord) => {
@@ -67,11 +71,13 @@ const onVerifyDomain = async () => {
     const data = await verifyDomain(customDomain.value);
 
     if (data.success) {
+      emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
       step.value = STEP.INITIAL;
     } else {
       console.error(data.error);
     }
   } catch (error) {
+    emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
     console.error(error);
   } finally {
     isVerifyingDomain.value = false;
