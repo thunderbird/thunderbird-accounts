@@ -441,7 +441,8 @@ sentry_sdk.set_extra('CELERY_TASK_ALWAYS_EAGER', CELERY_TASK_ALWAYS_EAGER)
 CORS_PREFLIGHT_MAX_AGE = 0  # For debugging purposes
 CORS_ALLOWED_ORIGINS = [host for host in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if host]
 
-ONE_GIGABYTE_IN_BYTES = 1_000_000_000
+# NOTE: Stalwart actually uses Gibibytes, bleh.
+ONE_GIGABYTE_IN_BYTES = 1_073_741_824
 
 # For local docker usage
 if DEBUG:

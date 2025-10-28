@@ -151,11 +151,7 @@ class Plan(BaseModel):
         super().save(**kwargs)
 
         # Only ship the task out if the field has changed
-        if (
-            previous_mail_storage_bytes
-            and new_mail_storage_bytes
-            and previous_mail_storage_bytes != new_mail_storage_bytes
-        ):
+        if previous_mail_storage_bytes != new_mail_storage_bytes:
             tasks.update_thundermail_quota.delay(self.uuid)
 
 

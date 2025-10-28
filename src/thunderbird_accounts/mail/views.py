@@ -522,7 +522,7 @@ class AdminStalwartList(TemplateView):
                         'roles': principal.get('roles'),
                         'members': principal.get('members'),
                         'quota': principal.get('quota'),
-                        'quota_used': principal.get('quota_used'),
+                        'quota_used': principal.get('usedQuota'),
                     }
                     for principal in data
                 ],
