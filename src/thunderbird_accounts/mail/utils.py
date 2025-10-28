@@ -62,7 +62,7 @@ def delete_email_addresses_from_stalwart_account(user: User, emails):
 
 def is_allowed_domain(email_address: str) -> bool:
     """Pass in an email address and see if it's a valid / allowed email domain"""
-    return any([email_address.endswith(domain) for domain in settings.ALLOWED_EMAIL_DOMAINS])
+    return any([email_address.endswith(f'@{domain}') for domain in settings.ALLOWED_EMAIL_DOMAINS])
 
 
 def update_quota_on_stalwart_account(user: User, quota: int):
