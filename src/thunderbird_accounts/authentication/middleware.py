@@ -7,7 +7,6 @@ from django.http import HttpRequest
 
 from .models import User
 from .utils import is_email_in_allow_list
-from thunderbird_accounts.mail.utils import create_stalwart_account
 
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 

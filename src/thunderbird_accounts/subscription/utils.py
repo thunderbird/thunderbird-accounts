@@ -1,5 +1,3 @@
-from django.conf import settings
-
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.utils import create_stalwart_account, update_quota_on_stalwart_account
 from thunderbird_accounts.subscription.models import Plan

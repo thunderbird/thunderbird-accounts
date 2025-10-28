@@ -831,7 +831,6 @@ class UpdateThundermailQuotaTestCase(TestCase):
     def test_plan_does_not_exist(self):
         # Manually created this uuid, it should not exist
         plan_uuid = '13371337-aaaa-bbbb-cccc-123456789abc'
-        storage = 1 * settings.ONE_GIGABYTE_IN_BYTES
         with self.assertRaises(models.Plan.DoesNotExist):
             models.Plan.objects.get(pk=plan_uuid)
 

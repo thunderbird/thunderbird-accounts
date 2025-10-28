@@ -56,7 +56,7 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             instance_mock.get_account.side_effect = AccountNotFoundError(username_and_email)
             mail_client_mock.return_value = instance_mock
 
-            user = User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
+            User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
 
             # Run sync so can look at the task results
             task_results = tasks.create_stalwart_account.run(
@@ -166,8 +166,6 @@ class CreateStalwartAccountTestCase(TaskTestCase):
 
     def test_creating_with_not_primary_domain(self):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
-            mock_stalwart_pkid = 1
-
             # Username is the app password login, and email is the primary email address
             domain = settings.ALLOWED_EMAIL_DOMAINS[1]
             username_and_email = f'test_user@{domain}'
