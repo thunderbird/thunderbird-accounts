@@ -58,7 +58,6 @@ def admin_fix_broken_stalwart_account(modeladmin, request, queryset):
         if account_not_found and any([user.username.endswith(domain) for domain in settings.ALLOWED_EMAIL_DOMAINS]):
             # No Accounts/Email model relationship
             try:
-                print('Created stalwart account')
                 mail_utils.create_stalwart_account(user)
                 success_new_account += 1
             except Exception as ex:

@@ -64,7 +64,6 @@ def notify_paddle_checkout_complete(request: Request, paddle: Client):
     data = json.loads(request.body.decode())
     transaction_id = data.get('transactionId')
 
-    print(data, transaction_id, request.body)
     if not transaction_id:
         return JsonResponse({'success': False})
 

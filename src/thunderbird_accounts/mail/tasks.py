@@ -160,8 +160,6 @@ def create_stalwart_account(
     stalwart = MailClient()
     domain = email.split('@')[1]
 
-    print('creating stlawart account now')
-
     if domain != settings.PRIMARY_EMAIL_DOMAIN:
         error = f'Cannot create Stalwart account with non-primary email domain: {domain}'
         logging.error(f'[create_stalwart_account] {error}')
