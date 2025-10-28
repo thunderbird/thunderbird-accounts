@@ -81,6 +81,7 @@ def home(request: HttpRequest):
         'app_passwords': json.dumps(app_passwords),
         'user_display_name': user_display_name,
         'custom_domains': json.dumps(custom_domains),
+        'max_custom_domains': settings.MAX_CUSTOM_DOMAINS,
     })
 
 
@@ -529,6 +530,13 @@ def create_custom_domain(request: HttpRequest):
 
     if not domain_name:
         return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
+
+    custom_domain_count = request.user.domains.count()
+
+    if custom_domain_count >= settings.MAX_CUSTOM_DOMAINS:
+        return JsonResponse(
+            {'success': False, 'error': _('You have reached the maximum number of custom domains')}, status=400
+        )
 
     stalwart_client = MailClient()
 

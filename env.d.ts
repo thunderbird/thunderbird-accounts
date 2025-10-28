@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+import { CustomDomain } from './assets/app/vue/views/MailView/sections/CustomDomainsSection/types';
+
 declare global {
   interface Window {
     _page: {
@@ -23,7 +25,8 @@ declare global {
       appPasswords?: string[];
       cancelRedirect?: string;
       allowedDomains?: string[];
-      customDomains?: { name: string, status: string, emailsCount?: number }[];
+      customDomains?: CustomDomain[];
+      maxCustomDomains?: number;
       currentView?: Record<string, any>;
     };
   }

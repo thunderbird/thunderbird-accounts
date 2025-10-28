@@ -31,6 +31,7 @@
     connectionInfo: {{ connection_info|to_json|safe }},
     appPasswords: {{ app_passwords|safe }},
     customDomains: {{ custom_domains|safe }},
+    maxCustomDomains: {{ max_custom_domains|to_json|safe }},
     {% block extra_page_params %}{% endblock %}
   };
   csrfToken.remove();

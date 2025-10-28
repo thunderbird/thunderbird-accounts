@@ -152,7 +152,8 @@
           "verifyStepInfoTitle": "Automatic Verification Attempts",
           "verifyStepInfoDescription": "Once you start verification, we’ll keep trying automatically for a few days. If it doesn’t succeed in that time, we’ll stop and you’ll need to restart the process manually.",
           "retry": "Retry",
-          "delete": "Delete"
+          "delete": "Delete",
+          "domainAlreadyExists": "Domain already exists"
         },
         "securitySettings": {
           "securitySettings": "Security Settings",

@@ -5,7 +5,7 @@ import { PhGlobe, PhCheckCircle } from '@phosphor-icons/vue';
 import { BaseBadge, BaseBadgeTypes } from '@thunderbirdops/services-ui';
 
 // Types
-import { DOMAIN_STATUS, STEP } from './types';
+import { CustomDomain, DOMAIN_STATUS, STEP } from './types';
 
 // Shared components
 import CardContainer from '@/components/CardContainer.vue';
@@ -17,7 +17,7 @@ import ActionsMenu from './components/ActionsMenu.vue';
 const { t } = useI18n();
 
 const currentStep = ref<STEP>(STEP.INITIAL);
-const customDomains = ref(window._page?.customDomains || []);
+const customDomains = ref<CustomDomain[]>(window._page?.customDomains || []);
 const customDomainsDescription = computed(() =>
   currentStep.value === STEP.INITIAL
   ? t('views.mail.sections.customDomains.customDomainsDescriptionInitial')
@@ -100,6 +100,7 @@ export default {
         @custom-domain-added="handleCustomDomainAdded"
         @custom-domain-verified="handleCustomDomainVerified"
         :last-domain-removed="lastDomainRemoved"
+        :custom-domains="customDomains"
       />
     </card-container>
   </section>

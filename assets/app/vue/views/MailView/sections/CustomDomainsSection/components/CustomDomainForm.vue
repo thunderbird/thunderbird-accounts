@@ -5,7 +5,7 @@ import { PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbir
 import { PhX } from '@phosphor-icons/vue';
 
 // Types
-import { DNSRecord, STEP, DOMAIN_STATUS } from '../types';
+import { CustomDomain, DNSRecord, STEP, DOMAIN_STATUS } from '../types';
 
 // API
 import { addCustomDomain, verifyDomain, getDNSRecords } from '../api';
@@ -13,6 +13,7 @@ import { addCustomDomain, verifyDomain, getDNSRecords } from '../api';
 const { t } = useI18n();
 
 const props = defineProps<{
+  customDomains: CustomDomain[];
   lastDomainRemoved?: string;
 }>();
 
@@ -27,6 +28,8 @@ const customDomain = ref(null);
 const showNoticeBar = ref(true);
 const isAddingCustomDomain = ref(false);
 const isVerifyingDomain = ref(false);
+const customDomainError = ref<string>(null);
+const maxCustomDomains = window._page?.maxCustomDomains;
 
 watch(step, (newStep) => {
   emit('step-change', newStep);
@@ -43,6 +46,11 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
 const recordsInfo = ref<DNSRecord[]>([]);
 
 const onCreateCustomDomain = async () => {
+  if (props.customDomains.some((domain) => domain.name === customDomain.value)) {
+    customDomainError.value = t('views.mail.sections.customDomains.domainAlreadyExists');
+    return;
+  }
+
   isAddingCustomDomain.value = true;
 
   try {
@@ -68,9 +76,11 @@ const onCreateCustomDomain = async () => {
       }
     } else {
       console.error(data.error);
+      customDomainError.value = data.error;
     }
   } catch (error) {
     console.error(error);
+    customDomainError.value = error;
   } finally {
     isAddingCustomDomain.value = false;
   }
@@ -99,13 +109,20 @@ const onVerifyDomain = async () => {
 
 <template>
   <template v-if="step === STEP.INITIAL">
-    <primary-button variant="outline" @click="step = STEP.ADD">{{ t('views.mail.sections.customDomains.addDomain') }}</primary-button>
+    <primary-button
+      variant="outline"
+      @click="step = STEP.ADD"
+      v-if="customDomains.length < maxCustomDomains"
+    >
+      {{ t('views.mail.sections.customDomains.addDomain') }}
+    </primary-button>
   </template>
   <template v-else-if="step === STEP.ADD">
     <text-input
       :placeholder="t('views.mail.sections.customDomains.domainPlaceholder')"
       name="custom-domain"
       :help="t('views.mail.sections.customDomains.domainHelp')"
+      :error="customDomainError"
       class="custom-domain-text-input"
       v-model="customDomain"
     >

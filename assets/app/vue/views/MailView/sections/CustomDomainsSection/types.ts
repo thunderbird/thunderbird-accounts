@@ -16,3 +16,9 @@ export type DNSRecord = {
   content: string;
   priority?: number;
 }
+
+export type CustomDomain = {
+  name: string;
+  status: DOMAIN_STATUS;
+  emailsCount?: number;
+}
