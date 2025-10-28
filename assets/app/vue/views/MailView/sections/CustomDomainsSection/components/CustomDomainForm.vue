@@ -35,6 +35,14 @@ const verificationCriticalErrors = ref<string[]>([]);
 
 const maxCustomDomains = window._page?.maxCustomDomains;
 
+watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
+  // If we just removed the domain we were adding, reset the step to initial
+  if (newLastDomainRemoved === customDomain.value) {
+    step.value = STEP.INITIAL;
+    customDomain.value = null;
+  }
+}, { immediate: true });
+
 const recordsInfo = ref<DNSRecord[]>([]);
 
 const handleDNSRecords = async (domainName: string) => {
