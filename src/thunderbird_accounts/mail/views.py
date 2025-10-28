@@ -692,7 +692,10 @@ def remove_custom_domain(request: HttpRequest):
         request.user.domains.filter(name=domain_name).delete()
     except Exception as e:
         logging.error(f'Error removing custom domain: {e}')
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while removing the custom domain. Please try again later.'},
+            status=500,
+        )
 
     return JsonResponse({'success': True})
 
