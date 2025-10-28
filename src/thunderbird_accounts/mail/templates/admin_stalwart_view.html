@@ -13,6 +13,7 @@
       <td>Emails</td>
       <td>Roles</td>
       <td>Members</td>
+      <td>Quota / Used Quota</td>
     </tr>
     </thead>
     <tbody>
@@ -25,6 +26,7 @@
       <td>{{ item.emails }}</td>
       <td>{{ item.roles }}</td>
       <td>{{ item.members }}</td>
+      <td>{{ item.quota }} / {{ item.quota_used }}</td>
     </tr>
     {% endfor %}
     </tbody>

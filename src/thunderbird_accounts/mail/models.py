@@ -60,6 +60,10 @@ class Account(BaseStalwartObject):
     name = SmallTextField(unique=True, help_text=_('The account name (this must be unique.)'))
     active = models.BooleanField(default=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    quota = models.BigIntegerField(
+        null=True, help_text=_('Amount of mail storage this account has access to (in bytes).')
+    )
+    # TODO: Implement freeze_quota
 
     class Meta:
         indexes = [
@@ -68,6 +72,32 @@ class Account(BaseStalwartObject):
 
     def __str__(self):
         return f'Stalwart Account - {self.name}'
+
+    def save(self, **kwargs):
+        """Override save to send updates to Stalwart if the quota changes"""
+        from thunderbird_accounts.subscription import utils
+
+        previous_quota = None
+        new_quota = None
+
+        # Make sure we don't crash if this is during a create
+        try:
+            old_plan = Account.objects.get(pk=self.uuid)
+            previous_quota = old_plan.quota
+            new_quota = self.quota
+        except Account.DoesNotExist:
+            pass
+
+        super().save(**kwargs)
+
+        # Only ship the task out if the field has changed
+        if (
+            self.user
+            and previous_quota
+            and new_quota
+            and previous_quota != new_quota
+        ):
+            utils.update_quota_on_stalwart_account(self.user, new_quota)
 
 
 class Email(BaseModel):

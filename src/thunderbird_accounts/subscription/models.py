@@ -117,11 +117,11 @@ class Plan(BaseModel):
     # Plan parameters
     mail_address_count = models.IntegerField(null=True, help_text=_('Amount of mail addresses a user can create.'))
     mail_domain_count = models.IntegerField(null=True, help_text=_('Amount of custom domains a user can have.'))
-    mail_storage_gb = models.IntegerField(
-        null=True, help_text=_('Amount of mail storage a user has access to (in GB).')
+    mail_storage_bytes = models.BigIntegerField(
+        null=True, help_text=_('Amount of mail storage a user has access to (in bytes).')
     )
-    send_storage_gb = models.IntegerField(
-        null=True, help_text=_('Amount of send storage a user has access to (in GB).')
+    send_storage_bytes = models.BigIntegerField(
+        null=True, help_text=_('Amount of send storage a user has access to (in bytes).')
     )
 
     product = models.OneToOneField('Product', null=True, on_delete=models.CASCADE)
@@ -132,27 +132,31 @@ class Plan(BaseModel):
         return f'Plan [{self.uuid}] {self.name} - <Unassociated>'
 
     def save(self, **kwargs):
-        """Override save to quickly check if the mail_storage_gb field has changed,
+        """Override save to quickly check if the mail_storage_bytes field has changed,
         if it has then ship off a task off to update each associated mail account.
         FIXME: This probably could be in a util function, I'm just worried we might not catch all updates."""
         from thunderbird_accounts.subscription import tasks
 
-        previous_mail_storage_gb = None
-        new_mail_storage_gb = None
+        previous_mail_storage_bytes = None
+        new_mail_storage_bytes = None
 
         # Make sure we don't crash if this is during a create
         try:
             old_plan = Plan.objects.get(pk=self.uuid)
-            previous_mail_storage_gb = old_plan.mail_storage_gb
-            new_mail_storage_gb = self.mail_storage_gb
+            previous_mail_storage_bytes = old_plan.mail_storage_bytes
+            new_mail_storage_bytes = self.mail_storage_bytes
         except Plan.DoesNotExist:
             pass
 
         super().save(**kwargs)
 
         # Only ship the task out if the field has changed
-        if previous_mail_storage_gb and new_mail_storage_gb and previous_mail_storage_gb != new_mail_storage_gb:
-            tasks.update_thundermail_quota.delay(self.uuid, new_mail_storage_gb)
+        if (
+            previous_mail_storage_bytes
+            and new_mail_storage_bytes
+            and previous_mail_storage_bytes != new_mail_storage_bytes
+        ):
+            tasks.update_thundermail_quota.delay(self.uuid)
 
 
 class SubscriptionItem(BaseModel):

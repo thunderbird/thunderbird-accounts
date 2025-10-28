@@ -51,6 +51,8 @@ class User(AbstractUser, BaseModel):
         _('Test Account'), default=False, help_text=_('Whether this account is used for testing.')
     )
 
+    plan = models.OneToOneField('subscription.Plan', null=True, on_delete=models.SET_NULL)
+
     class Meta(BaseModel.Meta):
         indexes = [
             *BaseModel.Meta.indexes,
@@ -80,3 +82,4 @@ class User(AbstractUser, BaseModel):
             email = account.email_set.filter(type=account.email_set.model.EmailType.PRIMARY).first()
             return email.address if email else None
         return None
+

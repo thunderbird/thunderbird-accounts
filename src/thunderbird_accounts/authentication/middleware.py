@@ -48,7 +48,6 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
 
         # Refresh so we have access to the uuid
         user.refresh_from_db()
-        create_stalwart_account(user)
 
         return user
 
@@ -62,13 +61,6 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         if claims.get('email') and user.email != claims.get('email'):
             user.email = claims.get('email')
         user.save()
-
-        # If we somehow have an accounts user but don't have a stalwart account associated, create one.
-        # But make sure our username is within the allowed email domains!
-        if not user.stalwart_primary_email and any(
-            [user.username.endswith(domain) for domain in settings.ALLOWED_EMAIL_DOMAINS]
-        ):
-            create_stalwart_account(user)
 
         return user
 
