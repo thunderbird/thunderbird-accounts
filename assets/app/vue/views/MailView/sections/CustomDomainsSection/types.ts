@@ -22,3 +22,9 @@ export type CustomDomain = {
   status: DOMAIN_STATUS;
   emailsCount?: number;
 }
+
+export type CustomDomain = {
+  name: string;
+  status: DOMAIN_STATUS;
+  emailsCount?: number;
+}
