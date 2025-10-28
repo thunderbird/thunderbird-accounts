@@ -47,11 +47,13 @@ def home(request: HttpRequest):
     user_display_name = None
 
     if request.user.is_authenticated:
-        account = request.user.account_set.first()
-
-        if account:
-            stalwart_client = MailClient()
         try:
+            account = request.user.account_set.first()
+            if not account:
+                raise AccountNotFoundError(username=request.user.stalwart_primary_email)
+
+            stalwart_client = MailClient()
+
             email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
             user_display_name = email_user.get('description')
             app_passwords = []
