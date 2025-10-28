@@ -8,9 +8,9 @@ const { t } = useI18n();
 // Placeholder data for now
 const subscription = {
   name: 'Standard',
-  price: '108',
+  price: '9',
   currency: '$',
-  period: 'Annually',
+  period: 'Monthly',
   description: 'Morbi vulputate lacus nec orci vehicula, nec hendrerit libero',
   features: {
     mailStorage: '30 GB',
