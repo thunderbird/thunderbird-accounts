@@ -194,18 +194,6 @@ class MailClient:
         data = response.json()
         return data.get('data')
 
-    def create_domain(self, domain, description=''):
-        data = {
-            'type': 'domain',
-            'name': domain,
-            'description': description,
-        }
-        response = self._create_principal(data)
-        data = response.json()
-
-        # Return the pkid
-        return data.get('data')
-
     def create_account(
         self,
         emails: list[str],
@@ -397,6 +385,27 @@ class MailClient:
 
         return base64.b64encode(f'{api_key_name}:{secret}'.encode()).decode()
 
+    def create_domain(self, domain, description=''):
+        data = {
+            'type': 'domain',
+            'name': domain,
+            'description': description,
+        }
+        response = self._create_principal(data)
+        data = response.json()
+
+        # Return the pkid
+        return data.get('data')
+
+    def delete_domain(self, domain_name: str):
+        """Deletes a Stalwart domain object from the given domain_name"""
+        response = self._delete_principal(domain_name)
+        data = response.json()
+        error = data.get('error')
+
+        if error:
+            logging.error(f'[delete_domain] err: {data}')
+            raise RuntimeError(data)
 
     def get_dns_records(self, domain_name: str) -> list[dict]:
         response = requests.get(
@@ -406,7 +415,6 @@ class MailClient:
         self._raise_for_error(response)
         data = response.json()
         return data.get('data')
-
 
     def verify_domain(self, domain_name: str):
         """Verify domain using Stalwart's troubleshooting API with SSE streaming.

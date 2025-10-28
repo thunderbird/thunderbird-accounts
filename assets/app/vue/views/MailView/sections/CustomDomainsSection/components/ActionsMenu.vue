@@ -3,7 +3,8 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhDotsThreeVertical } from '@phosphor-icons/vue';
 
-import { verifyDomain } from '../api'
+// API
+import { verifyDomain, removeCustomDomain } from '../api'
 
 const props = defineProps<{
   domain: {
@@ -11,6 +12,10 @@ const props = defineProps<{
     status: string;
     emailsCount?: number;
   };
+}>();
+
+const emit = defineEmits<{
+  'custom-domain-removed': [domainName: string];
 }>();
 
 const showMenu = ref(false);
@@ -27,10 +32,14 @@ const handleRetry = async () => {
   showMenu.value = false;
 };
 
-const handleDelete = () => {
-  // TODO: Implement delete functionality
-  console.log('Delete clicked', props.domain);
-  showMenu.value = false;
+const handleDelete = async () => {
+  const data = await removeCustomDomain(props.domain.name);
+  if (data.success) {
+    emit('custom-domain-removed', props.domain.name);
+    showMenu.value = false;
+  } else {
+    console.error(data.error);
+  }
 };
 
 const handleClickOutside = (event: MouseEvent) => {

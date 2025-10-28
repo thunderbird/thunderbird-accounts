@@ -23,6 +23,7 @@ const customDomainsDescription = computed(() =>
   ? t('views.mail.sections.customDomains.customDomainsDescriptionInitial')
   : t('views.mail.sections.customDomains.customDomainsDescriptionAdd')
 );
+const lastDomainRemoved = ref<string>(null);
 
 const handleStepChange = (step: STEP) => {
   currentStep.value = step;
@@ -37,6 +38,14 @@ const handleCustomDomainVerified = (customDomain: { name: string, status: DOMAIN
 
   if (index !== -1) {
     customDomains.value[index] = customDomain;
+  }
+};
+
+const handleCustomDomainRemoved = (domainName: string) => {
+  const index = customDomains.value.findIndex((domain) => domain.name === domainName);
+  if (index !== -1) {
+    lastDomainRemoved.value = domainName;
+    customDomains.value.splice(index, 1);
   }
 };
 </script>
@@ -78,7 +87,7 @@ export default {
             <base-badge :type="BaseBadgeTypes.Emails">{{ t('views.mail.sections.customDomains.emailsCount', domain.emailsCount) }}</base-badge>
           </template>
 
-          <actions-menu :domain="domain" />
+          <actions-menu :domain="domain" @custom-domain-removed="handleCustomDomainRemoved" />
         </div>
       </div>
 
@@ -86,6 +95,7 @@ export default {
         @step-change="handleStepChange"
         @custom-domain-added="handleCustomDomainAdded"
         @custom-domain-verified="handleCustomDomainVerified"
+        :last-domain-removed="lastDomainRemoved"
       />
     </card-container>
   </section>

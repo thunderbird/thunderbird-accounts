@@ -12,6 +12,10 @@ import { addCustomDomain, verifyDomain, getDNSRecords } from '../api';
 
 const { t } = useI18n();
 
+const props = defineProps<{
+  lastDomainRemoved?: string;
+}>();
+
 const emit = defineEmits<{
   'step-change': [step: STEP]
   'custom-domain-added': [customDomain: string]
@@ -26,6 +30,14 @@ const isVerifyingDomain = ref(false);
 
 watch(step, (newStep) => {
   emit('step-change', newStep);
+}, { immediate: true });
+
+watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
+  // If we just removed the domain we were adding, reset the step to initial
+  if (newLastDomainRemoved === customDomain.value) {
+    step.value = STEP.INITIAL;
+    customDomain.value = null;
+  }
 }, { immediate: true });
 
 const recordsInfo = ref<DNSRecord[]>([]);
