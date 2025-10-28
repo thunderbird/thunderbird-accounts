@@ -3,6 +3,9 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhDotsThreeVertical } from '@phosphor-icons/vue';
 
+// Types
+import { DOMAIN_STATUS } from '../types';
+
 // API
 import { verifyDomain, removeCustomDomain } from '../api'
 
@@ -16,6 +19,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'custom-domain-removed': [domainName: string];
+  'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }];
 }>();
 
 const showMenu = ref(false);
@@ -28,7 +32,15 @@ const toggleMenu = () => {
 };
 
 const handleRetry = async () => {
-  await verifyDomain(props.domain.name);
+  const data = await verifyDomain(props.domain.name);
+
+  if (data.success) {
+    emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.VERIFIED });
+  } else {
+    emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.FAILED });
+    console.error(data.error);
+  }
+
   showMenu.value = false;
 };
 
@@ -64,7 +76,7 @@ onBeforeUnmount(() => {
     </button>
 
     <div v-if="showMenu" class="dropdown">
-      <button @click="handleRetry">{{ t('views.mail.sections.customDomains.retry') }}</button>
+      <button @click="handleRetry" v-if="props.domain.status !== DOMAIN_STATUS.VERIFIED">{{ t('views.mail.sections.customDomains.retry') }}</button>
       <button @click="handleDelete">{{ t('views.mail.sections.customDomains.delete') }}</button>
     </div>
   </div>

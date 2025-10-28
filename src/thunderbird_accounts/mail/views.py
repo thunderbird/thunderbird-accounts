@@ -540,7 +540,10 @@ def create_custom_domain(request: HttpRequest):
         return JsonResponse({'success': False, 'error': _('Domain already exists')}, status=400)
     except Exception as e:
         logging.error(f'Error creating custom domain: {e}')
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while creating the custom domain. Please try again later.'},
+            status=500,
+        )
 
     return JsonResponse({'success': True})
 
@@ -560,7 +563,10 @@ def get_dns_records(request: HttpRequest):
         return JsonResponse({'success': True, 'dns_records': dns_records})
     except Exception as e:
         logging.error(f'Error getting DNS records: {e}')
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while getting the DNS records. Please try again later.'},
+            status=500,
+        )
 
 
 @login_required
@@ -578,12 +584,26 @@ def verify_custom_domain(request: HttpRequest):
 
     stalwart_client = MailClient()
 
+    now = datetime.datetime.now(datetime.UTC)
+
     try:
         verification_status = stalwart_client.verify_domain(domain.name)
+
+        domain.status = Domain.DomainStatus.VERIFIED
+        domain.verified_at = now
+
         return JsonResponse({'success': True, 'verification_status': verification_status})
     except Exception as e:
+        domain.status = Domain.DomainStatus.FAILED
+
         logging.error(f'Error verifying domain: {e}')
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while verifying the domain. Please try again later.'},
+            status=500,
+        )
+    finally:
+        domain.last_verification_attempt = now
+        domain.save()
 
 
 @login_required

@@ -87,7 +87,11 @@ export default {
             <base-badge :type="BaseBadgeTypes.Emails">{{ t('views.mail.sections.customDomains.emailsCount', domain.emailsCount) }}</base-badge>
           </template>
 
-          <actions-menu :domain="domain" @custom-domain-removed="handleCustomDomainRemoved" />
+          <actions-menu
+            :domain="domain"
+            @custom-domain-removed="handleCustomDomainRemoved"
+            @custom-domain-verified="handleCustomDomainVerified"
+          />
         </div>
       </div>
 
