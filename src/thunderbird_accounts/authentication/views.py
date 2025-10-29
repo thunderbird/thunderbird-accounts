@@ -29,10 +29,9 @@ def start_oidc_logout(request: HttpRequest):
 
     # Build the logout URL. Keycloak accepts client_id and post_logout_redirect_uri.
     base_url = settings.OIDC_OP_AUTHORIZATION_ENDPOINT.rsplit('/protocol/', 1)[0]
-    logout_endpoint = f"{base_url}/protocol/openid-connect/logout"
+    logout_endpoint = f'{base_url}/protocol/openid-connect/logout'
     redirect_url = (
-        f"{logout_endpoint}?client_id={settings.OIDC_RP_CLIENT_ID}"
-        f"&post_logout_redirect_uri={post_logout_redirect}"
+        f'{logout_endpoint}?client_id={settings.OIDC_RP_CLIENT_ID}&post_logout_redirect_uri={post_logout_redirect}'
     )
 
     return HttpResponseRedirect(redirect_url)

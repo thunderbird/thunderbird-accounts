@@ -122,8 +122,36 @@ def delete_email_addresses_from_stalwart_account(self, username: str, emails: li
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+def update_quota_on_stalwart_account(self, username: str, quota: int):
+    """Updates the quota value on a stalwart account.
+    This will cause the account's storage to be tracked by stalwart."""
+    try:
+        stalwart = MailClient()
+        stalwart.update_quota(username, quota)
+    except RuntimeError as ex:
+        logging.error(f'[update_quota_on_stalwart_account] Error updating quota on stalwart account {ex}')
+        return {
+            'username': username,
+            'quota': quota,
+            'reason': ex,
+            'task_status': 'failed',
+        }
+    return {
+        'username': username,
+        'quota': quota,
+        'task_status': 'success',
+    }
+
+
+@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
 def create_stalwart_account(
-    self, oidc_id: str, username: str, email: str, full_name: Optional[str] = None, app_password: Optional[str] = None
+    self,
+    oidc_id: str,
+    username: str,
+    email: str,
+    full_name: Optional[str] = None,
+    app_password: Optional[str] = None,
+    quota: Optional[int] = None,
 ):
     """Creates a Stalwart Account with the given parameters. OIDC ID is currently just used for error logging,
     but is still required. App Passwords can be set now, or later.
@@ -133,10 +161,11 @@ def create_stalwart_account(
     domain = email.split('@')[1]
 
     if domain != settings.PRIMARY_EMAIL_DOMAIN:
-        error = f'[create_stalwart_account] Cannot create Stalwart account with non-primary email domain: {domain}'
-        logging.error(error)
+        error = f'Cannot create Stalwart account with non-primary email domain: {domain}'
+        logging.error(f'[create_stalwart_account] {error}')
 
         return {
+            'oidc_id': oidc_id,
             'username': username,
             'email': email,
             'reason': error,
@@ -166,8 +195,6 @@ def create_stalwart_account(
         # We want this error
         pass
 
-    _stalwart_check_or_create_domain_entry(stalwart, domain)
-
     emails = [
         email,
         # Create every other allowed alias too
@@ -177,27 +204,58 @@ def create_stalwart_account(
         ],
     ]
 
+    _stalwart_check_or_create_domain_entry(stalwart, domain)
+    for alias in emails[1:]:
+        _domain = alias.split('@')[1]
+        print(f'checking domain {_domain}')
+        _stalwart_check_or_create_domain_entry(stalwart, _domain)
+
     # We need to create this after dkim and domain records exist
-    pkid = stalwart.create_account(emails, username, full_name, app_password)
+    pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
 
     user = User.objects.get(oidc_id=oidc_id)
+    now = datetime.datetime.now(datetime.UTC)
 
     # Don't create the account if we already have it
     # Also create their account objects
-    account = Account.objects.create(
+    account, _created = Account.objects.update_or_create(
         name=user.username,
-        active=True,
-        user=user,
+        defaults={
+            'active': True,
+            'quota': quota,
+            'stalwart_id': pkid,
+            'stalwart_updated_at': now,
+        },
+        create_defaults={
+            'active': True,
+            'quota': quota,
+            'stalwart_id': pkid,
+            'stalwart_updated_at': now,
+            'user_id': user.uuid,
+            'stalwart_created_at': now,
+        },
     )
-    email = Email.objects.create(address=user.username, type=Email.EmailType.PRIMARY.value, account=account)
-    for aliases in emails[1:]:
-        Email.objects.create(address=aliases, type=Email.EmailType.ALIAS.value, account=account)
 
-    now = datetime.datetime.now(datetime.UTC)
-    account.stalwart_id = pkid
-    account.stalwart_created_at = now
-    account.stalwart_updated_at = now
-    account.save()
+    # Edge-case: don't override an existing stalwart_created_at timestamp
+    if not account.stalwart_created_at:
+        account.stalwart_created_at = now
+        account.save()
+
+    Email.objects.update_or_create(
+        address=user.username,
+        create_defaults={
+            'type': Email.EmailType.PRIMARY.value,
+            'account_id': account.uuid,
+        },
+    )
+    for alias in emails[1:]:
+        Email.objects.update_or_create(
+            address=alias,
+            create_defaults={
+                'type': Email.EmailType.ALIAS.value,
+                'account_id': account.uuid,
+            },
+        )
 
     return {
         'oidc_id': oidc_id,

@@ -1,17 +1,30 @@
-from django.conf import settings
-
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.utils import create_stalwart_account, update_quota_on_stalwart_account
 from thunderbird_accounts.subscription.models import Plan
 
 
-def calculate_quota_in_bytes(value_in_gb: int):
-    """Convert our plan's quota field (in gb) to bytes for Stalwart."""
-    return value_in_gb * settings.ONE_GIGABYTE_IN_BYTES
+def activate_subscription_features(user: User, plan: Plan):
+    if not user.has_active_subscription:
+        return
+
+    # Associate the plan id
+    # We technically have a link through user -> subscriptions -> subscription items -> product -> plan
+    # but that's too long...
+    user.plan_id = plan.uuid
+    user.save()
+
+    # TODO: Save this in keycloak
+
+    account = user.account_set.first()
+    if account and account.stalwart_id:
+        update_quota_on_stalwart_account(user, account.quota)
+        return
+
+    create_stalwart_account(user, None)
 
 
-def update_user_mail_quota(user: User, plan: Plan):
-    """Updates a user's mail accounts quota."""
-    accounts = user.account_set.all()
-    for account in accounts:
-        account.quota = calculate_quota_in_bytes(plan.mail_storage_gb)
-        account.save()
+def deactivate_subscription_features():
+    """
+    TODO: Implement me
+    """
+    pass

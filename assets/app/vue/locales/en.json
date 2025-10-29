@@ -278,6 +278,20 @@
       "enterPassword": "Enter your password to confirm",
       "deleteAccountButtonLabel": "Request to delete data",
       "cancelButtonLabel": "Cancel"
+    },
+    "subscribe": {
+      "lineItems": {
+        "annualLong": "Annual Subscription",
+        "dueOn": "Due {0}",
+        "quantity": "Qty: {0}",
+        "subtotal": "Subtotal",
+        "taxes": "Taxes",
+        "today": "Today",
+        "renewal": "On renewal"
+      },
+      "planSystemError": "No plan exists or the plan is incorrectly setup. Please correct this in the admin panel.",
+      "paymentComplete": "Please wait while we verify payment, you will be redirected shortly.",
+      "title": "Order Summary"
     }
   },
   "footer": {

@@ -47,15 +47,21 @@ urlpatterns = [
     path('contact/submit', mail_views.contact_submit, name='contact_submit'),
     path('self-serve/app-passwords/add', mail_views.self_serve_app_password_add, name='app_password_add'),
     path('self-serve/app-passwords/remove', mail_views.self_serve_app_password_remove, name='app_password_remove'),
-    path('self-serve/app-passwords/set', mail_views.self_serve_app_password_set, name='app_password_set'),
-    path('self-serve/display-name/set', mail_views.self_serve_display_name_set, name='display_name_set'),
     # API
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
+    path('api/v1/subscription/paddle/info', subscription_views.get_paddle_information, name='paddle_info'),
+    path('api/v1/subscription/paddle/portal', subscription_views.get_paddle_portal_link, name='paddle_portal'),
+    path(
+        'api/v1/subscription/paddle/complete',
+        subscription_views.notify_paddle_checkout_complete,
+        name='paddle_complete',
+    ),
     path('health', infra_views.health_check),
 ]
+
 
 if settings.AUTH_SCHEME == 'oidc':
     urlpatterns.append(path('oidc/', include('mozilla_django_oidc.urls')))

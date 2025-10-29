@@ -17,17 +17,17 @@ if [[ "$TBA_DEV" == "yes" ]]; then
     sleep 1s
 fi
 
-# Run migrations
-./manage.py migrate
-
-# Retrieve paddle products & prices
-./manage.py get_paddle_products
-./manage.py get_paddle_prices
-
 # Run the app with the appropriate command
 if [[ "$TBA_CELERY" == "yes" ]]; then
     CMD="uv run celery -A thunderbird_accounts worker -l INFO"
 else
+    # Run migrations
+    ./manage.py migrate
+
+    # Retrieve paddle products & prices
+    ./manage.py get_paddle_products
+    ./manage.py get_paddle_prices
+
     CMD="uv run uvicorn thunderbird_accounts.asgi:application"
     ARGS="--lifespan off --host 0.0.0.0 --port 8087"
     if [[ "$TBA_DEV" == "yes" ]]; then

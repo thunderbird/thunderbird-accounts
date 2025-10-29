@@ -157,7 +157,7 @@ class PaddleTestCase(TestCase):
         super().setUp()
 
         self.celery_task_always_eager_setting = settings.CELERY_TASK_ALWAYS_EAGER
-        self.test_user = User.objects.create_user('test', 'test@example.org', '1234')
+        self.test_user = User.objects.create_user('test@example.org', 'test@example.org', '1234')
 
         # Create a mail account
         self.test_mail_account = Account.objects.create(
@@ -457,11 +457,11 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
 
         self.assertIsNotNone(product)
 
-        quota_in_gb = 1337
+        quota_in_bytes = 1337 * settings.ONE_GIGABYTE_IN_BYTES
         plan = models.Plan.objects.create(
             name='Test Plan',
             product_id=product.uuid,
-            mail_storage_gb=quota_in_gb,
+            mail_storage_bytes=quota_in_bytes,
         )
 
         self.assertIsNotNone(plan)
@@ -810,7 +810,7 @@ class UpdateThundermailQuotaTestCase(TestCase):
             subscription_id=subscription.uuid,
             product_id=product.uuid,
         )
-        plan = models.Plan.objects.create(name='Test Plan', mail_storage_gb=1, product_id=product.uuid)
+        plan = models.Plan.objects.create(name='Test Plan', mail_storage_bytes=1, product_id=product.uuid)
 
         # Create the thundermail objects
         # ...Why mail models?
@@ -820,13 +820,10 @@ class UpdateThundermailQuotaTestCase(TestCase):
         )
 
         # Run the task
-        task_results: dict | None = tasks.update_thundermail_quota.delay(
-            plan_uuid=plan.uuid.hex, mail_storage_gb=plan.mail_storage_gb
-        ).get(timeout=10)
+        task_results: dict | None = tasks.update_thundermail_quota.delay(plan_uuid=plan.uuid.hex).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('plan_uuid'), plan.uuid.hex)
-        self.assertEqual(task_results.get('mail_storage_gb'), plan.mail_storage_gb)
         self.assertEqual(task_results.get('task_status'), 'success')
         self.assertEqual(task_results.get('updated'), 1)
         self.assertEqual(task_results.get('skipped'), 0)
@@ -834,17 +831,13 @@ class UpdateThundermailQuotaTestCase(TestCase):
     def test_plan_does_not_exist(self):
         # Manually created this uuid, it should not exist
         plan_uuid = '13371337-aaaa-bbbb-cccc-123456789abc'
-        storage = 1
         with self.assertRaises(models.Plan.DoesNotExist):
             models.Plan.objects.get(pk=plan_uuid)
 
         # Run the task
-        task_results: dict | None = tasks.update_thundermail_quota.delay(
-            plan_uuid=plan_uuid, mail_storage_gb=storage
-        ).get(timeout=10)
+        task_results: dict | None = tasks.update_thundermail_quota.delay(plan_uuid=plan_uuid).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('plan_uuid'), plan_uuid)
-        self.assertEqual(task_results.get('mail_storage_gb'), storage)
         self.assertEqual(task_results.get('task_status'), 'failed')
         self.assertEqual(task_results.get('reason'), 'plan does not exist')

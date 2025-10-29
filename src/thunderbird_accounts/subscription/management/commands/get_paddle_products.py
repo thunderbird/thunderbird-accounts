@@ -35,6 +35,7 @@ class Command(PaddleCommand, BaseCommand):
         """Return a dict that will be passed in an update_or_create's default parameter.
         paddle_obj is an instance of a Paddle API object."""
         return {
+            'paddle_id': paddle_obj.id,
             'name': paddle_obj.name,
             'description': paddle_obj.description,
             'product_type': paddle_obj.type,

@@ -34,11 +34,15 @@ def decode_app_password(secret):
 
 def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
     # Run this immediately for now, in the future we'll ship these to celery
-    if user.account_set.count() > 0:
+    if user.account_set.count() > 0 and user.account_set.first().stalwart_id:
         return False
 
-    tasks.create_stalwart_account.run(
-        oidc_id=user.oidc_id, username=user.username, email=user.username, app_password=app_password
+    mail_quota = None
+    if user.plan_id:
+        mail_quota = user.plan.mail_storage_bytes
+
+    tasks.create_stalwart_account.delay(
+        oidc_id=user.oidc_id, username=user.username, email=user.username, app_password=app_password, quota=mail_quota
     )
 
     return True
@@ -58,4 +62,8 @@ def delete_email_addresses_from_stalwart_account(user: User, emails):
 
 def is_allowed_domain(email_address: str) -> bool:
     """Pass in an email address and see if it's a valid / allowed email domain"""
-    return any([email_address.endswith(domain) for domain in settings.ALLOWED_EMAIL_DOMAINS])
+    return any([email_address.endswith(f'@{domain}') for domain in settings.ALLOWED_EMAIL_DOMAINS])
+
+
+def update_quota_on_stalwart_account(user: User, quota: int):
+    tasks.update_quota_on_stalwart_account.delay(username=user.username, quota=quota)

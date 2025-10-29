@@ -46,8 +46,6 @@ class CustomEmailBaseForm(forms.BaseInlineFormSet):
 
         has_errors = False
 
-        print('self.instance.email_set.all() -> ', self.instance.email_set.all())
-
         for form in self.forms:
             if not form.is_valid() or not form.instance.address or len(form.changed_data) == 0:
                 continue

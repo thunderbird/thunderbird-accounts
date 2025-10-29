@@ -24,14 +24,12 @@ class User(AbstractUser, BaseModel):
         GERMAN = 'de', _('German')
 
     username = models.CharField(
-        _("username"),
+        _('username'),
         max_length=150,
         unique=True,
-        help_text=_(
-            "Required. 150 characters or fewer."
-        ),
+        help_text=_('Required. 150 characters or fewer.'),
         error_messages={
-            "unique": _("A user with that username already exists."),
+            'unique': _('A user with that username already exists.'),
         },
     )
 
@@ -52,6 +50,8 @@ class User(AbstractUser, BaseModel):
     is_test_account = models.BooleanField(
         _('Test Account'), default=False, help_text=_('Whether this account is used for testing.')
     )
+
+    plan = models.ForeignKey('subscription.Plan', null=True, on_delete=models.SET_NULL)
 
     class Meta(BaseModel.Meta):
         indexes = [

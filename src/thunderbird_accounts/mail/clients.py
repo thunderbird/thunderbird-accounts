@@ -206,7 +206,12 @@ class MailClient:
         return data.get('data')
 
     def create_account(
-        self, emails: list[str], principal_id: str, full_name: Optional[str] = None, app_password: Optional[str] = None
+        self,
+        emails: list[str],
+        principal_id: str,
+        full_name: Optional[str] = None,
+        app_password: Optional[str] = None,
+        quota: Optional[int] = None,
     ):
         data = {
             'type': 'individual',
@@ -215,6 +220,8 @@ class MailClient:
             'emails': emails,
             'roles': ['user'],
         }
+        if quota:
+            data['quota'] = quota
         if app_password:
             data['secrets'] = [app_password]
         response = self._create_principal(data)
@@ -341,6 +348,20 @@ class MailClient:
         if len(update_data) == 0:
             raise ValueError('You must provide at least one field to change.')
 
+        response = self._update_principal(principal_id, update_data)
+
+        # Returns data: null on success...
+        data = response.json()
+        error = data.get('error')
+        # I have no idea what the error is yet
+        if error:
+            logging.error(f'[update_individual] err: {data}')
+            raise RuntimeError(data)
+
+    def update_quota(self, principal_id: str, quota: int):
+        update_data = [
+            {'action': 'set', 'field': 'quota', 'value': quota},
+        ]
         response = self._update_principal(principal_id, update_data)
 
         # Returns data: null on success...
