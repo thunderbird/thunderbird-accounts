@@ -40,6 +40,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
   if (newLastDomainRemoved === customDomain.value) {
     step.value = STEP.INITIAL;
     customDomain.value = null;
+    customDomainError.value = null;
   }
 }, { immediate: true });
 
