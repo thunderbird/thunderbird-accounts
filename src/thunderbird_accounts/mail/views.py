@@ -79,7 +79,8 @@ def home(request: HttpRequest):
         ]
 
         # Get user's plan info constraints
-        max_custom_domains = request.user.plan.mail_domain_count
+        if request.user.plan:
+            max_custom_domains = request.user.plan.mail_domain_count
 
     return TemplateResponse(request, 'mail/index.html', {
         'connection_info': settings.CONNECTION_INFO,
@@ -548,6 +549,7 @@ def create_custom_domain(request: HttpRequest):
         stalwart_client = MailClient()
 
         domain_id = stalwart_client.create_domain(domain_name)
+        stalwart_client.create_dkim(domain_name)
         now = datetime.datetime.now(datetime.UTC)
         Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
     except DomainAlreadyExistsError:
