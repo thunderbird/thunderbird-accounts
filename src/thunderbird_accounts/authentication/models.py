@@ -51,7 +51,7 @@ class User(AbstractUser, BaseModel):
         _('Test Account'), default=False, help_text=_('Whether this account is used for testing.')
     )
 
-    plan = models.OneToOneField('subscription.Plan', null=True, on_delete=models.SET_NULL)
+    plan = models.ForeignKey('subscription.Plan', null=True, on_delete=models.SET_NULL)
 
     class Meta(BaseModel.Meta):
         indexes = [
