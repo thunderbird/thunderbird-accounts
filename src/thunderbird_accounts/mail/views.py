@@ -48,6 +48,7 @@ def home(request: HttpRequest):
     user_display_name = None
     custom_domains = []
     max_custom_domains = None
+    dns_hostname = settings.DNS_HOSTNAME
 
     if request.user.is_authenticated:
         try:
@@ -86,6 +87,7 @@ def home(request: HttpRequest):
         'user_display_name': user_display_name,
         'custom_domains': json.dumps(custom_domains),
         'max_custom_domains': max_custom_domains,
+        'dns_hostname': dns_hostname,
     })
 
 
@@ -558,27 +560,6 @@ def create_custom_domain(request: HttpRequest):
         )
 
     return JsonResponse({'success': True})
-
-
-@login_required
-@require_http_methods(['GET'])
-def get_dns_records(request: HttpRequest):
-    """Gets the DNS records for a custom domain"""
-    domain = request.user.domains.get(name=request.GET.get('domain-name'))
-    if not domain:
-        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
-
-    stalwart_client = MailClient()
-
-    try:
-        dns_records = stalwart_client.get_dns_records(domain.name)
-        return JsonResponse({'success': True, 'dns_records': dns_records})
-    except Exception as e:
-        logging.error(f'Error getting DNS records: {e}')
-        return JsonResponse(
-            {'success': False, 'error': 'An error occurred while getting the DNS records. Please try again later.'},
-            status=500,
-        )
 
 
 @login_required

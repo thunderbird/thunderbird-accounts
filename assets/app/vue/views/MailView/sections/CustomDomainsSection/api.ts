@@ -24,11 +24,6 @@ export const verifyDomain = async (domainName: string) => {
   return await response.json();
 };
 
-export const getDNSRecords = async (domainName: string) => {
-  const response = await fetch(`/custom-domains/dns-records?domain-name=${domainName}`);
-  return await response.json();
-};
-
 export const removeCustomDomain = async (domainName: string) => {
   const response = await fetch(`/custom-domains/remove`, {
     method: 'DELETE',

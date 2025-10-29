@@ -8,7 +8,10 @@ import { PhX } from '@phosphor-icons/vue';
 import { CustomDomain, DNSRecord, STEP, DOMAIN_STATUS } from '../types';
 
 // API
-import { addCustomDomain, verifyDomain, getDNSRecords } from '../api';
+import { addCustomDomain, verifyDomain } from '../api';
+
+// Utils
+import { generateDNSRecords } from '../utils';
 
 const { t } = useI18n();
 
@@ -59,23 +62,8 @@ const onCreateCustomDomain = async () => {
 
     if (data.success) {
       emit('custom-domain-added', customDomain.value);
-
-      const dnsRecordsData = await getDNSRecords(customDomain.value);
-      if (dnsRecordsData.success) {
-        recordsInfo.value = dnsRecordsData.dns_records.map((record: DNSRecord) => {
-          return {
-            type: record.type,
-            name: record.name,
-            content: record.content,
-            priority: record.priority || '-',
-          }
-        });
-
-        step.value = STEP.VERIFY_DOMAIN;
-        customDomainError.value = null;
-      } else {
-        customDomainError.value = dnsRecordsData.error;
-      }
+      recordsInfo.value = await generateDNSRecords(customDomain.value);
+      step.value = STEP.VERIFY_DOMAIN;
     } else {
       console.error(data.error);
       customDomainError.value = data.error;

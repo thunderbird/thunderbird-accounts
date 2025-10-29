@@ -14,7 +14,7 @@ export type DNSRecord = {
   type: string;
   name: string;
   content: string;
-  priority?: number;
+  priority?: string;
 }
 
 export type CustomDomain = {

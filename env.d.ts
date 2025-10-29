@@ -27,6 +27,7 @@ declare global {
       allowedDomains?: string[];
       customDomains?: CustomDomain[];
       maxCustomDomains?: number;
+      dnsHostname?: string;
       currentView?: Record<string, any>;
     };
   }
