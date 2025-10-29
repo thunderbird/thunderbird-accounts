@@ -205,7 +205,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-3059299f4a5ca3809b7b1e2708874024ffa7210b
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-525101db8a763d518094834659548f7758759dd4
             command:
               - start
             portMappings:
@@ -281,7 +281,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c2726a0ab43ffdd0af1fcc9170a7dac938212074
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:2ff6e862b1dc38b112d7b052109d936c633fff48
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -443,7 +443,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c2726a0ab43ffdd0af1fcc9170a7dac938212074
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:2ff6e862b1dc38b112d7b052109d936c633fff48
             linuxParameters:
               initProcessEnabled: True
             secrets:
