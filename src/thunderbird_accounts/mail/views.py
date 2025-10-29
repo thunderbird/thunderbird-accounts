@@ -538,9 +538,9 @@ def create_custom_domain(request: HttpRequest):
             {'success': False, 'error': _('You have reached the maximum number of custom domains')}, status=400
         )
 
-    stalwart_client = MailClient()
-
     try:
+        stalwart_client = MailClient()
+
         domain_id = stalwart_client.create_domain(domain_name)
         now = datetime.datetime.now(datetime.UTC)
         Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
@@ -615,7 +615,7 @@ def verify_custom_domain(request: HttpRequest):
 
 
 @login_required
-@require_http_methods(['POST'])
+@require_http_methods(['DELETE'])
 def remove_custom_domain(request: HttpRequest):
     """Removes a custom domain"""
     data = json.loads(request.body)
