@@ -20,6 +20,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'custom-domain-removed': [domainName: string];
   'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }];
+  'custom-domain-error': [error: string];
 }>();
 
 const showMenu = ref(false);
@@ -32,13 +33,17 @@ const toggleMenu = () => {
 };
 
 const handleRetry = async () => {
-  const data = await verifyDomain(props.domain.name);
-
-  if (data.success) {
-    emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.VERIFIED });
-  } else {
-    emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.FAILED });
-    console.error(data.error);
+  try {
+    const data = await verifyDomain(props.domain.name);
+  
+    if (data.success) {
+      emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.VERIFIED });
+    } else {
+      emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.FAILED });
+      emit('custom-domain-error', data.error);
+    }
+  } catch (error) {
+    emit('custom-domain-error', error);
   }
 
   showMenu.value = false;
@@ -50,7 +55,7 @@ const handleDelete = async () => {
     emit('custom-domain-removed', props.domain.name);
     showMenu.value = false;
   } else {
-    console.error(data.error);
+    emit('custom-domain-error', data.error);
   }
 };
 

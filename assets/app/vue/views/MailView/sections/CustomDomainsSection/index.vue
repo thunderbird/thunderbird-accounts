@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhGlobe, PhCheckCircle } from '@phosphor-icons/vue';
-import { BaseBadge, BaseBadgeTypes } from '@thunderbirdops/services-ui';
+import { PhGlobe, PhCheckCircle, PhX } from '@phosphor-icons/vue';
+import { BaseBadge, BaseBadgeTypes, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 
 // Types
 import { CustomDomain, DOMAIN_STATUS, STEP } from './types';
@@ -24,6 +24,7 @@ const customDomainsDescription = computed(() =>
   : t('views.mail.sections.customDomains.customDomainsDescriptionAdd')
 );
 const lastDomainRemoved = ref<string>(null);
+const errorMessage = ref<string>(null);
 
 const handleStepChange = (step: STEP) => {
   currentStep.value = step;
@@ -47,6 +48,10 @@ const handleCustomDomainRemoved = (domainName: string) => {
     lastDomainRemoved.value = domainName;
     customDomains.value.splice(index, 1);
   }
+};
+
+const handleCustomDomainError = (error: string) => {
+  errorMessage.value = error;
 };
 </script>
 
@@ -91,9 +96,20 @@ export default {
             :domain="domain"
             @custom-domain-removed="handleCustomDomainRemoved"
             @custom-domain-verified="handleCustomDomainVerified"
+            @custom-domain-error="handleCustomDomainError"
           />
         </div>
       </div>
+
+      <notice-bar :type="NoticeBarTypes.Critical" class="verify-step-notice-bar" v-if="errorMessage">
+        <p>{{ errorMessage }}</p>
+
+        <template #cta>
+          <button @click="errorMessage = null">
+            <ph-x size="24" />
+          </button>
+        </template>
+      </notice-bar>
 
       <custom-domain-form
         @step-change="handleStepChange"
@@ -135,6 +151,35 @@ section#custom-domains {
     font-weight: 600;
     letter-spacing: 0.48px;
     margin-block-end: 1rem;
+  }
+
+  .notice-bar {
+    margin-block-end: 1.5rem;
+
+    p {
+      margin-block-end: 0;
+    }
+
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
+      border: none;
+      border-radius: 300px;
+      box-shadow: inset 2px 2px 4px 0 rgba(0, 0, 0, 0.05);
+      background-color: rgba(0, 0, 0, 0.05);
+      color: var(--colour-ti-secondary);
+      cursor: pointer;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+
+      &:active {
+        background-color: rgba(0, 0, 0, 0.2);
+      }
+    }
   }
 
   .custom-domains-list {
