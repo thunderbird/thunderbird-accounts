@@ -29,8 +29,6 @@ const customDomainFormRef = ref(null);
 
 const maxCustomDomains = window._page?.maxCustomDomains;
 
-const maxCustomDomains = window._page?.maxCustomDomains;
-
 const handleStepChange = (step: STEP) => {
   currentStep.value = step;
 };
