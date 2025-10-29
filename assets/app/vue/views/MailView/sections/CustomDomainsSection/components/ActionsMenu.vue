@@ -21,6 +21,7 @@ const emit = defineEmits<{
   'custom-domain-removed': [domainName: string];
   'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }];
   'custom-domain-error': [error: string];
+  'custom-domain-view-dns-records': [domainName: string];
 }>();
 
 const showMenu = ref(false);
@@ -67,6 +68,11 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
+const handleViewDnsRecords = () => {
+  emit('custom-domain-view-dns-records', props.domain.name);
+  showMenu.value = false;
+};
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
 });
@@ -83,6 +89,9 @@ onBeforeUnmount(() => {
     </button>
 
     <div v-if="showMenu" class="dropdown">
+      <button @click="handleViewDnsRecords">
+        {{ t('views.mail.sections.customDomains.viewDnsRecords') }}
+      </button>
       <button @click="handleRetry">
         <template v-if="props.domain.status !== DOMAIN_STATUS.VERIFIED">
           {{ t('views.mail.sections.customDomains.verify') }}
@@ -120,7 +129,7 @@ onBeforeUnmount(() => {
   border-radius: 0.5rem;
   box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
   padding: 0.5rem 0;
-  min-width: 150px;
+  min-width: 170px;
   z-index: 10;
 
   button {

@@ -149,6 +149,7 @@
           "verifyStepNoteTip": "Tip:",
           "verifyStepNote": "{'If your registrar doesn’t allow \"@\" for the root domain, leave the Name/Host field empty.'}",
           "verifyStepButton": "Verify Domain",
+          "viewDnsRecords": "View DNS records",
           "recordsTableHeaderType": "Type",
           "recordsTableHeaderNameHost": "{'Name/Host'}",
           "recordsTableHeaderValueData": "{'Value/Data'}",

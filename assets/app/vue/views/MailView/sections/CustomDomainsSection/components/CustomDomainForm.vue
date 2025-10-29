@@ -38,19 +38,6 @@ const verificationStatus = ref<Record<string, any>>(null);
 
 const maxCustomDomains = window._page?.maxCustomDomains;
 
-watch(step, (newStep) => {
-  emit('step-change', newStep);
-}, { immediate: true });
-
-watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
-  // If we just removed the domain we were adding, reset the step to initial
-  if (newLastDomainRemoved === customDomain.value) {
-    step.value = STEP.INITIAL;
-    customDomain.value = null;
-    customDomainError.value = null;
-  }
-}, { immediate: true });
-
 const recordsInfo = ref<DNSRecord[]>([]);
 
 const onCreateCustomDomain = async () => {
@@ -95,7 +82,6 @@ const onVerifyDomain = async () => {
       customDomainError.value = null;
     } else {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
-      console.error(data.error);
     }
   } catch (error) {
     emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
@@ -105,6 +91,29 @@ const onVerifyDomain = async () => {
     customDomain.value = null;
   }
 };
+
+const viewDnsRecords = async (domainName: string) => {
+  customDomain.value = domainName;
+  recordsInfo.value = await generateDNSRecords(domainName);
+  step.value = STEP.VERIFY_DOMAIN;
+};
+
+defineExpose({
+  viewDnsRecords
+});
+
+watch(step, (newStep) => {
+  emit('step-change', newStep);
+}, { immediate: true });
+
+watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
+  // If we just removed the domain we were adding, reset the step to initial
+  if (newLastDomainRemoved === customDomain.value) {
+    step.value = STEP.INITIAL;
+    customDomain.value = null;
+    customDomainError.value = null;
+  }
+}, { immediate: true });
 </script>
 
 <template>

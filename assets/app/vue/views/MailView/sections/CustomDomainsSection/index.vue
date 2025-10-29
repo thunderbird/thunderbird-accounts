@@ -25,6 +25,7 @@ const customDomainsDescription = computed(() =>
 );
 const lastDomainRemoved = ref<string>(null);
 const errorMessage = ref<string>(null);
+const customDomainFormRef = ref(null);
 
 const maxCustomDomains = window._page?.maxCustomDomains;
 
@@ -54,6 +55,12 @@ const handleCustomDomainRemoved = (domainName: string) => {
 
 const handleCustomDomainError = (error: string) => {
   errorMessage.value = error;
+};
+
+const handleCustomDomainViewDnsRecords = (domainName: string) => {
+  if (customDomainFormRef.value) {
+    customDomainFormRef.value.viewDnsRecords(domainName);
+  }
 };
 </script>
 
@@ -99,6 +106,7 @@ export default {
             @custom-domain-removed="handleCustomDomainRemoved"
             @custom-domain-verified="handleCustomDomainVerified"
             @custom-domain-error="handleCustomDomainError"
+            @custom-domain-view-dns-records="handleCustomDomainViewDnsRecords"
           />
         </div>
       </div>
@@ -114,6 +122,7 @@ export default {
       </notice-bar>
 
       <custom-domain-form
+        ref="customDomainFormRef"
         @step-change="handleStepChange"
         @custom-domain-added="handleCustomDomainAdded"
         @custom-domain-verified="handleCustomDomainVerified"
