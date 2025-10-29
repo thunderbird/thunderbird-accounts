@@ -672,34 +672,6 @@ def remove_custom_domain(request: HttpRequest):
     return JsonResponse({'success': True})
 
 
-@login_required
-@require_http_methods(['POST'])
-def remove_custom_domain(request: HttpRequest):
-    """Removes a custom domain"""
-    data = json.loads(request.body)
-    domain_name = data.get('domain-name')
-
-    if not domain_name:
-        return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
-
-    domain = request.user.domains.get(name=domain_name)
-    if not domain:
-        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
-
-    stalwart_client = MailClient()
-    try:
-        stalwart_client.delete_domain(domain.name)
-        request.user.domains.filter(name=domain_name).delete()
-    except Exception as e:
-        logging.error(f'Error removing custom domain: {e}')
-        return JsonResponse(
-            {'success': False, 'error': 'An error occurred while removing the custom domain. Please try again later.'},
-            status=500,
-        )
-
-    return JsonResponse({'success': True})
-
-
 def wait_list(request: HttpRequest):
     return TemplateResponse(request, 'mail/wait-list.html', {'form_action': settings.WAIT_LIST_FORM_ACTION})
 

@@ -43,7 +43,7 @@ export const removeCustomDomain = async (domainName: string) => {
 
 export const removeCustomDomain = async (domainName: string) => {
   const response = await fetch(`/custom-domains/remove`, {
-    method: 'POST',
+    method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': window._page.csrfToken,
