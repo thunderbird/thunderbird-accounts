@@ -47,6 +47,7 @@ def home(request: HttpRequest):
     app_passwords = []
     user_display_name = None
     custom_domains = []
+    max_custom_domains = None
 
     if request.user.is_authenticated:
         try:
