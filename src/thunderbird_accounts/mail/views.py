@@ -76,12 +76,15 @@ def home(request: HttpRequest):
             for domain in domains
         ]
 
+        # Get user's plan info constraints
+        max_custom_domains = request.user.plan.mail_domain_count
+
     return TemplateResponse(request, 'mail/index.html', {
         'connection_info': settings.CONNECTION_INFO,
         'app_passwords': json.dumps(app_passwords),
         'user_display_name': user_display_name,
         'custom_domains': json.dumps(custom_domains),
-        'max_custom_domains': settings.MAX_CUSTOM_DOMAINS,
+        'max_custom_domains': max_custom_domains,
     })
 
 
@@ -533,7 +536,7 @@ def create_custom_domain(request: HttpRequest):
 
     custom_domain_count = request.user.domains.count()
 
-    if custom_domain_count >= settings.MAX_CUSTOM_DOMAINS:
+    if custom_domain_count >= request.user.plan.mail_domain_count:
         return JsonResponse(
             {'success': False, 'error': _('You have reached the maximum number of custom domains')}, status=400
         )

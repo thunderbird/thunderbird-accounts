@@ -410,9 +410,6 @@ PRIMARY_EMAIL_DOMAIN = (
     ALLOWED_EMAIL_DOMAINS[0] if ALLOWED_EMAIL_DOMAINS and len(ALLOWED_EMAIL_DOMAINS) > 0 else 'example.org'
 )
 
-# Maximum number of custom domains a user can have
-MAX_CUSTOM_DOMAINS = 3
-
 # Required otherwise a manifest error will be generated
 SERVESTATIC_MANIFEST_STRICT = False
 

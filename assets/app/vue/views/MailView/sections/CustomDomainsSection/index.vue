@@ -26,6 +26,8 @@ const customDomainsDescription = computed(() =>
 const lastDomainRemoved = ref<string>(null);
 const errorMessage = ref<string>(null);
 
+const maxCustomDomains = window._page?.maxCustomDomains;
+
 const handleStepChange = (step: STEP) => {
   currentStep.value = step;
 };
@@ -66,7 +68,7 @@ export default {
     <card-container>
       <h2>{{ t('views.mail.sections.customDomains.customDomains') }}</h2>
       <p class="custom-domains-description">{{ customDomainsDescription }}</p>
-      <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: 3 }) }}</strong>
+      <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: maxCustomDomains }) }}</strong>
 
       <div class="custom-domains-list" v-if="customDomains.length > 0">
         <div class="custom-domain-item" v-for="domain in customDomains" :key="domain.name">
