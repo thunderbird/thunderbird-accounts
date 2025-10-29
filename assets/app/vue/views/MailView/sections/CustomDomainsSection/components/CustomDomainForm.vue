@@ -40,6 +40,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
   if (newLastDomainRemoved === customDomain.value) {
     step.value = STEP.INITIAL;
     customDomain.value = null;
+    customDomainError.value = null;
   }
 }, { immediate: true });
 
@@ -71,8 +72,9 @@ const onCreateCustomDomain = async () => {
         });
 
         step.value = STEP.VERIFY_DOMAIN;
+        customDomainError.value = null;
       } else {
-        console.error(dnsRecordsData.error);
+        customDomainError.value = dnsRecordsData.error;
       }
     } else {
       console.error(data.error);
@@ -95,6 +97,7 @@ const onVerifyDomain = async () => {
     if (data.success) {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
       step.value = STEP.INITIAL;
+      customDomainError.value = null;
     } else {
       console.error(data.error);
     }
@@ -103,6 +106,7 @@ const onVerifyDomain = async () => {
     console.error(error);
   } finally {
     isVerifyingDomain.value = false;
+    customDomain.value = null;
   }
 };
 </script>

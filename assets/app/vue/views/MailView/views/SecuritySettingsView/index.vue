@@ -53,6 +53,7 @@ export default {
   .security-settings-view {
     .security-settings-card {
       width: 971px;
+      margin: 0 auto;
     }
   }
 }

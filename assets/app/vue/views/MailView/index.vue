@@ -35,6 +35,7 @@ export default {
   .mail-view {
     section {
       width: 971px;
+      margin: 0 auto;
     }
   }
 }
