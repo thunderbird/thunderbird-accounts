@@ -584,10 +584,14 @@ def verify_custom_domain(request: HttpRequest):
     try:
         verification_status = stalwart_client.verify_domain(domain.name)
 
-        domain.status = Domain.DomainStatus.VERIFIED
-        domain.verified_at = now
+        # TODO: Forcibly failing / returning False until we know what a verified verification status looks like
+        domain.status = Domain.DomainStatus.FAILED
 
-        return JsonResponse({'success': True, 'verification_status': verification_status})
+        # domain.status = Domain.DomainStatus.VERIFIED
+        # domain.verified_at = now
+        # return JsonResponse({'success': True, 'verification_status': verification_status})
+
+        return JsonResponse({'success': False, 'verification_status': verification_status})
     except Exception as e:
         domain.status = Domain.DomainStatus.FAILED
 

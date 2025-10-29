@@ -32,6 +32,10 @@ const showNoticeBar = ref(true);
 const isAddingCustomDomain = ref(false);
 const isVerifyingDomain = ref(false);
 const customDomainError = ref<string>(null);
+
+// TODO: Remove this once we know what a verified verification status looks like
+const verificationStatus = ref<Record<string, any>>(null);
+
 const maxCustomDomains = window._page?.maxCustomDomains;
 
 watch(step, (newStep) => {
@@ -82,11 +86,15 @@ const onVerifyDomain = async () => {
   try {
     const data = await verifyDomain(customDomain.value);
 
+    // TODO: Remove this once we know what a verified verification status looks like
+    verificationStatus.value = data.verification_status;
+
     if (data.success) {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
       step.value = STEP.INITIAL;
       customDomainError.value = null;
     } else {
+      emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
       console.error(data.error);
     }
   } catch (error) {
@@ -160,7 +168,20 @@ const onVerifyDomain = async () => {
       </template>
     </notice-bar>
 
-    <primary-button class="verify-step-button" @click="onVerifyDomain">{{ t('views.mail.sections.customDomains.verifyStepButton') }}</primary-button>
+    <!-- TODO: Remove this once we know what a verified verification status looks like -->
+    <notice-bar :type="NoticeBarTypes.Warning" class="verify-step-notice-bar" v-if="verificationStatus">
+      <template v-for="status in verificationStatus" :key="status.type">
+        <p>{{ JSON.stringify(status) }}</p>
+      </template>
+    </notice-bar>
+
+    <primary-button
+      class="verify-step-button"
+      @click="onVerifyDomain"
+      :disabled="isVerifyingDomain"
+    >
+      {{ t('views.mail.sections.customDomains.verifyStepButton') }}
+    </primary-button>
   </template>
 </template>
 

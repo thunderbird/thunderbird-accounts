@@ -40,7 +40,9 @@ const handleRetry = async () => {
       emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.VERIFIED });
     } else {
       emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.FAILED });
-      emit('custom-domain-error', data.error);
+
+      // TODO: Remove this once we know what a verified verification status looks like
+      emit('custom-domain-error', data.verification_status);
     }
   } catch (error) {
     emit('custom-domain-error', error);
