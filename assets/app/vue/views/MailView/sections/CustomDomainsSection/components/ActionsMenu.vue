@@ -83,7 +83,14 @@ onBeforeUnmount(() => {
     </button>
 
     <div v-if="showMenu" class="dropdown">
-      <button @click="handleRetry" v-if="props.domain.status !== DOMAIN_STATUS.VERIFIED">{{ t('views.mail.sections.customDomains.retry') }}</button>
+      <button @click="handleRetry">
+        <template v-if="props.domain.status !== DOMAIN_STATUS.VERIFIED">
+          {{ t('views.mail.sections.customDomains.verify') }}
+        </template>
+        <template v-else>
+          {{ t('views.mail.sections.customDomains.reVerify') }}
+        </template>
+      </button>
       <button @click="handleDelete">{{ t('views.mail.sections.customDomains.delete') }}</button>
     </div>
   </div>

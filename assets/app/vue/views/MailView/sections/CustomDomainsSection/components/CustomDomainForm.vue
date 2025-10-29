@@ -117,6 +117,7 @@ const onVerifyDomain = async () => {
       {{ t('views.mail.sections.customDomains.addDomain') }}
     </primary-button>
   </template>
+
   <template v-else-if="step === STEP.ADD">
     <text-input
       :placeholder="t('views.mail.sections.customDomains.domainPlaceholder')"
@@ -133,13 +134,20 @@ const onVerifyDomain = async () => {
       {{ t('views.mail.sections.customDomains.continue') }}
     </primary-button>
   </template>
+
   <template v-else-if="step === STEP.VERIFY_DOMAIN">
     <h3>{{ t('views.mail.sections.customDomains.verifyStepTitle') }}</h3>
     <div class="verify-step-list">
+      <h4>{{ t('views.mail.sections.customDomains.verifyStepOneTitle') }}</h4>
       <p>{{ t('views.mail.sections.customDomains.verifyStepOne') }}</p>
+      <h4>{{ t('views.mail.sections.customDomains.verifyStepTwoTitle') }}</h4>
       <p>{{ t('views.mail.sections.customDomains.verifyStepTwo') }}</p>
+      <h4>{{ t('views.mail.sections.customDomains.verifyStepThreeTitle') }}</h4>
       <p>{{ t('views.mail.sections.customDomains.verifyStepThree') }}</p>
-      <p class="verify-step-note">{{ t('views.mail.sections.customDomains.verifyStepNote') }}</p>
+      <p class="verify-step-note">
+        <strong>{{ t('views.mail.sections.customDomains.verifyStepNoteTip') }}</strong>
+        {{ t('views.mail.sections.customDomains.verifyStepNote') }}
+      </p>
     </div>
 
     <div class="records-table-wrapper">
@@ -200,14 +208,31 @@ h3 {
 .verify-step-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
   line-height: 1.32;
   color: var(--colour-ti-secondary);
   margin-block-end: 1.5rem;
 
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.32;
+    margin-block-end: 0.25rem;
+  }
+
+  p {
+    margin-inline-start: 1rem;
+    margin-block-end: 1.5rem;
+    font-size: 0.875rem;
+
+    &:not(:first-of-type) {
+      margin-inline-start: 1.25rem;
+    }
+  }
+
   .verify-step-note {
     font-size: 0.875rem;
     line-height: normal;
+    margin: 0;
   }
 }
 
