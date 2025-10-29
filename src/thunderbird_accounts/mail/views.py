@@ -48,7 +48,6 @@ def home(request: HttpRequest):
     user_display_name = None
     custom_domains = []
     max_custom_domains = None
-    dns_hostname = settings.DNS_HOSTNAME
 
     if request.user.is_authenticated:
         try:
