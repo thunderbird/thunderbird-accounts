@@ -48,6 +48,7 @@ def home(request: HttpRequest):
     user_display_name = None
     custom_domains = []
     max_custom_domains = None
+    dns_hostname = settings.DNS_HOSTNAME
 
     if request.user.is_authenticated:
         try:
@@ -87,6 +88,7 @@ def home(request: HttpRequest):
         'user_display_name': user_display_name,
         'custom_domains': json.dumps(custom_domains),
         'max_custom_domains': max_custom_domains,
+        'dns_hostname': dns_hostname,
     })
 
 
