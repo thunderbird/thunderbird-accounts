@@ -181,7 +181,7 @@ resources:
     keycloak:
       assign_public_ip: True
       desired_count: 1
-      health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
+      health_check_grace_period_seconds: 600 # Time before the LB checks for health of a new backend
       internal: False
       services:
         keycloak:
@@ -206,7 +206,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-1a25562dde49115f3461c5e77ad85e6d470a3bbc
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-b32c2f8dd2a5c862ebc794f6ef3b00b04390975d
             command:
               - start
             portMappings:
@@ -251,14 +251,14 @@ resources:
               - name: KC_SPI_THEME_WELCOME_THEME
                 value: "tbpro"
               - name: KC_TBPRO_HOME
-                value: "https://accounts.tb.pro/self-serve/"
+                value: "https://accounts.tb.pro/dashboard/"
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
       desired_count: 1
       ecr_resources:
         - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
-      health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
+      health_check_grace_period_seconds: 120 # Time before the LB checks for health of a new backend
       internal: False # This needs to be open to receive auth callbacks
       services:
         accounts:
