@@ -3,12 +3,25 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhDotsThreeVertical } from '@phosphor-icons/vue';
 
+// Types
+import { DOMAIN_STATUS } from '../types';
+
+// API
+import { verifyDomain, removeCustomDomain } from '../api'
+
 const props = defineProps<{
   domain: {
     name: string;
     status: string;
     emailsCount?: number;
   };
+}>();
+
+const emit = defineEmits<{
+  'custom-domain-removed': [domainName: string];
+  'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }];
+  'custom-domain-error': [error: string];
+  'custom-domain-view-dns-records': [domainName: string];
 }>();
 
 const showMenu = ref(false);
@@ -20,22 +33,44 @@ const toggleMenu = () => {
   showMenu.value = !showMenu.value;
 };
 
-const handleRetry = () => {
-  // TODO: Implement retry functionality
-  console.log('Retry clicked', props.domain);
+const handleRetry = async () => {
+  try {
+    const data = await verifyDomain(props.domain.name);
+  
+    if (data.success) {
+      emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.VERIFIED });
+    } else {
+      emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.FAILED });
+
+      // TODO: Remove this once we know what a verified verification status looks like
+      emit('custom-domain-error', data.verification_status);
+    }
+  } catch (error) {
+    emit('custom-domain-error', error);
+  }
+
   showMenu.value = false;
 };
 
-const handleDelete = () => {
-  // TODO: Implement delete functionality
-  console.log('Delete clicked', props.domain);
-  showMenu.value = false;
+const handleDelete = async () => {
+  const data = await removeCustomDomain(props.domain.name);
+  if (data.success) {
+    emit('custom-domain-removed', props.domain.name);
+    showMenu.value = false;
+  } else {
+    emit('custom-domain-error', data.error);
+  }
 };
 
 const handleClickOutside = (event: MouseEvent) => {
   if (menuRef.value && !menuRef.value.contains(event.target as Node)) {
     showMenu.value = false;
   }
+};
+
+const handleViewDnsRecords = () => {
+  emit('custom-domain-view-dns-records', props.domain.name);
+  showMenu.value = false;
 };
 
 onMounted(() => {
@@ -54,7 +89,17 @@ onBeforeUnmount(() => {
     </button>
 
     <div v-if="showMenu" class="dropdown">
-      <button @click="handleRetry">{{ t('views.mail.sections.customDomains.retry') }}</button>
+      <button @click="handleViewDnsRecords">
+        {{ t('views.mail.sections.customDomains.viewDnsRecords') }}
+      </button>
+      <button @click="handleRetry">
+        <template v-if="props.domain.status !== DOMAIN_STATUS.VERIFIED">
+          {{ t('views.mail.sections.customDomains.verify') }}
+        </template>
+        <template v-else>
+          {{ t('views.mail.sections.customDomains.reVerify') }}
+        </template>
+      </button>
       <button @click="handleDelete">{{ t('views.mail.sections.customDomains.delete') }}</button>
     </div>
   </div>
@@ -84,7 +129,7 @@ onBeforeUnmount(() => {
   border-radius: 0.5rem;
   box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
   padding: 0.5rem 0;
-  min-width: 150px;
+  min-width: 170px;
   z-index: 10;
 
   button {

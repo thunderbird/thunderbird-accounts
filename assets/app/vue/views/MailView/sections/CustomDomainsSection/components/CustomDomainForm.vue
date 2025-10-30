@@ -5,73 +5,158 @@ import { PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbir
 import { PhX } from '@phosphor-icons/vue';
 
 // Types
-import { STEP } from '../types';
+import { CustomDomain, DNSRecord, STEP, DOMAIN_STATUS } from '../types';
+
+// API
+import { addCustomDomain, verifyDomain } from '../api';
+
+// Utils
+import { generateDNSRecords } from '../utils';
 
 const { t } = useI18n();
 
+const props = defineProps<{
+  customDomains: CustomDomain[];
+  lastDomainRemoved?: string;
+}>();
+
 const emit = defineEmits<{
   'step-change': [step: STEP]
+  'custom-domain-added': [customDomain: string]
+  'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }]
 }>();
 
 const step = ref<STEP>(STEP.INITIAL);
 const customDomain = ref(null);
 const showNoticeBar = ref(true);
+const isAddingCustomDomain = ref(false);
+const isVerifyingDomain = ref(false);
+const customDomainError = ref<string>(null);
+
+// TODO: Remove this once we know what a verified verification status looks like
+const verificationStatus = ref<Record<string, any>>(null);
+
+const maxCustomDomains = window._page?.maxCustomDomains;
+
+const recordsInfo = ref<DNSRecord[]>([]);
+
+const onCreateCustomDomain = async () => {
+  if (props.customDomains.some((domain) => domain.name === customDomain.value)) {
+    customDomainError.value = t('views.mail.sections.customDomains.domainAlreadyExists');
+    return;
+  }
+
+  isAddingCustomDomain.value = true;
+
+  try {
+    const data = await addCustomDomain(customDomain.value);
+
+    if (data.success) {
+      emit('custom-domain-added', customDomain.value);
+      recordsInfo.value = await generateDNSRecords(customDomain.value);
+      step.value = STEP.VERIFY_DOMAIN;
+    } else {
+      console.error(data.error);
+      customDomainError.value = data.error;
+    }
+  } catch (error) {
+    console.error(error);
+    customDomainError.value = error;
+  } finally {
+    isAddingCustomDomain.value = false;
+  }
+};
+
+const onVerifyDomain = async () => {
+  isVerifyingDomain.value = true;
+
+  try {
+    const data = await verifyDomain(customDomain.value);
+
+    // TODO: Remove this once we know what a verified verification status looks like
+    verificationStatus.value = data.verification_status;
+
+    if (data.success) {
+      emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
+      step.value = STEP.INITIAL;
+      customDomainError.value = null;
+    } else {
+      emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
+    }
+  } catch (error) {
+    emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
+    console.error(error);
+  } finally {
+    isVerifyingDomain.value = false;
+    customDomain.value = null;
+  }
+};
+
+const viewDnsRecords = async (domainName: string) => {
+  customDomain.value = domainName;
+  recordsInfo.value = await generateDNSRecords(domainName);
+  step.value = STEP.VERIFY_DOMAIN;
+};
+
+defineExpose({
+  viewDnsRecords
+});
 
 watch(step, (newStep) => {
   emit('step-change', newStep);
 }, { immediate: true });
 
-const recordsInfo = [
-  {
-    type: 'MX',
-    name: '@',
-    value: 'mail.thundermail.com',
-    priority: 10,
-  },
-  {
-    type: 'TXT',
-    name: '_dmarc',
-    value: 'v=spf1 include:thundermail.com ~all',
-    priority: '-',
-  },
-  {
-    type: 'SRV',
-    name: '_autodiscover._tcp',
-    value: '0 0 443 autodiscover.thundermail.com',
-    priority: '-',
-  },
-]
-
-const onVerifyDomain = () => {
-  // TODO: Make API call to save the domain for verification
-  step.value = STEP.INITIAL;
-};
+watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
+  // If we just removed the domain we were adding, reset the step to initial
+  if (newLastDomainRemoved === customDomain.value) {
+    step.value = STEP.INITIAL;
+    customDomain.value = null;
+    customDomainError.value = null;
+  }
+}, { immediate: true });
 </script>
 
 <template>
   <template v-if="step === STEP.INITIAL">
-    <primary-button variant="outline" @click="step = STEP.ADD">{{ t('views.mail.sections.customDomains.addDomain') }}</primary-button>
+    <primary-button
+      variant="outline"
+      @click="step = STEP.ADD"
+      v-if="customDomains.length < maxCustomDomains"
+    >
+      {{ t('views.mail.sections.customDomains.addDomain') }}
+    </primary-button>
   </template>
+
   <template v-else-if="step === STEP.ADD">
     <text-input
       :placeholder="t('views.mail.sections.customDomains.domainPlaceholder')"
       name="custom-domain"
       :help="t('views.mail.sections.customDomains.domainHelp')"
+      :error="customDomainError"
       class="custom-domain-text-input"
       v-model="customDomain"
     >
       {{ t('views.mail.sections.customDomains.enterCustomDomain') }}
     </text-input>
 
-    <primary-button variant="outline" @click="step = STEP.VERIFY_DOMAIN">{{ t('views.mail.sections.customDomains.continue') }}</primary-button>
+    <primary-button variant="outline" @click="onCreateCustomDomain" :disabled="isAddingCustomDomain">
+      {{ t('views.mail.sections.customDomains.continue') }}
+    </primary-button>
   </template>
+
   <template v-else-if="step === STEP.VERIFY_DOMAIN">
     <h3>{{ t('views.mail.sections.customDomains.verifyStepTitle') }}</h3>
     <div class="verify-step-list">
+      <h4>{{ t('views.mail.sections.customDomains.verifyStepOneTitle') }}</h4>
       <p>{{ t('views.mail.sections.customDomains.verifyStepOne') }}</p>
+      <h4>{{ t('views.mail.sections.customDomains.verifyStepTwoTitle') }}</h4>
       <p>{{ t('views.mail.sections.customDomains.verifyStepTwo') }}</p>
+      <h4>{{ t('views.mail.sections.customDomains.verifyStepThreeTitle') }}</h4>
       <p>{{ t('views.mail.sections.customDomains.verifyStepThree') }}</p>
-      <p class="verify-step-note">{{ t('views.mail.sections.customDomains.verifyStepNote') }}</p>
+      <p class="verify-step-note">
+        <strong>{{ t('views.mail.sections.customDomains.verifyStepNoteTip') }}</strong>
+        {{ t('views.mail.sections.customDomains.verifyStepNote') }}
+      </p>
     </div>
 
     <div class="records-table-wrapper">
@@ -81,10 +166,10 @@ const onVerifyDomain = () => {
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderValueData') }}</p>
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderPriority') }}</p>
       </div>
-      <div class="records-table-row" v-for="record in recordsInfo" :key="record.value">
+      <div class="records-table-row" v-for="record in recordsInfo" :key="`${record.type}-${record.name}-${record.content}`">
         <p>{{ record.type }}</p>
         <p>{{ record.name }}</p>
-        <p>{{ record.value }}</p>
+        <p>{{ record.content }}</p>
         <p>{{ record.priority }}</p>
       </div>
     </div>
@@ -100,7 +185,20 @@ const onVerifyDomain = () => {
       </template>
     </notice-bar>
 
-    <primary-button class="verify-step-button" @click="onVerifyDomain">{{ t('views.mail.sections.customDomains.verifyStepButton') }}</primary-button>
+    <!-- TODO: Remove this once we know what a verified verification status looks like -->
+    <notice-bar :type="NoticeBarTypes.Warning" class="verify-step-notice-bar" v-if="verificationStatus">
+      <template v-for="status in verificationStatus" :key="status.type">
+        <p>{{ JSON.stringify(status) }}</p>
+      </template>
+    </notice-bar>
+
+    <primary-button
+      class="verify-step-button"
+      @click="onVerifyDomain"
+      :disabled="isVerifyingDomain"
+    >
+      {{ t('views.mail.sections.customDomains.verifyStepButton') }}
+    </primary-button>
   </template>
 </template>
 
@@ -119,14 +217,31 @@ h3 {
 .verify-step-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
   line-height: 1.32;
   color: var(--colour-ti-secondary);
   margin-block-end: 1.5rem;
 
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.32;
+    margin-block-end: 0.25rem;
+  }
+
+  p {
+    margin-inline-start: 1rem;
+    margin-block-end: 1.5rem;
+    font-size: 0.875rem;
+
+    &:not(:first-of-type) {
+      margin-inline-start: 1.25rem;
+    }
+  }
+
   .verify-step-note {
     font-size: 0.875rem;
     line-height: normal;
+    margin: 0;
   }
 }
 

@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 
@@ -19,7 +20,7 @@ from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
-from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError
+from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError, DomainAlreadyExistsError
 from thunderbird_accounts.mail.utils import decode_app_password
 
 try:
@@ -29,7 +30,7 @@ except ImportError:
     Client = None
     CreateCustomerPortalSession = None
 
-from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price
 from thunderbird_accounts.mail.zendesk import ZendeskClient
@@ -45,6 +46,8 @@ def raise_form_error(request, to_view: str, error_message: str):
 def home(request: HttpRequest):
     app_passwords = []
     user_display_name = None
+    custom_domains = []
+    max_custom_domains = None
 
     if request.user.is_authenticated:
         try:
@@ -64,10 +67,26 @@ def home(request: HttpRequest):
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
+        # Get user's custom domains
+        domains = request.user.domains.all()
+        custom_domains = [
+            {
+                'name': domain.name,
+                'status': domain.status,
+            }
+            for domain in domains
+        ]
+
+        # Get user's plan info constraints
+        if request.user.plan:
+            max_custom_domains = request.user.plan.mail_domain_count
+
     return TemplateResponse(request, 'mail/index.html', {
         'connection_info': settings.CONNECTION_INFO,
         'app_passwords': json.dumps(app_passwords),
         'user_display_name': user_display_name,
+        'custom_domains': json.dumps(custom_domains),
+        'max_custom_domains': max_custom_domains,
     })
 
 
@@ -505,6 +524,111 @@ def self_serve_app_password_add(request: HttpRequest):
         messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
     return HttpResponseRedirect('/self-serve/app-passwords')
+
+
+@login_required
+@require_http_methods(['POST'])
+def create_custom_domain(request: HttpRequest):
+    """Creates a custom domain for the user"""
+    data = json.loads(request.body)
+    domain_name = data.get('domain-name')
+
+    if not domain_name:
+        return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
+
+    custom_domain_count = request.user.domains.count()
+
+    if custom_domain_count >= request.user.plan.mail_domain_count:
+        return JsonResponse(
+            {'success': False, 'error': _('You have reached the maximum number of custom domains')}, status=400
+        )
+
+    try:
+        stalwart_client = MailClient()
+
+        domain_id = stalwart_client.create_domain(domain_name)
+        stalwart_client.create_dkim(domain_name)
+        now = datetime.datetime.now(datetime.UTC)
+        Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
+    except DomainAlreadyExistsError:
+        return JsonResponse({'success': False, 'error': _('Domain already exists')}, status=400)
+    except Exception as e:
+        logging.error(f'Error creating custom domain: {e}')
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while creating the custom domain. Please try again later.'},
+            status=500,
+        )
+
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(['POST'])
+def verify_custom_domain(request: HttpRequest):
+    """Verifies a custom domain"""
+    data = json.loads(request.body)
+    domain_name = data.get('domain-name')
+    if not domain_name:
+        return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
+
+    domain = request.user.domains.get(name=domain_name)
+    if not domain:
+        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    stalwart_client = MailClient()
+
+    now = datetime.datetime.now(datetime.UTC)
+
+    try:
+        verification_status = stalwart_client.verify_domain(domain.name)
+
+        # TODO: Forcibly failing / returning False until we know what a verified verification status looks like
+        domain.status = Domain.DomainStatus.FAILED
+
+        # domain.status = Domain.DomainStatus.VERIFIED
+        # domain.verified_at = now
+        # return JsonResponse({'success': True, 'verification_status': verification_status})
+
+        return JsonResponse({'success': False, 'verification_status': verification_status})
+    except Exception as e:
+        domain.status = Domain.DomainStatus.FAILED
+
+        logging.error(f'Error verifying domain: {e}')
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while verifying the domain. Please try again later.'},
+            status=500,
+        )
+    finally:
+        domain.last_verification_attempt = now
+        domain.save()
+
+
+@login_required
+@require_http_methods(['DELETE'])
+def remove_custom_domain(request: HttpRequest):
+    """Removes a custom domain"""
+    data = json.loads(request.body)
+    domain_name = data.get('domain-name')
+
+    if not domain_name:
+        return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
+
+    domain = request.user.domains.get(name=domain_name)
+    if not domain:
+        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    stalwart_client = MailClient()
+    try:
+        stalwart_client.delete_domain(domain.name)
+        request.user.domains.filter(name=domain_name).delete()
+    except Exception as e:
+        logging.error(f'Error removing custom domain: {e}')
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while removing the custom domain. Please try again later.'},
+            status=500,
+        )
+
+    return JsonResponse({'success': True})
 
 
 def wait_list(request: HttpRequest):

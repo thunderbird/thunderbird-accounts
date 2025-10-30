@@ -46,3 +46,15 @@ class AccountNotFoundError(StalwartError):
 class AccessTokenNotFound(StalwartError):
     def __str__(self):
         return f'AccessTokenNotFoundError: {self.details}'
+
+class DomainAlreadyExistsError(StalwartError):
+    """Raise when a domain already exists in Stalwart"""
+
+    domain: str
+
+    def __init__(self, domain, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.domain = domain
+
+    def __str__(self):
+        return f'DomainAlreadyExistsError: {self.domain}'
