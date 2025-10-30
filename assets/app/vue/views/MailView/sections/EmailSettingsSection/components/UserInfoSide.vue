@@ -33,7 +33,7 @@ const onSetDisplayNameSubmit = async () => {
   isSubmittingDisplayName.value = true;
 
   try {
-    const response = await fetch('/self-serve/display-name/set', {
+    const response = await fetch('/display-name/set', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ const onCancelSetDisplayName = () => {
       <template v-if="showDisplayNameForm">
         <form
           method="post"
-          action="/self-serve/display-name/set"
+          action="/display-name/set"
         >
           <text-input v-model="displayName" name="display-name" data-testid="display-name-input">
             {{ t('views.mail.sections.emailSettings.newDisplayName') }}:

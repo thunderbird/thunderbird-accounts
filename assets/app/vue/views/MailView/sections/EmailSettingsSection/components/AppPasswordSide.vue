@@ -30,7 +30,7 @@ const onSetPasswordSubmit = async () => {
   isSubmitting.value = true;
 
   try {
-    const response = await fetch('/self-serve/app-passwords/set', {
+    const response = await fetch('/app-passwords/set', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ const onCancelSetPassword = () => {
       <form
         ref="appPasswordFormRef"
         method="post"
-        action="/self-serve/app-passwords/set"
+        action="/app-passwords/set"
       >
         <input type="hidden" name="name" :value="userEmail" />
 
