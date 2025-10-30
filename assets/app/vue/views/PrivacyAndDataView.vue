@@ -156,7 +156,8 @@ h2 {
 
   .privacy-and-data-view {
     flex-direction: row;
-    gap: 2rem; 
+    gap: 2rem;
+    justify-content: center;
   }
 
   .divider {
