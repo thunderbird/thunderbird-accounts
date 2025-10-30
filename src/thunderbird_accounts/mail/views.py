@@ -85,7 +85,7 @@ def home(request: HttpRequest):
         # Get user's plan info constraints
         if request.user.plan:
             max_custom_domains = request.user.plan.mail_domain_count
-            max_email_aliases = request.user.plan.mail_address_count - 1 # Exclude primary email address
+            max_email_aliases = request.user.plan.mail_address_count
 
     return TemplateResponse(request, 'mail/index.html', {
         'connection_info': settings.CONNECTION_INFO,
