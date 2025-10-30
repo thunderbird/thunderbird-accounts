@@ -47,8 +47,9 @@ def home(request: HttpRequest):
     app_passwords = []
     user_display_name = None
     custom_domains = []
+    email_addresses = []
     max_custom_domains = None
-    dns_hostname = settings.DNS_HOSTNAME
+    max_email_aliases = None
 
     if request.user.is_authenticated:
         try:
@@ -60,10 +61,13 @@ def home(request: HttpRequest):
 
             email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
             user_display_name = email_user.get('description')
-            app_passwords = []
 
+            # Get user's app password from Stalwart
             for secret in email_user.get('secrets', []):
                 app_passwords.append(decode_app_password(secret))
+
+            # Get user's email addresses from Stalwart
+            email_addresses = email_user.get('emails', [])
         except AccountNotFoundError:
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))
@@ -81,13 +85,16 @@ def home(request: HttpRequest):
         # Get user's plan info constraints
         if request.user.plan:
             max_custom_domains = request.user.plan.mail_domain_count
+            max_email_aliases = request.user.plan.mail_address_count - 1 # Exclude primary email address
 
     return TemplateResponse(request, 'mail/index.html', {
         'connection_info': settings.CONNECTION_INFO,
         'app_passwords': json.dumps(app_passwords),
         'user_display_name': user_display_name,
         'custom_domains': json.dumps(custom_domains),
+        'email_addresses': json.dumps(email_addresses),
         'max_custom_domains': max_custom_domains,
+        'max_email_aliases': max_email_aliases,
         'tb_pro_appointment_url': settings.TB_PRO_APPOINTMENT_URL,
         'tb_pro_send_url': settings.TB_PRO_SEND_URL,
     })
