@@ -449,6 +449,3 @@ if DEBUG:
 
 # Tell django to use secure in stage/prod
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not IS_DEV else None
-
-# The hostname that will be used for generating DNS records
-DNS_HOSTNAME = os.getenv('DNS_HOSTNAME')
