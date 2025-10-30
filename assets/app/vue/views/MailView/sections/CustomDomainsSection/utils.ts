@@ -73,7 +73,7 @@ export const generateDNSRecords = async (domainName: string) => {
     {
       type: 'TXT',
       name: domainName,
-      content: 'v=spf1 ra=postmaster -all',
+      content: `v=spf1 include:spf.${dnsHostname} -all`,
       priority: '-',
     },
     {
