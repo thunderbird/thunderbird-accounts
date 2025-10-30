@@ -52,6 +52,8 @@ urlpatterns = [
     path('custom-domains/add', mail_views.create_custom_domain, name='add_custom_domain'),
     path('custom-domains/verify', mail_views.verify_custom_domain, name='verify_custom_domain'),
     path('custom-domains/remove', mail_views.remove_custom_domain, name='remove_custom_domain'),
+    path('email-aliases/add', mail_views.add_email_alias, name='add_email_alias'),
+    path('email-aliases/remove', mail_views.remove_email_alias, name='remove_email_alias'),
     # API
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),

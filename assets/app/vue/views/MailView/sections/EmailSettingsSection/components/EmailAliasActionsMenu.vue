@@ -6,13 +6,16 @@ import { PhDotsThreeVertical } from '@phosphor-icons/vue';
 // Types
 import { EmailAlias } from '../types';
 
+// API
+import { removeEmailAlias } from '../api';
+
 const props = defineProps<{
   alias: EmailAlias;
 }>();
 
 const emit = defineEmits<{
-  'make-primary': [alias: EmailAlias];
-  'delete-alias': [alias: EmailAlias];
+  'delete-alias-success': [alias: EmailAlias];
+  'delete-alias-error': [error: string];
 }>();
 
 const showMenu = ref(false);
@@ -24,16 +27,20 @@ const toggleMenu = () => {
   showMenu.value = !showMenu.value;
 };
 
-const handleMakePrimary = () => {
-  // TODO: Implement make primary functionality
-  emit('make-primary', props.alias);
-  showMenu.value = false;
-};
-
-const handleDelete = () => {
-  // TODO: Implement delete functionality
-  emit('delete-alias', props.alias);
-  showMenu.value = false;
+const handleDelete = async () => {
+  try {
+    const response = await removeEmailAlias(props.alias.email);
+  
+    if (response.success) {
+      emit('delete-alias-success', props.alias); 
+    } else {
+      emit('delete-alias-error', response.error);
+    }
+  } catch (error) {
+    emit('delete-alias-error', error);
+  } finally {
+    showMenu.value = false;
+  }
 };
 
 const handleClickOutside = (event: MouseEvent) => {
@@ -58,9 +65,6 @@ onBeforeUnmount(() => {
     </button>
 
     <div v-if="showMenu" class="dropdown">
-      <button @click="handleMakePrimary" :disabled="alias.isPrimary">
-        {{ t('views.mail.sections.emailSettings.makePrimary') }}
-      </button>
       <button @click="handleDelete" :disabled="alias.isSubscription">
         {{ t('views.mail.sections.emailSettings.delete') }}
       </button>

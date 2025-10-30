@@ -4,7 +4,6 @@ export enum EMAIL_ALIAS_STEP {
 }
 
 export interface EmailAlias {
-  id: number;
   email: string;
   isPrimary?: boolean;
   isSubscription?: boolean;
