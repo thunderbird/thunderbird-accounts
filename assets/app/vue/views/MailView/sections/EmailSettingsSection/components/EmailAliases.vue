@@ -1,50 +1,64 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NoticeBar, NoticeBarTypes, BaseBadge, BaseBadgeTypes } from '@thunderbirdops/services-ui';
+import { PhX } from '@phosphor-icons/vue';
 
 // Local components
 import EmailAliasActionsMenu from './EmailAliasActionsMenu.vue';
 import EmailAliasForm from './EmailAliasForm.vue';
 
 // Types
+import { DOMAIN_STATUS } from '../../CustomDomainsSection/types';
 import { EmailAlias } from '../types';
+
+// API
+import { addEmailAlias } from '../api';
 
 const { t } = useI18n();
 
-const allowedDomains = ['customdomain.lol', 'davitest.com'];
-const aliasLimit = 10;
+const aliasLimit = window._page?.maxEmailAliases;
 
-const placeholderAliases = ref<EmailAlias[]>([
-  { id: 1, email: 'username@thundermail.com', isPrimary: true, isSubscription: true },
-  { id: 2, email: 'username2@tb.pro', isPrimary: false, isSubscription: false },
-  { id: 3, email: 'ryan@sipes.us', isPrimary: false, isSubscription: false },
-]);
+const emailAliases = ref<EmailAlias[]>(window._page?.emailAddresses?.map((email, index) => ({
+  email: email,
+  // From Stalwart, primary / subscription email is always the first email address in the list
+  isPrimary: index === 0,
+  isSubscription: index === 0,
+})) || []);
+const isAddingEmailAlias = ref(false);
+const errorMessage = ref<string>(null);
 
-const onAddAlias = (emailAlias: string, domain: string) => {
-  placeholderAliases.value.push({
-    id: placeholderAliases.value.length + 1,
-    email: `${emailAlias}@${domain}`, isPrimary: false, isSubscription: false
-  });
-};
+const allowedDomains = computed(() => {
+  return window._page.customDomains
+    ?.filter(domain => domain.status !== DOMAIN_STATUS.VERIFIED)
+    .map(domain => domain.name) || [];
+});
 
-const onMakePrimary = (alias: EmailAlias) => {
-  placeholderAliases.value = placeholderAliases.value.map(item => ({
-    ...item,
-    isPrimary: item.id === alias.id
-  }));
-};
+const onAddAlias = async (emailAlias: string, domain: string) => {
+  isAddingEmailAlias.value = true;
 
-const onDeleteAlias = (alias: EmailAlias) => {
-  placeholderAliases.value = placeholderAliases.value.filter(item => item.id !== alias.id);
+  try {
+    const response = await addEmailAlias(emailAlias, domain);
 
-  // Make the subscription alias the primary one if there is no primary alias
-  if (placeholderAliases.value.every(item => !item.isPrimary)) {
-    placeholderAliases.value = placeholderAliases.value.map(item => ({
-      ...item,
-      isPrimary: item.isSubscription
-    }));
+    if (response.success) {
+      emailAliases.value.push({ email: `${emailAlias}@${domain}`, isPrimary: false, isSubscription: false });
+      errorMessage.value = null;
+    } else {
+      errorMessage.value = response.error;
+    }
+  } catch (error) {
+    errorMessage.value = error;
+  } finally {
+    isAddingEmailAlias.value = false;
   }
+};
+
+const onDeleteAliasSuccess = (alias: EmailAlias) => {
+  emailAliases.value = emailAliases.value.filter(item => item.email !== alias.email);
+};
+
+const onDeleteAliasError = (error: string) => {
+  errorMessage.value = error;
 };
 </script>
 
@@ -52,15 +66,20 @@ const onDeleteAlias = (alias: EmailAlias) => {
   <div class="email-aliases-content">
     <div class="header-content">
       <p>{{ t('views.mail.sections.emailSettings.emailAliasesDescription') }}</p>
-      <p class="email-aliases-count-text">{{ t('views.mail.sections.emailSettings.emailAliasesDescriptionTwo', { aliasUsed: placeholderAliases.length, aliasLimit }) }}</p>
+      <p class="email-aliases-count-text">
+        {{ t('views.mail.sections.emailSettings.emailAliasesDescriptionTwo', {
+          aliasUsed: emailAliases.length, aliasLimit
+        }) }}
+      </p>
     </div>
 
-    <notice-bar class="notice-bar-warning" :type="NoticeBarTypes.Warning">
+    <!-- TODO: Uncomment when we have a way to change the primary email alias -->
+    <!-- <notice-bar class="notice-bar-warning" :type="NoticeBarTypes.Warning">
       {{ t('views.mail.sections.emailSettings.emailAliasesPrimaryChangeWarning') }}
-    </notice-bar>
+    </notice-bar> -->
 
     <div class="aliases-list">
-      <div class="alias-item" v-for="alias in placeholderAliases" :key="alias.id">
+      <div class="alias-item" v-for="alias in emailAliases" :key="alias.email">
         <p>{{ alias.email }}</p>
 
         <template v-if="alias.isPrimary">
@@ -75,11 +94,29 @@ const onDeleteAlias = (alias: EmailAlias) => {
           </base-badge>
         </template>
 
-        <email-alias-actions-menu :alias="alias" @make-primary="onMakePrimary" @delete-alias="onDeleteAlias" />
+        <email-alias-actions-menu
+          :alias="alias"
+          @delete-alias-success="onDeleteAliasSuccess"
+          @delete-alias-error="onDeleteAliasError"
+        />
       </div>
     </div>
 
-    <email-alias-form :allowed-domains="allowedDomains" @add-alias="onAddAlias" v-if="placeholderAliases.length < aliasLimit" />
+    <notice-bar class="notice-bar-error" :type="NoticeBarTypes.Critical" v-if="errorMessage">
+      <p>{{ errorMessage }}</p>
+
+      <template #cta>
+        <button @click="errorMessage = null">
+          <ph-x size="16" />
+        </button>
+      </template>
+    </notice-bar>
+
+    <email-alias-form
+      v-if="emailAliases.length < aliasLimit"
+      :allowed-domains="allowedDomains"
+      @add-alias="onAddAlias"
+    />
   </div>
 </template>
 
@@ -127,6 +164,31 @@ const onDeleteAlias = (alias: EmailAlias) => {
       p {
         flex: 1;
         margin-block-end: 0;
+      }
+    }
+  }
+
+  .notice-bar {
+    margin-block-end: 1.5rem;
+
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
+      border: none;
+      border-radius: 300px;
+      box-shadow: inset 2px 2px 4px 0 rgba(0, 0, 0, 0.05);
+      background-color: rgba(0, 0, 0, 0.05);
+      color: var(--colour-ti-secondary);
+      cursor: pointer;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+
+      &:active {
+        background-color: rgba(0, 0, 0, 0.2);
       }
     }
   }

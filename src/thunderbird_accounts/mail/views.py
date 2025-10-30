@@ -680,6 +680,58 @@ def remove_custom_domain(request: HttpRequest):
     return JsonResponse({'success': True})
 
 
+@login_required
+@require_http_methods(['POST'])
+def add_email_alias(request: HttpRequest):
+    """Adds an email alias"""
+    data = json.loads(request.body)
+    email_alias = data.get('email-alias')
+    domain = data.get('domain')
+
+    if not email_alias or not domain:
+        return JsonResponse({'success': False, 'error': _('Email alias and domain are required')}, status=400)
+
+    if domain not in request.user.domains.values_list('name', flat=True):
+        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    full_email_alias = f'{email_alias}@{domain}'
+
+    try:
+        stalwart_client = MailClient()
+        stalwart_client.save_email_addresses(request.user.stalwart_primary_email, full_email_alias)
+    except Exception as e:
+        logging.error(f'Error adding email alias: {e}')
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while adding the email alias. Please try again later.'},
+            status=500,
+        )
+
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(['DELETE'])
+def remove_email_alias(request: HttpRequest):
+    """Removes an email alias"""
+    data = json.loads(request.body)
+    email_alias = data.get('email-alias')
+
+    if not email_alias:
+        return JsonResponse({'success': False, 'error': _('Email alias is required')}, status=400)
+
+    try:
+        stalwart_client = MailClient()
+        stalwart_client.delete_email_addresses(request.user.stalwart_primary_email, email_alias)
+    except Exception as e:
+        logging.error(f'Error removing email alias: {e}')
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while removing the email alias. Please try again later.'},
+            status=500,
+        )
+
+    return JsonResponse({'success': True})
+
+
 def wait_list(request: HttpRequest):
     return TemplateResponse(request, 'mail/wait-list.html', {'form_action': settings.WAIT_LIST_FORM_ACTION})
 
