@@ -30,7 +30,7 @@ const errorMessage = ref<string>(null);
 
 const allowedDomains = computed(() => {
   return window._page.customDomains
-    ?.filter(domain => domain.status !== DOMAIN_STATUS.VERIFIED)
+    ?.filter(domain => domain.status === DOMAIN_STATUS.VERIFIED)
     .map(domain => domain.name) || [];
 });
 
