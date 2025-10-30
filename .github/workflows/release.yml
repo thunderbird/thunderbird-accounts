@@ -95,7 +95,7 @@ jobs:
           export PATH="/home/runner/.pulumi/bin:$PATH"
 
           # Pull the versioned tag from the previous step
-          target_tag="${{ steps.retag-image.outputs.target_tag }}"
+          target_tag="${{ steps.retag-image.outputs.target-tag }}"
 
           # Create a YAML config stump containing only the nested tree leading to the image tag update
           cd pulumi
