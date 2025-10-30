@@ -23,14 +23,13 @@ resources:
         mailstrom-stage:
           peered_cidrs:
             - 10.1.0.0/16
-          peer_vpc_id: vpc-0e07e0c5c98fc75e1
+          peer_vpc_id: vpc-0de6d9ceaf7194dd3
           auto_accept: True  # Requires both VPCs to be in same account and region
           # Allow resolution of DNS records to private IPs (so we can use a private LB)
           accepter:
             allow_remote_vpc_dns_resolution: True
           requester:
             allow_remote_vpc_dns_resolution: True
-
 
   # The __main.py__ here is very specific in the following way:
   # For each ECS cluster you eventually define, you **must** have one entry by the same exact name in the
@@ -164,9 +163,9 @@ resources:
   # Fill out this template to build an SSH bastion
   # tb:ec2:SshableInstance:
   #   bastion:
-  #     ssh_keypair_name: your-ec2-keypair
+  #     ssh_keypair_name: your-keypair
   #     source_cidrs:
-  #       - your.ip.addr.ess/32
+  #       - 1.2.3.4/32
 
   tb:elasticache:ElastiCacheReplicaGroup:
     accounts:
@@ -205,7 +204,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-3059299f4a5ca3809b7b1e2708874024ffa7210b
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-b32c2f8dd2a5c862ebc794f6ef3b00b04390975d
             command:
               - start
             portMappings:
@@ -281,7 +280,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c2726a0ab43ffdd0af1fcc9170a7dac938212074
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:a157b31f7ee3e74ac551afc6069578275d37ff6f
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -443,7 +442,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c2726a0ab43ffdd0af1fcc9170a7dac938212074
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:a157b31f7ee3e74ac551afc6069578275d37ff6f
             linuxParameters:
               initProcessEnabled: True
             secrets:
