@@ -30,7 +30,9 @@ const planStorageProgress = computed(() => {
 });
 const mailStorageQuotaFormatted = computed(() => formatBytes(planInfo.value?.features.mailStorage));
 const usedQuotaFormatted = computed(() => formatBytes(planInfo.value?.usedQuota));
-const userEmail = computed(() => window._page?.userEmail);
+
+// From Stalwart, primary email is always the first email address in the list
+const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
 const userDisplayName = computed(() => window._page?.userDisplayName);
 
 onMounted(async () => {
@@ -58,7 +60,7 @@ onMounted(async () => {
     <div class="welcome-container">
       <p class="welcome">{{ t('views.mail.sections.dashboard.welcomeHeader.welcome') }},</p>
       <p class="name">{{ userDisplayName }}</p>
-      <p class="email">{{ userEmail }}</p>
+      <p class="email">{{ primaryEmail }}</p>
     </div>
 
     <div class="plan-info-container">
