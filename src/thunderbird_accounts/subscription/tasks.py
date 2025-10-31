@@ -185,14 +185,17 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
         next_billed_at = datetime.datetime.fromisoformat(next_billed_at)
 
     current_billing_period = event_data.get('current_billing_period', {})
-    current_billing_period_starts_at = current_billing_period.get('starts_at')
-    current_billing_period_ends_at = current_billing_period.get('end_at')
+    current_billing_period_starts_at = None
+    current_billing_period_ends_at = None
+    if current_billing_period:
+        current_billing_period_starts_at = current_billing_period.get('starts_at')
+        current_billing_period_ends_at = current_billing_period.get('end_at')
 
-    if current_billing_period_starts_at:
-        current_billing_period_starts_at = datetime.datetime.fromisoformat(current_billing_period_starts_at)
+        if current_billing_period_starts_at:
+            current_billing_period_starts_at = datetime.datetime.fromisoformat(current_billing_period_starts_at)
 
-    if current_billing_period_ends_at:
-        current_billing_period_ends_at = datetime.datetime.fromisoformat(current_billing_period_ends_at)
+        if current_billing_period_ends_at:
+            current_billing_period_ends_at = datetime.datetime.fromisoformat(current_billing_period_ends_at)
 
     subscription, subscription_created = Subscription.objects.update_or_create(
         paddle_id=paddle_id,

@@ -1,0 +1,85 @@
+{
+  "event_id": "evt_01k8xm1bep8tfym2q6v2qdxgkx",
+  "event_type": "subscription.updated",
+  "occurred_at": "2025-10-31T17:11:25.910326Z",
+  "notification_id": "ntf_01k8xm1c426xeyh7aj8gg1fbgr",
+  "data": {
+    "id": "sub_01k8xkm86pmvzv0md1v2hdzfsd",
+    "items": [
+      {
+        "price": {
+          "id": "pri_01jqexab9ah62cezgqckd9am0c",
+          "name": "Annual",
+          "type": "standard",
+          "status": "active",
+          "quantity": {
+            "maximum": 1,
+            "minimum": 1
+          },
+          "tax_mode": "internal",
+          "created_at": "2025-03-28T17:38:10.346619Z",
+          "product_id": "pro_01jqex8chw7se0zhk15hn5d6hs",
+          "unit_price": {
+            "amount": "1",
+            "currency_code": "USD"
+          },
+          "updated_at": "2025-09-25T16:21:56.977027Z",
+          "description": "Annual Plan",
+          "import_meta": null,
+          "trial_period": null,
+          "billing_cycle": {
+            "interval": "year",
+            "frequency": 1
+          },
+          "unit_price_overrides": []
+        },
+        "status": "active",
+        "product": {
+          "id": "pro_01jqex8chw7se0zhk15hn5d6hs",
+          "name": "Thunderbird Pro",
+          "type": "standard",
+          "status": "active",
+          "image_url": "",
+          "created_at": "2025-03-28T17:37:06.108Z",
+          "updated_at": "2025-10-31T16:13:16.374Z",
+          "custom_data": null,
+          "description": "",
+          "tax_category": "standard",
+          "consents_required": []
+        },
+        "quantity": 1,
+        "recurring": true,
+        "created_at": "2025-10-31T17:04:16.598Z",
+        "updated_at": "2025-10-31T17:04:16.598Z",
+        "trial_dates": null,
+        "next_billed_at": null,
+        "previously_billed_at": "2025-10-31T17:04:15.995497Z"
+      }
+    ],
+    "status": "canceled",
+    "discount": null,
+    "paused_at": null,
+    "address_id": "add_01k8xkm06pd1f2cnddf5s4a01a",
+    "created_at": "2025-10-31T17:04:16.598Z",
+    "started_at": "2025-10-31T17:04:15.995497Z",
+    "updated_at": "2025-10-31T17:11:25.28Z",
+    "business_id": null,
+    "canceled_at": "2025-10-31T17:11:25.276Z",
+    "custom_data": {
+      "signed_user_id": "e3820ee0ccec4b1f9922fdd003f9e825:tsGZSs3uUfabY2LqZ8qGc0Xw6Ps1gmCbSVWvo66UeKU"
+    },
+    "customer_id": "ctm_01jc6eq8p0gh00azhv6ypyj8jx",
+    "import_meta": null,
+    "billing_cycle": {
+      "interval": "year",
+      "frequency": 1
+    },
+    "currency_code": "CAD",
+    "next_billed_at": null,
+    "billing_details": null,
+    "collection_mode": "automatic",
+    "first_billed_at": "2025-10-31T17:04:15.995497Z",
+    "scheduled_change": null,
+    "current_billing_period": null
+  }
+}
