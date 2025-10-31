@@ -27,36 +27,39 @@ const userEmail = window._page?.userEmail;
         </div>
       </div>
 
-      <visual-divider />
+      <!-- <visual-divider /> -->
 
-      <div class="my-account-card-field with-outline-button">
+      <!-- TODO: Uncomment when implementing MFA -->
+      <!-- <div class="my-account-card-field with-outline-button">
         <div>
           <strong>{{ t('views.dashboard.accountCard.mfa') }}</strong>
           <p>{{ t('views.dashboard.accountCard.on') }}</p>
         </div>
 
         <primary-button variant="outline" size="small">{{ t('views.dashboard.accountCard.manage') }}</primary-button>
-      </div>
+      </div> -->
 
-      <visual-divider />
+      <!-- <visual-divider /> -->
 
-      <div class="my-account-card-field">
+      <!-- TODO: Uncomment when implementing recovery email -->
+      <!-- <div class="my-account-card-field">
         <strong>{{ t('views.dashboard.accountCard.recoveryEmailAddress') }}</strong>
         <div class="my-account-card-field-with-link-button">
           <base-badge :type="BaseBadgeTypes.Set">{{ t('views.dashboard.accountCard.set') }}</base-badge>
           <link-button>{{ t('views.dashboard.accountCard.change') }}</link-button>
         </div>
-      </div>
+      </div> -->
 
-      <visual-divider />
+      <!-- <visual-divider /> -->
 
-      <div class="my-account-card-field">
+      <!-- TODO: Uncomment when implementing recovery phone number -->
+      <!-- <div class="my-account-card-field">
         <strong>{{ t('views.dashboard.accountCard.recoveryPhoneNumber') }}</strong>
         <div class="my-account-card-field-with-link-button">
           <base-badge :type="BaseBadgeTypes.Set">{{ t('views.dashboard.accountCard.set') }}</base-badge>
           <link-button>{{ t('views.dashboard.accountCard.change') }}</link-button>
         </div>
-      </div>
+      </div> -->
     </div>
   </card-container>
 </template>
