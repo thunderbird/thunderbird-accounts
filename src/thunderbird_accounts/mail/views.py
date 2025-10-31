@@ -47,7 +47,9 @@ def home(request: HttpRequest):
     app_passwords = []
     user_display_name = None
     custom_domains = []
+    email_addresses = []
     max_custom_domains = None
+    max_email_aliases = None
 
     if request.user.is_authenticated:
         try:
@@ -59,10 +61,13 @@ def home(request: HttpRequest):
 
             email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
             user_display_name = email_user.get('description')
-            app_passwords = []
 
+            # Get user's app password from Stalwart
             for secret in email_user.get('secrets', []):
                 app_passwords.append(decode_app_password(secret))
+
+            # Get user's email addresses from Stalwart
+            email_addresses = email_user.get('emails', [])
         except AccountNotFoundError:
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))
@@ -80,13 +85,16 @@ def home(request: HttpRequest):
         # Get user's plan info constraints
         if request.user.plan:
             max_custom_domains = request.user.plan.mail_domain_count
+            max_email_aliases = request.user.plan.mail_address_count
 
     return TemplateResponse(request, 'mail/index.html', {
         'connection_info': settings.CONNECTION_INFO,
         'app_passwords': json.dumps(app_passwords),
         'user_display_name': user_display_name,
         'custom_domains': json.dumps(custom_domains),
+        'email_addresses': json.dumps(email_addresses),
         'max_custom_domains': max_custom_domains,
+        'max_email_aliases': max_email_aliases,
     })
 
 
@@ -625,6 +633,58 @@ def remove_custom_domain(request: HttpRequest):
         logging.error(f'Error removing custom domain: {e}')
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while removing the custom domain. Please try again later.'},
+            status=500,
+        )
+
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(['POST'])
+def add_email_alias(request: HttpRequest):
+    """Adds an email alias"""
+    data = json.loads(request.body)
+    email_alias = data.get('email-alias')
+    domain = data.get('domain')
+
+    if not email_alias or not domain:
+        return JsonResponse({'success': False, 'error': _('Email alias and domain are required')}, status=400)
+
+    if domain not in request.user.domains.values_list('name', flat=True):
+        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    full_email_alias = f'{email_alias}@{domain}'
+
+    try:
+        stalwart_client = MailClient()
+        stalwart_client.save_email_addresses(request.user.stalwart_primary_email, full_email_alias)
+    except Exception as e:
+        logging.error(f'Error adding email alias: {e}')
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while adding the email alias. Please try again later.'},
+            status=500,
+        )
+
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(['DELETE'])
+def remove_email_alias(request: HttpRequest):
+    """Removes an email alias"""
+    data = json.loads(request.body)
+    email_alias = data.get('email-alias')
+
+    if not email_alias:
+        return JsonResponse({'success': False, 'error': _('Email alias is required')}, status=400)
+
+    try:
+        stalwart_client = MailClient()
+        stalwart_client.delete_email_addresses(request.user.stalwart_primary_email, email_alias)
+    except Exception as e:
+        logging.error(f'Error removing email alias: {e}')
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while removing the email alias. Please try again later.'},
             status=500,
         )
 

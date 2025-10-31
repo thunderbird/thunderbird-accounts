@@ -38,6 +38,15 @@ const verificationStatus = ref<Record<string, any>>(null);
 
 const maxCustomDomains = window._page?.maxCustomDomains;
 
+watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
+  // If we just removed the domain we were adding, reset the step to initial
+  if (newLastDomainRemoved === customDomain.value) {
+    step.value = STEP.INITIAL;
+    customDomain.value = null;
+    customDomainError.value = null;
+  }
+}, { immediate: true });
+
 const recordsInfo = ref<DNSRecord[]>([]);
 
 const onCreateCustomDomain = async () => {
