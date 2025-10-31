@@ -285,7 +285,9 @@
       "deleteAccountCheckbox": "I understand my data will be permanently deleted",
       "enterPassword": "Enter your password to confirm",
       "deleteAccountButtonLabel": "Request to delete data",
-      "cancelButtonLabel": "Cancel"
+      "cancelButtonLabel": "Cancel",
+      "deleteAccountSuccess": "Your account has been deleted. You will be redirected to the home page in 3 seconds.",
+      "deleteAccountError": "An error occurred while deleting your account"
     },
     "subscribe": {
       "lineItems": {

@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { CheckboxInput, TextInput, DangerButton, VisualDivider, LinkButton } from '@thunderbirdops/services-ui';
+import { CheckboxInput, TextInput, DangerButton, VisualDivider, LinkButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 import NeedSupportCard from '@/components/NeedSupportCard.vue';
 import YourServices from '@/components/YourServices.vue';
+
+// API
+import { deleteAccount } from './api';
 
 /* TODO: Not in i18n yet as these are TBD */
 const supportLinks = [
@@ -14,6 +18,45 @@ const supportLinks = [
 ];
 
 const { t } = useI18n();
+
+const isDeleteAccountCheckboxChecked = ref(false);
+const passwordConfirmation = ref(null);
+const passwordConfirmationError = ref(null);
+const isSubmitting = ref(false);
+const isSuccess = ref(false);
+
+const isDeleteAccountButtonDisabled = computed(() => !isDeleteAccountCheckboxChecked.value || !passwordConfirmation.value);
+
+const onDeleteAccount = async () => {
+  if (isSubmitting.value) return;
+
+  isSubmitting.value = true;
+  passwordConfirmationError.value = null;
+
+  try {
+    const response = await deleteAccount(passwordConfirmation.value);
+  
+    if (response.success) {
+      isSuccess.value = true;
+  
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 3000);
+    } else {
+      passwordConfirmationError.value = response.error || t('views.privacyAndData.deleteAccountError');
+    }
+  } catch (error) {
+    passwordConfirmationError.value = error;
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+</script>
+
+<script lang="ts">
+export default {
+  name: 'PrivacyAndDataView',
+};
 </script>
 
 <template>
@@ -46,6 +89,7 @@ const { t } = useI18n();
           <checkbox-input
             :name="t('views.privacyAndData.deleteAccountCheckbox')"
             :label="t('views.privacyAndData.deleteAccountCheckbox')"
+            v-model="isDeleteAccountCheckboxChecked"
           />
         </div>
   
@@ -53,17 +97,27 @@ const { t } = useI18n();
           <text-input
             name="password-confirmation"
             :required="true"
+            :error="passwordConfirmationError"
+            v-model="passwordConfirmation"
           >
             {{ t('views.privacyAndData.enterPassword') }}
           </text-input>
   
-          <danger-button>{{ t('views.privacyAndData.deleteAccountButtonLabel') }}</danger-button>
-          <router-link to="/dashboard" class="cancel-button">
-            <link-button>
-              {{ t('views.privacyAndData.cancelButtonLabel') }}
-            </link-button>
-          </router-link>
+          <div>
+            <danger-button @click="onDeleteAccount" :disabled="isDeleteAccountButtonDisabled">
+              {{ t('views.privacyAndData.deleteAccountButtonLabel') }}
+            </danger-button>
+            <router-link to="/dashboard" class="cancel-button">
+              <link-button>
+                {{ t('views.privacyAndData.cancelButtonLabel') }}
+              </link-button>
+            </router-link>
+          </div>
         </div>
+
+        <notice-bar :type="NoticeBarTypes.Success" v-if="isSuccess">
+          {{ t('views.privacyAndData.deleteAccountSuccess') }}
+        </notice-bar>
       </div>
     </card-container>
 
@@ -122,7 +176,7 @@ h2 {
     .delete-account-data-card-content-actions {
       display: grid;
       grid-template-columns: 1fr auto;
-      align-items: flex-end;
+      align-items: flex-start;
       column-gap: 1rem;
 
       .cancel-button {
@@ -137,6 +191,10 @@ h2 {
       }
     }
   }
+}
+
+:deep(button.base.danger.filled) {
+  margin-block-start: 1.625rem;
 }
 
 .privacy-and-data-right-column {
@@ -156,7 +214,8 @@ h2 {
 
   .privacy-and-data-view {
     flex-direction: row;
-    gap: 2rem; 
+    gap: 2rem;
+    justify-content: center;
   }
 
   .divider {
