@@ -602,11 +602,11 @@ def verify_custom_domain(request: HttpRequest):
 
     try:
         # For dev / localhost we can't verify domains, so we will always return success
-        # if settings.IS_DEV:
-        #     domain.status = Domain.DomainStatus.VERIFIED
-        #     domain.verified_at = now
-        #     domain.save()
-        #     return JsonResponse({'success': True, 'critical_errors': [], 'warnings': []})
+        if settings.IS_DEV:
+            domain.status = Domain.DomainStatus.VERIFIED
+            domain.verified_at = now
+            domain.save()
+            return JsonResponse({'success': True, 'critical_errors': [], 'warnings': []})
 
         is_verified, critical_errors, warnings = stalwart_client.verify_domain(domain.name)
 
