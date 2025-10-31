@@ -11,6 +11,11 @@ export const addCustomDomain = async (domainName: string) => {
   return await response.json();
 };
 
+export const getRemoteDNSRecords = async (domainName: string) => {
+  const response = await fetch(`/custom-domains/dns-records?domain-name=${domainName}`);
+  return await response.json();
+};
+
 export const verifyDomain = async (domainName: string) => {
   const response = await fetch(`/custom-domains/verify`, {
     method: 'POST',
