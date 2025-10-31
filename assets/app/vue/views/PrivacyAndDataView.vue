@@ -143,6 +143,7 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  max-width: 345px;
 }
 
 @media (min-width: 1024px) {
