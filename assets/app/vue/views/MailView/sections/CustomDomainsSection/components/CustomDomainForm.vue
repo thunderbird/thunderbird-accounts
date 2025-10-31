@@ -33,8 +33,8 @@ const isAddingCustomDomain = ref(false);
 const isVerifyingDomain = ref(false);
 const customDomainError = ref<string>(null);
 
-// TODO: Remove this once we know what a verified verification status looks like
-const verificationStatus = ref<Record<string, any>>(null);
+const verificationWarnings = ref<string[]>([]);
+const verificationCriticalErrors = ref<string[]>([]);
 
 const maxCustomDomains = window._page?.maxCustomDomains;
 
@@ -71,11 +71,16 @@ const onCreateCustomDomain = async () => {
 const onVerifyDomain = async () => {
   isVerifyingDomain.value = true;
 
+  // Cleanup previous verification results
+  verificationWarnings.value = [];
+  verificationCriticalErrors.value = [];
+
   try {
     const data = await verifyDomain(customDomain.value);
 
-    // TODO: Remove this once we know what a verified verification status looks like
-    verificationStatus.value = data.verification_status;
+    // Even in a successful verification, we may have warnings or critical errors
+    verificationWarnings.value = data.warnings || [];
+    verificationCriticalErrors.value = data.critical_errors || [];
 
     if (data.success) {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
@@ -86,7 +91,7 @@ const onVerifyDomain = async () => {
     }
   } catch (error) {
     emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
-    console.error(error);
+    customDomainError.value = error;
   } finally {
     isVerifyingDomain.value = false;
     customDomain.value = null;
@@ -95,6 +100,7 @@ const onVerifyDomain = async () => {
 
 const viewDnsRecords = async (domainName: string) => {
   customDomain.value = domainName;
+  // TODO: Can't use this anymore since we need to fetch the DKIM records from the API
   recordsInfo.value = await generateDNSRecords(domainName);
   step.value = STEP.VERIFY_DOMAIN;
 };
@@ -186,10 +192,15 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
       </template>
     </notice-bar>
 
-    <!-- TODO: Remove this once we know what a verified verification status looks like -->
-    <notice-bar :type="NoticeBarTypes.Warning" class="verify-step-notice-bar" v-if="verificationStatus">
-      <template v-for="status in verificationStatus" :key="status.type">
-        <p>{{ JSON.stringify(status) }}</p>
+    <notice-bar :type="NoticeBarTypes.Warning" class="verify-step-notice-bar" v-if="verificationWarnings.length > 0">
+      <template v-for="warning in verificationWarnings" :key="warning">
+        <p>{{ t(`views.mail.sections.customDomains.verificationWarnings.${warning}`) }}</p>
+      </template>
+    </notice-bar>
+
+    <notice-bar :type="NoticeBarTypes.Critical" class="verify-step-notice-bar" v-if="verificationCriticalErrors.length > 0">
+      <template v-for="criticalError in verificationCriticalErrors" :key="criticalError">
+        <p>{{ t(`views.mail.sections.customDomains.verificationCriticalErrors.${criticalError}`) }}</p>
       </template>
     </notice-bar>
 

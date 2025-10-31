@@ -593,27 +593,45 @@ def verify_custom_domain(request: HttpRequest):
     now = datetime.datetime.now(datetime.UTC)
 
     try:
-        verification_status = stalwart_client.verify_domain(domain.name)
+        # For dev / localhost we can't verify domains, so we will always return success
+        if settings.IS_DEV:
+            domain.status = Domain.DomainStatus.VERIFIED
+            domain.verified_at = now
+            domain.save()
+            return JsonResponse({'success': True, 'critical_errors': [], 'warnings': []})
 
-        # TODO: Forcibly failing / returning False until we know what a verified verification status looks like
-        domain.status = Domain.DomainStatus.FAILED
+        is_verified, critical_errors, warnings = stalwart_client.verify_domain(domain.name)
 
-        # domain.status = Domain.DomainStatus.VERIFIED
-        # domain.verified_at = now
-        # return JsonResponse({'success': True, 'verification_status': verification_status})
+        domain.last_verification_attempt = now
 
-        return JsonResponse({'success': False, 'verification_status': verification_status})
+        if is_verified:
+            domain.status = Domain.DomainStatus.VERIFIED
+            domain.verified_at = now
+            domain.save()
+
+            return JsonResponse({
+                'success': True,
+                'critical_errors': critical_errors,
+                'warnings': warnings
+            })
+        else:
+            domain.status = Domain.DomainStatus.FAILED
+            domain.save()
+
+            return JsonResponse({
+                'success': False,
+                'critical_errors': critical_errors,
+                'warnings': warnings
+            })
     except Exception as e:
         domain.status = Domain.DomainStatus.FAILED
+        domain.save()
 
         logging.error(f'Error verifying domain: {e}')
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while verifying the domain. Please try again later.'},
             status=500,
         )
-    finally:
-        domain.last_verification_attempt = now
-        domain.save()
 
 
 @login_required
