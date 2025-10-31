@@ -8,10 +8,10 @@ import { PhX } from '@phosphor-icons/vue';
 import { CustomDomain, DNSRecord, STEP, DOMAIN_STATUS } from '../types';
 
 // API
-import { addCustomDomain, verifyDomain } from '../api';
+import { addCustomDomain, verifyDomain, getRemoteDNSRecords } from '../api';
 
 // Utils
-import { generateDNSRecords } from '../utils';
+import { generateDNSRecords, extractDKIMRecords } from '../utils';
 
 const { t } = useI18n();
 
@@ -39,6 +39,26 @@ const maxCustomDomains = window._page?.maxCustomDomains;
 
 const recordsInfo = ref<DNSRecord[]>([]);
 
+const handleDNSRecords = async (domainName: string) => {
+  try {
+    const remoteDNSRecords = await getRemoteDNSRecords(domainName);
+
+    if (remoteDNSRecords.success) {
+      const dkimRecords = extractDKIMRecords(remoteDNSRecords.dns_records, domainName);
+      const dnsRecords = [...generateDNSRecords(domainName), ...dkimRecords];
+
+      recordsInfo.value = dnsRecords;
+      step.value = STEP.VERIFY_DOMAIN;
+    } else {
+      console.error(remoteDNSRecords.error);
+      customDomainError.value = remoteDNSRecords.error;    
+    }
+  } catch (error) {
+    console.error(error);
+    customDomainError.value = error;
+  }
+}
+
 const onCreateCustomDomain = async () => {
   if (props.customDomains.some((domain) => domain.name === customDomain.value)) {
     customDomainError.value = t('views.mail.sections.customDomains.domainAlreadyExists');
@@ -52,9 +72,7 @@ const onCreateCustomDomain = async () => {
 
     if (data.success) {
       emit('custom-domain-added', customDomain.value);
-      const dnsRecords = [...generateDNSRecords(customDomain.value), ...(data.dkim_records || [])];
-      recordsInfo.value = dnsRecords;
-      step.value = STEP.VERIFY_DOMAIN;
+      await handleDNSRecords(customDomain.value);
     } else {
       console.error(data.error);
       customDomainError.value = data.error;
@@ -97,9 +115,7 @@ const onVerifyDomain = async () => {
 
 const viewDnsRecords = async (domainName: string) => {
   customDomain.value = domainName;
-  // TODO: Can't use this anymore since we need to fetch the DKIM records from the API
-  recordsInfo.value = await generateDNSRecords(domainName);
-  step.value = STEP.VERIFY_DOMAIN;
+  await handleDNSRecords(domainName);
 };
 
 defineExpose({

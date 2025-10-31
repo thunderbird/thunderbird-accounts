@@ -543,23 +543,11 @@ def create_custom_domain(request: HttpRequest):
             {'success': False, 'error': _('You have reached the maximum number of custom domains')}, status=400
         )
 
-    dkim_records = []
-
     try:
         stalwart_client = MailClient()
 
         domain_id = stalwart_client.create_domain(domain_name)
         stalwart_client.create_dkim(domain_name)
-
-        # Retrieve the Stalwart-generated DNS records that we can't generate ourselves
-        # Unfortunately, the creation of the DKIM doesn't return the DNS records
-        dns_records = stalwart_client.get_dns_records(domain_name)
-
-        # Extract DKIM records (TXT records with _domainkey in the name)
-        dkim_records = [
-            record for record in dns_records 
-            if record.get('type') == 'TXT' and '_domainkey' in record.get('name', '')
-        ]
 
         now = datetime.datetime.now(datetime.UTC)
         Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
@@ -572,7 +560,27 @@ def create_custom_domain(request: HttpRequest):
             status=500,
         )
 
-    return JsonResponse({'success': True, 'dkim_records': dkim_records})
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(['GET'])
+def get_dns_records(request: HttpRequest):
+    """Gets the DNS records for a custom domain"""
+    domain = request.user.domains.get(name=request.GET.get('domain-name'))
+    if not domain:
+        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    try:
+        stalwart_client = MailClient()
+        dns_records = stalwart_client.get_dns_records(domain.name)
+        return JsonResponse({'success': True, 'dns_records': dns_records})
+    except Exception as e:
+        logging.error(f'Error getting DNS records: {e}')
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while getting the DNS records. Please try again later.'},
+            status=500,
+        )
 
 
 @login_required
@@ -594,11 +602,11 @@ def verify_custom_domain(request: HttpRequest):
 
     try:
         # For dev / localhost we can't verify domains, so we will always return success
-        if settings.IS_DEV:
-            domain.status = Domain.DomainStatus.VERIFIED
-            domain.verified_at = now
-            domain.save()
-            return JsonResponse({'success': True, 'critical_errors': [], 'warnings': []})
+        # if settings.IS_DEV:
+        #     domain.status = Domain.DomainStatus.VERIFIED
+        #     domain.verified_at = now
+        #     domain.save()
+        #     return JsonResponse({'success': True, 'critical_errors': [], 'warnings': []})
 
         is_verified, critical_errors, warnings = stalwart_client.verify_domain(domain.name)
 
