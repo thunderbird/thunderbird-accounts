@@ -53,7 +53,8 @@ const onCreateCustomDomain = async () => {
 
     if (data.success) {
       emit('custom-domain-added', customDomain.value);
-      recordsInfo.value = await generateDNSRecords(customDomain.value);
+      const dnsRecords = [...generateDNSRecords(customDomain.value), ...(data.dkim_records || [])];
+      recordsInfo.value = dnsRecords;
       step.value = STEP.VERIFY_DOMAIN;
     } else {
       console.error(data.error);

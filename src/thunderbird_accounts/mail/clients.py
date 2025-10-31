@@ -407,6 +407,15 @@ class MailClient:
             logging.error(f'[delete_domain] err: {data}')
             raise RuntimeError(data)
 
+    def get_dns_records(self, domain_name: str) -> list[dict]:
+        response = requests.get(
+            f'{self.api_url}/dns/records/{domain_name}', headers=self.authorized_headers, verify=False
+        )
+        response.raise_for_status()
+        self._raise_for_error(response)
+        data = response.json()
+        return data.get('data')
+
     def verify_domain(self, domain_name: str):
         """Verify domain using Stalwart's troubleshooting API with SSE streaming.
 

@@ -1,4 +1,4 @@
-export const generateDNSRecords = async (domainName: string) => {
+export const generateDNSRecords = (domainName: string) => {
   // Currently, we don't have a separate host for JMAP, IMAP or SMTP
   // in the future, if we do, we'll need to pass this as a separate variable
   const dnsHostname = window._page?.connectionInfo?.SMTP?.HOST;
