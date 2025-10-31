@@ -446,7 +446,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:7165a3cb1534141c2717f63cb637738bd383bd96
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v0.8.1
             linuxParameters:
               initProcessEnabled: True
             secrets:
