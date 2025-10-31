@@ -92,6 +92,30 @@ class KeycloakClient:
         response = self.request(endpoint, RequestMethods.GET)
         return response.json()
 
+    def verify_password(self, username: str, password: str) -> bool:
+        """Verify a user's password by attempting to authenticate with Keycloak.
+        :param username: The user's username (email)
+        :param password: The password to verify
+        :return: True if password is correct, False otherwise
+        """
+
+        try:
+            response = requests.post(
+                settings.OIDC_OP_TOKEN_ENDPOINT,
+                data={
+                    'client_id': settings.OIDC_RP_CLIENT_ID,
+                    'client_secret': settings.OIDC_RP_CLIENT_SECRET,
+                    'grant_type': 'password',
+                    'username': username,
+                    'password': password,
+                },
+            )
+
+            # If authentication is successful, we get a 200 with tokens
+            return response.status_code == 200
+        except Exception:
+            return False
+
     def _shared_clean(self, username):
         if '@' not in username:
             raise ValueError('Username needs to be the Stalwart/Keycloak login email.')

@@ -3,9 +3,11 @@ import json
 import logging
 
 import requests.exceptions
+import sentry_sdk
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.core.signing import Signer
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
@@ -19,6 +21,8 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.clients import KeycloakClient
+from thunderbird_accounts.authentication.exceptions import DeleteUserError
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError, DomainAlreadyExistsError
 from thunderbird_accounts.mail.utils import decode_app_password
@@ -627,6 +631,77 @@ def remove_custom_domain(request: HttpRequest):
             {'success': False, 'error': 'An error occurred while removing the custom domain. Please try again later.'},
             status=500,
         )
+
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(['DELETE'])
+@sensitive_post_parameters('password')
+def delete_account(request: HttpRequest):
+    """Deletes a user's account from Stalwart, Keycloak, and the database.
+    This function will:
+    1. Validate the user's password
+    2. Delete the user's Stalwart mail account (if it exists)
+    3. Delete the user's Keycloak account (if it exists)
+    4. Delete the user from the database (which cascades to Account and Email models)
+    5. Log the user out
+    If Stalwart or Keycloak deletion fails, the error is logged to Sentry
+    but the database user is still deleted to prevent orphaned accounts.
+    """
+    data = json.loads(request.body)
+    password = data.get('password')
+
+    if not password:
+        return JsonResponse({
+            'success': False,
+            'error': str(_('Password is required'))
+        }, status=400)
+
+    user = request.user
+
+    # Validate password before proceeding with any deletions
+    keycloak_client = KeycloakClient()
+
+    if not keycloak_client.verify_password(user.username, password):
+        return JsonResponse({
+            'success': False,
+            'error': str(_('Invalid password'))
+        }, status=400)
+
+    has_errors = False
+
+    # Delete from Stalwart (mail server)
+    if user.stalwart_primary_email:
+        try:
+            stalwart_client = MailClient()
+            stalwart_client.delete_account(user.stalwart_primary_email)
+        except Exception as ex:
+            has_errors = True
+            sentry_sdk.capture_exception(ex)
+            logging.error(f'Could not delete {user.username} from Stalwart: {ex}')
+
+    # Delete from Keycloak (authentication server)
+    if user.oidc_id:
+        try:
+            keycloak_client = KeycloakClient()
+            keycloak_client.delete_user(user.oidc_id)
+        except DeleteUserError as ex:
+            has_errors = True
+            sentry_sdk.capture_exception(ex)
+            logging.error(f'Could not delete {user.email} from Keycloak: {ex}')
+
+    # Delete from database (this will cascade delete Account and Email models)
+    user.delete()
+
+    # Log the user out
+    logout(request)
+
+    if has_errors:
+        return JsonResponse({
+            'success': True,
+            'warning': _('Account deleted, but some external services may require manual cleanup.')
+        })
 
     return JsonResponse({'success': True})
 

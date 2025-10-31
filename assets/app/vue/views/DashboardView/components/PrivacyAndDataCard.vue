@@ -26,14 +26,24 @@ const { t } = useI18n();
       <div>
         <strong>{{ t('views.dashboard.privacyAndDataCard.deleteAccount') }}</strong>
         <p>{{ t('views.dashboard.privacyAndDataCard.deleteAccountText') }}</p>
-    
-        <danger-button variant="outline">{{ t('views.dashboard.privacyAndDataCard.deleteAccountButtonLabel') }}</danger-button>
+
+        <router-link to="/privacy-and-data">
+          <danger-button variant="outline">
+            {{ t('views.dashboard.privacyAndDataCard.deleteAccountButtonLabel') }}
+          </danger-button>
+        </router-link>
       </div>
     </div>
   </card-container>
 </template>
 
 <style scoped>
+a {
+  display: inline-block;
+  text-decoration: none;
+  width: auto;
+}
+
 .privacy-and-data-card {
   min-width: unset;
   color: var(--colour-ti-secondary);
