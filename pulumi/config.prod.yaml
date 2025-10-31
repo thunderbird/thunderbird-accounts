@@ -258,7 +258,7 @@ resources:
       desired_count: 1
       ecr_resources:
         - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
-      health_check_grace_period_seconds: 120 # Time before the LB checks for health of a new backend
+      health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
       internal: False # This needs to be open to receive auth callbacks
       services:
         accounts:
@@ -282,7 +282,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:7165a3cb1534141c2717f63cb637738bd383bd96
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v0.8.1
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -349,6 +349,8 @@ resources:
               - name: STALWART_API_AUTH_METHOD
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR
             environment:
+              - name: TIMES_I_NEED_TO_REDEPLOY_WITHOUT_CHANGING_IMAGE
+                value: '2'
               - name: ADMIN_CONTACT
                 value: dummy@example.org
               - name: ADMIN_WEBSITE

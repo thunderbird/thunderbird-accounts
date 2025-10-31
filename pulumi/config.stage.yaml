@@ -443,7 +443,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c2726a0ab43ffdd0af1fcc9170a7dac938212074
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:aaf6a1a5ab86e869b5d4d7d15225e60a01494081
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -571,7 +571,7 @@ resources:
               - name: STALWART_BASE_JMAP_URL
                 value: 'https://mail.stage-thundermail.com'
               - name: STALWART_BASE_API_URL
-                value: 'https://mail-i.stage-thundermail.com'
+                value: 'https://mailstrom-stage-management-i.stage-thundermail.com:8080'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth-stage.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
