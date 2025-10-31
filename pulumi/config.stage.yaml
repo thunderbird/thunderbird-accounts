@@ -250,6 +250,7 @@ resources:
                 value: "tbpro"
               - name: KC_TBPRO_HOME
                 value: "https://accounts-stage.tb.pro/dashboard/"
+                value: "https://accounts-stage.tb.pro/dashboard/"
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
