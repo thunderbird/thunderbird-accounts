@@ -55,7 +55,7 @@ const subscription = {
         </p>
 
         <primary-button>
-          {{ t('views.dashboard.yourCurrentSubscription.changePaymentMethodButtonLabel') }}
+          {{ t('views.dashboard.yourCurrentSubscription.manageSubscriptionButtonLabel') }}
         </primary-button>
 
         <p class="footer-text">

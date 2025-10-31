@@ -51,7 +51,7 @@
         "domains": "Domains",
         "emailAddresses": "Email Addresses",
         "autoRenewsOn": "Auto-renews on",
-        "changePaymentMethodButtonLabel": "Change payment method",
+        "manageSubscriptionButtonLabel": "Manage Subscription",
         "footerText": "You’ll be taken to Paddle, our secure payment provider."
       }
     },
