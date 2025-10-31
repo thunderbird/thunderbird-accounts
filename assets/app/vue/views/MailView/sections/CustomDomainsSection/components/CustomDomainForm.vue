@@ -28,7 +28,6 @@ const emit = defineEmits<{
 
 const step = ref<STEP>(STEP.INITIAL);
 const customDomain = ref(null);
-const showNoticeBar = ref(true);
 const isAddingCustomDomain = ref(false);
 const isVerifyingDomain = ref(false);
 const customDomainError = ref<string>(null);
@@ -78,16 +77,14 @@ const onVerifyDomain = async () => {
   try {
     const data = await verifyDomain(customDomain.value);
 
-    // Even in a successful verification, we may have warnings or critical errors
-    verificationWarnings.value = data.warnings || [];
-    verificationCriticalErrors.value = data.critical_errors || [];
-
     if (data.success) {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
       step.value = STEP.INITIAL;
       customDomain.value = null;
       customDomainError.value = null;
     } else {
+      verificationWarnings.value = data.warnings || [];
+      verificationCriticalErrors.value = data.critical_errors || [];
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
     }
   } catch (error) {
@@ -183,7 +180,8 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
       </div>
     </div>
 
-    <notice-bar :type="NoticeBarTypes.Info" class="verify-step-notice-bar" v-if="showNoticeBar">
+    <!-- TODO: Uncomment this once we have the task / job to automatically verify domains -->
+    <!-- <notice-bar :type="NoticeBarTypes.Info" class="verify-step-notice-bar" v-if="showNoticeBar">
       <strong>{{ t('views.mail.sections.customDomains.verifyStepInfoTitle') }}</strong>
       <p>{{ t('views.mail.sections.customDomains.verifyStepInfoDescription') }}</p>
 
@@ -192,7 +190,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
           <ph-x size="24" />
         </button>
       </template>
-    </notice-bar>
+    </notice-bar> -->
 
     <notice-bar :type="NoticeBarTypes.Warning" class="verify-step-notice-bar" v-if="verificationWarnings.length > 0">
       <template v-for="warning in verificationWarnings" :key="warning">
@@ -212,7 +210,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
       </template>
 
       <template #cta>
-        <button class="close-button" @click="verificationWarnings = []">
+        <button class="close-button" @click="verificationCriticalErrors = []">
           <ph-x size="24" />
         </button>
       </template>
