@@ -24,7 +24,7 @@ resources:
         mailstrom-prod:
           peered_cidrs:
             - 10.0.0.0/16
-          peer_vpc_id: vpc-0b1bde8b45292eda7
+          peer_vpc_id: vpc-0f372803723016c3d
           auto_accept: True
           accepter:
             allow_remote_vpc_dns_resolution: True
