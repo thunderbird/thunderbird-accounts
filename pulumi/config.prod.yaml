@@ -258,7 +258,7 @@ resources:
       desired_count: 1
       ecr_resources:
         - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
-      health_check_grace_period_seconds: 120 # Time before the LB checks for health of a new backend
+      health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
       internal: False # This needs to be open to receive auth callbacks
       services:
         accounts:
