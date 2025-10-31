@@ -85,6 +85,7 @@ const onVerifyDomain = async () => {
     if (data.success) {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
       step.value = STEP.INITIAL;
+      customDomain.value = null;
       customDomainError.value = null;
     } else {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
@@ -94,7 +95,6 @@ const onVerifyDomain = async () => {
     customDomainError.value = error;
   } finally {
     isVerifyingDomain.value = false;
-    customDomain.value = null;
   }
 };
 
@@ -135,20 +135,22 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
   </template>
 
   <template v-else-if="step === STEP.ADD">
-    <text-input
-      :placeholder="t('views.mail.sections.customDomains.domainPlaceholder')"
-      name="custom-domain"
-      :help="t('views.mail.sections.customDomains.domainHelp')"
-      :error="customDomainError"
-      class="custom-domain-text-input"
-      v-model="customDomain"
-    >
-      {{ t('views.mail.sections.customDomains.enterCustomDomain') }}
-    </text-input>
-
-    <primary-button variant="outline" @click="onCreateCustomDomain" :disabled="isAddingCustomDomain">
-      {{ t('views.mail.sections.customDomains.continue') }}
-    </primary-button>
+    <form @submit.prevent="onCreateCustomDomain">
+      <text-input
+        :placeholder="t('views.mail.sections.customDomains.domainPlaceholder')"
+        name="custom-domain"
+        :help="t('views.mail.sections.customDomains.domainHelp')"
+        :error="customDomainError"
+        class="custom-domain-text-input"
+        v-model="customDomain"
+      >
+        {{ t('views.mail.sections.customDomains.enterCustomDomain') }}
+      </text-input>
+  
+      <primary-button variant="outline" @click="onCreateCustomDomain" :disabled="isAddingCustomDomain">
+        {{ t('views.mail.sections.customDomains.continue') }}
+      </primary-button>
+    </form>
   </template>
 
   <template v-else-if="step === STEP.VERIFY_DOMAIN">
@@ -196,11 +198,23 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
       <template v-for="warning in verificationWarnings" :key="warning">
         <p>{{ t(`views.mail.sections.customDomains.verificationWarnings.${warning}`) }}</p>
       </template>
+
+      <template #cta>
+        <button class="close-button" @click="verificationWarnings = []">
+          <ph-x size="24" />
+        </button>
+      </template>
     </notice-bar>
 
     <notice-bar :type="NoticeBarTypes.Critical" class="verify-step-notice-bar" v-if="verificationCriticalErrors.length > 0">
       <template v-for="criticalError in verificationCriticalErrors" :key="criticalError">
         <p>{{ t(`views.mail.sections.customDomains.verificationCriticalErrors.${criticalError}`) }}</p>
+      </template>
+
+      <template #cta>
+        <button class="close-button" @click="verificationWarnings = []">
+          <ph-x size="24" />
+        </button>
       </template>
     </notice-bar>
 
