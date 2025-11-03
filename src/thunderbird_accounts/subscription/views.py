@@ -189,11 +189,11 @@ def get_subscription_plan_info(request: Request):
     if not subscription_item or not subscription_item.product or not subscription_item.price:
         return JsonResponse({'success': False, 'error': 'Subscription information incomplete'}, status=500)
 
-    # Get the plan associated with the product
-    try:
-        plan = Plan.objects.get(product=subscription_item.product)
-    except Plan.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Plan not found for subscription'}, status=500)
+    # Get the plan from the user
+    plan = request.user.plan
+
+    if not plan:
+        return JsonResponse({'success': False, 'error': 'Plan not found for user'}, status=500)
 
     # Get price information
     price = subscription_item.price

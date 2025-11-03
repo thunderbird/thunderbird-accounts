@@ -44,6 +44,10 @@ const formatBytes = (bytes: string | null): string | null => {
 
 /**
  * Formats subscription data from the backend into a display-friendly format
+ * @param subscriptionData - The subscription data from the backend
+ * @param n - The number formatting function from vue-i18n
+ * @param t - The translation function from vue-i18n
+ * @param d - The date formatting function from vue-i18n
  * - Converts currency code to symbol
  * - Converts price from cents to dollars
  * - Converts yearly pricing to monthly equivalent
