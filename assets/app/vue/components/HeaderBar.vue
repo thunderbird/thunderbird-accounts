@@ -15,10 +15,10 @@ const navItemsAccounts = [
     route: '/dashboard',
     i18nKey: 'dashboard',
   },
-  {
-    route: '/manage-mfa',
-    i18nKey: 'manageMfa',
-  },
+  // {
+  //   route: '/manage-mfa',
+  //   i18nKey: 'manageMfa',
+  // },
   {
     route: '/privacy-and-data',
     i18nKey: 'privacyAndData',

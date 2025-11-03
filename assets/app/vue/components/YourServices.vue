@@ -2,6 +2,9 @@
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
+
+const tbProAppointmentUrl = window._page?.tbProAppointmentUrl;
+const tbProSendUrl = window._page?.tbProSendUrl;
 </script>
 
 <template>
@@ -14,12 +17,12 @@ const { t } = useI18n();
         <p>Thundermail</p>
       </router-link>
 
-      <a class="service-icon-link" href="#">
+      <a class="service-icon-link" :href="tbProAppointmentUrl" target="_blank">
         <img src="@/assets/svg/appointment-icon.svg" alt="Appointment" />
         <p>Appointment</p>
       </a>
 
-      <a class="service-icon-link" href="#">
+      <a class="service-icon-link" :href="tbProSendUrl" target="_blank">
         <img src="@/assets/svg/send-icon.svg" alt="Send" />
         <p>Send</p>
       </a>

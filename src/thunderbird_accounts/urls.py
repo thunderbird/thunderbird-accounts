@@ -64,6 +64,7 @@ urlpatterns = [
         subscription_views.notify_paddle_checkout_complete,
         name='paddle_complete',
     ),
+    path('api/v1/subscription/plan/info', subscription_views.get_subscription_plan_info, name='subscription_plan_info'),
     path('health', infra_views.health_check),
 ]
 

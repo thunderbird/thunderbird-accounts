@@ -21,7 +21,7 @@ from rest_framework.request import Request
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks, models
 from thunderbird_accounts.subscription.decorators import inject_paddle
-from thunderbird_accounts.subscription.models import Plan, Price
+from thunderbird_accounts.subscription.models import Plan, Price, Subscription
 from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
 
 
@@ -117,7 +117,7 @@ def get_paddle_portal_link(request: Request, paddle: Client):
     if not request.user.has_active_subscription:
         return JsonResponse({}, status=401)
 
-    subscription = request.user.subscription_set.first()
+    subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
     customer_session = paddle.customer_portal_sessions.create(
         subscription.paddle_customer_id, CreateCustomerPortalSession()
     )
@@ -167,3 +167,51 @@ def handle_paddle_webhook(request: Request):
 
     logging.debug(f'Dispatched {event_type} webhook')
     return response
+
+@login_required
+@require_http_methods(['POST'])
+def get_subscription_plan_info(request: Request):
+    """Returns the user's current subscription information including plan details, pricing, and features."""
+
+    # Check if user has an active subscription
+    if not request.user.has_active_subscription:
+        return JsonResponse({'success': False, 'error': 'No active subscription found'}, status=404)
+
+    # Get the user's active subscription
+    subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
+
+    if not subscription:
+        return JsonResponse({'success': False, 'error': 'No active subscription found'}, status=404)
+
+    # Get the subscription item (contains the product and price information)
+    subscription_item = subscription.subscriptionitem_set.first()
+
+    if not subscription_item or not subscription_item.product or not subscription_item.price:
+        return JsonResponse({'success': False, 'error': 'Subscription information incomplete'}, status=500)
+
+    # Get the plan from the user
+    plan = request.user.plan
+
+    if not plan:
+        return JsonResponse({'success': False, 'error': 'Plan not found for user'}, status=500)
+
+    # Get price information
+    price = subscription_item.price
+
+    # Build the response
+    subscription_info = {
+        'name': plan.name,
+        'price': price.amount,
+        'currency': price.currency,
+        'period': price.billing_cycle_interval,
+        'description': subscription_item.product.description or '',
+        'features': {
+            'mailStorage': plan.mail_storage_bytes,
+            'sendStorage': plan.send_storage_bytes,
+            'emailAddresses': plan.mail_address_count,
+            'domains': plan.mail_domain_count,
+        },
+        'autoRenewal': subscription.next_billed_at,
+    }
+
+    return JsonResponse({'success': True, 'subscription': subscription_info})
