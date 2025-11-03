@@ -65,8 +65,14 @@ onMounted(() => {
         <p class="subscription-description">{{ subscription.description }}</p>
         <p class="subscription-price">
           <span class="subscription-price-amount">
-            <span class="subscription-price-currency">{{ subscription.currency }}</span>
-            {{ subscription.price }}
+            <i18n-n tag="span" :value="parseFloat(subscription.price)" format="currency" :format-options="{ currency: subscription.currency }">
+              <template #currency="slotProps">
+                <span class="subscription-price-currency">{{ slotProps.currency }}</span>
+              </template>
+              <template #integer="slotProps">
+                <span>{{ slotProps.integer }}</span>
+              </template>
+            </i18n-n>
           </span>
           <span class="subscription-price-period">{{ subscription.period }}</span>
         </p>

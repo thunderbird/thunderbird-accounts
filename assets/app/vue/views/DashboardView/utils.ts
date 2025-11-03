@@ -1,16 +1,6 @@
 import type { ComposerNumberFormatting, ComposerTranslation, ComposerDateTimeFormatting } from 'vue-i18n';
 import type { SubscriptionData } from './types';
 
-export const getCurrencySymbol = (currency: string, n: ComposerNumberFormatting) => {
-  const formatted = n(0, {
-    style: 'currency',
-    currency,
-    currencyDisplay: 'narrowSymbol',
-  });
-
-  return formatted.replace(/[\d\s.,]/g, '');
-}
-
 /**
  * Converts bytes to the most appropriate unit (KB, MB, or GB) with the unit label
  * @param bytes - The number of bytes to convert
@@ -60,8 +50,6 @@ export const formatSubscriptionData = (
   t: ComposerTranslation,
   d: ComposerDateTimeFormatting
 ): SubscriptionData => {
-  const currencySymbol = getCurrencySymbol(subscriptionData.currency, n);
-
   // Convert price from cents to dollars
   let priceInDollars = parseFloat(subscriptionData.price) / 100;
 
@@ -83,7 +71,6 @@ export const formatSubscriptionData = (
 
   return {
     ...subscriptionData,
-    currency: currencySymbol,
     price: formattedPrice,
     period: t('views.dashboard.yourCurrentSubscription.monthly'),
     autoRenewal: formattedAutoRenewal,

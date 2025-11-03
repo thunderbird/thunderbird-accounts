@@ -19,6 +19,17 @@ const datetimeFormats = {
   },
 };
 
+const numberFormats = {
+  en: {
+    currency: {
+      style: 'currency' as const,
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    },
+  },
+};
+
 const instance = createI18n({
   legacy: false,
   globalInjection: true,
@@ -26,6 +37,7 @@ const instance = createI18n({
   fallbackLocale: 'en',
   messages,
   datetimeFormats,
+  numberFormats,
 });
 
 export default instance;
