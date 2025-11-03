@@ -449,3 +449,6 @@ if DEBUG:
 
 # Tell django to use secure in stage/prod
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not IS_DEV else None
+
+TB_PRO_APPOINTMENT_URL: str = os.getenv('TB_PRO_APPOINTMENT_URL')
+TB_PRO_SEND_URL: str = os.getenv('TB_PRO_SEND_URL')

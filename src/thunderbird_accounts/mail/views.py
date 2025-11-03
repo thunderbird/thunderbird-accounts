@@ -87,6 +87,8 @@ def home(request: HttpRequest):
         'user_display_name': user_display_name,
         'custom_domains': json.dumps(custom_domains),
         'max_custom_domains': max_custom_domains,
+        'tb_pro_appointment_url': settings.TB_PRO_APPOINTMENT_URL,
+        'tb_pro_send_url': settings.TB_PRO_SEND_URL,
     })
 
 

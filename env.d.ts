@@ -27,6 +27,8 @@ declare global {
       allowedDomains?: string[];
       customDomains?: CustomDomain[];
       maxCustomDomains?: number;
+      tbProAppointmentUrl?: string;
+      tbProSendUrl?: string;
       currentView?: Record<string, any>;
     };
   }
