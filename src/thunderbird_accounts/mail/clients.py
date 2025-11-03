@@ -172,6 +172,15 @@ class MailClient:
 
         return response
 
+    def get_telemetry(self):
+        """We actually only use this for the health check"""
+        response = requests.patch(
+            f'{self.api_url}/telemetry/metrics', headers=self.authorized_headers, verify=False
+        )
+        response.raise_for_status()
+        self._raise_for_error(response)
+        return response
+
     def _parse_verification_stages(self, stages: list) -> tuple[bool, list[str]]:
         """Parse Stalwart verification stages to determine success/failure.
 
@@ -184,7 +193,7 @@ class MailClient:
 
         For domain verification, we only fail on CRITICAL errors that prevent basic SMTP:
         - MX/IP lookup failures
-        - Connection failures  
+        - Connection failures
         - SMTP protocol failures (EHLO, etc.)
 
         Advanced security features (MTA-STS, TLSA, TLS-RPT) are optional and won't fail verification.
