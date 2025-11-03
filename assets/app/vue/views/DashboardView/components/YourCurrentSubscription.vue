@@ -1,32 +1,65 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PrimaryButton } from '@thunderbirdops/services-ui';
+import { PrimaryButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 
-const { t } = useI18n();
+// Types
+import type { SubscriptionData } from '../types';
 
-// Placeholder data for now
-const subscription = {
-  name: 'Standard',
-  price: '9',
-  currency: '$',
-  period: 'Monthly',
-  description: 'Morbi vulputate lacus nec orci vehicula, nec hendrerit libero',
-  features: {
-    mailStorage: '30 GB',
-    sendStorage: '300 GB',
-    domains: '3',
-    emailAddresses: '15',
-  },
-  autoRenewal: 'March 24, 2026'
+// API
+import { getSubscriptionPlanInfo, getSubscriptionPortalLink } from '../api';
+
+// Utils
+import { formatSubscriptionData } from '../utils';
+
+const { t, n, d } = useI18n();
+
+const errorText = ref<string>(null);
+const isLoading = ref<boolean>(true);
+const subscription = ref<SubscriptionData | null>(null);
+
+const getSubscriptionInfo = async () => {
+  isLoading.value = true;
+
+  try {
+    const data = await getSubscriptionPlanInfo();
+
+    if (!data.success) {
+      throw new Error(data.error || t('views.dashboard.yourCurrentSubscription.loadingError'));
+    }
+
+    subscription.value = formatSubscriptionData(data.subscription, n, t, d);
+  } catch (error) {
+    errorText.value = error instanceof Error ? error.message : t('views.dashboard.yourCurrentSubscription.loadingError');
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+const navigateToSubscription = async () => {
+  try {
+    const { url } = await getSubscriptionPortalLink(); 
+    window.open(url, '_blank');
+  } catch (error) {
+    errorText.value = error instanceof Error ? error.message : t('views.dashboard.yourCurrentSubscription.portalLinkError');
+  }
 };
+
+onMounted(() => {
+  getSubscriptionInfo();
+});
 </script>
 
 <template>
   <section>
     <h2>{{ t('views.dashboard.yourCurrentSubscription.yourCurrentSubscription') }}</h2>
 
-    <card-container dark padding="small">
+    <div v-if="isLoading">
+      <p>{{ t('views.dashboard.yourCurrentSubscription.loading') }}</p>
+    </div>
+
+    <card-container v-else-if="subscription" dark padding="small">
       <div class="card-container-inner">
         <h3>{{ subscription.name }}</h3>
         <p class="subscription-description">{{ subscription.description }}</p>
@@ -38,7 +71,7 @@ const subscription = {
           <span class="subscription-price-period">{{ subscription.period }}</span>
         </p>
         <template v-for="[key, value] in Object.entries(subscription.features)" :key="key">
-          <div class="subscription-feature">
+          <div v-if="value" class="subscription-feature">
             <hr />
             <div class="subscription-feature-item">
               <span><strong>{{ value }}</strong></span>
@@ -49,12 +82,12 @@ const subscription = {
       </div>
 
       <div class="footer">
-        <p>
+        <p v-if="subscription.autoRenewal">
           {{ t('views.dashboard.yourCurrentSubscription.autoRenewsOn') }}
           <strong>{{ subscription.autoRenewal }}</strong>
         </p>
 
-        <primary-button>
+        <primary-button @click="navigateToSubscription">
           {{ t('views.dashboard.yourCurrentSubscription.manageSubscriptionButtonLabel') }}
         </primary-button>
 
@@ -63,12 +96,15 @@ const subscription = {
         </p>
       </div>
     </card-container>
+
+    <notice-bar :type="NoticeBarTypes.Critical" v-if="errorText">{{ errorText }}</notice-bar>
   </section>
 </template>
 
 <style scoped>
 section {
   max-width: 345px;
+  color: var(--colour-ti-secondary);
 }
 
 h2 {
@@ -79,7 +115,6 @@ h2 {
   letter-spacing: 0.39px;
   line-height: 1.2;
   margin-block-end: 1rem;
-  color: var(--colour-ti-secondary);
 }
 
 h3 {

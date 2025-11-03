@@ -9,12 +9,23 @@ const messages = {
   en, // English
 };
 
+const datetimeFormats = {
+  en: {
+    long: {
+      year: 'numeric' as const,
+      month: 'long' as const,
+      day: 'numeric' as const,
+    },
+  },
+};
+
 const instance = createI18n({
   legacy: false,
   globalInjection: true,
   locale: defaultLocale(),
   fallbackLocale: 'en',
   messages,
+  datetimeFormats,
 });
 
 export default instance;

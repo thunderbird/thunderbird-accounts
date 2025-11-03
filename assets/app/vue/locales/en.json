@@ -46,10 +46,14 @@
       },
       "yourCurrentSubscription": {
         "yourCurrentSubscription": "Your Current Subscription",
+        "loading": "Loading...",
+        "loadingError": "Failed to load subscription information",
+        "portalLinkError": "Failed to get subscription portal link",
         "mailStorage": "of Mail Storage",
         "sendStorage": "of Send Storage",
-        "domains": "Domains",
+        "domains": "Custom Domains",
         "emailAddresses": "Email Addresses",
+        "monthly": "Monthly",
         "autoRenewsOn": "Auto-renews on",
         "manageSubscriptionButtonLabel": "Manage Subscription",
         "footerText": "You’ll be taken to Paddle, our secure payment provider."
