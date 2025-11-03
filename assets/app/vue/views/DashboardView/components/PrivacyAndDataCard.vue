@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { VisualDivider, PrimaryButton, DangerButton, LinkButton } from '@thunderbirdops/services-ui';
+import { DangerButton } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 
 const { t } = useI18n();
@@ -11,7 +11,8 @@ const { t } = useI18n();
     <h2>{{ t('views.dashboard.privacyAndDataCard.privacyAndData') }}</h2>
 
     <div class="privacy-and-data-card-details">
-      <div>
+      <!-- TODO: Uncomment when implementing device management -->
+      <!-- <div>
         <strong>{{ t('views.dashboard.privacyAndDataCard.manageDevices') }}</strong>
         <p>{{ t('views.dashboard.privacyAndDataCard.manageDevicesText') }}</p>
     
@@ -21,7 +22,7 @@ const { t } = useI18n();
         </div>
       </div>
   
-      <visual-divider />
+      <visual-divider /> -->
   
       <div>
         <strong>{{ t('views.dashboard.privacyAndDataCard.deleteAccount') }}</strong>
