@@ -22,7 +22,7 @@ config:
   accounts:fxa-encrypt-secret:
     secure: AAABAMPhy394kdOrJWSwklQR/6ZD6PUg7iXnoRwug5OQOUbzcr/O1v846wbjYzZZc7G9XserUhgr2BN7Uk2Rnejagdi7g0ab2vTzTQ==
   accounts:paddle-token:
-    secure: AAABANgq3/jY0GRqUvv7JLceOt7J8epkxQ4Zq24ybxTdnzA=
+    secure: AAABADQmt+sZDErRvhl4KVuDl0ea1tqVhWdNY84W6aAAOQtloeq4SPj+7LbdRfX0JGZ55S6aitcu+YeL/PSE7A==
   accounts:paddle-price-id-lo:
     secure: AAABAPb2QBKyQRMZ2jnPAAVaer/zz0CSBtyEb5YV6r3Fe10=
   accounts:paddle-price-id-md:
