@@ -5,6 +5,7 @@ from django.conf import settings
 from django.urls import reverse
 
 from thunderbird_accounts.utils.utils import get_absolute_url
+from thunderbird_accounts.authentication.reserved import is_reserved
 
 
 class KeycloakRequiredAction(enum.StrEnum):
@@ -44,6 +45,12 @@ class KeycloakRequiredAction(enum.StrEnum):
 def is_email_in_allow_list(email: str):
     allow_list = settings.AUTH_ALLOW_LIST
     if not allow_list:
+        return True
+
+    return email.endswith(tuple(allow_list.split(',')))
+
+def is_email_reserved(email: str):
+    if not is_reserved(email):
         return True
 
     return email.endswith(tuple(allow_list.split(',')))
