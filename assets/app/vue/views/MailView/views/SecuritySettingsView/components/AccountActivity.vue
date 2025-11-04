@@ -1,42 +1,52 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhDevices } from '@phosphor-icons/vue';
 import DetailsSummary from '@/components/DetailsSummary.vue';
-import { LinkButton } from '@thunderbirdops/services-ui';
+import { LinkButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 
-const { t } = useI18n();
+// Types
+import type { ActiveSession } from '../types';
 
-const accountActivityRecords = [
-  {
-    id: 1,
-    device: 'macOS – Thunderbird',
-    location: 'Berlin, Germany',
-    lastActive: 'Today at 10:24 AM',
-  },
-  {
-    id: 2,
-    device: 'Windows – Outlook',
-    location: 'San Francisco, USA',
-    lastActive: 'Yesterday at 8:02 PM',
-  },
-  {
-    id: 3,
-    device: 'Android – Gmail App',
-    location: 'Tokyo, Japan',
-    lastActive: 'Jun 24, 2:15 AM',
-  },
-  {
-    id: 4,
-    device: 'Unknown Device – IMAP',
-    location: 'Paris, France',
-    lastActive: 'Jun 22, 6:45 PM',
-  },
-];
+// Utils
+import { formatDate } from '../utils';
+
+const { t, locale } = useI18n();
+
+const activeSessions = ref([]);
+const loading = ref(true);
+const errorMessage = ref(null);
 
 const signOut = (id: number) => {
-  // TODO: Implement sign out logic
-  console.log(`Signing out device ${id}`);
+  if (window.confirm(t('views.mail.views.securitySettings.signOutConfirmation'))) {
+    // TODO: Implement sign out logic
+    console.log(`Signing out device ${id}`);
+  }
 };
+
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/v1/auth/get-active-sessions/', {
+      method: 'GET',
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      const sortedData = data.sort((a: ActiveSession, b: ActiveSession) => b.last_access - a.last_access);
+
+      activeSessions.value = sortedData.map((session: ActiveSession) => ({
+        id: session.id,
+        deviceInfo: session.device_info,
+        ipAddress: session.ip_address,
+        lastAccess: formatDate(new Date(session.last_access), locale.value, t),
+      }));
+    } catch (error) {
+      errorMessage.value = t('views.mail.views.securitySettings.errorLoadingActiveSessions', error);
+    } finally {
+      loading.value = false;
+    }
+});
 </script>
 
 <template>
@@ -45,23 +55,31 @@ const signOut = (id: number) => {
       <ph-devices size="24" />
     </template>
 
-    <template v-if="accountActivityRecords.length > 0">
+    <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">
+      <p>{{ errorMessage }}</p>
+    </notice-bar>
+
+    <template v-if="loading">
+      <p class="account-activity-description">{{ t('views.mail.views.securitySettings.loadingActiveSessions') }}</p>
+    </template>
+
+    <template v-else-if="activeSessions.length > 0">
       <p class="account-activity-description">{{ t('views.mail.views.securitySettings.accountActivityDescription') }}</p>
   
       <div class="records-table-wrapper" >
         <div class="records-table-header">
           <p>{{ t('views.mail.views.securitySettings.recordsTableHeaderDevice') }}</p>
-          <p>{{ t('views.mail.views.securitySettings.recordsTableHeaderLocation') }}</p>
+          <p>{{ t('views.mail.views.securitySettings.recordsTableHeaderIpAddress') }}</p>
           <p>{{ t('views.mail.views.securitySettings.recordsTableHeaderLastActive') }}</p>
           <p>{{ t('views.mail.views.securitySettings.recordsTableHeaderActions') }}</p>
         </div>
   
-        <div class="records-table-row" v-for="record in accountActivityRecords" :key="record.id">
-          <p>{{ record.device }}</p>
-          <p>{{ record.location }}</p>
-          <p>{{ record.lastActive }}</p>
+        <div class="records-table-row" v-for="activeSession in activeSessions" :key="activeSession.id">
+          <p>{{ activeSession.deviceInfo || t('views.mail.views.securitySettings.unknownDevice') }}</p>
+          <p>{{ activeSession.ipAddress }}</p>
+          <p>{{ activeSession.lastAccess }}</p>
           <div class="sign-out-button-wrapper">
-            <link-button @click="signOut(record.id)">
+            <link-button @click="signOut(activeSession.id)">
               {{ t('views.mail.views.securitySettings.signOut') }}
             </link-button>
           </div>
