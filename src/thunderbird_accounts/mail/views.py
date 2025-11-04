@@ -550,6 +550,7 @@ def create_custom_domain(request: HttpRequest):
 
         domain_id = stalwart_client.create_domain(domain_name)
         stalwart_client.create_dkim(domain_name)
+
         now = datetime.datetime.now(datetime.UTC)
         Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
     except DomainAlreadyExistsError:
@@ -562,6 +563,26 @@ def create_custom_domain(request: HttpRequest):
         )
 
     return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(['GET'])
+def get_dns_records(request: HttpRequest):
+    """Gets the DNS records for a custom domain"""
+    domain = request.user.domains.get(name=request.GET.get('domain-name'))
+    if not domain:
+        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    try:
+        stalwart_client = MailClient()
+        dns_records = stalwart_client.get_dns_records(domain.name)
+        return JsonResponse({'success': True, 'dns_records': dns_records})
+    except Exception as e:
+        logging.error(f'Error getting DNS records: {e}')
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while getting the DNS records. Please try again later.'},
+            status=500,
+        )
 
 
 @login_required
@@ -582,27 +603,45 @@ def verify_custom_domain(request: HttpRequest):
     now = datetime.datetime.now(datetime.UTC)
 
     try:
-        verification_status = stalwart_client.verify_domain(domain.name)
+        # For dev / localhost we can't verify domains, so we will always return success
+        if settings.IS_DEV:
+            domain.status = Domain.DomainStatus.VERIFIED
+            domain.verified_at = now
+            domain.save()
+            return JsonResponse({'success': True, 'critical_errors': [], 'warnings': []})
 
-        # TODO: Forcibly failing / returning False until we know what a verified verification status looks like
-        domain.status = Domain.DomainStatus.FAILED
+        is_verified, critical_errors, warnings = stalwart_client.verify_domain(domain.name)
 
-        # domain.status = Domain.DomainStatus.VERIFIED
-        # domain.verified_at = now
-        # return JsonResponse({'success': True, 'verification_status': verification_status})
+        domain.last_verification_attempt = now
 
-        return JsonResponse({'success': False, 'verification_status': verification_status})
+        if is_verified:
+            domain.status = Domain.DomainStatus.VERIFIED
+            domain.verified_at = now
+            domain.save()
+
+            return JsonResponse({
+                'success': True,
+                'critical_errors': critical_errors,
+                'warnings': warnings
+            })
+        else:
+            domain.status = Domain.DomainStatus.FAILED
+            domain.save()
+
+            return JsonResponse({
+                'success': False,
+                'critical_errors': critical_errors,
+                'warnings': warnings
+            })
     except Exception as e:
         domain.status = Domain.DomainStatus.FAILED
+        domain.save()
 
         logging.error(f'Error verifying domain: {e}')
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while verifying the domain. Please try again later.'},
             status=500,
         )
-    finally:
-        domain.last_verification_attempt = now
-        domain.save()
 
 
 @login_required

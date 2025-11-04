@@ -1,4 +1,10 @@
-export const generateDNSRecords = async (domainName: string) => {
+import type { DNSRecord } from "./types";
+
+export const extractDKIMRecords = (dnsRecords: DNSRecord[], domainName: string) => {
+  return dnsRecords.filter((record) => record.type === 'TXT' && record.name.includes(`_domainkey.${domainName}.`));
+};
+
+export const generateDNSRecords = (domainName: string) => {
   // Currently, we don't have a separate host for JMAP, IMAP or SMTP
   // in the future, if we do, we'll need to pass this as a separate variable
   const dnsHostname = window._page?.connectionInfo?.SMTP?.HOST;
@@ -95,4 +101,25 @@ export const generateDNSRecords = async (domainName: string) => {
       priority: '-',
     },
   ];
+};
+
+/**
+ * Deduplicates critical errors by consolidating ehloError and readGreetingError
+ * since they represent the same issue (inability to verify domain records connect to Thundermail)
+ */
+export const deduplicateCriticalErrors = (errors: string[]): string[] => {
+  const errorSet = new Set(errors);
+
+  // If both ehloError and readGreetingError exist, keep only readGreetingError
+  if (errorSet.has('ehloError') && errorSet.has('readGreetingError')) {
+    errorSet.delete('ehloError');
+  }
+
+  // If only ehloError exists, replace it with readGreetingError
+  else if (errorSet.has('ehloError')) {
+    errorSet.delete('ehloError');
+    errorSet.add('readGreetingError');
+  }
+
+  return Array.from(errorSet);
 };

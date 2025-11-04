@@ -172,6 +172,93 @@ class MailClient:
 
         return response
 
+    def _parse_verification_stages(self, stages: list) -> tuple[bool, list[str]]:
+        """Parse Stalwart verification stages to determine success/failure.
+
+        Ref https://github.com/stalwartlabs/webadmin/blob/main/src/pages/manage/troubleshoot.rs#L806-L1003
+
+        Based on Stalwart's DeliveryStage enum, stages are categorized as:
+        - Success stages (e.g., MxLookupSuccess, ConnectionSuccess)
+        - Error stages (e.g., MxLookupError, ConnectionError) - actual failures
+        - NotFound stages (e.g., MtaStsNotFound, TlsaNotFound) - warnings, not failures
+
+        For domain verification, we only fail on CRITICAL errors that prevent basic SMTP:
+        - MX/IP lookup failures
+        - Connection failures  
+        - SMTP protocol failures (EHLO, etc.)
+
+        Advanced security features (MTA-STS, TLSA, TLS-RPT) are optional and won't fail verification.
+
+        Args:
+            stages: List of stage dictionaries from Stalwart troubleshooting API
+
+        Returns:
+            tuple: (is_verified, failed_stages)
+                - is_verified: True if verification completed successfully
+                - failed_stages: List of stage types that had errors/warnings
+        """
+        if not stages:
+            return False, []
+
+        critical_errors = set()
+        warnings = set()
+        has_completed = False
+
+        # Critical errors that prevent basic SMTP delivery (will fail verification)
+        critical_error_types = {
+            'mxLookupError',        # Can't find mail servers
+            'ipLookupError',        # Can't resolve IP addresses
+            'connectionError',      # Can't connect to server
+            'readGreetingError',    # SMTP greeting failed
+            'ehloError',            # EHLO command failed
+        }
+
+        # Optional/advanced features that are warnings but don't fail verification
+        # These include NotFound variants and errors for optional security features
+        warning_types = {
+            # NotFound variants (expected to be missing for many domains)
+            'mtaStsNotFound',       # MTA-STS policy not published (optional)
+            'tlsRptNotFound',       # TLS-RPT record not published (optional)
+            'tlsaNotFound',         # TLSA/DANE records not found (optional)
+            # Optional security feature errors
+            'mtaStsFetchError',     # Failed to fetch MTA-STS policy (optional)
+            'mtaStsVerifyError',    # MTA-STS verification failed (optional)
+            'tlsRptLookupError',    # TLS-RPT lookup failed (optional)
+            'tlsaLookupError',      # TLSA lookup failed (optional)
+            'daneVerifyError',      # DANE verification failed (optional)
+            # StartTLS is important but many servers work without it
+            'startTlsError',        # TLS upgrade failed (degraded security but may work)
+        }
+
+        for stage in stages:
+            if not isinstance(stage, dict):
+                continue
+
+            stage_type = stage.get('type', '')
+
+            # Check if process completed successfully
+            if stage_type == 'completed':
+                has_completed = True
+                continue
+
+            # Categorize the stage
+            if stage_type in critical_error_types:
+                critical_errors.add(stage_type)
+            elif stage_type in warning_types:
+                warnings.add(stage_type)
+            # Catch any other error types not explicitly categorized
+            elif stage_type.endswith('Error') and stage_type not in warning_types:
+                # MailFromError, RcptToError would be critical if we tested full delivery
+                # But for domain verification, we typically stop at EHLO/StartTLS
+                critical_errors.add(stage_type)
+
+        # Verification succeeds if:
+        # 1. The troubleshooting process completed (reached 'completed' stage)
+        # 2. There are no CRITICAL errors (optional security features don't count)
+        is_verified = has_completed and len(critical_errors) == 0
+
+        return is_verified, list(critical_errors), list(warnings)
+
     def get_domain(self, domain):
         response = self._get_principal(domain)
 
@@ -407,6 +494,15 @@ class MailClient:
             logging.error(f'[delete_domain] err: {data}')
             raise RuntimeError(data)
 
+    def get_dns_records(self, domain_name: str) -> list[dict]:
+        response = requests.get(
+            f'{self.api_url}/dns/records/{domain_name}', headers=self.authorized_headers, verify=False
+        )
+        response.raise_for_status()
+        self._raise_for_error(response)
+        data = response.json()
+        return data.get('data')
+
     def verify_domain(self, domain_name: str):
         """Verify domain using Stalwart's troubleshooting API with SSE streaming.
 
@@ -419,7 +515,10 @@ class MailClient:
             domain_name: The domain to verify/troubleshoot
 
         Returns:
-            list: List of delivery stages collected during troubleshooting
+            tuple: (is_verified, critical_errors, warnings)
+                - is_verified: True if verification completed successfully
+                - critical_errors: List of stage types that had errors
+                - warnings: List of stage types that had warnings
         """
         # Step 1: Get troubleshooting token
         token_response = requests.get(
@@ -481,5 +580,8 @@ class MailClient:
             elif line.startswith('data:'):
                 event_data.append(line[5:].strip())
 
-        # Return collected stages even if we didn't get explicit completion
-        return delivery_stages
+        print(delivery_stages)
+
+        # Parse the verification stages to determine success/failure
+        is_verified, critical_errors, warnings = self._parse_verification_stages(delivery_stages)
+        return is_verified, critical_errors, warnings

@@ -9,6 +9,9 @@ import { DOMAIN_STATUS } from '../types';
 // API
 import { verifyDomain, removeCustomDomain } from '../api'
 
+// Utils
+import { deduplicateCriticalErrors } from '../utils';
+
 const props = defineProps<{
   domain: {
     name: string;
@@ -22,6 +25,8 @@ const emit = defineEmits<{
   'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }];
   'custom-domain-error': [error: string];
   'custom-domain-view-dns-records': [domainName: string];
+  'custom-domain-verification-warnings': [warnings: string[]];
+  'custom-domain-verification-critical-errors': [criticalErrors: string[]];
 }>();
 
 const showMenu = ref(false);
@@ -36,14 +41,13 @@ const toggleMenu = () => {
 const handleRetry = async () => {
   try {
     const data = await verifyDomain(props.domain.name);
-  
+
     if (data.success) {
       emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.VERIFIED });
     } else {
+      emit('custom-domain-verification-warnings', data.warnings);
+      emit('custom-domain-verification-critical-errors', deduplicateCriticalErrors(data.critical_errors || []));
       emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.FAILED });
-
-      // TODO: Remove this once we know what a verified verification status looks like
-      emit('custom-domain-error', data.verification_status);
     }
   } catch (error) {
     emit('custom-domain-error', error);

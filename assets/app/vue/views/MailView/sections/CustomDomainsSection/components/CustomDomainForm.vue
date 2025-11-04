@@ -8,10 +8,10 @@ import { PhX } from '@phosphor-icons/vue';
 import { CustomDomain, DNSRecord, STEP, DOMAIN_STATUS } from '../types';
 
 // API
-import { addCustomDomain, verifyDomain } from '../api';
+import { addCustomDomain, verifyDomain, getRemoteDNSRecords } from '../api';
 
 // Utils
-import { generateDNSRecords } from '../utils';
+import { generateDNSRecords, extractDKIMRecords, deduplicateCriticalErrors } from '../utils';
 
 const { t } = useI18n();
 
@@ -28,17 +28,34 @@ const emit = defineEmits<{
 
 const step = ref<STEP>(STEP.INITIAL);
 const customDomain = ref(null);
-const showNoticeBar = ref(true);
 const isAddingCustomDomain = ref(false);
 const isVerifyingDomain = ref(false);
 const customDomainError = ref<string>(null);
-
-// TODO: Remove this once we know what a verified verification status looks like
-const verificationStatus = ref<Record<string, any>>(null);
+const verificationCriticalErrors = ref<string[]>([]);
 
 const maxCustomDomains = window._page?.maxCustomDomains;
 
 const recordsInfo = ref<DNSRecord[]>([]);
+
+const handleDNSRecords = async (domainName: string) => {
+  try {
+    const remoteDNSRecords = await getRemoteDNSRecords(domainName);
+
+    if (remoteDNSRecords.success) {
+      const dkimRecords = extractDKIMRecords(remoteDNSRecords.dns_records, domainName);
+      const dnsRecords = [...generateDNSRecords(domainName), ...dkimRecords];
+
+      recordsInfo.value = dnsRecords;
+      step.value = STEP.VERIFY_DOMAIN;
+    } else {
+      console.error(remoteDNSRecords.error);
+      customDomainError.value = remoteDNSRecords.error;    
+    }
+  } catch (error) {
+    console.error(error);
+    customDomainError.value = error;
+  }
+}
 
 const onCreateCustomDomain = async () => {
   if (props.customDomains.some((domain) => domain.name === customDomain.value)) {
@@ -53,8 +70,7 @@ const onCreateCustomDomain = async () => {
 
     if (data.success) {
       emit('custom-domain-added', customDomain.value);
-      recordsInfo.value = await generateDNSRecords(customDomain.value);
-      step.value = STEP.VERIFY_DOMAIN;
+      await handleDNSRecords(customDomain.value);
     } else {
       console.error(data.error);
       customDomainError.value = data.error;
@@ -70,32 +86,32 @@ const onCreateCustomDomain = async () => {
 const onVerifyDomain = async () => {
   isVerifyingDomain.value = true;
 
+  // Cleanup previous verification results
+  verificationCriticalErrors.value = [];
+
   try {
     const data = await verifyDomain(customDomain.value);
-
-    // TODO: Remove this once we know what a verified verification status looks like
-    verificationStatus.value = data.verification_status;
 
     if (data.success) {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
       step.value = STEP.INITIAL;
+      customDomain.value = null;
       customDomainError.value = null;
     } else {
+      verificationCriticalErrors.value = deduplicateCriticalErrors(data.critical_errors || []);
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
     }
   } catch (error) {
     emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
-    console.error(error);
+    customDomainError.value = error;
   } finally {
     isVerifyingDomain.value = false;
-    customDomain.value = null;
   }
 };
 
 const viewDnsRecords = async (domainName: string) => {
   customDomain.value = domainName;
-  recordsInfo.value = await generateDNSRecords(domainName);
-  step.value = STEP.VERIFY_DOMAIN;
+  await handleDNSRecords(domainName);
 };
 
 defineExpose({
@@ -128,20 +144,22 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
   </template>
 
   <template v-else-if="step === STEP.ADD">
-    <text-input
-      :placeholder="t('views.mail.sections.customDomains.domainPlaceholder')"
-      name="custom-domain"
-      :help="t('views.mail.sections.customDomains.domainHelp')"
-      :error="customDomainError"
-      class="custom-domain-text-input"
-      v-model="customDomain"
-    >
-      {{ t('views.mail.sections.customDomains.enterCustomDomain') }}
-    </text-input>
-
-    <primary-button variant="outline" @click="onCreateCustomDomain" :disabled="isAddingCustomDomain">
-      {{ t('views.mail.sections.customDomains.continue') }}
-    </primary-button>
+    <form @submit.prevent="onCreateCustomDomain">
+      <text-input
+        :placeholder="t('views.mail.sections.customDomains.domainPlaceholder')"
+        name="custom-domain"
+        :help="t('views.mail.sections.customDomains.domainHelp')"
+        :error="customDomainError"
+        class="custom-domain-text-input"
+        v-model="customDomain"
+      >
+        {{ t('views.mail.sections.customDomains.enterCustomDomain') }}
+      </text-input>
+  
+      <primary-button variant="outline" @click="onCreateCustomDomain" :disabled="isAddingCustomDomain">
+        {{ t('views.mail.sections.customDomains.continue') }}
+      </primary-button>
+    </form>
   </template>
 
   <template v-else-if="step === STEP.VERIFY_DOMAIN">
@@ -174,7 +192,8 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
       </div>
     </div>
 
-    <notice-bar :type="NoticeBarTypes.Info" class="verify-step-notice-bar" v-if="showNoticeBar">
+    <!-- TODO: Uncomment this once we have the task / job to automatically verify domains -->
+    <!-- <notice-bar :type="NoticeBarTypes.Info" class="verify-step-notice-bar" v-if="showNoticeBar">
       <strong>{{ t('views.mail.sections.customDomains.verifyStepInfoTitle') }}</strong>
       <p>{{ t('views.mail.sections.customDomains.verifyStepInfoDescription') }}</p>
 
@@ -183,12 +202,17 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
           <ph-x size="24" />
         </button>
       </template>
-    </notice-bar>
+    </notice-bar> -->
 
-    <!-- TODO: Remove this once we know what a verified verification status looks like -->
-    <notice-bar :type="NoticeBarTypes.Warning" class="verify-step-notice-bar" v-if="verificationStatus">
-      <template v-for="status in verificationStatus" :key="status.type">
-        <p>{{ JSON.stringify(status) }}</p>
+    <notice-bar :type="NoticeBarTypes.Critical" class="verify-step-notice-bar" v-if="verificationCriticalErrors.length > 0">
+      <template v-for="criticalError in verificationCriticalErrors" :key="criticalError">
+        <p>{{ t(`views.mail.sections.customDomains.verificationCriticalErrors.${criticalError}`) }}</p>
+      </template>
+
+      <template #cta>
+        <button class="close-button" @click="verificationCriticalErrors = []">
+          <ph-x size="24" />
+        </button>
       </template>
     </notice-bar>
 

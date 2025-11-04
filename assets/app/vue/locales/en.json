@@ -165,7 +165,13 @@
           "delete": "Delete",
           "verify": "Verify",
           "reVerify": "Re-verify",
-          "domainAlreadyExists": "Domain already exists"
+          "domainAlreadyExists": "Domain already exists",
+          "verificationCriticalErrors": {
+            "mxLookupError": "Unable to find mail servers for domain",
+            "ipLookupError": "Unable to resolve IP addresses",
+            "connectionError": "Failed to connect to mail server",
+            "readGreetingError": "We could not verify that the domain records connect to Thundermail"
+          }
         },
         "securitySettings": {
           "securitySettings": "Security Settings",
