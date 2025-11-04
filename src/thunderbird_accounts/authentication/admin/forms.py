@@ -82,8 +82,6 @@ class CustomUserFormBase(forms.ModelForm):
 
 
 class CustomNewUserForm(CustomUserFormBase):
-    oidc_id: Optional[str] = None
-
     def clean(self):
         super().clean()
 
@@ -100,11 +98,11 @@ class CustomNewUserForm(CustomUserFormBase):
                 self.cleaned_data.get('email'),
                 self.cleaned_data.get('timezone'),
                 name=name,
-                send_reset_password_email=True,
+                send_reset_password_email=False,
             )
 
             # Save the oidc id so it matches on login
-            self.oidc_id = keycloak_pkid
+            self.cleaned_data['oidc_id'] = keycloak_pkid
         except (ValueError, InvalidDomainError) as ex:
             # Only username errors raise ValueErrors right now
             self.add_error('username', str(ex))
@@ -119,8 +117,7 @@ class CustomNewUserForm(CustomUserFormBase):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-
-        user.oidc_id = self.oidc_id
+        user.oidc_id = self.cleaned_data.get('oidc_id')
 
         # Actually save the user
         if commit:

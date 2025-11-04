@@ -116,15 +116,12 @@ class AdminCreateUserTestCase(TestCase):
         self.assertEqual(user.oidc_id, FAKE_OIDC_UUID)
 
         # 1. Creating the user
-        # 2. Sending the update password email
-        self.assertEqual(mock_requests.call_count, 2)
+        self.assertEqual(mock_requests.call_count, 1)
 
         # Ensure that our endpoint calls line up with our expectations above
         # ...yes it has that many tuples
         self.assertEqual(mock_requests.call_args_list[0][0][0], 'users')
         self.assertEqual(mock_requests.call_args_list[0][0][1], RequestMethods.POST)
-        self.assertEqual(mock_requests.call_args_list[1][0][0], f'users/{FAKE_OIDC_UUID}/execute-actions-email')
-        self.assertEqual(mock_requests.call_args_list[1][0][1], RequestMethods.PUT)
 
 
 @patch('thunderbird_accounts.mail.clients.MailClient._update_principal')
