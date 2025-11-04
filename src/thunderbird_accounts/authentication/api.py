@@ -37,6 +37,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
 
+from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.serializers import UserProfileSerializer
 from thunderbird_accounts.authentication.clients import KeycloakClient
 
@@ -75,7 +76,14 @@ def get_user_profile(request: Request):
 def get_active_sessions(request: Request):
     if not request.user.is_authenticated:
         raise NotAuthenticated()
-    return Response(KeycloakClient().get_active_sessions(request.user.oidc_id))
+
+    try:
+        keycloak_client = KeycloakClient()
+        sessions = keycloak_client.get_active_sessions(request.user.oidc_id)
+        return Response(sessions)
+    except Exception as e:
+        logging.exception(f'Error fetching active sessions: {e}')
+        raise ValidationError('Error fetching active sessions')
 
 
 @api_view(['GET'])
@@ -349,8 +357,30 @@ def sign_out_session(request: Request):
     if not session_id:
         raise ValidationError('session_id is required')
 
+    oidc_id_token = request.session.get('oidc_id_token')
+
+    if not oidc_id_token:
+        raise ValidationError('No oidc_id_token found in session')
+
     try:
+        # Sign out from the Keycloak session
         keycloak_client = KeycloakClient()
-        return Response(keycloak_client.sign_out_session(session_id))
+        keycloak_client.sign_out_session(session_id)
+
+        # Verify if the request's keycloak session_id matches the one in the ID token
+        auth_backend = AccountsOIDCBackend()
+        payload = auth_backend.verify_token(oidc_id_token)
+        keycloak_session_id = payload.get('sid')
+
+        if not keycloak_session_id:
+            raise ValidationError("'sid' claim not found in ID token. Did you enable back-channel logout in Keycloak?")
+
+        if keycloak_session_id == session_id:
+            # If so, delete current session data and cookie from Django as well
+            request.session.flush()
+
+        return Response({'success': True})
+
     except Exception as e:
-        raise ValidationError(f'Error signing out session: {e}')
+        logging.exception(f'Error signing out session: {e}')
+        raise ValidationError('Error signing out session')
