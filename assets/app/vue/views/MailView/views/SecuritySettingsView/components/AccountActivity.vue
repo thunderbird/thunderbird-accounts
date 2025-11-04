@@ -24,7 +24,10 @@ const signOut = async (id: string) => {
   if (window.confirm(t('views.mail.views.securitySettings.signOutConfirmation'))) {
     try {
       await signOutSession(id);
-      window.location.href = '/';
+
+      // Reload to refresh the data
+      // and auto-redirect to home in case the user signed themselves out
+      window.location.reload();
     } catch (error) {
       console.log(error);
       errorMessage.value = t('views.mail.views.securitySettings.errorSigningOutSession', { error: error });
