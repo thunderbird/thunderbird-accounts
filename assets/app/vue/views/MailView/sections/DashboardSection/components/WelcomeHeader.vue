@@ -22,6 +22,10 @@ const planStorageProgress = computed(() => {
   const usedQuota = parseFloat(planInfo.value?.usedQuota);
   const mailStorage = parseFloat(planInfo.value?.features.mailStorage);
 
+  if (mailStorage === 0) {
+    return '0%';
+  }
+
   return `${(usedQuota / mailStorage) * 100}%`;
 });
 const mailStorageQuotaFormatted = computed(() => formatBytes(planInfo.value?.features.mailStorage));
