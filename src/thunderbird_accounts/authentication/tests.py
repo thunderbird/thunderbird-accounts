@@ -3,6 +3,8 @@ from unittest.mock import patch, MagicMock
 import freezegun
 from django.conf import settings
 from django.contrib.admin import AdminSite
+from django.core.exceptions import PermissionDenied
+from django.forms import model_to_dict
 from django.http import HttpRequest
 from django.test import TestCase, Client as RequestClient
 from django.urls import reverse
@@ -439,6 +441,164 @@ class AccountsOIDCBackendTestCase(TestCase):
             self.user.save()
             self.user.refresh_from_db()
         self.backend = AccountsOIDCBackend()
+
+    def test_create_user_success(self):
+        claims = {
+            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
+            'zoneinfo': 'America/Vancouver',
+            'email_verified': True,
+            'name': 'Admin Example',
+            'preferred_username': 'admin@example.org',
+            'session_state': '196cb668-5492-4fd1-811b-72fdae44fd39',
+            'given_name': 'Admin',
+            'locale': 'en',
+            'family_name': 'Example',
+            'email': 'admin@example.com',
+        }
+
+        user = self.backend.create_user(claims)
+        self.assertIsNotNone(user)
+
+        self.assertEqual(user.email, claims.get('email'))
+        self.assertEqual(user.username, claims.get('preferred_username'))
+        self.assertEqual(user.display_name, claims.get('preferred_username'))
+        self.assertEqual(user.get_full_name(), claims.get('name'))
+        self.assertEqual(user.oidc_id, claims.get('sub'))
+        self.assertEqual(user.language, claims.get('locale'))
+        self.assertEqual(user.timezone, claims.get('zoneinfo'))
+
+        # is_services_admin wasn't included in the claim, and the default create_user value is False
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
+
+    def test_create_user_success_bare_minimum(self):
+        claims = {
+            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
+            'preferred_username': 'admin@example.org',
+            'email': 'admin@example.com',
+            'email_verified': True,
+        }
+
+        user = self.backend.create_user(claims)
+        self.assertIsNotNone(user)
+        self.assertEqual(user.email, claims.get('email'))
+        self.assertEqual(user.username, claims.get('preferred_username'))
+        self.assertEqual(user.display_name, claims.get('preferred_username'))
+        self.assertEqual(user.oidc_id, claims.get('sub'))
+
+    def test_create_user_fail_on_no_verified_email(self):
+        claims = {
+            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
+            'preferred_username': 'admin@example.org',
+            'email': 'admin@example.com',
+            'email_verified': False,
+        }
+
+        with self.assertRaises(PermissionDenied):
+            self.backend.create_user(claims)
+
+    def test_create_user_fail_on_not_on_allow_list(self):
+        _original_settings = settings.ALLOWED_EMAIL_DOMAINS
+        settings.ALLOWED_EMAIL_DOMAINS = ['example.ca']
+        claims = {
+            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
+            'preferred_username': 'admin@example.org',
+            'email': 'admin@example.com',
+            'email_verified': False,
+        }
+
+        with self.assertRaises(PermissionDenied):
+            self.backend.create_user(claims)
+
+        settings.ALLOWED_EMAIL_DOMAINS = _original_settings
+
+    def test_create_user_superuser_access(self):
+        claims = {
+            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
+            'preferred_username': 'admin@example.org',
+            'email': 'admin@example.com',
+            'email_verified': True,
+            'is_services_admin': 'yes',
+        }
+
+        user = self.backend.create_user(claims)
+        self.assertIsNotNone(user)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+
+    def test_update_user_success(self):
+        claims = {
+            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
+            'preferred_username': 'admin@example.org',
+            'email': 'admin@example.com',
+            'email_verified': True,
+            # New data!
+            'given_name': 'Example Admin',
+            'is_services_admin': 'yes',
+        }
+
+        user = User.objects.create(
+            email=claims.get('email'),
+            username=claims.get('preferred_username'),
+            display_name=claims.get('preferred_username'),
+            oidc_id=claims.get('sub'),
+            is_staff=False,
+            is_superuser=False,
+        )
+        # Retrieve a copy of the fields as update_user will update this instance.
+        user_data = model_to_dict(user)
+
+        user_updated = self.backend.update_user(user, claims)
+
+        self.assertIsNotNone(user_updated)
+
+        # Make sure these values are fixed
+        self.assertFalse(user_data.get('is_staff'))
+        self.assertFalse(user_data.get('is_superuser'))
+
+        # Make sure nothing else has changed
+        self.assertEqual(user_updated.email, user_data.get('email'))
+        self.assertEqual(user_updated.username, user_data.get('username'))
+        self.assertEqual(user_updated.display_name, user_data.get('display_name'))
+        self.assertEqual(user_updated.oidc_id, user_data.get('oidc_id'))
+
+        # Make sure these fields have changed
+        self.assertNotEqual(user_updated.first_name, user_data.get('first_name'))
+        self.assertNotEqual(user_updated.is_staff, user_data.get('is_staff'))
+        self.assertNotEqual(user_updated.is_superuser, user_data.get('is_superuser'))
+
+    def test_update_user_dont_reset_services_admin_permissions(self):
+        """Testing update_user to make sure not including is_services_admin in claim will leave is_staff,
+        and is_superuser fields alone."""
+        claims = {
+            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
+            'preferred_username': 'admin@example.org',
+            'email': 'admin@example.com',
+            'email_verified': True,
+        }
+
+        user = User.objects.create(
+            email=claims.get('email'),
+            username=claims.get('preferred_username'),
+            display_name=claims.get('preferred_username'),
+            oidc_id=claims.get('sub'),
+            is_staff=True,
+            is_superuser=True,
+        )
+        # Retrieve a copy of the fields as update_user will update this instance.
+        user_data = model_to_dict(user)
+
+        user_updated = self.backend.update_user(user, claims)
+
+        self.assertIsNotNone(user_updated)
+
+        # Make sure these values are fixed
+        self.assertTrue(user_data.get('is_staff'))
+        self.assertTrue(user_data.get('is_superuser'))
+
+        # Make sure these fields have not changed
+        self.assertTrue(user_updated.is_staff)
+        self.assertTrue(user_updated.is_superuser)
 
     def test_filter_users_by_claims_no_fallback(self):
         _original_setting = settings.OIDC_FALLBACK_MATCH_BY_EMAIL

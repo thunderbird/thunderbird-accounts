@@ -32,9 +32,11 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         user.display_name = claims.get('preferred_username')
         user.username = claims.get('preferred_username')
 
-        # Non-standard
-        user.is_staff = claims.get('is_services_admin', 'no').lower() == 'yes'
-        user.is_superuser = claims.get('is_services_admin', 'no').lower() == 'yes'
+        # Non-standard, only adjust the value if it comes not undefined / null
+        is_services_admin = claims.get('is_services_admin')
+        if is_services_admin is not None:
+            user.is_staff = is_services_admin == 'yes'
+            user.is_superuser = is_services_admin == 'yes'
 
         return user
 
