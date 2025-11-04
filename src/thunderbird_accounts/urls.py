@@ -24,6 +24,7 @@ from thunderbird_accounts.support.customer import support_customer_api
 
 from thunderbird_accounts.authentication.api import (
     get_user_profile,
+    get_active_sessions,
     sign_up,
     can_i_sign_up,
     create_test_allow_list_entry,
@@ -67,6 +68,7 @@ urlpatterns = [
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
+    path('api/v1/auth/get-active-sessions/', get_active_sessions, name='api_get_active_sessions'),
     path('api/v1/auth/sign-up/', sign_up, name='api_sign_up'),
     path('api/v1/auth/can-i-sign-up/', can_i_sign_up, name='api_can_i_sign_up'),
     path('api/v1/auth/waffle-flags/', auth_api.get_waffle_flags, name='api_waffle_flags'),
