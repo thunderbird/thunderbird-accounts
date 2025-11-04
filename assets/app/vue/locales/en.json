@@ -128,7 +128,8 @@
           "anErrorOccurredWhileChangingDisplayName": "An error occurred while changing the display name",
           "newDisplayName": "New display name",
           "displayNamePlaceholder": "Enter your display name",
-          "displayNameRequired": "Display name is required"
+          "displayNameRequired": "Display name is required",
+          "addEmailAliasDisabledTooltip": "Add a custom domain to enable email aliases"
         },
         "customDomains": {
           "customDomains": "Custom Domains",

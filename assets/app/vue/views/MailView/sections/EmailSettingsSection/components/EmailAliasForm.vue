@@ -27,6 +27,8 @@ const allowedDomainsOptions = computed(() => props.allowedDomains.map((domain) =
   value: domain,
 })));
 
+const addEmailAliasDisabled = computed(() => props.allowedDomains.length === 0);
+
 const validateEmailAlias = (value: string): string | null => {
   if (!value) {
     return null; // Let built-in required validation handle empty values
@@ -69,8 +71,10 @@ const onSubmit = () => {
   <template v-if="step === EMAIL_ALIAS_STEP.INITIAL">
     <primary-button
       variant="outline"
+      class="add-email-alias-button"
       @click="step = EMAIL_ALIAS_STEP.SUBMIT"
-      :disabled="allowedDomains.length === 0"
+      :disabled="addEmailAliasDisabled"
+      :tooltip="addEmailAliasDisabled ? t('views.mail.sections.emailSettings.addEmailAliasDisabledTooltip') : null"
     >
       {{ t('views.mail.sections.emailSettings.addEmailAlias') }}
     </primary-button>
@@ -103,6 +107,10 @@ const onSubmit = () => {
 </template>
 
 <style scoped>
+:deep(.tooltip) {
+  min-width: 200px;
+}
+
 .email-alias-input-wrapper {
   display: flex;
   align-items: flex-start;
