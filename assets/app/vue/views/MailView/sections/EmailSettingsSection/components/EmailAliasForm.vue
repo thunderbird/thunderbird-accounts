@@ -67,7 +67,11 @@ const onSubmit = () => {
 
 <template>
   <template v-if="step === EMAIL_ALIAS_STEP.INITIAL">
-    <primary-button variant="outline" @click="step = EMAIL_ALIAS_STEP.SUBMIT">
+    <primary-button
+      variant="outline"
+      @click="step = EMAIL_ALIAS_STEP.SUBMIT"
+      :disabled="allowedDomains.length === 0"
+    >
       {{ t('views.mail.sections.emailSettings.addEmailAlias') }}
     </primary-button>
   </template>

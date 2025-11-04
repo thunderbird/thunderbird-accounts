@@ -78,7 +78,7 @@ const onDeleteAliasError = (error: string) => {
       {{ t('views.mail.sections.emailSettings.emailAliasesPrimaryChangeWarning') }}
     </notice-bar> -->
 
-    <div class="aliases-list">
+    <div class="aliases-list" v-if="emailAliases.length > 0">
       <div class="alias-item" v-for="alias in emailAliases" :key="alias.email">
         <p>{{ alias.email }}</p>
 
