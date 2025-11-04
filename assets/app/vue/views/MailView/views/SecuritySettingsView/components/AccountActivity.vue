@@ -5,6 +5,9 @@ import { PhDevices } from '@phosphor-icons/vue';
 import DetailsSummary from '@/components/DetailsSummary.vue';
 import { LinkButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 
+// API
+import { getActiveSessions, signOutSession } from '../api';
+
 // Types
 import type { ActiveSession } from '../types';
 
@@ -17,35 +20,35 @@ const activeSessions = ref([]);
 const loading = ref(true);
 const errorMessage = ref(null);
 
-const signOut = (id: number) => {
+const signOut = async (id: string) => {
   if (window.confirm(t('views.mail.views.securitySettings.signOutConfirmation'))) {
-    // TODO: Implement sign out logic
-    console.log(`Signing out device ${id}`);
+    try {
+      await signOutSession(id);
+      window.location.href = '/';
+    } catch (error) {
+      console.log(error);
+      errorMessage.value = t('views.mail.views.securitySettings.errorSigningOutSession', { error: error });
+    }
   }
 };
 
 onMounted(async () => {
   try {
-    const response = await fetch('/api/v1/auth/get-active-sessions/', {
-      method: 'GET',
-        credentials: 'include',
-      });
+    const data = await getActiveSessions();
 
-      const data = await response.json();
+    const sortedData = data.sort((a: ActiveSession, b: ActiveSession) => b.last_access - a.last_access);
 
-      const sortedData = data.sort((a: ActiveSession, b: ActiveSession) => b.last_access - a.last_access);
-
-      activeSessions.value = sortedData.map((session: ActiveSession) => ({
-        id: session.id,
-        deviceInfo: session.device_info,
-        ipAddress: session.ip_address,
-        lastAccess: formatDate(new Date(session.last_access), locale.value, t),
-      }));
-    } catch (error) {
-      errorMessage.value = t('views.mail.views.securitySettings.errorLoadingActiveSessions', error);
-    } finally {
-      loading.value = false;
-    }
+    activeSessions.value = sortedData.map((session: ActiveSession) => ({
+      id: session.id,
+      deviceInfo: session.device_info,
+      ipAddress: session.ip_address,
+      lastAccess: formatDate(new Date(session.last_access), locale.value, t),
+    }));
+  } catch (error) {
+    errorMessage.value = t('views.mail.views.securitySettings.errorLoadingActiveSessions', error);
+  } finally {
+    loading.value = false;
+  }
 });
 </script>
 
@@ -93,6 +96,10 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.notice-bar {
+  margin-block-end: 1rem;
+}
+
 .account-activity-description {
   color: var(--colour-ti-secondary);
   line-height: 1.32;

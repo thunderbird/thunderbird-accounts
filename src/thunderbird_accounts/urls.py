@@ -19,7 +19,7 @@ from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
 from django.utils.translation import gettext_lazy as _
 
-from thunderbird_accounts.authentication.api import get_user_profile, get_active_sessions
+from thunderbird_accounts.authentication.api import get_user_profile, get_active_sessions, sign_out_session
 
 admin.site.site_header = _('Thunderbird Accounts Admin Panel')
 admin.site.site_title = _('Thunderbird Accounts Admin Panel')
@@ -57,6 +57,7 @@ urlpatterns = [
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/auth/get-active-sessions/', get_active_sessions, name='api_get_active_sessions'),
+    path('api/v1/auth/sign-out-session/', sign_out_session, name='api_sign_out_session'),
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
     path('api/v1/subscription/paddle/info', subscription_views.get_paddle_information, name='paddle_info'),
     path('api/v1/subscription/paddle/portal', subscription_views.get_paddle_portal_link, name='paddle_portal'),
