@@ -65,8 +65,8 @@ onMounted(async () => {
       <template v-if="planInfo">
         <div class="plan-info">
           <p class="plan-name">{{ planInfo.name }}</p>
-          <p class="plan-storage">{{ usedQuotaFormatted }} <span>{{
-            t('views.mail.sections.dashboard.welcomeHeader.storageOf') }}</span> {{ mailStorageQuotaFormatted }}
+          <p class="plan-storage">
+            {{ t('views.mail.sections.dashboard.welcomeHeader.storageOf', { used: usedQuotaFormatted, total: mailStorageQuotaFormatted }) }}
           </p>
         </div>
 

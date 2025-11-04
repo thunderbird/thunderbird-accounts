@@ -64,7 +64,7 @@
         "dashboard": {
           "welcomeHeader": {
             "welcome": "Welcome",
-            "storageOf": "of",
+            "storageOf": "{used} of {total}",
             "errorMessage": "Failed to load subscription information"
           },
           "setUpAnEmailApp": "Set up an Email app",
