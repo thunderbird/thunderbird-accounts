@@ -26,7 +26,6 @@ const customDomainsDescription = computed(() =>
 const lastDomainRemoved = ref<string>(null);
 const errorMessage = ref<string>(null);
 const customDomainFormRef = ref(null);
-const verificationWarnings = ref<string[]>([]);
 const verificationCriticalErrors = ref<string[]>([]);
 const maxCustomDomains = window._page?.maxCustomDomains;
 
@@ -62,10 +61,6 @@ const handleCustomDomainViewDnsRecords = (domainName: string) => {
   if (customDomainFormRef.value) {
     customDomainFormRef.value.viewDnsRecords(domainName);
   }
-};
-
-const handleCustomDomainVerificationWarnings = (warnings: string[]) => {
-  verificationWarnings.value = warnings;
 };
 
 const handleCustomDomainVerificationCriticalErrors = (criticalErrors: string[]) => {
@@ -116,7 +111,6 @@ export default {
             @custom-domain-verified="handleCustomDomainVerified"
             @custom-domain-error="handleCustomDomainError"
             @custom-domain-view-dns-records="handleCustomDomainViewDnsRecords"
-            @custom-domain-verification-warnings="handleCustomDomainVerificationWarnings"
             @custom-domain-verification-critical-errors="handleCustomDomainVerificationCriticalErrors"
           />
         </div>
@@ -132,19 +126,7 @@ export default {
         </template>
       </notice-bar>
 
-      <!-- Domain Verification Notice Bars -->
-      <notice-bar :type="NoticeBarTypes.Warning" class="verify-step-notice-bar" v-if="verificationWarnings.length > 0">
-        <template v-for="warning in verificationWarnings" :key="warning">
-          <p>{{ t(`views.mail.sections.customDomains.verificationWarnings.${warning}`) }}</p>
-        </template>
-
-        <template #cta>
-          <button @click="verificationWarnings = []">
-            <ph-x size="24" />
-          </button>
-        </template>
-      </notice-bar>
-
+      <!-- Domain Verification Notice Bar -->
       <notice-bar :type="NoticeBarTypes.Critical" class="verify-step-notice-bar" v-if="verificationCriticalErrors.length > 0">
         <template v-for="criticalError in verificationCriticalErrors" :key="criticalError">
           <p>{{ t(`views.mail.sections.customDomains.verificationCriticalErrors.${criticalError}`) }}</p>

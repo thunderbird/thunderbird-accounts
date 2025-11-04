@@ -9,6 +9,9 @@ import { DOMAIN_STATUS } from '../types';
 // API
 import { verifyDomain, removeCustomDomain } from '../api'
 
+// Utils
+import { deduplicateCriticalErrors } from '../utils';
+
 const props = defineProps<{
   domain: {
     name: string;
@@ -43,7 +46,7 @@ const handleRetry = async () => {
       emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.VERIFIED });
     } else {
       emit('custom-domain-verification-warnings', data.warnings);
-      emit('custom-domain-verification-critical-errors', data.critical_errors);
+      emit('custom-domain-verification-critical-errors', deduplicateCriticalErrors(data.critical_errors || []));
       emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.FAILED });
     }
   } catch (error) {

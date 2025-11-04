@@ -11,7 +11,7 @@ import { CustomDomain, DNSRecord, STEP, DOMAIN_STATUS } from '../types';
 import { addCustomDomain, verifyDomain, getRemoteDNSRecords } from '../api';
 
 // Utils
-import { generateDNSRecords, extractDKIMRecords } from '../utils';
+import { generateDNSRecords, extractDKIMRecords, deduplicateCriticalErrors } from '../utils';
 
 const { t } = useI18n();
 
@@ -31,8 +31,6 @@ const customDomain = ref(null);
 const isAddingCustomDomain = ref(false);
 const isVerifyingDomain = ref(false);
 const customDomainError = ref<string>(null);
-
-const verificationWarnings = ref<string[]>([]);
 const verificationCriticalErrors = ref<string[]>([]);
 
 const maxCustomDomains = window._page?.maxCustomDomains;
@@ -89,7 +87,6 @@ const onVerifyDomain = async () => {
   isVerifyingDomain.value = true;
 
   // Cleanup previous verification results
-  verificationWarnings.value = [];
   verificationCriticalErrors.value = [];
 
   try {
@@ -101,8 +98,7 @@ const onVerifyDomain = async () => {
       customDomain.value = null;
       customDomainError.value = null;
     } else {
-      verificationWarnings.value = data.warnings || [];
-      verificationCriticalErrors.value = data.critical_errors || [];
+      verificationCriticalErrors.value = deduplicateCriticalErrors(data.critical_errors || []);
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
     }
   } catch (error) {
@@ -207,18 +203,6 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
         </button>
       </template>
     </notice-bar> -->
-
-    <notice-bar :type="NoticeBarTypes.Warning" class="verify-step-notice-bar" v-if="verificationWarnings.length > 0">
-      <template v-for="warning in verificationWarnings" :key="warning">
-        <p>{{ t(`views.mail.sections.customDomains.verificationWarnings.${warning}`) }}</p>
-      </template>
-
-      <template #cta>
-        <button class="close-button" @click="verificationWarnings = []">
-          <ph-x size="24" />
-        </button>
-      </template>
-    </notice-bar>
 
     <notice-bar :type="NoticeBarTypes.Critical" class="verify-step-notice-bar" v-if="verificationCriticalErrors.length > 0">
       <template v-for="criticalError in verificationCriticalErrors" :key="criticalError">

@@ -161,23 +161,11 @@
           "verify": "Verify",
           "reVerify": "Re-verify",
           "domainAlreadyExists": "Domain already exists",
-          "verificationWarnings": {
-            "mtaStsNotFound": "MTA-STS policy not published (optional security feature)",
-            "tlsRptNotFound": "TLS-RPT record not published (optional reporting feature)",
-            "tlsaNotFound": "TLSA/DANE records not found (optional security feature)",
-            "mtaStsFetchError": "Failed to fetch MTA-STS policy",
-            "mtaStsVerifyError": "MTA-STS verification failed",
-            "tlsRptLookupError": "TLS-RPT lookup failed",
-            "tlsaLookupError": "TLSA lookup failed",
-            "daneVerifyError": "DANE verification failed",
-            "startTlsError": "TLS upgrade failed (degraded security but may work)"
-          },
           "verificationCriticalErrors": {
             "mxLookupError": "Unable to find mail servers for domain",
             "ipLookupError": "Unable to resolve IP addresses",
             "connectionError": "Failed to connect to mail server",
-            "readGreetingError": "SMTP greeting failed",
-            "ehloError": "EHLO command failed"
+            "readGreetingError": "We could not verify that the domain records connect to Thundermail"
           }
         },
         "securitySettings": {
