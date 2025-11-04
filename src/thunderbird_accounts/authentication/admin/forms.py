@@ -1,5 +1,4 @@
 import zoneinfo
-from typing import Optional
 
 import sentry_sdk
 from django import forms
