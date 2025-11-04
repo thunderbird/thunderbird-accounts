@@ -379,7 +379,6 @@ class KeycloakClient:
 
         return pkid
 
-
     def get_active_sessions(self, oidc_id: str):
         endpoint = f'users/{oidc_id}/sessions'
         response = self.request(endpoint, RequestMethods.GET)
@@ -406,6 +405,18 @@ class KeycloakClient:
             )
 
         return active_sessions
+
+    def sign_out_session(self, session_id: str):
+        endpoint = f'sessions/{session_id}'
+        response = self.request(endpoint, RequestMethods.DELETE)
+
+        if response.status_code != 204:
+            sentry_sdk.capture_exception(response.content.decode())
+            raise Exception(
+                f'Error<{response.status_code}>: Cannot sign out session due to: {response.content.decode()}'
+            )
+
+        return {'success': True}
 
 
 class KeycloakMfaClient:

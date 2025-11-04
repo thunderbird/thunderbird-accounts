@@ -301,6 +301,7 @@
           "errorLoadingActiveSessions": "Failed to load active sessions: {error}",
           "unknownDevice": "Unknown Device",
           "signOutConfirmation": "Are you sure you want to sign out of the selected device?",
+          "errorSigningOutSession": "Failed to sign out of device: {error}",
           "recordsTableHeaderDevice": "Device – App",
           "recordsTableHeaderIpAddress": "IP address",
           "recordsTableHeaderLastActive": "Last active",
