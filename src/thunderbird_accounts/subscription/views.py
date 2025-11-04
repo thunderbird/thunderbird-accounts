@@ -18,6 +18,7 @@ from paddle_billing.Resources.Notifications.Operations import ListNotifications
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.request import Request
 
+from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks, models
 from thunderbird_accounts.subscription.decorators import inject_paddle
@@ -198,6 +199,17 @@ def get_subscription_plan_info(request: Request):
     # Get price information
     price = subscription_item.price
 
+    # Used quota comes from Stalwart and it is optional
+    used_quota = None
+
+    try:
+        stalwart_client = MailClient()
+        account = stalwart_client.get_account(request.user.stalwart_primary_email)
+        used_quota = account.get('used_quota', 0)
+    except Exception as e:
+        logging.error(f'Error getting used quota: {e}')
+        return JsonResponse({'success': False, 'error': 'Error getting mail storage used quota'}, status=500)
+
     # Build the response
     subscription_info = {
         'name': plan.name,
@@ -212,6 +224,7 @@ def get_subscription_plan_info(request: Request):
             'domains': plan.mail_domain_count,
         },
         'autoRenewal': subscription.next_billed_at,
+        'usedQuota': used_quota,
     }
 
     return JsonResponse({'success': True, 'subscription': subscription_info})

@@ -64,7 +64,8 @@
         "dashboard": {
           "welcomeHeader": {
             "welcome": "Welcome",
-            "storageOf": "of"
+            "storageOf": "of",
+            "errorMessage": "Failed to load subscription information"
           },
           "setUpAnEmailApp": "Set up an Email app",
           "downloadDescription": "For a quick and easy setup, we recommend using Thunderbird. Just download the app, enter your email address and password, and you're ready to go.",

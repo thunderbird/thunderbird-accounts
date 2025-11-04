@@ -13,4 +13,5 @@ export interface SubscriptionData {
   description: string;
   features: SubscriptionFeatures;
   autoRenewal: string | null;
+  usedQuota: string;
 }
