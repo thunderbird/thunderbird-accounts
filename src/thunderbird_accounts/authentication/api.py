@@ -32,7 +32,7 @@ from thunderbird_accounts.authentication.utils import (
     get_user_by_contact_email,
 )
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
-from rest_framework.exceptions import NotAuthenticated
+from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
@@ -340,3 +340,21 @@ def sign_up(request: Request):
         )
 
     return Response({'success': True})
+
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+def sign_out_session(request: Request):
+    if not request.user.is_authenticated:
+        raise NotAuthenticated()
+
+    session_id = request.data.get('session_id')
+
+    if not session_id:
+        raise ValidationError('session_id is required')
+
+    try:
+        keycloak_client = KeycloakClient()
+        return Response(keycloak_client.sign_out_session(session_id))
+    except Exception as e:
+        raise ValidationError(f'Error signing out session: {e}')
