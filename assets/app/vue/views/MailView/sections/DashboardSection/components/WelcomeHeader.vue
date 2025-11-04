@@ -148,6 +148,7 @@ header {
     border-radius: 64px;
     box-shadow: inset 2px 2px 4px 0 rgba(0, 0, 0, 0.1);
     background-color: rgba(0, 0, 0, 0.1);
+    overflow: hidden;
 
     .plan-storage-progress-fill {
       height: 100%;

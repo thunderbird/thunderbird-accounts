@@ -205,6 +205,7 @@ def get_subscription_plan_info(request: Request):
     try:
         stalwart_client = MailClient()
         account = stalwart_client.get_account(request.user.stalwart_primary_email)
+        quota = account.get('quota', 0)
         used_quota = account.get('used_quota', 0)
     except Exception as e:
         logging.error(f'Error getting used quota: {e}')
@@ -218,7 +219,7 @@ def get_subscription_plan_info(request: Request):
         'period': price.billing_cycle_interval,
         'description': subscription_item.product.description or '',
         'features': {
-            'mailStorage': plan.mail_storage_bytes,
+            'mailStorage': quota, # The mail storage quota source of truth is Stalwart
             'sendStorage': plan.send_storage_bytes,
             'emailAddresses': plan.mail_address_count,
             'domains': plan.mail_domain_count,
