@@ -6,8 +6,8 @@ import type { SubscriptionData } from './types';
  * @param bytes - The number of bytes to convert
  * @returns The value with unit as a string (e.g., "30 GB", "1 KB"), formatted without unnecessary decimals
  */
-const formatBytes = (bytes: string | null): string | null => {
-  if (!bytes) return null;
+export const formatBytes = (bytes: string | null): string | null => {
+  if (!bytes || bytes === '0') return '0 B';
 
   const bytesNum = parseFloat(bytes);
 
@@ -29,7 +29,7 @@ const formatBytes = (bytes: string | null): string | null => {
   }
 
   // If less than 1 KB, return in bytes
-  return `${bytesNum} bytes`;
+  return `${bytesNum} B`;
 }
 
 /**

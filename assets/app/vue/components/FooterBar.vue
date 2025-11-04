@@ -36,10 +36,11 @@ const navItemsMail = [
     route: '/mail#custom-domains',
     i18nKey: 'customDomains',
   },
-  {
-    route: '/mail/security-settings',
-    i18nKey: 'securitySettings',
-  },
+  // TODO: Uncomment when implementing security settings
+  // {
+  //   route: '/mail/security-settings',
+  //   i18nKey: 'securitySettings',
+  // },
 ];
 
 const currentRoute = useRoute();

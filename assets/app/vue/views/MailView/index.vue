@@ -2,7 +2,9 @@
 import DashboardSection from './sections/DashboardSection/index.vue';
 import EmailSettingsSection from './sections/EmailSettingsSection/index.vue';
 import CustomDomainsSection from './sections/CustomDomainsSection/index.vue';
-import SecuritySettingsSection from './sections/SecuritySettingsSection.vue';
+
+// TODO: Uncomment when implementing security settings
+// import SecuritySettingsSection from './sections/SecuritySettingsSection.vue';
 </script>
 
 <script lang="ts">
@@ -16,7 +18,9 @@ export default {
     <dashboard-section />
     <email-settings-section />
     <custom-domains-section />
-    <security-settings-section />
+
+    <!-- TODO: Uncomment when implementing security settings -->
+    <!-- <security-settings-section /> -->
   </div>
 </template>
 
