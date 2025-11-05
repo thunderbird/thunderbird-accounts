@@ -29,6 +29,10 @@ class CustomUserAdmin(UserAdmin):
             _('Keycloak Account info'),
             {'fields': ('oidc_id',)},
         ),
+        (
+            _('Paddle Account info'),
+            {'fields': ('is_awaiting_payment_verification',)},
+        ),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'email')}),
         (
             _('Permissions'),

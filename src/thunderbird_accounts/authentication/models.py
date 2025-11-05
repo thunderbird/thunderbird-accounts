@@ -51,6 +51,14 @@ class User(AbstractUser, BaseModel):
         _('Test Account'), default=False, help_text=_('Whether this account is used for testing.')
     )
 
+    is_awaiting_payment_verification = models.BooleanField(
+        default=False,
+        help_text=_(
+            "The user has paid and we're waiting on Paddle to verify the payment was successful."
+            '<br>'
+            '<b>Note:</b> Please do not override this unless authorized.'
+        ),
+    )
     plan = models.ForeignKey('subscription.Plan', null=True, on_delete=models.SET_NULL)
 
     class Meta(BaseModel.Meta):

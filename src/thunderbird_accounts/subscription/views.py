@@ -68,6 +68,13 @@ def notify_paddle_checkout_complete(request: Request, paddle: Client):
     if not transaction_id:
         return JsonResponse({'success': False})
 
+    user = request.user
+    if not user:
+        return JsonResponse({'success': False})
+
+    user.is_awaiting_payment_verification = True
+    user.save()
+
     # Give paddle some time to update their end
     # Yes this is not perfect, I know.
     time.sleep(5)

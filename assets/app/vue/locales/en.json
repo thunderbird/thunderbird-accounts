@@ -310,7 +310,13 @@
       },
       "planSystemError": "No plan exists or the plan is incorrectly setup. Please correct this in the admin panel.",
       "paymentComplete": "Please wait while we verify payment, you will be redirected shortly.",
-      "title": "Order Summary"
+      "title": "Order Summary",
+      "verification": {
+        "title": "Your payment is being processed.",
+        "text": "This step can take up to 48 hours to complete.",
+        "help": "Need help? Contact {0}.",
+        "support": "support"
+      }
     }
   },
   "footer": {

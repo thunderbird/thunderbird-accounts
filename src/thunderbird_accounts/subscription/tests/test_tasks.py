@@ -383,6 +383,10 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
     def test_success(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
 
+        # Ensure they're in the payment pending state
+        self.test_user.is_awaiting_payment_verification = True
+        self.test_user.save()
+
         # Retrieve the webhook sample
         data = self.retrieve_webhook_fixture()
 
@@ -434,6 +438,10 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
         self.assertEqual(subscription_items[1].quantity, 1)
         self.assertIsNotNone(subscription_items[1].subscription)
         self.assertIsNotNone(subscription_items[1].price)
+
+        # Refresh the user
+        self.test_user.refresh_from_db()
+        self.assertFalse(self.test_user.is_awaiting_payment_verification)
 
     def test_success_updates_account_quota(self):
         self.assertEqual(models.Subscription.objects.count(), 0)

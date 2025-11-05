@@ -1,4 +1,4 @@
-import {createRouter, createWebHistory} from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router';
 
 // Accounts Routes
 import HomeView from '@/views/HomeView.vue';
@@ -23,7 +23,7 @@ const router = createRouter({
       component: HomeView,
       meta: {
         isPublic: true,
-      }
+      },
     },
     {
       path: '/dashboard',
@@ -58,7 +58,7 @@ const router = createRouter({
       component: PrivacyView,
       meta: {
         isPublic: true,
-      }
+      },
     },
     {
       path: '/terms',
@@ -66,45 +66,49 @@ const router = createRouter({
       component: TermsView,
       meta: {
         isPublic: true,
-      }
+      },
     },
     // Sign Up / Subscribe
     {
       path: '/subscribe',
       name: 'subscribe',
-      component: SubscribeView
-    }
+      component: SubscribeView,
+    },
   ],
   scrollBehavior(to, _from, savedPosition) {
     if (to.hash) {
       return {
-        el: to.hash
-      }
+        el: to.hash,
+      };
     }
 
     if (savedPosition) {
       return savedPosition;
     }
 
-    return {top: 0, left: 0}
-  }
+    return { top: 0, left: 0 };
+  },
 });
 
 router.beforeEach((to, from) => {
   const isAuthenticated = window._page?.isAuthenticated;
   const hasActiveSubscription = window._page?.hasActiveSubscription;
+  const isAwaitingPaymentVerification = window._page?.isAwaitingPaymentVerification;
+  const sendToSubscribe = isAwaitingPaymentVerification || !hasActiveSubscription;
 
   // Don't let unauthenticated users anywhere except the home view
   if (!isAuthenticated && !to.meta?.isPublic) {
-    return {name: 'home'};
+    return { name: 'home' };
   }
 
   // Don't let unsubscribed users anywhere except the subscribe view
-  if (isAuthenticated && !hasActiveSubscription && to.name != 'subscribe') {
-    return {name: 'subscribe'};
+  if (isAuthenticated && sendToSubscribe && to.name != 'subscribe') {
+    return { name: 'subscribe' };
+  } else if (isAuthenticated && !sendToSubscribe && to.name == 'subscribe') {
+    return { name: 'dashboard' };
   }
 
-  return true
-})
+  return true;
+});
 
 export default router;
