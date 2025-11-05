@@ -649,6 +649,9 @@ class SubscriptionUpdatedToCancelledTaskTestCase(SubscriptionCreatedTaskTestCase
     def test_success(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
 
+        self.test_user.is_awaiting_payment_verification = True
+        self.test_user.save()
+
         # Retrieve the webhook sample
         data = self.retrieve_webhook_fixture()
 
@@ -695,6 +698,10 @@ class SubscriptionUpdatedToCancelledTaskTestCase(SubscriptionCreatedTaskTestCase
         self.assertTrue(subscription.subscriptionitem_set.count() == 1)
 
         self.assertTrue(subscription.status == models.Subscription.StatusValues.CANCELED.value)
+
+        # Refresh the test user, and confirm that the payment pending flag was not cleared (as this is a cancel)
+        self.test_user.refresh_from_db()
+        self.assertTrue(self.test_user.is_awaiting_payment_verification)
 
     def test_subscription_already_exists(self):
         """Not needed for update webhook"""

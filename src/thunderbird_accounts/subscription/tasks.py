@@ -283,8 +283,10 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             defaults={'quantity': quantity},
         )
 
-    user.is_awaiting_payment_verification = False
-    user.save()
+    # If the subscription updated or was created with active then clear any payment pending flags
+    if status == Subscription.StatusValues.ACTIVE.value:
+        user.is_awaiting_payment_verification = False
+        user.save()
 
     return {
         'paddle_id': paddle_id,
