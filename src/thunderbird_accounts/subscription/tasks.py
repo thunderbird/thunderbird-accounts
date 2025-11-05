@@ -6,6 +6,7 @@ from django.core.signing import Signer, BadSignature
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product, Plan
+from thunderbird_accounts.subscription.utils import activate_subscription_features
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -272,6 +273,8 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             plan = product_obj.plan
             if not plan:
                 logging.warning(f'Product {product.get("id")} has no plan attached!')
+            else:
+                activate_subscription_features(user, plan)
 
         SubscriptionItem.objects.update_or_create(
             paddle_price_id=price.get('id'),
