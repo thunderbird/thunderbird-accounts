@@ -691,13 +691,13 @@ def add_email_alias(request: HttpRequest):
     domain = data.get('domain')
 
     if not email_alias or not domain:
-        return JsonResponse({'success': False, 'error': _('Email alias and domain are required')}, status=400)
+        return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)
 
     if (
         domain not in request.user.domains.values_list('name', flat=True)
         and domain not in settings.ALLOWED_EMAIL_DOMAINS
     ):
-        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+        return JsonResponse({'success': False, 'error': _('Domain not found.')}, status=404)
 
     full_email_alias = f'{email_alias}@{domain}'
 
@@ -707,26 +707,27 @@ def add_email_alias(request: HttpRequest):
     except Account.DoesNotExist:
         logging.error(f'Account not found for user {request.user.uuid}')
         return JsonResponse(
-            {'success': False, 'error': 'Account not found'},
+            {'success': False, 'error': _('There was an error retrieving your mail account.')},
             status=404,
         )
 
     # Create the email alias record locally
     try:
-        email_obj = Email.objects.create(
+        email_obj, created = Email.objects.get_or_create(
             address=full_email_alias,
             type=Email.EmailType.ALIAS,
             account=account,
         )
-    except IntegrityError:
-        return JsonResponse(
-            {'success': False, 'error': _('This email address is not available')},
-            status=400,
-        )
+
+        if not created:
+            return JsonResponse(
+                {'success': False, 'error': _('This email address is not available.')},
+                status=400,
+            )
     except Exception as e:
         logging.error(f'Error creating email alias: {e}')
         return JsonResponse(
-            {'success': False, 'error': 'An error occurred while creating the email alias. Please try again later.'},
+            {'success': False, 'error': _('An error occurred while creating the email alias. Please try again later.')},
             status=500,
         )
 
@@ -740,7 +741,7 @@ def add_email_alias(request: HttpRequest):
 
         logging.error(f'Error adding email alias: {e}')
         return JsonResponse(
-            {'success': False, 'error': 'An error occurred while adding the email alias. Please try again later.'},
+            {'success': False, 'error': _('An error occurred while adding the email alias. Please try again later.')},
             status=500,
         )
 
@@ -755,7 +756,7 @@ def remove_email_alias(request: HttpRequest):
     email_alias = data.get('email-alias')
 
     if not email_alias:
-        return JsonResponse({'success': False, 'error': _('Email alias is required')}, status=400)
+        return JsonResponse({'success': False, 'error': _('Email alias is required.')}, status=400)
 
     # Get the account
     try:
@@ -763,7 +764,7 @@ def remove_email_alias(request: HttpRequest):
     except Account.DoesNotExist:
         logging.error(f'Account not found for user {request.user.uuid}')
         return JsonResponse(
-            {'success': False, 'error': 'Account not found'},
+            {'success': False, 'error': _('There was an error retrieving your mail account to update.')},
             status=404,
         )
 
@@ -773,7 +774,7 @@ def remove_email_alias(request: HttpRequest):
     except Email.DoesNotExist:
         logging.error(f'Email alias not found for user {request.user.uuid} and email {email_alias}')
         return JsonResponse(
-            {'success': False, 'error': 'Email alias not found'},
+            {'success': False, 'error': _('Email alias not found.')},
             status=404,
         )
 
@@ -784,7 +785,7 @@ def remove_email_alias(request: HttpRequest):
     except Exception as e:
         logging.error(f'Error removing email alias: {e}')
         return JsonResponse(
-            {'success': False, 'error': 'An error occurred while removing the email alias. Please try again later.'},
+            {'success': False, 'error': _('An error occurred while removing the email alias. Please try again later.')},
             status=500,
         )
 
