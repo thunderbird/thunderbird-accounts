@@ -181,6 +181,18 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             'reason': 'invalid signed user id provided (bad signature exception)',
         }
 
+    try:
+        user = User.objects.get(pk=user_uuid)
+    except User.DoesNotExist:
+        logging.error(f'Signed user uuid {user_uuid} is invalid! ')
+        return {
+            'paddle_id': paddle_id,
+            'occurred_at': occurred_at,
+            'user_uuid': user_uuid,
+            'task_status': 'failed',
+            'reason': 'invalid signed user id provided (no user found)',
+        }
+
     if next_billed_at:
         next_billed_at = datetime.datetime.fromisoformat(next_billed_at)
 
@@ -262,11 +274,7 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             if not plan:
                 logging.warning(f'Product {product.get("id")} has no plan attached!')
             else:
-                try:
-                    user = User.objects.get(pk=user_uuid)
-                    activate_subscription_features(user, plan)
-                except User.DoesNotExist:
-                    logging.warning(f'Product {product.get("id")} has no valid user attached!')
+                activate_subscription_features(user, plan)
 
         SubscriptionItem.objects.update_or_create(
             paddle_price_id=price.get('id'),
@@ -277,6 +285,11 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             product_id=product_obj.uuid if product_obj else None,
             defaults={'quantity': quantity},
         )
+
+    # If the subscription updated or was created with active then clear any payment pending flags
+    if status == Subscription.StatusValues.ACTIVE.value:
+        user.is_awaiting_payment_verification = False
+        user.save()
 
     return {
         'paddle_id': paddle_id,

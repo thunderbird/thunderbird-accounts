@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import CheckoutStep from '@/views/SubscribeView/components/CheckoutStep.vue';
+import PaymentPendingStep from '@/views/SubscribeView/components/PaymentPendingStep.vue';
+
+const isAwaitingPaymentVerification = window._page?.isAwaitingPaymentVerification;
 </script>
 
 <script lang="ts">
@@ -10,7 +13,8 @@ export default {
 
 <template>
   <div class="subscribe-view">
-    <checkout-step />
+    <payment-pending-step v-if="isAwaitingPaymentVerification" />
+    <checkout-step v-else />
   </div>
 </template>
 

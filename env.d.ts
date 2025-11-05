@@ -7,6 +7,8 @@ declare global {
     _page: {
       pageId?: string;
       isAuthenticated?: boolean;
+      isAwaitingPaymentVerification?: boolean;
+      hasActiveSubscription?: boolean;
       userEmail?: string;
       userFullName?: string;
       userDisplayName?: string;

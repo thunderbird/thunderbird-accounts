@@ -165,6 +165,32 @@ class PaddleTestCase(TestCase):
             user_id=self.test_user.uuid,
         )
 
+        # If required we need to attach a fake product and plan to this test
+        data = self.retrieve_webhook_fixture()
+        if data:
+            event_data: dict = data.get('data')
+            for item in event_data.get('items', []):
+                product_data: dict = item.get('product')
+                if product_data:
+                    product, _created = models.Product.objects.update_or_create(
+                        paddle_id=product_data.get('id'),
+                        defaults={
+                            'paddle_id': product_data.get('id'),
+                            'name': product_data.get('name'),
+                            'product_type': product_data.get('type'),
+                            'status': models.Product.StatusValues.ACTIVE.value,
+                        },
+                    )
+                    self.assertIsNotNone(product)
+                    plan, _created = models.Plan.objects.update_or_create(
+                        name=f'{product_data.get("name")} plan',
+                        defaults={
+                            'visible_on_subscription_page': True,
+                            'product': product,
+                        },
+                    )
+                    self.assertIsNotNone(plan)
+
         # Make sure tasks run in sync
         settings.CELERY_TASK_ALWAYS_EAGER = True
 
@@ -383,6 +409,10 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
     def test_success(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
 
+        # Ensure they're in the payment pending state
+        self.test_user.is_awaiting_payment_verification = True
+        self.test_user.save()
+
         # Retrieve the webhook sample
         data = self.retrieve_webhook_fixture()
 
@@ -435,6 +465,11 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
         self.assertIsNotNone(subscription_items[1].subscription)
         self.assertIsNotNone(subscription_items[1].price)
 
+        # Refresh the user
+        self.test_user.refresh_from_db()
+        self.assertFalse(self.test_user.is_awaiting_payment_verification)
+        self.assertIsNotNone(self.test_user.plan)
+
     def test_success_updates_account_quota(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
 
@@ -453,16 +488,16 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
         self.assertIsNotNone(product_id)
         self.assertIsNotNone(product_name)
 
-        product = models.Product.objects.create(paddle_id=product_id, name=product_name)
+        # Created in base class setup
+        product = models.Product.objects.get(paddle_id=product_id)
 
         self.assertIsNotNone(product)
 
         quota_in_bytes = 1337 * settings.ONE_GIGABYTE_IN_BYTES
-        plan = models.Plan.objects.create(
-            name='Test Plan',
-            product_id=product.uuid,
-            mail_storage_bytes=quota_in_bytes,
-        )
+
+        plan = product.plan
+        plan.mail_storage_bytes = quota_in_bytes
+        plan.save()
 
         self.assertIsNotNone(plan)
 
@@ -641,6 +676,9 @@ class SubscriptionUpdatedToCancelledTaskTestCase(SubscriptionCreatedTaskTestCase
     def test_success(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
 
+        self.test_user.is_awaiting_payment_verification = True
+        self.test_user.save()
+
         # Retrieve the webhook sample
         data = self.retrieve_webhook_fixture()
 
@@ -687,6 +725,10 @@ class SubscriptionUpdatedToCancelledTaskTestCase(SubscriptionCreatedTaskTestCase
         self.assertTrue(subscription.subscriptionitem_set.count() == 1)
 
         self.assertTrue(subscription.status == models.Subscription.StatusValues.CANCELED.value)
+
+        # Refresh the test user, and confirm that the payment pending flag was not cleared (as this is a cancel)
+        self.test_user.refresh_from_db()
+        self.assertTrue(self.test_user.is_awaiting_payment_verification)
 
     def test_subscription_already_exists(self):
         """Not needed for update webhook"""
