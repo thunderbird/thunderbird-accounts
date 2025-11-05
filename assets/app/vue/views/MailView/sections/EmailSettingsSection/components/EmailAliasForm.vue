@@ -67,7 +67,11 @@ const onSubmit = () => {
 
 <template>
   <template v-if="step === EMAIL_ALIAS_STEP.INITIAL">
-    <primary-button variant="outline" @click="step = EMAIL_ALIAS_STEP.SUBMIT">
+    <primary-button
+      variant="outline"
+      class="add-email-alias-button"
+      @click="step = EMAIL_ALIAS_STEP.SUBMIT"
+    >
       {{ t('views.mail.sections.emailSettings.addEmailAlias') }}
     </primary-button>
   </template>
@@ -99,6 +103,10 @@ const onSubmit = () => {
 </template>
 
 <style scoped>
+:deep(.tooltip) {
+  min-width: 200px;
+}
+
 .email-alias-input-wrapper {
   display: flex;
   align-items: flex-start;

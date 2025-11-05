@@ -28,7 +28,9 @@ declare global {
       cancelRedirect?: string;
       allowedDomains?: string[];
       customDomains?: CustomDomain[];
+      emailAddresses?: string[];
       maxCustomDomains?: number;
+      maxEmailAliases?: number;
       tbProAppointmentUrl?: string;
       tbProSendUrl?: string;
       currentView?: Record<string, any>;

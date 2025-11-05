@@ -31,8 +31,11 @@
     formError: {{ form_error|to_json|safe|default:'null' }},
     connectionInfo: {{ connection_info|to_json|safe }},
     appPasswords: {{ app_passwords|safe }},
+    allowedDomains: {{ allowed_domains|safe }},
     customDomains: {{ custom_domains|safe }},
+    emailAddresses: {{ email_addresses|safe }},
     maxCustomDomains: {{ max_custom_domains|to_json|safe }},
+    maxEmailAliases: {{ max_email_aliases|to_json|safe }},
     tbProAppointmentUrl: {{ tb_pro_appointment_url|to_json|safe }},
     tbProSendUrl: {{ tb_pro_send_url|to_json|safe }},
     {% block extra_page_params %}{% endblock %}

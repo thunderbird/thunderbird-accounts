@@ -23,7 +23,8 @@ const displayName = ref<string>(null);
 const errorMessageDisplayName = ref(window._page?.formError || '');
 const isSubmittingDisplayName = ref(false);
 
-const userEmail = computed(() => window._page?.userEmail);
+// From Stalwart, primary email is always the first email address in the list
+const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
 const userDisplayName = computed(() => window._page?.userDisplayName);
 
 const onSetDisplayNameSubmit = async () => {
@@ -75,7 +76,7 @@ const onCancelSetDisplayName = () => {
   <div class="user-info-side-container">
     <div>
       <strong>{{ t('views.mail.sections.emailSettings.primaryEmail') }}:</strong>
-      <p>{{ userEmail }}</p>
+      <p>{{ primaryEmail }}</p>
     </div>
 
     <div class="display-name-content">
