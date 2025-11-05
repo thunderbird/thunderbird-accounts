@@ -4,6 +4,7 @@ import logging
 
 import requests.exceptions
 from django.conf import settings
+from django.db import IntegrityError
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
@@ -700,10 +701,43 @@ def add_email_alias(request: HttpRequest):
 
     full_email_alias = f'{email_alias}@{domain}'
 
+    # Get the user's account
+    try:
+        account = Account.objects.get(user=request.user)
+    except Account.DoesNotExist:
+        logging.error(f'Account not found for user {request.user.uuid}')
+        return JsonResponse(
+            {'success': False, 'error': 'Account not found'},
+            status=404,
+        )
+
+    # Create the email alias record locally
+    try:
+        email_obj = Email.objects.create(
+            address=full_email_alias,
+            type=Email.EmailType.ALIAS,
+            account=account,
+        )
+    except IntegrityError:
+        return JsonResponse(
+            {'success': False, 'error': _('This email address is not available')},
+            status=400,
+        )
+    except Exception as e:
+        logging.error(f'Error creating email alias: {e}')
+        return JsonResponse(
+            {'success': False, 'error': 'An error occurred while creating the email alias. Please try again later.'},
+            status=500,
+        )
+
+    # Create the email alias in Stalwart
     try:
         stalwart_client = MailClient()
         stalwart_client.save_email_addresses(request.user.stalwart_primary_email, full_email_alias)
     except Exception as e:
+        # If Stalwart creation fails, delete the local Email object
+        email_obj.delete()
+
         logging.error(f'Error adding email alias: {e}')
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while adding the email alias. Please try again later.'},
@@ -723,6 +757,27 @@ def remove_email_alias(request: HttpRequest):
     if not email_alias:
         return JsonResponse({'success': False, 'error': _('Email alias is required')}, status=400)
 
+    # Get the account
+    try:
+        account = Account.objects.get(user=request.user)
+    except Account.DoesNotExist:
+        logging.error(f'Account not found for user {request.user.uuid}')
+        return JsonResponse(
+            {'success': False, 'error': 'Account not found'},
+            status=404,
+        )
+
+    # Get the local Email object
+    try:
+        email_obj = Email.objects.get(address=email_alias, type=Email.EmailType.ALIAS, account=account)
+    except Email.DoesNotExist:
+        logging.error(f'Email alias not found for user {request.user.uuid} and email {email_alias}')
+        return JsonResponse(
+            {'success': False, 'error': 'Email alias not found'},
+            status=404,
+        )
+
+    # Remove from Stalwart
     try:
         stalwart_client = MailClient()
         stalwart_client.delete_email_addresses(request.user.stalwart_primary_email, email_alias)
@@ -732,6 +787,14 @@ def remove_email_alias(request: HttpRequest):
             {'success': False, 'error': 'An error occurred while removing the email alias. Please try again later.'},
             status=500,
         )
+
+    # Remove the local Email object
+    try:
+        email_obj.delete()
+    except Exception as e:
+        # Don't return an error since Stalwart deletion succeeded
+        # Just log the error for investigation
+        logging.error(f'Error deleting email alias record: {e}')
 
     return JsonResponse({'success': True})
 
