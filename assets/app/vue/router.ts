@@ -102,9 +102,9 @@ router.beforeEach((to, from) => {
   }
 
   // Don't let unsubscribed users anywhere except the subscribe view
-  if (isAuthenticated && sendToSubscribe && to.name != 'subscribe') {
+  if (isAuthenticated && sendToSubscribe && to.name !== 'subscribe') {
     return { name: 'subscribe' };
-  } else if (isAuthenticated && !sendToSubscribe && to.name == 'subscribe') {
+  } else if (isAuthenticated && !sendToSubscribe && to.name === 'subscribe') {
     return { name: 'dashboard' };
   }
 
