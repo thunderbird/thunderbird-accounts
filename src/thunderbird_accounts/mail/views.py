@@ -714,8 +714,10 @@ def add_email_alias(request: HttpRequest):
     try:
         email_obj, created = Email.objects.get_or_create(
             address=full_email_alias,
-            type=Email.EmailType.ALIAS,
-            account=account,
+            defaults={
+                'type': Email.EmailType.ALIAS.value,
+                'account': account,
+            },
         )
 
         if not created:
