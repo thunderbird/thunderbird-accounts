@@ -8,7 +8,7 @@ const { t } = useI18n();
     <h1 class="title">{{ t('views.subscribe.verification.title') }}</h1>
     <h3>{{ t('views.subscribe.verification.text') }}</h3>
     <i18n-t keypath="views.subscribe.verification.help" tag="p">
-      <router-link to="/contact/">{{ t('views.subscribe.verification.support') }}</router-link>
+      <a href="/contact/">{{ t('views.subscribe.verification.support') }}</a>
     </i18n-t>
   </section>
 </template>
