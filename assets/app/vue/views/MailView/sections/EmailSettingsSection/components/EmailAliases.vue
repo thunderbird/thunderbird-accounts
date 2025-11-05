@@ -29,9 +29,15 @@ const isAddingEmailAlias = ref(false);
 const errorMessage = ref<string>(null);
 
 const allowedDomains = computed(() => {
-  return window._page.customDomains
+  // Allowed domains include any verified custom domains
+  const customDomains = window._page.customDomains
     ?.filter(domain => domain.status === DOMAIN_STATUS.VERIFIED)
     .map(domain => domain.name) || [];
+
+  // And the domains in the settings.ALLOWED_EMAIL_DOMAINS from the backend
+  const allowedDomains = window._page.allowedDomains || [];
+
+  return [...customDomains, ...allowedDomains];
 });
 
 const onAddAlias = async (emailAlias: string, domain: string) => {

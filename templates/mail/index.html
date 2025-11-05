@@ -30,6 +30,7 @@
     formError: {{ form_error|to_json|safe|default:'null' }},
     connectionInfo: {{ connection_info|to_json|safe }},
     appPasswords: {{ app_passwords|safe }},
+    allowedDomains: {{ allowed_domains|safe }},
     customDomains: {{ custom_domains|safe }},
     emailAddresses: {{ email_addresses|safe }},
     maxCustomDomains: {{ max_custom_domains|to_json|safe }},

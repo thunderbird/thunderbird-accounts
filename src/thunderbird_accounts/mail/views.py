@@ -91,6 +91,7 @@ def home(request: HttpRequest):
         'connection_info': settings.CONNECTION_INFO,
         'app_passwords': json.dumps(app_passwords),
         'user_display_name': user_display_name,
+        'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS,
         'custom_domains': json.dumps(custom_domains),
         'email_addresses': json.dumps(email_addresses),
         'max_custom_domains': max_custom_domains,
@@ -691,7 +692,10 @@ def add_email_alias(request: HttpRequest):
     if not email_alias or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required')}, status=400)
 
-    if domain not in request.user.domains.values_list('name', flat=True):
+    if (
+        domain not in request.user.domains.values_list('name', flat=True)
+        and domain not in settings.ALLOWED_EMAIL_DOMAINS
+    ):
         return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
 
     full_email_alias = f'{email_alias}@{domain}'
