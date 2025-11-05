@@ -18,7 +18,7 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         email = claims.get('email', '')
         email_verified = claims.get('email_verified')
 
-        if not settings.IS_DEV and (not email_verified or not is_email_in_allow_list(email) or not is_email_reserved(email)):
+        if not settings.IS_DEV and (not email_verified or not is_email_in_allow_list(email)):
             logging.warning(f"Denied user {email} as they're not in the allow list.")
             messages.error(
                 self.request,

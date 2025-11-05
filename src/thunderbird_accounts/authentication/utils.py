@@ -50,11 +50,7 @@ def is_email_in_allow_list(email: str):
     return email.endswith(tuple(allow_list.split(',')))
 
 def is_email_reserved(email: str):
-    if not is_reserved(email):
-        return True
-
-    return email.endswith(tuple(allow_list.split(',')))
-
+    return is_reserved(email)
 
 def create_aia_url(action: KeycloakRequiredAction):
     """Create a url for a user to start a keycloak flow.

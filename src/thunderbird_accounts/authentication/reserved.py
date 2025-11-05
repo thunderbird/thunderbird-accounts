@@ -1,155 +1,48 @@
 import re
 
-"""
-reserved_names = [
-    # thunderbird
-    "thunderbird",
-    "thunderbird*support",
-    "thunderbird*help",
-    "thunderbird*contact",
-    "thunderbird*mozilla",
-    "thunderbird*email",
-    "thunderbird*pro",
-    "thunderbirdpro*support",
-    "thunderbirdpro*mozilla",
-    "thunderbirdpro*email",
-    "thunderbirdpro*help",
-    "thunderbirdpro*contact",
-    "officialthunderbird",
-    "official*thunderbirdpro",
-    "real*thunderbird",
-    "real*thunderbirdpro",
-    "thunderbird*official",
-    "thunderbirdpro*official",
-    "thunderbird*real",
-    "thunderbirdpro*real",
-    "official*thunderbird[]support",
-    "real thunderbird[]support",
-    "thunderbird[]support official",
-    "thunderbird[]support real",
-    "official thunderbird[]mozilla",
-    "real thunderbird[]mozilla",
-    "thunderbird[]mozilla official",
-    "thunderbird[]mozilla real",
-    "official thunderbird[]email",
-    "real thunderbird[]email",
-    "thunderbird[]email official",
-    "thunderbird[]email real",
-    "official thunderbird[]pro",
-    "real thunderbird[]pro",
-    "thunderbird[]pro official",
-    "thunderbird[]pro real",
+# brand related names, and also help/support
+brands = "(thunderbird|thunderbirdpro|mzla|mozilla|firefox|help|support)"
 
-    # thundermail
-    "thundermail",
-    "thundermail[]support",
-    "thundermail[]mozilla",
-    "thundermail[]mzla",
-    "thundermail[]pro",
-    "official thundermail",
-    "real thundermail",
-    "thundermail official",
-    "thundermail real",
-    "official thundermail[]support",
-    "real thundermail[]support",
-    "thundermail[]support official",
-    "thundermail[]support real",
-    "official thundermail[]mozilla",
-    "real thundermail[]mozilla",
-    "thundermail[]mozilla official",
-    "thundermail[]mozilla real",
-    "official thundermail[]mzla",
-    "real thundermail[]mzla",
-    "thundermail[]mzla official",
-    "thundermail[]mzla real",
-    "official thundermail[]pro",
-    "real thundermail[]pro",
-    "thundermail[]pro official",
-    "thundermail[]pro real",
-
-    # mozilla
-    "mozilla",
-    "mozilla[]support",
-    "mozilla[]thunderbird",
-    "mozilla[]firefox",
-    "mozilla[]org",
-    "official mozilla",
-    "real mozilla",
-    "mozilla official",
-    "mozilla real",
-    "official mozilla[]support",
-    "real mozilla[]support",
-    "mozilla[]support official",
-    "mozilla[]support real",
-    "official mozilla[]thunderbird",
-    "real mozilla[]thunderbird",
-    "mozilla[]thunderbird official",
-    "mozilla[]thunderbird real",
-    "official mozilla[]firefox",
-    "real mozilla[]firefox",
-    "mozilla[]firefox official",
-    "mozilla[]firefox real",
-    "official mozilla[]org",
-    "real mozilla[]org",
-    "mozilla[]org official",
-    "mozilla[]org real",
-
-    # mzla
-    "mzla",
-    "mzla[]support",
-    "mzla[]thunderbird",
-    "mzla[]thundermail",
-    "mzla[]org",
-    "official mzla",
-    "real mzla",
-    "mzla official",
-    "mzla real",
-    "official mzla[]support",
-    "real mzla[]support",
-    "mzla[]support official",
-    "mzla[]support real",
-    "official mzla[]thunderbird",
-    "real mzla[]thunderbird",
-    "mzla[]thunderbird official",
-    "mzla[]thunderbird real",
-    "official mzla[]thundermail",
-    "real mzla[]thundermail",
-    "mzla[]thundermail official",
-    "mzla[]thundermail real",
-    "official mzla[]org",
-    "real mzla[]org",
-    "mzla[]org official",
-    "mzla[]org real",
-
-    # firefox
-    "firefox",
-    "firefox[]browser",
-    "firefox[]mozilla",
-    "official firefox",
-    "real firefox",
-    "firefox official",
-    "firefox real",
-    "official firefox[]browser",
-    "real firefox[]browser",
-    "firefox[]browser official",
-    "firefox[]browser real",
-    "official firefox[]mozilla",
-    "real firefox[]mozilla",
-    "firefox[]mozilla official",
-    "firefox[]mozilla real",
+# Brand names plus common tokens
+names_with_brands = [
+    brands + "+",
+    brands + ".*support+",
+    brands + ".*help+",
+    brands + ".*mozilla+",
+    brands + ".*email+",
+    brands + ".*org+"
 ]
-"""
-#tb_name = "(thunderbird|thunderbirdpro)"
-tb_name = "thunderbird"
-names_with_thunderbird = [
-    tb_name + "+$",
-    tb_name + ".*support+$",
-    tb_name + ".*mozilla+$",
-    tb_name + ".*email+$"
-]
+reserved_names = [] + names_with_brands
 
-names_with_official = []
-regexes = [re.compile("^" + n) for n in names_with_thunderbird]
+# official/real versions
+reserved_names = reserved_names + [
+        'official[_]*' + n for n in names_with_brands
+    ] + [
+        n + '[_]*official' for n in names_with_brands
+    ] + [
+        'real[_]*' + n for n in names_with_brands
+    ] + [
+        n + '[_]*real' for n in names_with_brands
+    ]
+
+# test users, match anything mzla-test* related
+reserved_names += ["mzla-test[.]*"]
+
+# common example usernames
+reserved_names += ["user(name|_name)*$"] + ["example(user|_user|name|_name)*$"] + ["test"]
+
+# potential company team use
+team_suffix = "(team|_team)*"
+reserved_names += ["team"] + ["hr"] + ["accounts" + team_suffix] + ["engineering" + team_suffix] \
+    + ["marketing" + team_suffix] + ["design" + team_suffix] + ["contact(us|_us)*$"]
+
+# mailserver general
+reserved_names += ["root", "postmaster", "hostmaster"]
+
+# birbs
+reserved_names += ["roc", "ezio", "mithu", "ava", "callum", "sora", "robin", "nemo"]
+
+regexes = [re.compile("^" + n + "$") for n in reserved_names]
 
 def is_reserved(testString):
     return any(r.match(testString) for r in regexes)

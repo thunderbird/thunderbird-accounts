@@ -54,6 +54,21 @@ class AdminCreateUserTestCase(TestCase):
 
         mock_requests.assert_not_called()
 
+    def test_failed_username_validation_reserved(self, mock_requests: MagicMock):
+        # Bad username
+        form_data = {
+            'username': 'support@thundermail.com',
+            'email': 'frog@example.com',
+            'timezone': 'America/Toronto',
+        }
+
+        form = self._build_form(form_data)
+
+        with self.assertRaises(ValueError):
+            form.save(True)
+
+        mock_requests.assert_not_called()
+
     def test_failed_email_validation(self, mock_requests: MagicMock):
         # Bad email domain
         form_data = {
@@ -136,7 +151,7 @@ class AdminUpdateUserTestcase(TestCase):
         self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
         # Create a test user so we can update it later
         self.user = User.objects.create(
-            oidc_id=FAKE_OIDC_UUID, username=f'test@{self.subdomain}', email='test@example.com'
+            oidc_id=FAKE_OIDC_UUID, username=f'internaltest@{self.subdomain}', email='test@example.com'
         )
         self.user.save()
         self.user.refresh_from_db()
@@ -224,7 +239,7 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertEqual(mock_update_principal.call_count, 0)
 
     def test_success(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
-        account = Account.objects.create(name='test', user=self.user)
+        account = Account.objects.create(name='internaltest', user=self.user)
         Email.objects.create(
             address=self.user.username,
             type=Email.EmailType.PRIMARY,
@@ -309,7 +324,7 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertEqual(mock_update_principal.call_count, 0)
 
     def test_success_without_username_update(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
-        account = Account.objects.create(name='test', user=self.user)
+        account = Account.objects.create(name='internaltest', user=self.user)
         Email.objects.create(
             address=self.user.username,
             type=Email.EmailType.PRIMARY,
@@ -317,7 +332,7 @@ class AdminUpdateUserTestcase(TestCase):
         )
 
         form_data = {
-            'username': f'test@{self.subdomain}',
+            'username': f'internaltest@{self.subdomain}',
             'email': 'frog@example.com',
             'timezone': 'America/Toronto',
             'oidc_id': self.user.oidc_id,

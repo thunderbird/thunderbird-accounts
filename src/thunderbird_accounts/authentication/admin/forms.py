@@ -13,6 +13,7 @@ from thunderbird_accounts.authentication.exceptions import (
     ImportUserError,
 )
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.utils import is_email_reserved
 from thunderbird_accounts.mail.clients import MailClient
 
 
@@ -76,6 +77,10 @@ class CustomUserFormBase(forms.ModelForm):
                 zoneinfo.ZoneInfo(self.data.get('timezone'))
             except (zoneinfo.ZoneInfoNotFoundError, ValueError) as ex:
                 self.add_error('timezone', str(ex))
+
+        if is_email_reserved(self.data.get('username').partition("@")[0]):
+            self.add_error('username', _('This username is taken.'))
+            return
 
         return super().clean()
 
