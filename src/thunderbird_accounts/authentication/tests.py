@@ -70,7 +70,7 @@ class AdminCreateUserTestCase(TestCase):
 
         # Check for invalid domain error
         self.assertTrue(len(form.errors) > 0)
-        self.assertIn('InvalidDomainError', str(form.errors))
+        self.assertIn('Thundermail address must end with', str(form.errors))
 
         # No email
         form_data = {
