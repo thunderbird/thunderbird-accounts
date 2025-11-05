@@ -63,6 +63,9 @@ class CustomUserFormBase(forms.ModelForm):
     )
 
     def clean(self):
+        if not self.data.get('username', '').endswith(f'@{settings.PRIMARY_EMAIL_DOMAIN}'):
+            self.add_error('username', _(f'Thundermail address must end with {settings.PRIMARY_EMAIL_DOMAIN}'))
+
         if not self.data.get('email'):
             self.add_error('email', _('A recovery email is required.'))
 
