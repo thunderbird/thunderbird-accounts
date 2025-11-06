@@ -421,6 +421,10 @@ resources:
                 value: 'https://mail.stage-thundermail.com'
               - name: STALWART_BASE_API_URL
                 value: 'https://mailstrom-stage-management-i.stage-thundermail.com:8080'
+              - name: TB_PRO_APPOINTMENT_URL
+                value: 'https://appointment-stage.tb.pro/'
+              - name: TB_PRO_SEND_URL
+                value: 'https://send-stage.tb.pro/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth-stage.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
@@ -571,6 +575,10 @@ resources:
                 value: 'https://mail.stage-thundermail.com'
               - name: STALWART_BASE_API_URL
                 value: 'https://mailstrom-stage-management-i.stage-thundermail.com:8080'
+              - name: TB_PRO_APPOINTMENT_URL
+                value: 'https://appointment-stage.tb.pro/'
+              - name: TB_PRO_SEND_URL
+                value: 'https://send-stage.tb.pro/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth-stage.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
