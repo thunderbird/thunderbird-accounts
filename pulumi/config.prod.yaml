@@ -425,6 +425,10 @@ resources:
                 value: 'https://mail.thundermail.com'
               - name: STALWART_BASE_API_URL
                 value: 'https://mailstrom-prod-management-i.thundermail.com:8080'
+              - name: TB_PRO_APPOINTMENT_URL
+                value: 'https://appointment.tb.pro/'
+              - name: TB_PRO_SEND_URL
+                value: 'https://send.tb.pro/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
@@ -581,6 +585,10 @@ resources:
                 value: 'https://mail.thundermail.com'
               - name: STALWART_BASE_API_URL
                 value: 'https://mailstrom-prod-management-i.thundermail.com:8080'
+              - name: TB_PRO_APPOINTMENT_URL
+                value: 'https://appointment.tb.pro/'
+              - name: TB_PRO_SEND_URL
+                value: 'https://send.tb.pro/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
