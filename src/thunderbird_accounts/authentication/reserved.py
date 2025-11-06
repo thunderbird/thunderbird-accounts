@@ -45,7 +45,6 @@ reserved_names += ["^root$", "^postmaster$", "^hostmaster$", "^support$", "^help
 reserved_names += ["roc$", "ezio$", "mithu$", "ava$", "callum$", "sora$", "robin$", "nemo$"]
 
 regexes = [re.compile("^" + n) for n in reserved_names]
-print(regexes)
 
 def is_reserved(testString):
     return any(r.match(testString) for r in regexes)
