@@ -17,6 +17,10 @@ def activate_subscription_features(user: User, plan: Plan):
 
     account = user.account_set.first()
     if account and account.stalwart_id:
+        # Update the mail storage quota
+        account.quota = plan.mail_storage_bytes
+        account.save()
+
         update_quota_on_stalwart_account(user, account.quota)
         return
 
