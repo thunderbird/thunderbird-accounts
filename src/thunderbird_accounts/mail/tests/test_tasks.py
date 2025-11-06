@@ -32,12 +32,31 @@ class UpdateQuotaOnStalwartAccountTestCase(TaskTestCase):
             instance_mock = Mock()
             mail_client_mock.return_value = instance_mock
 
-            tasks.update_quota_on_stalwart_account.delay(
+            results = tasks.update_quota_on_stalwart_account.run(
                 username=f'test_user@{settings.PRIMARY_EMAIL_DOMAIN}', quota=settings.ONE_GIGABYTE_IN_BYTES
             )
 
             mail_client_mock.assert_called_once()
             instance_mock.update_quota.assert_called_once()
+
+            self.assertEqual(results['task_status'], 'success')
+
+    def test_with_none(self):
+        """Passing None (the db default for quota in our schema) should actually pass 0 to stalwart.
+        This is the same as unlimited / no quota in stalwart."""
+        with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
+            instance_mock = Mock()
+            mail_client_mock.return_value = instance_mock
+
+            results = tasks.update_quota_on_stalwart_account.run(
+                username=f'test_user@{settings.PRIMARY_EMAIL_DOMAIN}', quota=None
+            )
+
+            mail_client_mock.assert_called_once()
+            instance_mock.update_quota.assert_called_once()
+
+            self.assertEqual(results['task_status'], 'success')
+            self.assertEqual(results['quota'], 0)
 
 
 class CreateStalwartAccountTestCase(TaskTestCase):

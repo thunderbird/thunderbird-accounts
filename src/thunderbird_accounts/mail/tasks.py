@@ -122,9 +122,14 @@ def delete_email_addresses_from_stalwart_account(self, username: str, emails: li
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
-def update_quota_on_stalwart_account(self, username: str, quota: int):
+def update_quota_on_stalwart_account(self, username: str, quota: Optional[int]):
     """Updates the quota value on a stalwart account.
     This will cause the account's storage to be tracked by stalwart."""
+
+    # Small fix for db defaulting to None
+    if quota is None:
+        quota = 0
+
     try:
         stalwart = MailClient()
         stalwart.update_quota(username, quota)
