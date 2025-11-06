@@ -2,8 +2,10 @@ import logging
 from socket import gethostbyname, gethostname
 
 from django.conf import settings
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest
+from django.utils.translation import gettext_lazy as _
 
 from .models import User
 from .utils import is_email_in_allow_list
@@ -18,6 +20,10 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
 
         if not settings.IS_DEV and (not email_verified or not is_email_in_allow_list(email)):
             logging.warning(f"Denied user {email} as they're not in the allow list.")
+            messages.error(
+                self.request,
+                _('You are not on the allow list. If you think this is a mistake, please contact support.'),
+            )
             raise PermissionDenied()
 
         return True

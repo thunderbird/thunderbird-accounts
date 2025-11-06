@@ -15,10 +15,10 @@ export type DNSRecord = {
   name: string;
   content: string;
   priority?: string;
-}
+};
 
 export type CustomDomain = {
   name: string;
   status: DOMAIN_STATUS;
   emailsCount?: number;
-}
+};

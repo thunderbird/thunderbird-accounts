@@ -38,6 +38,7 @@
     maxEmailAliases: {{ max_email_aliases|to_json|safe }},
     tbProAppointmentUrl: {{ tb_pro_appointment_url|to_json|safe }},
     tbProSendUrl: {{ tb_pro_send_url|to_json|safe }},
+    serverMessages: {{ server_messages|default:None|to_json|safe }},
     {% block extra_page_params %}{% endblock %}
   };
   csrfToken.remove();
