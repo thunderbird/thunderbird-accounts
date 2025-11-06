@@ -41,7 +41,7 @@
         "manageDevicesButtonLabel": "Manage devices",
         "logoutFromAllDevicesButtonLabel": "Log out from all devices",
         "deleteAccount": "Delete Account",
-        "deleteAccountText": "This will permanently delete your Thunderbird Pro account and Thunderbird Pro services data. You will not be able to reactivate this account.",
+        "deleteAccountText": "To permanently delete your Thunderbird Pro account and unsubscribe from the service, please reach out to our support team who will be able to assist you. Once your account is deleted, you will not be able to reactivate it or access your data.",
         "deleteAccountButtonLabel": "Delete account and all data"
       },
       "yourCurrentSubscription": {

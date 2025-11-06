@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { DangerButton } from '@thunderbirdops/services-ui';
+import { LinkButton } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 
 const { t } = useI18n();
@@ -27,8 +27,10 @@ const { t } = useI18n();
       <div>
         <strong>{{ t('views.dashboard.privacyAndDataCard.deleteAccount') }}</strong>
         <p>{{ t('views.dashboard.privacyAndDataCard.deleteAccountText') }}</p>
-    
-        <danger-button variant="outline">{{ t('views.dashboard.privacyAndDataCard.deleteAccountButtonLabel') }}</danger-button>
+
+        <link-button href="/contact/" size="small" class="delete-account-button">
+          {{ t('views.dashboard.privacyAndDataCard.deleteAccountButtonLabel') }}
+        </link-button>
       </div>
     </div>
   </card-container>
@@ -70,6 +72,10 @@ const { t } = useI18n();
     display: flex;
     align-items: center;
     gap: 1rem;
+  }
+
+  .delete-account-button {
+    padding-inline: 0;
   }
 }
 
