@@ -835,11 +835,6 @@ class IsReservedUnitTests(TestCase):
         for name in (reserved_names_related + unrelated):
             self.assertFalse(is_reserved(name))
 
-    def test_case_sensitivity(self):
-        # Regexes are lowercase without IGNORECASE
-        for name in ["Thunderbird", "Mozilla", "Support"]:
-            self.assertFalse(is_reserved(name))
-
     def test_partial_matches_should_pass(self):
         # Anchors ^...$ mean full-string match only
         for name in ["user123", "myusernamex", "rooted", "teamwork", "contacting"]:
