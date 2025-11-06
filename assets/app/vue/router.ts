@@ -12,6 +12,9 @@ import TermsView from '@/views/TermsView.vue';
 import MailView from '@/views/MailView/index.vue';
 import SecuritySettingsView from '@/views/MailView/views/SecuritySettingsView/index.vue';
 
+// Zendesk Contact Form (Support)
+import ContactView from '@/views/ContactView/index.vue';
+
 const router = createRouter({
   history: createWebHistory('/'),
   routes: [
@@ -69,6 +72,15 @@ const router = createRouter({
       name: 'subscribe',
       component: SubscribeView,
     },
+    // Zendesk Contact Form (Support)
+    {
+      path: '/contact',
+      name: 'contact',
+      component: ContactView,
+      meta: {
+        isPublic: true,
+      },
+    }
   ],
   scrollBehavior(to, _from, savedPosition) {
     if (to.hash) {

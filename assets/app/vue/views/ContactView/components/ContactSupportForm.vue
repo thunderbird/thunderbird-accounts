@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, useTemplateRef } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes, CheckboxInput } from '@thunderbirdops/services-ui';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
+
+// Types
+import { ContactFieldsAPIResponse, TicketField } from '../types';
 
 // Zendesk Ticket Field <-> Vue Component mapping
 // https://developer.zendesk.com/api-reference/ticketing/tickets/ticket_fields/#create-ticket-field
@@ -21,24 +25,7 @@ const TICKET_FIELD_TYPE_TO_COMPONENT = {
   'description': TextArea,
 };
 
-type TicketForm = {
-  id: number
-}
-
-type TicketField = {
-  id: number,
-  title: string,
-  description: string,
-  required: boolean,
-  type: keyof typeof TICKET_FIELD_TYPE_TO_COMPONENT,
-  custom_field_options?: { id: number, name: string, value: string }[]
-}
-
-interface ContactFieldsAPIResponse {
-  success: boolean,
-  ticket_form: TicketForm,
-  ticket_fields: TicketField[],
-}
+const { t } = useI18n();
 
 const csrfTokenVal = ref(window._page.csrfToken);
 const errorText = ref(window._page.formError);
@@ -109,10 +96,11 @@ const fetchTicketFields = async () => {
           form.value[field.title] = '';
         }
       });
+    } else {
+      errorText.value = t('views.contact.errorFetchingFields');
     }
   } catch (error) {
-    console.error('Error fetching ticket fields:', error);
-    errorText.value = 'Failed to fetch ticket fields. Please try again.';
+    errorText.value = error;
   }
 };
 
@@ -195,15 +183,14 @@ const handleSubmit = async () => {
     const data = await response.json();
 
     if (!data.success) {
-      errorText.value = data.error;
+      errorText.value = data.error || t('views.contact.errorSubmittingForm');
       return;
     }
 
     resetForm();
-    successText.value = 'Your support request has been submitted successfully';
+    successText.value = t('views.contact.success');
   } catch (error) {
-    console.error('Submit error:', error);
-    errorText.value = 'Failed to submit contact form. Please try again.';
+    errorText.value = error;
   } finally {
     isSubmitting.value = false;
   }
@@ -219,10 +206,10 @@ onMounted(() => {
   <notice-bar :type="NoticeBarTypes.Success" v-if="successText" class="notice">{{ successText }}</notice-bar>
 
   <form @submit.prevent="handleSubmit" method="post" action="/contact/submit" ref="formRef">
-    <!-- Email -->
+    <!-- Email (always present) -->
     <text-input ref="emailInput" name="email" type="email" v-model="form.email" :required="true"
       data-testid="contact-email-input">
-      Your email address
+      {{ t('views.contact.emailAddressLabel') }}
     </text-input>
 
     <template v-for="field in dynamicFields" :key="field.id">
@@ -236,21 +223,27 @@ onMounted(() => {
 
     <div class="form-group file-dropzone" @dragover.prevent @drop.prevent="handleDrop" @click="triggerFileSelect"
       role="button" aria-label="Upload files">
-      <p v-if="form.attachments.length === 0">Drag & drop files here, or click to upload</p>
-      <p v-else>{{ form.attachments.length }} file(s) selected. Drag & drop more files here, or click to upload</p>
+      <p v-if="form.attachments.length === 0">
+        {{ t('views.contact.dragAndDropFilesText') }}
+      </p>
+      <p v-else>
+        {{ t('views.contact.filesSelectedText', { count: form.attachments.length }) }}
+      </p>
       <input type="file" ref="fileInput" class="hidden" multiple @change="handleFileSelect" />
     </div>
 
     <ul v-if="form.attachments.length" class="attachment-list">
       <li v-for="(attachment, index) in form.attachments" :key="index">
         <span class="attachment-filename">{{ attachment.filename }}</span>
-        <button @click="removeAttachment(index)" class="remove-attachment-btn">Remove</button>
+        <button @click="removeAttachment(index)" class="remove-attachment-btn">
+          {{ t('views.contact.remove') }}
+        </button>
       </li>
     </ul>
 
     <div class="form-group">
       <primary-button @click.capture="handleSubmit" data-testid="contact-submit-btn" :disabled="isSubmitting">
-        {{ isSubmitting ? 'Submitting...' : 'Submit' }}
+        {{ isSubmitting ? t('views.contact.submitting') : t('views.contact.submit') }}
       </primary-button>
     </div>
 
@@ -341,5 +334,11 @@ form {
 
 .remove-attachment-btn:hover {
   background-color: #c82333;
+}
+
+@media (max-width: 768px) {
+  form {
+    max-width: 100%;
+  }
 }
 </style>
