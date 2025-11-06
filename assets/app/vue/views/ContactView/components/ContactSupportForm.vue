@@ -262,28 +262,32 @@ form {
 
 .form-group {
   margin-block-end: 1rem;
+
+  &.file-dropzone {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+
+    p {
+      margin-block-end: 1rem;
+    }
+
+    &:hover {
+      border-color: #888;
+    }
+
+    &:focus {
+      border-color: #333;
+    }
+  }
 }
 
 /* Bug fix: select-input's labels have a .wrapper class with a max-width of 320px */
 .wrapper {
   max-width: 100%;
-}
-
-.file-dropzone {
-  border: 2px dashed #ccc;
-  border-radius: 8px;
-  padding: 1rem;
-  text-align: center;
-  cursor: pointer;
-  outline: none;
-}
-
-.file-dropzone:hover {
-  border-color: #888;
-}
-
-.file-dropzone:focus {
-  border-color: #333;
 }
 
 .notice {
