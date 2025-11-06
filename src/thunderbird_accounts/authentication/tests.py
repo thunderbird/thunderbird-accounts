@@ -438,6 +438,8 @@ class AccountsOIDCBackendTestCase(TestCase):
             self.user.save()
             self.user.refresh_from_db()
         self.backend = AccountsOIDCBackend()
+        self.backend.request = HttpRequest()
+        self.backend.request._messages = MagicMock()
 
     def test_create_user_success(self):
         claims = {
@@ -505,6 +507,8 @@ class AccountsOIDCBackendTestCase(TestCase):
 
         with self.assertRaises(PermissionDenied):
             self.backend.create_user(claims)
+
+        settings.AUTH_ALLOW_LIST = ''
 
     def test_create_user_fail_on_not_on_allow_list(self):
         _original_settings = settings.ALLOWED_EMAIL_DOMAINS
@@ -630,6 +634,7 @@ class AccountsOIDCBackendTestCase(TestCase):
 
         user_updated = self.backend.update_user(user, claims)
         self.assertIsNotNone(user_updated)
+        settings.AUTH_ALLOW_LIST = ''
 
     def test_update_inactive_user_does_check_allowlist(self):
         """Testing update_user to make sure not including is_services_admin in claim will leave is_staff,
