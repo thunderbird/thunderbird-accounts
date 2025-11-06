@@ -494,6 +494,18 @@ class AccountsOIDCBackendTestCase(TestCase):
         with self.assertRaises(PermissionDenied):
             self.backend.create_user(claims)
 
+    def test_create_user_fail_on_not_in_allow_list(self):
+        settings.AUTH_ALLOW_LIST = 'not_example.org'
+        claims = {
+            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
+            'preferred_username': 'admin@example.org',
+            'email': 'admin@example.com',
+            'email_verified': True,
+        }
+
+        with self.assertRaises(PermissionDenied):
+            self.backend.create_user(claims)
+
     def test_create_user_fail_on_not_on_allow_list(self):
         _original_settings = settings.ALLOWED_EMAIL_DOMAINS
         settings.ALLOWED_EMAIL_DOMAINS = ['example.ca']
@@ -596,6 +608,50 @@ class AccountsOIDCBackendTestCase(TestCase):
         # Make sure these fields have not changed
         self.assertTrue(user_updated.is_staff)
         self.assertTrue(user_updated.is_superuser)
+
+    def test_update_active_user_doesnt_check_allowlist(self):
+        """Testing update_user to make sure not including is_services_admin in claim will leave is_staff,
+        and is_superuser fields alone."""
+        settings.AUTH_ALLOW_LIST = 'example.org'
+        claims = {
+            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
+            'preferred_username': 'admin@example.org',
+            'email': 'admin@not_in_allow_list_example.com',
+            'email_verified': True,
+        }
+
+        user = User.objects.create(
+            email=claims.get('email'),
+            username=claims.get('preferred_username'),
+            display_name=claims.get('preferred_username'),
+            oidc_id=claims.get('sub'),
+            is_active=True,
+        )
+
+        user_updated = self.backend.update_user(user, claims)
+        self.assertIsNotNone(user_updated)
+
+    def test_update_inactive_user_does_check_allowlist(self):
+        """Testing update_user to make sure not including is_services_admin in claim will leave is_staff,
+        and is_superuser fields alone."""
+        settings.AUTH_ALLOW_LIST = 'example.org'
+        claims = {
+            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
+            'preferred_username': 'admin@example.org',
+            'email': 'admin@not_in_allow_list_example.com',
+            'email_verified': True,
+        }
+
+        user = User.objects.create(
+            email=claims.get('email'),
+            username=claims.get('preferred_username'),
+            display_name=claims.get('preferred_username'),
+            oidc_id=claims.get('sub'),
+            is_active=False,
+        )
+
+        with self.assertRaises(PermissionDenied):
+            self.backend.update_user(user, claims)
 
     def test_filter_users_by_claims_no_fallback(self):
         _original_setting = settings.OIDC_FALLBACK_MATCH_BY_EMAIL

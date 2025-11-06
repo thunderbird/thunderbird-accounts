@@ -53,7 +53,8 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         return user
 
     def update_user(self, user, claims):
-        self._check_allow_list(claims)
+        if not user.is_active:
+            self._check_allow_list(claims)
 
         user = self._set_user_fields(user, claims)
 
