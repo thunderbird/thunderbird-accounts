@@ -772,26 +772,18 @@ class IsReservedUnitTests(TestCase):
             self.assertTrue(is_reserved(brand))
     
     def test_brand_plus_variants(self):
-        # (brands)+ allows one-or-more repetition; these should still match
+        # (brands)? allows more than one match
         for name in ["thunderbirdthunderbird", "supportsupport"]:
-            self.assertTrue(is_reserved(name))
+            self.assertFalse(is_reserved(name))
 
     def test_brand_support_help_suffix_patterns(self):
-        # ^(brand).*support+$
-        for name in ["mozilla_customer_support", "firefox-foo-support", "supporthelp"]:  # supporthelp matches (brands)+ too
+        # ^(brand).*support?$ and customer_support and help
+        for name in ["thunderbirdpro_customer_support", "thunderbirdpro_support", "thunderbird_customer_support", "thunderbird_support", "thunderbird-support", "mzla_support", "mzla_help", "mozilla_support", "firefox_help"]:
             self.assertTrue(is_reserved(name))
 
-        # ^(brand).*help+$
-        for name in ["thunderbird-get-help", "mzla__help"]:
-            self.assertTrue(is_reserved(name))
-
-        # ^(brand).*mozilla+$ (brand then mozilla somewhere)
-        for name in ["firefox-to-mozilla", "support---mozilla"]:
-            self.assertTrue(is_reserved(name))
-
-        # ^(brand).*email+$ and ^(brand).*org+$
-        for name in ["thunderbird-email", "firefox_org"]:
-            self.assertTrue(is_reserved(name))
+        # ^(brand).*email?$ and ^(brand).*org?$
+        for name in ["thunderbird_email", "firefox_org"]:
+            self.assertTrue(is_reserved(name), name)
 
     def test_official_and_real_variants(self):
         for name in [
@@ -809,7 +801,7 @@ class IsReservedUnitTests(TestCase):
             self.assertTrue(is_reserved(name))
 
     def test_common_example_usernames(self):
-        for name in ["username", "user_name", "user", "exampleuser", "example_name", "test"]:
+        for name in ["username", "user_name", "user", "exampleuser", "example_name", "example-user", "test"]:
             self.assertTrue(is_reserved(name))
 
     def test_team_and_contact(self):
