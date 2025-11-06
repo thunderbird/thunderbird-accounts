@@ -778,7 +778,9 @@ class IsReservedUnitTests(TestCase):
 
     def test_brand_support_help_suffix_patterns(self):
         # ^(brand).*support?$ and customer_support and help
-        for name in ["thunderbirdpro_customer_support", "thunderbirdpro_support", "thunderbird_customer_support", "thunderbird_support", "thunderbird-support", "mzla_support", "mzla_help", "mozilla_support", "firefox_help"]:
+        for name in ["thunderbirdpro_customer_support", "thunderbirdpro_support", \
+            "thunderbird_customer_support", "thunderbird_support", "thunderbird-support", \
+            "mzla_support", "mzla_help", "mozilla_support", "firefox_help"]:
             self.assertTrue(is_reserved(name))
 
         # ^(brand).*email?$ and ^(brand).*org?$
