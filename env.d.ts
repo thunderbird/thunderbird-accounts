@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
-import { CustomDomain } from './assets/app/vue/views/MailView/sections/CustomDomainsSection/types';
+import { CustomDomain } from '@/views/MailView/sections/CustomDomainsSection/types';
+import { ServerMessage } from '@/types';
 
 declare global {
   interface Window {
@@ -34,6 +35,7 @@ declare global {
       tbProAppointmentUrl?: string;
       tbProSendUrl?: string;
       currentView?: Record<string, any>;
+      serverMessages: ServerMessage[];
     };
   }
 }

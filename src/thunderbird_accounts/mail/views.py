@@ -18,6 +18,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
+from django.contrib.messages import get_messages
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
@@ -94,18 +95,25 @@ def home(request: HttpRequest):
             max_custom_domains = request.user.plan.mail_domain_count
             max_email_aliases = request.user.plan.mail_address_count
 
-    return TemplateResponse(request, 'mail/index.html', {
-        'connection_info': settings.CONNECTION_INFO,
-        'app_passwords': json.dumps(app_passwords),
-        'user_display_name': user_display_name,
-        'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS,
-        'custom_domains': json.dumps(custom_domains),
-        'email_addresses': json.dumps(email_addresses),
-        'max_custom_domains': max_custom_domains,
-        'max_email_aliases': max_email_aliases,
-        'tb_pro_appointment_url': settings.TB_PRO_APPOINTMENT_URL,
-        'tb_pro_send_url': settings.TB_PRO_SEND_URL,
-    })
+    return TemplateResponse(
+        request,
+        'mail/index.html',
+        {
+            'connection_info': settings.CONNECTION_INFO,
+            'app_passwords': json.dumps(app_passwords),
+            'user_display_name': user_display_name,
+            'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS,
+            'custom_domains': json.dumps(custom_domains),
+            'email_addresses': json.dumps(email_addresses),
+            'max_custom_domains': max_custom_domains,
+            'max_email_aliases': max_email_aliases,
+            'tb_pro_appointment_url': settings.TB_PRO_APPOINTMENT_URL,
+            'tb_pro_send_url': settings.TB_PRO_SEND_URL,
+            'server_messages': [
+                {'level': message.level, 'message': str(message.message) } for message in get_messages(request)
+            ],
+        },
+    )
 
 
 @login_required
