@@ -23,15 +23,16 @@ const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
   <div class="page-container">
     <header-bar />
 
-    <section class="server-messages" v-if="serverMessages">
-      <notice-bar
-        class="server-message"
-        v-for="message in serverMessages"
-        :key="message.message"
-        :type="serverLevelToNoticeBarType(message.level)"
-      >
-        {{ message.message }}
-      </notice-bar>
+    <section class="server-messages" v-if="serverMessages !== null">
+      <template v-for="message in serverMessages" :key="message.message">
+        <notice-bar
+          class="server-message"
+          v-if="message.message.trim() !== ''"
+          :type="serverLevelToNoticeBarType(message.level)"
+        >
+          {{ message.message }}
+        </notice-bar>
+      </template>
     </section>
 
     <main>
@@ -60,8 +61,9 @@ main {
 .server-messages {
   width: 100%;
   display: flex;
+  flex-direction: column;
   justify-content: center;
-  gap: 1rem;
+  align-items: center;
 
   .server-message {
     max-width: 60rem;

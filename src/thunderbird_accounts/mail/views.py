@@ -103,7 +103,7 @@ def home(request: HttpRequest):
             'tb_pro_appointment_url': settings.TB_PRO_APPOINTMENT_URL,
             'tb_pro_send_url': settings.TB_PRO_SEND_URL,
             'server_messages': [
-                {'level': message.level, 'message': message.message} for message in get_messages(request)
+                {'level': message.level, 'message': str(message.message) } for message in get_messages(request)
             ],
         },
     )
