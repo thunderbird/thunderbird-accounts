@@ -3,6 +3,7 @@ import json
 import logging
 
 import requests.exceptions
+import sentry_sdk
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
@@ -71,6 +72,12 @@ def home(request: HttpRequest):
         except AccountNotFoundError:
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))
+        except requests.ConnectionError as ex:
+            sentry_sdk.capture_exception(ex)
+            messages.error(
+                request,
+                _('Thundermail is experiencing some connection issues, some aspects of the site may be unavailable.'),
+            )
 
         # Get user's custom domains
         domains = request.user.domains.all()
