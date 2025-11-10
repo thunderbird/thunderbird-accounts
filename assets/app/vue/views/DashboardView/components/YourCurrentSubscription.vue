@@ -15,8 +15,6 @@ import { formatSubscriptionData } from '../utils';
 
 const { t, n, d } = useI18n();
 
-const isAuthenticated = window._page?.isAuthenticated;
-
 const errorText = ref<string>(null);
 const isLoading = ref<boolean>(true);
 const subscription = ref<SubscriptionData | null>(null);
@@ -49,9 +47,7 @@ const navigateToSubscription = async () => {
 };
 
 onMounted(() => {
-  if (isAuthenticated) {
-    getSubscriptionInfo();
-  }
+  getSubscriptionInfo();
 });
 </script>
 

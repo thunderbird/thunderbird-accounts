@@ -95,6 +95,12 @@ def home(request: HttpRequest):
         if request.user.plan:
             max_custom_domains = request.user.plan.mail_domain_count
             max_email_aliases = request.user.plan.mail_address_count
+    else:
+        # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
+        public_routes = ['/privacy', '/terms']
+
+        if request.path not in public_routes:
+            return HttpResponseRedirect(reverse('login'))
 
     return TemplateResponse(
         request,
