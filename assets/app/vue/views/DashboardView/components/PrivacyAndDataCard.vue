@@ -28,9 +28,11 @@ const { t } = useI18n();
         <strong>{{ t('views.dashboard.privacyAndDataCard.deleteAccount') }}</strong>
         <p>{{ t('views.dashboard.privacyAndDataCard.deleteAccountText') }}</p>
 
-        <link-button href="/contact/" size="small" class="delete-account-button">
-          {{ t('views.dashboard.privacyAndDataCard.deleteAccountButtonLabel') }}
-        </link-button>
+        <a href="/contact/">
+          <link-button size="small" class="delete-account-button">
+            {{ t('views.dashboard.privacyAndDataCard.deleteAccountButtonLabel') }}
+          </link-button>
+        </a>
       </div>
     </div>
   </card-container>
