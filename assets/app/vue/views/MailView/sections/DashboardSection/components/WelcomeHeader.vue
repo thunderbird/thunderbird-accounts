@@ -12,6 +12,8 @@ import { getSubscriptionPlanInfo } from '@/views/DashboardView/api';
 
 const { t } = useI18n();
 
+const isAuthenticated = window._page?.isAuthenticated;
+
 const loading = ref(true);
 const errorMessage = ref<string>(null);
 const planInfo = ref<SubscriptionData | null>(null);
@@ -36,6 +38,11 @@ const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
 const userDisplayName = computed(() => window._page?.userDisplayName);
 
 onMounted(async () => {
+  if (!isAuthenticated) {
+    loading.value = false;
+    return;
+  };
+
   try {
     const data = await getSubscriptionPlanInfo();
 

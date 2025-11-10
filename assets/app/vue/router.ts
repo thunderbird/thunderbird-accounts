@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 // Accounts Routes
-import HomeView from '@/views/HomeView.vue';
 import DashboardView from '@/views/DashboardView/index.vue';
 import ManageMfaView from '@/views/ManageMfaView/index.vue';
 import PrivacyAndDataView from '@/views/PrivacyAndDataView.vue';
@@ -19,11 +18,7 @@ const router = createRouter({
     // Accounts Routes
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
-      meta: {
-        isPublic: true,
-      },
+      redirect: '/dashboard'
     },
     {
       path: '/dashboard',
@@ -90,7 +85,7 @@ const router = createRouter({
   },
 });
 
-router.beforeEach((to, from) => {
+router.beforeEach((to, _from) => {
   const isAuthenticated = window._page?.isAuthenticated;
   const hasActiveSubscription = window._page?.hasActiveSubscription;
   const isAwaitingPaymentVerification = window._page?.isAwaitingPaymentVerification;
@@ -98,7 +93,9 @@ router.beforeEach((to, from) => {
 
   // Don't let unauthenticated users anywhere except the home view
   if (!isAuthenticated && !to.meta?.isPublic) {
-    return { name: 'home' };
+    // Login is done through Django routing and not Vue router
+    window.location.href = '/login/';
+    return false;
   }
 
   // Don't let unsubscribed users anywhere except the subscribe view
