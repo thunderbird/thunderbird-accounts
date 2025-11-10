@@ -14,7 +14,7 @@ from thunderbird_accounts.authentication.admin import CustomUserAdmin
 from thunderbird_accounts.authentication.clients import RequestMethods
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.authentication.reserved import is_reserved
+from thunderbird_accounts.authentication.reserved import is_reserved, servers, support
 from thunderbird_accounts.mail.models import Account, Email
 
 FAKE_OIDC_UUID = '39a7b5e8-7a64-45e3-acf1-ca7d314bfcec'
@@ -821,9 +821,13 @@ class IsReservedUnitTests(TestCase):
         ]:
             self.assertTrue(is_reserved(name))
 
-    def test_mailserver_general(self):
-        for name in ["root", "postmaster", "hostmaster"]:
-            self.assertTrue(is_reserved(name))
+    def test_internal_names(self):
+        # select a few to hardcode test
+        for name in ["root", "postmaster", "support", "marketing"]:
+            self.assertTrue(is_reserved(name), name)
+
+        for name in (servers + support):
+            self.assertTrue(is_reserved(name), name)
 
     def test_birbs(self):
         for name in ["roc", "ezio", "mithu", "ava", "callum", "sora", "robin", "nemo"]:

@@ -34,12 +34,54 @@ reserved_names += ["mzla-test[.]*"]
 reserved_names += ["user(name|[_|-]name)*$"] + ["example(user|[_|-]user|name|[_|-]name)*$"] + ["^test$"]
 
 # potential company team use
-team_suffix = "(team|_team)*$"
-reserved_names += ["team$"] + ["hr$"] + ["accounts" + team_suffix] + ["engineering" + team_suffix] \
-    + ["marketing" + team_suffix] + ["design" + team_suffix] + ["contact(us|[_|-]us)*$"]
+teams = ["team(s)*", "hr", "accounts", "engineering", "marketing", "design", "legal", "privacy", "policy", "finance", "sales"]
+reserved_names += ["^" + n + "(team|_team)*$" for n in teams] +  ["contact(us|[_|-]us)*$"]
 
-# mailserver and support
-reserved_names += ["^root$", "^postmaster$", "^hostmaster$", "^support$", "^help$", "^abuse$"]
+# servers and internal teams
+servers = [
+    "admin",
+    "administrator",
+    "anonymous",
+    "billing",
+    "bounce",
+    "email",
+    "hostmaster",
+    "imap",
+    "info",
+    "is",
+    "it",
+    "mailer",
+    "mailerdaemon",
+    "mailer-daemon",
+    "mis",
+    "news",
+    "nobody",
+    "noc",
+    "noreply",
+    "no-reply",
+    "pop",
+    "pop3",
+    "postmaster",
+    "root",
+    "security",
+    "smtp",
+    "ssl",
+    "ssladmin",
+    "ssladministrator",
+    "sslwebmaster",
+    "superuser",
+    "sysadmin",
+    "sysadministrator",
+    "usernet",
+    "uucp",
+    "ftp",
+    "sftp",
+    "webmaster",
+    "www"
+]
+support = ["support", "help", "abuse", "terms"]
+reserved_names += ["^" + n +"$"for n in (servers + support)]
+
 
 # birbs
 reserved_names += ["roc$", "ezio$", "mithu$", "ava$", "callum$", "sora$", "robin$", "nemo$"]
