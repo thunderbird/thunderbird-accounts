@@ -95,7 +95,7 @@ router.beforeEach((to, _from) => {
   if (!isAuthenticated && !to.meta?.isPublic) {
     // Login is done through Django routing and not Vue router
     window.location.href = '/login/';
-    return;
+    return false;
   }
 
   // Don't let unsubscribed users anywhere except the subscribe view
