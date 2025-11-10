@@ -21,6 +21,7 @@ from django.views.generic import TemplateView
 from django.contrib.messages import get_messages
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError, DomainAlreadyExistsError
 from thunderbird_accounts.mail.utils import decode_app_password
@@ -706,6 +707,9 @@ def add_email_alias(request: HttpRequest):
 
     if not email_alias or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)
+
+    if is_reserved(email_alias):
+        return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
 
     if (
         domain not in request.user.domains.values_list('name', flat=True)

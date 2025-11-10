@@ -14,6 +14,7 @@ from thunderbird_accounts.authentication.admin import CustomUserAdmin
 from thunderbird_accounts.authentication.clients import RequestMethods
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.reserved import is_reserved, servers, support
 from thunderbird_accounts.mail.models import Account, Email
 
 FAKE_OIDC_UUID = '39a7b5e8-7a64-45e3-acf1-ca7d314bfcec'
@@ -43,6 +44,21 @@ class AdminCreateUserTestCase(TestCase):
         # Bad username
         form_data = {
             'username': 'frog',
+            'email': 'frog@example.com',
+            'timezone': 'America/Toronto',
+        }
+
+        form = self._build_form(form_data)
+
+        with self.assertRaises(ValueError):
+            form.save(True)
+
+        mock_requests.assert_not_called()
+
+    def test_failed_username_validation_reserved(self, mock_requests: MagicMock):
+        # Bad username
+        form_data = {
+            'username': 'support@thundermail.com',
             'email': 'frog@example.com',
             'timezone': 'America/Toronto',
         }
@@ -136,7 +152,7 @@ class AdminUpdateUserTestcase(TestCase):
         self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
         # Create a test user so we can update it later
         self.user = User.objects.create(
-            oidc_id=FAKE_OIDC_UUID, username=f'test@{self.subdomain}', email='test@example.com'
+            oidc_id=FAKE_OIDC_UUID, username=f'internaltest@{self.subdomain}', email='test@example.com'
         )
         self.user.save()
         self.user.refresh_from_db()
@@ -224,7 +240,7 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertEqual(mock_update_principal.call_count, 0)
 
     def test_success(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
-        account = Account.objects.create(name='test', user=self.user)
+        account = Account.objects.create(name='internaltest', user=self.user)
         Email.objects.create(
             address=self.user.username,
             type=Email.EmailType.PRIMARY,
@@ -309,7 +325,7 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertEqual(mock_update_principal.call_count, 0)
 
     def test_success_without_username_update(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
-        account = Account.objects.create(name='test', user=self.user)
+        account = Account.objects.create(name='internaltest', user=self.user)
         Email.objects.create(
             address=self.user.username,
             type=Email.EmailType.PRIMARY,
@@ -317,7 +333,7 @@ class AdminUpdateUserTestcase(TestCase):
         )
 
         form_data = {
-            'username': f'test@{self.subdomain}',
+            'username': f'internaltest@{self.subdomain}',
             'email': 'frog@example.com',
             'timezone': 'America/Toronto',
             'oidc_id': self.user.oidc_id,
@@ -749,3 +765,94 @@ class LoginRequiredTestCase(TestCase):
             response = client.get(url, follow=False)
             self.assertEqual(response.status_code, status)
             self.assertTrue(response.request['PATH_INFO'].startswith(url))
+
+
+class IsReservedUnitTests(TestCase):
+    def test_brand_names(self):
+        for brand in ['thunderbird', 'mozilla', 'firefox', 'help', 'support', 'mzla']:
+            self.assertTrue(is_reserved(brand))
+
+    def test_brand_plus_variants(self):
+        # (brands)? allows more than one match
+        for name in ['thunderbirdthunderbird', 'supportsupport']:
+            self.assertFalse(is_reserved(name))
+
+    def test_brand_support_help_suffix_patterns(self):
+        # ^(brand).*support?$ and customer_support and help
+        for name in [
+            'thunderbirdpro_customer_support',
+            'thunderbirdpro_support',
+            'thunderbird_customer_support',
+            'thunderbird_support',
+            'thunderbird-support',
+            'mzla_support',
+            'mzla_help',
+            'mozilla_support',
+            'firefox_help',
+        ]:
+            self.assertTrue(is_reserved(name))
+
+        # ^(brand).*email?$ and ^(brand).*org?$
+        for name in ['thunderbird_email', 'firefox_org']:
+            self.assertTrue(is_reserved(name), name)
+
+    def test_official_and_real_variants(self):
+        for name in [
+            'official_thunderbird',
+            'officialsupport',
+            'realmozilla',
+            'firefox_real',
+            'support_official',
+            'mozilla_real',
+        ]:
+            self.assertTrue(is_reserved(name))
+
+    def test_mzla_test_variants(self):
+        for name in ['mzla-test', 'mzla-test.123', 'mzla-test.alpha.beta']:
+            self.assertTrue(is_reserved(name))
+
+    def test_common_example_usernames(self):
+        for name in ['username', 'user_name', 'user', 'exampleuser', 'example_name', 'example-user', 'test']:
+            self.assertTrue(is_reserved(name))
+
+    def test_servers(self):
+        for name in ['admin', 'root', 'webmaster', 'postmaster', 'superuser', 'administrator']:
+            self.assertTrue(is_reserved(name))
+
+    def test_team_and_contact(self):
+        for name in [
+            'team',
+            'hr',
+            'accounts_team',
+            'engineering',
+            'engineering_team',
+            'marketing_team',
+            'design',
+            'design_team',
+            'contactus',
+            'contact_us',
+        ]:
+            self.assertTrue(is_reserved(name))
+
+    def test_internal_names(self):
+        # select a few to hardcode test
+        for name in ['root', 'postmaster', 'support', 'marketing']:
+            self.assertTrue(is_reserved(name), name)
+
+        for name in servers + support:
+            self.assertTrue(is_reserved(name), name)
+
+    def test_birbs(self):
+        for name in ['roc', 'ezio', 'mithu', 'ava', 'callum', 'sora', 'robin', 'nemo']:
+            self.assertTrue(is_reserved(name))
+
+    def test_non_reserved(self):
+        reserved_names_related = ['mozillafan', 'supporter', 'helper', 'hostmastery', 'contacts']
+        unrelated = ['randomuser', 'this_should_not_be_a_problem', '123_asdf', 'asdf_123', '123asdf', 'asdf123']
+        for name in reserved_names_related + unrelated:
+            self.assertFalse(is_reserved(name))
+
+    def test_partial_matches_should_pass(self):
+        # Anchors ^...$ mean full-string match only
+        for name in ['user123', 'myusernamex', 'rooted', 'teamwork', 'contacting']:
+            self.assertFalse(is_reserved(name))

@@ -5,6 +5,7 @@ from django.conf import settings
 from django.urls import reverse
 
 from thunderbird_accounts.utils.utils import get_absolute_url
+from thunderbird_accounts.authentication.reserved import is_reserved
 
 
 class KeycloakRequiredAction(enum.StrEnum):
@@ -48,6 +49,8 @@ def is_email_in_allow_list(email: str):
 
     return email.endswith(tuple(allow_list.split(',')))
 
+def is_email_reserved(email: str):
+    return is_reserved(email)
 
 def create_aia_url(action: KeycloakRequiredAction):
     """Create a url for a user to start a keycloak flow.
