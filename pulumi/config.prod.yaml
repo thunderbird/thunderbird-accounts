@@ -356,7 +356,7 @@ resources:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
               - name: ALLOWED_EMAIL_DOMAINS
-                value: 'thundermail.com'
+                value: 'thundermail.com,tb.pro'
               - name: ALLOWED_HOSTS
                 value: 'accounts.tb.pro'
               - name: APP_ENV
@@ -516,7 +516,7 @@ resources:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
               - name: ALLOWED_EMAIL_DOMAINS
-                value: 'thundermail.com'
+                value: 'thundermail.com,tb.pro'
               - name: APP_ENV
                 value: 'prod'
               - name: AUTH_SCHEME
