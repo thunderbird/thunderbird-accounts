@@ -141,6 +141,30 @@ class AdminCreateUserTestCase(TestCase):
         self.assertEqual(mock_requests.call_args_list[0][0][0], 'users')
         self.assertEqual(mock_requests.call_args_list[0][0][1], RequestMethods.POST)
 
+    def test_success_with_reserved_username(self, mock_requests: MagicMock):
+        form_data = {
+            'username': f'admin@{self.subdomain}',
+            'email': 'admin@example.com',
+            'timezone': 'America/Toronto',
+        }
+
+        mock_requests.return_value = self._build_success_response()
+
+        form = self._build_form(form_data)
+
+        user = form.save(True)
+        # We should have a user, they should have a pk (saved to db), and our fake oidc id
+        self.assertIsNotNone(user)
+        self.assertIsNotNone(user.pk)
+        self.assertEqual(user.oidc_id, FAKE_OIDC_UUID)
+
+        # 1. Creating the user
+        self.assertEqual(mock_requests.call_count, 1)
+
+        # Ensure that our endpoint calls line up with our expectations above
+        # ...yes it has that many tuples
+        self.assertEqual(mock_requests.call_args_list[0][0][0], 'users')
+
 
 @patch('thunderbird_accounts.mail.clients.MailClient._update_principal')
 @patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')
