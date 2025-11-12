@@ -123,63 +123,6 @@ def home(request: HttpRequest):
     )
 
 
-@login_required
-def sign_up(request: HttpRequest):
-    # If we're posting ourselves, we're logging in
-    if request.method == 'POST':
-        return HttpResponseRedirect(reverse('self-serve'))
-
-    return TemplateResponse(
-        request,
-        'mail/sign-up/index.html',
-        {
-            'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS,
-            'cancel_redirect': reverse('self_serve_account_info'),
-        },
-    )
-
-
-@require_http_methods(['POST'])
-def sign_up_submit(request: HttpRequest):
-    if request.user.is_anonymous:
-        return HttpResponseRedirect('/')
-    if len(request.user.account_set.all()) > 0:
-        return raise_form_error(request, reverse('sign_up'), _('You already have an account'))
-    if not request.POST['app_password'] or not request.POST['email_address'] or not request.POST['email_domain']:
-        return raise_form_error(request, reverse('sign_up'), _('Required fields are not set'))
-    if request.POST['email_domain'] not in settings.ALLOWED_EMAIL_DOMAINS:
-        return raise_form_error(request, reverse('sign_up'), _('Invalid domain selected'))
-
-    email_address = request.POST['email_address'].strip()
-    email_address = f'{email_address}@{request.POST["email_domain"]}'
-
-    try:
-        Email.objects.get(address=email_address)
-        return raise_form_error(request, reverse('sign_up'), _('Requested email is already taken'))
-    except Email.DoesNotExist:
-        pass
-
-    user = request.user
-
-    # Set the user's username to the new primary email address and save the user
-    user.username = email_address
-    user.save()
-
-    app_password = request.POST['app_password']
-
-    # Send a task to create the inbox / account on stalwart's end
-    if app_password:
-        # Form the encrypted app password
-        app_password = utils.save_app_password('Mail Client', app_password)
-
-    success = utils.create_stalwart_account(user, app_password)
-
-    if success:
-        return HttpResponseRedirect(reverse('self_serve_connection_info'))
-
-    return HttpResponseRedirect(reverse('sign_up'))
-
-
 def self_serve_common_options(is_account_settings: bool, user: User, account: Account):
     """Common return params for self serve pages"""
     return {

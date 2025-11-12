@@ -2,28 +2,12 @@ import { createApp } from 'vue';
 import '@thunderbirdops/services-ui/style.css';
 
 // Forms (Kept as is for now)
-import SignInToSignUpForm from '@/components/forms/SignInToSignUpForm.vue';
-import SignUpFlowForm from '@/components/forms/SignUpFlowForm.vue';
-import CheckoutFlow from '@/components/forms/CheckoutFlow.vue';
 import ContactSupportForm from '@/components/forms/ContactSupportForm.vue';
 
 // Vue App (Everything else)
 import App from '@/App.vue';
 
 const vueForms = [
-  // Sign Up Page
-  {
-    id: 'signInToSignUpForm',
-    sfc: SignInToSignUpForm,
-  },
-  {
-    id: 'signUpFlowForm',
-    sfc: SignUpFlowForm,
-  },
-  {
-    id: 'checkoutFlow',
-    sfc: CheckoutFlow,
-  },
   {
     id: 'contactSupportForm',
     sfc: ContactSupportForm,
