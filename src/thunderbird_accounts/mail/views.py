@@ -54,7 +54,7 @@ def home(request: HttpRequest):
     max_custom_domains = None
     max_email_aliases = None
 
-    if request.user.is_authenticated:
+    if request.user.is_authenticated and request.user.has_active_subscription:
         try:
             account = request.user.account_set.first()
             if not account:
