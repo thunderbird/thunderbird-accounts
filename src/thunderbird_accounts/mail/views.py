@@ -95,7 +95,7 @@ def home(request: HttpRequest):
         if request.user.plan:
             max_custom_domains = request.user.plan.mail_domain_count
             max_email_aliases = request.user.plan.mail_address_count
-    else:
+    elif not request.user.is_authenticated:  # Only if the user is not authenticated
         # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
         public_routes = ['/privacy', '/terms']
 
