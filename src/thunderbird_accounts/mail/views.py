@@ -8,7 +8,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.core.signing import Signer
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
@@ -26,16 +25,7 @@ from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError, DomainAlreadyExistsError
 from thunderbird_accounts.mail.utils import decode_app_password
 
-try:
-    from paddle_billing import Client
-    from paddle_billing.Resources.CustomerPortalSessions.Operations import CreateCustomerPortalSession
-except ImportError:
-    Client = None
-    CreateCustomerPortalSession = None
-
 from thunderbird_accounts.mail.models import Account, Email, Domain
-from thunderbird_accounts.subscription.decorators import inject_paddle
-from thunderbird_accounts.subscription.models import Plan, Price
 from thunderbird_accounts.mail.zendesk import ZendeskClient
 from thunderbird_accounts.mail import utils
 
