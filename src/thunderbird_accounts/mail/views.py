@@ -101,7 +101,7 @@ def home(request: HttpRequest):
             'connection_info': settings.CONNECTION_INFO,
             'app_passwords': json.dumps(app_passwords),
             'user_display_name': user_display_name,
-            'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS,
+            'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS if settings.ALLOWED_EMAIL_DOMAINS else [],
             'custom_domains': json.dumps(custom_domains),
             'email_addresses': json.dumps(email_addresses),
             'max_custom_domains': max_custom_domains,
