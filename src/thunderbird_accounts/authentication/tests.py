@@ -754,43 +754,6 @@ class AccountsOIDCBackendTestCase(TestCase):
         settings.OIDC_FALLBACK_MATCH_BY_EMAIL = _original_setting
 
 
-class LoginRequiredTestCase(TestCase):
-    # (URL reverse key, expected response status code),
-    login_required_keys = [
-        ('self_serve_home', 302),  # This one is a redirect
-        ('self_serve_account_info', 302),
-        ('self_serve_app_password', 302),
-        ('self_serve_connection_info', 302),
-        ('self_serve_subscription', 302),
-        ('self_serve_subscription_success', 302),
-    ]
-
-    def test_logged_out(self):
-        client = RequestClient()
-        login_url = reverse(settings.LOGIN_URL)
-
-        for key, _ in self.login_required_keys:
-            url = reverse(key)
-            self.assertTrue(url)
-
-            response = client.get(url, follow=False)
-            self.assertEqual(response.status_code, 302)
-            self.assertTrue(response.url.startswith(login_url))
-
-    def test_logged_in(self):
-        client = RequestClient()
-        user = User.objects.get_or_create(username='test', oidc_id='1234')[0]
-        client.force_login(user)
-
-        for key, status in self.login_required_keys:
-            url = reverse(key)
-            self.assertTrue(url)
-
-            response = client.get(url, follow=False)
-            self.assertEqual(response.status_code, status)
-            self.assertTrue(response.request['PATH_INFO'].startswith(url))
-
-
 class IsReservedUnitTests(TestCase):
     def test_brand_names(self):
         for brand in ['thunderbird', 'mozilla', 'firefox', 'help', 'support', 'mzla']:

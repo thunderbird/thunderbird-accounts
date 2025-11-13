@@ -113,15 +113,6 @@ def home(request: HttpRequest):
     )
 
 
-def self_serve_common_options(is_account_settings: bool, user: User, account: Account):
-    """Common return params for self serve pages"""
-    return {
-        'has_account': True if account else False,
-        'is_account_settings': is_account_settings,
-        'has_active_subscription': user.has_active_subscription,
-    }
-
-
 def contact(request: HttpRequest):
     """Contact page for support requests (uses ZenDesk's API)
     A user can always access this page even if they don't have a mail account setup
