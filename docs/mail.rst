@@ -9,14 +9,4 @@ Admin Panel
 
 This is the standard Django admin panel with minor tweaks to help suit our needs.
 
-Stalwart's user management is actively controlled by `Account` model in this app. Creating an account model with a name and attaching it to a `Authentication.User` model allows a user to modify their account data in the self-serve page.
-
-==========
-Self Serve
-==========
-
-The self-serve portal is available at `/self-serve/`. This route requires the user to be authenticated.
-
-Here a user can view the settings required to connect to their mail account, and create / delete app passwords to access their mail.
-
-From a development perspective most of the development here happen in the template folder `/templates/mail/self-serve/` and the `mail/views.py` file. Currently development is quite primitive as we await designs, with a mixed VueJS / Django template pages.
+Stalwart's user management is actively controlled by `Account` model in this app. Currently, this is the recommended way to create a user account as we don't have sign-up enabled just yet.
