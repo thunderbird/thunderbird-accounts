@@ -36,6 +36,9 @@ def raise_form_error(request, to_view: str, error_message: str):
 
 
 def home(request: HttpRequest):
+    """The main route for our VueJS app.
+    This prepares some data for the initial form load (like authentication information, plan information, and the like.)
+    """
     app_passwords = []
     user_display_name = None
     custom_domains = []
@@ -106,7 +109,7 @@ def home(request: HttpRequest):
             'tb_pro_appointment_url': settings.TB_PRO_APPOINTMENT_URL,
             'tb_pro_send_url': settings.TB_PRO_SEND_URL,
             'server_messages': [
-                {'level': message.level, 'message': str(message.message) } for message in get_messages(request)
+                {'level': message.level, 'message': str(message.message)} for message in get_messages(request)
             ],
         },
     )
@@ -234,10 +237,7 @@ def app_password_set(request: HttpRequest):
         label = data.get('name')
 
         if not new_password or not label:
-            return JsonResponse({
-                'success': False,
-                'error': str(_('Label and password are required'))
-            }, status=400)
+            return JsonResponse({'success': False, 'error': str(_('Label and password are required'))}, status=400)
 
         stalwart_client = MailClient()
 
@@ -251,27 +251,20 @@ def app_password_set(request: HttpRequest):
         new_secret = utils.save_app_password(label, new_password)
         stalwart_client.save_app_password(request.user.stalwart_primary_email, new_secret)
 
-        return JsonResponse({
-            'success': True,
-            'message': str(_('Password set successfully'))
-        })
+        return JsonResponse({'success': True, 'message': str(_('Password set successfully'))})
 
     except AccountNotFoundError:
-        return JsonResponse({
-            'success': False,
-            'error': str(_('Could not connect to Thundermail, please try again later.'))
-        }, status=500)
+        return JsonResponse(
+            {'success': False, 'error': str(_('Could not connect to Thundermail, please try again later.'))}, status=500
+        )
     except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': str(_('Invalid request data'))
-        }, status=400)
+        return JsonResponse({'success': False, 'error': str(_('Invalid request data'))}, status=400)
     except Exception as e:
         logging.error(f'Error setting app password: {e}')
-        return JsonResponse({
-            'success': False,
-            'error': str(_('An error occurred while setting the password. Please try again.'))
-        }, status=500)
+        return JsonResponse(
+            {'success': False, 'error': str(_('An error occurred while setting the password. Please try again.'))},
+            status=500,
+        )
 
 
 @login_required
@@ -284,16 +277,10 @@ def display_name_set(request: HttpRequest):
         data = json.loads(request.body)
         display_name = data.get('display-name')
     except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': str(_('Invalid request data'))
-        }, status=400)
+        return JsonResponse({'success': False, 'error': str(_('Invalid request data'))}, status=400)
 
     if not display_name:
-        return JsonResponse({
-            'success': False,
-            'error': str(_('Display name is required'))
-        }, status=400)
+        return JsonResponse({'success': False, 'error': str(_('Display name is required'))}, status=400)
 
     stalwart_client = MailClient()
     try:
@@ -301,10 +288,7 @@ def display_name_set(request: HttpRequest):
     except AccountNotFoundError:
         messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
-    return JsonResponse({
-        'success': True,
-        'message': str(_('Display name set successfully'))
-    })
+    return JsonResponse({'success': True, 'message': str(_('Display name set successfully'))})
 
 
 @login_required
@@ -398,20 +382,12 @@ def verify_custom_domain(request: HttpRequest):
             domain.verified_at = now
             domain.save()
 
-            return JsonResponse({
-                'success': True,
-                'critical_errors': critical_errors,
-                'warnings': warnings
-            })
+            return JsonResponse({'success': True, 'critical_errors': critical_errors, 'warnings': warnings})
         else:
             domain.status = Domain.DomainStatus.FAILED
             domain.save()
 
-            return JsonResponse({
-                'success': False,
-                'critical_errors': critical_errors,
-                'warnings': warnings
-            })
+            return JsonResponse({'success': False, 'critical_errors': critical_errors, 'warnings': warnings})
     except Exception as e:
         domain.status = Domain.DomainStatus.FAILED
         domain.save()

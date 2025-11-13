@@ -26,7 +26,6 @@ Contents
     frontend.rst
     mail.rst
     tasks.rst
-    webhooks.rst
     internal_client_env.rst
     building.rst
     deploying-thundermail-waiting-list.rst

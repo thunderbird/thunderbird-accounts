@@ -22,23 +22,26 @@ class UserCacheSerializer(serializers.ModelSerializer):
     """
     Version 1
     Formats a user model to the json format below:
-    {
-        "_version": "1",
-        "uuid": "7baaf446-d747-4b7c-ae87-1aab58a9fcd9",
-        "username": "My Username",
-        "display_name": "My Display Name",
-        "full_name": "my full name",
-        "email": "my@email.address",
-        "oidc_id": "123abc",
-        "language": "en",
-        "avatar_url": "https://coolcatpics.local/cat.png",
-        "timezone": "America/Vancouver",
-        "date_joined": "2024-11-13T16:57:11.968Z",
-        "last_login": "2024-11-13T16:57:11.968Z",
-        "created_at": "2024-11-13T16:57:11.968Z",
-        "updated_at": "2024-11-13T16:57:11.968Z",
-        "access": ["apmt", "send", "assist"]
-    }"""
+    .. code-block:: json
+
+        {
+            "_version": "1",
+            "uuid": "7baaf446-d747-4b7c-ae87-1aab58a9fcd9",
+            "username": "My Username",
+            "display_name": "My Display Name",
+            "full_name": "my full name",
+            "email": "my@email.address",
+            "oidc_id": "123abc",
+            "language": "en",
+            "avatar_url": "https://coolcatpics.local/cat.png",
+            "timezone": "America/Vancouver",
+            "date_joined": "2024-11-13T16:57:11.968Z",
+            "last_login": "2024-11-13T16:57:11.968Z",
+            "created_at": "2024-11-13T16:57:11.968Z",
+            "updated_at": "2024-11-13T16:57:11.968Z",
+            "access": ["apmt", "send", "assist"]
+        }
+    """
 
     # Schema version
     _version = serializers.IntegerField(default=1, read_only=True)
