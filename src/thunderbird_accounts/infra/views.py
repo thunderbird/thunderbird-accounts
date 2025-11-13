@@ -16,7 +16,7 @@ from uuid import uuid4 as UUID
 class PerformanceMonitored:
     def __init__(self, func):
         self.func = func
-    
+
     def __call__(self, *args, **kwargs):
         start = time.perf_counter()
         result = self.func(*args, **kwargs)
