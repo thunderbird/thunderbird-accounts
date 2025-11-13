@@ -6,8 +6,7 @@ from django.contrib.admin import AdminSite
 from django.core.exceptions import PermissionDenied
 from django.forms import model_to_dict
 from django.http import HttpRequest
-from django.test import TestCase, Client as RequestClient
-from django.urls import reverse
+from django.test import TestCase
 from requests import Response
 
 from thunderbird_accounts.authentication.admin import CustomUserAdmin
