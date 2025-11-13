@@ -89,7 +89,7 @@ def home(request: HttpRequest):
             max_email_aliases = request.user.plan.mail_address_count
     elif not request.user.is_authenticated:  # Only if the user is not authenticated
         # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
-        public_routes = ['/privacy', '/terms']
+        public_routes = ['/privacy', '/terms', '/contact']
 
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))
@@ -113,13 +113,6 @@ def home(request: HttpRequest):
             ],
         },
     )
-
-
-def contact(request: HttpRequest):
-    """Contact page for support requests (uses ZenDesk's API)
-    A user can always access this page even if they don't have a mail account setup
-    since they might encounter problems before the mail account setup itself."""
-    return TemplateResponse(request, 'mail/contact.html')
 
 
 @require_http_methods(['GET'])
