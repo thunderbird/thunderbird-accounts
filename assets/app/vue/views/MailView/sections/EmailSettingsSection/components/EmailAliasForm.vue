@@ -18,7 +18,7 @@ const emit = defineEmits<{
 
 const step = ref<EMAIL_ALIAS_STEP>(EMAIL_ALIAS_STEP.INITIAL);
 const emailAlias = ref(null);
-const selectedDomain = ref(null);
+const selectedDomain = ref(props.allowedDomains[0] ?? null);
 const formRef = useTemplateRef('formRef');
 const validationError = ref<string | null>(null);
 
