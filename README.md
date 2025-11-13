@@ -86,7 +86,7 @@ A variety of basic development admin accounts are provided to help folks boot th
 
 ### Accounts / Thunderbird Pro Dashboard
 
-You can access the login / dashboard at [http://localhost:8087/self-serve/](http://localhost:8087/self-serve/). If you
+You can access the login / dashboard at [http://localhost:8087/](http://localhost:8087/). If you
 are not logged in you will be taken to a keycloak login screen. You can use the following credentials to proceed:
 
 ```

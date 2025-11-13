@@ -8,7 +8,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.core.signing import Signer
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
@@ -20,22 +19,12 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 from django.contrib.messages import get_messages
 
-from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError, DomainAlreadyExistsError
 from thunderbird_accounts.mail.utils import decode_app_password
 
-try:
-    from paddle_billing import Client
-    from paddle_billing.Resources.CustomerPortalSessions.Operations import CreateCustomerPortalSession
-except ImportError:
-    Client = None
-    CreateCustomerPortalSession = None
-
 from thunderbird_accounts.mail.models import Account, Email, Domain
-from thunderbird_accounts.subscription.decorators import inject_paddle
-from thunderbird_accounts.subscription.models import Plan, Price
 from thunderbird_accounts.mail.zendesk import ZendeskClient
 from thunderbird_accounts.mail import utils
 
@@ -47,6 +36,9 @@ def raise_form_error(request, to_view: str, error_message: str):
 
 
 def home(request: HttpRequest):
+    """The main route for our VueJS app.
+    This prepares some data for the initial form load (like authentication information, plan information, and the like.)
+    """
     app_passwords = []
     user_display_name = None
     custom_domains = []
@@ -117,76 +109,10 @@ def home(request: HttpRequest):
             'tb_pro_appointment_url': settings.TB_PRO_APPOINTMENT_URL,
             'tb_pro_send_url': settings.TB_PRO_SEND_URL,
             'server_messages': [
-                {'level': message.level, 'message': str(message.message) } for message in get_messages(request)
+                {'level': message.level, 'message': str(message.message)} for message in get_messages(request)
             ],
         },
     )
-
-
-@login_required
-def sign_up(request: HttpRequest):
-    # If we're posting ourselves, we're logging in
-    if request.method == 'POST':
-        return HttpResponseRedirect(reverse('self-serve'))
-
-    return TemplateResponse(
-        request,
-        'mail/sign-up/index.html',
-        {
-            'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS,
-            'cancel_redirect': reverse('self_serve_account_info'),
-        },
-    )
-
-
-@require_http_methods(['POST'])
-def sign_up_submit(request: HttpRequest):
-    if request.user.is_anonymous:
-        return HttpResponseRedirect('/')
-    if len(request.user.account_set.all()) > 0:
-        return raise_form_error(request, reverse('sign_up'), _('You already have an account'))
-    if not request.POST['app_password'] or not request.POST['email_address'] or not request.POST['email_domain']:
-        return raise_form_error(request, reverse('sign_up'), _('Required fields are not set'))
-    if request.POST['email_domain'] not in settings.ALLOWED_EMAIL_DOMAINS:
-        return raise_form_error(request, reverse('sign_up'), _('Invalid domain selected'))
-
-    email_address = request.POST['email_address'].strip()
-    email_address = f'{email_address}@{request.POST["email_domain"]}'
-
-    try:
-        Email.objects.get(address=email_address)
-        return raise_form_error(request, reverse('sign_up'), _('Requested email is already taken'))
-    except Email.DoesNotExist:
-        pass
-
-    user = request.user
-
-    # Set the user's username to the new primary email address and save the user
-    user.username = email_address
-    user.save()
-
-    app_password = request.POST['app_password']
-
-    # Send a task to create the inbox / account on stalwart's end
-    if app_password:
-        # Form the encrypted app password
-        app_password = utils.save_app_password('Mail Client', app_password)
-
-    success = utils.create_stalwart_account(user, app_password)
-
-    if success:
-        return HttpResponseRedirect(reverse('self_serve_connection_info'))
-
-    return HttpResponseRedirect(reverse('sign_up'))
-
-
-def self_serve_common_options(is_account_settings: bool, user: User, account: Account):
-    """Common return params for self serve pages"""
-    return {
-        'has_account': True if account else False,
-        'is_account_settings': is_account_settings,
-        'has_active_subscription': user.has_active_subscription,
-    }
 
 
 def contact(request: HttpRequest):
@@ -300,154 +226,6 @@ def contact_submit(request: HttpRequest):
 
 
 @login_required
-def self_serve(request: HttpRequest):
-    return HttpResponseRedirect(reverse('self_serve_connection_info'))
-
-
-@login_required
-def self_serve_account_settings(request: HttpRequest):
-    """Account Settings page for Self Serve
-    A user can always access this page even if they don't have a mail account setup.
-    This way they can delete their account if they wish, or create an account."""
-    account = request.user.account_set.first()
-
-    return TemplateResponse(
-        request,
-        'mail/self-serve/account-info.html',
-        self_serve_common_options(True, request.user, account),
-    )
-
-
-@login_required
-def self_serve_connection_info(request: HttpRequest):
-    """Connection Info page for Self Serve
-    This page displays information relating to the connection settings
-    that a user may need to connect an external mail client."""
-
-    email = None
-    account = request.user.account_set.first()
-    if account:
-        email = account.email_set.first()
-
-    return TemplateResponse(
-        request,
-        'mail/self-serve/connection-info.html',
-        {
-            **self_serve_common_options(False, request.user, account),
-            'mail_address': email.address if email else None,
-            'mail_username': account.name if account else None,
-            'IMAP': settings.CONNECTION_INFO['IMAP'],
-            'JMAP': settings.CONNECTION_INFO['JMAP'] if 'JMAP' in settings.CONNECTION_INFO else {},
-            'SMTP': settings.CONNECTION_INFO['SMTP'],
-        },
-    )
-
-
-@login_required
-@inject_paddle
-def self_serve_subscription(request: HttpRequest, paddle: Client):
-    """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay
-
-    This page requires a bit of setup before it can properly display:
-
-    #. Have Paddle's (Sandbox or Production) API key set, and Paddle's client-side token setup.
-    #. Pull a list of Paddle products and prices via the cli commands (these run on container boot.)
-    #. At least one :any:`thunderbird_accounts.subscription.models.Plan` instance that's set up with a
-        :any:`thunderbird_accounts.subscription.models.Product` relationship.
-
-    """
-    user = request.user
-    account = request.user.account_set.first()
-    signer = Signer()
-
-    if user.has_active_subscription:
-        subscription = user.subscription_set.first()
-
-        customer_session = paddle.customer_portal_sessions.create(
-            subscription.paddle_customer_id, CreateCustomerPortalSession()
-        )
-        return HttpResponseRedirect(customer_session.urls.general.overview)
-
-    plan_info = []
-    plans = Plan.objects.filter(visible_on_subscription_page=True).exclude(product_id__isnull=True).all()
-    for plan in plans:
-        prices = plan.product.price_set.filter(status=Price.StatusValues.ACTIVE).all()
-        plan_info.extend([price.paddle_id for price in prices])
-
-    return TemplateResponse(
-        request,
-        'mail/self-serve/subscription.html',
-        {
-            'is_subscription': True,
-            'success_redirect': reverse('self_serve_subscription_success'),
-            'paddle_token': settings.PADDLE_TOKEN,
-            'paddle_environment': settings.PADDLE_ENV,
-            'paddle_plan_info': json.dumps(plan_info),
-            'signed_user_id': signer.sign(request.user.uuid.hex),
-            **self_serve_common_options(False, request.user, account),
-        },
-    )
-
-
-@login_required
-def self_serve_subscription_success(request: HttpRequest):
-    """Subscription page allowing user to select plan tier and do checkout via Paddle.js overlay"""
-    account = request.user.account_set.first()
-    return TemplateResponse(
-        request,
-        'mail/self-serve/subscription-success.html',
-        {'is_subscription': True, **self_serve_common_options(False, request.user, account)},
-    )
-
-
-@login_required
-def self_serve_app_passwords(request: HttpRequest):
-    """App Password page for Self Serve
-    A user can create (if none exists), or delete an App Password which is used to connect to the mail server."""
-    account = request.user.account_set.first()
-
-    stalwart_client = MailClient()
-    try:
-        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
-        app_passwords = []
-        for secret in email_user.get('secrets', []):
-            app_passwords.append(decode_app_password(secret))
-    except AccountNotFoundError:
-        app_passwords = []
-        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
-
-    return TemplateResponse(
-        request,
-        'mail/self-serve/app-passwords.html',
-        {
-            **self_serve_common_options(False, request.user, account),
-            'app_passwords': json.dumps(app_passwords),
-        },
-    )
-
-
-@login_required
-@require_http_methods(['POST'])
-def self_serve_app_password_remove(request: HttpRequest):
-    """Removes an app password from a remote Stalwart account"""
-    app_password_label = json.loads(request.body).get('password')
-
-    stalwart_client = MailClient()
-    try:
-        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
-
-        for secret in email_user.get('secrets', []):
-            secret_label = decode_app_password(secret)
-            if secret_label == app_password_label:
-                stalwart_client.delete_app_password(request.user.stalwart_primary_email, secret)
-                return JsonResponse({'success': True})
-    except AccountNotFoundError:
-        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
-
-    return JsonResponse({'success': False})
-
-
-@login_required
 @require_http_methods(['POST'])
 @sensitive_post_parameters('password')
 def app_password_set(request: HttpRequest):
@@ -459,10 +237,7 @@ def app_password_set(request: HttpRequest):
         label = data.get('name')
 
         if not new_password or not label:
-            return JsonResponse({
-                'success': False,
-                'error': str(_('Label and password are required'))
-            }, status=400)
+            return JsonResponse({'success': False, 'error': str(_('Label and password are required'))}, status=400)
 
         stalwart_client = MailClient()
 
@@ -476,27 +251,20 @@ def app_password_set(request: HttpRequest):
         new_secret = utils.save_app_password(label, new_password)
         stalwart_client.save_app_password(request.user.stalwart_primary_email, new_secret)
 
-        return JsonResponse({
-            'success': True,
-            'message': str(_('Password set successfully'))
-        })
+        return JsonResponse({'success': True, 'message': str(_('Password set successfully'))})
 
     except AccountNotFoundError:
-        return JsonResponse({
-            'success': False,
-            'error': str(_('Could not connect to Thundermail, please try again later.'))
-        }, status=500)
+        return JsonResponse(
+            {'success': False, 'error': str(_('Could not connect to Thundermail, please try again later.'))}, status=500
+        )
     except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': str(_('Invalid request data'))
-        }, status=400)
+        return JsonResponse({'success': False, 'error': str(_('Invalid request data'))}, status=400)
     except Exception as e:
         logging.error(f'Error setting app password: {e}')
-        return JsonResponse({
-            'success': False,
-            'error': str(_('An error occurred while setting the password. Please try again.'))
-        }, status=500)
+        return JsonResponse(
+            {'success': False, 'error': str(_('An error occurred while setting the password. Please try again.'))},
+            status=500,
+        )
 
 
 @login_required
@@ -509,16 +277,10 @@ def display_name_set(request: HttpRequest):
         data = json.loads(request.body)
         display_name = data.get('display-name')
     except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': str(_('Invalid request data'))
-        }, status=400)
+        return JsonResponse({'success': False, 'error': str(_('Invalid request data'))}, status=400)
 
     if not display_name:
-        return JsonResponse({
-            'success': False,
-            'error': str(_('Display name is required'))
-        }, status=400)
+        return JsonResponse({'success': False, 'error': str(_('Display name is required'))}, status=400)
 
     stalwart_client = MailClient()
     try:
@@ -526,37 +288,7 @@ def display_name_set(request: HttpRequest):
     except AccountNotFoundError:
         messages.error(request, _('Could not connect to Thundermail, please try again later.'))
 
-    return JsonResponse({
-        'success': True,
-        'message': str(_('Display name set successfully'))
-    })
-
-
-@login_required
-@require_http_methods(['POST'])
-@sensitive_post_parameters('password')
-def self_serve_app_password_add(request: HttpRequest):
-    """Add an app password to the remote Stalwart account"""
-    label = request.POST['name']
-    password = request.POST['password']
-
-    if not label or not password:
-        return raise_form_error(request, reverse('self_serve_app_password'), _('Label and password are required'))
-
-    stalwart_client = MailClient()
-    try:
-        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
-        for secret in email_user.get('secrets', []):
-            secret_label = decode_app_password(secret)
-            if secret_label == label:
-                return raise_form_error(request, reverse('self_serve_app_password'), _('That label is already in-use'))
-
-        secret = utils.save_app_password(label, password)
-        stalwart_client.save_app_password(request.user.stalwart_primary_email, secret)
-    except AccountNotFoundError:
-        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
-
-    return HttpResponseRedirect('/self-serve/app-passwords')
+    return JsonResponse({'success': True, 'message': str(_('Display name set successfully'))})
 
 
 @login_required
@@ -650,20 +382,12 @@ def verify_custom_domain(request: HttpRequest):
             domain.verified_at = now
             domain.save()
 
-            return JsonResponse({
-                'success': True,
-                'critical_errors': critical_errors,
-                'warnings': warnings
-            })
+            return JsonResponse({'success': True, 'critical_errors': critical_errors, 'warnings': warnings})
         else:
             domain.status = Domain.DomainStatus.FAILED
             domain.save()
 
-            return JsonResponse({
-                'success': False,
-                'critical_errors': critical_errors,
-                'warnings': warnings
-            })
+            return JsonResponse({'success': False, 'critical_errors': critical_errors, 'warnings': warnings})
     except Exception as e:
         domain.status = Domain.DomainStatus.FAILED
         domain.save()

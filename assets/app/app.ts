@@ -2,40 +2,12 @@ import { createApp } from 'vue';
 import '@thunderbirdops/services-ui/style.css';
 
 // Forms (Kept as is for now)
-import SelfServeForm from '@/components/forms/SelfServeForm.vue';
-import SignInToSignUpForm from '@/components/forms/SignInToSignUpForm.vue';
-import SignUpFlowForm from '@/components/forms/SignUpFlowForm.vue';
-import AccountInfoForm from '@/components/forms/AccountInfoForm.vue';
-import CheckoutFlow from '@/components/forms/CheckoutFlow.vue';
 import ContactSupportForm from '@/components/forms/ContactSupportForm.vue';
 
 // Vue App (Everything else)
 import App from '@/App.vue';
 
 const vueForms = [
-  // Self Serve - App Password Page
-  {
-    id: 'selfServeForm',
-    sfc: SelfServeForm,
-  },
-  // Self Serve - Account Info Page
-  {
-    id: 'accountInfoForm',
-    sfc: AccountInfoForm,
-  },
-  // Sign Up Page
-  {
-    id: 'signInToSignUpForm',
-    sfc: SignInToSignUpForm,
-  },
-  {
-    id: 'signUpFlowForm',
-    sfc: SignUpFlowForm,
-  },
-  {
-    id: 'checkoutFlow',
-    sfc: CheckoutFlow,
-  },
   {
     id: 'contactSupportForm',
     sfc: ContactSupportForm,

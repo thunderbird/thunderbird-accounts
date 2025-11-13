@@ -4,6 +4,9 @@ from thunderbird_accounts.subscription.models import Plan
 
 
 def activate_subscription_features(user: User, plan: Plan):
+    """Activates a plan.
+    Which right now just saves the plan_id on the user, creates the mail account if one doesn't exist,
+    or updates an existing mail account's quota."""
     if not user.has_active_subscription:
         return
 
