@@ -16,10 +16,12 @@ right of the page you'll see the `Add User +` button at the top, and some basic 
 From this page you can click on a user's UUID field (shown in highlighted in blue) to view their profile information in
 more depth. You can also select one or many user's to perform actions on.
 
-There are currently two available actions:
+There are currently four available actions:
 
 * Delete selected user(s).
-* Fix Broken Stalwart Account.
+* Fix Broken Stalwart Account
+* Sync plan information to Keycloak
+* Manually activate subscription features
 
 If you spot an option that's not documented or has an issue number, please ask a developer before using.
 
@@ -47,13 +49,38 @@ The steps are as follows:
 If the user does not have a Stalwart account then one is created on the spot and their email is automatically attached.
 If the user does have a Stalwart account but does not have their email attached, then their email will be attached.
 
-If the fix creates or fixes something succesfully you'll see a message similar to:
+If the fix creates or fixes something successfully you'll see a message similar to:
 "Create/Fixed x Stalwart email addresses/accounts."
 
-If there's an error you'll see "Failed to fix x Stalwart accounts.". Please follow up with an engineer on steps to
+If there's an error you'll see "Failed to fix x Stalwart accounts." Please follow up with an engineer on steps to
 remedy this.
 
 Finally, if there is nothing to fix then you'll see a "Nothing to fix!" message.
+
+### Sync information to Keycloak
+
+This action copies the current plan information to their Keycloak user profile. This allows other services to access 
+this information without having to ask Accounts. 
+
+It currently syncs the following information:
+* is_subscribed: Whether the user is subscribed to a plan.
+* mail_address_count: The amount of email addresses their plan allows them to create.
+* mail_domain_count: The amount of custom domains their plan allows them to attach to their account.
+* mail_storage_bytes: The amount of mail storage (in bytes) their plan allows them to use.
+* send_storage_bytes: The amount of Send storage (in bytes) their plan allows them to use.
+
+This should automatically update if the user's plan changes, or if the plan itself changes. There may be a delay between 
+changing plan information and the information updating in Keycloak.
+
+This is safe to re-run. 
+
+### Manually activate subscription features
+
+This action will run the same code that occurs when a user subscribes for the first time, but only if they already have 
+a plan attached. It will create a Stalwart account, if one already exists it will update their Stalwart account's quota 
+with the information on their plan.
+
+This is safe to re-run, but generally not advised unless you're manually fixing up a bungled subscription. 
 
 ## Adding Users
 

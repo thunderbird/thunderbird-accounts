@@ -54,6 +54,32 @@ class UpdateUserError(KeycloakError):
         return f'UpdateUserError: {self.error} for {self.username}'
 
 
+class UpdateUserPlanInfoError(KeycloakError):
+    username: str
+    error: str
+
+    def __init__(self, error, oidc_id: Optional[str] = None, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.oidc_id = oidc_id
+        self.error = error
+
+    def __str__(self):
+        return f'UpdateUserError: {self.error} for {self.oidc_id}'
+
+
+class GetUserError(KeycloakError):
+    oidc_id: str
+    error: str
+
+    def __init__(self, error, oidc_id: Optional[str] = None, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.oidc_id = oidc_id
+        self.error = error
+
+    def __str__(self):
+        return f'GetUserError: {self.error} for {self.oidc_id}'
+
+
 class DeleteUserError(KeycloakError):
     oidc_id: str
     error: str
