@@ -23,7 +23,7 @@ class PerformanceMonitored:
         finish = time.perf_counter()
         duration = finish - start
         logging.debug(f'Performance monitoring -- Function {self.func} ran in {duration} seconds')
-        return (result, duration)
+        return result, duration
 
 
 def health_check(request: HttpRequest):
