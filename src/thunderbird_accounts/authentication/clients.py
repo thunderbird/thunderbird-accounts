@@ -16,7 +16,10 @@ from thunderbird_accounts.authentication.exceptions import (
     SendExecuteActionsEmailError,
     UpdateUserError,
     DeleteUserError,
+    UpdateUserPlanInfoError,
+    GetUserError,
 )
+from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.utils import is_allowed_domain
 from thunderbird_accounts.utils.utils import get_absolute_url
 
@@ -98,6 +101,23 @@ class KeycloakClient:
         if not is_allowed_domain(username):
             raise InvalidDomainError(username)
 
+    def get_user(self, oidc_id: str):
+        try:
+            response = self.request(
+                f'users/{oidc_id}',
+                RequestMethods.GET,
+            )
+            response.raise_for_status()
+        except RequestException as exc:
+            sentry_sdk.capture_exception(exc)
+            if exc.response is not None:
+                raise GetUserError(
+                    oidc_id=oidc_id, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
+                )
+
+            raise GetUserError(oidc_id=oidc_id, error=f'Error<{exc}>: No response!')
+        return response
+
     def delete_user(self, oidc_id: str):
         """Updates a user on keycloak with the give attributes.
 
@@ -109,6 +129,60 @@ class KeycloakClient:
             raise DeleteUserError(
                 oidc_id=oidc_id, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
             )
+
+        return True
+
+    def update_user_plan_info(
+        self,
+        oidc_id: str,
+        is_subscribed: bool,
+        mail_address_count: Optional[int] = None,
+        mail_domain_count: Optional[int] = None,
+        mail_storage_bytes: Optional[int] = None,
+        send_storage_bytes: Optional[int] = None,
+    ):
+        """Updates a user on keycloak with the give attributes.
+
+        :raises User.DoesNotExist: If the oidc_id is not connected to a user
+        :raises User.MultipleObjectsReturned: If multiple users have the same oidc_id (this is bad for many reasons!)
+        :raises GetUserError: If there was an error during the keycloak user get api request
+        :raises UpdateUserPlanInfoError: If there was an error during the keycloak user update api request"""
+        user = User.objects.get(oidc_id=oidc_id)
+        user_data = self.get_user(oidc_id=oidc_id)
+
+        update_data = user_data.json()
+        print('EXISTING DATA ->', update_data)
+        update_data['attributes'] = {
+            **update_data['attributes'],
+            **dict(
+                filter(
+                    lambda x: x[1] is not None,
+                    {
+                        'is_subscribed': 'yes' if is_subscribed else 'no',
+                        'mail_address_count': mail_address_count,
+                        'mail_domain_count': mail_domain_count,
+                        'mail_storage_bytes': mail_storage_bytes,
+                        'send_storage_bytes': send_storage_bytes,
+                    }.items(),
+                )
+            ),
+        }
+        print('UPDATED DATA ->', update_data)
+
+        try:
+            self.request(
+                f'users/{oidc_id}',
+                RequestMethods.PUT,
+                json_data=update_data,
+            )
+        except RequestException as exc:
+            sentry_sdk.capture_exception(exc)
+            if exc.response is not None:
+                raise UpdateUserPlanInfoError(
+                    oidc_id=oidc_id, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
+                )
+
+            raise UpdateUserPlanInfoError(oidc_id=oidc_id, error=f'Error<{exc}>: No response!')
 
         return True
 

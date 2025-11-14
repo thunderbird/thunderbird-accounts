@@ -1,10 +1,12 @@
 import sentry_sdk
-from django.contrib import messages
+from django.contrib import messages, admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.admin.actions import (
     admin_fix_broken_stalwart_account,
+    admin_sync_plan_to_keycloak,
+    admin_manual_activate_subscription_features,
 )
 from thunderbird_accounts.authentication.admin.forms import CustomUserChangeForm, CustomNewUserForm
 from thunderbird_accounts.authentication.clients import KeycloakClient
@@ -14,9 +16,16 @@ from thunderbird_accounts.mail.clients import MailClient
 
 
 class CustomUserAdmin(UserAdmin):
+    @admin.display(description='Plan')
+    def shorten_plan(user: User) -> str:
+        if not user.plan:
+            return None
+        return user.plan.name
+
     list_display = (
         'uuid',
         'oidc_id',
+        shorten_plan,
         *UserAdmin.list_display,
         'is_test_account',
         'last_used_email',
@@ -31,9 +40,21 @@ class CustomUserAdmin(UserAdmin):
         ),
         (
             _('Paddle Account info'),
-            {'fields': ('is_awaiting_payment_verification',)},
+            {
+                'description': _(
+                    '<b>Note</b>: Paddle Account information is automatically set / unset via webhooks from Paddle.<br/>'
+                    'If you adjust it here it may change in the future!'
+                ),
+                'fields': (
+                    'plan',
+                    'is_awaiting_payment_verification',
+                ),
+            },
         ),
+        (_('Profile Info'), {'fields': ('display_name', 'avatar_url', 'timezone')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'email')}),
+        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+        (_('Timestamps'), {'fields': ('created_at', 'updated_at')}),
         (
             _('Permissions'),
             {
@@ -47,9 +68,6 @@ class CustomUserAdmin(UserAdmin):
                 ),
             },
         ),
-        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
-        (_('Profile Info'), {'fields': ('display_name', 'avatar_url', 'timezone')}),
-        (_('Timestamps'), {'fields': ('created_at', 'updated_at')}),
     )
     readonly_fields = UserAdmin.readonly_fields + (
         'uuid',
@@ -58,8 +76,8 @@ class CustomUserAdmin(UserAdmin):
         'created_at',
         'updated_at',
     )
-    actions = [admin_fix_broken_stalwart_account]
-    list_filter = ['is_staff', 'is_superuser', 'is_test_account', 'is_active']
+    actions = [admin_fix_broken_stalwart_account, admin_sync_plan_to_keycloak, admin_manual_activate_subscription_features]
+    list_filter = ['is_staff', 'is_superuser', 'is_test_account', 'is_active', 'plan']
 
     form = CustomUserChangeForm
     add_form = CustomNewUserForm
