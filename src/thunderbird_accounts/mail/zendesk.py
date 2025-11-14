@@ -11,6 +11,7 @@ class ZendeskClient(object):
         self.email = settings.ZENDESK_USER_EMAIL
         self.token = settings.ZENDESK_API_TOKEN
         self.subdomain = settings.ZENDESK_SUBDOMAIN
+        self.form_id = settings.ZENDESK_FORM_ID
         self.base_url = f'https://{self.subdomain}.zendesk.com/api/v2'
 
     def create_ticket(self, ticket_fields):
@@ -37,10 +38,7 @@ class ZendeskClient(object):
                 'subject': ticket_fields.get('subject'),
                 'comment': comment,
                 'requester': {'name': 'Accounts Support', 'email': ticket_fields.get('email')},
-                'custom_fields': [
-                    {'id': ticket_fields.get('product_field_id'), 'value': ticket_fields.get('product')},
-                    {'id': ticket_fields.get('type_field_id'), 'value': ticket_fields.get('ticket_type')},
-                ],
+                'custom_fields': ticket_fields.get('custom_fields', []),
             }
         }
 
@@ -50,6 +48,27 @@ class ZendeskClient(object):
             # This needs to be the end user's email for the ticket to be tracked correctly
             # within Zendesk, NOT the ZENDESK_USER_EMAIL
             auth=(f'{ticket_fields.get("email")}/token', self.token),
+            json=payload,
+        )
+
+        return response
+
+    def update_ticket(self, ticket_id, ticket_fields):
+        """Update a ticket in Zendesk using the Tickets API."""
+        url = f'{self.base_url}/tickets/{ticket_id}'
+
+        # For the full payload format, see:
+        # https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#update-ticket
+        payload = {
+            'ticket': ticket_fields
+        }
+
+        # This request needs to be made on behalf of the agent (not the end user)
+        # so any fields can be updated (including hidden fields)
+        response = requests.put(
+            url,
+            headers={'Content-Type': 'application/json'},
+            auth=(f'{settings.ZENDESK_USER_EMAIL}/token', settings.ZENDESK_API_TOKEN),
             json=payload,
         )
 
@@ -85,8 +104,8 @@ class ZendeskClient(object):
             return {'success': False, 'error': 'Zendesk upload failed', 'details': response.text}
 
     def get_ticket_fields(self):
-        """Get ticket fields from Zendesk API."""
-        url = f'{self.base_url}/ticket_fields.json'
+        """Get ticket fields from the ZENDESK_FORM_ID through Zendesk API including fields."""
+        url = f'{self.base_url}/ticket_forms/{self.form_id}?include=ticket_fields'
 
         response = requests.get(
             url, auth=(f'{self.email}/token', self.token), headers={'Content-Type': 'application/json'}

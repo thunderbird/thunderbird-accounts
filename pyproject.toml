@@ -27,6 +27,8 @@ dependencies = [
     "celery[redis]>=5.5.3",
     "django-cors-headers>=4.9.0",
     "mozilla-django-oidc>=4.0.1",
+    "regex>=2025.9.1",
+    "ua-parser>=1.0.1",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"

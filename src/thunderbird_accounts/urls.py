@@ -28,7 +28,6 @@ admin.site.index_title = _('Accounts Administration')
 urlpatterns = [
     path('admin/', admin.site.urls),
     # Django-specific routes (not handled by Vue)
-    path('contact/', mail_views.contact, name='contact'),
     path('wait-list/', mail_views.wait_list),
     path('contact/fields', mail_views.contact_fields, name='contact_fields'),
     # Post only

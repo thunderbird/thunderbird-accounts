@@ -3,7 +3,6 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { UserAvatar } from '@thunderbirdops/services-ui';
-import { PhArrowSquareOut } from '@phosphor-icons/vue';
 
 defineProps<{
   username: string;
@@ -13,12 +12,14 @@ const { t } = useI18n();
 const router = useRouter();
 const currentRoute = useRoute();
 
-const externalMenuItems = [
+const internalMenuItems = [
   {
     label: t('components.userMenu.contact'),
-    href: '/contact/',
-    icon: PhArrowSquareOut,
+    to: '/contact',
   },
+]
+
+const externalMenuItems = [
   {
     label: t('components.userMenu.logout'),
     href: '/logout/',
@@ -57,6 +58,14 @@ onBeforeUnmount(() => {
     <user-avatar :username="username" class="avatar" @click="toggleMenu" />
 
     <div v-if="showMenu" class="dropdown">
+      <router-link
+        v-for="internalItem in internalMenuItems"
+        :key="internalItem.label"
+        :to="internalItem.to"
+      >
+        {{ internalItem.label }}
+      </router-link>
+
       <a
         v-for="externalItem in externalMenuItems"
         :key="externalItem.label"
