@@ -2,7 +2,7 @@ import json
 from unittest.mock import patch, Mock
 
 from django.conf import settings
-from django.test import TestCase, Client as RequestClient
+from django.test import TestCase, Client as RequestClient, override_settings
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -237,3 +237,217 @@ class ZendeskContactFieldsTestCase(TestCase):
         url = reverse('contact_fields')
         response = self.client.post(url, data={})
         self.assertEqual(response.status_code, 405)
+
+
+class ZendeskContactSubmitTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    @patch('thunderbird_accounts.utils.utils.parse_user_agent_info')
+    @override_settings(
+        ZENDESK_FORM_ID='42',
+        ZENDESK_FORM_BROWSER_FIELD_ID='1001',
+        ZENDESK_FORM_OS_FIELD_ID='1002',
+    )
+    def test_contact_submit_success_with_attachments(self, mock_parse_ua, mock_client_cls):
+        mock_parse_ua.return_value = ('Firefox 120', 'macOS 14')
+
+        instance = Mock()
+        mock_client_cls.return_value = instance
+        instance.upload_file.return_value = {'success': True, 'upload_token': 'tok123', 'filename': 'test.txt'}
+
+        create_resp = Mock()
+        create_resp.ok = True
+        create_resp.json.return_value = {'request': {'id': 555}}
+        instance.create_ticket.return_value = create_resp
+
+        update_resp = Mock()
+        update_resp.ok = True
+        instance.update_ticket.return_value = update_resp
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+                {'id': 13, 'title': 'Category', 'type': 'tagger', 'value': 'general', 'required': False},
+            ],
+        }
+        uploaded = SimpleUploadedFile('test.txt', b'hi', content_type='text/plain')
+        response = self.client.post(
+            url,
+            data={'data': json.dumps(payload), 'attachments': uploaded},
+            HTTP_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Firefox/120.0',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+        # upload called for the file
+        instance.upload_file.assert_called_once()
+        # create called with expected payload
+        args, _kwargs = instance.create_ticket.call_args
+        sent_fields = args[0]
+        self.assertEqual(sent_fields['ticket_form_id'], 42)
+        self.assertEqual(sent_fields['email'], 'user@example.org')
+        self.assertEqual(sent_fields['subject'], 'Hello')
+        self.assertEqual(sent_fields['description'], 'Body')
+        self.assertEqual(sent_fields['attachments'], [{'token': 'tok123', 'filename': 'test.txt'}])
+        self.assertEqual(sent_fields['custom_fields'], [{'id': 13, 'value': 'general'}])
+
+        # update called with browser/os hidden fields
+        instance.update_ticket.assert_called_once()
+        # Ensure the IDs are ints and values are what we mocked from UA
+        update_payload = instance.update_ticket.call_args.args[1]
+        self.assertEqual(
+            update_payload,
+            {
+                'custom_fields': [
+                    {'id': 1001, 'value': 'Firefox 120'},
+                    {'id': 1002, 'value': 'macOS 14'},
+                ]
+            },
+        )
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    def test_contact_submit_validation_error_for_required_field(self, mock_client_cls):
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': '', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+        response = self.client.post(url, data={'data': json.dumps(payload)})
+        self.assertEqual(response.status_code, 400)
+        body = json.loads(response.content.decode())
+        self.assertFalse(body['success'])
+        self.assertIn('Subject is required', body['error'])
+        # Ensure no calls were made to the client
+        mock_client_cls.assert_not_called()
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    @override_settings(ZENDESK_FORM_ID='42')
+    def test_contact_submit_upload_failure(self, mock_client_cls):
+        instance = Mock()
+        mock_client_cls.return_value = instance
+        instance.upload_file.return_value = {'success': False, 'error': 'Zendesk upload failed'}
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+        uploaded = SimpleUploadedFile('test.txt', b'hi', content_type='text/plain')
+        response = self.client.post(url, data={'data': json.dumps(payload), 'attachments': uploaded})
+
+        self.assertEqual(response.status_code, 500)
+        body = json.loads(response.content.decode())
+        self.assertFalse(body['success'])
+        self.assertIn('Failed to upload file test.txt:', body['error'])
+        # create_ticket should not be called
+        instance.create_ticket.assert_not_called()
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    @override_settings(ZENDESK_FORM_ID='42')
+    def test_contact_submit_upload_exception(self, mock_client_cls):
+        instance = Mock()
+        mock_client_cls.return_value = instance
+        instance.upload_file.side_effect = Exception('boom')
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+        uploaded = SimpleUploadedFile('test.txt', b'hi', content_type='text/plain')
+        response = self.client.post(url, data={'data': json.dumps(payload), 'attachments': uploaded})
+
+        self.assertEqual(response.status_code, 500)
+        body = json.loads(response.content.decode())
+        self.assertFalse(body['success'])
+        self.assertIn('Failed to upload file test.txt: boom', body['error'])
+        instance.create_ticket.assert_not_called()
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    @override_settings(ZENDESK_FORM_ID='42')
+    def test_contact_submit_create_ticket_failure(self, mock_client_cls):
+        instance = Mock()
+        mock_client_cls.return_value = instance
+        instance.upload_file.return_value = {'success': True, 'upload_token': 'tok123', 'filename': 'test.txt'}
+        create_resp = Mock()
+        create_resp.ok = False
+        instance.create_ticket.return_value = create_resp
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+        uploaded = SimpleUploadedFile('test.txt', b'hi', content_type='text/plain')
+        response = self.client.post(url, data={'data': json.dumps(payload), 'attachments': uploaded})
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(json.loads(response.content.decode()), {'success': False})
+        instance.update_ticket.assert_not_called()
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    @patch('thunderbird_accounts.utils.utils.parse_user_agent_info')
+    @override_settings(
+        ZENDESK_FORM_ID='42',
+        ZENDESK_FORM_BROWSER_FIELD_ID='1001',
+        ZENDESK_FORM_OS_FIELD_ID='1002',
+    )
+    def test_contact_submit_update_ticket_failure(self, mock_parse_ua, mock_client_cls):
+        mock_parse_ua.return_value = ('Firefox 120', 'macOS 14')
+
+        instance = Mock()
+        mock_client_cls.return_value = instance
+        instance.upload_file.return_value = {'success': True, 'upload_token': 'tok123', 'filename': 'test.txt'}
+
+        create_resp = Mock()
+        create_resp.ok = True
+        create_resp.json.return_value = {'request': {'id': 555}}
+        instance.create_ticket.return_value = create_resp
+
+        update_resp = Mock()
+        update_resp.ok = False
+        instance.update_ticket.return_value = update_resp
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+        uploaded = SimpleUploadedFile('test.txt', b'hi', content_type='text/plain')
+        response = self.client.post(url, data={'data': json.dumps(payload), 'attachments': uploaded})
+
+        # Even though the update failed, at this point the ticket was created successfully
+        # So we were just unable to update the hidden fields, so we still return success to the user
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content.decode()), {'success': True})

@@ -262,48 +262,49 @@ def contact_submit(request: HttpRequest):
 
     zendesk_api_response = zendesk_client.create_ticket(ticket_fields)
 
-    if zendesk_api_response.ok:
-        # Extract the ticket ID from the response
-        response_data = zendesk_api_response.json()
-        ticket_id = response_data['request']['id']
+    if not zendesk_api_response.ok:
+        sentry_sdk.capture_message(
+            f'Failed to create Zendesk ticket: {zendesk_api_response}',
+            level='error',
+        )
+        return JsonResponse({'success': False}, status=500)
 
-        # Add browser and OS information to hidden custom fields
-        from thunderbird_accounts.utils.utils import parse_user_agent_info
+    # Extract the ticket ID from the response
+    response_data = zendesk_api_response.json()
+    ticket_id = response_data['request']['id']
 
-        user_agent_string = request.headers.get('User-Agent')
-        browser_string, os_string = parse_user_agent_info(user_agent_string)
+    # Add browser and OS information to hidden custom fields
+    from thunderbird_accounts.utils.utils import parse_user_agent_info
 
-        # Hidden fields (e.g. fields with permissions set as 'Agents can edit')
-        # can't be submitted through the Requests API, so we need to update the ticket manually
-        # using the Tickets API instead on behalf of the agent (not the end user)
-        update_ticket_fields = {
-            'custom_fields': [{
-                'id': int(settings.ZENDESK_FORM_BROWSER_FIELD_ID),
-                'value': browser_string
-            },
-            {
-                'id': int(settings.ZENDESK_FORM_OS_FIELD_ID),
-                'value': os_string
-            }]
-        }
+    user_agent_string = request.headers.get('User-Agent')
+    browser_string, os_string = parse_user_agent_info(user_agent_string)
 
-        zendesk_api_response = zendesk_client.update_ticket(ticket_id, update_ticket_fields)
+    # Hidden fields (e.g. fields with permissions set as 'Agents can edit')
+    # can't be submitted through the Requests API, so we need to update the ticket manually
+    # using the Tickets API instead on behalf of the agent (not the end user)
+    update_ticket_fields = {
+        'custom_fields': [{
+            'id': int(settings.ZENDESK_FORM_BROWSER_FIELD_ID),
+            'value': browser_string
+        },
+        {
+            'id': int(settings.ZENDESK_FORM_OS_FIELD_ID),
+            'value': os_string
+        }]
+    }
 
-        if zendesk_api_response.ok:
-            return JsonResponse({'success': True})
+    zendesk_api_response = zendesk_client.update_ticket(ticket_id, update_ticket_fields)
 
+    if not zendesk_api_response.ok:
+        # At this point the ticket has been created, even though we couldn't update the hidden fields
+        # So we should capture the error but still return success to the user
         sentry_sdk.capture_message(
             f'Zendesk ticket created but failed to update hidden fields: {zendesk_api_response}',
             level='error',
             user={'ticket_id': ticket_id},
         )
-        return JsonResponse({'success': False}, status=500)
 
-    sentry_sdk.capture_message(
-        f'Failed to create Zendesk ticket: {zendesk_api_response}',
-        level='error',
-    )
-    return JsonResponse({'success': False}, status=500)
+    return JsonResponse({'success': True})
 
 
 @login_required
