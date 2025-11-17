@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes, CheckboxInput } from '@thunderbirdops/services-ui';
+import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes, CheckboxInput, LoadingSkeleton } from '@thunderbirdops/services-ui';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 import NativeInputWrapper from './NativeInputWrapper.vue';
 
@@ -38,6 +38,7 @@ const form = ref({
 });
 const formRef = ref(null);
 const fileInput = ref(null);
+const isLoadingFormFields = ref(true);
 
 // services-ui's TextInput and TextArea field references for resetting form state
 const emailInput = useTemplateRef('emailInput');
@@ -115,6 +116,8 @@ const fetchTicketFields = async () => {
     }
   } catch (error) {
     errorText.value = error;
+  } finally {
+    isLoadingFormFields.value = false;
   }
 };
 
@@ -226,30 +229,43 @@ onMounted(() => {
       {{ t('views.contact.emailAddressLabel') }}
     </text-input>
 
-    <template v-for="field in dynamicFields" :key="field.id">
-      <component
-        :is="TICKET_FIELD_TYPE_TO_COMPONENT[field.type]"
-        :ref="field.id"
-        :name="field.title"
-        v-model="form[field.title]"
-        v-bind="nativeAttrsForField(field)"
-        :required="field.required"
-        :options="field.custom_field_options?.map((option) => ({ label: option.name, value: option.value }))"
-        :data-testid="`contact-${field.title}-input`"
-      >
-        {{ field.title }}
-      </component>
+    <template v-if="isLoadingFormFields">
+      <template v-for="i in 5" :key="i">
+        <loading-skeleton :is-loading="true" class="loading-skeleton-field">
+          <div />
+        </loading-skeleton>
+      </template>
     </template>
 
-    <div class="form-group file-dropzone" @dragover.prevent @drop.prevent="handleDrop" @click="triggerFileSelect"
-      role="button" aria-label="Upload files">
-      <p v-if="form.attachments.length === 0">
-        {{ t('views.contact.dragAndDropFilesText') }}
-      </p>
-      <p v-else>
-        {{ t('views.contact.filesSelectedText', { count: form.attachments.length }) }}
-      </p>
-      <input type="file" ref="fileInput" class="hidden" multiple @change="handleFileSelect" />
+    <template v-else>
+      <template v-for="field in dynamicFields" :key="field.id">
+        <component
+          :is="TICKET_FIELD_TYPE_TO_COMPONENT[field.type]"
+          :ref="field.id"
+          :name="field.title"
+          v-model="form[field.title]"
+          v-bind="nativeAttrsForField(field)"
+          :required="field.required"
+          :options="field.custom_field_options?.map((option) => ({ label: option.name, value: option.value }))"
+          :data-testid="`contact-${field.title}-input`"
+        >
+          {{ field.title }}
+        </component>
+      </template>
+    </template>
+
+    <div class="file-upload-container">
+      <p>{{ t('views.contact.fileUploadLabel') }}</p>
+      <div class="form-group file-dropzone" @dragover.prevent @drop.prevent="handleDrop" @click="triggerFileSelect"
+        role="button" aria-label="Upload files">
+        <p v-if="form.attachments.length === 0" class="file-dropzone-initial-text">
+          {{ t('views.contact.dragAndDropFilesText') }}
+        </p>
+        <p v-else>
+          {{ t('views.contact.filesSelectedText', { count: form.attachments.length }) }}
+        </p>
+        <input type="file" ref="fileInput" class="hidden file-input-button" multiple @change="handleFileSelect" />
+      </div>
     </div>
 
     <ul v-if="form.attachments.length" class="attachment-list">
@@ -275,24 +291,72 @@ onMounted(() => {
 form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
   margin-block-start: 1rem;
-  max-width: 50%;
+
+  .loading-skeleton-field {
+    height: 4.5rem !important; /* height is defined inline in services-ui */
+    width: 100% !important; /* width is defined inline in services-ui */
+  }
+
+  .file-upload-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: var(--colour-ti-secondary);
+    font-weight: 500;
+  }
 }
 
 .form-group {
   margin-block-end: 1rem;
 
   &.file-dropzone {
-    border: 2px dashed #ccc;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     border-radius: 8px;
     padding: 1rem;
     text-align: center;
     cursor: pointer;
     outline: none;
+    min-height: 137px;
+    box-shadow: inset 2px 2px 4px 0 rgba(0, 0, 0, 0.05);
+    /* Dashed border effect as we can't easily set the distance between the dashes */
+    background-image:
+      linear-gradient(to right, var(--colour-neutral-border) 0 12px, transparent 12px 100%),
+      linear-gradient(to right, var(--colour-neutral-border) 0 12px, transparent 12px 100%),
+      linear-gradient(to bottom, var(--colour-neutral-border) 0 12px, transparent 12px 100%),
+      linear-gradient(to bottom, var(--colour-neutral-border) 0 12px, transparent 12px 100%);
+    background-position: top left, bottom left, top left, top right;
+    background-size: 16px 1px, 16px 1px, 1px 16px, 1px 16px;
+    background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
 
     p {
       margin-block-end: 1rem;
+
+      &.file-dropzone-initial-text {
+        color: var(--colour-ti-muted);
+        line-height: 1.32;
+        font-weight: normal;
+      }
+    }
+
+    .file-input-button {
+      color: var(--colour-ti-muted);
+      line-height: 1.23;
+      font-size: 0.875rem;
+      cursor: pointer;
+
+      &::file-selector-button {
+        background-color: var(--colour-neutral-base);
+        color: var(--colour-primary-hover);
+        border-radius: 8px;
+        border: 1px solid var(--colour-ti-highlight);
+        padding: 0.375rem 0.75rem;
+        margin-inline-end: 0.75rem;
+      }
     }
 
     &:hover {
@@ -312,7 +376,6 @@ form {
 
 .notice {
   margin-block: 1rem;
-  max-width: 50%;
 }
 
 .attachment-list {
@@ -358,11 +421,5 @@ form {
 
 .remove-attachment-btn:hover {
   background-color: #c82333;
-}
-
-@media (max-width: 768px) {
-  form {
-    max-width: 100%;
-  }
 }
 </style>
