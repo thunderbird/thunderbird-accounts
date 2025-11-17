@@ -169,7 +169,8 @@ def contact_submit(request: HttpRequest):
     # using the 'data' field so that we can also send attachments in the same request
     try:
         data_json = json.loads(request.POST.get('data', '{}'))
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as ex:
+        sentry_sdk.capture_exception(ex)
         return JsonResponse({'success': False, 'error': _('Invalid form data')}, status=400)
 
     email = data_json.get('email')
@@ -237,12 +238,13 @@ def contact_submit(request: HttpRequest):
                 {'token': zendesk_api_response['upload_token'], 'filename': zendesk_api_response['filename']}
             )
 
-        except Exception as e:
+        except Exception as ex:
+            sentry_sdk.capture_exception(ex)
             return JsonResponse(
                 {
                     'success': False,
                     'error': _('Failed to upload file {uploaded_file_name}: {error}').format(
-                        uploaded_file_name=uploaded_file.name, error=str(e)
+                        uploaded_file_name=uploaded_file.name, error=str(ex)
                     ),
                 },
                 status=500,
@@ -290,8 +292,17 @@ def contact_submit(request: HttpRequest):
         if zendesk_api_response.ok:
             return JsonResponse({'success': True})
 
+        sentry_sdk.capture_message(
+            f'Zendesk ticket created but failed to update hidden fields: {zendesk_api_response}',
+            level='error',
+            user={'ticket_id': ticket_id},
+        )
         return JsonResponse({'success': False}, status=500)
 
+    sentry_sdk.capture_message(
+        f'Failed to create Zendesk ticket: {zendesk_api_response}',
+        level='error',
+    )
     return JsonResponse({'success': False}, status=500)
 
 
