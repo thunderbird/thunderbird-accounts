@@ -3,6 +3,7 @@ import { ref, onMounted, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes, CheckboxInput } from '@thunderbirdops/services-ui';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
+import NativeInputWrapper from './NativeInputWrapper.vue';
 
 // Types
 import { ContactFieldsAPIResponse, TicketField } from '../types';
@@ -13,14 +14,14 @@ const TICKET_FIELD_TYPE_TO_COMPONENT = {
   'text': TextInput,
   'textarea': TextArea,
   'checkbox': CheckboxInput,
-  'date': '', // TODO: Define a data input component
-  'integer': '', // TODO: Define a number input component
-  'decimal': '', // TODO: Define a number input component
-  'regexp': '', // TODO: Define a regex input component
-  'partialcreditcard': '', // TODO: Define a partial credit card input component
-  'multiselect': '', // TODO: Define a multi-select input component
+  'date': NativeInputWrapper,
+  'integer': NativeInputWrapper,
+  'decimal': NativeInputWrapper,
+  'regexp': TextInput,
+  'partialcreditcard': '', // TODO: Define a partial credit card input component, if needed
+  'multiselect': '', // TODO: Define a multi-select input component, if needed
   'tagger': SelectInput,
-  'lookup': '', // TODO: Define a lookup input component
+  'lookup': '', // TODO: Define a lookup input component, if needed
   'subject': TextInput,
   'description': TextArea,
 };
@@ -41,6 +42,19 @@ const fileInput = ref(null);
 // services-ui's TextInput and TextArea field references for resetting form state
 const emailInput = useTemplateRef('emailInput');
 const dynamicFields = ref<TicketField[]>([]);
+
+const nativeAttrsForField = (field: TicketField) => {
+  switch (field.type) {
+    case 'date':
+      return { type: 'date' };
+    case 'integer':
+      return { type: 'number' };
+    case 'decimal':
+      return { type: 'number' };
+    default:
+      return {};
+  }
+};
 
 const triggerFileSelect = () => {
   fileInput.value?.click();
@@ -213,10 +227,16 @@ onMounted(() => {
     </text-input>
 
     <template v-for="field in dynamicFields" :key="field.id">
-      <component :is="TICKET_FIELD_TYPE_TO_COMPONENT[field.type]" :ref="field.id" :name="field.title"
-        v-model="form[field.title]" :required="field.required"
+      <component
+        :is="TICKET_FIELD_TYPE_TO_COMPONENT[field.type]"
+        :ref="field.id"
+        :name="field.title"
+        v-model="form[field.title]"
+        v-bind="nativeAttrsForField(field)"
+        :required="field.required"
         :options="field.custom_field_options?.map((option) => ({ label: option.name, value: option.value }))"
-        :data-testid="`contact-${field.title}-input`">
+        :data-testid="`contact-${field.title}-input`"
+      >
         {{ field.title }}
       </component>
     </template>
