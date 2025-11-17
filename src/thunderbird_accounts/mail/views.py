@@ -243,8 +243,8 @@ def contact_submit(request: HttpRequest):
             return JsonResponse(
                 {
                     'success': False,
-                    'error': _('Failed to upload file {uploaded_file_name}: {error}').format(
-                        uploaded_file_name=uploaded_file.name, error=str(ex)
+                    'error': _('Failed to upload file {uploaded_file_name}. Please try again later.').format(
+                        uploaded_file_name=uploaded_file.name
                     ),
                 },
                 status=500,
