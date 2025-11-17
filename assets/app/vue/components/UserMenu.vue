@@ -58,6 +58,7 @@ onBeforeUnmount(() => {
     <user-avatar :username="username" class="avatar" @click="toggleMenu" />
 
     <div v-if="showMenu" class="dropdown">
+      <!-- Holds internal links (VueJS routes) -->
       <router-link
         v-for="internalItem in internalMenuItems"
         :key="internalItem.label"
@@ -66,13 +67,13 @@ onBeforeUnmount(() => {
         {{ internalItem.label }}
       </router-link>
 
+      <!-- Holds external links (primarily Django routes) -->
       <a
         v-for="externalItem in externalMenuItems"
         :key="externalItem.label"
         :href="externalItem.href"
       >
         {{ externalItem.label }}
-        <component :is="externalItem.icon" size="16" />
       </a>
     </div>
 </button>
