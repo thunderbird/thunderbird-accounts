@@ -33,22 +33,26 @@ def parse_user_agent_info(user_agent_string: str) -> tuple[str, str]:
 
     # Extract browser information
     browser_info = parse_user_agent(user_agent_string)
-    browser_string = f"{browser_info.family}"
-    if browser_info.major:
-        browser_string += f" {browser_info.major}"
-        if browser_info.minor:
-            browser_string += f".{browser_info.minor}"
-            if browser_info.patch:
-                browser_string += f".{browser_info.patch}"
+    browser_string = browser_info.family
+    browser_version = '.'.join(filter(lambda x: x, [
+        browser_info.major,
+        browser_info.minor,
+        browser_info.patch,
+    ]))
+
+    if browser_version.strip():
+        browser_string = f'{browser_string} {browser_version}'
 
     # Extract OS information
     os_info = parse_os(user_agent_string)
-    os_string = f"{os_info.family}"
-    if os_info.major:
-        os_string += f" {os_info.major}"
-        if os_info.minor:
-            os_string += f".{os_info.minor}"
-            if os_info.patch:
-                os_string += f".{os_info.patch}"
+    os_string = os_info.family
+    os_version = '.'.join(filter(lambda x: x, [
+        os_info.major,
+        os_info.minor,
+        os_info.patch,
+    ]))
+
+    if os_version.strip():
+        os_string = f'{os_string} {os_version}'
 
     return browser_string, os_string
