@@ -131,3 +131,109 @@ class AddEmailAliasTestCase(TestCase):
                 json.loads(response.content.decode()),
                 {'success': False, 'error': _('You cannot use this email address.')},
             )
+
+
+class ZendeskContactFieldsTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    def test_contact_fields_success_filters_and_transforms(self, mock_client_cls):
+        instance = Mock()
+        mock_client_cls.return_value = instance
+        instance.get_ticket_fields.return_value = {
+            'success': True,
+            'data': {
+                'ticket_form': {'id': 123, 'name': 'Support'},
+                'ticket_fields': [
+                    {
+                        'id': 1,
+                        'title': 'Subject',
+                        'description': 'Subject field',
+                        'required': True,
+                        'type': 'subject',
+                        'active': True,
+                        'visible_in_portal': True,
+                        'editable_in_portal': True,
+                    },
+                    {
+                        'id': 2,
+                        'title': 'Category',
+                        'description': 'Choose a category',
+                        'required': False,
+                        'type': 'tagger',
+                        'active': True,
+                        'visible_in_portal': True,
+                        'editable_in_portal': True,
+                        'custom_field_options': [
+                            {'id': 21, 'name': 'General', 'value': 'general', 'extra': 'ignored'},
+                            {'id': 22, 'name': 'Billing', 'value': 'billing'},
+                        ],
+                    },
+                    {
+                        # Should be filtered out (not editable in portal)
+                        'id': 3,
+                        'title': 'Internal',
+                        'description': 'Internal only',
+                        'required': False,
+                        'type': 'text',
+                        'active': True,
+                        'visible_in_portal': True,
+                        'editable_in_portal': False,
+                    },
+                ],
+            },
+        }
+
+        url = reverse('contact_fields')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(response.content.decode())
+
+        self.assertTrue(payload['success'])
+        self.assertEqual(payload['ticket_form'], {'id': 123})
+        self.assertIn('ticket_fields', payload)
+
+        # Only two fields should pass the filter
+        fields = payload['ticket_fields']
+        self.assertEqual(len(fields), 2)
+
+        # Field 1 minimal keys + values
+        f1 = next(f for f in fields if f['id'] == 1)
+        self.assertEqual(
+            {k: f1[k] for k in ['id', 'title', 'description', 'required', 'type']},
+            {'id': 1, 'title': 'Subject', 'description': 'Subject field', 'required': True, 'type': 'subject'},
+        )
+        self.assertNotIn('custom_field_options', f1)
+
+        # Field 2 options trimmed to id/name/value
+        f2 = next(f for f in fields if f['id'] == 2)
+        self.assertEqual(f2['title'], 'Category')
+        self.assertIn('custom_field_options', f2)
+        self.assertEqual(
+            f2['custom_field_options'],
+            [
+                {'id': 21, 'name': 'General', 'value': 'general'},
+                {'id': 22, 'name': 'Billing', 'value': 'billing'},
+            ],
+        )
+
+        # Ensure client was called once
+        instance.get_ticket_fields.assert_called_once()
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    def test_contact_fields_error_from_backend(self, mock_client_cls):
+        instance = Mock()
+        mock_client_cls.return_value = instance
+        instance.get_ticket_fields.return_value = {'success': False, 'error': 'Boom'}
+
+        url = reverse('contact_fields')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 500)
+        payload = json.loads(response.content.decode())
+        self.assertEqual(payload, {'success': False, 'error': 'Boom'})
+
+    def test_contact_fields_method_not_allowed(self):
+        url = reverse('contact_fields')
+        response = self.client.post(url, data={})
+        self.assertEqual(response.status_code, 405)
