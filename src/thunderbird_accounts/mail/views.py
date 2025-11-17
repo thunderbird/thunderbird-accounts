@@ -12,7 +12,7 @@ from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
-from django.views.decorators.cache import never_cache
+from django.views.decorators.cache import cache_page, never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
@@ -116,6 +116,7 @@ def home(request: HttpRequest):
 
 
 @require_http_methods(['GET'])
+@cache_page(60 * 15)
 def contact_fields(request: HttpRequest):
     """Get ticket fields from Zendesk API and filter based on Zendesk Admin."""
     zendesk_client = ZendeskClient()
