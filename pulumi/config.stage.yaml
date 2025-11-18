@@ -590,11 +590,11 @@ resources:
               - name: KEYCLOAK_ADMIN_URL_TOKEN
                 value: 'https://auth-stage.tb.pro/realms/master/protocol/openid-connect/token/'
               - name: ZENDESK_FORM_ID
-                value: '43835995509779'
+                value: '46642378723859'
               - name: ZENDESK_FORM_BROWSER_FIELD_ID
-                value: '44738491227923'
+                value: '46642389601427'
               - name: ZENDESK_FORM_OS_FIELD_ID
-                value: '44738497160211'
+                value: '46642417675539'
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:
