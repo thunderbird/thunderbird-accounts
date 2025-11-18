@@ -12,6 +12,9 @@ import TermsView from '@/views/TermsView.vue';
 import MailView from '@/views/MailView/index.vue';
 import SecuritySettingsView from '@/views/MailView/views/SecuritySettingsView/index.vue';
 
+// Zendesk Contact Form (Support)
+import ContactView from '@/views/ContactView/index.vue';
+
 const router = createRouter({
   history: createWebHistory('/'),
   routes: [
@@ -69,6 +72,15 @@ const router = createRouter({
       name: 'subscribe',
       component: SubscribeView,
     },
+    // Zendesk Contact Form (Support)
+    {
+      path: '/contact',
+      name: 'contact',
+      component: ContactView,
+      meta: {
+        isPublic: true,
+      },
+    }
   ],
   scrollBehavior(to, _from, savedPosition) {
     if (to.hash) {
@@ -99,7 +111,7 @@ router.beforeEach((to, _from) => {
   }
 
   // Don't let unsubscribed users anywhere except the subscribe view
-  if (isAuthenticated && sendToSubscribe && to.name !== 'subscribe') {
+  if (isAuthenticated && sendToSubscribe && !['subscribe', 'contact'].includes(to.name.toString())) {
     return { name: 'subscribe' };
   } else if (isAuthenticated && !sendToSubscribe && to.name === 'subscribe') {
     return { name: 'dashboard' };

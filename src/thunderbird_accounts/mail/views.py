@@ -12,7 +12,7 @@ from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
-from django.views.decorators.cache import never_cache
+from django.views.decorators.cache import cache_page, never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
@@ -89,7 +89,7 @@ def home(request: HttpRequest):
             max_email_aliases = request.user.plan.mail_address_count
     elif not request.user.is_authenticated:  # Only if the user is not authenticated
         # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
-        public_routes = ['/privacy', '/terms']
+        public_routes = ['/privacy', '/terms', '/contact']
 
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))
@@ -115,16 +115,10 @@ def home(request: HttpRequest):
     )
 
 
-def contact(request: HttpRequest):
-    """Contact page for support requests (uses ZenDesk's API)
-    A user can always access this page even if they don't have a mail account setup
-    since they might encounter problems before the mail account setup itself."""
-    return TemplateResponse(request, 'mail/contact.html')
-
-
 @require_http_methods(['GET'])
+@cache_page(60 * 15)
 def contact_fields(request: HttpRequest):
-    """Get ticket fields from Zendesk API and filter for fields with custom options."""
+    """Get ticket fields from Zendesk API and filter based on Zendesk Admin."""
     zendesk_client = ZendeskClient()
     result = zendesk_client.get_ticket_fields()
 
@@ -133,24 +127,38 @@ def contact_fields(request: HttpRequest):
             {'success': False, 'error': result.get('error', _('Failed to fetch ticket fields'))}, status=500
         )
 
+    ticket_form = result['data']['ticket_form']
     ticket_fields = result['data']['ticket_fields']
-    fields_by_title = {}
 
-    # Filter ticket fields to only include those with custom_field_options
+    # For now, we only care about the id of the ticket form, since we need to pass it back to ticket creation
+    # Even though we could read this from the env var ZENDESK_FORM_ID directly, we might need more fields in the future
+    ticket_form_data = {
+        'id': ticket_form['id']
+    }
+
+    ticket_fields_data = []
+
+    # Filter ticket fields based on being editable / visible (controlled through Zendesk Admin)
     for field in ticket_fields:
-        if 'custom_field_options' in field:
-            # Extract the id, title, and custom_field_options with id, name and value
+        if field['active'] and field['visible_in_portal'] and field['editable_in_portal']:
             field_data = {
                 'id': field['id'],
                 'title': field['title'],
-                'custom_field_options': [
+                'description': field['description'],
+                'required': field['required'],
+                'type': field['type']
+            }
+
+            if 'custom_field_options' in field:
+                # Extract the id, name, and custom_field_options with id, name and value
+                field_data['custom_field_options'] = [
                     {'id': option['id'], 'name': option['name'], 'value': option['value']}
                     for option in field['custom_field_options']
-                ],
-            }
-            fields_by_title[field['title']] = field_data
+                ]
 
-    return JsonResponse({'success': True, 'ticket_fields': fields_by_title})
+            ticket_fields_data.append(field_data)
+
+    return JsonResponse({'success': True, 'ticket_form': ticket_form_data, 'ticket_fields': ticket_fields_data})
 
 
 @require_http_methods(['POST'])
@@ -158,17 +166,54 @@ def contact_submit(request: HttpRequest):
     """Uses Zendesk's Requests API to create a ticket
     Ref https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#tickets-and-requests"""
 
-    email = request.POST.get('email')
-    subject = request.POST.get('subject')
-    product = request.POST.get('product')
-    product_field_id = request.POST.get('product_field_id')
-    ticket_type = request.POST.get('type')
-    type_field_id = request.POST.get('type_field_id')
-    description = request.POST.get('description')
+    # Data comes in as multipart/form-data, so we need to parse the JSON data from the form
+    # using the 'data' field so that we can also send attachments in the same request
+    try:
+        data_json = json.loads(request.POST.get('data', '{}'))
+    except json.JSONDecodeError as ex:
+        sentry_sdk.capture_exception(ex)
+        return JsonResponse({'success': False, 'error': _('Invalid form data')}, status=400)
+
+    email = data_json.get('email')
+    fields = data_json.get('fields', [])
+
+    # Extract subject and description from dynamic fields.
+    # Even though they come in as dynamic fields, they are special mandatory fields
+    # that should be sent differently in the Request API.
+    # https://developer.zendesk.com/api-reference/ticketing/tickets/ticket-requests/#json-format
+    subject = None
+    description = None
+
+    custom_fields = []
+    validation_errors = []
+
+    for field in fields:
+        field_type = field.get('type')
+        field_value = field.get('value')
+        field_id = field.get('id')
+        field_title = field.get('title')
+        field_required = field.get('required', False)
+
+        # Check if required field is empty
+        if field_required and (not field_value or field_value.strip() == ''):
+            validation_errors.append(f'{field_title} is required')
+
+        if field_type == 'subject':
+            subject = field_value
+        elif field_type == 'description':
+            description = field_value
+        else:
+            # This is a custom field
+            custom_fields.append({
+                'id': field_id,
+                'value': field_value
+            })
+
     uploaded_files = request.FILES.getlist('attachments')
 
-    if not any([email, subject, product, ticket_type, description]):
-        return raise_form_error(request, reverse('contact'), _('All fields are required'))
+    # Check for validation errors
+    if validation_errors:
+        return JsonResponse({'success': False, 'error': ', '.join(validation_errors)}, status=400)
 
     # Upload files to Zendesk and collect tokens
     attachment_tokens = []
@@ -194,12 +239,13 @@ def contact_submit(request: HttpRequest):
                 {'token': zendesk_api_response['upload_token'], 'filename': zendesk_api_response['filename']}
             )
 
-        except Exception as e:
+        except Exception as ex:
+            sentry_sdk.capture_exception(ex)
             return JsonResponse(
                 {
                     'success': False,
-                    'error': _('Failed to upload file {uploaded_file_name}: {error}').format(
-                        uploaded_file_name=uploaded_file.name, error=str(e)
+                    'error': _('Failed to upload file {uploaded_file_name}. Please try again later.').format(
+                        uploaded_file_name=uploaded_file.name
                     ),
                 },
                 status=500,
@@ -207,22 +253,59 @@ def contact_submit(request: HttpRequest):
 
     # Create ticket with attachment tokens
     ticket_fields = {
+        'ticket_form_id': int(settings.ZENDESK_FORM_ID),
         'email': email,
         'subject': subject,
-        'product': product,
-        'product_field_id': product_field_id,
-        'ticket_type': ticket_type,
-        'type_field_id': type_field_id,
         'description': description,
         'attachments': attachment_tokens,
+        'custom_fields': custom_fields,
     }
 
     zendesk_api_response = zendesk_client.create_ticket(ticket_fields)
 
-    if zendesk_api_response.ok:
-        return JsonResponse({'success': True})
+    if not zendesk_api_response.ok:
+        sentry_sdk.capture_message(
+            f'Failed to create Zendesk ticket: {zendesk_api_response}',
+            level='error',
+        )
+        return JsonResponse({'success': False}, status=500)
 
-    return JsonResponse({'success': False}, status=500)
+    # Extract the ticket ID from the response
+    response_data = zendesk_api_response.json()
+    ticket_id = response_data['request']['id']
+
+    # Add browser and OS information to hidden custom fields
+    from thunderbird_accounts.utils.utils import parse_user_agent_info
+
+    user_agent_string = request.headers.get('User-Agent')
+    browser_string, os_string = parse_user_agent_info(user_agent_string)
+
+    # Hidden fields (e.g. fields with permissions set as 'Agents can edit')
+    # can't be submitted through the Requests API, so we need to update the ticket manually
+    # using the Tickets API instead on behalf of the agent (not the end user)
+    update_ticket_fields = {
+        'custom_fields': [{
+            'id': int(settings.ZENDESK_FORM_BROWSER_FIELD_ID),
+            'value': browser_string
+        },
+        {
+            'id': int(settings.ZENDESK_FORM_OS_FIELD_ID),
+            'value': os_string
+        }]
+    }
+
+    zendesk_api_response = zendesk_client.update_ticket(ticket_id, update_ticket_fields)
+
+    if not zendesk_api_response.ok:
+        # At this point the ticket has been created, even though we couldn't update the hidden fields
+        # So we should capture the error but still return success to the user
+        sentry_sdk.capture_message(
+            f'Zendesk ticket created but failed to update hidden fields: {zendesk_api_response}',
+            level='error',
+            user={'ticket_id': ticket_id},
+        )
+
+    return JsonResponse({'success': True})
 
 
 @login_required

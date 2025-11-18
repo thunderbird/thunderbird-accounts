@@ -317,6 +317,20 @@
         "help": "Need help? Contact {0}.",
         "support": "support"
       }
+    },
+    "contact": {
+      "title": "Submit a request",
+      "requiredFieldsText": "Fields marked with an asterisk (*) are required.",
+      "errorFetchingFields": "Failed to fetch ticket fields. Please reload the page and try again.",
+      "errorSubmittingForm": "Failed to submit contact form. Please try again.",
+      "success": "Your support request has been submitted successfully",
+      "emailAddressLabel": "Your email address",
+      "fileUploadLabel": "Files",
+      "dragAndDropFilesText": "Drag & drop files here, or click to upload",
+      "filesSelectedText": "{count} file(s) selected. Drag & drop more files here, or click to upload",
+      "remove": "Remove",
+      "submit": "Submit",
+      "submitting": "Submitting..."
     }
   },
   "footer": {
