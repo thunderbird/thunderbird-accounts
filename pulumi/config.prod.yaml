@@ -433,6 +433,12 @@ resources:
                 value: 'https://auth.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
                 value: 'https://auth.tb.pro/realms/master/protocol/openid-connect/token/'
+              - name: ZENDESK_FORM_ID
+                value: '38216134664083'
+              - name: ZENDESK_FORM_BROWSER_FIELD_ID
+                value: '44379231787027'
+              - name: ZENDESK_FORM_OS_FIELD_ID
+                value: '44379263732755'
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -593,6 +599,12 @@ resources:
                 value: 'https://auth.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
                 value: 'https://auth.tb.pro/realms/master/protocol/openid-connect/token/'
+              - name: ZENDESK_FORM_ID
+                value: '38216134664083'
+              - name: ZENDESK_FORM_BROWSER_FIELD_ID
+                value: '44379231787027'
+              - name: ZENDESK_FORM_OS_FIELD_ID
+                value: '44379263732755'
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:
