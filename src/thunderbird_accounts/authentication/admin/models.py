@@ -42,7 +42,8 @@ class CustomUserAdmin(UserAdmin):
             _('Paddle Account info'),
             {
                 'description': _(
-                    '<b>Note</b>: Paddle Account information is automatically set / unset via webhooks from Paddle.<br/>'
+                    '<b>Note</b>: Paddle Account information is automatically set / unset via webhooks from Paddle.'
+                    '<br/>'
                     'If you adjust it here it may change in the future!'
                 ),
                 'fields': (
@@ -76,7 +77,11 @@ class CustomUserAdmin(UserAdmin):
         'created_at',
         'updated_at',
     )
-    actions = [admin_fix_broken_stalwart_account, admin_sync_plan_to_keycloak, admin_manual_activate_subscription_features]
+    actions = [
+        admin_fix_broken_stalwart_account,
+        admin_sync_plan_to_keycloak,
+        admin_manual_activate_subscription_features,
+    ]
     list_filter = ['is_staff', 'is_superuser', 'is_test_account', 'is_active', 'plan']
 
     form = CustomUserChangeForm

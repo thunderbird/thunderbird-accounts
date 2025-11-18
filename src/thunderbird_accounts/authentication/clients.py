@@ -147,11 +147,10 @@ class KeycloakClient:
         :raises User.MultipleObjectsReturned: If multiple users have the same oidc_id (this is bad for many reasons!)
         :raises GetUserError: If there was an error during the keycloak user get api request
         :raises UpdateUserPlanInfoError: If there was an error during the keycloak user update api request"""
-        user = User.objects.get(oidc_id=oidc_id)
+        User.objects.get(oidc_id=oidc_id)
         user_data = self.get_user(oidc_id=oidc_id)
 
         update_data = user_data.json()
-        print('EXISTING DATA ->', update_data)
         update_data['attributes'] = {
             **update_data['attributes'],
             **dict(
@@ -167,7 +166,6 @@ class KeycloakClient:
                 )
             ),
         }
-        print('UPDATED DATA ->', update_data)
 
         try:
             self.request(
