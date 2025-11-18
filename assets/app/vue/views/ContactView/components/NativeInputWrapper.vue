@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { TextInput } from '@thunderbirdops/services-ui';
+
 /**
  * This component is a simple wrapper for native HTML input elements.
  * It is used alongside the <component :is="" /> Vue component
@@ -23,7 +25,7 @@ function onInput(e: Event) {
 </script>
 
 <template>
-  <input
+  <text-input
     v-bind="$attrs"
     :type="type"
     :name="name"
