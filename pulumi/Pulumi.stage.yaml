@@ -51,11 +51,11 @@ config:
   accounts:keycloak-admin-password:
     secure: AAABAJickUKn6Zxpqow593gbQbotzoY+vNQBG0xXhOQrRsaCtCs6XpSN55UXSRpig5vBtFPO4vPopG+/rQ==
   accounts:zendesk-subdomain:
-    secure: AAABAFRVwXflHJQSugBxHsgawNPaKoTsd1Ey1+8YklQkGnERiQFkPEc68pfdAVQ=
+    secure: AAABAErBeSMBoBpeiJiorS1dEzFCbaZ/PQ1LOMgwFDQgC0CKpCqREjU7DiLZJIE=
   accounts:zendesk-user-email:
-    secure: AAABAB/KKz6m9nMQRztBE3dejPRkgGtcF69MoQvrmJrZhhovdEuJxN1DZDQRpmuuUdTL5V8=
+    secure: AAABAIDNK2NpkW07XV3088rFIDTZagUikAS6nNvxSbTVx92ZlueYbRgSSRzNpGPo9r4+mhM=
   accounts:zendesk-api-token:
-    secure: AAABAExzdc41d0AOzlPTD1BreVUFf9M6qsrhRcLRP36n4oYNhDsCDTDe9guHWZpOfufHc4VWCzhME6qqwI3BT26+oPHxYPHo
+    secure: AAABAMBoQJNPyWbRXj2En+XR9myzkzHXL1W7O89D1n8AHQuxEETsL4JCHModn/Zx+c2Zp561uKQTalwewC9GfT1gc+kjfc3I
   accounts:oidc-client-secret:
     secure: AAABANecyPIzXdO+dhrAz8COqV+plPk+F7C0a8SSsdzvJd5oB5SIXK58ttLKkxPUHqkarW+rQQCtEU1REOVCQQ==
   accounts:oidc-client-id:
