@@ -1,12 +1,11 @@
 import json
 import datetime
 from pathlib import Path
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock
 
 from django.conf import settings
 from django.core.signing import Signer
 from django.test import TestCase
-from requests import Response
 from rest_framework.test import APIClient, APITestCase as DRF_APITestCase
 
 from thunderbird_accounts.authentication.models import User
