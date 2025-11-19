@@ -2,16 +2,19 @@
 import { useI18n } from 'vue-i18n';
 import { PhDownloadSimple, PhGlobe } from '@phosphor-icons/vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
+import { useTour, FTUE_STEPS } from '@/composables/useTour';
 
 // Shared components
 import CardContainer from '@/components/CardContainer.vue';
 import DetailsSummary from '@/components/DetailsSummary.vue';
+import TourCard from '@/components/TourCard.vue';
 
 // Local components
 import WelcomeHeader from './components/WelcomeHeader.vue';
 import ViewServerSettings from './components/ViewServerSettings.vue';
 
 const { t } = useI18n();
+const tour = useTour();
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const thunderbirdClientImage = new URL('@/assets/png/thundermail-dashboard-client.png', import.meta.url).href;
@@ -28,6 +31,17 @@ export default {
     <welcome-header />
 
     <card-container>
+      <tour-card
+        v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.DASHBOARD"
+        :text="t('views.mail.ftue.step1Text')"
+        :subtitle="t('views.mail.ftue.step1Subtitle')"
+        :current-step="tour.currentStep.value"
+        :total-steps="FTUE_STEPS.FINAL"
+        show-back
+        @next="tour.next()"
+        @back="tour.back()"
+      />
+
       <h2>{{ t('views.mail.sections.dashboard.setUpAnEmailApp') }}</h2>
 
       <div class="dashboard-section-content">
