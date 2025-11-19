@@ -15,6 +15,7 @@ from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.reserved import is_reserved, servers, support
 from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.utils.tests.utils import build_keycloak_success_response
 
 FAKE_OIDC_UUID = '39a7b5e8-7a64-45e3-acf1-ca7d314bfcec'
 
@@ -122,7 +123,9 @@ class AdminCreateUserTestCase(TestCase):
             'timezone': 'America/Toronto',
         }
 
-        mock_requests.return_value = self._build_success_response()
+        mock_requests.return_value = build_keycloak_success_response(return_headers={
+            'Location': f'http://keycloak:8999/admin/realms/tbpro/users/{FAKE_OIDC_UUID}'
+        })
 
         form = self._build_form(form_data)
 
@@ -147,7 +150,9 @@ class AdminCreateUserTestCase(TestCase):
             'timezone': 'America/Toronto',
         }
 
-        mock_requests.return_value = self._build_success_response()
+        mock_requests.return_value = build_keycloak_success_response(return_headers={
+            'Location': f'http://keycloak:8999/admin/realms/tbpro/users/{FAKE_OIDC_UUID}'
+        })
 
         form = self._build_form(form_data)
 
@@ -180,11 +185,6 @@ class AdminUpdateUserTestcase(TestCase):
         self.user.save()
         self.user.refresh_from_db()
 
-    def _build_success_response(self):
-        fake_response = Response()
-        fake_response.status_code = 200
-        return fake_response
-
     def _build_form(self, form_data):
         user_admin = CustomUserAdmin(User, AdminSite())
         fake_request = HttpRequest()
@@ -205,7 +205,7 @@ class AdminUpdateUserTestcase(TestCase):
             'date_joined_1': self.user.date_joined.time(),
         }
 
-        mock_requests.return_value = self._build_success_response()
+        mock_requests.return_value = build_keycloak_success_response()
         form = self._build_form(form_data)
 
         with self.assertRaises(ValueError):
@@ -228,7 +228,7 @@ class AdminUpdateUserTestcase(TestCase):
             'date_joined_1': self.user.date_joined.time(),
         }
 
-        mock_requests.return_value = self._build_success_response()
+        mock_requests.return_value = build_keycloak_success_response()
         form = self._build_form(form_data)
 
         with self.assertRaises(ValueError):
@@ -251,7 +251,7 @@ class AdminUpdateUserTestcase(TestCase):
             'date_joined_1': self.user.date_joined.time(),
         }
 
-        mock_requests.return_value = self._build_success_response()
+        mock_requests.return_value = build_keycloak_success_response()
         form = self._build_form(form_data)
 
         with self.assertRaises(ValueError):
@@ -283,13 +283,13 @@ class AdminUpdateUserTestcase(TestCase):
             'date_joined_1': self.user.date_joined.time(),
         }
 
-        mock_requests.return_value = self._build_success_response()
+        mock_requests.return_value = build_keycloak_success_response()
 
         # Set the json output to an empty object
         mock_update_principal.return_value.json.return_value = {}
 
         form = self._build_form(form_data)
-
+        print('->', form.errors)
         user = form.save(True)
 
         # We should have a user, they should have a pk (saved to db), and our fake oidc id
@@ -297,8 +297,9 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertIsNotNone(user.pk)
         self.assertEqual(user.oidc_id, FAKE_OIDC_UUID)
 
-        # 1. Updating the user
-        self.assertEqual(mock_requests.call_count, 1)
+        # 1. Retrieving existing user data
+        # 2. Updating the user
+        self.assertEqual(mock_requests.call_count, 2)
 
         # Ensure that our endpoint calls line up with our expectations above
         # ...yes it has that many tuples
@@ -322,7 +323,7 @@ class AdminUpdateUserTestcase(TestCase):
             'date_joined_1': self.user.date_joined.time(),
         }
 
-        mock_requests.return_value = self._build_success_response()
+        mock_requests.return_value = build_keycloak_success_response()
 
         # Set the json output to an empty object
         mock_update_principal.return_value.json.return_value = {}
@@ -336,8 +337,9 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertIsNotNone(user.pk)
         self.assertEqual(user.oidc_id, FAKE_OIDC_UUID)
 
-        # 1. Updating the user
-        self.assertEqual(mock_requests.call_count, 1)
+        # 1. Retrieving existing user data
+        # 2. Updating the user
+        self.assertEqual(mock_requests.call_count, 2)
 
         # Ensure that our endpoint calls line up with our expectations above
         # ...yes it has that many tuples
@@ -366,7 +368,7 @@ class AdminUpdateUserTestcase(TestCase):
             'date_joined_1': self.user.date_joined.time(),
         }
 
-        mock_requests.return_value = self._build_success_response()
+        mock_requests.return_value = build_keycloak_success_response()
 
         # Set the json output to an empty object
         mock_update_principal.return_value.json.return_value = {}
@@ -380,8 +382,9 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertIsNotNone(user.pk)
         self.assertEqual(user.oidc_id, FAKE_OIDC_UUID)
 
-        # 1. Updating the user
-        self.assertEqual(mock_requests.call_count, 1)
+        # 1. Retrieving existing user data
+        # 2. Updating the user
+        self.assertEqual(mock_requests.call_count, 2)
 
         # Ensure that our endpoint calls line up with our expectations above
         # ...yes it has that many tuples

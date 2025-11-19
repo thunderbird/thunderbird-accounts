@@ -1,11 +1,12 @@
 import json
 import datetime
 from pathlib import Path
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, MagicMock
 
 from django.conf import settings
 from django.core.signing import Signer
 from django.test import TestCase
+from requests import Response
 from rest_framework.test import APIClient, APITestCase as DRF_APITestCase
 
 from thunderbird_accounts.authentication.models import User
@@ -13,6 +14,8 @@ from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.subscription import tasks, models
 from thunderbird_accounts.mail import models as mail_models
 from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
+from thunderbird_accounts.utils.tests.utils import build_keycloak_success_response, build_mail_get_account, \
+    build_mail_update_account
 
 
 class PaddleWebhookViewTestCase(DRF_APITestCase):
@@ -406,7 +409,12 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
 
         return event_data
 
-    def test_success(self):
+    @patch('thunderbird_accounts.mail.clients.MailClient._get_principal')
+    @patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')
+    def test_success(self, mock_request, mail_client):
+        mock_request.return_value = build_keycloak_success_response()
+        mail_client.return_value = build_mail_get_account()
+
         self.assertEqual(models.Subscription.objects.count(), 0)
 
         # Ensure they're in the payment pending state
@@ -470,7 +478,12 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
         self.assertFalse(self.test_user.is_awaiting_payment_verification)
         self.assertIsNotNone(self.test_user.plan)
 
-    def test_success_updates_account_quota(self):
+    @patch('thunderbird_accounts.mail.clients.MailClient._get_principal')
+    @patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')
+    def test_success_updates_account_quota(self, mock_request, mail_client):
+        mock_request.return_value = build_keycloak_success_response()
+        mail_client.return_value = build_mail_get_account()
+
         self.assertEqual(models.Subscription.objects.count(), 0)
 
         # Retrieve the webhook sample
@@ -567,7 +580,11 @@ class SubscriptionUpdatedTaskTestCase(SubscriptionCreatedTaskTestCase):
     is_create_event: bool = False
     paddle_fixture = 'fixtures/webhook_paddle_subscription_updated.json'
 
-    def test_success(self):
+    @patch('thunderbird_accounts.mail.clients.MailClient._get_principal')
+    @patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')
+    def test_success(self, mock_request, mail_client):
+        mock_request.return_value = build_keycloak_success_response()
+        mail_client.return_value = build_mail_get_account()
         self.assertEqual(models.Subscription.objects.count(), 0)
 
         # Retrieve the webhook sample
@@ -920,7 +937,12 @@ class UpdateThundermailQuotaTestCase(TestCase):
 
         settings.CELERY_TASK_ALWAYS_EAGER = self.celery_task_always_eager_setting
 
-    def test_success(self):
+    @patch('thunderbird_accounts.mail.clients.MailClient._get_principal')
+    @patch('thunderbird_accounts.mail.clients.MailClient._update_principal')
+    def test_success(self, update_mail_client, get_mail_client):
+        update_mail_client.return_value = build_mail_update_account()
+        get_mail_client.return_value = build_mail_get_account()
+
         # Create the paddle objects
         product = models.Product.objects.create(
             paddle_id='pro_123',

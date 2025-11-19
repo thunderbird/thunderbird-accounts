@@ -152,7 +152,7 @@ class KeycloakClient:
 
         update_data = user_data.json()
         update_data['attributes'] = {
-            **update_data['attributes'],
+            **update_data.get('attributes', {}),
             **dict(
                 filter(
                     lambda x: x[1] is not None,
@@ -204,6 +204,8 @@ class KeycloakClient:
         if username:
             self._shared_clean(username)
 
+        user_data = self.get_user(oidc_id=oidc_id).json()
+
         update_data = dict(
             filter(
                 lambda x: x[1] is not None,
@@ -230,6 +232,12 @@ class KeycloakClient:
 
         if update_attribute_data:
             update_data['attributes'] = update_attribute_data
+
+        # Merge the two dicts together, update data being above existing data
+        update_data = {
+            **update_data,
+            **user_data,
+        }
 
         try:
             self.request(f'users/{oidc_id}', RequestMethods.PUT, json_data=update_data)
