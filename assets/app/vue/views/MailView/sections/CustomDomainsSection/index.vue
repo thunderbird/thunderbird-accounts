@@ -89,6 +89,7 @@ export default {
         show-back
         @next="tour.next()"
         @back="tour.back()"
+        @close="tour.skip()"
       />
 
       <h2>{{ t('views.mail.sections.customDomains.customDomains') }}</h2>

@@ -37,7 +37,7 @@ export default {
         show-back
         @next="tour.next()"
         @back="tour.back()"
-        @skip="tour.skip()"
+        @close="tour.skip()"
       />
 
       <h2>{{ t('views.mail.sections.emailSettings.emailSettings') }}</h2>

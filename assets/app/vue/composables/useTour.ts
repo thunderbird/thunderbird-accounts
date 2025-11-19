@@ -7,10 +7,26 @@ export const FTUE_STEPS = {
   FINAL: 3,
 }
 
-const currentStep = ref(FTUE_STEPS.INITIAL);
+const FTUE_STORAGE_KEY = 'tb_accounts_ftue_completed';
 
-// TODO: Change this to localStorage or something
-const showFTUE = ref(true);
+// Get the initial state of the FTUE from localStorage or return true if not available
+const getInitialState = () => {
+  if (typeof localStorage !== 'undefined') {
+    return localStorage.getItem(FTUE_STORAGE_KEY) !== 'true';
+  }
+
+  return true;
+};
+
+const currentStep = ref(FTUE_STEPS.INITIAL);
+const showFTUE = ref(getInitialState());
+
+// When the showFTUE state changes to false, we mark it the FTUE as completed in localStorage
+watch(showFTUE, (value) => {
+  if (!value && typeof localStorage !== 'undefined') {
+    localStorage.setItem(FTUE_STORAGE_KEY, 'true');
+  }
+});
 
 export const useTour = () => {
   const steps = [
@@ -32,7 +48,7 @@ export const useTour = () => {
   ];
 
   const start = () => {
-    currentStep.value = 1;
+    currentStep.value = FTUE_STEPS.DASHBOARD;
   };
 
   const next = () => {

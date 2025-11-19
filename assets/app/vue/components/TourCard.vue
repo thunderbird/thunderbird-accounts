@@ -14,14 +14,14 @@ defineProps<{
   nextLabel?: string;
 }>();
 
-const emit = defineEmits(['next', 'back']);
+const emit = defineEmits(['next', 'back', 'close']);
 </script>
 
 <template>
   <div class="tour-card">
     <header>
       <p>{{ t('views.mail.ftue.step', { step: currentStep, total: totalSteps }) }}</p>
-      <button class="close-button">
+      <button class="close-button" @click="emit('close')">
         <ph-x-circle size="24" />
       </button>
     </header>
