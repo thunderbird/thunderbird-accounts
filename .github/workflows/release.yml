@@ -16,6 +16,8 @@ permissions:
 jobs:
   deploy-production:
     runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/${{ github.repository }}/cached-devcontainer:latest
     environment: production
     env:
       IS_CI_AUTOMATION: "yes"
@@ -71,22 +73,10 @@ jobs:
           file: pulumi.tbz
       
       - name: Decompress Pulumi code
-        shell: bash
         run: |
           tar -xvf pulumi.tbz
-      
-      - name: Set up Python ${{ vars.PYTHON_VERSION}}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ vars.PYTHON_VERSION}}
-
-      - name: Install Pulumi
-        shell: bash
-        run: |
-          curl -fsSL https://get.pulumi.com | sh
 
       - name: Deploy version-tagged image to prod
-        shell: bash
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |
