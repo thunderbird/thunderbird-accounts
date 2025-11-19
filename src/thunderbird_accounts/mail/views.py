@@ -396,7 +396,8 @@ def create_custom_domain(request: HttpRequest):
             {
                 'success': False,
                 'error': _(
-                    'This domain is already configured. Please reach out to support in case you believe this is a mistake'
+                    'This domain is already configured. Please reach out to support '
+                    'in case you believe this is a mistake'
                 ),
             },
             status=400,
