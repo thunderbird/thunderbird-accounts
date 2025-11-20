@@ -40,7 +40,8 @@ def activate_subscription_features(user: User, plan: Plan):
         user.plan_id = plan.uuid
         user.save()
 
-    sync_plan_to_keycloak(user)
+    # TODO: Temporarily removed until https://github.com/thunderbird/thunderbird-accounts/issues/346 is ready
+    # sync_plan_to_keycloak(user)
 
     account = user.account_set.first()
     if account and account.stalwart_id:
