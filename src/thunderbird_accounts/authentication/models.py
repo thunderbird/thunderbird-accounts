@@ -59,7 +59,7 @@ class User(AbstractUser, BaseModel):
             '<b>Note:</b> Please do not override this unless authorized.'
         ),
     )
-    plan = models.ForeignKey('subscription.Plan', null=True, on_delete=models.SET_NULL)
+    plan = models.ForeignKey('subscription.Plan', null=True, blank=True, on_delete=models.SET_NULL)
 
     class Meta(BaseModel.Meta):
         indexes = [

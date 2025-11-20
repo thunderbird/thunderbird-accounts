@@ -4,9 +4,11 @@ from django.conf import settings
 from django.contrib import messages, admin
 from django.utils.translation import gettext_lazy as _, ngettext
 
+from thunderbird_accounts.authentication.exceptions import UpdateUserPlanInfoError
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail import utils as mail_utils
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError
+from thunderbird_accounts.subscription.utils import sync_plan_to_keycloak, activate_subscription_features
 
 
 @admin.action(description=_('Fix Broken Stalwart Account'))
@@ -101,5 +103,108 @@ def admin_fix_broken_stalwart_account(modeladmin, request, queryset):
         modeladmin.message_user(
             request,
             _('Nothing to fix!'),
+            messages.INFO,
+        )
+
+
+@admin.action(description=_('Manually activate subscription features'))
+def admin_manual_activate_subscription_features(modeladmin, request, queryset):
+    success_activate = 0
+    errors = 0
+
+    for user in queryset:
+        try:
+            activate_subscription_features(user, user.plan)
+            success_activate += 1
+        except UpdateUserPlanInfoError as ex:
+            logging.error(ex)
+            errors += 1
+
+    if success_activate:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Activated %d plan.',
+                'Activated %d plans.',
+                success_activate,
+            )
+            % success_activate,
+            messages.SUCCESS,
+        )
+    if errors:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Failed to update %d plan.',
+                'Failed to update %d plans.',
+                errors,
+            )
+            % errors,
+            messages.ERROR,
+        )
+    if sum([success_activate, errors]) == 0:
+        modeladmin.message_user(
+            request,
+            _('Nothing to update!'),
+            messages.INFO,
+        )
+
+
+@admin.action(description=_('Sync plan information to Keycloak'))
+def admin_sync_plan_to_keycloak(modeladmin, request, queryset):
+    success_activate = 0
+    success_deactivate = 0
+    errors = 0
+
+    for user in queryset:
+        try:
+            sync_plan_to_keycloak(user)
+        except UpdateUserPlanInfoError as ex:
+            logging.error(ex)
+            errors += 1
+            continue
+
+        if not user.has_active_subscription:
+            success_deactivate += 1
+        else:
+            success_activate += 1
+
+    if success_activate:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Synced %d plan with an active subscription.',
+                'Synced %d plans with active subscriptions.',
+                success_activate,
+            )
+            % success_activate,
+            messages.SUCCESS,
+        )
+    if success_deactivate:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Synced %d plan with an inactive subscription.',
+                'Synced %d plans with inactive subscriptions.',
+                success_deactivate,
+            )
+            % success_deactivate,
+            messages.SUCCESS,
+        )
+    if errors:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Failed to update %d plan.',
+                'Failed to update %d plans.',
+                errors,
+            )
+            % errors,
+            messages.ERROR,
+        )
+    if sum([success_activate, success_deactivate, errors]) == 0:
+        modeladmin.message_user(
+            request,
+            _('Nothing to update!'),
             messages.INFO,
         )

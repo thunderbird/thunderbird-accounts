@@ -17,13 +17,8 @@ from thunderbird_accounts.infra import views as infra_views
 from thunderbird_accounts.mail import views as mail_views
 from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
-from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.api import get_user_profile
-
-admin.site.site_header = _('Thunderbird Accounts Admin Panel')
-admin.site.site_title = _('Thunderbird Accounts Admin Panel')
-admin.site.index_title = _('Accounts Administration')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

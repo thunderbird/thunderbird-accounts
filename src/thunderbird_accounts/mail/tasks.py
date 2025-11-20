@@ -2,13 +2,12 @@ import datetime
 import logging
 from typing import Optional
 
-import sentry_sdk
 from celery import shared_task
 from django.conf import settings
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
+from thunderbird_accounts.mail.exceptions import DomainNotFoundError
 from thunderbird_accounts.mail.models import Account, Email
 
 
@@ -177,29 +176,6 @@ def create_stalwart_account(
             'task_status': 'failed',
         }
 
-    # Make sure we don't have anyone with this username
-    try:
-        stalwart.get_account(username)
-        # It already exists? We should have caught that in our system.
-        sentry_sdk.capture_message(
-            (
-                'Error: Username already exists!'
-                f' Cannot create a Stalwart account with the username {username} for {email}.'
-            ),
-            level='error',
-            user={'oidc_id': oidc_id},
-        )
-        return {
-            'oidc_id': oidc_id,
-            'username': username,
-            'email': email,
-            'task_status': 'failed',
-            'reason': 'Username already exists in Stalwart.',
-        }
-    except AccountNotFoundError:
-        # We want this error
-        pass
-
     emails = [
         email,
         # Create every other allowed alias too
@@ -215,8 +191,21 @@ def create_stalwart_account(
         print(f'checking domain {_domain}')
         _stalwart_check_or_create_domain_entry(stalwart, _domain)
 
-    # We need to create this after dkim and domain records exist
-    pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
+    # Lookup the account first, this shouldn't normally happen but if it does we shouldn't explode.
+    stalwart_account = stalwart.get_account(username)
+
+    if not stalwart_account:
+        # We need to create this after dkim and domain records exist
+        pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
+    else:
+        # link the stalwart account
+        pkid = stalwart_account.get('id')
+
+        # Check the aliases
+        if emails != stalwart_account.get('emails'):
+            # We'll just replace them all otherwise we're doing weird diff logic here.
+            stalwart.replace_email_addresses(username, emails)
+
 
     user = User.objects.get(oidc_id=oidc_id)
     now = datetime.datetime.now(datetime.UTC)

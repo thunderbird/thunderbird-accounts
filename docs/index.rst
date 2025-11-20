@@ -20,16 +20,14 @@ Contents
     :caption: Developer Documentation
 
     readme.md
-    modules.rst
-    database_erd.rst
-    infra.rst
+    autodoc.rst
     frontend.rst
+    how-to-integrate-keycloak.rst
+    keycloak-theme.rst
     mail.rst
     tasks.rst
-    internal_client_env.rst
-    building.rst
-    deploying-thundermail-waiting-list.rst
-    keycloak-theme.rst
+
+
 
 Indices and tables
 ==================
