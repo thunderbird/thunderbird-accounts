@@ -28,9 +28,6 @@ jobs:
       iac-changed: ${{ steps.check.outputs.iac-changed }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
 
       - uses: dorny/paths-filter@v3
         id: check
@@ -82,26 +79,25 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.iac-changed
     runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/${{ github.repository }}/cached-devcontainer:latest
     environment: staging
     steps:
       - uses: actions/checkout@v4
 
       - name: Ruff formatting/linting checks
-        uses: chartboost/ruff-action@v1
-        with:
-          src: "pulumi"
-          args: "format --check"
+        run: ruff format --check pulumi && ruff check pulumi
 
       - name: Ruff error checks
-        uses: chartboost/ruff-action@v1
-        with:
-          src: "pulumi"
+        run: ruff check pulumi
 
   run-e2e-tests-local:
     needs: detect-changes
     # if: needs.detect-changes.outputs.iac-changed
     if: false
     runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/${{ github.repository }}/cached-devcontainer:latest
     environment: staging
     env:
       ACCTS_FXA_EMAIL: ${{ secrets.E2E_ACCTS_FXA_EMAIL }}
@@ -132,12 +128,6 @@ jobs:
 
       - name: Start appointment stack via docker
         run: docker compose up -d --build -V
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: 'test/e2e/package-lock.json'
 
       - name: Install E2E test dependencies
         run: |
