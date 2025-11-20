@@ -166,6 +166,8 @@
           "verify": "Verify",
           "reVerify": "Re-verify",
           "domainAlreadyExists": "Domain already exists",
+          "domainAlreadyConfigured": "This domain is already configured. Please {link} in case you believe this is a mistake.",
+          "reachOutToSupport": "reach out to support",
           "verificationCriticalErrors": {
             "mxLookupError": "Unable to find mail servers for domain",
             "ipLookupError": "Unable to resolve IP addresses",

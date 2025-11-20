@@ -395,10 +395,9 @@ def create_custom_domain(request: HttpRequest):
         return JsonResponse(
             {
                 'success': False,
-                'error': _(
-                    'This domain is already configured. Please reach out to support '
-                    'in case you believe this is a mistake'
-                ),
+                'error': _('This domain is already configured.'),
+                # This error returns a code so that the frontend can show a i18n message with a link to contact page
+                'code': 'domain_already_configured',
             },
             status=400,
         )
