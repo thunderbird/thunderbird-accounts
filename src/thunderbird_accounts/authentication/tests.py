@@ -289,7 +289,6 @@ class AdminUpdateUserTestcase(TestCase):
         mock_update_principal.return_value.json.return_value = {}
 
         form = self._build_form(form_data)
-        print('->', form.errors)
         user = form.save(True)
 
         # We should have a user, they should have a pk (saved to db), and our fake oidc id

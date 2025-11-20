@@ -115,12 +115,10 @@ def admin_manual_activate_subscription_features(modeladmin, request, queryset):
     for user in queryset:
         try:
             activate_subscription_features(user, user.plan)
+            success_activate += 1
         except UpdateUserPlanInfoError as ex:
             logging.error(ex)
             errors += 1
-            continue
-
-        success_activate += 1
 
     if success_activate:
         modeladmin.message_user(
