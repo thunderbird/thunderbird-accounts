@@ -390,8 +390,11 @@ def create_custom_domain(request: HttpRequest):
         stalwart_client.create_dkim(domain_name)
 
         now = datetime.datetime.now(datetime.UTC)
-        Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
-    except (DomainAlreadyExistsError, IntegrityError):
+        try:
+            Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
+        except IntegrityError:
+            raise DomainAlreadyExistsError(domain_name)
+    except DomainAlreadyExistsError:
         return JsonResponse(
             {
                 'success': False,
