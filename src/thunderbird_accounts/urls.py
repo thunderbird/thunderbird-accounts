@@ -21,10 +21,6 @@ from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.api import get_user_profile
 
-admin.site.site_header = _('Thunderbird Accounts Admin Panel')
-admin.site.site_title = _('Thunderbird Accounts Admin Panel')
-admin.site.index_title = _('Accounts Administration')
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     # Django-specific routes (not handled by Vue)
