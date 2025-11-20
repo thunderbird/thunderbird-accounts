@@ -444,8 +444,6 @@ def verify_custom_domain(request: HttpRequest):
     if not domain:
         return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
 
-    stalwart_client = MailClient()
-
     now = datetime.datetime.now(datetime.UTC)
 
     try:
@@ -456,6 +454,7 @@ def verify_custom_domain(request: HttpRequest):
             domain.save()
             return JsonResponse({'success': True, 'critical_errors': [], 'warnings': []})
 
+        stalwart_client = MailClient()
         is_verified, critical_errors, warnings = stalwart_client.verify_domain(domain.name)
 
         domain.last_verification_attempt = now

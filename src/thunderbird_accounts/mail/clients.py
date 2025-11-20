@@ -1,5 +1,5 @@
 import base64
-import json
+import dns.resolver
 import logging
 from enum import StrEnum
 from typing import Optional
@@ -174,99 +174,10 @@ class MailClient:
 
     def get_telemetry(self):
         """We actually only use this for the health check"""
-        response = requests.patch(
-            f'{self.api_url}/telemetry/metrics', headers=self.authorized_headers, verify=False
-        )
+        response = requests.patch(f'{self.api_url}/telemetry/metrics', headers=self.authorized_headers, verify=False)
         response.raise_for_status()
         self._raise_for_error(response)
         return response
-
-    def _parse_verification_stages(self, stages: list) -> tuple[bool, list[str]]:
-        """Parse Stalwart verification stages to determine success/failure.
-
-        Ref https://github.com/stalwartlabs/webadmin/blob/main/src/pages/manage/troubleshoot.rs#L806-L1003
-
-        Based on Stalwart's DeliveryStage enum, stages are categorized as:
-        - Success stages (e.g., MxLookupSuccess, ConnectionSuccess)
-        - Error stages (e.g., MxLookupError, ConnectionError) - actual failures
-        - NotFound stages (e.g., MtaStsNotFound, TlsaNotFound) - warnings, not failures
-
-        For domain verification, we only fail on CRITICAL errors that prevent basic SMTP:
-        - MX/IP lookup failures
-        - Connection failures
-        - SMTP protocol failures (EHLO, etc.)
-
-        Advanced security features (MTA-STS, TLSA, TLS-RPT) are optional and won't fail verification.
-
-        Args:
-            stages: List of stage dictionaries from Stalwart troubleshooting API
-
-        Returns:
-            tuple: (is_verified, failed_stages)
-                - is_verified: True if verification completed successfully
-                - failed_stages: List of stage types that had errors/warnings
-        """
-        if not stages:
-            return False, []
-
-        critical_errors = set()
-        warnings = set()
-        has_completed = False
-
-        # Critical errors that prevent basic SMTP delivery (will fail verification)
-        critical_error_types = {
-            'mxLookupError',        # Can't find mail servers
-            'ipLookupError',        # Can't resolve IP addresses
-            'connectionError',      # Can't connect to server
-            'readGreetingError',    # SMTP greeting failed
-            'ehloError',            # EHLO command failed
-        }
-
-        # Optional/advanced features that are warnings but don't fail verification
-        # These include NotFound variants and errors for optional security features
-        warning_types = {
-            # NotFound variants (expected to be missing for many domains)
-            'mtaStsNotFound',       # MTA-STS policy not published (optional)
-            'tlsRptNotFound',       # TLS-RPT record not published (optional)
-            'tlsaNotFound',         # TLSA/DANE records not found (optional)
-            # Optional security feature errors
-            'mtaStsFetchError',     # Failed to fetch MTA-STS policy (optional)
-            'mtaStsVerifyError',    # MTA-STS verification failed (optional)
-            'tlsRptLookupError',    # TLS-RPT lookup failed (optional)
-            'tlsaLookupError',      # TLSA lookup failed (optional)
-            'daneVerifyError',      # DANE verification failed (optional)
-            # StartTLS is important but many servers work without it
-            'startTlsError',        # TLS upgrade failed (degraded security but may work)
-        }
-
-        for stage in stages:
-            if not isinstance(stage, dict):
-                continue
-
-            stage_type = stage.get('type', '')
-
-            # Check if process completed successfully
-            if stage_type == 'completed':
-                has_completed = True
-                continue
-
-            # Categorize the stage
-            if stage_type in critical_error_types:
-                critical_errors.add(stage_type)
-            elif stage_type in warning_types:
-                warnings.add(stage_type)
-            # Catch any other error types not explicitly categorized
-            elif stage_type.endswith('Error') and stage_type not in warning_types:
-                # MailFromError, RcptToError would be critical if we tested full delivery
-                # But for domain verification, we typically stop at EHLO/StartTLS
-                critical_errors.add(stage_type)
-
-        # Verification succeeds if:
-        # 1. The troubleshooting process completed (reached 'completed' stage)
-        # 2. There are no CRITICAL errors (optional security features don't count)
-        is_verified = has_completed and len(critical_errors) == 0
-
-        return is_verified, list(critical_errors), list(warnings)
 
     def get_domain(self, domain):
         response = self._get_principal(domain)
@@ -513,84 +424,129 @@ class MailClient:
         return data.get('data')
 
     def verify_domain(self, domain_name: str):
-        """Verify domain using Stalwart's troubleshooting API with SSE streaming.
+        """Verify domain using dnspython.
 
-        This implementation follows the Stalwart web-admin approach:
-        1. Get a troubleshooting token
-        2. Stream delivery stages via SSE
-        3. Collect stages until completion
-
-        Args:
-            domain_name: The domain to verify/troubleshoot
+        Checks:
+        1. MX Records exist and point to the correct host (Critical, fails verification)
+        2. SPF Record exists and includes the correct host (Warning if missing)
+        3. DKIM Record exists (Warning if missing)
 
         Returns:
             tuple: (is_verified, critical_errors, warnings)
-                - is_verified: True if verification completed successfully
-                - critical_errors: List of stage types that had errors
-                - warnings: List of stage types that had warnings
+                - is_verified: True if verification completed successfully without critical errors
+                - critical_errors: List of errors (e.g., 'mxLookupError')
+                - warnings: List of warnings (e.g., 'spfRecordNotFound')
         """
-        # Step 1: Get troubleshooting token
-        token_response = requests.get(
-            f'{self.api_url}/troubleshoot/token',
-            headers=self.authorized_headers,
-            verify=False
-        )
-        token_response.raise_for_status()
-        auth_token = token_response.json()
+        critical_errors = []
+        warnings = []
 
-        # Step 2: Stream delivery stages via SSE
-        sse_url = f'{self.api_url}/troubleshoot/delivery/{domain_name}?token={auth_token}'
-        sse_response = requests.get(
-            sse_url,
-            headers={
-                **self.authorized_headers,
-                'Accept': 'text/event-stream',
-            },
-            stream=True,
-            verify=False
-        )
-        sse_response.raise_for_status()
+        expected_host = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
 
-        # Step 3: Parse SSE events and collect delivery stages
-        delivery_stages = []
-        current_event = None
-        event_data = []
+        # 1. Check MX Records
+        try:
+            mx_answers = dns.resolver.resolve(domain_name, 'MX')
+            has_correct_mx = False
+            for rdata in mx_answers:
+                exchange = rdata.exchange.to_text().rstrip('.')
+                if exchange == expected_host:
+                    has_correct_mx = True
+                    break
 
-        for line in sse_response.iter_lines(decode_unicode=True):
-            if line is None:
-                continue
+            if not has_correct_mx:
+                logging.warning(f'MX records found for {domain_name} but none match {expected_host}')
+                critical_errors.append('mxLookupError')
 
-            # Empty line signals end of event
-            if not line.strip():
-                if event_data and current_event == 'event':
-                    # Parse the JSON data
-                    data_content = '\n'.join(event_data)
-                    try:
-                        stages = json.loads(data_content)
-                        if isinstance(stages, list):
-                            for stage in stages:
-                                delivery_stages.append(stage)
-                                # Check for completion
-                                if isinstance(stage, dict) and stage.get('type') == 'Completed':
-                                    return delivery_stages
-                                elif isinstance(stage, str) and stage == 'Completed':
-                                    return delivery_stages
-                    except json.JSONDecodeError as e:
-                        logging.warning(f'Failed to parse SSE data: {e}')
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+            critical_errors.append('mxLookupError')
+        except Exception as e:
+            logging.error(f'MX lookup failed for {domain_name}: {e}')
+            critical_errors.append('mxLookupError')
 
-                # Reset for next event
-                event_data = []
-                current_event = None
-                continue
+        # 2. Check SPF Record
+        try:
+            txt_answers = dns.resolver.resolve(domain_name, 'TXT')
+            has_spf = False
+            expected_spf_include = f'include:spf.{expected_host}'
 
-            # Parse SSE fields
-            if line.startswith('event:'):
-                current_event = line[6:].strip()
-            elif line.startswith('data:'):
-                event_data.append(line[5:].strip())
+            for rdata in txt_answers:
+                # rdata.strings is a list of bytes
+                txt_content = b''.join(rdata.strings).decode('utf-8')
+                if txt_content.startswith('v=spf1') and expected_spf_include in txt_content:
+                    has_spf = True
+                    break
 
-        print(delivery_stages)
+            if not has_spf:
+                warnings.append('spfRecordNotFound')
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+            warnings.append('spfRecordNotFound')
+        except Exception as e:
+            logging.warning(f'SPF lookup failed for {domain_name}: {e}')
+            warnings.append('spfRecordNotFound')
 
-        # Parse the verification stages to determine success/failure
-        is_verified, critical_errors, warnings = self._parse_verification_stages(delivery_stages)
+        # 3. Check DKIM Record
+        # We need to get the selector first from Stalwart
+        # Since we don't store the selector in our DB, we'll fetch DNS records
+        # from Stalwart which generates the expected records
+        try:
+            stalwart_dns_records = self.get_dns_records(domain_name)
+
+            dkim_record = next(
+                (r for r in stalwart_dns_records if r.get('type') == 'TXT' and '_domainkey' in r.get('name', '')), None
+            )
+
+            if dkim_record:
+                # name comes back like "selector._domainkey.domain.com."
+                # we need to query "selector._domainkey.domain.com"
+                dkim_host = dkim_record['name'].rstrip('.')
+
+                txt_answers = dns.resolver.resolve(dkim_host, 'TXT')
+                has_dkim = False
+                expected_p_value = None
+
+                # Extract p= value from expected dkim record
+                parts = [p.strip() for p in dkim_record.get('content', '').split(';')]
+                for part in parts:
+                    if part.startswith('p='):
+                        expected_p_value = part[2:]
+                        break
+
+                if not expected_p_value:
+                    logging.warning(f'Could not extract p value from expected DKIM record for {domain_name}')
+                    warnings.append('dkimRecordNotFound')
+                else:
+                    # The value from stalwart might be split or formatted differently, so we mainly check
+                    # if a TXT record exists and if it looks like a DKIM record (v=DKIM1) and has matching p
+                    for rdata in txt_answers:
+                        txt_content = b''.join(rdata.strings).decode('utf-8')
+
+                        if 'v=DKIM1' not in txt_content:
+                            continue
+
+                        # Extract p= value from DNS record
+                        actual_p_value = None
+                        parts = [p.strip() for p in txt_content.split(';')]
+
+                        for part in parts:
+                            if part.startswith('p='):
+                                actual_p_value = part[2:]
+                                break
+
+                        if actual_p_value == expected_p_value:
+                            has_dkim = True
+                            break
+
+                    if not has_dkim:
+                        warnings.append('dkimRecordNotFound')
+            else:
+                # If we can't get the expected DKIM record from Stalwart, we can't verify it
+                logging.warning(f'No DKIM record found in Stalwart for {domain_name}')
+                warnings.append('dkimRecordNotFound')
+
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+            warnings.append('dkimRecordNotFound')
+        except Exception as e:
+            logging.warning(f'DKIM lookup failed for {domain_name}: {e}')
+            warnings.append('dkimRecordNotFound')
+
+        is_verified = len(critical_errors) == 0
         return is_verified, critical_errors, warnings
