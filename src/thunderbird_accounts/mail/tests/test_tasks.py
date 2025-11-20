@@ -165,7 +165,6 @@ class CreateStalwartAccountTestCase(TaskTestCase):
 
             # Username is the app password login, and email is the primary email address
             username_and_email = f'test_user@{settings.PRIMARY_EMAIL_DOMAIN}'
-            email_alias = f'test_user@{settings.ALLOWED_EMAIL_DOMAINS[1]}'
             oidc_id = '1234'
             quota = settings.ONE_GIGABYTE_IN_BYTES * 100
 

@@ -2,13 +2,12 @@ import datetime
 import logging
 from typing import Optional
 
-import sentry_sdk
 from celery import shared_task
 from django.conf import settings
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
+from thunderbird_accounts.mail.exceptions import DomainNotFoundError
 from thunderbird_accounts.mail.models import Account, Email
 
 
