@@ -22,8 +22,8 @@ export const formatBytes = (bytes: string | null): string | null => {
     if (bytesNum >= unit.threshold) {
       const value = bytesNum / unit.divisor;
 
-      // Format without unnecessary decimals
-      const formatted = value % 1 === 0 ? value.toFixed(0) : value.toFixed(2);
+      // Flooring the value as we don't need decimals for the UI
+      const formatted = Math.floor(value);
       return `${formatted} ${unit.label}`;
     }
   }
