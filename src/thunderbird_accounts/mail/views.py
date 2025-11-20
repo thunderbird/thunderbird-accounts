@@ -6,6 +6,7 @@ import requests.exceptions
 import sentry_sdk
 from django.conf import settings
 from django.contrib import messages
+from django.db import IntegrityError
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
@@ -132,9 +133,7 @@ def contact_fields(request: HttpRequest):
 
     # For now, we only care about the id of the ticket form, since we need to pass it back to ticket creation
     # Even though we could read this from the env var ZENDESK_FORM_ID directly, we might need more fields in the future
-    ticket_form_data = {
-        'id': ticket_form['id']
-    }
+    ticket_form_data = {'id': ticket_form['id']}
 
     ticket_fields_data = []
 
@@ -146,7 +145,7 @@ def contact_fields(request: HttpRequest):
                 'title': field['title'],
                 'description': field['description'],
                 'required': field['required'],
-                'type': field['type']
+                'type': field['type'],
             }
 
             if 'custom_field_options' in field:
@@ -204,10 +203,7 @@ def contact_submit(request: HttpRequest):
             description = field_value
         else:
             # This is a custom field
-            custom_fields.append({
-                'id': field_id,
-                'value': field_value
-            })
+            custom_fields.append({'id': field_id, 'value': field_value})
 
     uploaded_files = request.FILES.getlist('attachments')
 
@@ -284,14 +280,10 @@ def contact_submit(request: HttpRequest):
     # can't be submitted through the Requests API, so we need to update the ticket manually
     # using the Tickets API instead on behalf of the agent (not the end user)
     update_ticket_fields = {
-        'custom_fields': [{
-            'id': int(settings.ZENDESK_FORM_BROWSER_FIELD_ID),
-            'value': browser_string
-        },
-        {
-            'id': int(settings.ZENDESK_FORM_OS_FIELD_ID),
-            'value': os_string
-        }]
+        'custom_fields': [
+            {'id': int(settings.ZENDESK_FORM_BROWSER_FIELD_ID), 'value': browser_string},
+            {'id': int(settings.ZENDESK_FORM_OS_FIELD_ID), 'value': os_string},
+        ]
     }
 
     zendesk_api_response = zendesk_client.update_ticket(ticket_id, update_ticket_fields)
@@ -398,9 +390,20 @@ def create_custom_domain(request: HttpRequest):
         stalwart_client.create_dkim(domain_name)
 
         now = datetime.datetime.now(datetime.UTC)
-        Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
+        try:
+            Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
+        except IntegrityError:
+            raise DomainAlreadyExistsError(domain_name)
     except DomainAlreadyExistsError:
-        return JsonResponse({'success': False, 'error': _('Domain already exists')}, status=400)
+        return JsonResponse(
+            {
+                'success': False,
+                'error': _('This domain is already configured.'),
+                # This error returns a code so that the frontend can show a i18n message with a link to contact page
+                'code': 'domain_already_configured',
+            },
+            status=400,
+        )
     except Exception as e:
         logging.error(f'Error creating custom domain: {e}')
         return JsonResponse(
