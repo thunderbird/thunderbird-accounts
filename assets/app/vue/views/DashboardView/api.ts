@@ -1,5 +1,5 @@
 export const getSubscriptionPortalLink = async () => {
-  const response = await fetch('/api/v1/subscription/paddle/portal', {
+  const response = await fetch('/api/v1/subscription/paddle/portal/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -11,7 +11,7 @@ export const getSubscriptionPortalLink = async () => {
 }
 
 export const getSubscriptionPlanInfo = async () => {
-  const response = await fetch('/api/v1/subscription/plan/info', {
+  const response = await fetch('/api/v1/subscription/plan/info/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

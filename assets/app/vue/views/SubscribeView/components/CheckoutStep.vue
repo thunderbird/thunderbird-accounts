@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { LoadingSkeleton, NoticeBar, NoticeBarTypes, VisualDivider } from '@thunderbirdops/services-ui';
-import { initializePaddle } from '@paddle/paddle-js';
+import { initializePaddle, PaddleEventData } from '@paddle/paddle-js';
 import CardContainer from '@/components/CardContainer.vue';
 import { ref } from 'vue';
 
@@ -17,6 +17,8 @@ const initCurrencyFormatter = (code: string) => {
 };
 
 let currencyFormatter = initCurrencyFormatter('USD');
+let paddle = null;
+
 const planName = ref();
 const planSystemError = ref(false);
 const paymentComplete = ref(false);
@@ -37,47 +39,56 @@ const order_summary = ref({
 });
 
 /**
+ * "Open" the checkout, which just really involves passing Paddle some settings for the iframe that is loaded inline.
+ * Here we'll set the checkout product (paddleItems) and the signed user id which will be used to track the transaction.
+ * @param paddleItems
+ * @param signedUserId
+ */
+const openCheckout = (paddleItems: any, signedUserId: string) => {
+  paddle.Checkout.open({
+    items: paddleItems,
+    customData: {
+      // This will tie the transaction and subscription to our user uuid
+      signed_user_id: signedUserId,
+    },
+  });
+};
+
+/**
  * Callback to handle Paddle checkout events
- * Once the checkout process is complete a POST request will be made to verify (and do some work on dev env)
- * the subscription and transactions exist. This should be near instant, but our system relies on the trans/sub existing
- * in order to declare the user as "subscribed".
+ * We use this to update our cart with real data as the user clicks and types around the Paddle checkout iframe.
+ * Additionally on dev we need to keep a copy of the transaction id so we can later look it up and manually run the
+ * webhook call to activate subscription features, as we cannot get webhooks locally.
  * @param evt
  */
-const onPaddleEvent = async (evt) => {
-  if (!evt.name) {
+const onPaddleEvent = async (evt: PaddleEventData) => {
+  if (evt?.name == 'checkout.completed') {
+    paymentComplete.value = true;
     return;
   }
 
-  // Check if the checkout is completed, and the transaction is marked as completed.
-  if (evt.name == 'checkout.completed') {
-    const data = evt.data;
-    if (data.status === 'completed') {
-      paymentComplete.value = true;
-
-      /* This POST will basically just stall for a bit, on dev environments it retrieves the actual webhook
-      call from Paddle and runs the "handle webhook" tasks. */
-      const response = await fetch('/api/v1/subscription/paddle/complete', {
-        mode: 'same-origin',
-        credentials: 'include',
-        method: 'POST',
-        body: JSON.stringify({
-          transactionId: data.transaction_id,
-        }),
-        headers: {
-          'X-CSRFToken': csrfToken,
-        },
-      });
-      const responseData = await response.json();
-      if (responseData) {
-        // Send them home
-        window.location.href = '/dashboard';
-      }
-    }
+  if (!evt?.name || !evt?.data) {
+    return;
   }
 
   // Just update the cart, every checkout.* event has all the information on it.
   if (evt.name.indexOf('checkout.') === 0) {
     const data = evt.data;
+
+    // Set the transaction id if we're on a dev build
+    if (import.meta.env.DEV && data?.transaction_id) {
+      await fetch('/api/v1/subscription/paddle/txid/', {
+        mode: 'same-origin',
+        credentials: 'include',
+        method: 'PUT',
+        body: JSON.stringify({
+          txid: data?.transaction_id,
+        }),
+        headers: {
+          'X-CSRFToken': csrfToken,
+        },
+      });
+    }
 
     currencyFormatter = initCurrencyFormatter(data.currency_code);
 
@@ -102,7 +113,7 @@ const onPaddleEvent = async (evt) => {
  * module.
  */
 const setupPaddle = async () => {
-  const response = await fetch('/api/v1/subscription/paddle/info', {
+  const response = await fetch('/api/v1/subscription/paddle/info/', {
     mode: 'same-origin',
     credentials: 'include',
     method: 'POST',
@@ -122,8 +133,6 @@ const setupPaddle = async () => {
     planSystemError.value = true;
   }
 
-  console.log(paddleEnvironment, paddlePlanInfo, paddleToken);
-
   // We'll just grab the first plan and use those prices (really it's just 1 price here)
   const paddleItems = paddlePlanInfo[0]['prices'].map((priceId) => ({
     quantity: 1,
@@ -138,6 +147,8 @@ const setupPaddle = async () => {
     eventCallback: onPaddleEvent,
     checkout: {
       settings: {
+        // Must be a full url
+        successUrl: `${window.location.origin}/subscription/paddle/complete/`,
         displayMode: 'inline',
         frameTarget: 'checkout-container',
         frameInitialHeight: 992,
@@ -149,20 +160,9 @@ const setupPaddle = async () => {
     if (!paddleInstance) {
       return;
     }
-    const paddle = paddleInstance;
-
-    // open checkout
-    function openCheckout() {
-      paddle.Checkout.open({
-        items: paddleItems,
-        customData: {
-          // This will tie the transaction and subscription to our user uuid
-          signed_user_id: signedUserId,
-        },
-      });
-    }
-
-    openCheckout();
+    // Set the component-wide paddle object
+    paddle = paddleInstance;
+    openCheckout(paddleItems, signedUserId);
   });
 };
 
@@ -178,9 +178,6 @@ export default {
 <template>
   <div class="subscribe-view">
     <h2>{{ t('views.subscribe.title') }}</h2>
-    <notice-bar v-if="paymentComplete" :type="NoticeBarTypes.Info">{{
-      t('views.subscribe.paymentComplete')
-    }}</notice-bar>
     <notice-bar v-if="planSystemError" :type="NoticeBarTypes.Critical">{{
       t('views.subscribe.planSystemError')
     }}</notice-bar>
@@ -254,6 +251,13 @@ export default {
       </card-container>
       <card-container class="checkout-container">
         <h2>Payment</h2>
+        {{
+          /* Paddle's checkout will just disappear into the void once it starts redirecting us to successUrl.
+             It looks ugly, so show a small message in its place. */
+        }}
+            <p v-if="paymentComplete">{{
+              t('views.subscribe.paymentComplete')
+            }}</p>
       </card-container>
     </div>
   </div>
