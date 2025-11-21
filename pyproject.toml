@@ -17,7 +17,7 @@ dependencies = [
     "itsdangerous>=2.2.0",
     "uvicorn[standard]>=0.38.0",
     "psycopg[binary]>=3.2.12",
-    "redis==5.2.1",  # Locked by Celery 5.5.3
+    "redis==5.2.1", # Locked by Celery 5.5.3
     "hiredis>=3.3.0",
     "django-vite>=3.1.0",
     "argon2-cffi>=25.1.0",
@@ -29,6 +29,7 @@ dependencies = [
     "mozilla-django-oidc>=4.0.1",
     "regex>=2025.9.1",
     "ua-parser>=1.0.1",
+    "dnspython>=2.8.0",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"
