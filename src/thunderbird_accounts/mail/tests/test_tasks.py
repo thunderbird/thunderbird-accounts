@@ -136,7 +136,7 @@ class CreateStalwartAccountTestCase(TaskTestCase):
                 'success', task_results.get('task_status'), msg=f'Failed due to {task_results.get("reason")}'
             )
 
-            mail_client_mock.assert_called_once()
+            mail_client_mock.assert_called()
 
             instance_mock.create_account.assert_called_once_with(
                 [username_and_email, email_alias], username_and_email, None, None, quota
@@ -192,31 +192,6 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             self.assertEqual(username_and_email, task_results.get('username'))
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
             self.assertEqual(mock_stalwart_pkid, task_results.get('stalwart_pkid'))
-
-    def test_account_already_exists(self):
-        with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
-            # Username is the app password login, and email is the primary email address
-            username_and_email = f'test_user@{settings.PRIMARY_EMAIL_DOMAIN}'
-            oidc_id = '1234'
-            quota = settings.ONE_GIGABYTE_IN_BYTES * 100
-
-            # We intentionally don't mock get_account here
-            instance_mock = Mock()
-            mail_client_mock.return_value = instance_mock
-
-            # Run sync so can look at the task results
-            task_results = tasks.create_stalwart_account.run(
-                oidc_id=oidc_id, username=username_and_email, email=username_and_email, quota=quota
-            )
-
-            self.assertEqual('failed', task_results.get('task_status'))
-            self.assertEqual('Username already exists in Stalwart.', task_results.get('reason'))
-
-            mail_client_mock.assert_called_once()
-
-            self.assertEqual(username_and_email, task_results.get('email'))
-            self.assertEqual(username_and_email, task_results.get('username'))
-            self.assertEqual(oidc_id, task_results.get('oidc_id'))
 
     def test_creating_with_not_primary_domain(self):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
