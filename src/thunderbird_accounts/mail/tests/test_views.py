@@ -293,6 +293,7 @@ class ZendeskContactSubmitTestCase(TestCase):
         args, _kwargs = instance.create_ticket.call_args
         sent_fields = args[0]
         self.assertEqual(sent_fields['ticket_form_id'], 42)
+        self.assertEqual(sent_fields['name'], 'user@example.org')  # Defaults to email when name not provided
         self.assertEqual(sent_fields['email'], 'user@example.org')
         self.assertEqual(sent_fields['subject'], 'Hello')
         self.assertEqual(sent_fields['description'], 'Body')
@@ -450,3 +451,94 @@ class ZendeskContactSubmitTestCase(TestCase):
         # So we were just unable to update the hidden fields, so we still return success to the user
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    @patch('thunderbird_accounts.utils.utils.parse_user_agent_info')
+    @override_settings(
+        ZENDESK_FORM_ID='42',
+        ZENDESK_FORM_BROWSER_FIELD_ID='1001',
+        ZENDESK_FORM_OS_FIELD_ID='1002',
+    )
+    def test_contact_submit_name_defaults_to_email_when_not_provided(self, mock_parse_ua, mock_client_cls):
+        """Test that when name is not provided in the payload, it defaults to the email address."""
+        mock_parse_ua.return_value = ('Firefox 120', 'macOS 14')
+
+        instance = Mock()
+        mock_client_cls.return_value = instance
+        instance.upload_file.return_value = {'success': True, 'upload_token': 'tok123', 'filename': 'test.txt'}
+
+        create_resp = Mock()
+        create_resp.ok = True
+        create_resp.json.return_value = {'request': {'id': 555}}
+        instance.create_ticket.return_value = create_resp
+
+        update_resp = Mock()
+        update_resp.ok = True
+        instance.update_ticket.return_value = update_resp
+
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+        response = self.client.post(
+            url,
+            data={'data': json.dumps(payload)},
+            HTTP_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Firefox/120.0',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        # Verify the name field defaults to email when not provided in payload
+        args, _kwargs = instance.create_ticket.call_args
+        sent_fields = args[0]
+        self.assertEqual(sent_fields['name'], 'user@example.org')
+        self.assertEqual(sent_fields['email'], 'user@example.org')
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    @patch('thunderbird_accounts.utils.utils.parse_user_agent_info')
+    @override_settings(
+        ZENDESK_FORM_ID='42',
+        ZENDESK_FORM_BROWSER_FIELD_ID='1001',
+        ZENDESK_FORM_OS_FIELD_ID='1002',
+    )
+    def test_contact_submit_uses_name_from_payload_when_provided(self, mock_parse_ua, mock_client_cls):
+        """Test that when name is provided in the payload, it uses that name instead of defaulting to email."""
+        mock_parse_ua.return_value = ('Firefox 120', 'macOS 14')
+
+        instance = Mock()
+        mock_client_cls.return_value = instance
+        instance.upload_file.return_value = {'success': True, 'upload_token': 'tok123', 'filename': 'test.txt'}
+
+        create_resp = Mock()
+        create_resp.ok = True
+        create_resp.json.return_value = {'request': {'id': 555}}
+        instance.create_ticket.return_value = create_resp
+
+        update_resp = Mock()
+        update_resp.ok = True
+        instance.update_ticket.return_value = update_resp
+
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'name': 'John Doe',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+        response = self.client.post(
+            url,
+            data={'data': json.dumps(payload)},
+            HTTP_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Firefox/120.0',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        # Verify the name field uses the provided name from payload
+        args, _kwargs = instance.create_ticket.call_args
+        sent_fields = args[0]
+        self.assertEqual(sent_fields['name'], 'John Doe')
+        self.assertEqual(sent_fields['email'], 'user@example.org')

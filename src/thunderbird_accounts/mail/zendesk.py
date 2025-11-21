@@ -37,7 +37,7 @@ class ZendeskClient(object):
             'request': {
                 'subject': ticket_fields.get('subject'),
                 'comment': comment,
-                'requester': {'name': 'Accounts Support', 'email': ticket_fields.get('email')},
+                'requester': {'name': ticket_fields.get('name'), 'email': ticket_fields.get('email')},
                 'custom_fields': ticket_fields.get('custom_fields', []),
             }
         }
@@ -59,9 +59,7 @@ class ZendeskClient(object):
 
         # For the full payload format, see:
         # https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#update-ticket
-        payload = {
-            'ticket': ticket_fields
-        }
+        payload = {'ticket': ticket_fields}
 
         # This request needs to be made on behalf of the agent (not the end user)
         # so any fields can be updated (including hidden fields)

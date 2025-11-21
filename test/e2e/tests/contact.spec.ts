@@ -89,7 +89,8 @@ test.describe('contact support form', {
     await expect(contactPage.submitButton).toBeVisible();
 
     // check that email is not pre-filled with user's email
-    expect(contactPage.emailInput).toBeEmpty;
+    await expect(contactPage.emailInput).toBeEmpty();
+    await expect(contactPage.nameInput).toBeEmpty();
   });
 
   test('able to submit contact form successfully', async ({ page }) => {
@@ -119,6 +120,7 @@ test.describe('contact support form', {
     // fill out the contact form
     await contactPage.fillContactForm(
       ACCTS_OIDC_EMAIL,
+      'Test Name',
       'Test Subject',
       MOCK_PRODUCT_VALUE,
       MOCK_TYPE_VALUE,
@@ -139,7 +141,7 @@ test.describe('contact support form', {
 
   test('error handling works correctly', async ({ page }) => {
     // capture the POST /contact/submit and mock an error response
-    await page.route('*/**/contact/submit', async (route, request) => {
+    await page.route('*/**/contact/submit', async (route, _request) => {
       // send an error response
       await route.fulfill({
         status: 500,
@@ -154,6 +156,7 @@ test.describe('contact support form', {
     // fill out the contact form
     await contactPage.fillContactForm(
       ACCTS_OIDC_EMAIL,
+      'Test Name',
       'Test Subject',
       MOCK_PRODUCT_VALUE,
       MOCK_TYPE_VALUE,
@@ -197,6 +200,7 @@ test.describe('contact support form', {
     // fill out the contact form
     await contactPage.fillContactForm(
       ACCTS_OIDC_EMAIL,
+      'Test Name with Attachment',
       'Test Subject with Attachment',
       MOCK_PRODUCT_VALUE,
       MOCK_TYPE_VALUE,
