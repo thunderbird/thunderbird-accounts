@@ -203,7 +203,6 @@ def create_stalwart_account(
             # We'll just replace them all otherwise we're doing weird diff logic here.
             stalwart.replace_email_addresses(username, emails)
     except AccountNotFoundError:
-        print("EXCEPT??????")
         # We need to create this after dkim and domain records exist
         pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
 

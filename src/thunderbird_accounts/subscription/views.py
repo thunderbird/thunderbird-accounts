@@ -70,7 +70,6 @@ def set_paddle_transaction_id(request: Request):
     if settings.IS_DEV:
         data = json.loads(request.body.decode())
         request.session[SESSION_PADDLE_TRANSACTION_ID] = data.get('txid')
-        print('set SESSION_PADDLE_TRANSACTION_ID', data.get('txid'))
     return JsonResponse({'success': True})
 
 
@@ -78,7 +77,6 @@ def set_paddle_transaction_id(request: Request):
 @inject_paddle
 def on_paddle_checkout_complete(request: Request, paddle: Client):
     transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
-    print('pop SESSION_PADDLE_TRANSACTION_ID', transaction_id)
     user = request.user
     if not user:
         # I hope to never see this as it's technically impossible.

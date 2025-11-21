@@ -23,6 +23,7 @@ const planName = ref();
 const planSystemError = ref(false);
 const paymentComplete = ref(false);
 const paddleLoading = ref(true);
+const paddleUnknownError = ref(false);
 
 // Placeholder information for the skeletons
 const order_summary = ref({
