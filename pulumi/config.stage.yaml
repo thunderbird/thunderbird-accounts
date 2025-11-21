@@ -435,8 +435,6 @@ resources:
                 value: '46642389601427'
               - name: ZENDESK_FORM_OS_FIELD_ID
                 value: '46642417675539'
-              - name: ZENDESK_FORM_NAME_FIELD_ID
-                value: '46738179101587'
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -597,8 +595,6 @@ resources:
                 value: '46642389601427'
               - name: ZENDESK_FORM_OS_FIELD_ID
                 value: '46642417675539'
-              - name: ZENDESK_FORM_NAME_FIELD_ID
-                value: '46738179101587'
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:
