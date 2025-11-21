@@ -37,7 +37,7 @@ class ZendeskClient(object):
             'request': {
                 'subject': ticket_fields.get('subject'),
                 'comment': comment,
-                'requester': {'name': 'Accounts Support', 'email': ticket_fields.get('email')},
+                'requester': {'email': ticket_fields.get('email')},
                 'custom_fields': ticket_fields.get('custom_fields', []),
             }
         }

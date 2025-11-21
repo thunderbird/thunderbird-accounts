@@ -19,6 +19,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 from django.contrib.messages import get_messages
+from django.contrib.auth.models import User
 
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import MailClient
@@ -276,6 +277,9 @@ def contact_submit(request: HttpRequest):
     user_agent_string = request.headers.get('User-Agent')
     browser_string, os_string = parse_user_agent_info(user_agent_string)
 
+    # Attempt to get the user's first name from their email address
+    user_first_name = User.objects.filter(email=email).values_list('first_name', flat=True).first() or ''
+
     # Hidden fields (e.g. fields with permissions set as 'Agents can edit')
     # can't be submitted through the Requests API, so we need to update the ticket manually
     # using the Tickets API instead on behalf of the agent (not the end user)
@@ -283,6 +287,7 @@ def contact_submit(request: HttpRequest):
         'custom_fields': [
             {'id': int(settings.ZENDESK_FORM_BROWSER_FIELD_ID), 'value': browser_string},
             {'id': int(settings.ZENDESK_FORM_OS_FIELD_ID), 'value': os_string},
+            {'id': int(settings.ZENDESK_FORM_NAME_FIELD_ID), 'value': user_first_name},
         ]
     }
 
