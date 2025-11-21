@@ -20,7 +20,6 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 from django.contrib.messages import get_messages
 
-from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError, DomainAlreadyExistsError
