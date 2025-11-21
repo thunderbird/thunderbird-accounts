@@ -158,6 +158,8 @@ const setupPaddle = async () => {
     },
   }).then((paddleInstance) => {
     if (!paddleInstance) {
+      console.error('Could not retrieve the paddle instance', paddleInstance);
+      paddleUnknownError.value = true;
       return;
     }
     // Set the component-wide paddle object
@@ -178,6 +180,9 @@ export default {
 <template>
   <div class="subscribe-view">
     <h2>{{ t('views.subscribe.title') }}</h2>
+    <notice-bar v-if="paddleUnknownError" :type="NoticeBarTypes.Critical">{{
+      t('views.subscribe.paddleUnknownError')
+    }}</notice-bar>
     <notice-bar v-if="planSystemError" :type="NoticeBarTypes.Critical">{{
       t('views.subscribe.planSystemError')
     }}</notice-bar>
@@ -250,14 +255,10 @@ export default {
         </ul>
       </card-container>
       <card-container class="checkout-container">
-        <h2>Payment</h2>
-        {{
-          /* Paddle's checkout will just disappear into the void once it starts redirecting us to successUrl.
-             It looks ugly, so show a small message in its place. */
-        }}
-            <p v-if="paymentComplete">{{
-              t('views.subscribe.paymentComplete')
-            }}</p>
+        <h3>{{ t('views.subscribe.checkoutHeading') }}</h3>
+        <!-- Paddle's checkout will just disappear into the void once it starts redirecting us to successUrl.
+             It looks ugly, so show a small message in its place. -->
+        <p v-if="paymentComplete">{{ t('views.subscribe.paymentComplete') }}</p>
       </card-container>
     </div>
   </div>
