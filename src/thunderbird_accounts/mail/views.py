@@ -174,6 +174,12 @@ def contact_submit(request: HttpRequest):
         return JsonResponse({'success': False, 'error': _('Invalid form data')}, status=400)
 
     email = data_json.get('email')
+
+    # Name is optional in the UI, 
+    # but it is required for the Zendesk Requests API's requester object
+    # So we default to the email address if the name is not provided
+    name = data_json.get('name', email)
+
     fields = data_json.get('fields', [])
 
     # Extract subject and description from dynamic fields.
@@ -247,18 +253,10 @@ def contact_submit(request: HttpRequest):
                 status=500,
             )
 
-    # Name is a required field for the Zendesk Requests API's requester object
-    # So we attempt to retrieve the user's first_name + last_name if there's an email match on our database
-    # otherwise it is the same as the email address
-    user_full_name = email
-
-    if request.user.is_authenticated:
-        user_full_name = request.user.get_full_name() or email
-
     # Create ticket with attachment tokens
     ticket_fields = {
         'ticket_form_id': int(settings.ZENDESK_FORM_ID),
-        'name': user_full_name,
+        'name': name,
         'email': email,
         'subject': subject,
         'description': description,
