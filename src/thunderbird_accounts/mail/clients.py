@@ -24,6 +24,17 @@ class StalwartErrors(StrEnum):
     OTHER = 'other'
 
 
+class DomainVerificationErrors(StrEnum):
+    """Domain verification error codes returned by verify_domain()"""
+
+    # Critical errors (fail verification)
+    MX_LOOKUP_ERROR = 'mxLookupError'
+
+    # Warnings (do not fail verification)
+    SPF_RECORD_NOT_FOUND = 'spfRecordNotFound'
+    DKIM_RECORD_NOT_FOUND = 'dkimRecordNotFound'
+
+
 class MailClient:
     """A partial api client for Stalwart
     Docs: https://stalw.art/docs/api/management/endpoints
@@ -434,8 +445,8 @@ class MailClient:
         Returns:
             tuple: (is_verified, critical_errors, warnings)
                 - is_verified: True if verification completed successfully without critical errors
-                - critical_errors: List of errors (e.g., 'mxLookupError')
-                - warnings: List of warnings (e.g., 'spfRecordNotFound')
+                - critical_errors: List of errors (e.g., DomainVerificationErrors.MX_LOOKUP_ERROR)
+                - warnings: List of warnings (e.g., DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
         """
         critical_errors = []
         warnings = []
@@ -454,13 +465,13 @@ class MailClient:
 
             if not has_correct_mx:
                 logging.warning(f'MX records found for {domain_name} but none match {expected_host}')
-                critical_errors.append('mxLookupError')
+                critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
 
         except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-            critical_errors.append('mxLookupError')
+            critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
         except Exception as e:
             logging.error(f'MX lookup failed for {domain_name}: {e}')
-            critical_errors.append('mxLookupError')
+            critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
 
         # 2. Check SPF Record
         try:
@@ -476,12 +487,12 @@ class MailClient:
                     break
 
             if not has_spf:
-                warnings.append('spfRecordNotFound')
+                warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
         except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-            warnings.append('spfRecordNotFound')
+            warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
         except Exception as e:
             logging.warning(f'SPF lookup failed for {domain_name}: {e}')
-            warnings.append('spfRecordNotFound')
+            warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
 
         # 3. Check DKIM Record
         # We need to get the selector first from Stalwart
@@ -512,7 +523,7 @@ class MailClient:
 
                 if not expected_p_value:
                     logging.warning(f'Could not extract p value from expected DKIM record for {domain_name}')
-                    warnings.append('dkimRecordNotFound')
+                    warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
                 else:
                     # The value from stalwart might be split or formatted differently, so we mainly check
                     # if a TXT record exists and if it looks like a DKIM record (v=DKIM1) and has matching p
@@ -536,17 +547,17 @@ class MailClient:
                             break
 
                     if not has_dkim:
-                        warnings.append('dkimRecordNotFound')
+                        warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
             else:
                 # If we can't get the expected DKIM record from Stalwart, we can't verify it
                 logging.warning(f'No DKIM record found in Stalwart for {domain_name}')
-                warnings.append('dkimRecordNotFound')
+                warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
 
         except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-            warnings.append('dkimRecordNotFound')
+            warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
         except Exception as e:
             logging.warning(f'DKIM lookup failed for {domain_name}: {e}')
-            warnings.append('dkimRecordNotFound')
+            warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
 
         is_verified = len(critical_errors) == 0
         return is_verified, critical_errors, warnings

@@ -1,7 +1,7 @@
 import dns.resolver
 from unittest.mock import MagicMock, patch
 from django.test import SimpleTestCase, override_settings
-from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.clients import MailClient, DomainVerificationErrors
 
 
 @override_settings(
@@ -63,14 +63,14 @@ class TestMailClientVerifyDomain(SimpleTestCase):
         is_verified, critical_errors, warnings = self.client.verify_domain(self.domain)
 
         self.assertFalse(is_verified)
-        self.assertIn('mxLookupError', critical_errors)
+        self.assertIn(DomainVerificationErrors.MX_LOOKUP_ERROR, critical_errors)
 
         # Case 2: MX lookup raises exception
         mock_resolve.side_effect = dns.resolver.NoAnswer()
         is_verified, critical_errors, _warnings = self.client.verify_domain(self.domain)
 
         self.assertFalse(is_verified)
-        self.assertIn('mxLookupError', critical_errors)
+        self.assertIn(DomainVerificationErrors.MX_LOOKUP_ERROR, critical_errors)
 
     @patch('thunderbird_accounts.mail.clients.dns.resolver.resolve')
     def test_verify_domain_spf_failure(self, mock_resolve):
@@ -95,7 +95,7 @@ class TestMailClientVerifyDomain(SimpleTestCase):
 
         self.assertTrue(is_verified)  # SPF failure is not critical
         self.assertEqual(critical_errors, [])
-        self.assertIn('spfRecordNotFound', warnings)
+        self.assertIn(DomainVerificationErrors.SPF_RECORD_NOT_FOUND, warnings)
 
     @patch('thunderbird_accounts.mail.clients.dns.resolver.resolve')
     @patch.object(MailClient, 'get_dns_records')
@@ -129,7 +129,7 @@ class TestMailClientVerifyDomain(SimpleTestCase):
 
         self.assertTrue(is_verified)  # DKIM failure is not critical
         self.assertEqual(critical_errors, [])
-        self.assertIn('dkimRecordNotFound', warnings)
+        self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, warnings)
 
     @patch('thunderbird_accounts.mail.clients.dns.resolver.resolve')
     @patch.object(MailClient, 'get_dns_records')
@@ -156,4 +156,4 @@ class TestMailClientVerifyDomain(SimpleTestCase):
 
         self.assertTrue(is_verified)
         self.assertEqual(critical_errors, [])
-        self.assertIn('dkimRecordNotFound', warnings)
+        self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, warnings)
