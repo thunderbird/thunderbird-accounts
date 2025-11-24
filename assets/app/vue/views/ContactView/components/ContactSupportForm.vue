@@ -232,7 +232,6 @@ onMounted(() => {
       {{ t('views.contact.emailAddressLabel') }}
     </text-input>
 
-    <!-- Name (optional - not part of the Zendesk form itself, but we'll add to the request payload) -->
     <text-input ref="nameInput" name="name" type="text" v-model="form.name" :required="false"
       data-testid="contact-name-input">
       {{ t('views.contact.nameLabel') }}

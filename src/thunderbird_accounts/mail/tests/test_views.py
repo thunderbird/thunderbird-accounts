@@ -302,6 +302,7 @@ class ZendeskContactSubmitTestCase(TestCase):
 
         # update called with browser/os hidden fields
         instance.update_ticket.assert_called_once()
+
         # Ensure the IDs are ints and values are what we mocked from UA
         update_payload = instance.update_ticket.call_args.args[1]
         self.assertEqual(
@@ -493,10 +494,15 @@ class ZendeskContactSubmitTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         # Verify the name field defaults to email when not provided in payload
-        args, _kwargs = instance.create_ticket.call_args
-        sent_fields = args[0]
-        self.assertEqual(sent_fields['name'], 'user@example.org')
-        self.assertEqual(sent_fields['email'], 'user@example.org')
+        instance.create_ticket.assert_called_once_with({
+            'ticket_form_id': 42,
+            'name': 'user@example.org',
+            'email': 'user@example.org',
+            'subject': 'Hello',
+            'description': 'Body',
+            'attachments': [],
+            'custom_fields': [],
+        })
 
     @patch('thunderbird_accounts.mail.views.ZendeskClient')
     @patch('thunderbird_accounts.utils.utils.parse_user_agent_info')
