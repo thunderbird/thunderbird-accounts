@@ -136,9 +136,8 @@ INSTALLED_APPS = [
     'thunderbird_accounts.subscription',
     'thunderbird_accounts.mail',
     'thunderbird_accounts.utils',
+    'thunderbird_accounts.admin.AccountsAdminConfig',  # Instead of 'django.contrib.admin'
     # Django
-    'thunderbird_accounts.AccountsAdminConfig',
-    #'django.contrib.admin',
     'django.contrib.auth',
     # OIDC Auth
     'mozilla_django_oidc',  # Load after auth

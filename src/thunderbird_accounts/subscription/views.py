@@ -5,8 +5,9 @@ import time
 
 import sentry_sdk
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.core.signing import Signer
@@ -24,6 +25,9 @@ from thunderbird_accounts.subscription import tasks, models
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price, Subscription
 from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
+
+# We only need this here right now
+SESSION_PADDLE_TRANSACTION_ID = 'paddle_txid'
 
 
 def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
@@ -59,28 +63,54 @@ def get_paddle_information(request: Request):
 
 
 @login_required
-@require_http_methods(['POST'])
+@require_http_methods(['PUT'])
+def set_paddle_transaction_id(request: Request):
+    """This error is used to work-around the fact we don't get a transaction id from Paddle's successUrl redirect.
+    It kinda sucks, but it works for now."""
+    if settings.IS_DEV:
+        data = json.loads(request.body.decode())
+        request.session[SESSION_PADDLE_TRANSACTION_ID] = data.get('txid')
+    return JsonResponse({'success': True})
+
+
+@login_required
 @inject_paddle
-def notify_paddle_checkout_complete(request: Request, paddle: Client):
-    data = json.loads(request.body.decode())
-    transaction_id = data.get('transactionId')
-
-    if not transaction_id:
-        return JsonResponse({'success': False})
-
+def on_paddle_checkout_complete(request: Request, paddle: Client):
+    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
     user = request.user
     if not user:
-        return JsonResponse({'success': False})
+        sentry_sdk.capture_message(
+            '[on_paddle_checkout_complete] User passed login_required but did not have user object!'
+        )
 
-    user.is_awaiting_payment_verification = True
-    user.save()
+        # I hope to never see this as it's technically impossible.
+        messages.error(
+            request,
+            _('There was a problem verifying your user. Please re-login.'),
+        )
+        return HttpResponseRedirect('/')
 
-    # Give paddle some time to update their end
-    # Yes this is not perfect, I know.
-    time.sleep(5)
+    # The webhook could technically be processed before we get to this request, it's not likely to happen
+    # but don't shoot ourselves in the foot if it does.
+    if not user.has_active_subscription:
+        user.is_awaiting_payment_verification = True
+        user.save()
 
     # We can't get webhook events on dev, so we need to manually check the event stream
     if settings.IS_DEV:
+        # Dev only error
+        if not transaction_id:
+            # Let's send them to the dashboard
+            messages.error(
+                request,
+                _('The paddle transaction id was not in your session so we cannot pull the subscription information.'),
+            )
+            return HttpResponseRedirect('/subscribe')
+
+        # Give paddle some time to update their end
+        # Yes this is not perfect, I know.
+        time.sleep(5)
+
         subscription_id = None
         notification_list = paddle.notifications.list(ListNotifications(filter=transaction_id))
 
@@ -115,7 +145,7 @@ def notify_paddle_checkout_complete(request: Request, paddle: Client):
                     )
                     break
 
-    return JsonResponse({'success': True})
+    return HttpResponseRedirect('/dashboard')
 
 
 @login_required
@@ -176,6 +206,7 @@ def handle_paddle_webhook(request: Request):
     logging.debug(f'Dispatched {event_type} webhook')
     return response
 
+
 @login_required
 @require_http_methods(['POST'])
 def get_subscription_plan_info(request: Request):
@@ -226,7 +257,7 @@ def get_subscription_plan_info(request: Request):
         'period': price.billing_cycle_interval,
         'description': subscription_item.product.description or '',
         'features': {
-            'mailStorage': quota, # The mail storage quota source of truth is Stalwart
+            'mailStorage': quota,  # The mail storage quota source of truth is Stalwart
             'sendStorage': plan.send_storage_bytes,
             'emailAddresses': plan.mail_address_count,
             'domains': plan.mail_domain_count,

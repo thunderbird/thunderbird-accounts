@@ -7,7 +7,7 @@ from django.conf import settings
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError
+from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
 from thunderbird_accounts.mail.models import Account, Email
 
 
@@ -188,24 +188,28 @@ def create_stalwart_account(
     _stalwart_check_or_create_domain_entry(stalwart, domain)
     for alias in emails[1:]:
         _domain = alias.split('@')[1]
-        print(f'checking domain {_domain}')
         _stalwart_check_or_create_domain_entry(stalwart, _domain)
 
     # Lookup the account first, this shouldn't normally happen but if it does we shouldn't explode.
-    stalwart_account = stalwart.get_account(username)
+    try:
+        stalwart_account = stalwart.get_account(username)
+        stalwart_emails = stalwart_account.get('emails', [])
 
-    if not stalwart_account:
-        # We need to create this after dkim and domain records exist
-        pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
-    else:
         # link the stalwart account
         pkid = stalwart_account.get('id')
 
         # Check the aliases
-        if emails != stalwart_account.get('emails'):
-            # We'll just replace them all otherwise we're doing weird diff logic here.
-            stalwart.replace_email_addresses(username, emails)
+        if emails != stalwart_emails:
+            # Diff of new emails
+            new_emails = set(emails) - set(stalwart_emails)
+            # Diff of the old emails
+            old_emails = set(stalwart_emails) - set(emails)
 
+            stalwart.save_email_addresses(username, list(new_emails))
+            stalwart.delete_email_addresses(username, list(old_emails))
+    except AccountNotFoundError:
+        # We need to create this after dkim and domain records exist
+        pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
 
     user = User.objects.get(oidc_id=oidc_id)
     now = datetime.datetime.now(datetime.UTC)
