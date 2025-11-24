@@ -79,7 +79,7 @@ def on_paddle_checkout_complete(request: Request, paddle: Client):
     transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
     user = request.user
     if not user:
-        sentry_sdk.capture_message(`
+        sentry_sdk.capture_message(
             '[on_paddle_checkout_complete] User passed login_required but did not have user object!'
         )
 
