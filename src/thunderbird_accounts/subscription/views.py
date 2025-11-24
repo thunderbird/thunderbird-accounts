@@ -76,7 +76,7 @@ def set_paddle_transaction_id(request: Request):
 @login_required
 @inject_paddle
 def on_paddle_checkout_complete(request: Request, paddle: Client):
-    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
+    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID, default=None)
     user = request.user
     if not user:
         sentry_sdk.capture_message(
