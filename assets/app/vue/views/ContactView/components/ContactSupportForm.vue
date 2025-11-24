@@ -34,6 +34,7 @@ const successText = ref('');
 const isSubmitting = ref(false);
 const form = ref({
   email: window._page?.userEmail || '',
+  name: window._page?.userFullName || '',
   attachments: [],
 });
 const formRef = ref(null);
@@ -125,6 +126,7 @@ const resetForm = () => {
   // Reset fixed form fields (not dynamic fields)
   form.value = {
     email: '',
+    name: '',
     attachments: [],
   };
 
@@ -159,6 +161,7 @@ const handleSubmit = async () => {
     const jsonData = {
       // Email is a fixed field
       email: form.value.email,
+      name: form.value.name,
       fields: []
     };
 
@@ -227,6 +230,11 @@ onMounted(() => {
     <text-input ref="emailInput" name="email" type="email" v-model="form.email" :required="true"
       data-testid="contact-email-input">
       {{ t('views.contact.emailAddressLabel') }}
+    </text-input>
+
+    <text-input ref="nameInput" name="name" type="text" v-model="form.name" :required="false"
+      data-testid="contact-name-input">
+      {{ t('views.contact.nameLabel') }}
     </text-input>
 
     <template v-if="isLoadingFormFields">

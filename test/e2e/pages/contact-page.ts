@@ -6,6 +6,7 @@ export class ContactPage {
   readonly contactHeader: Locator;
   readonly requiredFieldsText: Locator;
   readonly emailInput: Locator;
+  readonly nameInput: Locator;
   readonly subjectInput: Locator;
   readonly productSelect: Locator;
   readonly typeSelect: Locator;
@@ -21,6 +22,7 @@ export class ContactPage {
     this.contactHeader = this.page.getByRole('heading', { name: 'Submit a request' });
     this.requiredFieldsText = this.page.getByText('Fields marked with an asterisk (*) are required.');
     this.emailInput = this.page.getByTestId('contact-email-input');
+    this.nameInput = this.page.getByTestId('contact-name-input');
     this.subjectInput = this.page.getByTestId('contact-subject-input');
     this.productSelect = this.page.getByTestId('contact-product-input');
     this.typeSelect = this.page.getByTestId('contact-type-input');
@@ -45,8 +47,9 @@ export class ContactPage {
     await this.page.waitForTimeout(500);
   }
 
-  async fillContactForm(email: string, subject: string, product: string, type: string, description: string) {
+  async fillContactForm(email: string, name: string, subject: string, product: string, type: string, description: string) {
     await this.emailInput.fill(email);
+    await this.nameInput.fill(name);
     await this.subjectInput.fill(subject);
     await this.productSelect.selectOption(product);
     await this.typeSelect.selectOption(type);

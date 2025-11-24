@@ -344,6 +344,7 @@
       "errorSubmittingForm": "Failed to submit contact form. Please try again.",
       "success": "Your support request has been submitted successfully",
       "emailAddressLabel": "Your email address",
+      "nameLabel": "Preferred name",
       "fileUploadLabel": "Files",
       "dragAndDropFilesText": "Drag & drop files here, or click to upload",
       "filesSelectedText": "{count} file(s) selected. Drag & drop more files here, or click to upload",
