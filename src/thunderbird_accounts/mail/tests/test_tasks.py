@@ -89,6 +89,10 @@ class CreateStalwartAccountTestCase(TaskTestCase):
 
             mail_client_mock.assert_called_once()
 
+            instance_mock.get_account.assert_called_with(username_and_email)
+            instance_mock.save_email_addresses.assert_not_called()
+            instance_mock.delete_email_addresses.assert_not_called()
+
             instance_mock.create_account.assert_called_once_with(
                 [username_and_email, email_alias], username_and_email, None, None, quota
             )
@@ -137,6 +141,10 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             )
 
             mail_client_mock.assert_called()
+
+            instance_mock.get_account.assert_called_with(username_and_email)
+            instance_mock.save_email_addresses.assert_not_called()
+            instance_mock.delete_email_addresses.assert_not_called()
 
             instance_mock.create_account.assert_called_once_with(
                 [username_and_email, email_alias], username_and_email, None, None, quota
@@ -187,6 +195,8 @@ class CreateStalwartAccountTestCase(TaskTestCase):
 
             mail_client_mock.assert_called_once()
             instance_mock.get_account.assert_called_with(username_and_email)
+            instance_mock.save_email_addresses.assert_called_once()
+            instance_mock.delete_email_addresses.assert_called_once()
 
             self.assertEqual(username_and_email, task_results.get('email'))
             self.assertEqual(username_and_email, task_results.get('username'))
@@ -215,6 +225,10 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             )
 
             mail_client_mock.assert_called_once()
+
+            instance_mock.get_account.assert_not_called()
+            instance_mock.save_email_addresses.assert_not_called()
+            instance_mock.delete_email_addresses.assert_not_called()
 
             self.assertEqual(username_and_email, task_results.get('email'))
             self.assertEqual(username_and_email, task_results.get('username'))

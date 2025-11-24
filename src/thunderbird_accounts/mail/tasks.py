@@ -193,15 +193,20 @@ def create_stalwart_account(
     # Lookup the account first, this shouldn't normally happen but if it does we shouldn't explode.
     try:
         stalwart_account = stalwart.get_account(username)
+        stalwart_emails = stalwart_account.get('emails', [])
 
         # link the stalwart account
         pkid = stalwart_account.get('id')
 
-
         # Check the aliases
-        if emails != stalwart_account.get('emails'):
-            # We'll just replace them all otherwise we're doing weird diff logic here.
-            stalwart.replace_email_addresses(username, emails)
+        if emails != stalwart_emails:
+            # Diff of new emails
+            new_emails = set(emails) - set(stalwart_emails)
+            # Diff of the old emails
+            old_emails = set(stalwart_emails) - set(emails)
+
+            stalwart.save_email_addresses(username, list(new_emails))
+            stalwart.delete_email_addresses(username, list(old_emails))
     except AccountNotFoundError:
         # We need to create this after dkim and domain records exist
         pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
