@@ -459,7 +459,6 @@ class ZendeskContactSubmitTestCase(TestCase):
 
         instance = Mock()
         mock_client_cls.return_value = instance
-        instance.upload_file.return_value = {'success': True, 'upload_token': 'tok123', 'filename': 'test.txt'}
 
         create_resp = Mock()
         create_resp.ok = True
@@ -510,7 +509,6 @@ class ZendeskContactSubmitTestCase(TestCase):
 
         instance = Mock()
         mock_client_cls.return_value = instance
-        instance.upload_file.return_value = {'success': True, 'upload_token': 'tok123', 'filename': 'test.txt'}
 
         create_resp = Mock()
         create_resp.ok = True
