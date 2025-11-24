@@ -5,6 +5,7 @@ from django.conf import settings
 from django.test import TestCase, Client as RequestClient, override_settings
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account
@@ -266,8 +267,6 @@ class ZendeskContactSubmitTestCase(TestCase):
         update_resp.ok = True
         instance.update_ticket.return_value = update_resp
 
-        from django.core.files.uploadedfile import SimpleUploadedFile
-
         url = reverse('contact_submit')
         payload = {
             'email': 'user@example.org',
@@ -340,8 +339,6 @@ class ZendeskContactSubmitTestCase(TestCase):
         mock_client_cls.return_value = instance
         instance.upload_file.return_value = {'success': False, 'error': 'Zendesk upload failed'}
 
-        from django.core.files.uploadedfile import SimpleUploadedFile
-
         url = reverse('contact_submit')
         payload = {
             'email': 'user@example.org',
@@ -366,8 +363,6 @@ class ZendeskContactSubmitTestCase(TestCase):
         instance = Mock()
         mock_client_cls.return_value = instance
         instance.upload_file.side_effect = Exception('boom')
-
-        from django.core.files.uploadedfile import SimpleUploadedFile
 
         url = reverse('contact_submit')
         payload = {
@@ -395,8 +390,6 @@ class ZendeskContactSubmitTestCase(TestCase):
         create_resp = Mock()
         create_resp.ok = False
         instance.create_ticket.return_value = create_resp
-
-        from django.core.files.uploadedfile import SimpleUploadedFile
 
         url = reverse('contact_submit')
         payload = {
@@ -436,8 +429,6 @@ class ZendeskContactSubmitTestCase(TestCase):
         update_resp.ok = False
         instance.update_ticket.return_value = update_resp
 
-        from django.core.files.uploadedfile import SimpleUploadedFile
-
         url = reverse('contact_submit')
         payload = {
             'email': 'user@example.org',
@@ -451,6 +442,7 @@ class ZendeskContactSubmitTestCase(TestCase):
 
         # Even though the update failed, at this point the ticket was created successfully
         # So we were just unable to update the hidden fields, so we still return success to the user
+        instance.update_ticket.assert_called_once()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content.decode()), {'success': True})
 
@@ -503,6 +495,7 @@ class ZendeskContactSubmitTestCase(TestCase):
             'attachments': [],
             'custom_fields': [],
         })
+        instance.update_ticket.assert_called_once()
 
     @patch('thunderbird_accounts.mail.views.ZendeskClient')
     @patch('thunderbird_accounts.utils.utils.parse_user_agent_info')
@@ -549,3 +542,4 @@ class ZendeskContactSubmitTestCase(TestCase):
         sent_fields = args[0]
         self.assertEqual(sent_fields['name'], 'John Doe')
         self.assertEqual(sent_fields['email'], 'user@example.org')
+        instance.update_ticket.assert_called_once()
