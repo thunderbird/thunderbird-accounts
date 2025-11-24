@@ -47,7 +47,7 @@ urlpatterns = [
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
     path('api/v1/subscription/paddle/info/', subscription_views.get_paddle_information, name='paddle_info'),
     path('api/v1/subscription/paddle/portal/', subscription_views.get_paddle_portal_link, name='paddle_portal'),
-    path('api/v1/subscription/paddle/txid/', subscription_views.set_paddle_transaction_id, name='subscription_txid'),
+    path('api/v1/subscription/paddle/txid/', subscription_views.set_paddle_transaction_id, name='paddle_txid'),
     path(
         'api/v1/subscription/plan/info/', subscription_views.get_subscription_plan_info, name='subscription_plan_info'
     ),
