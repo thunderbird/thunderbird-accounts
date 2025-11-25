@@ -397,6 +397,9 @@ DJANGO_VITE = {
     }
 }
 
+# Required otherwise a manifest error will be generated
+SERVESTATIC_MANIFEST_STRICT = False
+
 CONNECTION_INFO = {
     'IMAP': {'HOST': os.getenv('IMAP_HOST'), 'PORT': os.getenv('IMAP_PORT'), 'TLS': os.getenv('IMAP_TLS') == 'True'},
     'JMAP': {'HOST': os.getenv('JMAP_HOST'), 'PORT': os.getenv('JMAP_PORT'), 'TLS': os.getenv('JMAP_TLS') == 'True'},
@@ -413,8 +416,6 @@ PRIMARY_EMAIL_DOMAIN = (
     ALLOWED_EMAIL_DOMAINS[0] if ALLOWED_EMAIL_DOMAINS and len(ALLOWED_EMAIL_DOMAINS) > 0 else 'example.org'
 )
 
-# Required otherwise a manifest error will be generated
-SERVESTATIC_MANIFEST_STRICT = False
 
 # Celery settings, these are prefixed by CELERY_ and are otherwise just celery parameters
 CELERY_BROKER_URL = '/'.join(filter(None, [os.getenv('CELERY_BROKER') or REDIS_URL, os.getenv('REDIS_CELERY_DB')]))

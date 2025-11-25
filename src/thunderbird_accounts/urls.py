@@ -6,7 +6,6 @@ These are the routes and some light admin panel customization are located.
 """
 
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.urls import path, include, re_path
@@ -66,10 +65,6 @@ if settings.AUTH_SCHEME == 'oidc':
 
 if settings.DEBUG:
     urlpatterns.append(path('docs/', include('rest_framework.urls')))
-
-# Needed with uvicorn dev server
-if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.ASSETS_ROOT)
 
 urlpatterns += [
     path(

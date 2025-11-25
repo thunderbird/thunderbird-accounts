@@ -32,6 +32,7 @@ COPY manage.py \
      env.d.ts \
      .
 COPY assets ./assets/
+COPY keycloak ./keycloak/
 COPY scripts ./scripts/
 COPY src/thunderbird_accounts ./src/thunderbird_accounts/
 COPY static ./static/
@@ -41,6 +42,16 @@ COPY templates ./templates/
 RUN uv sync --extra cli --extra subscription && \
     npm install && npm cache clean --force && \
     chmod +x scripts/entry.sh
+
+# Build the production app
+RUN npm run build
+
+# Collect static content, ignore the vue component directory
+RUN ./manage.py collectstatic --noinput -i assets/app/vue
+
+# Clean up after collectstatic is finished
+RUN rm -rf ./keycloak/*
+RUN rm -rf ./assets/*
 
 EXPOSE 8087
 ENTRYPOINT ["./scripts/entry.sh"]

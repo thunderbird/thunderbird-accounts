@@ -5,12 +5,6 @@
 #   mode. To run in development mode instead, run with TBA_DEV=yes. To run the Celery worker
 #   instead, run with TBA_CELERY=yes.
 
-# Build the vite apps
-npm run build
-
-# Collect static content, ignore the vue component directory
-./manage.py collectstatic --noinput -i assets/app/vue
-
 # In dev environments, give the DB a little extra time to come online
 if [[ "$TBA_DEV" == "yes" ]]; then
     echo 'Waiting 1s for DB...'

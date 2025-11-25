@@ -55,7 +55,7 @@ services:
       - ./.env.test:/app/.env.test
       - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
       - ./assets:/app/assets
-      - ./static:/app/static
+      - ./keycloak:/app/assets/keycloak
       - ./templates:/app/templates
     depends_on:
       - postgres

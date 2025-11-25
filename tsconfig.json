@@ -23,7 +23,8 @@
     "allowJs": true,
     "isolatedModules": true,
     "paths": {
-      "@/*": ["./assets/app/vue/*"]
+      "@/*": ["./assets/app/vue/*"],
+      "@kc/*": ["./keycloak/themes/tbpro/assets/*"]
     },
     "types": ["vite/client"]
   },
