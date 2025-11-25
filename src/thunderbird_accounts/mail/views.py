@@ -90,7 +90,7 @@ def home(request: HttpRequest):
             max_email_aliases = request.user.plan.mail_address_count
     elif not request.user.is_authenticated:  # Only if the user is not authenticated
         # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
-        public_routes = ['/privacy', '/terms', '/contact']
+        public_routes = ['/privacy', '/terms', '/contact', '/sign-up']
 
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))

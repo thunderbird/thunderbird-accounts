@@ -1,8 +1,8 @@
 <script setup>
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
-import MessageBar from '@/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
+import MessageBar from '@kc/vue/components/MessageBar.vue';
+import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const formAction = window._page.currentView?.formAction;
 const logoutForm = useTemplateRef('logout-form');

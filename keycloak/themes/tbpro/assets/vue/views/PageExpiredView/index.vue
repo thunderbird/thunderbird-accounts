@@ -1,6 +1,6 @@
 <script setup>
-import MessageBar from '@/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
+import MessageBar from '@kc/vue/components/MessageBar.vue';
+import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const restartFlowUrl = window._page.currentView?.restartFlowUrl;
 const loginUrl = window._page.currentView?.loginUrl;

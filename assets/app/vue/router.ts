@@ -14,6 +14,7 @@ import SecuritySettingsView from '@/views/MailView/views/SecuritySettingsView/in
 
 // Zendesk Contact Form (Support)
 import ContactView from '@/views/ContactView/index.vue';
+import SignUpView from '@/views/SignUpView/index.vue';
 
 const router = createRouter({
   history: createWebHistory('/'),
@@ -22,6 +23,15 @@ const router = createRouter({
     {
       path: '/',
       redirect: '/dashboard'
+    },
+    {
+      path: '/sign-up',
+      name: 'sign-up',
+      component: SignUpView,
+      meta: {
+        isPublic: true,
+        useAppTemplate: false,
+      }
     },
     {
       path: '/dashboard',
