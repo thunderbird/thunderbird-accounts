@@ -51,17 +51,18 @@ def before_send(event: Event, hint: Hint) -> Event | None:
     return event
 
 
-sentry_sdk.init(
-    dsn=os.getenv('SENTRY_DSN'),
-    # Add data like request headers and IP for users,
-    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
-    send_default_pii=False,
-    traces_sample_rate=1.0,
-    profiles_sample_rate=1.0,
-    environment=APP_ENV,
-    before_send=before_send,
-    attach_stacktrace=True,
-)
+if not IS_DEV and not IS_TEST:
+    sentry_sdk.init(
+        dsn=os.getenv('SENTRY_DSN'),
+        # Add data like request headers and IP for users,
+        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+        send_default_pii=False,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+        environment=APP_ENV,
+        before_send=before_send,
+        attach_stacktrace=True,
+    )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 if os.getenv('IN_CONTAINER') == 'True':

@@ -253,7 +253,13 @@ class KeycloakClient:
         return True
 
     def import_user(
-        self, username, backup_email, timezone, name: Optional[str] = None, send_reset_password_email: bool = True
+        self,
+        username,
+        backup_email,
+        timezone,
+        name: Optional[str] = None,
+        send_reset_password_email: bool = True,
+        verified_email: bool = True,
     ) -> str:
         """Creates a user and sends them a reset password email.
 
@@ -271,7 +277,7 @@ class KeycloakClient:
                 json_data={
                     'username': username,
                     'email': backup_email,
-                    'emailVerified': True,
+                    'emailVerified': verified_email,
                     'firstName': name,
                     'attributes': {'zoneinfo': timezone, 'locale': 'en'},
                     'enabled': True,

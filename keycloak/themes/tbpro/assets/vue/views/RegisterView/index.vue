@@ -49,16 +49,18 @@ export default {
 </script>
 
 <template>
-  <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
-    {{ $t('registerError') }}
-  </notice-bar>
-  <message-bar v-else/>
-
   <a :href="clientUrl" class="logo-link">
     <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
   </a>
-
   <h2>{{ $t('registerTitle') }}</h2>
+
+  <slot name="notice-bars">
+    <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
+      {{ $t('registerError') }}
+    </notice-bar>
+    <message-bar v-else/>
+  </slot>
+
   <form id="kc-register-form" ref="register-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
         @keyup.enter="onSubmit">
     <div class="form-elements">
@@ -114,6 +116,7 @@ export default {
       <text-input readonly data-testid="full-username-readonly-input" id="username" name="username" class="hidden" v-model="email"></text-input>
       <text-input readonly data-testid="locale-readonly-input" id="locale" name="locale" class="hidden" v-model="locale"></text-input>
       <text-input readonly data-testid="zoneinfo-readonly-input" id="zoneinfo" name="zoneinfo" class="hidden" v-model="timezone"></text-input>
+      <slot name="form-extras"/>
     </div>
     <div class="buttons">
       <brand-button data-testid="submit" class="submit" @click="onSubmit">

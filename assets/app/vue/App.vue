@@ -20,7 +20,6 @@ const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
 };
 
 const route = useRoute();
-
 </script>
 
 <template>

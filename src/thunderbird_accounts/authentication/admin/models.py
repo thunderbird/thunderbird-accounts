@@ -11,7 +11,7 @@ from thunderbird_accounts.authentication.admin.actions import (
 from thunderbird_accounts.authentication.admin.forms import CustomUserChangeForm, CustomNewUserForm
 from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.exceptions import DeleteUserError
-from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.models import User, AllowListEntry
 from thunderbird_accounts.mail.clients import MailClient
 
 
@@ -154,3 +154,8 @@ class CustomUserAdmin(UserAdmin):
             )
         # Finally delete the rest of the model
         super().delete_model(request, obj)
+
+
+class AllowListEntryAdmin(admin.ModelAdmin):
+    search_fields = ('email',)
+    search_help_text = _('Search the allow list by email address.')

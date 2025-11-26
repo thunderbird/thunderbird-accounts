@@ -27,7 +27,7 @@ const router = createRouter({
     {
       path: '/sign-up',
       name: 'sign-up',
-      component: SignUpView,
+      component: SignUpView, // If we lazy-load this they'll see an ugly screen flash.
       meta: {
         isPublic: true,
         useAppTemplate: false,
