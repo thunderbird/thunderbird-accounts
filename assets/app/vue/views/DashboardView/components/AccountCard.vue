@@ -6,8 +6,8 @@ import CardContainer from '@/components/CardContainer.vue';
 
 const { t } = useI18n();
 
-// From Stalwart, primary email is always the first email address in the list
-const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
+// The user's username is their primary email address
+const username = computed(() => window._page?.username);
 </script>
 
 <template>
@@ -17,7 +17,7 @@ const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
     <div class="my-account-card-details">
       <div class="my-account-card-field">
         <strong>{{ t('views.dashboard.accountCard.email') }}</strong>
-        <p>{{ primaryEmail }}</p>
+        <p>{{ username }}</p>
       </div>
 
       <visual-divider />
