@@ -32,10 +32,22 @@ class ImportUserError(KeycloakError):
     username: str
     error: str
 
-    def __init__(self, error, username: Optional[str] = None, *args, **kwargs):
+    def __init__(
+        self,
+        error,
+        username: Optional[str] = None,
+        error_code: Optional[str] = None,
+        error_desc: Optional[str] = None,
+        *args,
+        **kwargs,
+    ):
         super().__init__(args, kwargs)
         self.username = username
+        # Used for __str__
         self.error = error
+        # Structured error from keycloak
+        self.error_code = error_code
+        self.error_desc = error_desc
 
     def __str__(self):
         return f'ImportUserError: {self.error} for {self.username}'

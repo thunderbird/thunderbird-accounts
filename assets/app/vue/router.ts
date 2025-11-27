@@ -34,6 +34,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/sign-up/complete', // This is the "Check your email" page after sign-up.
+      name: 'sign-up-complete',
+      component: SignUpView, // If we lazy-load this they'll see an ugly screen flash.
+      meta: {
+        isPublic: true,
+        useAppTemplate: false,
+      }
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardView,

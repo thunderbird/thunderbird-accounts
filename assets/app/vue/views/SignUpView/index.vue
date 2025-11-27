@@ -12,6 +12,13 @@ import i18nInstance from '@/composables/i18n';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { SERVER_MESSAGE_LEVEL } from '@/types';
+import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
+
+const { t } = useI18n();
+const route = useRoute();
+const isSignUpComplete = route.name === 'sign-up-complete';
 
 // Note: We only support english right now
 const locale = 'en';
@@ -22,8 +29,9 @@ window._page.currentView = {
   formAction: '/users/sign-up/',
   clientUrl: window.location.origin,
   currentLocale: locale,
+  tbProPrimaryDomain: window._page.tbProPrimaryDomain,
 };
-window._page.pageId = 'sign-up';
+window._page.pageId = route.name.toString();
 
 // Merge some localization
 i18nInstance.global.mergeLocaleMessage(locale, { ...(kcEn ?? {}) });
@@ -52,7 +60,7 @@ export default {
 
 <template>
   <base-template>
-    <register-view>
+    <register-view v-if="!isSignUpComplete">
       <template v-slot:notice-bars>
         <section class="server-messages" v-if="serverMessages !== null">
           <template v-for="message in serverMessages" :key="message.message">
@@ -70,6 +78,13 @@ export default {
         <csrf-token />
       </template>
     </register-view>
+    <section v-else>
+      <a href="/" class="logo-link">
+        <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
+      </a>
+      <h2>{{ t('verifyTitle') }}</h2>
+      <p>{{ t('emailVerifyInstruction') }}</p>
+    </section>
   </base-template>
 </template>
 
@@ -84,4 +99,31 @@ export default {
     margin: 1rem 1rem 1rem 0;
   }
 }
+
+.logo-link {
+  display: block;
+  text-decoration: none;
+  margin-block-end: 2.8125rem;
+
+  .logo {
+    height: 36px;
+    width: auto;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+}
+
+h2 {
+  font-size: 2.25rem;
+  font-family: metropolis;
+  font-weight: normal;
+  letter-spacing: -0.36px;
+  line-height: 1.2;
+  color: var(--colour-primary-default);
+  margin: 0 0 1.5rem 0;
+}
+
 </style>

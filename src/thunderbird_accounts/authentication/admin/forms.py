@@ -100,7 +100,6 @@ class CustomNewUserForm(CustomUserFormBase):
                 self.cleaned_data.get('email'),
                 self.cleaned_data.get('timezone'),
                 name=name,
-                send_reset_password_email=False,
             )
 
             # Save the oidc id so it matches on login

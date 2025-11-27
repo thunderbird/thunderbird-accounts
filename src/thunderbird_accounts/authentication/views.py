@@ -21,7 +21,6 @@ from django.views.generic import TemplateView
 from thunderbird_accounts.authentication.exceptions import (
     InvalidDomainError,
     ImportUserError,
-    SendExecuteActionsEmailError,
 )
 from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction
 from thunderbird_accounts.utils.utils import get_absolute_url
@@ -76,14 +75,12 @@ def sign_up(request: HttpRequest):
     locale = data.get('locale', 'en')
 
     partial_username = data.get('partialUsername')
-    username = f'{partial_username}@thundermail.com'
-
-    print('->', data)
+    username = f'{partial_username}@{settings.PRIMARY_EMAIL_DOMAIN}'
 
     generic_email_error = _('You cannot sign-up with that email address.')
     try:
         # Make sure they're on the allow list
-        AllowListEntry.objects.get(email=email)
+        allow_list_entry = AllowListEntry.objects.get(email=email)
     except AllowListEntry.DoesNotExist:
         messages.error(request, generic_email_error)
         return HttpResponseRedirect('/sign-up')
@@ -97,7 +94,7 @@ def sign_up(request: HttpRequest):
     if data.get('password') != data.get('password-confirm'):
         messages.error(request, _("Your password doesn't match the confirm password field."))
 
-    user = User(username=username, email=email, display_name=username, language=locale, timezone=timezone).save()
+    user = User(username=username, email=email, display_name=username, language=locale, timezone=timezone)
 
     # TODO: Move this to a task!
 
@@ -108,29 +105,30 @@ def sign_up(request: HttpRequest):
             username,
             email,
             timezone,
-            send_reset_password_email=False,
+            password=data.get('password'),
+            send_action_email=KeycloakRequiredAction.VERIFY_EMAIL,
             verified_email=False,
         )
 
         # Save the oidc id so it matches on login
         user.oidc_id = keycloak_pkid
         user.save()
+
+        # Tie the allow list entry with our new user
+        allow_list_entry.user = user
+        allow_list_entry.save()
     except (ValueError, InvalidDomainError):
         # Only username errors raise ValueErrors right now
         messages.error(request, generic_email_error)
         return HttpResponseRedirect('/sign-up')
     except ImportUserError as ex:
         sentry_sdk.capture_exception(ex)
-        messages.error(request, generic_email_error)
+        messages.error(
+            request, ex.error_desc if ex.error_desc else _('There was an unknown error, please try again later.')
+        )
         return HttpResponseRedirect('/sign-up')
-    except SendExecuteActionsEmailError as ex:
-        sentry_sdk.capture_exception(ex)
-        # We don't have a way to add a warning, and we don't want this error preventing user creation!
-        # self.add_error(None, _(f'User created in Keycloak but could not send them an email to add their password.
-        # Tell a developer: {ex}'))
 
-    print('success')
-    return HttpResponseRedirect('/sign-up')
+    return HttpResponseRedirect('/sign-up/complete')
 
 
 @require_http_methods(['POST'])

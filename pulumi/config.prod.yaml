@@ -252,6 +252,8 @@ resources:
                 value: "tbpro"
               - name: KC_TBPRO_HOME
                 value: "https://accounts.tb.pro/dashboard/"
+              - name: KC_TBPRO_PRIMARY_DOMAIN
+                value: "thundermail.com"
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG

@@ -8,6 +8,7 @@ import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
 const clientUrl = window._page.currentView?.clientUrl;
+const tbProPrimaryDomain = `@${window._page.currentView?.tbProPrimaryDomain}`;
 
 // Fixed values
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
@@ -71,8 +72,8 @@ export default {
         required
         autocomplete="username" 
         :error="usernameError"
-        :outerSuffix="$t('signUpUsernameSuffix')"
-        :help="$t('signUpUsernameHelp')"
+        :outerSuffix="tbProPrimaryDomain"
+        :help="$t('signUpUsernameHelp', {'domain': tbProPrimaryDomain})"
         v-model="username"
       >
         {{ $t('username') }}

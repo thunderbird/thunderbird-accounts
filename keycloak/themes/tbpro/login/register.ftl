@@ -15,6 +15,7 @@
         },
         clientUrl: '${client.baseUrl}',
         currentLocale: '${(locale.currentLanguageTag)!"en"}',
+        tbProPrimaryDomain: '${properties.tbproHomeUrl}',
       };
       window._l10n = {
         ...window._l10n,
