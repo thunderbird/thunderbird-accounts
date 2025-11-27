@@ -48,52 +48,37 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
-    // Setup project - signs into Appointment once for all the tests
-    { name: 'setup', testMatch: /.*\.setup\.ts/ },
+    // Setup browsers - signs into TB Accounts once for all the tests and saves auth
+    { name: 'desktop-setup',
+      testMatch: /.*\.desktop.setup\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        screenshot: 'only-on-failure',
+       },
+    },
+
+    // Main tests; each browser runs the setup above and saves auth state which is loaded for each test in the suite
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        screenshot: 'only-on-failure',
         // Use prepared auth state
         storageState: 'test-results/.auth/user.json',
        },
-      dependencies: ['setup'],
+      dependencies: ['desktop-setup'],
     },
 
     {
       name: 'firefox',
       use: {
         ...devices['Desktop Firefox'],
+        screenshot: 'only-on-failure',
         // Use prepared auth state
         storageState: 'test-results/.auth/user.json',
        },
-      dependencies: ['setup'],
+      dependencies: ['desktop-setup'],
     },
-
-    //{
-    //  name: 'webkit',
-    //  use: { ...devices['Desktop Safari'] },
-    //},
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
   ],
 
   /* Run your local dev server before starting the tests */
