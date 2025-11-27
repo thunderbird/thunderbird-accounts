@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { BaseBadge, BaseBadgeTypes, LinkButton, PrimaryButton, VisualDivider } from '@thunderbirdops/services-ui';
+import { VisualDivider } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 
 const { t } = useI18n();
-const userEmail = window._page?.userEmail;
+
+// The user's username is their primary email address
+const username = computed(() => window._page?.username);
 </script>
 
 <template>
@@ -14,7 +17,7 @@ const userEmail = window._page?.userEmail;
     <div class="my-account-card-details">
       <div class="my-account-card-field">
         <strong>{{ t('views.dashboard.accountCard.email') }}</strong>
-        <p>{{ userEmail }}</p>
+        <p>{{ username }}</p>
       </div>
 
       <visual-divider />
