@@ -4,6 +4,7 @@ import { ContactPage } from '../pages/contact-page';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
+  PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
   ACCTS_OIDC_EMAIL,
 } from '../const/constants';
 
@@ -51,7 +52,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('contact support form', {
-  tag: [PLAYWRIGHT_TAG_E2E_SUITE],
+  tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
 }, () => {
   test('contact form displayed correctly', async ({ page }) => {
     // check that the contact form is visible

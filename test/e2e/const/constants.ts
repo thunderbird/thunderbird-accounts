@@ -10,11 +10,10 @@ export const ACCTS_OIDC_PWORD = String(process.env.ACCTS_OIDC_PWORD);
 
 // playwright test tags
 export const PLAYWRIGHT_TAG_E2E_SUITE = '@e2e-suite';
+export const PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY = '@e2e-prod-desktop-nighlty';
 
 // timeouts
 export const TIMEOUT_2_SECONDS = 2000;
-export const TIMEOUT_5_SECONDS = 5000;
-export const TIMEOUT_30_SECONDS = 30000;
 export const TIMEOUT_60_SECONDS = 60000;
 
 // connection info
@@ -25,16 +24,3 @@ export const SMTP_PORT = Number(process.env.SMTP_PORT);
 export const IMAP_TLS = String(process.env.IMAP_TLS) ?? 'SSL/TLS';
 export const JMAP_TLS = String(process.env.JMAP_TLS) ?? 'SSL/TLS';
 export const SMTP_TLS = String(process.env.SMTP_TLS) ?? 'SSL/TLS';
-export const APP_PASSWORD = 'Your App Password';
-export const YOUR_EMAIL_LBL = 'Your email address:';
-export const THUNDERMAIL_USERNAME = String(process.env.THUNDERMAIL_USERNAME);
-export const THUNDERMAIL_EMAIL_ADDRESS = String(process.env.THUNDERMAIL_EMAIL_ADDRESS);
-
-// mock responses
-export const MOCK_RESPONSE_OK = {
-  status: 200,
-  contentType: 'application/json',
-  body: JSON.stringify({
-    fake_data: 'fake response data',
-  }),
-};
