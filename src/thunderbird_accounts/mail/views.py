@@ -46,11 +46,9 @@ def home(request: HttpRequest):
     email_addresses = []
     max_custom_domains = None
     max_email_aliases = None
-    username = None
 
     if request.user.is_authenticated and request.user.has_active_subscription:
         try:
-            username = request.user.username
             account = request.user.account_set.first()
             if not account:
                 raise AccountNotFoundError(username=request.user.stalwart_primary_email)
@@ -114,7 +112,6 @@ def home(request: HttpRequest):
             'server_messages': [
                 {'level': message.level, 'message': str(message.message)} for message in get_messages(request)
             ],
-            'username': username,
         },
     )
 
