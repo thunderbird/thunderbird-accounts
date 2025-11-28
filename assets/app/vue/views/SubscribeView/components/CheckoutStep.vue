@@ -153,7 +153,7 @@ const setupPaddle = async () => {
         displayMode: 'inline',
         frameTarget: 'checkout-container',
         frameInitialHeight: 992,
-        frameStyle: 'width: 100%; min-width: 312px; background-color: transparent; border: none;',
+        frameStyle: 'width: 100%; background-color: transparent; border: none;',
         variant: 'one-page',
       },
     },
@@ -279,7 +279,6 @@ export default {
     gap: 1rem;
     display: flex;
     flex-direction: column;
-    align-items: center;
   }
 
   h2 {
@@ -293,12 +292,10 @@ export default {
 
   .checkout-container {
     width: 100%;
-    max-width: 60%;
   }
 
   .summary-card {
     width: 100%;
-    max-width: 60%;
     min-height: 340px;
   }
 
@@ -373,6 +370,14 @@ export default {
       align-items: flex-start;
       flex-direction: row;
       gap: 2rem;
+    }
+
+    .checkout-container {
+      max-width: 60%;
+    }
+
+    .summary-card {
+      max-width: 60%;
     }
   }
 }
