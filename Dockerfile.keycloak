@@ -1,4 +1,7 @@
-FROM node:latest as build
+#
+# Build stage for compiling our custom Keycloak theme
+#
+FROM node:latest AS build_theme
 
 RUN mkdir -p /app/keycloak/themes
 WORKDIR /app/
@@ -13,17 +16,35 @@ RUN npm run build-theme
 # Remove the build files
 RUN rm -rf /app/keycloak/assets/*
 
+#
+# The Keycloak image we ultimately use is security-hardened in part by removing
+# many common tools which might potentially contain vulnerabilities. We have to
+# use some custom Java-land tools to install the Sentry plugin we use for error
+# reporting. Hence, we use another build stage here to produce those tools. We
+# use the openjdk:21-ea image because it comes with the same version of Java 
+# that Keycloak uses.
+#
+FROM openjdk:21-ea AS install_maven
 
+RUN mkdir /tmp/maven
+ADD https://dlcdn.apache.org/maven/maven-3/3.9.11/binaries/apache-maven-3.9.11-bin.tar.gz /tmp/maven/
+WORKDIR /tmp/maven
+RUN tar -xf apache-maven-3.9.11-bin.tar.gz && \
+    ./apache-maven-3.9.11/bin/mvn wrapper:wrapper
+RUN ls -lah /tmp/maven
 
 #
-# Keycloak dockerfile for local development
+# Build stage for producing our custom Keycloak container image
 #
 FROM quay.io/keycloak/keycloak:26.3
 
-# Load in our dev setup
+# Load in our configurations, custom theme, Maven wrapper, and custom entrypoint
 COPY --chown=keycloak:keycloak keycloak/data/import /opt/keycloak/data/import
-COPY --from=build /app/keycloak/themes/tbpro /opt/keycloak/themes/tbpro
-
+COPY --from=build_theme /app/keycloak/themes/tbpro /opt/keycloak/themes/tbpro
+COPY --from=install_maven /tmp/maven/mvnw /opt/keycloak
+COPY --from=install_maven /tmp/maven/.mvn/ /opt/keycloak/.mvn
+RUN echo "DEBUG -- rjung -- ls" && \
+    ls -lah /opt/keycloak
 COPY scripts/entry-keycloak.sh scripts/entry.sh
 
 ENTRYPOINT ["./scripts/entry.sh"]
