@@ -82,8 +82,8 @@ def sign_up(request: HttpRequest):
         # Make sure they're on the allow list
         allow_list_entry = AllowListEntry.objects.get(email=email)
     except AllowListEntry.DoesNotExist:
-        messages.error(request, generic_email_error)
-        return HttpResponseRedirect('/sign-up')
+        # Redirect the user to the tbpro waitlist
+        return HttpResponseRedirect(settings.TB_PRO_WAIT_LIST_URL)
 
     # Make sure a user does not exist with their email address
     user = User.objects.filter(Q(email=email) | Q(username=username)).exists()

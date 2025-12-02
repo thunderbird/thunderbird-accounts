@@ -135,6 +135,7 @@ services:
       KC_DEV: yes  # Run the container with start-dev instead of start
       KC_SPI_THEME_WELCOME_THEME: "tbpro"
       KC_TBPRO_HOME: "http://localhost:8087/"
+      KC_TBPRO_SIGN_UP: "http://localhost:8087/sign-up"
       KC_TBPRO_PRIMARY_DOMAIN: "example.org"
     volumes:
       - "./keycloak/themes:/opt/keycloak/themes"

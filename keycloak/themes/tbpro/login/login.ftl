@@ -10,7 +10,7 @@
         // <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
         registerUrl: '${url.registrationUrl}',
         // <#else>
-        registerUrl: null,
+        registerUrl: '${properties.tbproSignupUrl}',
         // </#if>
         // <#if realm.resetPasswordAllowed>
         forgotPasswordUrl: '${url.loginResetCredentialsUrl}',
