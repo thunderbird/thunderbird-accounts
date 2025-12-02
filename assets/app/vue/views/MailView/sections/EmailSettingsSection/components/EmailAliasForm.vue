@@ -71,7 +71,7 @@ const onSubmit = () => {
 // Validate on selected domain change as well
 watch(selectedDomain, () => {
   validationError.value = validateEmailAlias(emailAlias.value);
-})
+});
 </script>
 
 <template>
