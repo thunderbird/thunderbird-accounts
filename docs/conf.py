@@ -5,11 +5,11 @@ import logging
 import os
 import sys
 
-print(f'Running in {os.getcwd()}')
+print(f'Running in {os.getcwd()}')  # noqa: T201
 
 sys.path.insert(0, os.path.abspath('src'))
 
-print(f'Adding to path: {os.path.abspath("../src")}')
+print(f'Adding to path: {os.path.abspath("../src")}')  # noqa: T201
 
 # -- Project information
 
@@ -110,7 +110,7 @@ def linkcode_resolve(domain, info):
             file = file[3:]
 
         if not file.startswith('src/thunderbird_accounts'):
-            print(f'Ignoring {file}')
+            print(f'Ignoring {file}')  # noqa: T201
             # e.g. object is a typing.NewType
             return None
 

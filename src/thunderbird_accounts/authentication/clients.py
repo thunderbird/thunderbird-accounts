@@ -296,8 +296,7 @@ class KeycloakClient:
 
             try:
                 error_data: dict = json.loads(exc.response.content.decode())
-            except (TypeError, JSONDecodeError) as ex2:
-                print('bad json', ex2)
+            except (TypeError, JSONDecodeError):
                 # Could not determine explicit error information
                 error_data = {}
 
