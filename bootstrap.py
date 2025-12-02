@@ -29,6 +29,10 @@ def main():
         shutil.rmtree('mail/data')
         print('\t* Removed mail/data')
 
+    if not os.path.isdir('mail/etc') or from_scratch:
+        os.makedirs('mail/etc')
+        print('\t* Created mail/etc directory')
+
     if not os.path.isfile('mail/etc/config.toml') or from_scratch:
         try:
             shutil.copy('config.toml.example', 'mail/etc/config.toml')
