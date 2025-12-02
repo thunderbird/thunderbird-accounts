@@ -19,6 +19,10 @@ from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.types import Event, Hint
 
+# Help language servers understand django
+import django_stubs_ext
+django_stubs_ext.monkeypatch()
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
