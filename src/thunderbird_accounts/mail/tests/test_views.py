@@ -217,7 +217,7 @@ class AddEmailAliasTestCase(TestCase):
     def test_custom_domain_alias_length_minimum_2(self):
         """Test that MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=2 works correctly for both allowed and custom domains."""
         email_alias_url = reverse('add_email_alias')
-        _custom_domain = Domain.objects.create(
+        Domain.objects.create(
             name='customdomain.com',
             user=self.user,
             status=Domain.DomainStatus.VERIFIED,
