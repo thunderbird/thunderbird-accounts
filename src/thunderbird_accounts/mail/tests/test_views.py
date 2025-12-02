@@ -182,7 +182,7 @@ class AddEmailAliasTestCase(TestCase):
     def test_custom_domain_alias_short_allowed(self):
         """Test that short email aliases (< 3 chars) are allowed for custom domains (not in ALLOWED_EMAIL_DOMAINS)."""
         email_alias_url = reverse('add_email_alias')
-        _custom_domain = Domain.objects.create(
+        Domain.objects.create(
             name='customdomain.com',
             user=self.user,
             status=Domain.DomainStatus.VERIFIED,
