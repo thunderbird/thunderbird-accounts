@@ -357,6 +357,8 @@ resources:
                 value: stage
               - name: ALLOWED_EMAIL_DOMAINS
                 value: 'stage-thundermail.com'
+              - name: MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                value: '3'
               - name: AUTH_SCHEME
                 value: 'oidc'
               - name: CSRF_HTTPONLY
@@ -515,6 +517,8 @@ resources:
                 value: https://www.thunderbird.net
               - name: ALLOWED_EMAIL_DOMAINS
                 value: 'stage-thundermail.com'
+              - name: MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                value: '3'
               - name: APP_ENV
                 value: stage
               - name: AUTH_SCHEME

@@ -357,6 +357,8 @@ resources:
                 value: https://www.thunderbird.net
               - name: ALLOWED_EMAIL_DOMAINS
                 value: 'thundermail.com,tb.pro'
+              - name: MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                value: '3'
               - name: ALLOWED_HOSTS
                 value: 'accounts.tb.pro'
               - name: APP_ENV
@@ -523,6 +525,8 @@ resources:
                 value: https://www.thunderbird.net
               - name: ALLOWED_EMAIL_DOMAINS
                 value: 'thundermail.com,tb.pro'
+              - name: MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                value: '3'
               - name: APP_ENV
                 value: 'prod'
               - name: AUTH_SCHEME
