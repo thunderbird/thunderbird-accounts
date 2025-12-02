@@ -91,8 +91,16 @@ def sign_up(request: HttpRequest):
         messages.error(request, generic_email_error)
         return HttpResponseRedirect('/sign-up')
 
-    if data.get('password') != data.get('password-confirm'):
+
+    if any(
+        [
+            not data.get('password'),
+            not data.get('password-confirm'),
+            data.get('password') != data.get('password-confirm'),
+        ]
+    ):
         messages.error(request, _("Your password doesn't match the confirm password field."))
+        return HttpResponseRedirect('/sign-up')
 
     user = User(username=username, email=email, display_name=username, language=locale, timezone=timezone)
 
@@ -145,13 +153,13 @@ def bulk_import_allow_list(request: HttpRequest):
     # Normalize new lines (I'm not sure if this is actually needed but best to be safe here.)
     entries = entries.replace('\r\n', '\n').replace('\r', '\n')
     # Now split on new line
-    entries: list[str] = entries.split('\n')
+    split_entries: list[str] = entries.split('\n')
 
     dupes = []
     errors = []
     add_amount = 0
 
-    for entry in entries:
+    for entry in split_entries:
         # Remove spaces
         entry = entry.strip()
         if not entry:

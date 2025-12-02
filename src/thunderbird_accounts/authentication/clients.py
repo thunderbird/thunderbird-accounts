@@ -294,8 +294,6 @@ class KeycloakClient:
         except RequestException as exc:
             sentry_sdk.capture_exception(exc)
 
-            print('->', exc)
-
             try:
                 error_data: dict = json.loads(exc.response.content.decode())
             except (TypeError, JSONDecodeError) as ex2:
