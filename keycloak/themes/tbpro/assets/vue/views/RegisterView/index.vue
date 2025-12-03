@@ -36,6 +36,20 @@ const recoveryEmailError = computed(() => {
 const registerForm = useTemplateRef('register-form');
 
 const onSubmit = () => {
+  // Do some basic password/confirm password checking, due to how we inject the i18n between kc and accounts 
+  // we'll need to just grab it from the html. 
+  const invalidPasswordConfirmMessage = document.getElementById('invalidPasswordConfirmMessage')?.innerText;
+  const password = registerForm.value.elements['password'];
+  const passwordConfirm = registerForm.value.elements['password-confirm'];
+
+  if (invalidPasswordConfirmMessage
+    && password.value
+    && passwordConfirm.value
+    && password.value !== passwordConfirm.value) {
+    password.setCustomValidity(invalidPasswordConfirmMessage);
+    passwordConfirm.setCustomValidity(invalidPasswordConfirmMessage);
+  }
+
   if (registerForm.value.checkValidity()) {
     registerForm?.value?.submit();
   }
@@ -50,6 +64,9 @@ export default {
 </script>
 
 <template>
+  <div id="i18n-workaround">
+    <span id="invalidPasswordConfirmMessage">{{ $t('invalidPasswordConfirmMessage') }}</span>
+  </div>
   <a :href="clientUrl" class="logo-link">
     <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
   </a>
@@ -132,6 +149,10 @@ export default {
 </template>
 
 <style scoped>
+#i18n-workaround {
+  display: none;
+}
+
 .hidden {
   display: none;
 }

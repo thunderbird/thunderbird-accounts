@@ -37,6 +37,7 @@
         registerError: '${msg("registerError")}',
         recoveryEmail: '${msg("recoveryEmail")}',
         recoveryEmailHelp: '${msg("recoveryEmailHelp")}',
+        invalidPasswordDoesntMatch: '${msg("invalidPasswordConfirmMessage")}'
       };
     </script>
     </#if>

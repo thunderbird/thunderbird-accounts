@@ -7,6 +7,7 @@ const messageHeader = window._page.currentView?.messageHeader;
 const actionUrl = window._page.currentView?.actionUrl;
 const actionText = window._page.currentView?.actionText;
 const clientUrl = window._page.currentView?.clientUrl;
+const requiredActions = window._page.currentView?.requiredActions ?? [];
 </script>
 
 <script>
@@ -16,7 +17,7 @@ export default {
 </script>
 
 <template>
-  <message-bar/>
+  <message-bar />
 
   <a :href="clientUrl" class="logo-link">
     <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
@@ -30,6 +31,9 @@ export default {
       {{ message?.summary }}
     </template>
   </h2>
+  <ul class="required-actions">
+    <li v-for="action in requiredActions" v-bind:key="action">{{ action }}</li>
+  </ul>
   <template v-if="actionUrl">
     <a :href="actionUrl" data-testid="action-url">{{ actionText }}</a>
   </template>
@@ -42,6 +46,14 @@ export default {
   left: 1.5rem;
   right: 1.5rem;
   z-index: 1;
+}
+
+.required-actions {
+  margin-bottom: 1rem;
+
+  li {
+    list-style: none;
+  }
 }
 
 h2 {
