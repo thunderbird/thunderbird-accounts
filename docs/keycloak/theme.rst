@@ -1,5 +1,6 @@
+==============================================
 Keycloak Theme Development
---------------------------
+==============================================
 
 Keycloak is the default OIDC provider for Thunderbird Account. While we use a staging instance under the tbpro-dev realm
 for other projects, we spin up a keycloak docker container for theme development in this project.

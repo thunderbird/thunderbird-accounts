@@ -22,11 +22,16 @@ Contents
     readme.md
     autodoc.rst
     frontend.rst
-    how-to-integrate-keycloak.rst
-    keycloak-theme.rst
     mail.rst
     tasks.rst
 
+.. toctree::
+    :maxdepth: 2
+    :caption: Keycloak Developer Documentation
+
+    keycloak/how-to-deploy-to-prod.rst
+    keycloak/how-to-integrate.rst
+    keycloak/theme.rst
 
 
 Indices and tables
