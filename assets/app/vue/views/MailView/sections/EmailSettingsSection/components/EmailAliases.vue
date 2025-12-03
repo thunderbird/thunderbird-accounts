@@ -28,7 +28,7 @@ const emailAliases = ref<EmailAlias[]>(window._page?.emailAddresses?.map((email,
 const isAddingEmailAlias = ref(false);
 const errorMessage = ref<string>(null);
 
-const allowedDomains = computed(() => {
+const allDomainOptions = computed(() => {
   // Allowed domains include any verified custom domains
   const customDomains = window._page.customDomains
     ?.filter(domain => domain.status === DOMAIN_STATUS.VERIFIED)
@@ -120,7 +120,7 @@ const onDeleteAliasError = (error: string) => {
 
     <email-alias-form
       v-if="emailAliases.length < aliasLimit"
-      :allowed-domains="allowedDomains"
+      :all-domain-options="allDomainOptions"
       @add-alias="onAddAlias"
     />
   </div>

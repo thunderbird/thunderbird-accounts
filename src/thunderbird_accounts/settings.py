@@ -408,6 +408,9 @@ ALLOWED_EMAIL_DOMAINS = (
     if os.getenv('ALLOWED_EMAIL_DOMAINS')
     else None
 )
+
+MIN_CUSTOM_DOMAIN_ALIAS_LENGTH = int(os.getenv('MIN_CUSTOM_DOMAIN_ALIAS_LENGTH', '3'))
+
 # The email domain that will be used for account creation and login
 PRIMARY_EMAIL_DOMAIN = (
     ALLOWED_EMAIL_DOMAINS[0] if ALLOWED_EMAIL_DOMAINS and len(ALLOWED_EMAIL_DOMAINS) > 0 else 'example.org'

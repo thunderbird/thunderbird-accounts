@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.mail.models import Account
+from thunderbird_accounts.mail.models import Account, Domain
 
 
 class HomeViewRedirectTestCase(TestCase):
@@ -132,6 +132,139 @@ class AddEmailAliasTestCase(TestCase):
                 json.loads(response.content.decode()),
                 {'success': False, 'error': _('You cannot use this email address.')},
             )
+
+    @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
+    @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=3)
+    def test_allowed_domain_alias_too_short(self):
+        """Test that email aliases shorter than 3 characters are rejected for ALLOWED_EMAIL_DOMAINS."""
+        email_alias_url = reverse('add_email_alias')
+
+        # Test with 1 character
+        response = self.client.post(
+            email_alias_url,
+            data={'email-alias': 'a', 'domain': 'example.org'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
+        )
+
+        # Test with 2 characters
+        response = self.client.post(
+            email_alias_url,
+            data={'email-alias': 'ab', 'domain': 'example.org'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
+        )
+
+    @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
+    @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=3)
+    def test_allowed_domain_alias_minimum_length(self):
+        """Test that email aliases of exactly 3 characters are accepted for ALLOWED_EMAIL_DOMAINS."""
+        email_alias_url = reverse('add_email_alias')
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'abc', 'domain': 'example.org'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+    @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
+    @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=3)
+    def test_custom_domain_alias_short_allowed(self):
+        """Test that short email aliases (< 3 chars) are allowed for custom domains (not in ALLOWED_EMAIL_DOMAINS)."""
+        email_alias_url = reverse('add_email_alias')
+        Domain.objects.create(
+            name='customdomain.com',
+            user=self.user,
+            status=Domain.DomainStatus.VERIFIED,
+        )
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            # Test with 1 character - should succeed for custom domain
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'a', 'domain': 'customdomain.com'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+            # Test with 2 characters - should succeed for custom domain
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'ab', 'domain': 'customdomain.com'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+    @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
+    @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=2)
+    def test_custom_domain_alias_length_minimum_2(self):
+        """Test that MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=2 works correctly for both allowed and custom domains."""
+        email_alias_url = reverse('add_email_alias')
+        Domain.objects.create(
+            name='customdomain.com',
+            user=self.user,
+            status=Domain.DomainStatus.VERIFIED,
+        )
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+
+            # Test ALLOWED_EMAIL_DOMAINS: 1 character should be rejected
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'a', 'domain': 'example.org'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(
+                json.loads(response.content.decode()),
+                {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
+            )
+
+            # Test ALLOWED_EMAIL_DOMAINS: 2 characters should be accepted
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'ab', 'domain': 'example.org'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+            # Test custom domain: 1 character should be allowed
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'a', 'domain': 'customdomain.com'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+            # Test custom domain: 2 characters should be allowed
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'ab', 'domain': 'customdomain.com'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
 
 
 class ZendeskContactFieldsTestCase(TestCase):
@@ -484,15 +617,17 @@ class ZendeskContactSubmitTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         # Verify the name field defaults to email when not provided in payload
-        instance.create_ticket.assert_called_once_with({
-            'ticket_form_id': 42,
-            'name': 'user@example.org',
-            'email': 'user@example.org',
-            'subject': 'Hello',
-            'description': 'Body',
-            'attachments': [],
-            'custom_fields': [],
-        })
+        instance.create_ticket.assert_called_once_with(
+            {
+                'ticket_form_id': 42,
+                'name': 'user@example.org',
+                'email': 'user@example.org',
+                'subject': 'Hello',
+                'description': 'Body',
+                'attachments': [],
+                'custom_fields': [],
+            }
+        )
         instance.update_ticket.assert_called_once()
 
     @patch('thunderbird_accounts.mail.views.ZendeskClient')

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, useTemplateRef } from 'vue';
+import { ref, computed, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { TextInput, SelectInput, PrimaryButton } from '@thunderbirdops/services-ui';
 
@@ -9,20 +9,23 @@ import { EMAIL_ALIAS_STEP } from '../types';
 const { t } = useI18n();
 
 const props = defineProps<{
-  allowedDomains: string[];
+  allDomainOptions: string[];
 }>();
 
 const emit = defineEmits<{
   'add-alias': [emailAlias: string, domain: string];
 }>();
 
+// And the domains in the settings.ALLOWED_EMAIL_DOMAINS from the backend
+const allowedDomains = window._page.allowedDomains || [];
+
 const step = ref<EMAIL_ALIAS_STEP>(EMAIL_ALIAS_STEP.INITIAL);
 const emailAlias = ref(null);
-const selectedDomain = ref(props.allowedDomains[0] ?? null);
+const selectedDomain = ref(props.allDomainOptions[0] ?? null);
 const formRef = useTemplateRef('formRef');
 const validationError = ref<string | null>(null);
 
-const allowedDomainsOptions = computed(() => props.allowedDomains.map((domain) => ({
+const allDomainOptions = computed(() => props.allDomainOptions.map((domain) => ({
   label: domain,
   value: domain,
 })));
@@ -32,7 +35,8 @@ const validateEmailAlias = (value: string): string | null => {
     return null; // Let built-in required validation handle empty values
   }
 
-  if (value.length < 3) {
+  // This rule should only apply to allowed domains, not custom domains
+  if (allowedDomains.includes(selectedDomain.value) && value.length < 3) {
     return t('views.mail.sections.emailSettings.nameValidationErrorMinLength');
   }
 
@@ -58,11 +62,16 @@ const onSubmit = () => {
   if (!validationError.value && formRef.value.checkValidity()) {
     emit('add-alias', emailAlias.value, selectedDomain.value);
     emailAlias.value = null;
-    selectedDomain.value = null;
+    selectedDomain.value = props.allDomainOptions[0] ?? null;
     validationError.value = null;
     step.value = EMAIL_ALIAS_STEP.INITIAL;
   }
 };
+
+// Validate on selected domain change as well
+watch(selectedDomain, () => {
+  validationError.value = validateEmailAlias(emailAlias.value);
+});
 </script>
 
 <template>
@@ -90,7 +99,7 @@ const onSubmit = () => {
           {{ t('views.mail.sections.emailSettings.name') }}
         </text-input>
         <span>@</span>
-        <select-input name="domain" :options="allowedDomainsOptions" v-model="selectedDomain" required>
+        <select-input name="domain" :options="allDomainOptions" v-model="selectedDomain" required>
           {{ t('views.mail.sections.emailSettings.domain') }}
         </select-input>
       </div>
