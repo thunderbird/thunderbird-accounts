@@ -2,12 +2,13 @@
 import { TextInput, BrandButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { computed, ref, useTemplateRef } from 'vue';
 import { PhArrowRight } from '@phosphor-icons/vue';
-import MessageBar from '@/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
+import MessageBar from '@kc/vue/components/MessageBar.vue';
+import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
 const clientUrl = window._page.currentView?.clientUrl;
+const tbProPrimaryDomain = `@${window._page.currentView?.tbProPrimaryDomain}`;
 
 // Fixed values
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
@@ -35,6 +36,20 @@ const recoveryEmailError = computed(() => {
 const registerForm = useTemplateRef('register-form');
 
 const onSubmit = () => {
+  // Do some basic password/confirm password checking, due to how we inject the i18n between kc and accounts 
+  // we'll need to just grab it from the html. 
+  const invalidPasswordConfirmMessage = document.getElementById('invalidPasswordConfirmMessage')?.innerText;
+  const password = registerForm.value.elements['password'];
+  const passwordConfirm = registerForm.value.elements['password-confirm'];
+
+  if (invalidPasswordConfirmMessage
+    && password.value
+    && passwordConfirm.value
+    && password.value !== passwordConfirm.value) {
+    password.setCustomValidity(invalidPasswordConfirmMessage);
+    passwordConfirm.setCustomValidity(invalidPasswordConfirmMessage);
+  }
+
   if (registerForm.value.checkValidity()) {
     registerForm?.value?.submit();
   }
@@ -49,16 +64,21 @@ export default {
 </script>
 
 <template>
-  <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
-    {{ $t('registerError') }}
-  </notice-bar>
-  <message-bar v-else/>
-
+  <div id="i18n-workaround">
+    <span id="invalidPasswordConfirmMessage">{{ $t('invalidPasswordConfirmMessage') }}</span>
+  </div>
   <a :href="clientUrl" class="logo-link">
     <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
   </a>
-
   <h2>{{ $t('registerTitle') }}</h2>
+
+  <slot name="notice-bars">
+    <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
+      {{ $t('registerError') }}
+    </notice-bar>
+    <message-bar v-else/>
+  </slot>
+
   <form id="kc-register-form" ref="register-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
         @keyup.enter="onSubmit">
     <div class="form-elements">
@@ -69,8 +89,8 @@ export default {
         required
         autocomplete="username" 
         :error="usernameError"
-        :outerSuffix="$t('signUpUsernameSuffix')"
-        :help="$t('signUpUsernameHelp')"
+        :outerSuffix="tbProPrimaryDomain"
+        :help="$t('signUpUsernameHelp', {'domain': tbProPrimaryDomain})"
         v-model="username"
       >
         {{ $t('username') }}
@@ -81,6 +101,7 @@ export default {
         name="email"
         required
         autocomplete="email"
+        type="email"
         :error="recoveryEmailError"
         :help="$t('recoveryEmailHelp')"
       >
@@ -114,6 +135,7 @@ export default {
       <text-input readonly data-testid="full-username-readonly-input" id="username" name="username" class="hidden" v-model="email"></text-input>
       <text-input readonly data-testid="locale-readonly-input" id="locale" name="locale" class="hidden" v-model="locale"></text-input>
       <text-input readonly data-testid="zoneinfo-readonly-input" id="zoneinfo" name="zoneinfo" class="hidden" v-model="timezone"></text-input>
+      <slot name="form-extras"/>
     </div>
     <div class="buttons">
       <brand-button data-testid="submit" class="submit" @click="onSubmit">
@@ -128,6 +150,10 @@ export default {
 </template>
 
 <style scoped>
+#i18n-workaround {
+  display: none;
+}
+
 .hidden {
   display: none;
 }

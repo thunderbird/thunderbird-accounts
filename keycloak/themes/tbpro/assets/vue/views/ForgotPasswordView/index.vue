@@ -1,8 +1,8 @@
 <script setup>
 import { TextInput, PrimaryButton, NoticeBar, NoticeBarTypes } from "@thunderbirdops/services-ui";
 import { ref, computed, useTemplateRef } from 'vue';
-import MessageBar from '@/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
+import MessageBar from '@kc/vue/components/MessageBar.vue';
+import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;

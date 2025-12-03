@@ -90,7 +90,7 @@ def home(request: HttpRequest):
             max_email_aliases = request.user.plan.mail_address_count
     elif not request.user.is_authenticated:  # Only if the user is not authenticated
         # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
-        public_routes = ['/privacy', '/terms', '/contact']
+        public_routes = ['/privacy', '/terms', '/contact', '/sign-up', '/sign-up/complete']
 
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))
@@ -109,6 +109,7 @@ def home(request: HttpRequest):
             'max_email_aliases': max_email_aliases,
             'tb_pro_appointment_url': settings.TB_PRO_APPOINTMENT_URL,
             'tb_pro_send_url': settings.TB_PRO_SEND_URL,
+            'tb_pro_primary_domain': settings.PRIMARY_EMAIL_DOMAIN,
             'server_messages': [
                 {'level': message.level, 'message': str(message.message)} for message in get_messages(request)
             ],

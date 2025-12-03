@@ -1,0 +1,22 @@
+{
+  "registerTitle": "Set up your account",
+  "verifyTitle": "Thank you for signing up!",
+  "username": "Username",
+  "email": "Email",
+  "password": "Password",
+  "passwordConfirm": "Confirm password",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "backToLogin": "Back to Login",
+  "doRegister": "Create Account",
+  "goToLogin": "Already have an account? {0}",
+  "goToLoginAction": "Log In",
+  "signUpUsernameHelp": "This will become your email e.g. yourname{domain}",
+  "signUpPasswordHelp": "Use a strong password you haven’t used elsewhere.",
+  "signUpPasswordConfirmHelp": "Re-enter your password to confirm.",
+  "registerError": "There was a problem creating your account.",
+  "recoveryEmail": "Recovery email",
+  "recoveryEmailHelp": "You will be required to verify this email address to continue.",
+  "emailVerifyInstruction": "An email with instructions to verify your recovery email address has been sent to your address.",
+  "invalidPasswordConfirmMessage": "Password confirmation doesn't match."
+}

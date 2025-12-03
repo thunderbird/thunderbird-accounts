@@ -154,3 +154,8 @@ class CustomUserAdmin(UserAdmin):
             )
         # Finally delete the rest of the model
         super().delete_model(request, obj)
+
+
+class AllowListEntryAdmin(admin.ModelAdmin):
+    search_fields = ('email',)
+    search_help_text = _('Search the allow list by email address.')

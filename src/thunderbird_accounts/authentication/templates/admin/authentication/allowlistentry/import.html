@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block content %}
+  <section>
+      <h1>Allow List Entry Bulk Importer</h1>
+      <form id="bulk-form" name="bulk-form" method="POST" action="{{ submit_url|safe }}">
+        <label for="bulk-entry">Enter email addresses below. <strong>Each new line will be a separate entry</strong>, duplicates will be
+          ignored and spaces will be removed.</label>
+        <textarea id="bulk-entry" name="bulk-entry" rows="20"></textarea>
+        <button id="submit" class="addlink" type="submit">Import</button>
+        {% csrf_token %}
+      </form>
+  </section>
+  <style>
+    #bulk-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    #submit {
+      max-width: 10rem;
+    }
+  </style>
+{% endblock content %}

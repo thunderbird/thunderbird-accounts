@@ -31,6 +31,7 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./assets/app/vue', import.meta.url)),
+        '@kc': fileURLToPath(new URL('./keycloak/themes/tbpro/assets', import.meta.url))
       },
       extensions: ['.ts', '.js', '.vue'],
     },

@@ -1,6 +1,6 @@
 {
   "name": "thunderbird-accounts",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "> [!IMPORTANT]   > Thunderbird Accounts is still in active development and is not ready for any active use.",
   "private": true,
   "directories": {

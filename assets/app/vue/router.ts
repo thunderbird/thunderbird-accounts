@@ -14,6 +14,7 @@ import SecuritySettingsView from '@/views/MailView/views/SecuritySettingsView/in
 
 // Zendesk Contact Form (Support)
 import ContactView from '@/views/ContactView/index.vue';
+import SignUpView from '@/views/SignUpView/index.vue';
 
 const router = createRouter({
   history: createWebHistory('/'),
@@ -22,6 +23,24 @@ const router = createRouter({
     {
       path: '/',
       redirect: '/dashboard'
+    },
+    {
+      path: '/sign-up',
+      name: 'sign-up',
+      component: SignUpView, // If we lazy-load this they'll see an ugly screen flash.
+      meta: {
+        isPublic: true,
+        useAppTemplate: false,
+      }
+    },
+    {
+      path: '/sign-up/complete', // This is the "Check your email" page after sign-up.
+      name: 'sign-up-complete',
+      component: SignUpView, // If we lazy-load this they'll see an ugly screen flash.
+      meta: {
+        isPublic: true,
+        useAppTemplate: false,
+      }
     },
     {
       path: '/dashboard',

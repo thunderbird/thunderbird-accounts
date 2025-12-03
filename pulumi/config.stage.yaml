@@ -249,7 +249,11 @@ resources:
               - name: KC_SPI_THEME_WELCOME_THEME
                 value: "tbpro"
               - name: KC_TBPRO_HOME
-                value: "https://accounts-stage.tb.pro/dashboard/"
+                value: "https://accounts-stage.tb.pro/dashboard"
+              - name: KC_TBPRO_SIGN_UP
+                value: "https://accounts-stage.tb.pro/sign-up"
+              - name: KC_TBPRO_PRIMARY_DOMAIN
+                value: "stage-thundermail.com"
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -427,6 +431,8 @@ resources:
                 value: 'https://appointment-stage.tb.pro/'
               - name: TB_PRO_SEND_URL
                 value: 'https://send-stage.tb.pro/'
+              - name: TB_PRO_WAIT_LIST_URL
+                value: 'https://tb.pro/waitlist/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth-stage.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
@@ -589,6 +595,8 @@ resources:
                 value: 'https://appointment-stage.tb.pro/'
               - name: TB_PRO_SEND_URL
                 value: 'https://send-stage.tb.pro/'
+              - name: TB_PRO_WAIT_LIST_URL
+                value: 'https://tb.pro/waitlist/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth-stage.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN

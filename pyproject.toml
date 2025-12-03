@@ -30,6 +30,8 @@ dependencies = [
     "regex>=2025.9.1",
     "ua-parser>=1.0.1",
     "dnspython>=2.8.0",
+    "django-types>=0.22.0",
+    "django-stubs-ext>=5.2.8",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"
@@ -76,6 +78,9 @@ subscription = [
 where = ["src"]
 include = ["thunderbird_accounts"]  # package names should match these glob patterns (["*"] by default)
 
+[tool.django-stubs]
+django_settings_module = "thunderbird_accounts.settings"
+
 ###############################################################
 # Ruff Configuration
 ###############################################################
@@ -117,7 +122,8 @@ quote-style = "single"
 
 [tool.ruff.lint]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-select = ["E", "F"]
+# Enable flagging print (T201)
+select = ["E", "F", "T201"]
 ignore = []
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.

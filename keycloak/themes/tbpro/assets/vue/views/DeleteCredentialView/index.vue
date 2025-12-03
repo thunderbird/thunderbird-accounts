@@ -1,9 +1,9 @@
 <script setup>
 import { DangerButton, PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
-import CancelForm from '@/vue/components/CancelForm.vue';
-import MessageBar from '@/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
+import CancelForm from '@kc/vue/components/CancelForm.vue';
+import MessageBar from '@kc/vue/components/MessageBar.vue';
+import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const formAction = window._page.currentView?.formAction;
 const loginForm = useTemplateRef('login-form');

@@ -90,3 +90,34 @@ class User(AbstractUser, BaseModel):
             email = account.email_set.filter(type=account.email_set.model.EmailType.PRIMARY).first()
             return email.address if email else None
         return None
+
+
+class AllowListEntry(BaseModel):
+    """Allow List Entry
+
+    This is a small model that holds an email address and a user_id. If an email address on a AllowListEntry is in the
+    db then that user can successfully sign-up and move onto the Subscribe screen. Otherwise, they'll just see the wait
+    list.
+
+    If a user is created from an allow list entry their user will generally be populated in the user_id field / user
+    relationship. (Unless they're created by outside means.)"""
+    email = models.EmailField(_('email address'), unique=True)
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text=_('The user associated with this allow list entry, if any.'),
+    )
+
+    class Meta(BaseModel.Meta):
+        verbose_name_plural = 'Allow list entries'
+        indexes = [
+            *BaseModel.Meta.indexes,
+            models.Index(fields=['email']),
+        ]
+
+    def __str__(self):
+        if self.user:
+            return f'Allow List Entry [{self.uuid}] {self.email} - {self.user.username}'
+        return f'Allow List Entry [{self.uuid}] {self.email} - <Unassociated>'

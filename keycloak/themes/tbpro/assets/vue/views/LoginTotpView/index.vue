@@ -1,7 +1,7 @@
 <script setup>
 import { TextInput, PrimaryButton, SelectInput } from "@thunderbirdops/services-ui";
 import { computed, ref, useTemplateRef } from "vue";
-import MessageBar from '@/vue/components/MessageBar.vue';
+import MessageBar from '@kc/vue/components/MessageBar.vue';
 
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;

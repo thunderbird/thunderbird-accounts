@@ -3,6 +3,7 @@ import HeaderBar from '@/components/HeaderBar.vue';
 import FooterBar from '@/components/FooterBar.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { SERVER_MESSAGE_LEVEL } from '@/types';
+import { useRoute } from 'vue-router';
 
 const serverMessages = window._page?.serverMessages ?? [];
 const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
@@ -17,10 +18,12 @@ const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
       return NoticeBarTypes.Info;
   }
 };
+
+const route = useRoute();
 </script>
 
 <template>
-  <div class="page-container">
+  <div class="page-container" v-if="route?.meta?.useAppTemplate ?? true">
     <header-bar />
 
     <section class="server-messages" v-if="serverMessages !== null">
@@ -41,6 +44,7 @@ const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
 
     <footer-bar />
   </div>
+  <router-view v-else />
 </template>
 
 <style scoped>
