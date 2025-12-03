@@ -18,5 +18,5 @@
   "recoveryEmail": "Recovery email",
   "recoveryEmailHelp": "You will be required to verify this email address to continue.",
   "emailVerifyInstruction": "An email with instructions to verify your recovery email address has been sent to your address.",
-  "invalidPasswordConfirmMessage": "Password confirmation doesnt match."
+  "invalidPasswordConfirmMessage": "Password confirmation doesn't match."
 }

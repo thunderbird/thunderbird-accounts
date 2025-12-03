@@ -101,6 +101,7 @@ export default {
         name="email"
         required
         autocomplete="email"
+        type="email"
         :error="recoveryEmailError"
         :help="$t('recoveryEmailHelp')"
       >
