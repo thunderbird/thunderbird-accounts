@@ -7,7 +7,7 @@ from thunderbird_accounts.authentication.models import User
 
 
 def oidc_force_login(client: RequestClient, user: User, backend=None):
-    """This works like :any:`django.test.Client` except it also bypasses the missing
+    """This works like `django.test.Client` except it also bypasses the missing
     ``oidc_id_token_expiration`` session value by setting it in the far future.
 
     Other-wise the request would be redirected to keycloak to login."""
