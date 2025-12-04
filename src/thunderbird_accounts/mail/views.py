@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import requests
 
 import requests.exceptions
 import sentry_sdk
@@ -14,12 +15,14 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page, never_cache
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 from django.contrib.messages import get_messages
 
+from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import (
@@ -719,7 +722,7 @@ def remove_email_alias(request: HttpRequest):
     return JsonResponse({'success': True})
 
 
-@login_required
+@csrf_exempt
 @require_http_methods(['POST'])
 def appointment_caldav_setup(request: HttpRequest):
     """Auto-setup for CalDAV for Appointment.
@@ -738,14 +741,54 @@ def appointment_caldav_setup(request: HttpRequest):
                 {'success': False, 'error': _('Invalid appointment secret.')},
                 status=400,
             )
+
+        access_token = data.get('oidc-access-token')
+
+        if not access_token:
+            return JsonResponse(
+                {'success': False, 'error': _('OIDC access token is required.')},
+                status=400,
+            )
+
     except json.JSONDecodeError:
         return JsonResponse(
             {'success': False, 'error': _('Invalid request data')},
             status=400,
         )
 
-    user = request.user
-    access_token = request.session.get('oidc_access_token')
+    user = None
+
+    # Validate the access token against the OIDC provider to identify the user
+    if settings.AUTH_SCHEME == 'oidc' and settings.OIDC_OP_USER_ENDPOINT:
+        try:
+            response = requests.get(
+                settings.OIDC_OP_USER_ENDPOINT,
+                headers={'Authorization': f'Bearer {access_token}'},
+                timeout=10
+            )
+            response.raise_for_status()
+            claims = response.json()
+
+            backend = AccountsOIDCBackend(request)
+            users = backend.filter_users_by_claims(claims)
+            user = users.first()
+        except requests.RequestException as ex:
+            sentry_sdk.capture_exception(ex)
+            return JsonResponse(
+                {'success': False, 'error': _('Failed to validate OIDC token.')},
+                status=401,
+            )
+    else:
+        return JsonResponse(
+            {'success': False, 'error': _('OIDC is not configured.')},
+            status=501,
+        )
+
+    if not user:
+        return JsonResponse(
+            {'success': False, 'error': _('User not found.')},
+            status=404,
+        )
 
     if not user.stalwart_primary_email:
         sentry_sdk.capture_message(
@@ -763,7 +806,7 @@ def appointment_caldav_setup(request: HttpRequest):
 
     try:
         stalwart_client = MailClient()
-        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
+        email_user = stalwart_client.get_account(user.stalwart_primary_email)
 
         # Attempt to find existing special app password for this user
         app_password = None
@@ -777,7 +820,7 @@ def appointment_caldav_setup(request: HttpRequest):
         # If no existing app password is found, create a new one using the access token as the password
         if not app_password:
             app_password = utils.save_app_password(label, access_token)
-            stalwart_client.save_app_password(request.user.stalwart_primary_email, app_password)
+            stalwart_client.save_app_password(user.stalwart_primary_email, app_password)
 
         return JsonResponse({'success': True, 'app_password': app_password})
 
