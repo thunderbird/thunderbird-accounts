@@ -1,6 +1,7 @@
 import json
 from unittest.mock import patch, Mock
 
+import requests
 from django.conf import settings
 from django.test import TestCase, Client as RequestClient, override_settings
 from django.urls import reverse
@@ -713,32 +714,15 @@ class AppointmentCalDAVSetupTestCase(TestCase):
             account=self.account,
         )
 
-        self.client.force_login(self.user)
         self.url = reverse('appointment_caldav_setup')
-
-        # Set up session with access token
-        session = self.client.session
-        session['oidc_access_token'] = 'test-access-token-123'
-        session.save()
-
-    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
-    def test_unauthenticated_user_redirected(self):
-        """Test that unauthenticated users are redirected to login."""
-        client = RequestClient()
-        response = client.post(
-            self.url,
-            data=json.dumps({'appointment-secret': 'test-secret-123'}),
-            content_type='application/json',
-        )
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.startswith(reverse('oidc_authentication_init')))
+        self.access_token = 'test-access-token-123'
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
     def test_missing_appointment_secret(self):
         """Test that missing appointment-secret returns 400 error."""
         response = self.client.post(
             self.url,
-            data=json.dumps({}),
+            data=json.dumps({'oidc-access-token': self.access_token}),
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
@@ -751,7 +735,7 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         """Test that invalid appointment-secret returns 400 error."""
         response = self.client.post(
             self.url,
-            data=json.dumps({'appointment-secret': 'wrong-secret'}),
+            data=json.dumps({'appointment-secret': 'wrong-secret', 'oidc-access-token': self.access_token}),
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
@@ -760,16 +744,104 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         self.assertEqual(payload['error'], _('Invalid appointment secret.'))
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    def test_missing_oidc_access_token(self):
+        """Test that missing oidc-access-token returns 400 error."""
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        payload = json.loads(response.content.decode())
+        self.assertFalse(payload['success'])
+        self.assertEqual(payload['error'], _('OIDC access token is required.'))
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @override_settings(AUTH_SCHEME='password')
+    def test_oidc_not_configured(self):
+        """Test that 501 is returned when OIDC is not configured."""
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 501)
+        payload = json.loads(response.content.decode())
+        self.assertFalse(payload['success'])
+        self.assertEqual(payload['error'], _('OIDC is not configured.'))
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @override_settings(AUTH_SCHEME='oidc')
+    @override_settings(OIDC_OP_USER_ENDPOINT='http://oidc-provider/userinfo')
+    @patch('thunderbird_accounts.mail.views.requests.get')
+    def test_oidc_validation_failure(self, mock_requests_get):
+        """Test that 401 is returned when OIDC token validation fails."""
+        mock_response = Mock()
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError('401 Client Error')
+        mock_requests_get.return_value = mock_response
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 401)
+        payload = json.loads(response.content.decode())
+        self.assertFalse(payload['success'])
+        self.assertEqual(payload['error'], _('Failed to validate OIDC token.'))
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @override_settings(AUTH_SCHEME='oidc')
+    @override_settings(OIDC_OP_USER_ENDPOINT='http://oidc-provider/userinfo')
+    @patch('thunderbird_accounts.mail.views.requests.get')
+    @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
+    def test_user_not_found(self, mock_backend_cls, mock_requests_get):
+        """Test that 404 is returned when user is not found."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {'sub': 'unknown-user'}
+        mock_requests_get.return_value = mock_response
+
+        mock_backend = Mock()
+        mock_backend.filter_users_by_claims.return_value.first.return_value = None
+        mock_backend_cls.return_value = mock_backend
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 404)
+        payload = json.loads(response.content.decode())
+        self.assertFalse(payload['success'])
+        self.assertEqual(payload['error'], _('User not found.'))
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @override_settings(AUTH_SCHEME='oidc')
+    @override_settings(OIDC_OP_USER_ENDPOINT='http://oidc-provider/userinfo')
+    @patch('thunderbird_accounts.mail.views.requests.get')
+    @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
     @patch('thunderbird_accounts.mail.views.sentry_sdk.capture_message')
-    def test_missing_stalwart_primary_email(self, mock_capture_message):
+    def test_missing_stalwart_primary_email(self, mock_capture_message, mock_backend_cls, mock_requests_get):
         """Test that missing stalwart_primary_email returns 400 error and captures sentry message."""
 
         # Delete the primary email so stalwart_primary_email property returns None
         Email.objects.filter(account=self.account, type=Email.EmailType.PRIMARY).delete()
 
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {'sub': '1234'}
+        mock_requests_get.return_value = mock_response
+
+        mock_backend = Mock()
+        mock_backend.filter_users_by_claims.return_value.first.return_value = self.user
+        mock_backend_cls.return_value = mock_backend
+
         response = self.client.post(
             self.url,
-            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
@@ -783,11 +855,24 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         self.assertEqual(call_args[1]['user'], {'user_id': self.user.uuid})
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @override_settings(AUTH_SCHEME='oidc')
+    @override_settings(OIDC_OP_USER_ENDPOINT='http://oidc-provider/userinfo')
+    @patch('thunderbird_accounts.mail.views.requests.get')
+    @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_success_existing_app_password_found(self, mock_mail_client_cls):
+    def test_success_existing_app_password_found(self, mock_mail_client_cls, mock_backend_cls, mock_requests_get):
         """Test successful retrieval of existing app password."""
         label = f'appointment-caldav-setup-{self.user.stalwart_primary_email}'
         existing_app_password = f'$app${label}$hashed-password'
+
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {'sub': '1234'}
+        mock_requests_get.return_value = mock_response
+
+        mock_backend = Mock()
+        mock_backend.filter_users_by_claims.return_value.first.return_value = self.user
+        mock_backend_cls.return_value = mock_backend
 
         mock_instance = Mock()
         mock_instance.get_account.return_value = {
@@ -797,7 +882,7 @@ class AppointmentCalDAVSetupTestCase(TestCase):
 
         response = self.client.post(
             self.url,
-            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
@@ -811,12 +896,27 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         mock_instance.save_app_password.assert_not_called()
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @override_settings(AUTH_SCHEME='oidc')
+    @override_settings(OIDC_OP_USER_ENDPOINT='http://oidc-provider/userinfo')
+    @patch('thunderbird_accounts.mail.views.requests.get')
+    @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
     @patch('thunderbird_accounts.mail.views.utils.save_app_password')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_success_new_app_password_created(self, mock_mail_client_cls, mock_save_app_password):
+    def test_success_new_app_password_created(
+        self, mock_mail_client_cls, mock_save_app_password, mock_backend_cls, mock_requests_get
+    ):
         """Test successful creation of new app password when none exists."""
         label = f'appointment-caldav-setup-{self.user.stalwart_primary_email}'
         new_app_password = f'$app${label}$new-hashed-password'
+
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {'sub': '1234'}
+        mock_requests_get.return_value = mock_response
+
+        mock_backend = Mock()
+        mock_backend.filter_users_by_claims.return_value.first.return_value = self.user
+        mock_backend_cls.return_value = mock_backend
 
         mock_instance = Mock()
         mock_instance.get_account.return_value = {
@@ -827,7 +927,7 @@ class AppointmentCalDAVSetupTestCase(TestCase):
 
         response = self.client.post(
             self.url,
-            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
@@ -838,16 +938,31 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         # Verify MailClient was called correctly
         mock_instance.get_account.assert_called_once_with(self.user.stalwart_primary_email)
         # Verify save_app_password was called with correct parameters
-        mock_save_app_password.assert_called_once_with(label, 'test-access-token-123')
+        mock_save_app_password.assert_called_once_with(label, self.access_token)
         mock_instance.save_app_password.assert_called_once_with(self.user.stalwart_primary_email, new_app_password)
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @override_settings(AUTH_SCHEME='oidc')
+    @override_settings(OIDC_OP_USER_ENDPOINT='http://oidc-provider/userinfo')
+    @patch('thunderbird_accounts.mail.views.requests.get')
+    @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
     @patch('thunderbird_accounts.mail.views.utils.save_app_password')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_success_no_existing_secrets(self, mock_mail_client_cls, mock_save_app_password):
+    def test_success_no_existing_secrets(
+        self, mock_mail_client_cls, mock_save_app_password, mock_backend_cls, mock_requests_get
+    ):
         """Test successful creation when user has no existing secrets."""
         label = f'appointment-caldav-setup-{self.user.stalwart_primary_email}'
         new_app_password = f'$app${label}$new-hashed-password'
+
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {'sub': '1234'}
+        mock_requests_get.return_value = mock_response
+
+        mock_backend = Mock()
+        mock_backend.filter_users_by_claims.return_value.first.return_value = self.user
+        mock_backend_cls.return_value = mock_backend
 
         mock_instance = Mock()
         mock_instance.get_account.return_value = {
@@ -858,7 +973,7 @@ class AppointmentCalDAVSetupTestCase(TestCase):
 
         response = self.client.post(
             self.url,
-            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
@@ -869,17 +984,32 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         mock_instance.save_app_password.assert_called_once_with(self.user.stalwart_primary_email, new_app_password)
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @override_settings(AUTH_SCHEME='oidc')
+    @override_settings(OIDC_OP_USER_ENDPOINT='http://oidc-provider/userinfo')
+    @patch('thunderbird_accounts.mail.views.requests.get')
+    @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
     @patch('thunderbird_accounts.mail.views.sentry_sdk.capture_exception')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_exception_handling(self, mock_mail_client_cls, mock_capture_exception):
+    def test_exception_handling(
+        self, mock_mail_client_cls, mock_capture_exception, mock_backend_cls, mock_requests_get
+    ):
         """Test that exceptions are caught and return 500 error."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {'sub': '1234'}
+        mock_requests_get.return_value = mock_response
+
+        mock_backend = Mock()
+        mock_backend.filter_users_by_claims.return_value.first.return_value = self.user
+        mock_backend_cls.return_value = mock_backend
+
         mock_instance = Mock()
         mock_instance.get_account.side_effect = Exception('Test exception')
         mock_mail_client_cls.return_value = mock_instance
 
         response = self.client.post(
             self.url,
-            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 500)
