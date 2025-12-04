@@ -170,7 +170,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'mozilla_django_oidc.middleware.SessionRefresh',
     # This should be last
-    'thunderbird_accounts.authentication.middleware.FixMissingArchivesFolderMiddleware'
+    'thunderbird_accounts.mail.middleware.FixMissingArchivesFolderMiddleware'
 ]
 
 ROOT_URLCONF = 'thunderbird_accounts.urls'

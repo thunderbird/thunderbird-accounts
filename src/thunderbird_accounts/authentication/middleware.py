@@ -10,22 +10,8 @@ from django.utils.translation import gettext_lazy as _
 
 from .models import User
 from .utils import is_email_in_allow_list
-from thunderbird_accounts.mail.utils import check_if_we_need_to_fix_archives_folder
 
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
-
-
-class FixMissingArchivesFolderMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        if request.user.is_authenticated and request.user.has_active_subscription:
-            # This needs to be here for after they subscribe
-            # we need their oidc access token which is only available on the request...
-            check_if_we_need_to_fix_archives_folder(request)
-
-        return self.get_response(request)
 
 
 class AccountsOIDCBackend(OIDCAuthenticationBackend):

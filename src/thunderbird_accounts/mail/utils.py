@@ -51,21 +51,6 @@ def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
 
     return True
 
-
-def check_if_we_need_to_fix_archives_folder(request):
-    """Originally just part of authenticate, but we need to do this on dashboard view"""
-    user = request.user
-
-    oidc_access_token = request.session['oidc_access_token']
-
-    # If the user exists, has a stalwart account reference and an oidc access token
-    # Check if we need to fix their archives folder, and do it if we need to.
-    if user and user.account_set.count() > 0 and oidc_access_token:
-        archive_folders_to_check = user.account_set.filter(verified_archive_folder=False)
-        for account in archive_folders_to_check:
-            fix_archives_folder(oidc_access_token, account)
-
-
 def fix_archives_folder(access_token, account: Account) -> bool:
     """Check if the archive folder exists, if it doesn't create it!
     This fixes a bug with our stalwart instance where it doesn't give us an archives folder...
