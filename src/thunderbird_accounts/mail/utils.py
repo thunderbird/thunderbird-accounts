@@ -51,6 +51,7 @@ def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
 
     return True
 
+
 def fix_archives_folder(access_token, account: Account) -> bool:
     """Check if the archive folder exists, if it doesn't create it!
     This fixes a bug with our stalwart instance where it doesn't give us an archives folder...
@@ -139,15 +140,11 @@ def fix_archives_folder(access_token, account: Account) -> bool:
             # this response object kinda sucks, so we'll just rely on that.
             inbox_res['methodResponses'][0][1]['created'][temp_id]
 
-            # Mark as okay if we didn't get hit with a KeyError
-            account.verified_archive_folder = True
-            account.save()
+        # If we got here without an error, then we can mark this as verified
+        account.verified_archive_folder = True
+        account.save()
 
-            return True
-        else:
-            # Oh we have an id? That means there's already an archives folder here.
-            account.verified_archive_folder = True
-            account.save()
+        return True
     except (HTTPError, Exception, KeyError) as ex:
         logging.error('fix_archive_folder failed!')
         sentry_sdk.capture_message(f'[fix_archive_folder] Failed JMAP response: {inbox_res}')
