@@ -169,6 +169,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'mozilla_django_oidc.middleware.SessionRefresh',
+    # This should be last
+    'thunderbird_accounts.mail.middleware.FixMissingArchivesFolderMiddleware'
 ]
 
 ROOT_URLCONF = 'thunderbird_accounts.urls'
@@ -355,6 +357,7 @@ else:
     OIDC_OP_USER_ENDPOINT = None
     OIDC_OP_JWKS_ENDPOINT = None
 
+STALWART_ARCHIVES_FOLDER_NAME = 'Archives'
 STALWART_BASE_JMAP_URL = os.getenv('STALWART_BASE_JMAP_URL')
 STALWART_BASE_API_URL = os.getenv('STALWART_BASE_API_URL')
 STALWART_API_AUTH_STRING = os.getenv('STALWART_API_AUTH_STRING')
