@@ -4,7 +4,6 @@ from thunderbird_accounts.mail.models import Account
 from django.conf import settings
 from importlib import import_module
 from typing import Optional
-from django.contrib.sessions.backends.base import SessionBase
 from django.http.request import HttpRequest
 from unittest.mock import MagicMock
 from thunderbird_accounts.mail.middleware import FixMissingArchivesFolderMiddleware
