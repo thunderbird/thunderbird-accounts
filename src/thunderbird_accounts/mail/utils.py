@@ -1,9 +1,13 @@
+import logging
+import uuid
 from typing import Optional
-
+from requests.exceptions import HTTPError
 from django.contrib.auth.hashers import make_password, identify_hasher
+import sentry_sdk
 
 from thunderbird_accounts import settings
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.mail import tasks
 
 
@@ -46,6 +50,125 @@ def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
     )
 
     return True
+
+
+def check_if_we_need_to_fix_archives_folder(request):
+    """Originally just part of authenticate, but we need to do this on dashboard view"""
+    user = request.user
+
+    oidc_access_token = request.session['oidc_access_token']
+
+    # If the user exists, has a stalwart account reference and an oidc access token
+    # Check if we need to fix their archives folder, and do it if we need to.
+    if user and user.account_set.count() > 0 and oidc_access_token:
+        archive_folders_to_check = user.account_set.filter(verified_archive_folder=False)
+        for account in archive_folders_to_check:
+            fix_archives_folder(oidc_access_token, account)
+
+
+def fix_archives_folder(access_token, account: Account) -> bool:
+    """Check if the archive folder exists, if it doesn't create it!
+    This fixes a bug with our stalwart instance where it doesn't give us an archives folder...
+
+    This function is a little messy, and will hopefully be removed in the future."""
+    from thunderbird_accounts.mail.tiny_jmap_client import TinyJMAPClient
+
+    if not access_token:
+        return False
+
+    try:
+        client = TinyJMAPClient(
+            hostname=settings.STALWART_BASE_JMAP_URL,
+            username=account.name,
+            token=access_token,
+        )
+        account_id = client.get_account_id()
+
+        # Look up if they have an archives folder
+        inbox_res = client.make_jmap_call(
+            {
+                'using': ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
+                'methodCalls': [
+                    [
+                        'Mailbox/query',
+                        {
+                            'accountId': account_id,
+                            'filter': {'role': 'archive'},
+                        },
+                        '0',
+                    ]
+                ],
+            }
+        )
+
+        inboxes = inbox_res['methodResponses'][0][1]['ids']
+        if len(inboxes) == 0:
+            # If they don't create a new inbox with the role 'archive', named 'Archives'
+            # (set in settings.STALWART_ARCHIVES_FOLDER_NAME) which is subscribed by default
+            temp_id = str(uuid.uuid4())
+            inbox_res = client.make_jmap_call(
+                {
+                    'using': ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
+                    'methodCalls': [
+                        [
+                            'Mailbox/set',
+                            {
+                                'accountId': account_id,
+                                'create': {
+                                    temp_id: {
+                                        'name': settings.STALWART_ARCHIVES_FOLDER_NAME,
+                                        'role': 'archive',
+                                        'isSubscribed': True,
+                                    }
+                                },
+                            },
+                            '0',
+                        ]
+                    ],
+                }
+            )
+
+            """
+            Response looks like this:
+            {
+                'methodResponses': [
+                    [
+                        'Mailbox/set',
+                        {
+                            'accountId': 'e', 
+                            'oldState': 'sae', 
+                            'newState': 'sai', 
+                            'created': {
+                                '464ff50a-0e53-45f4-a5af-a0f77d0fb232': { # <--- temp_id
+                                    'id': 'h'
+                                }
+                            }
+                        }, 
+                        '0'
+                    ]
+                ], 'sessionState': '3e25b2a0'
+            }
+            """
+
+            # Note: If the request didn't work, this will raise a KeyError
+            # this response object kinda sucks, so we'll just rely on that.
+            inbox_res['methodResponses'][0][1]['created'][temp_id]
+
+            # Mark as okay if we didn't get hit with a KeyError
+            account.verified_archive_folder = True
+            account.save()
+
+            return True
+        else:
+            # Oh we have an id? That means there's already an archives folder here.
+            account.verified_archive_folder = True
+            account.save()
+    except (HTTPError, Exception, KeyError) as ex:
+        logging.error('fix_archive_folder failed!')
+        sentry_sdk.capture_message(f'[fix_archive_folder] Failed JMAP response: {inbox_res}')
+        sentry_sdk.capture_exception(ex)
+
+    return False
 
 
 def add_email_addresses_to_stalwart_account(user: User, emails):

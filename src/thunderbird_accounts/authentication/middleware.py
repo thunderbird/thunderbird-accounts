@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from socket import gethostbyname, gethostname
 
 from django.conf import settings
@@ -9,16 +10,36 @@ from django.utils.translation import gettext_lazy as _
 
 from .models import User
 from .utils import is_email_in_allow_list
+from thunderbird_accounts.mail.utils import check_if_we_need_to_fix_archives_folder
 
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
 
+class FixMissingArchivesFolderMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated and request.user.has_active_subscription:
+            # This needs to be here for after they subscribe
+            # we need their oidc access token which is only available on the request...
+            check_if_we_need_to_fix_archives_folder(request)
+
+        return self.get_response(request)
+
+
 class AccountsOIDCBackend(OIDCAuthenticationBackend):
+    """User authentication middleware for OIDC
+
+    This is our slightly customized mozilla-django-oidc middleware used to create/update/authenticate users
+    against oidc flows.
+    """
+
     def get_user(self, user_id):
         """Retrieve the user from OIDC get_user and additionally check if they're active.
         Fixes https://github.com/mozilla/mozilla-django-oidc/issues/520
         """
-        user: User = super().get_user(user_id)
+        user: Optional[User] = super().get_user(user_id)
         return user if self.user_can_authenticate(user) else None
 
     def _check_allow_list(self, claims: dict):
