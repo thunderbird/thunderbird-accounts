@@ -719,6 +719,76 @@ def remove_email_alias(request: HttpRequest):
     return JsonResponse({'success': True})
 
 
+@login_required
+@require_http_methods(['POST'])
+def appointment_caldav_setup(request: HttpRequest):
+    """Auto-setup for CalDAV for Appointment.
+    This is meant to be called by Appointment's backend only.
+    Receives an OIDC token, retrieves the user's Stalwart account
+    and creates or retrieves a special App Password to be used in Appointment's CalDAV auto-setup"""
+
+    try:
+        data = json.loads(request.body)
+        appointment_secret = data.get('appointment-secret')
+
+        # This endpoint is only meant to be called by Appointment's backend
+        # so we need to verify a shared secret between them before proceeding
+        if not appointment_secret or appointment_secret != settings.APPOINTMENT_CALDAV_SECRET:
+            return JsonResponse(
+                {'success': False, 'error': _('Invalid appointment secret.')},
+                status=400,
+            )
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {'success': False, 'error': _('Invalid request data')},
+            status=400,
+        )
+
+    user = request.user
+    access_token = request.session.get('oidc_access_token')
+
+    if not user.stalwart_primary_email:
+        sentry_sdk.capture_message(
+            f'Stalwart Primary Email address is not set for user {user.uuid}',
+            level='error',
+            user={'user_id': user.uuid},
+        )
+        return JsonResponse(
+            {'success': False, 'error': _('Primary email address is not set.')},
+            status=400,
+        )
+
+    # Use a special label for the App Password to be used in Appointment's CalDAV auto-setup
+    label = f'appointment-caldav-setup-{user.stalwart_primary_email}'
+
+    try:
+        stalwart_client = MailClient()
+        email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
+
+        # Attempt to find existing special app password for this user
+        app_password = None
+        expected_prefix = f'$app${label}$'
+
+        for secret in email_user.get('secrets', []):
+            if secret.startswith(expected_prefix):
+                app_password = secret
+                break
+
+        # If no existing app password is found, create a new one using the access token as the password
+        if not app_password:
+            app_password = utils.save_app_password(label, access_token)
+            stalwart_client.save_app_password(request.user.stalwart_primary_email, app_password)
+
+        return JsonResponse({'success': True, 'app_password': app_password})
+
+    except Exception as ex:
+        sentry_sdk.capture_exception(ex)
+        return JsonResponse(
+            {'success': False, 'error': _('An error occurred while creating the app password.')},
+            status=500,
+        )
+
+
 def wait_list(request: HttpRequest):
     return TemplateResponse(request, 'mail/wait-list.html', {'form_action': settings.WAIT_LIST_FORM_ACTION})
 
