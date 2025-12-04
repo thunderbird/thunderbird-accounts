@@ -30,7 +30,7 @@ class FixMissingArchivesFolderMiddlewareTestCase(TestCase):
                         'queryState': 'sai',
                         'canCalculateChanges': True,
                         'position': 0,
-                        'ids': ['a'] if not mailbox_ids else mailbox_ids,
+                        'ids': [] if not mailbox_ids else mailbox_ids,
                     },
                     'a',
                 ]
@@ -104,7 +104,9 @@ class FixMissingArchivesFolderMiddlewareTestCase(TestCase):
         fake_request = self.build_request(user, oidc_access_token)
 
         # Run the middleware
-        self.middleware(fake_request)
+        with patch('uuid.uuid4') as uuid_mock:
+            uuid_mock.return_value = self.DEFAULT_TEMP_ID
+            self.middleware(fake_request)
 
         # Ensure make_jmap_call was called
         make_jmap_call.assert_called()

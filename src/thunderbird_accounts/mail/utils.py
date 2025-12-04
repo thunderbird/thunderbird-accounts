@@ -136,9 +136,10 @@ def fix_archives_folder(access_token, account: Account) -> bool:
             }
             """
 
-            # Note: If the request didn't work, this will raise a KeyError
-            # this response object kinda sucks, so we'll just rely on that.
-            inbox_res['methodResponses'][0][1]['created'][temp_id]
+            # Note: If the request didn't work, it won't have temp_id in it, 
+            # or if it's malformed it'll raise a keyerror.
+            if temp_id not in inbox_res['methodResponses'][0][1]['created']:
+                raise Exception('Failed to create archive folder')
 
         # If we got here without an error, then we can mark this as verified
         account.verified_archive_folder = True
