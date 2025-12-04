@@ -286,7 +286,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v0.8.1
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.4.0
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -464,7 +464,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v0.8.1
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.4.0
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -648,7 +648,11 @@ resources:
       notify_emails:
         - thunderbird-services-monitoring@thunderbird.net
       config:
-        alarms: {}
+        alarms:
+          accounts-prod-fargate-accounts-fargateservicealb-alb-accounts:
+            response_time:
+              threshold: 2
+
 
   tb:ci:AwsAutomationUser:
     ci:
