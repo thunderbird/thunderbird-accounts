@@ -695,3 +695,209 @@ class ZendeskContactSubmitTestCase(TestCase):
         self.assertEqual(sent_fields['name'], 'John Doe')
         self.assertEqual(sent_fields['email'], 'user@example.org')
         instance.update_ticket.assert_called_once()
+
+
+class AppointmentCalDAVSetupTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(
+            username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}',
+            oidc_id='1234',
+        )
+        self.account = Account.objects.create(name=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', user=self.user)
+
+        # Create primary email so stalwart_primary_email property works
+        Email.objects.create(
+            address=f'test@{settings.PRIMARY_EMAIL_DOMAIN}',
+            type=Email.EmailType.PRIMARY,
+            account=self.account,
+        )
+
+        self.client.force_login(self.user)
+        self.url = reverse('appointment_caldav_setup')
+
+        # Set up session with access token
+        session = self.client.session
+        session['oidc_access_token'] = 'test-access-token-123'
+        session.save()
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    def test_unauthenticated_user_redirected(self):
+        """Test that unauthenticated users are redirected to login."""
+        client = RequestClient()
+        response = client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith(reverse('oidc_authentication_init')))
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    def test_missing_appointment_secret(self):
+        """Test that missing appointment-secret returns 400 error."""
+        response = self.client.post(
+            self.url,
+            data=json.dumps({}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        payload = json.loads(response.content.decode())
+        self.assertFalse(payload['success'])
+        self.assertEqual(payload['error'], _('Invalid appointment secret.'))
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    def test_invalid_appointment_secret(self):
+        """Test that invalid appointment-secret returns 400 error."""
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'wrong-secret'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        payload = json.loads(response.content.decode())
+        self.assertFalse(payload['success'])
+        self.assertEqual(payload['error'], _('Invalid appointment secret.'))
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @patch('thunderbird_accounts.mail.views.sentry_sdk.capture_message')
+    def test_missing_stalwart_primary_email(self, mock_capture_message):
+        """Test that missing stalwart_primary_email returns 400 error and captures sentry message."""
+
+        # Delete the primary email so stalwart_primary_email property returns None
+        Email.objects.filter(account=self.account, type=Email.EmailType.PRIMARY).delete()
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        payload = json.loads(response.content.decode())
+        self.assertFalse(payload['success'])
+        self.assertEqual(payload['error'], _('Primary email address is not set.'))
+        mock_capture_message.assert_called_once()
+        call_args = mock_capture_message.call_args
+        self.assertIn(f'Stalwart Primary Email address is not set for user {self.user.uuid}', call_args[0][0])
+        self.assertEqual(call_args[1]['level'], 'error')
+        self.assertEqual(call_args[1]['user'], {'user_id': self.user.uuid})
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_success_existing_app_password_found(self, mock_mail_client_cls):
+        """Test successful retrieval of existing app password."""
+        label = f'appointment-caldav-setup-{self.user.stalwart_primary_email}'
+        existing_app_password = f'$app${label}$hashed-password'
+
+        mock_instance = Mock()
+        mock_instance.get_account.return_value = {
+            'secrets': [existing_app_password, '$app$other-label$other-hash'],
+        }
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(response.content.decode())
+        self.assertTrue(payload['success'])
+        self.assertEqual(payload['app_password'], existing_app_password)
+
+        # Verify MailClient was called correctly
+        mock_instance.get_account.assert_called_once_with(self.user.stalwart_primary_email)
+        # Should not call save_app_password since existing password was found
+        mock_instance.save_app_password.assert_not_called()
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @patch('thunderbird_accounts.mail.views.utils.save_app_password')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_success_new_app_password_created(self, mock_mail_client_cls, mock_save_app_password):
+        """Test successful creation of new app password when none exists."""
+        label = f'appointment-caldav-setup-{self.user.stalwart_primary_email}'
+        new_app_password = f'$app${label}$new-hashed-password'
+
+        mock_instance = Mock()
+        mock_instance.get_account.return_value = {
+            'secrets': ['$app$other-label$other-hash'],
+        }
+        mock_mail_client_cls.return_value = mock_instance
+        mock_save_app_password.return_value = new_app_password
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(response.content.decode())
+        self.assertTrue(payload['success'])
+        self.assertEqual(payload['app_password'], new_app_password)
+
+        # Verify MailClient was called correctly
+        mock_instance.get_account.assert_called_once_with(self.user.stalwart_primary_email)
+        # Verify save_app_password was called with correct parameters
+        mock_save_app_password.assert_called_once_with(label, 'test-access-token-123')
+        mock_instance.save_app_password.assert_called_once_with(self.user.stalwart_primary_email, new_app_password)
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @patch('thunderbird_accounts.mail.views.utils.save_app_password')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_success_no_existing_secrets(self, mock_mail_client_cls, mock_save_app_password):
+        """Test successful creation when user has no existing secrets."""
+        label = f'appointment-caldav-setup-{self.user.stalwart_primary_email}'
+        new_app_password = f'$app${label}$new-hashed-password'
+
+        mock_instance = Mock()
+        mock_instance.get_account.return_value = {
+            'secrets': [],
+        }
+        mock_mail_client_cls.return_value = mock_instance
+        mock_save_app_password.return_value = new_app_password
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(response.content.decode())
+        self.assertTrue(payload['success'])
+        self.assertEqual(payload['app_password'], new_app_password)
+
+        mock_instance.save_app_password.assert_called_once_with(self.user.stalwart_primary_email, new_app_password)
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @patch('thunderbird_accounts.mail.views.sentry_sdk.capture_exception')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_exception_handling(self, mock_mail_client_cls, mock_capture_exception):
+        """Test that exceptions are caught and return 500 error."""
+        mock_instance = Mock()
+        mock_instance.get_account.side_effect = Exception('Test exception')
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 500)
+        payload = json.loads(response.content.decode())
+        self.assertFalse(payload['success'])
+        self.assertEqual(payload['error'], _('An error occurred while creating the app password.'))
+        mock_capture_exception.assert_called_once()
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    def test_invalid_json_body(self):
+        """Test that invalid JSON body returns 400 error."""
+        response = self.client.post(
+            self.url,
+            data='invalid json',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = json.loads(response.content.decode())
+        self.assertFalse(payload['success'])
+        self.assertEqual(payload['error'], _('Invalid request data'))
