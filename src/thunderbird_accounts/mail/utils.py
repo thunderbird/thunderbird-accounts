@@ -148,7 +148,6 @@ def fix_archives_folder(access_token, account: Account) -> bool:
         return True
     except (HTTPError, Exception, KeyError) as ex:
         logging.error('fix_archive_folder failed!')
-        sentry_sdk.capture_message(f'[fix_archive_folder] Failed JMAP response: {inbox_res}')
         sentry_sdk.capture_exception(ex)
 
     return False
