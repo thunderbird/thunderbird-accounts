@@ -252,6 +252,8 @@ resources:
                 value: "https://accounts-stage.tb.pro/dashboard"
               - name: KC_TBPRO_SIGN_UP
                 value: "https://accounts-stage.tb.pro/sign-up"
+              - name: KC_TBPRO_CONTACT
+                value: "https://accounts-stage.tb.pro/contact"
               - name: KC_TBPRO_PRIMARY_DOMAIN
                 value: "stage-thundermail.com"
 
