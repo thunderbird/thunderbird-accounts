@@ -49,7 +49,7 @@ export default {
         <div class="download-card">
           <div class="content">
             <p>{{ t('views.mail.sections.dashboard.downloadDescription') }}</p>
-            <a class="download-link" href="https://www.thunderbird.net/thunderbird/all/" target="_blank">
+            <a class="download-link" href="https://www.thunderbird.net/thunderbird/all/?utm_campaign=main&utm_medium=tb_pro&utm_source=thundermail_dashboard&utm_content=banner_top" target="_blank">
               <primary-button>
                 <template #iconLeft>
                   <ph-download-simple size="16"/>
