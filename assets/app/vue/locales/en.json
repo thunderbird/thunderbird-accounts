@@ -53,7 +53,7 @@
         "sendStorage": "of Send Storage",
         "domains": "Custom Domains",
         "emailAddresses": "Email Addresses",
-        "monthly": "Monthly",
+        "monthly": "per month,{newLine}paid annually",
         "autoRenewsOn": "Auto-renews on",
         "manageSubscriptionButtonLabel": "Manage Subscription",
         "footerText": "You’ll be taken to Paddle, our secure payment provider."

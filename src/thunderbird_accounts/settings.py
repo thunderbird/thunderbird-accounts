@@ -84,6 +84,7 @@ SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
+CRYPTO_SECRET_KEY: bytes|None = os.getenv('CRYPTO_SECRET_KEY', '').encode() if os.getenv('CRYPTO_SECRET_KEY') else None
 
 # These are url reverse keys
 LOGIN_URL = 'oidc_authentication_init'
@@ -94,6 +95,9 @@ LOGIN_MAX_AGE_IN_SECONDS = 60 * 3
 
 IS_IN_ALLOW_LIST_CACHE_KEY = 'is_in_allow_list'
 IS_IN_ALLOW_LIST_CACHE_MAX_AGE_IN_SECONDS = 60 * 60 * 24
+
+PADDLE_DASH_PRICE_CACHE_KEY = 'paddle_sub_price_info'  # Prefix
+PADDLE_DASH_PRICE_CACHE_MAX_AGE_IN_SECONDS = 60 * 60  # One hour
 
 AUTH_ALLOW_LIST: str = os.getenv('AUTH_ALLOW_LIST')
 
