@@ -284,6 +284,7 @@ def get_subscription_plan_info(request: Request, paddle: Client):
         if enc_price_info:
             price_info = json.loads(crypto_obj.decrypt(enc_price_info).decode())
     except Exception:
+        # Intentionally pass through, cache can become invalidated on sub update so this is fine
         pass
 
     if not price_info:
@@ -340,7 +341,6 @@ def get_subscription_plan_info(request: Request, paddle: Client):
                 'discount': paddle_discount_amount,
                 'discount_type': paddle_discount_type,
             }
-            pass
 
     # Used quota comes from Stalwart and it is optional
     used_quota = None
