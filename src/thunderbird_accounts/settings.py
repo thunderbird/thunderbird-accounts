@@ -93,6 +93,7 @@ SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
+CRYPTO_SECRET_KEY: bytes|None = os.getenv('CRYPTO_SECRET_KEY', '').encode() if os.getenv('CRYPTO_SECRET_KEY') else None
 
 # These are url reverse keys
 LOGIN_URL = 'oidc_authentication_init'
@@ -124,6 +125,8 @@ PADDLE_API_KEY: str = os.getenv('PADDLE_API_KEY')
 PADDLE_VENDOR_SITE: str = (
     'https://sandbox-vendors.paddle.com' if PADDLE_ENV == 'sandbox' else 'https://vendors.paddle.com'
 )
+PADDLE_DASH_PRICE_CACHE_KEY = 'paddle_sub_price_info'  # Prefix
+PADDLE_DASH_PRICE_CACHE_MAX_AGE_IN_SECONDS = 60 * 60  # One hour
 
 # Zendesk integration
 ZENDESK_SUBDOMAIN: str = os.getenv('ZENDESK_SUBDOMAIN')
