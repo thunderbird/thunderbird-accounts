@@ -25,7 +25,6 @@ from paddle_billing.Resources.Notifications.Operations import ListNotifications
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.request import Request
 
-from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks, models
@@ -267,7 +266,8 @@ def get_subscription_plan_info(request: Request, paddle: Client):
     try:
         if enc_price_info:
             price_info = json.loads(crypto_obj.decrypt(enc_price_info).decode())
-    except Exception as e:
+    except Exception:
+        # Intentionally pass through, cache can become invalidated on sub update so this is fine
         pass
 
     if not price_info:
@@ -324,7 +324,6 @@ def get_subscription_plan_info(request: Request, paddle: Client):
                 'discount': paddle_discount_amount,
                 'discount_type': paddle_discount_type,
             }
-            pass
 
     # Used quota comes from Stalwart and it is optional
     used_quota = None
