@@ -169,12 +169,48 @@ class SubscriptionItem(BaseModel):
     price = models.ForeignKey('Price', null=True, on_delete=models.CASCADE)
     product = models.ForeignKey('Product', null=True, on_delete=models.CASCADE)
 
+    price_override_amount = models.CharField(
+        max_length=256, null=True, blank=True, help_text=_('Usually this is the localized amount the user pays.')
+    )
+    price_override_currency = models.CharField(
+        max_length=256, null=True, blank=True, help_text=_('The currency code for the `price_override_amount`.')
+    )
+
+    @property
+    def price_amount(self) -> int | None:
+        """Helper function to retrieve a override price and fallback to regular price."""
+        if self.price_override_amount:
+            return int(self.price_override_amount)
+        elif self.price:
+            return int(self.price.amount)
+        return None
+
+    @property
+    def price_currency(self) -> str | None:
+        """Helper function to retrieve the overrice price currency and fallback to regular price currency."""
+        if self.price_override_currency:
+            return self.price_override_currency
+        elif self.price:
+            return self.price.currency
+        return None
+
     def __str__(self):
         return f'Subscription Item [{self.uuid}] {self.subscription_id} - {self.paddle_product_id}'
 
+    class Meta(BaseModel.Meta):
+        indexes = [
+            *BaseModel.Meta.indexes,
+            models.Index(fields=['quantity']),
+            models.Index(fields=['price_override_currency']),
+        ]
+
 
 class Subscription(BaseModel):
-    """A paddle subscription object"""
+    """
+    A paddle subscription object
+
+    :param QuerySet subscriptionitem_set: Reverse ForeignKey relationship for SubscriptionItem
+    """
 
     class StatusValues(models.TextChoices):
         # Empty value, non-paddle value
@@ -186,6 +222,15 @@ class Subscription(BaseModel):
         PAST_DUE = 'past_due', _('Past Due')
         PAUSED = 'paused', _('Paused')
         TRIALING = 'trialing', _('Trialing')
+
+    class DiscountTypes(models.TextChoices):
+        # Empty value, non-paddle value
+        NONE = '', _('None')
+
+        # Paddle values
+        PERCENTAGE = 'percentage', _('Percentage')
+        FLAT = 'flat', _('Flat')
+        FLAT_PER_SEAT = 'flat_per_seat', _('Flat per seat')
 
     paddle_id = PaddleId(help_text=_('The subscription paddle id.'))
     paddle_customer_id = PaddleId(help_text=_('The customer paddle id.'))
@@ -212,8 +257,74 @@ class Subscription(BaseModel):
         null=True, help_text=_('date when this model was last updated by a paddle webhook.')
     )
 
+    discount_amount = models.CharField(
+        max_length=256,
+        null=True,
+        blank=True,
+        help_text=_(
+            'Discount (if any) that is applied to the Subscription (after all items are totaled.)'
+            '<br/>'
+            'This field can be a flat amount or percentage. See `discount_type` for what this value represents.'
+        ),
+    )
+    discount_type = models.CharField(
+        max_length=256,
+        choices=DiscountTypes,
+        default=DiscountTypes.NONE,
+        null=True,
+        help_text=_('What the `discount_amount` field represents.'),
+    )
+
     def __str__(self):
         return f'Subscription [{self.uuid}] {self.paddle_id} - {self.user.display_name}'
+
+    @property
+    def current_billing_period_amount(self) -> int | None:
+        if self.subscriptionitem_set.count() == 0:
+            return None
+
+        total_amount = 0
+        for item in self.subscriptionitem_set.all():
+            # If we don't have price_amount set then this calc is invalid.
+            if not item.price_amount:
+                return None
+
+            total_amount += int(item.price_amount)
+        return total_amount
+
+    @property
+    def current_billing_period_currency(self) -> str | None:
+        """Returns the currency billed for this billing period.
+        Note: This does not handle multiple currencies, it just grabs the first one!"""
+        return self.subscriptionitem_set.first().price_currency
+
+    @property
+    def current_billing_period_discounted_amount(self) -> int | None:
+        """Returns the amount regardless of price localization and applies any discount.
+        Use `current_billing_period_currency` to retrieve the currency unit."""
+        if self.subscriptionitem_set.count() == 0:
+            return None
+        elif not self.discount_amount or self.discount_type:
+            # If there's no discount just grab the best billing period amount
+            return self.current_billing_period_amount
+
+        total_amount = 0
+        for item in self.subscriptionitem_set.all():
+            # If we don't have price_amount set then this calc is invalid.
+            if not item.price_amount:
+                return None
+
+            amount = int(item.price_amount)
+
+            if self.discount_type == self.DiscountTypes.PERCENTAGE:
+                amount = amount * (1 - (self.discount_amount * 0.01))
+            elif self.discount_type == self.DiscountTypes.FLAT:
+                amount -= self.discount_amount
+            elif self.discount_type == self.DiscountTypes.FLAT_PER_SEAT:  # ??
+                amount -= self.discount_amount
+
+            total_amount += amount
+        return total_amount
 
     class Meta(BaseModel.Meta):
         indexes = [
