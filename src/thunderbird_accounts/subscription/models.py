@@ -304,7 +304,7 @@ class Subscription(BaseModel):
         Use `current_billing_period_currency` to retrieve the currency unit."""
         if self.subscriptionitem_set.count() == 0:
             return None
-        elif not self.discount_amount or self.discount_type:
+        elif not self.discount_amount or not self.discount_type:
             # If there's no discount just grab the best billing period amount
             return self.current_billing_period_amount
 
@@ -315,13 +315,14 @@ class Subscription(BaseModel):
                 return None
 
             amount = int(item.price_amount)
+            discount_amount = float(self.discount_amount)
 
             if self.discount_type == self.DiscountTypes.PERCENTAGE:
-                amount = amount * (1 - (self.discount_amount * 0.01))
+                amount = amount * (1 - (discount_amount * 0.01))
             elif self.discount_type == self.DiscountTypes.FLAT:
-                amount -= self.discount_amount
+                amount -= discount_amount
             elif self.discount_type == self.DiscountTypes.FLAT_PER_SEAT:  # ??
-                amount -= self.discount_amount
+                amount -= discount_amount
 
             total_amount += amount
         return total_amount
