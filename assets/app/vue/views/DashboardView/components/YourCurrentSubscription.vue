@@ -31,7 +31,12 @@ const getSubscriptionInfo = async () => {
 
     subscription.value = formatSubscriptionData(data.subscription, n, t, d);
   } catch (error) {
-    errorText.value = error instanceof Error ? error.message : t('views.dashboard.yourCurrentSubscription.loadingError');
+    // Only show good error messages
+    if (error instanceof Error && error?.message !== 'Internal Server Error') {
+      errorText.value = error.message;
+    } else {
+      errorText.value = t('views.dashboard.yourCurrentSubscription.loadingError')
+    }
   } finally {
     isLoading.value = false;
   }
