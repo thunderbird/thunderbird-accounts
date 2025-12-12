@@ -366,16 +366,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     env:
-      ACCTS_FXA_EMAIL: ${{ secrets.E2E_ACCTS_FXA_EMAIL }}
-      ACCTS_FXA_PWORD: ${{ secrets.E2E_ACCTS_FXA_PWORD }}
-      FXA_CLIENT_ID: ${{ secrets.E2E_ACCTS_FXA_CLIENT_ID }}
-      FXA_SECRET: ${{ secrets.E2E_ACCTS_FXA_SECRET }}
-      SECRET_KEY: ${{ secrets.E2E_ACCTS_SECRET_KEY }}
-      LOGIN_CODE_SECRET: ${{ secrets.E2E_ACCTS_LOGIN_CODE_SECRET }}
-      FXA_ENCRYPT_SECRET: ${{ secrets.E2E_ACCTS_FXA_ENCRYPT_SECRET }}
-      THUNDERMAIL_USERNAME: ${{ secrets.E2E_THUNDERMAIL_USERNAME }}
-      THUNDERMAIL_EMAIL_ADDRESS: ${{ secrets.E2E_THUNDERMAIL_EMAIL_ADDRESS }}
-      EMAIL_SIGN_UP_ADDRESS: ${{ secrets.E2E_ACCTS_PADDLE_EMAIL_SIGN_UP_ADDRESS }}
+      ACCTS_OIDC_EMAIL: ${{ secrets.E2E_ACCTS_OIDC_EMAIL }}
+      ACCTS_OIDC_PWORD: ${{ secrets.E2E_ACCTS_OIDC_PWORD }}
+      ACCTS_RECOVERY_EMAIL: ${{ secrets.E2E_ACCTS_RECOVERY_EMAIL }}
+      PRIMARY_THUNDERMAIL_EMAIL: ${{ secrets.E2E_PRIMARY_THUNDERMAIL_EMAIL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -402,4 +396,4 @@ jobs:
         run: |
           cd ./test/e2e
           cp .env.stage.example .env
-          npm run e2e-test-browserstack-gha
+          npm run e2e-test-browserstack-desktop-firefox

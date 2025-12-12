@@ -19,9 +19,7 @@ npx playwright install
 
 ## E2E Test Prerequisites
 
-The E2E tests require an existing TB Pro (keycloak) account used to sign-in to TB Accounts, and reads this from your local .env file. This includes:
-
-- Credentials for an existing TB Pro (keycloak) account
+The E2E tests require an existing TB Pro (keycloak) account used to sign-in to TB Accounts, and reads this from your local .env file.
 
 In addition, you will need the env vars for the Paddle sandbox (found in the Services vault in 1Password)
 
@@ -39,7 +37,7 @@ PADDLE_ENV=sandbox
 
 ### Add TB Pro Account Information
 
-When running the TB Accounts local dev stack it uses the TB Pro stage env for sign-in, and then redirects back to your localhost afterwords. So you will use your TB Pro stage test account (keycloak) also when running the E2E tests against your local dev stack.
+When running the TB Accounts local dev stack setup your existing local OIDC/Keycloak credentials in your .env file as follows.
 
 First copy over the provided `.env.dev.example` to a local `.env`:
 
@@ -51,8 +49,11 @@ cp .env.dev.example .env
 Then edit your local `.env` file and provide the following values:
 
 ```dotenv
-ACCTS_OIDC_EMAIL=<existing-tbpro-stage-user-email>
-ACCTS_OIDC_PWORD=<exisiting-tbro-stage-password>
+ACCTS_HUB_URL=<URL-for-TB-Accts-Hub>
+ACCTS_OIDC_EMAIL=<existing-tbpro-user-email>
+ACCTS_OIDC_PWORD=<exisiting-tbro-password>
+ACCTS_RECOVERY_EMAIL=<tbpro-recovery-email>
+PRIMARY_THUNDERMAIL_EMAIL=<primary-thundermail-email-address>
 ```
 
 ## Setup Paddle backend for subscription tests (optional)
@@ -110,10 +111,11 @@ cp .env.stage.example .env
 Then edit your local `.env` file and provide the following values:
 
 ```dotenv
-ACCTS_OIDC_EMAIL=<existing-tbpro-stage-user-email>
-ACCTS_OIDC_PWORD=<exisiting-tbro-stage-password>
-THUNDERMAIL_USERNAME=<thundermail username associated with the above acct>
-THUNDERMAIL_EMAIL_ADDRESS=<thundermail email address associated with the above acct>
+ACCTS_HUB_URL=<URL-for-TB-Accts-Hub>
+ACCTS_OIDC_EMAIL=<existing-tbpro-user-email>
+ACCTS_OIDC_PWORD=<exisiting-tbro-password>
+ACCTS_RECOVERY_EMAIL=<tbpro-recovery-email>
+PRIMARY_THUNDERMAIL_EMAIL=<primary-thundermail-email-address>
 ```
 
 To run the E2E tests headless (still in `test/e2e`):
@@ -143,10 +145,11 @@ You can run the E2E tests from your local machine pointed at the stage environme
 Once you have credentials for an existing TB Accounts test account, edit your local `.env` file (that you first copied from `.env.stage.example`) and add these details (more information found above):
 
 ```dotenv
-ACCTS_OIDC_EMAIL=<existing-tbpro-stage-user-email>
-ACCTS_OIDC_PWORD=<exisiting-tbro-stage-password>
-THUNDERMAIL_USERNAME=<thundermail username associated with the above acct>
-THUNDERMAIL_EMAIL_ADDRESS=<thundermail email address associated with the above acct>
+ACCTS_HUB_URL=<URL-for-TB-Accts-Hub>
+ACCTS_OIDC_EMAIL=<existing-tbpro-user-email>
+ACCTS_OIDC_PWORD=<exisiting-tbro-password>
+ACCTS_RECOVERY_EMAIL=<tbpro-recovery-email>
+PRIMARY_THUNDERMAIL_EMAIL=<primary-thundermail-email-address>
 ```
 
 Also in order to run on BrowserStack you need to provide your BrowserStack credentials. Sign into your BrowserStack account and navigate to your `User Profile` and find your auth username and access key. In your local terminal export the following env vars to set the BrowserStack credentials that the tests will use:
@@ -162,7 +165,7 @@ export BROWSERSTACK_ACCESS_KEY=<your-browserstack-access-key>
 To run the E2E tests on BrowserStack (still in `test/e2e`):
 
 ```bash
-npm run e2e-test-browserstack
+npm run e2e-test-browserstack-desktop-firefox
 ```
 
 After the tests finish in your local console you'll see a link to the BrowserStack test session; when signed into your BrowserStack account you'll be able to use that link to see the test session results including video playback.

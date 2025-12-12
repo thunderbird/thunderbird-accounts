@@ -33,19 +33,7 @@ platforms:
       name: Firefox-OSX
       setup:
       - name: 'setup_firefox_auth'
-        testMatch: 'auth.setup.ts'
-      use:
-        storageState: 'test-results/.auth/user.json'
-
-  - os: OS X
-    osVersion: Sequoia
-    browserName: playwright-chromium
-    browserVersion: latest
-    playwrightConfigOptions:
-      name: Chromium-OSX
-      setup:
-      - name: 'setup_chrome_auth'
-        testMatch: 'auth.setup.ts'
+        testMatch: 'auth.desktop.setup.ts'
       use:
         storageState: 'test-results/.auth/user.json'
 
