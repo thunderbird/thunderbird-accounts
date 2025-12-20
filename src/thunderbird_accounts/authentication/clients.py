@@ -7,6 +7,7 @@ from urllib.parse import urljoin
 import requests
 import sentry_sdk
 from django.urls import reverse
+from requests import JSONDecodeError
 from requests.exceptions import RequestException
 
 from django.conf import settings
@@ -16,7 +17,11 @@ from thunderbird_accounts.authentication.exceptions import (
     SendExecuteActionsEmailError,
     UpdateUserError,
     DeleteUserError,
+    UpdateUserPlanInfoError,
+    GetUserError,
 )
+from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.utils import KeycloakRequiredAction
 from thunderbird_accounts.mail.utils import is_allowed_domain
 from thunderbird_accounts.utils.utils import get_absolute_url
 
@@ -98,6 +103,23 @@ class KeycloakClient:
         if not is_allowed_domain(username):
             raise InvalidDomainError(username)
 
+    def get_user(self, oidc_id: str):
+        try:
+            response = self.request(
+                f'users/{oidc_id}',
+                RequestMethods.GET,
+            )
+            response.raise_for_status()
+        except RequestException as exc:
+            sentry_sdk.capture_exception(exc)
+            if exc.response is not None:
+                raise GetUserError(
+                    oidc_id=oidc_id, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
+                )
+
+            raise GetUserError(oidc_id=oidc_id, error=f'Error<{exc}>: No response!')
+        return response
+
     def delete_user(self, oidc_id: str):
         """Updates a user on keycloak with the give attributes.
 
@@ -109,6 +131,58 @@ class KeycloakClient:
             raise DeleteUserError(
                 oidc_id=oidc_id, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
             )
+
+        return True
+
+    def update_user_plan_info(
+        self,
+        oidc_id: str,
+        is_subscribed: bool,
+        mail_address_count: Optional[int] = None,
+        mail_domain_count: Optional[int] = None,
+        mail_storage_bytes: Optional[int] = None,
+        send_storage_bytes: Optional[int] = None,
+    ):
+        """Updates a user on keycloak with the give attributes.
+
+        :raises User.DoesNotExist: If the oidc_id is not connected to a user
+        :raises User.MultipleObjectsReturned: If multiple users have the same oidc_id (this is bad for many reasons!)
+        :raises GetUserError: If there was an error during the keycloak user get api request
+        :raises UpdateUserPlanInfoError: If there was an error during the keycloak user update api request"""
+        User.objects.get(oidc_id=oidc_id)
+        user_data = self.get_user(oidc_id=oidc_id)
+
+        update_data = user_data.json()
+        update_data['attributes'] = {
+            **update_data.get('attributes', {}),
+            **dict(
+                filter(
+                    lambda x: x[1] is not None,
+                    {
+                        'is_subscribed': 'yes' if is_subscribed else 'no',
+                        'mail_address_count': mail_address_count,
+                        'mail_domain_count': mail_domain_count,
+                        'mail_storage_bytes': mail_storage_bytes,
+                        'send_storage_bytes': send_storage_bytes,
+                    }.items(),
+                )
+            ),
+        }
+
+        try:
+            self.request(
+                f'users/{oidc_id}',
+                RequestMethods.PUT,
+                json_data=update_data,
+            )
+        except RequestException as exc:
+            sentry_sdk.capture_exception(exc)
+            if exc.response is not None:
+                raise UpdateUserPlanInfoError(
+                    oidc_id=oidc_id, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
+                )
+
+            raise UpdateUserPlanInfoError(oidc_id=oidc_id, error=f'Error<{exc}>: No response!')
 
         return True
 
@@ -131,6 +205,8 @@ class KeycloakClient:
         :raises UpdateUserError: If there was an error during the keycloak user update api request"""
         if username:
             self._shared_clean(username)
+
+        user_data = self.get_user(oidc_id=oidc_id).json()
 
         update_data = dict(
             filter(
@@ -159,6 +235,12 @@ class KeycloakClient:
         if update_attribute_data:
             update_data['attributes'] = update_attribute_data
 
+        # Merge the two dicts together, update data being above existing data
+        update_data = {
+            **update_data,
+            **user_data,
+        }
+
         try:
             self.request(f'users/{oidc_id}', RequestMethods.PUT, json_data=update_data)
         except RequestException as exc:
@@ -173,7 +255,14 @@ class KeycloakClient:
         return True
 
     def import_user(
-        self, username, backup_email, timezone, name: Optional[str] = None, send_reset_password_email: bool = True
+        self,
+        username,
+        backup_email,
+        timezone,
+        name: Optional[str] = None,
+        password: Optional[str] = None,
+        send_action_email: Optional[KeycloakRequiredAction] = None,
+        verified_email: bool = True,
     ) -> str:
         """Creates a user and sends them a reset password email.
 
@@ -184,6 +273,10 @@ class KeycloakClient:
         request failed"""
         self._shared_clean(username)
 
+        credentials = []
+        if password:
+            credentials = [{'type': 'password', 'value': password, 'temporary': False}]
+
         try:
             response = self.request(
                 'users',
@@ -191,16 +284,29 @@ class KeycloakClient:
                 json_data={
                     'username': username,
                     'email': backup_email,
-                    'emailVerified': True,
+                    'emailVerified': verified_email,
                     'firstName': name,
                     'attributes': {'zoneinfo': timezone, 'locale': 'en'},
+                    'credentials': credentials,
                     'enabled': True,
                 },
             )
         except RequestException as exc:
             sentry_sdk.capture_exception(exc)
+
+            try:
+                error_data: dict = json.loads(exc.response.content.decode())
+            except (TypeError, JSONDecodeError):
+                # Could not determine explicit error information
+                error_data = {}
+
+            # Note: status_code == 409 means the user already exists on keycloak which we should have caught before this
+            # function call.
             raise ImportUserError(
-                username=username, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
+                username=username,
+                error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}',
+                error_code=error_data.get('error'),
+                error_desc=error_data.get('error_description'),
             )
 
         # Request returns an empty body on a 201 success, so retrieve pkid from location.
@@ -208,8 +314,8 @@ class KeycloakClient:
         response_location = response.headers.get('Location')
         pkid = response_location.split('/')[-1]
 
-        if send_reset_password_email:
-            action = 'UPDATE_PASSWORD'
+        if send_action_email:
+            action = send_action_email.value
             try:
                 self.request(
                     f'users/{pkid}/execute-actions-email',
@@ -231,5 +337,6 @@ class KeycloakClient:
                         f'Error<{exc.response.status_code}>: Cannot send email due to: {exc.response.content.decode()}'
                     ),
                 )
+
 
         return pkid

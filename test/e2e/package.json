@@ -6,8 +6,9 @@
     "e2e-test": "npx playwright test --grep e2e-suite --project=firefox",
     "e2e-test-headed": "npx playwright test --grep e2e-suite --project=firefox --headed",
     "e2e-test-debug": "npx playwright test --grep e2e-suite --project=firefox --headed --ui",
-    "e2e-test-browserstack": "npx browserstack-node-sdk playwright test --grep e2e-suite --browserstack.buildName 'TB Accounts E2E Tests'",
-    "e2e-test-browserstack-gha": "npx browserstack-node-sdk playwright test --grep e2e-suite",
+    "e2e-test-browserstack-desktop-firefox": "npx browserstack-node-sdk playwright test --grep e2e-suite --project=Firefox-OSX --browserstack.config 'browserstack-desktop.yml'",
+    "prod-nightly-tests-browserstack-desktop-firefox": "npx browserstack-node-sdk playwright test --grep e2e-prod-desktop-nighlty --project=Firefox-OSX --browserstack.config 'browserstack-desktop-nightly.yml'",
+    "prod-nightly-tests-browserstack-desktop-chromium": "npx browserstack-node-sdk playwright test --grep e2e-prod-desktop-nighlty --project=Chromium-OSX --browserstack.config 'browserstack-desktop-nightly.yml'",
     "postinstall": "npm update browserstack-node-sdk"
   },
   "keywords": [],
@@ -15,7 +16,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@playwright/test": "1.55.0",
+    "@playwright/test": "1.56.1",
     "@types/node": "^22.10.1",
     "browserstack-node-sdk": "^1.34.34",
     "dotenv": "^16.3.1",

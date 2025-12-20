@@ -1,8 +1,8 @@
 <script setup>
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { computed, useTemplateRef } from 'vue';
-import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
-import CancelForm from '@/vue/components/CancelForm.vue';
+import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
+import CancelForm from '@kc/vue/components/CancelForm.vue';
 
 const formAction = window._page.currentView?.formAction;
 const showForm = computed(() => window._page.appInitiatedAction !== 'false');

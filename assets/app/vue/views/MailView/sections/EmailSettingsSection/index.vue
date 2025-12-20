@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { PhSliders } from '@phosphor-icons/vue';
+import { useTour, FTUE_STEPS } from '@/composables/useTour';
 
 // Shared components
 import CardContainer from '@/components/CardContainer.vue';
 import DetailsSummary from '@/components/DetailsSummary.vue';
+import TourCard from '@/components/TourCard.vue';
 
 // Local components
 import AppPasswordSide from './components/AppPasswordSide.vue';
@@ -12,6 +14,7 @@ import UserInfoSide from './components/UserInfoSide.vue';
 import EmailAliases from './components/EmailAliases.vue';
 
 const { t } = useI18n();
+const tour = useTour();
 
 const appPasswords = window._page?.appPasswords || [];
 </script>
@@ -25,6 +28,18 @@ export default {
 <template>
   <section id="email-settings">
     <card-container>
+      <tour-card
+        v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.FINAL"
+        :text="t('views.mail.ftue.step3Text')"
+        :next-label="t('views.mail.ftue.done')"
+        :current-step="tour.currentStep.value"
+        :total-steps="FTUE_STEPS.FINAL"
+        show-back
+        @next="tour.next()"
+        @back="tour.back()"
+        @close="tour.skip()"
+      />
+
       <h2>{{ t('views.mail.sections.emailSettings.emailSettings') }}</h2>
 
       <div class="email-settings-content">

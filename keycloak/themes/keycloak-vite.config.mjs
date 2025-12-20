@@ -34,6 +34,7 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': fileURLToPath(new URL(`./tbpro/assets`, import.meta.url)),
+        '@kc': fileURLToPath(new URL(`./tbpro/assets`, import.meta.url)),
       },
       extensions: ['.ts', '.js', '.vue'],
     },

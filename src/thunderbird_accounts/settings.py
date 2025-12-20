@@ -19,6 +19,10 @@ from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.types import Event, Hint
 
+# Help language servers understand django
+import django_stubs_ext
+django_stubs_ext.monkeypatch()
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -51,17 +55,18 @@ def before_send(event: Event, hint: Hint) -> Event | None:
     return event
 
 
-sentry_sdk.init(
-    dsn=os.getenv('SENTRY_DSN'),
-    # Add data like request headers and IP for users,
-    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
-    send_default_pii=False,
-    traces_sample_rate=1.0,
-    profiles_sample_rate=1.0,
-    environment=APP_ENV,
-    before_send=before_send,
-    attach_stacktrace=True,
-)
+if not IS_DEV and not IS_TEST:
+    sentry_sdk.init(
+        dsn=os.getenv('SENTRY_DSN'),
+        # Add data like request headers and IP for users,
+        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+        send_default_pii=False,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+        environment=APP_ENV,
+        before_send=before_send,
+        attach_stacktrace=True,
+    )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 if os.getenv('IN_CONTAINER') == 'True':
@@ -136,8 +141,8 @@ INSTALLED_APPS = [
     'thunderbird_accounts.subscription',
     'thunderbird_accounts.mail',
     'thunderbird_accounts.utils',
+    'thunderbird_accounts.admin.AccountsAdminConfig',  # Instead of 'django.contrib.admin'
     # Django
-    'django.contrib.admin',
     'django.contrib.auth',
     # OIDC Auth
     'mozilla_django_oidc',  # Load after auth
@@ -164,6 +169,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'mozilla_django_oidc.middleware.SessionRefresh',
+    # This should be last
+    'thunderbird_accounts.mail.middleware.FixMissingArchivesFolderMiddleware'
 ]
 
 ROOT_URLCONF = 'thunderbird_accounts.urls'
@@ -350,6 +357,7 @@ else:
     OIDC_OP_USER_ENDPOINT = None
     OIDC_OP_JWKS_ENDPOINT = None
 
+STALWART_ARCHIVES_FOLDER_NAME = 'Archives'
 STALWART_BASE_JMAP_URL = os.getenv('STALWART_BASE_JMAP_URL')
 STALWART_BASE_API_URL = os.getenv('STALWART_BASE_API_URL')
 STALWART_API_AUTH_STRING = os.getenv('STALWART_API_AUTH_STRING')
@@ -397,6 +405,9 @@ DJANGO_VITE = {
     }
 }
 
+# Required otherwise a manifest error will be generated
+SERVESTATIC_MANIFEST_STRICT = False
+
 CONNECTION_INFO = {
     'IMAP': {'HOST': os.getenv('IMAP_HOST'), 'PORT': os.getenv('IMAP_PORT'), 'TLS': os.getenv('IMAP_TLS') == 'True'},
     'JMAP': {'HOST': os.getenv('JMAP_HOST'), 'PORT': os.getenv('JMAP_PORT'), 'TLS': os.getenv('JMAP_TLS') == 'True'},
@@ -408,13 +419,14 @@ ALLOWED_EMAIL_DOMAINS = (
     if os.getenv('ALLOWED_EMAIL_DOMAINS')
     else None
 )
+
+MIN_CUSTOM_DOMAIN_ALIAS_LENGTH = int(os.getenv('MIN_CUSTOM_DOMAIN_ALIAS_LENGTH', '3'))
+
 # The email domain that will be used for account creation and login
 PRIMARY_EMAIL_DOMAIN = (
     ALLOWED_EMAIL_DOMAINS[0] if ALLOWED_EMAIL_DOMAINS and len(ALLOWED_EMAIL_DOMAINS) > 0 else 'example.org'
 )
 
-# Required otherwise a manifest error will be generated
-SERVESTATIC_MANIFEST_STRICT = False
 
 # Celery settings, these are prefixed by CELERY_ and are otherwise just celery parameters
 CELERY_BROKER_URL = '/'.join(filter(None, [os.getenv('CELERY_BROKER') or REDIS_URL, os.getenv('REDIS_CELERY_DB')]))
@@ -455,3 +467,4 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not IS_DEV else
 
 TB_PRO_APPOINTMENT_URL: str = os.getenv('TB_PRO_APPOINTMENT_URL')
 TB_PRO_SEND_URL: str = os.getenv('TB_PRO_SEND_URL')
+TB_PRO_WAIT_LIST_URL: str = os.getenv('TB_PRO_WAIT_LIST_URL')

@@ -15,6 +15,7 @@
         },
         clientUrl: '${client.baseUrl}',
         currentLocale: '${(locale.currentLanguageTag)!"en"}',
+        tbProPrimaryDomain: '${properties.tbproPrimaryDomain}',
       };
       window._l10n = {
         ...window._l10n,
@@ -36,6 +37,7 @@
         registerError: '${msg("registerError")}',
         recoveryEmail: '${msg("recoveryEmail")}',
         recoveryEmailHelp: '${msg("recoveryEmailHelp")}',
+        invalidPasswordDoesntMatch: '${msg("invalidPasswordConfirmMessage")}'
       };
     </script>
     </#if>

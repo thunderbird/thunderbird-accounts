@@ -6,7 +6,6 @@ These are the routes and some light admin panel customization are located.
 """
 
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.urls import path, include, re_path
@@ -17,15 +16,21 @@ from thunderbird_accounts.infra import views as infra_views
 from thunderbird_accounts.mail import views as mail_views
 from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
-from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.api import get_user_profile
 
-admin.site.site_header = _('Thunderbird Accounts Admin Panel')
-admin.site.site_title = _('Thunderbird Accounts Admin Panel')
-admin.site.index_title = _('Accounts Administration')
-
 urlpatterns = [
+    # Custom admin routes need to be before admin.site.urls
+    path(
+        'admin/authentication/allowlistentry-custom/import/',
+        auth_views.AdminAllowListEntryImport.as_view(),
+        name='allow_list_entry_import',
+    ),
+    path(
+        'admin/authentication/allowlistentry-custom/import/submit/',
+        auth_views.bulk_import_allow_list,
+        name='allow_list_entry_import_submit',
+    ),
     path('admin/', admin.site.urls),
     # Django-specific routes (not handled by Vue)
     path('wait-list/', mail_views.wait_list),
@@ -40,19 +45,25 @@ urlpatterns = [
     path('custom-domains/dns-records', mail_views.get_dns_records, name='get_dns_records'),
     path('email-aliases/add', mail_views.add_email_alias, name='add_email_alias'),
     path('email-aliases/remove', mail_views.remove_email_alias, name='remove_email_alias'),
+    path(
+        'subscription/paddle/complete/',
+        subscription_views.on_paddle_checkout_complete,
+        name='paddle_complete',
+    ),
+    # Authentication
+    path('users/sign-up/', auth_views.sign_up, name='sign_up'),
     # API
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
-    path('api/v1/subscription/paddle/info', subscription_views.get_paddle_information, name='paddle_info'),
-    path('api/v1/subscription/paddle/portal', subscription_views.get_paddle_portal_link, name='paddle_portal'),
+    path('api/v1/subscription/paddle/info/', subscription_views.get_paddle_information, name='paddle_info'),
+    path('api/v1/subscription/paddle/portal/', subscription_views.get_paddle_portal_link, name='paddle_portal'),
+    path('api/v1/subscription/paddle/txid/', subscription_views.set_paddle_transaction_id, name='paddle_txid'),
     path(
-        'api/v1/subscription/paddle/complete',
-        subscription_views.notify_paddle_checkout_complete,
-        name='paddle_complete',
+        'api/v1/subscription/plan/info/', subscription_views.get_subscription_plan_info, name='subscription_plan_info'
     ),
-    path('api/v1/subscription/plan/info', subscription_views.get_subscription_plan_info, name='subscription_plan_info'),
+    # Health check
     path('health', infra_views.health_check),
 ]
 
@@ -68,10 +79,6 @@ if settings.AUTH_SCHEME == 'oidc':
 
 if settings.DEBUG:
     urlpatterns.append(path('docs/', include('rest_framework.urls')))
-
-# Needed with uvicorn dev server
-if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.ASSETS_ROOT)
 
 urlpatterns += [
     path(

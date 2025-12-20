@@ -2,6 +2,9 @@
 {% block content %}
 <section>
   <h1>Stalwart Principals</h1>
+  <p>This is an read-only view of the data on Stalwart/Thundermail.</p>
+  <br/>
+
   <p>Displaying {{ items|length }} principal objects</p>
   <table>
     <thead>
@@ -37,37 +40,9 @@
     <br/>
     <br/>
     {% csrf_token %}
-    <div class="submit-row">
-      <a class="deletelink" id="purge" href="#">Purge individuals</a>
-    </div>
     <pre id="output"></pre>
   </div>
+  <small>Principal objects are the "everything" or "polymorphic" object in Stalwart. They differ by <code>type</code>
+    but store their data in nearly the same base fields.</small>
 </section>
-<script>
-  // Allows up to clean up the test data before the proper oidc schema has been finallized.
-  const btn = document.getElementById('purge');
-  btn.addEventListener('click', async (evt) => {
-    const answer = confirm('Are you sure you want to delete all individuals?');
-    if (!answer) {
-      return;
-    }
-    const answer2 = confirm('Are you REALLY sure, there\'s no undoing this!');
-    if (!answer2) {
-      return;
-    }
-
-    const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-    const response = await fetch('/mail/admin/stalwart/purge', {
-      credentials: 'include',
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': csrfToken,
-      },
-    });
-
-    const data = await response.json();
-    const output = document.getElementById('output');
-    output.innerText = JSON.stringify(data, null, 2);
-  })
-</script>
 {% endblock content %}

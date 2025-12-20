@@ -31,18 +31,10 @@ const customDomain = ref(null);
 const isAddingCustomDomain = ref(false);
 const isVerifyingDomain = ref(false);
 const customDomainError = ref<string>(null);
+const domainAlreadyConfigured = ref(false);
 const verificationCriticalErrors = ref<string[]>([]);
 
 const maxCustomDomains = window._page?.maxCustomDomains;
-
-watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
-  // If we just removed the domain we were adding, reset the step to initial
-  if (newLastDomainRemoved === customDomain.value) {
-    step.value = STEP.INITIAL;
-    customDomain.value = null;
-    customDomainError.value = null;
-  }
-}, { immediate: true });
 
 const recordsInfo = ref<DNSRecord[]>([]);
 
@@ -80,6 +72,9 @@ const onCreateCustomDomain = async () => {
     if (data.success) {
       emit('custom-domain-added', customDomain.value);
       await handleDNSRecords(customDomain.value);
+    } else if (data.code === 'domain_already_configured') {
+      console.error(data.error);
+      domainAlreadyConfigured.value = true
     } else {
       console.error(data.error);
       customDomainError.value = data.error;
@@ -106,6 +101,7 @@ const onVerifyDomain = async () => {
       step.value = STEP.INITIAL;
       customDomain.value = null;
       customDomainError.value = null;
+      domainAlreadyConfigured.value = false;
     } else {
       verificationCriticalErrors.value = deduplicateCriticalErrors(data.critical_errors || []);
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
@@ -137,6 +133,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
     step.value = STEP.INITIAL;
     customDomain.value = null;
     customDomainError.value = null;
+    domainAlreadyConfigured.value = false;
   }
 }, { immediate: true });
 </script>
@@ -165,6 +162,14 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
         {{ t('views.mail.sections.customDomains.enterCustomDomain') }}
       </text-input>
   
+      <notice-bar :type="NoticeBarTypes.Critical" v-if="domainAlreadyConfigured" class="domain-already-configured-notice-bar">
+        <i18n-t keypath="views.mail.sections.customDomains.domainAlreadyConfigured" tag="span">
+          <template #link>
+             <router-link to="/contact">{{ t('views.mail.sections.customDomains.reachOutToSupport') }}</router-link>
+          </template>
+        </i18n-t>
+      </notice-bar>
+
       <primary-button variant="outline" @click="onCreateCustomDomain" :disabled="isAddingCustomDomain">
         {{ t('views.mail.sections.customDomains.continue') }}
       </primary-button>
@@ -238,6 +243,14 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
 <style scoped>
 .custom-domain-text-input {
   margin-block-end: 1.5rem;
+}
+
+.domain-already-configured-notice-bar {
+  margin-block-end: 1.5rem;
+
+  a {
+    color: var(--colour-ti-secondary);
+  }
 }
 
 h3 {
@@ -349,6 +362,10 @@ h3 {
 
 @media (min-width: 768px) {
   .custom-domain-text-input {
+    max-width: 50%;
+  }
+
+  .domain-already-configured-notice-bar {
     max-width: 50%;
   }
 

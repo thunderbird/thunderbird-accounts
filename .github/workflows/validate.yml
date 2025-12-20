@@ -62,6 +62,11 @@ jobs:
       - name: Start docker-compose
         run: docker compose up -d --build -V postgres redis accounts vite-dev
 
+      # Manually run this step as it seems to not run correctly sometimes?
+      - name: Build frontend
+        run: |
+          docker compose exec vite-dev bash -c 'npm run build & npm run build-theme'
+
       - name: Accounts lint check
         run: |
           docker compose exec accounts bash -c 'uv run ruff check'

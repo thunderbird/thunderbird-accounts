@@ -206,7 +206,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-b32c2f8dd2a5c862ebc794f6ef3b00b04390975d
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-7455d336a06ecb2e75c0c96de513d6b528ecfc86
             command:
               - start
             portMappings:
@@ -251,7 +251,11 @@ resources:
               - name: KC_SPI_THEME_WELCOME_THEME
                 value: "tbpro"
               - name: KC_TBPRO_HOME
-                value: "https://accounts.tb.pro/dashboard/"
+                value: "https://accounts.tb.pro/dashboard"
+              - name: KC_TBPRO_SIGN_UP
+                value: "https://accounts.tb.pro/sign-up"
+              - name: KC_TBPRO_PRIMARY_DOMAIN
+                value: "thundermail.com"
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -282,7 +286,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v0.8.1
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.4.0
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -357,6 +361,8 @@ resources:
                 value: https://www.thunderbird.net
               - name: ALLOWED_EMAIL_DOMAINS
                 value: 'thundermail.com,tb.pro'
+              - name: MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                value: '3'
               - name: ALLOWED_HOSTS
                 value: 'accounts.tb.pro'
               - name: APP_ENV
@@ -429,6 +435,8 @@ resources:
                 value: 'https://appointment.tb.pro/'
               - name: TB_PRO_SEND_URL
                 value: 'https://send.tb.pro/'
+              - name: TB_PRO_WAIT_LIST_URL
+                value: 'https://tb.pro/waitlist/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
@@ -456,7 +464,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v0.8.1
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.4.0
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -523,6 +531,8 @@ resources:
                 value: https://www.thunderbird.net
               - name: ALLOWED_EMAIL_DOMAINS
                 value: 'thundermail.com,tb.pro'
+              - name: MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                value: '3'
               - name: APP_ENV
                 value: 'prod'
               - name: AUTH_SCHEME
@@ -595,6 +605,8 @@ resources:
                 value: 'https://appointment.tb.pro/'
               - name: TB_PRO_SEND_URL
                 value: 'https://send.tb.pro/'
+              - name: TB_PRO_WAIT_LIST_URL
+                value: 'https://tb.pro/waitlist/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
@@ -636,7 +648,11 @@ resources:
       notify_emails:
         - thunderbird-services-monitoring@thunderbird.net
       config:
-        alarms: {}
+        alarms:
+          accounts-prod-fargate-accounts-fargateservicealb-alb-accounts:
+            response_time:
+              threshold: 2
+
 
   tb:ci:AwsAutomationUser:
     ci:

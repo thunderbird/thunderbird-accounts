@@ -3,18 +3,21 @@ import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhGlobe, PhCheckCircle, PhX } from '@phosphor-icons/vue';
 import { BaseBadge, BaseBadgeTypes, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
+import { useTour, FTUE_STEPS } from '@/composables/useTour';
 
 // Types
 import { CustomDomain, DOMAIN_STATUS, STEP } from './types';
 
 // Shared components
 import CardContainer from '@/components/CardContainer.vue';
+import TourCard from '@/components/TourCard.vue';
 
 // Local components
 import CustomDomainForm from './components/CustomDomainForm.vue';
 import ActionsMenu from './components/ActionsMenu.vue';
 
 const { t } = useI18n();
+const tour = useTour();
 
 const currentStep = ref<STEP>(STEP.INITIAL);
 const customDomains = ref<CustomDomain[]>(window._page?.customDomains || []);
@@ -77,6 +80,18 @@ export default {
 <template>
   <section id="custom-domains">
     <card-container>
+      <tour-card
+        v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.CUSTOM_DOMAINS"
+        :text="t('views.mail.ftue.step2Text')"
+        :subtitle="t('views.mail.ftue.step2Subtitle')"
+        :current-step="tour.currentStep.value"
+        :total-steps="FTUE_STEPS.CUSTOM_DOMAINS"
+        show-back
+        @next="tour.next()"
+        @back="tour.back()"
+        @close="tour.skip()"
+      />
+
       <h2>{{ t('views.mail.sections.customDomains.customDomains') }}</h2>
       <p class="custom-domains-description">{{ customDomainsDescription }}</p>
       <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: maxCustomDomains }) }}</strong>

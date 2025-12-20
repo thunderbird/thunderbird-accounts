@@ -13,6 +13,7 @@ declare global {
       userEmail?: string;
       userFullName?: string;
       userDisplayName?: string;
+      username?: string;
       connectionInfo?: {
         'SMTP': {'HOST': string, 'PORT': number, 'TLS': boolean},
         'IMAP': {'HOST': string, 'PORT': number, 'TLS': boolean},
@@ -34,6 +35,7 @@ declare global {
       maxEmailAliases?: number;
       tbProAppointmentUrl?: string;
       tbProSendUrl?: string;
+      tbProPrimaryDomain?: string;
       currentView?: Record<string, any>;
       serverMessages: ServerMessage[];
     };

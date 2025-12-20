@@ -7,10 +7,10 @@ import {
   CopyIcon,
 } from "@thunderbirdops/services-ui";
 import { computed, ref, useTemplateRef } from "vue";
-import { i18n } from '@/composables/i18n.js';
-import CancelForm from '@/vue/components/CancelForm.vue';
-import MessageBar from "@/vue/components/MessageBar.vue";
-import ThunderbirdLogoLight from '@/svg/thunderbird-pro-light.svg';
+import { i18n } from '@kc/composables/i18n.js';
+import CancelForm from '@kc/vue/components/CancelForm.vue';
+import MessageBar from "@kc/vue/components/MessageBar.vue";
+import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const isManualMode = ref(false);
 const clientUrl = window._page.currentView?.clientUrl;

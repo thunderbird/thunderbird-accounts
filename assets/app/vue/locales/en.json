@@ -166,6 +166,8 @@
           "verify": "Verify",
           "reVerify": "Re-verify",
           "domainAlreadyExists": "Domain already exists",
+          "domainAlreadyConfigured": "This domain is already configured. Please {link} in case you believe this is a mistake.",
+          "reachOutToSupport": "reach out to support",
           "verificationCriticalErrors": {
             "mxLookupError": "Unable to find mail servers for domain",
             "ipLookupError": "Unable to resolve IP addresses",
@@ -207,6 +209,21 @@
           "removedSuccessfully": "Removed {email} from allow list",
           "undo": "Undo"
         }
+      },
+      "ftue": {
+        "initialWelcomeTitle": "Welcome to Thundermail",
+        "initialWelcomeDescription": "Would you like a quick tour of the dashboard?",
+        "letsGo": "Let's go!",
+        "skip": "Skip",
+        "next": "Next",
+        "back": "Back",
+        "done": "Done",
+        "step": "Step {step} of {total}",
+        "step1Text": "Download Thunderbird (or your preferred email app) and sign in with your primary email and password to access your new account.",
+        "step1Subtitle": "Next: Add custom domains",
+        "step2Text": "{'Add a custom domain you own to create additional email addresses like you@yourdomain.com.'}",
+        "step2Subtitle": "Next: Email addresses",
+        "step3Text": "Add email addresses using your custom domains."
       }
     },
     "manageMfa": {
@@ -308,9 +325,11 @@
         "today": "Today",
         "renewal": "On renewal"
       },
+      "paddleUnknownError": "We're experiencing connectivity issues with our payment provider. Please try again later.",
       "planSystemError": "No plan exists or the plan is incorrectly setup. Please correct this in the admin panel.",
       "paymentComplete": "Please wait while we verify payment, you will be redirected shortly.",
       "title": "Order Summary",
+      "checkoutHeading": "Payment",
       "verification": {
         "title": "Your payment is being processed.",
         "text": "This step can take up to 48 hours to complete.",
@@ -325,6 +344,7 @@
       "errorSubmittingForm": "Failed to submit contact form. Please try again.",
       "success": "Your support request has been submitted successfully",
       "emailAddressLabel": "Your email address",
+      "nameLabel": "Preferred name",
       "fileUploadLabel": "Files",
       "dragAndDropFilesText": "Drag & drop files here, or click to upload",
       "filesSelectedText": "{count} file(s) selected. Drag & drop more files here, or click to upload",

@@ -2,7 +2,6 @@ import datetime
 import logging
 from typing import Optional
 
-import sentry_sdk
 from celery import shared_task
 from django.conf import settings
 
@@ -177,29 +176,6 @@ def create_stalwart_account(
             'task_status': 'failed',
         }
 
-    # Make sure we don't have anyone with this username
-    try:
-        stalwart.get_account(username)
-        # It already exists? We should have caught that in our system.
-        sentry_sdk.capture_message(
-            (
-                'Error: Username already exists!'
-                f' Cannot create a Stalwart account with the username {username} for {email}.'
-            ),
-            level='error',
-            user={'oidc_id': oidc_id},
-        )
-        return {
-            'oidc_id': oidc_id,
-            'username': username,
-            'email': email,
-            'task_status': 'failed',
-            'reason': 'Username already exists in Stalwart.',
-        }
-    except AccountNotFoundError:
-        # We want this error
-        pass
-
     emails = [
         email,
         # Create every other allowed alias too
@@ -212,11 +188,28 @@ def create_stalwart_account(
     _stalwart_check_or_create_domain_entry(stalwart, domain)
     for alias in emails[1:]:
         _domain = alias.split('@')[1]
-        print(f'checking domain {_domain}')
         _stalwart_check_or_create_domain_entry(stalwart, _domain)
 
-    # We need to create this after dkim and domain records exist
-    pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
+    # Lookup the account first, this shouldn't normally happen but if it does we shouldn't explode.
+    try:
+        stalwart_account = stalwart.get_account(username)
+        stalwart_emails = stalwart_account.get('emails', [])
+
+        # link the stalwart account
+        pkid = stalwart_account.get('id')
+
+        # Check the aliases
+        if emails != stalwart_emails:
+            # Diff of new emails
+            new_emails = set(emails) - set(stalwart_emails)
+            # Diff of the old emails
+            old_emails = set(stalwart_emails) - set(emails)
+
+            stalwart.save_email_addresses(username, list(new_emails))
+            stalwart.delete_email_addresses(username, list(old_emails))
+    except AccountNotFoundError:
+        # We need to create this after dkim and domain records exist
+        pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
 
     user = User.objects.get(oidc_id=oidc_id)
     now = datetime.datetime.now(datetime.UTC)

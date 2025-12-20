@@ -32,10 +32,22 @@ class ImportUserError(KeycloakError):
     username: str
     error: str
 
-    def __init__(self, error, username: Optional[str] = None, *args, **kwargs):
+    def __init__(
+        self,
+        error,
+        username: Optional[str] = None,
+        error_code: Optional[str] = None,
+        error_desc: Optional[str] = None,
+        *args,
+        **kwargs,
+    ):
         super().__init__(args, kwargs)
         self.username = username
+        # Used for __str__
         self.error = error
+        # Structured error from keycloak
+        self.error_code = error_code
+        self.error_desc = error_desc
 
     def __str__(self):
         return f'ImportUserError: {self.error} for {self.username}'
@@ -52,6 +64,32 @@ class UpdateUserError(KeycloakError):
 
     def __str__(self):
         return f'UpdateUserError: {self.error} for {self.username}'
+
+
+class UpdateUserPlanInfoError(KeycloakError):
+    username: str
+    error: str
+
+    def __init__(self, error, oidc_id: Optional[str] = None, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.oidc_id = oidc_id
+        self.error = error
+
+    def __str__(self):
+        return f'UpdateUserError: {self.error} for {self.oidc_id}'
+
+
+class GetUserError(KeycloakError):
+    oidc_id: str
+    error: str
+
+    def __init__(self, error, oidc_id: Optional[str] = None, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.oidc_id = oidc_id
+        self.error = error
+
+    def __str__(self):
+        return f'GetUserError: {self.error} for {self.oidc_id}'
 
 
 class DeleteUserError(KeycloakError):

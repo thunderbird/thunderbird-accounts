@@ -51,7 +51,6 @@ cache.ttl.positive = "1h"
 endpoint.method = "introspect"
 endpoint.url = "http://keycloak:8999/realms/tbpro/protocol/openid-connect/token/introspect"
 fields.email = "username"
-fields.username = "username"
 timeout = "15s"
 type = "oidc"
 

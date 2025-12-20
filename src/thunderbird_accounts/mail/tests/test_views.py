@@ -5,9 +5,10 @@ from django.conf import settings
 from django.test import TestCase, Client as RequestClient, override_settings
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.mail.models import Account
+from thunderbird_accounts.mail.models import Account, Domain
 
 
 class HomeViewRedirectTestCase(TestCase):
@@ -131,6 +132,139 @@ class AddEmailAliasTestCase(TestCase):
                 json.loads(response.content.decode()),
                 {'success': False, 'error': _('You cannot use this email address.')},
             )
+
+    @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
+    @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=3)
+    def test_allowed_domain_alias_too_short(self):
+        """Test that email aliases shorter than 3 characters are rejected for ALLOWED_EMAIL_DOMAINS."""
+        email_alias_url = reverse('add_email_alias')
+
+        # Test with 1 character
+        response = self.client.post(
+            email_alias_url,
+            data={'email-alias': 'a', 'domain': 'example.org'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
+        )
+
+        # Test with 2 characters
+        response = self.client.post(
+            email_alias_url,
+            data={'email-alias': 'ab', 'domain': 'example.org'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
+        )
+
+    @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
+    @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=3)
+    def test_allowed_domain_alias_minimum_length(self):
+        """Test that email aliases of exactly 3 characters are accepted for ALLOWED_EMAIL_DOMAINS."""
+        email_alias_url = reverse('add_email_alias')
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'abc', 'domain': 'example.org'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+    @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
+    @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=3)
+    def test_custom_domain_alias_short_allowed(self):
+        """Test that short email aliases (< 3 chars) are allowed for custom domains (not in ALLOWED_EMAIL_DOMAINS)."""
+        email_alias_url = reverse('add_email_alias')
+        Domain.objects.create(
+            name='customdomain.com',
+            user=self.user,
+            status=Domain.DomainStatus.VERIFIED,
+        )
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            # Test with 1 character - should succeed for custom domain
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'a', 'domain': 'customdomain.com'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+            # Test with 2 characters - should succeed for custom domain
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'ab', 'domain': 'customdomain.com'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+    @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
+    @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=2)
+    def test_custom_domain_alias_length_minimum_2(self):
+        """Test that MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=2 works correctly for both allowed and custom domains."""
+        email_alias_url = reverse('add_email_alias')
+        Domain.objects.create(
+            name='customdomain.com',
+            user=self.user,
+            status=Domain.DomainStatus.VERIFIED,
+        )
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+
+            # Test ALLOWED_EMAIL_DOMAINS: 1 character should be rejected
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'a', 'domain': 'example.org'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(
+                json.loads(response.content.decode()),
+                {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
+            )
+
+            # Test ALLOWED_EMAIL_DOMAINS: 2 characters should be accepted
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'ab', 'domain': 'example.org'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+            # Test custom domain: 1 character should be allowed
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'a', 'domain': 'customdomain.com'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+            # Test custom domain: 2 characters should be allowed
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'ab', 'domain': 'customdomain.com'},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
 
 
 class ZendeskContactFieldsTestCase(TestCase):
@@ -266,8 +400,6 @@ class ZendeskContactSubmitTestCase(TestCase):
         update_resp.ok = True
         instance.update_ticket.return_value = update_resp
 
-        from django.core.files.uploadedfile import SimpleUploadedFile
-
         url = reverse('contact_submit')
         payload = {
             'email': 'user@example.org',
@@ -293,6 +425,7 @@ class ZendeskContactSubmitTestCase(TestCase):
         args, _kwargs = instance.create_ticket.call_args
         sent_fields = args[0]
         self.assertEqual(sent_fields['ticket_form_id'], 42)
+        self.assertEqual(sent_fields['name'], 'user@example.org')  # Defaults to email when name not provided
         self.assertEqual(sent_fields['email'], 'user@example.org')
         self.assertEqual(sent_fields['subject'], 'Hello')
         self.assertEqual(sent_fields['description'], 'Body')
@@ -301,6 +434,7 @@ class ZendeskContactSubmitTestCase(TestCase):
 
         # update called with browser/os hidden fields
         instance.update_ticket.assert_called_once()
+
         # Ensure the IDs are ints and values are what we mocked from UA
         update_payload = instance.update_ticket.call_args.args[1]
         self.assertEqual(
@@ -338,8 +472,6 @@ class ZendeskContactSubmitTestCase(TestCase):
         mock_client_cls.return_value = instance
         instance.upload_file.return_value = {'success': False, 'error': 'Zendesk upload failed'}
 
-        from django.core.files.uploadedfile import SimpleUploadedFile
-
         url = reverse('contact_submit')
         payload = {
             'email': 'user@example.org',
@@ -363,9 +495,6 @@ class ZendeskContactSubmitTestCase(TestCase):
     def test_contact_submit_upload_exception(self, mock_client_cls):
         instance = Mock()
         mock_client_cls.return_value = instance
-        instance.upload_file.side_effect = Exception('boom')
-
-        from django.core.files.uploadedfile import SimpleUploadedFile
 
         url = reverse('contact_submit')
         payload = {
@@ -381,7 +510,7 @@ class ZendeskContactSubmitTestCase(TestCase):
         self.assertEqual(response.status_code, 500)
         body = json.loads(response.content.decode())
         self.assertFalse(body['success'])
-        self.assertIn('Failed to upload file test.txt: boom', body['error'])
+        self.assertIn('Failed to upload file test.txt', body['error'])
         instance.create_ticket.assert_not_called()
 
     @patch('thunderbird_accounts.mail.views.ZendeskClient')
@@ -393,8 +522,6 @@ class ZendeskContactSubmitTestCase(TestCase):
         create_resp = Mock()
         create_resp.ok = False
         instance.create_ticket.return_value = create_resp
-
-        from django.core.files.uploadedfile import SimpleUploadedFile
 
         url = reverse('contact_submit')
         payload = {
@@ -434,8 +561,6 @@ class ZendeskContactSubmitTestCase(TestCase):
         update_resp.ok = False
         instance.update_ticket.return_value = update_resp
 
-        from django.core.files.uploadedfile import SimpleUploadedFile
-
         url = reverse('contact_submit')
         payload = {
             'email': 'user@example.org',
@@ -449,5 +574,104 @@ class ZendeskContactSubmitTestCase(TestCase):
 
         # Even though the update failed, at this point the ticket was created successfully
         # So we were just unable to update the hidden fields, so we still return success to the user
+        instance.update_ticket.assert_called_once()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    @patch('thunderbird_accounts.utils.utils.parse_user_agent_info')
+    @override_settings(
+        ZENDESK_FORM_ID='42',
+        ZENDESK_FORM_BROWSER_FIELD_ID='1001',
+        ZENDESK_FORM_OS_FIELD_ID='1002',
+    )
+    def test_contact_submit_name_defaults_to_email_when_not_provided(self, mock_parse_ua, mock_client_cls):
+        """Test that when name is not provided in the payload, it defaults to the email address."""
+        mock_parse_ua.return_value = ('Firefox 120', 'macOS 14')
+
+        instance = Mock()
+        mock_client_cls.return_value = instance
+
+        create_resp = Mock()
+        create_resp.ok = True
+        create_resp.json.return_value = {'request': {'id': 555}}
+        instance.create_ticket.return_value = create_resp
+
+        update_resp = Mock()
+        update_resp.ok = True
+        instance.update_ticket.return_value = update_resp
+
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+        response = self.client.post(
+            url,
+            data={'data': json.dumps(payload)},
+            HTTP_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Firefox/120.0',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        # Verify the name field defaults to email when not provided in payload
+        instance.create_ticket.assert_called_once_with(
+            {
+                'ticket_form_id': 42,
+                'name': 'user@example.org',
+                'email': 'user@example.org',
+                'subject': 'Hello',
+                'description': 'Body',
+                'attachments': [],
+                'custom_fields': [],
+            }
+        )
+        instance.update_ticket.assert_called_once()
+
+    @patch('thunderbird_accounts.mail.views.ZendeskClient')
+    @patch('thunderbird_accounts.utils.utils.parse_user_agent_info')
+    @override_settings(
+        ZENDESK_FORM_ID='42',
+        ZENDESK_FORM_BROWSER_FIELD_ID='1001',
+        ZENDESK_FORM_OS_FIELD_ID='1002',
+    )
+    def test_contact_submit_uses_name_from_payload_when_provided(self, mock_parse_ua, mock_client_cls):
+        """Test that when name is provided in the payload, it uses that name instead of defaulting to email."""
+        mock_parse_ua.return_value = ('Firefox 120', 'macOS 14')
+
+        instance = Mock()
+        mock_client_cls.return_value = instance
+
+        create_resp = Mock()
+        create_resp.ok = True
+        create_resp.json.return_value = {'request': {'id': 555}}
+        instance.create_ticket.return_value = create_resp
+
+        update_resp = Mock()
+        update_resp.ok = True
+        instance.update_ticket.return_value = update_resp
+
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'name': 'John Doe',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+        response = self.client.post(
+            url,
+            data={'data': json.dumps(payload)},
+            HTTP_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Firefox/120.0',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        # Verify the name field uses the provided name from payload
+        args, _kwargs = instance.create_ticket.call_args
+        sent_fields = args[0]
+        self.assertEqual(sent_fields['name'], 'John Doe')
+        self.assertEqual(sent_fields['email'], 'user@example.org')
+        instance.update_ticket.assert_called_once()
