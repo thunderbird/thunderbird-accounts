@@ -31,7 +31,12 @@ const getSubscriptionInfo = async () => {
 
     subscription.value = formatSubscriptionData(data.subscription, n, t, d);
   } catch (error) {
-    errorText.value = error instanceof Error ? error.message : t('views.dashboard.yourCurrentSubscription.loadingError');
+    // Only show good error messages
+    if (error instanceof Error && error?.message !== 'Internal Server Error') {
+      errorText.value = error.message;
+    } else {
+      errorText.value = t('views.dashboard.yourCurrentSubscription.loadingError')
+    }
   } finally {
     isLoading.value = false;
   }
@@ -65,16 +70,13 @@ onMounted(() => {
         <p class="subscription-description">{{ subscription.description }}</p>
         <p class="subscription-price">
           <span class="subscription-price-amount">
-            <i18n-n tag="span" :value="parseFloat(subscription.price)" format="currency" :format-options="{ currency: subscription.currency }">
-              <template #currency="slotProps">
-                <span class="subscription-price-currency">{{ slotProps.currency }}</span>
-              </template>
-              <template #integer="slotProps">
-                <span>{{ slotProps.integer }}</span>
-              </template>
-            </i18n-n>
+            {{ subscription.price }}
           </span>
-          <span class="subscription-price-period">{{ subscription.period }}</span>
+          <i18n-t :keypath="subscription.period" tag="span" class="subscription-price-period">
+            <template v-slot:newLine>
+              <br/>
+            </template>
+          </i18n-t>
         </p>
         <template v-for="[key, value] in Object.entries(subscription.features)" :key="key">
           <div v-if="value" class="subscription-feature">
@@ -154,15 +156,21 @@ h3 {
     font-family: metropolis;
     margin-block-end: 1.75rem;
 
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+    text-align: left;
+
     .subscription-price-amount {
       position: relative;
       font-size: 2rem;
-      margin-inline-end: 0.375rem;
-    }
+      margin-inline-end: 0.375rem;    }
 
     .subscription-price-period {
       font-family: Inter;
       font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
     }
 
     .subscription-price-currency {
