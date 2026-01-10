@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory, RouteRecordRaw, RouterOptions } from 'vue-router';
 
 // Accounts Routes
 import DashboardView from '@/views/DashboardView/index.vue';
@@ -16,91 +16,101 @@ import SecuritySettingsView from '@/views/MailView/views/SecuritySettingsView/in
 import ContactView from '@/views/ContactView/index.vue';
 import SignUpView from '@/views/SignUpView/index.vue';
 
+import PublicRoutes from "@/../../shared/public_routes.json";
+
+const routes: RouteRecordRaw[] = [
+  // Accounts Routes
+  {
+    path: '/',
+    name: 'home-redirect',
+    redirect: '/dashboard'
+  },
+  {
+    path: '/sign-up',
+    name: 'sign-up',
+    component: SignUpView, // If we lazy-load this they'll see an ugly screen flash.
+    meta: {
+      useAppTemplate: false,
+    }
+  },
+  {
+    path: '/sign-up/complete', // This is the "Check your email" page after sign-up.
+    name: 'sign-up-complete',
+    component: SignUpView, // If we lazy-load this they'll see an ugly screen flash.
+    meta: {
+      useAppTemplate: false,
+    }
+  },
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: DashboardView,
+  },
+  {
+    path: '/manage-mfa',
+    name: 'manage-mfa',
+    component: ManageMfaView,
+  },
+  {
+    path: '/privacy-and-data',
+    name: 'privacy-and-data',
+    component: PrivacyAndDataView,
+  },
+  // Thundermail Routes
+  {
+    path: '/mail',
+    name: 'mail',
+    component: MailView,
+  },
+  {
+    path: '/mail/security-settings',
+    name: 'mail-security-settings',
+    component: SecuritySettingsView,
+  },
+  // Footer links (shared between Accounts and Thundermail)
+  {
+    path: '/privacy',
+    name: 'privacy',
+    component: PrivacyView,
+  },
+  {
+    path: '/terms',
+    name: 'terms',
+    component: TermsView,
+  },
+  // Sign Up / Subscribe
+  {
+    path: '/subscribe',
+    name: 'subscribe',
+    component: SubscribeView,
+  },
+  // Zendesk Contact Form (Support)
+  {
+    path: '/contact',
+    name: 'contact',
+    component: ContactView,
+  }
+];
+
+/**
+ * Merge together our above defined routes with the isPublic information in public_routes.json
+ * Note: We can create a script that pre-processes this using the rollup transformer hook in the future. 
+ */
+const routerRoutes = routes.map((route: RouteRecordRaw) => {
+  const meta = { 
+    isPublic: route.name.toString() in PublicRoutes,
+    ...route?.meta || {}
+  }
+  return {
+    meta,
+    ...route
+  }
+});
+
+
 const router = createRouter({
   history: createWebHistory('/'),
-  routes: [
-    // Accounts Routes
-    {
-      path: '/',
-      redirect: '/dashboard'
-    },
-    {
-      path: '/sign-up',
-      name: 'sign-up',
-      component: SignUpView, // If we lazy-load this they'll see an ugly screen flash.
-      meta: {
-        isPublic: true,
-        useAppTemplate: false,
-      }
-    },
-    {
-      path: '/sign-up/complete', // This is the "Check your email" page after sign-up.
-      name: 'sign-up-complete',
-      component: SignUpView, // If we lazy-load this they'll see an ugly screen flash.
-      meta: {
-        isPublic: true,
-        useAppTemplate: false,
-      }
-    },
-    {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: DashboardView,
-    },
-    {
-      path: '/manage-mfa',
-      name: 'manage-mfa',
-      component: ManageMfaView,
-    },
-    {
-      path: '/privacy-and-data',
-      name: 'privacy-and-data',
-      component: PrivacyAndDataView,
-    },
-    // Thundermail Routes
-    {
-      path: '/mail',
-      name: 'mail',
-      component: MailView,
-    },
-    {
-      path: '/mail/security-settings',
-      name: 'mail-security-settings',
-      component: SecuritySettingsView,
-    },
-    // Footer links (shared between Accounts and Thundermail)
-    {
-      path: '/privacy',
-      name: 'privacy',
-      component: PrivacyView,
-      meta: {
-        isPublic: true,
-      },
-    },
-    {
-      path: '/terms',
-      name: 'terms',
-      component: TermsView,
-      meta: {
-        isPublic: true,
-      },
-    },
-    // Sign Up / Subscribe
-    {
-      path: '/subscribe',
-      name: 'subscribe',
-      component: SubscribeView,
-    },
-    // Zendesk Contact Form (Support)
-    {
-      path: '/contact',
-      name: 'contact',
-      component: ContactView,
-      meta: {
-        isPublic: true,
-      },
-    }
-  ],
+  routes: routerRoutes,
   scrollBehavior(to, _from, savedPosition) {
     if (to.hash) {
       return {
