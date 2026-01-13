@@ -5,7 +5,7 @@
     <script>
       window._page['currentView'] = {
         formAction: '${url.loginAction}',
-        supportUrl: '${client.baseUrl}contact',
+        supportUrl: '${properties.tbproContactUrl}',
         clientUrl: '${client.baseUrl}',
         // <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
         registerUrl: '${url.registrationUrl}',

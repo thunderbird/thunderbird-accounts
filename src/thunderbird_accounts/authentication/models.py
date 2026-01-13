@@ -11,6 +11,7 @@ from thunderbird_accounts.utils.models import BaseModel
 
 class User(AbstractUser, BaseModel):
     """
+    :param username: The thundermail address, aligns with keycloak's usage of username.
     :param oidc_id: The ID of the connected oidc account
     :param last_used_email: The last used email associated with this account
     :param language: The user's preferred language to view the ui/system emails in

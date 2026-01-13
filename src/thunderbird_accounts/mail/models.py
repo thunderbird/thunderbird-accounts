@@ -63,6 +63,10 @@ class Account(BaseStalwartObject):
     quota = models.BigIntegerField(
         null=True, help_text=_('Amount of mail storage this account has access to (in bytes).')
     )
+    verified_archive_folder = models.BooleanField(
+        default=False,
+        help_text=_('On login we check if they have an archive folder. If this is true that check will be skipped.'),
+    )
     # TODO: Implement freeze_quota
 
     class Meta:
@@ -133,29 +137,17 @@ class Domain(BaseStalwartObject):
         VERIFIED = 'verified', _('Verified')
         FAILED = 'failed', _('Verification Failed')
 
-    name = SmallTextField(
-        unique=True,
-        help_text=_('The domain name (e.g., example.com)')
-    )
+    name = SmallTextField(unique=True, help_text=_('The domain name (e.g., example.com)'))
     status = models.CharField(
         max_length=20,
         choices=DomainStatus,
         default=DomainStatus.PENDING,
-        help_text=_('Current verification status of the domain')
+        help_text=_('Current verification status of the domain'),
     )
     user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='domains',
-        help_text=_('The user who owns this domain')
+        User, on_delete=models.CASCADE, related_name='domains', help_text=_('The user who owns this domain')
     )
-    verified_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text=_('Date and time when the domain was verified')
-    )
+    verified_at = models.DateTimeField(null=True, blank=True, help_text=_('Date and time when the domain was verified'))
     last_verification_attempt = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text=_('Date and time of the last verification attempt')
+        null=True, blank=True, help_text=_('Date and time of the last verification attempt')
     )

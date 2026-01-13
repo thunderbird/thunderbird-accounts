@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from socket import gethostbyname, gethostname
 
 from django.conf import settings
@@ -14,11 +15,17 @@ from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
 
 class AccountsOIDCBackend(OIDCAuthenticationBackend):
+    """User authentication middleware for OIDC
+
+    This is our slightly customized mozilla-django-oidc middleware used to create/update/authenticate users
+    against oidc flows.
+    """
+
     def get_user(self, user_id):
         """Retrieve the user from OIDC get_user and additionally check if they're active.
         Fixes https://github.com/mozilla/mozilla-django-oidc/issues/520
         """
-        user: User = super().get_user(user_id)
+        user: Optional[User] = super().get_user(user_id)
         return user if self.user_can_authenticate(user) else None
 
     def _check_allow_list(self, claims: dict):
