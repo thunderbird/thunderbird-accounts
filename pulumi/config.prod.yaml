@@ -254,6 +254,8 @@ resources:
                 value: "https://accounts.tb.pro/dashboard"
               - name: KC_TBPRO_SIGN_UP
                 value: "https://accounts.tb.pro/sign-up"
+              - name: KC_TBPRO_CONTACT
+                value: "https://accounts.tb.pro/contact"
               - name: KC_TBPRO_PRIMARY_DOMAIN
                 value: "thundermail.com"
 
