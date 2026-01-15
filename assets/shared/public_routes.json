@@ -1,0 +1,7 @@
+{
+	"sign-up": "/sign-up",
+	"sign-up-complete": "/sign-up/complete",
+	"privacy": "/privacy",
+	"terms": "/terms",
+	"contact": "/contact"
+}

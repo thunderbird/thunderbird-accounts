@@ -1,6 +1,8 @@
+from functools import cache
 import datetime
 import json
 import logging
+import os
 
 import requests.exceptions
 import sentry_sdk
@@ -30,6 +32,16 @@ from thunderbird_accounts.mail.zendesk import ZendeskClient
 from thunderbird_accounts.mail import utils
 
 
+@cache
+def get_public_routes():
+    """This function retrieves a json file that is shared between the frontend and backend
+    It's a cached function so this shouldn't run often!
+    """
+    shared_routes = os.path.join(settings.BASE_DIR, 'assets', 'shared', 'public_routes.json')
+    with open(shared_routes) as fh:
+        return json.loads(fh.read()).values()
+
+
 def raise_form_error(request, to_view: str, error_message: str):
     """Puts the error message into the message bag and redirects to a named view."""
     messages.error(request, error_message, extra_tags='form-error')
@@ -48,7 +60,6 @@ def home(request: HttpRequest):
     max_email_aliases = None
 
     if request.user.is_authenticated and request.user.has_active_subscription:
-
         try:
             account = request.user.account_set.first()
             if not account:
@@ -91,7 +102,7 @@ def home(request: HttpRequest):
             max_email_aliases = request.user.plan.mail_address_count
     elif not request.user.is_authenticated:  # Only if the user is not authenticated
         # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
-        public_routes = ['/privacy', '/terms', '/contact', '/sign-up', '/sign-up/complete']
+        public_routes = get_public_routes()
 
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))
@@ -177,7 +188,7 @@ def contact_submit(request: HttpRequest):
 
     email = data_json.get('email')
 
-    # Name is optional in the UI, 
+    # Name is optional in the UI,
     # but it is required for the Zendesk Requests API's requester object
     # So we default to the email address if the name is not provided
     name = data_json.get('name', email)
