@@ -6,7 +6,11 @@ import BaseTemplate from '@kc/vue/BaseTemplate.vue';
 // Match routes based on pageId / route name
 const pageId = ref(window._page.pageId);
 const routeName = pageId.value && router.hasRoute(pageId.value) ? pageId.value : 'route-not-implemented';
-console.log('route:', routeName);
+// Information for easier debugging
+console.info({
+  route: routeName,
+  pageId: pageId.value,
+});
 router.replace({ name: routeName });
 </script>
 
