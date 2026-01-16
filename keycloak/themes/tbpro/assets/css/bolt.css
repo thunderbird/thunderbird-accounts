@@ -20,6 +20,6 @@
   --density-relaxed: var(--space-12);
 }
 
-body {
+.bolt-defaults {
   font-size: var(--txt-default);
 }

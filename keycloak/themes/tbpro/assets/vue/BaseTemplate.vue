@@ -14,7 +14,7 @@ const onWiggle = async () => {
 </script>
 
 <template>
-  <section>
+  <section class="bolt-defaults">
     <div class="debug-page-id" @click="onWiggle" :class="{ wiggle: playingAnimation }">{{ pageId }}</div>
 
     <div class="card">
