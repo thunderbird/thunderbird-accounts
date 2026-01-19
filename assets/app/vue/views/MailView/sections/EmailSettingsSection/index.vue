@@ -43,7 +43,7 @@ export default {
       <h2>{{ t('views.mail.sections.emailSettings.emailSettings') }}</h2>
 
       <div class="email-settings-content">
-        <user-info-side :app-passwords="appPasswords" />
+        <user-info-side/>
         <app-password-side :app-passwords="appPasswords" />
       </div>
 

@@ -6,17 +6,11 @@ import {
   NoticeBarTypes,
   PrimaryButton,
   TextInput,
-  BaseBadge,
-  BaseBadgeTypes,
   VisualDivider,
   LinkButton,
 } from '@thunderbirdops/services-ui';
 
 const { t } = useI18n();
-
-defineProps<{
-  appPasswords?: string[];
-}>();
 
 const showDisplayNameForm = ref(false);
 const displayName = ref<string>(null);
@@ -111,15 +105,7 @@ const onCancelSetDisplayName = () => {
 
     <visual-divider />
 
-    <div>
-      <strong>{{ t('views.mail.sections.emailSettings.password') }}:</strong>
-      <template v-if="appPasswords.length > 0">
-        <base-badge :type="BaseBadgeTypes.Set">{{ t('views.mail.sections.emailSettings.set') }}</base-badge>
-      </template>
-      <template v-else>
-        <base-badge :type="BaseBadgeTypes.NotSet">{{ t('views.mail.sections.emailSettings.notSet') }}</base-badge>
-      </template>
-    </div>
+    
   </div>
 </template>
 
