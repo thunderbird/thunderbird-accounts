@@ -206,7 +206,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-7455d336a06ecb2e75c0c96de513d6b528ecfc86
+            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-1bc8ad616feb3e3c921eb99fdec3b083ac77b7d5
             command:
               - start
             portMappings:
