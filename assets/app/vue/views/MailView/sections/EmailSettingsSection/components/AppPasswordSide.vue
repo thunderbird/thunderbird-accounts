@@ -14,10 +14,11 @@ import { APP_PASSWORD_SUPPORT_URL } from '@/defines';
 
 const { t } = useI18n();
 
-defineProps<{
+const props = defineProps<{
   appPasswords?: string[];
 }>();
 
+const accountHasAppPasswords = ref(props.appPasswords.length > 0);
 const showPasswordForm = ref(false);
 const appPassword = ref<string>(null);
 const appPasswordConfirm = ref<string>(null);
@@ -26,6 +27,13 @@ const successMessage = ref<string>(null);
 const isSubmitting = ref(false);
 
 const userEmail = computed(() => window._page?.userEmail);
+
+const resetPasswordForm = () => {
+  errorMessage.value = '';
+  appPassword.value = null;
+  appPasswordConfirm.value = null;
+  showPasswordForm.value = false;
+}
 
 const onSetPasswordSubmit = async () => {
   if (isSubmitting.value) return;
@@ -38,6 +46,8 @@ const onSetPasswordSubmit = async () => {
   errorMessage.value = '';
   isSubmitting.value = true;
 
+  const label = userEmail.value;
+
   try {
     const response = await fetch('/app-passwords/set', {
       method: 'POST',
@@ -46,7 +56,7 @@ const onSetPasswordSubmit = async () => {
         'X-CSRFToken': window._page.csrfToken,
       },
       body: JSON.stringify({
-        name: userEmail.value,
+        name: label,
         password: appPassword.value,
       }),
     });
@@ -55,14 +65,12 @@ const onSetPasswordSubmit = async () => {
 
     if (data.success) {
       // Reset form and close
-      appPassword.value = '';
-      showPasswordForm.value = false;
+      resetPasswordForm();
 
       successMessage.value = t('views.mail.sections.emailSettings.passwordSetSuccessfully');
 
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      window._page.appPasswords = [...window?._page?.appPasswords ?? [], label];
+      accountHasAppPasswords.value = window._page.appPasswords.length > 0;
     } else {
       errorMessage.value = data.error || t('views.mail.sections.emailSettings.anErrorOccurred');
     }
@@ -75,9 +83,7 @@ const onSetPasswordSubmit = async () => {
 };
 
 const onCancelSetPassword = () => {
-  errorMessage.value = '';
-  appPassword.value = '';
-  showPasswordForm.value = false;
+  resetPasswordForm();
 };
 </script>
 
@@ -85,7 +91,7 @@ const onCancelSetPassword = () => {
   <div class="app-password-side-container">
     <div class="app-password-set-indicator-container">
       <strong>{{ t('views.mail.sections.emailSettings.appPassword') }}:</strong>
-      <template v-if="appPasswords.length > 0">
+      <template v-if="accountHasAppPasswords">
         <base-badge :type="BaseBadgeTypes.Set">{{ t('views.mail.sections.emailSettings.set') }}</base-badge>
       </template>
       <template v-else>

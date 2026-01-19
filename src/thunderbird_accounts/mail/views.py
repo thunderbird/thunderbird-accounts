@@ -336,7 +336,6 @@ def app_password_set(request: HttpRequest):
         stalwart_client.save_app_password(request.user.stalwart_primary_email, new_secret)
 
         return JsonResponse({'success': True, 'message': str(_('Password set successfully'))})
-
     except AccountNotFoundError:
         return JsonResponse(
             {'success': False, 'error': str(_('Could not connect to Thundermail, please try again later.'))}, status=500
