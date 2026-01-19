@@ -143,7 +143,7 @@ const onCancelSetPassword = () => {
               isSubmitting ? t('views.mail.sections.emailSettings.saving') : t('views.mail.sections.emailSettings.save')
             }}
           </primary-button>
-          <link-button variant="outline" @click="onCancelSetPassword" :disabled="isSubmitting"
+          <link-button @click="onCancelSetPassword" :disabled="isSubmitting"
             >{{ t('views.mail.sections.emailSettings.cancel') }}
           </link-button>
         </div>
@@ -156,7 +156,7 @@ const onCancelSetPassword = () => {
       }}</primary-button>
     </template>
     <template v-else>
-      <primary-button @click="showPasswordForm = true">{{
+      <primary-button variant="outline" @click="showPasswordForm = true">{{
         t('views.mail.sections.emailSettings.createPasswordButtonLabel')
       }}</primary-button>
     </template>
