@@ -1,22 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import OrbGraphic from '@kc/images/orb-graphic.png';
-
-const pageId = ref(window._page.pageId);
-
-const playingAnimation = ref(false);
-const onWiggle = async () => {
-  playingAnimation.value = true;
-  window.setTimeout(() => {
-    playingAnimation.value = false;
-  }, 1000);
-};
 </script>
 
 <template>
   <section class="bolt-defaults">
-    <div class="debug-page-id" @click="onWiggle" :class="{ wiggle: playingAnimation }">{{ pageId }}</div>
-
     <div class="card">
       <!-- Left side: Orb graphic -->
       <div class="left-side">
@@ -34,22 +22,6 @@ const onWiggle = async () => {
 </template>
 
 <style scoped>
-.wiggle {
-  animation: wiggle 1s;
-}
-
-.debug-page-id {
-  cursor: pointer;
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  background-color: black;
-  color: white;
-  border-radius: 1rem;
-  padding: 0.5rem;
-  z-index: 2;
-}
-
 section {
   min-height: 100vh;
   display: flex;
