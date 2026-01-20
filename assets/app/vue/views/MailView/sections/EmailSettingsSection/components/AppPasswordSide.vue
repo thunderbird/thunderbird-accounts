@@ -11,6 +11,7 @@ import {
   TextInput,
 } from '@thunderbirdops/services-ui';
 import { APP_PASSWORD_SUPPORT_URL } from '@/defines';
+import { PhX } from '@phosphor-icons/vue';
 
 const { t } = useI18n();
 
@@ -22,7 +23,7 @@ const accountHasAppPasswords = ref(props.appPasswords.length > 0);
 const showPasswordForm = ref(false);
 const appPassword = ref<string>(null);
 const appPasswordConfirm = ref<string>(null);
-const errorMessage = ref(window._page?.formError || '');
+const errorMessage = ref<string>(window._page?.formError || null);
 const successMessage = ref<string>(null);
 const isSubmitting = ref(false);
 
@@ -43,7 +44,7 @@ const onSetPasswordSubmit = async () => {
     return;
   }
 
-  errorMessage.value = '';
+  errorMessage.value = null;
   isSubmitting.value = true;
 
   const label = userEmail.value;
@@ -109,33 +110,39 @@ const onCancelSetPassword = () => {
       </i18n-t>
     </p>
 
-    <notice-bar :type="NoticeBarTypes.Success" v-if="successMessage" class="success-message">{{
-      successMessage
-    }}</notice-bar>
+    <notice-bar :type="NoticeBarTypes.Success" v-if="successMessage" class="success-message">
+      {{ successMessage }}
+      <template v-slot:cta>
+        <button class="close-button" @click="successMessage = null"
+          :aria-label="$t('views.mail.sections.emailSettings.close')">
+          <ph-x size="24" />
+        </button>
+      </template>
+    </notice-bar>
 
     <template v-if="showPasswordForm">
       <form ref="appPasswordFormRef" method="post" action="/app-passwords/set">
         <input type="hidden" name="name" :value="userEmail" />
 
-        <text-input
-          v-model="appPassword"
-          name="password"
-          type="password"
-          data-testid="app-passwords-add-password-input"
-        >
+        <text-input v-model="appPassword" name="password" type="password"
+          data-testid="app-passwords-add-password-input">
           {{ t('views.mail.sections.emailSettings.newPassword') }}:
         </text-input>
 
-        <text-input
-          v-model="appPasswordConfirm"
-          name="password-confirm"
-          type="password"
-          data-testid="app-passwords-add-password-confirm-input"
-        >
+        <text-input v-model="appPasswordConfirm" name="password-confirm" type="password"
+          data-testid="app-passwords-add-password-confirm-input">
           {{ t('views.mail.sections.emailSettings.confirmPassword') }}:
         </text-input>
 
-        <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">{{ errorMessage }}</notice-bar>
+        <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">
+          {{ errorMessage }}
+          <template v-slot:cta>
+            <button class="close-button" @click="errorMessage = null"
+              :aria-label="$t('views.mail.sections.emailSettings.close')">
+              <ph-x size="24" />
+            </button>
+          </template>
+        </notice-bar>
 
         <div class="set-password-buttons-container">
           <primary-button @click="onSetPasswordSubmit" :disabled="isSubmitting" data-testid="app-passwords-add-btn">
@@ -143,8 +150,8 @@ const onCancelSetPassword = () => {
               isSubmitting ? t('views.mail.sections.emailSettings.saving') : t('views.mail.sections.emailSettings.save')
             }}
           </primary-button>
-          <link-button @click="onCancelSetPassword" :disabled="isSubmitting"
-            >{{ t('views.mail.sections.emailSettings.cancel') }}
+          <link-button @click="onCancelSetPassword" :disabled="isSubmitting">{{
+            t('views.mail.sections.emailSettings.cancel') }}
           </link-button>
         </div>
       </form>
@@ -153,12 +160,12 @@ const onCancelSetPassword = () => {
     <template v-else-if="appPasswords.length > 0">
       <primary-button variant="outline" @click="showPasswordForm = true">{{
         t('views.mail.sections.emailSettings.changePasswordButtonLabel')
-      }}</primary-button>
+        }}</primary-button>
     </template>
     <template v-else>
       <primary-button variant="outline" @click="showPasswordForm = true">{{
         t('views.mail.sections.emailSettings.createPasswordButtonLabel')
-      }}</primary-button>
+        }}</primary-button>
     </template>
   </div>
 </template>
@@ -197,5 +204,11 @@ const onCancelSetPassword = () => {
   .success-message {
     margin-block-end: 1rem;
   }
+}
+
+.close-button {
+  background-color: transparent;
+  border: 0;
+  cursor: pointer;
 }
 </style>

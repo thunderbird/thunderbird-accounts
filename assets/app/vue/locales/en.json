@@ -93,6 +93,7 @@
           "displayName": "Display name",
           "appPassword": "App Password",
           "appPasswords": "App Passwords",
+          "close": "Close",
           "change": "change",
           "set": "Set",
           "notSet": "Not set",
