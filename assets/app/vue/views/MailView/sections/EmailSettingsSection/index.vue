@@ -12,11 +12,12 @@ import TourCard from '@/components/TourCard.vue';
 import AppPasswordSide from './components/AppPasswordSide.vue';
 import UserInfoSide from './components/UserInfoSide.vue';
 import EmailAliases from './components/EmailAliases.vue';
+import { ref } from 'vue';
 
 const { t } = useI18n();
 const tour = useTour();
 
-const appPasswords = window._page?.appPasswords || [];
+const appPasswords = ref<string[]>(window._page?.appPasswords || []);
 </script>
 
 <script lang="ts">
@@ -43,7 +44,7 @@ export default {
       <h2>{{ t('views.mail.sections.emailSettings.emailSettings') }}</h2>
 
       <div class="email-settings-content">
-        <user-info-side :app-passwords="appPasswords" />
+        <user-info-side/>
         <app-password-side :app-passwords="appPasswords" />
       </div>
 
