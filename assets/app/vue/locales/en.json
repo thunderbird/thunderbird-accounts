@@ -222,9 +222,7 @@
         "done": "Done",
         "step": "Step {step} of {total}",
         "step1Text": "Download Thunderbird (or your preferred email app) and sign in with your primary email and password to access your new account.",
-        "step1Subtitle": "Next: Add custom domains",
         "step2Text": "{'Add a custom domain you own to create additional email addresses like you@yourdomain.com.'}",
-        "step2Subtitle": "Next: Email addresses",
         "step3Text": "Add email addresses using your custom domains."
       }
     },

@@ -83,9 +83,8 @@ export default {
       <tour-card
         v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.CUSTOM_DOMAINS"
         :text="t('views.mail.ftue.step2Text')"
-        :subtitle="t('views.mail.ftue.step2Subtitle')"
         :current-step="tour.currentStep.value"
-        :total-steps="FTUE_STEPS.CUSTOM_DOMAINS"
+        :total-steps="FTUE_STEPS.FINAL"
         show-back
         @next="tour.next()"
         @back="tour.back()"
