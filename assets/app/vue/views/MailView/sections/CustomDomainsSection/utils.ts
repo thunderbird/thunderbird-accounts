@@ -17,30 +17,6 @@ export const generateDNSRecords = (domainName: string) => {
       priority: '10',
     },
     {
-      type: 'CNAME',
-      name: `mail.${domainName}`,
-      content: dnsHostname,
-      priority: '-',
-    },
-    {
-      type: 'CNAME',
-      name: `autoconfig.${domainName}.`,
-      content: dnsHostname,
-      priority: '-',
-    },
-    {
-      type: 'CNAME',
-      name: `autodiscover.${domainName}.`,
-      content: dnsHostname,
-      priority: '-',
-    },
-    {
-      type: 'CNAME',
-      name: `mta-sts.${domainName}.`,
-      content: dnsHostname,
-      priority: '-',
-    },
-    {
       type: 'SRV',
       name: `_jmap._tcp.${domainName}.`,
       content: `1 443 ${dnsHostname}`,
@@ -55,12 +31,6 @@ export const generateDNSRecords = (domainName: string) => {
     {
       type: 'SRV',
       name: `_carddavs._tcp.${domainName}.`,
-      content: `1 443 ${dnsHostname}`,
-      priority: '0',
-    },
-    {
-      type: 'SRV',
-      name: `_imap._tcp.${domainName}.`,
       content: `1 443 ${dnsHostname}`,
       priority: '0',
     },
