@@ -1,6 +1,14 @@
 <script setup lang="ts">
+import { onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 const { t } = useI18n();
+
+onMounted(() => {
+  // After 5 seconds reload the page, if the payment came through they'll see the dashboard.
+  window.setTimeout(() => {
+    window.location.reload();
+  }, 5000);
+});
 </script>
 
 <template>
