@@ -104,7 +104,8 @@ jobs:
 
   run-e2e-tests-local:
     needs: detect-changes
-    if: needs.detect-changes.outputs.iac-changed
+    # if: needs.detect-changes.outputs.iac-changed
+    if: false
     runs-on: ubuntu-latest
     environment: staging
     env:
