@@ -13,7 +13,7 @@ const messageType = computed(() => {
 </script>
 
 <template>
-  <notice-bar class="notice-bar" :type="messageType" v-if="message?.type">{{ message?.summary }}</notice-bar>
+  <notice-bar data-testid="notice-bar" class="notice-bar" :type="messageType" v-if="message?.type">{{ message?.summary }}</notice-bar>
 </template>
 
 <style scoped>

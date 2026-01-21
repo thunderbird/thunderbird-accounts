@@ -12,7 +12,25 @@ import {
 } from "../const/constants";
 
 const authFile = path.join(__dirname, '../test-results/.auth/user.json');
+
+/**
+ * Allows you to show the current page's console log in stdout
+ */
+export const showPageConsoleLog = async (page: Page) => {
+    // Listen for all console logs
+    page.on('console', msg => console.log(`> ${msg.text()}`));
+
+}
   
+/**
+ * Similar to waitForLoadState but works with our vue applications.
+ * During App.vue's onMounted (aka the ready state for our vue app) we add a testid to body, 
+ * this will await networkidle and then look for that testid. 
+ */
+export const waitForVueApp = async (page: Page) => {
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('[data-testid=vue-app]');
+}
 
 /**
  * Navigate to TB Accounts Hub (at the ACCTS_HUB_URL in the test/e2e/.env file). If already signed
@@ -24,16 +42,20 @@ export const navigateToAccountsHubAndSignIn = async (page: Page) => {
     console.log(`navigating to accounts hub ${ACCTS_TARGET_ENV} (${ACCTS_HUB_URL})`);   
     const tbAcctsSignInPage = new TBAcctsOIDCPage(page);
     const tbAcctsHubPage = new TBAcctsHubPage(page);
+    
     await page.goto(`${ACCTS_HUB_URL}`);
-    await page.waitForTimeout(TIMEOUT_5_SECONDS);
-
+    //await page.waitForTimeout(TIMEOUT_5_SECONDS);
+    await waitForVueApp(page);
+    
     // if we are already signed in then we can skip this
     if (await tbAcctsSignInPage.signInHeaderText.isVisible() && await tbAcctsSignInPage.signInButton.isEnabled()) {
         await tbAcctsSignInPage.signIn();
     }
 
+
+    await waitForVueApp(page);
     // now that we're signed into the accounts hub give it time to load
-    await page.waitForTimeout(TIMEOUT_5_SECONDS);
+    //await page.waitForTimeout(TIMEOUT_5_SECONDS);
     await expect(tbAcctsHubPage.dashboardTitle).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     await expect(tbAcctsHubPage.userMenu).toBeVisible();
 }
