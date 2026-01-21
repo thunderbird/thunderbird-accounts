@@ -4,6 +4,7 @@ import FooterBar from '@/components/FooterBar.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { SERVER_MESSAGE_LEVEL } from '@/types';
 import { useRoute } from 'vue-router';
+import { onMounted } from 'vue';
 
 const serverMessages = window._page?.serverMessages ?? [];
 const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
@@ -20,6 +21,10 @@ const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
 };
 
 const route = useRoute();
+
+onMounted(() => {
+  window.document.body.dataset['testid'] = 'vue-app';
+});
 </script>
 
 <template>
