@@ -202,7 +202,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
         <p>{{ record.type }}</p>
         <p>{{ record.name }}</p>
         <p>{{ record.content }}</p>
-        <p>{{ record.priority }}</p>
+        <p>{{ record.priority || '-' }}</p>
       </div>
     </div>
 
