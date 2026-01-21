@@ -34,7 +34,6 @@ export default {
       <tour-card
         v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.DASHBOARD"
         :text="t('views.mail.ftue.step1Text')"
-        :subtitle="t('views.mail.ftue.step1Subtitle')"
         :current-step="tour.currentStep.value"
         :total-steps="FTUE_STEPS.FINAL"
         show-back
