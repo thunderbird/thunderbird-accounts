@@ -22,7 +22,12 @@ from django.contrib.messages import get_messages
 
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import MailClient
-from thunderbird_accounts.mail.exceptions import AccessTokenNotFound, AccountNotFoundError, DomainAlreadyExistsError
+from thunderbird_accounts.mail.exceptions import (
+    AccessTokenNotFound,
+    AccountNotFoundError,
+    DomainAlreadyExistsError,
+    DomainNotFoundError,
+)
 from thunderbird_accounts.mail.utils import decode_app_password
 
 from thunderbird_accounts.mail.models import Account, Email, Domain
@@ -48,7 +53,6 @@ def home(request: HttpRequest):
     max_email_aliases = None
 
     if request.user.is_authenticated and request.user.has_active_subscription:
-
         try:
             account = request.user.account_set.first()
             if not account:
@@ -177,7 +181,7 @@ def contact_submit(request: HttpRequest):
 
     email = data_json.get('email')
 
-    # Name is optional in the UI, 
+    # Name is optional in the UI,
     # but it is required for the Zendesk Requests API's requester object
     # So we default to the email address if the name is not provided
     name = data_json.get('name', email)
@@ -394,12 +398,15 @@ def create_custom_domain(request: HttpRequest):
     try:
         stalwart_client = MailClient()
 
-        domain_id = stalwart_client.create_domain(domain_name)
-        stalwart_client.create_dkim(domain_name)
-
-        now = datetime.datetime.now(datetime.UTC)
         try:
-            Domain.objects.create(name=domain_name, user=request.user, stalwart_id=domain_id, stalwart_created_at=now)
+            domain = stalwart_client.get_domain(domain_name)
+            if domain:
+                raise DomainAlreadyExistsError(domain_name)
+        except DomainNotFoundError:
+            pass
+
+        try:
+            Domain.objects.create(name=domain_name, user=request.user, stalwart_id=None, stalwart_created_at=None)
         except IntegrityError:
             raise DomainAlreadyExistsError(domain_name)
     except DomainAlreadyExistsError:
@@ -458,21 +465,29 @@ def verify_custom_domain(request: HttpRequest):
     now = datetime.datetime.now(datetime.UTC)
 
     try:
-        # For dev / localhost we can't verify domains, so we will always return success
-        if settings.IS_DEV:
-            domain.status = Domain.DomainStatus.VERIFIED
-            domain.verified_at = now
-            domain.save()
-            return JsonResponse({'success': True, 'critical_errors': [], 'warnings': []})
-
         stalwart_client = MailClient()
-        is_verified, critical_errors, warnings = stalwart_client.verify_domain(domain.name)
+
+        # For dev / localhost we can't verify domains, so we will always return success
+        if not settings.IS_DEV:
+            is_verified, critical_errors, warnings = stalwart_client.verify_domain(domain.name)
+        else:
+            is_verified = True
+            critical_errors = []
+            warnings = ['Dev mode activated. Automatically verified domain.']
 
         domain.last_verification_attempt = now
 
         if is_verified:
             domain.status = Domain.DomainStatus.VERIFIED
             domain.verified_at = now
+
+            # Now attach the stalwart domain id to the user domain object
+            domain_id = stalwart_client.create_domain(domain_name)
+            stalwart_client.create_dkim(domain_name)
+            now = datetime.datetime.now(datetime.UTC)
+
+            domain.stalwart_id = domain_id
+            domain.stalwart_created_at = now
             domain.save()
 
             return JsonResponse({'success': True, 'critical_errors': critical_errors, 'warnings': warnings})
@@ -505,6 +520,28 @@ def remove_custom_domain(request: HttpRequest):
     domain = request.user.domains.get(name=domain_name)
     if not domain:
         return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    # Check if we have any aliases for that domain setup
+    try:
+        account = Account.objects.get(user=request.user)
+    except Account.DoesNotExist:
+        logging.error(f'Account not found for user {request.user.uuid}')
+        return JsonResponse(
+            {'success': False, 'error': _('There was an error retrieving your mail account.')},
+            status=404,
+        )
+
+    # Get the local Email object
+    aliases: list[Email] = Email.objects.filter(type=Email.EmailType.ALIAS, account=account).all()
+    for alias in aliases:
+        if alias.address.endswith(f'@{domain_name}'):
+            return JsonResponse(
+                {
+                    'success': False,
+                    'error': 'You must remove all aliases using this domain before you can remove the domain.',
+                },
+                status=400,
+            )
 
     stalwart_client = MailClient()
     try:

@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from thunderbird_accounts.mail.admin.actions import admin_fix_stalwart_ids
 from thunderbird_accounts.mail.admin.forms import CustomEmailBaseForm, CustomAccountBaseForm
-from thunderbird_accounts.mail.models import Email
+from thunderbird_accounts.mail.models import Email, Domain
 
 
 class EmailInline(admin.TabularInline):
@@ -19,4 +19,8 @@ class AccountAdmin(admin.ModelAdmin):
     add_form = CustomAccountBaseForm
 
     inlines = (EmailInline,)
+    readonly_fields = ('uuid', 'stalwart_id', 'stalwart_created_at', 'stalwart_updated_at')
+
+class DomainAdmin(admin.ModelAdmin):
+    model = Domain
     readonly_fields = ('uuid', 'stalwart_id', 'stalwart_created_at', 'stalwart_updated_at')
