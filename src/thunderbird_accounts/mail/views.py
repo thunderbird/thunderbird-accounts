@@ -545,8 +545,13 @@ def remove_custom_domain(request: HttpRequest):
 
     stalwart_client = MailClient()
     try:
-        stalwart_client.delete_domain(domain.name)
-        request.user.domains.filter(name=domain_name).delete()
+        domains = request.user.domains.filter(name=domain_name).all()
+        # There should only be one here, but just in case...
+        for domain in domains:
+            if domain.stalwart_id:
+                stalwart_client.delete_domain(domain.name)
+                break
+            domain.delete()
     except Exception as e:
         logging.error(f'Error removing custom domain: {e}')
         return JsonResponse(
