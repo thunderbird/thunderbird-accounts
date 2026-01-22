@@ -151,3 +151,6 @@ class Domain(BaseStalwartObject):
     last_verification_attempt = models.DateTimeField(
         null=True, blank=True, help_text=_('Date and time of the last verification attempt')
     )
+
+    def __str__(self):
+        return f'{self.name} - {self.status.capitalize()}'
