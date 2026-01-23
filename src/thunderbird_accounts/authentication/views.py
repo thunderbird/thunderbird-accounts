@@ -6,7 +6,6 @@ from django.contrib.auth.decorators import login_required, permission_required
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.db.models import Q
 from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
 from urllib.parse import quote
@@ -76,7 +75,7 @@ def sign_up(request: HttpRequest):
     # This file is loaded before models are ready, so we import locally here...for now.
     from thunderbird_accounts.authentication.clients import KeycloakClient
     from thunderbird_accounts.authentication.models import AllowListEntry, User
-    from thunderbird_accounts.mail.models import Email
+    from thunderbird_accounts.mail.utils import is_address_taken
 
     data = request.POST
     email = data.get('email')
@@ -96,15 +95,8 @@ def sign_up(request: HttpRequest):
         # Redirect the user to the tbpro waitlist
         return HttpResponseRedirect(settings.TB_PRO_WAIT_LIST_URL)
 
-    # Make sure a user does not exist with their email address
-    user = User.objects.filter(Q(email=email) | Q(username=username)).exists()
-    if user:
-        messages.error(request, generic_email_error)
-        return HttpResponseRedirect('/sign-up')
-
     # Make sure there's no email alias with this address
-    aliases = Email.objects.filter(address=email).exists()
-    if aliases:
+    if is_address_taken(email):
         messages.error(request, generic_email_error)
         return HttpResponseRedirect('/sign-up')
 

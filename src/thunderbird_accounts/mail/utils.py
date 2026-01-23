@@ -136,7 +136,7 @@ def fix_archives_folder(access_token, account: Account) -> bool:
             }
             """
 
-            # Note: If the request didn't work, it won't have temp_id in it, 
+            # Note: If the request didn't work, it won't have temp_id in it,
             # or if it's malformed it'll raise a keyerror.
             if temp_id not in inbox_res['methodResponses'][0][1]['created']:
                 raise Exception('Failed to create archive folder')
@@ -168,6 +168,24 @@ def delete_email_addresses_from_stalwart_account(user: User, emails):
 def is_allowed_domain(email_address: str) -> bool:
     """Pass in an email address and see if it's a valid / allowed email domain"""
     return any([email_address.endswith(f'@{domain}') for domain in settings.ALLOWED_EMAIL_DOMAINS])
+
+
+def is_address_taken(email_address: str) -> bool:
+    from thunderbird_accounts.authentication.models import User
+    from thunderbird_accounts.mail.models import Email
+    from django.db.models import Q
+
+    # Make sure a user does not exist with their email address
+    user = User.objects.filter(Q(email=email_address) | Q(username=email_address)).exists()
+    if user:
+        return True
+
+    # Make sure there's no email alias with this address
+    aliases = Email.objects.filter(address=email_address).exists()
+    if aliases:
+        return True
+
+    return False
 
 
 def update_quota_on_stalwart_account(user: User, quota: int):

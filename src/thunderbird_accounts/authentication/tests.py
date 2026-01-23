@@ -931,7 +931,7 @@ class SignUpViewTestcase(TestCase):
         self.assertEqual(str(_('You cannot sign-up with that email address.')), self.get_messages(response)[0].message)
 
     def test_alias_already_exists(self, mock_import_user: MagicMock):
-        """Test that we check if a user exists before creating a user"""
+        """Test that we check if a alias exists before creating a user"""
 
         # Set a return value for oidc_id
         mock_import_user.return_value = 1
