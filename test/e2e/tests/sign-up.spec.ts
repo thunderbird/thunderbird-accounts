@@ -12,6 +12,9 @@ import {
 let signUpPage: TbAcctsSignUpPage;
 
 test.beforeEach(async ({ page }) => {
+  // Remove any authentication cookies before passing it to our page
+  page.context().clearCookies();
+
   signUpPage = new TbAcctsSignUpPage(page);
   await signUpPage.navigateToPage();
 });
@@ -30,7 +33,7 @@ test.describe('sign up form', {
     await signUpPage.submitForm();
 
     // new page!
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     expect(page.url()).toEqual(TB_PRO_WAIT_LIST_URL);
   });
 

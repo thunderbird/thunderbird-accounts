@@ -25,10 +25,10 @@ export const showPageConsoleLog = async (page: Page) => {
 /**
  * Similar to waitForLoadState but works with our vue applications.
  * During App.vue's onMounted (aka the ready state for our vue app) we add a testid to body, 
- * this will await networkidle and then look for that testid. 
+ * this will await domcontentloaded and then look for that testid. 
  */
 export const waitForVueApp = async (page: Page) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForSelector('[data-testid=vue-app]');
 }
 
