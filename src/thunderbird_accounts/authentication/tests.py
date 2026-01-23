@@ -910,6 +910,9 @@ class SignUpViewTestcase(TestCase):
     def test_user_already_exists(self, mock_import_user: MagicMock):
         """Test that we check if a user exists before creating a user"""
 
+        # Set a return value for oidc_id
+        mock_import_user.return_value = 1
+
         User(email=self.wait_list[0], username='hello@example.org').save()
 
         response = self.client.post(
@@ -926,6 +929,32 @@ class SignUpViewTestcase(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers.get('Location'), '/sign-up', msg=self.get_messages(response))
         self.assertEqual(str(_('You cannot sign-up with that email address.')), self.get_messages(response)[0].message)
+
+    def test_alias_already_exists(self, mock_import_user: MagicMock):
+        """Test that we check if a user exists before creating a user"""
+
+        # Set a return value for oidc_id
+        mock_import_user.return_value = 1
+
+        user = User(email='not_in_examples@example.org', username='not_in_examples@example.org').save()
+        account = Account(name='not_in_examples@example.org', user=user).save()
+        Email(address=self.wait_list[0], type=Email.EmailType.ALIAS, account=account).save()
+
+        response = self.client.post(
+            '/users/sign-up/',
+            {
+                'email': self.wait_list[0],
+                'timezone': 'UTC',
+                'locale': 'en',
+                'partialUsername': 'hello',
+                'password': '123',
+                'password-confirm': '123',
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers.get('Location'), '/sign-up', msg=self.get_messages(response))
+        self.assertEqual(str(_('You cannot sign-up with that email address.')), self.get_messages(response)[0].message)
+
 
     def test_passwords_are_empty(self, mock_import_user: MagicMock):
         """Test that we check if passwords exist"""

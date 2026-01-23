@@ -76,6 +76,7 @@ def sign_up(request: HttpRequest):
     # This file is loaded before models are ready, so we import locally here...for now.
     from thunderbird_accounts.authentication.clients import KeycloakClient
     from thunderbird_accounts.authentication.models import AllowListEntry, User
+    from thunderbird_accounts.mail.models import Email
 
     data = request.POST
     email = data.get('email')
@@ -98,6 +99,12 @@ def sign_up(request: HttpRequest):
     # Make sure a user does not exist with their email address
     user = User.objects.filter(Q(email=email) | Q(username=username)).exists()
     if user:
+        messages.error(request, generic_email_error)
+        return HttpResponseRedirect('/sign-up')
+
+    # Make sure there's no email alias with this address
+    aliases = Email.objects.filter(address=email).exists()
+    if aliases:
         messages.error(request, generic_email_error)
         return HttpResponseRedirect('/sign-up')
 
