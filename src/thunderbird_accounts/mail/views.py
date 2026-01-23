@@ -148,7 +148,7 @@ def contact_fields(request: HttpRequest):
         if field['active'] and field['visible_in_portal'] and field['editable_in_portal']:
             field_data = {
                 'id': field['id'],
-                'title': field['title'],
+                'title': field['title_in_portal'] if 'title_in_portal' in field else field['title'],
                 'description': field['description'],
                 'required': field['required'],
                 'type': field['type'],

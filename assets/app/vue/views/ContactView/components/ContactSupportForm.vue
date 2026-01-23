@@ -256,6 +256,7 @@ onMounted(() => {
           :required="field.required"
           :options="field.custom_field_options?.map((option) => ({ label: option.name, value: option.value }))"
           :data-testid="`contact-${field.title}-input`"
+          :help="field.description"
         >
           {{ field.title }}
         </component>
