@@ -1,4 +1,3 @@
-from thunderbird_accounts.settings import USE_ALLOW_LIST
 from unittest.mock import MagicMock, patch
 
 import freezegun
