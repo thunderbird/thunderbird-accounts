@@ -13,7 +13,9 @@ let signUpPage: TbAcctsSignUpPage;
 
 test.beforeEach(async ({ page }) => {
   // Remove any authentication cookies before passing it to our page
-  page.context().clearCookies();
+  await page.context().clearCookies();
+  // Ensure we're cookieless.
+  expect(await page.context().cookies()).toEqual([])
 
   signUpPage = new TbAcctsSignUpPage(page);
   await signUpPage.navigateToPage();
@@ -22,8 +24,7 @@ test.beforeEach(async ({ page }) => {
 test.describe('sign up form', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
 }, () => {
-  test('form successfully submits but is not on allow list', async ({ page }) => {
-    
+  test('form successfully submits but is not on allow list', async ({ page }) => {    
     // Test that no query params = empty recovery email
     await expect(signUpPage.recoveryEmailInput).toBeEmpty();
 
