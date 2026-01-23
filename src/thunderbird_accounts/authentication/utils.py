@@ -43,14 +43,28 @@ class KeycloakRequiredAction(enum.StrEnum):
 
 
 def is_email_in_allow_list(email: str):
-    allow_list = settings.AUTH_ALLOW_LIST
-    if not allow_list:
+    """If USE_ALLOW_LIST is enabled check the email for an existing User or an AllowListEntry."""
+    from thunderbird_accounts.authentication.models import AllowListEntry, User
+
+    # If we're not using the allow list we don't check it.
+    if not settings.USE_ALLOW_LIST:
         return True
 
-    return email.endswith(tuple(allow_list.split(',')))
+    # Are they an existing active user?
+    user = User.objects.filter(email=email).filter(is_active=True).first()
+    if not user:
+        try:
+            # Make sure they're on the allow list
+            AllowListEntry.objects.get(email=email)
+        except AllowListEntry.DoesNotExist:
+            return False
+
+    return True
+
 
 def is_email_reserved(email: str):
     return is_reserved(email)
+
 
 def create_aia_url(action: KeycloakRequiredAction):
     """Create a url for a user to start a keycloak flow.
