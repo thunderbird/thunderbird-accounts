@@ -32,6 +32,11 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         email = claims.get('email', '')
         email_verified = claims.get('email_verified')
 
+        # Ignore allow list for services admin
+        is_services_admin: bool = claims.get('is_services_admin', 'no') == 'yes'
+        if is_services_admin:
+            return True
+
         if not email_verified or not is_email_in_allow_list(email):
             logging.warning(f"Denied user {email} as they're not in the allow list.")
             messages.error(
