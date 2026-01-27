@@ -1,7 +1,6 @@
 import sentry_sdk
 from django.contrib import messages, admin
 from django.contrib.auth.admin import UserAdmin
-from django.contrib.admin.models import LogEntry
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.admin.actions import (
