@@ -1,6 +1,7 @@
 import sentry_sdk
 from django.contrib import messages, admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.admin.models import LogEntry
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.admin.actions import (
@@ -17,7 +18,7 @@ from thunderbird_accounts.mail.clients import MailClient
 
 class CustomUserAdmin(UserAdmin):
     @admin.display(description='Plan')
-    def shorten_plan(user: User) -> str:
+    def shorten_plan(user: User) -> str | None:
         if not user.plan:
             return None
         return user.plan.name
@@ -159,3 +160,27 @@ class CustomUserAdmin(UserAdmin):
 class AllowListEntryAdmin(admin.ModelAdmin):
     search_fields = ('email',)
     search_help_text = _('Search the allow list by email address.')
+
+
+class LogEntryAdmin(admin.ModelAdmin):
+    """Allows Admin Log entries to be shown in the django admin panel"""
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_view_permission(self, request, obj=None):
+        """Only show view permissinos to users with superuser and staff flags"""
+        if not request.user:
+            return False
+        if not request.user.is_superuser or not request.user.is_staff:
+            return False
+        return True
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('content_type')
