@@ -23,6 +23,7 @@ Contents
     autodoc.rst
     frontend.rst
     mail.rst
+    sign-up.rst
     tasks.rst
 
 .. toctree::
