@@ -151,6 +151,36 @@ class FixMissingArchivesFolderMiddlewareTestCase(TestCase):
         account.refresh_from_db()
         self.assertTrue(account.verified_archive_folder)
 
+
+    @patch('thunderbird_accounts.mail.utils.fix_archives_folder')
+    def test_authenticated_user_without_oidc_access_token_should_not_call_fix_archives_folder(
+        self, tiny_jmap_mock: MagicMock, fix_archives_folder_mock: MagicMock
+    ):
+        user = User(username='test@example.org', email='test@example.com')
+        user.save()
+        account = Account(name=user.username, user=user, verified_archive_folder=False)
+        account.save()
+        self.assertFalse(account.verified_archive_folder)
+        # We need an "active" subscription
+        sub = Subscription(
+            paddle_id='foo', paddle_customer_id='bar', status=Subscription.StatusValues.ACTIVE, user=user
+        )
+        sub.save()
+
+        # Mock tiny_jmap
+        tiny_jmap_mock_instance = tiny_jmap_mock()
+        make_jmap_call = MagicMock()
+        tiny_jmap_mock_instance.make_jmap_call = make_jmap_call
+
+        fake_request = self.build_request(user, None)
+
+        # Run the middleware
+        self.middleware(fake_request)
+
+        # Make sure neither jmap calls were sent out, and that our fix archive folder wasn't either.
+        fix_archives_folder_mock.assert_not_called()
+        make_jmap_call.assert_not_called()
+
     @patch('thunderbird_accounts.mail.utils.fix_archives_folder')
     def test_unauthenticated_user_shouldnt_have_fix_archives_folder_called(
         self, tiny_jmap_mock: MagicMock, fix_archives_folder_mock: MagicMock
