@@ -15,7 +15,10 @@ class FixMissingArchivesFolderMiddleware:
         return self.get_response(request)
 
     def check_if_we_need_to_fix_archives_folder(self, request: HttpRequest):
-        oidc_access_token = request.session['oidc_access_token']
+        oidc_access_token = request.session.get('oidc_access_token')
+        if not oidc_access_token:
+            return
+
         user = request.user
 
         # If the user exists, has a stalwart account reference and an oidc access token
