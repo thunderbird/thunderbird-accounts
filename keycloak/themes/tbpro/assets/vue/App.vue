@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import router from '../router';
 import BaseTemplate from '@kc/vue/BaseTemplate.vue';
 
@@ -12,6 +12,10 @@ console.info({
   pageId: pageId.value,
 });
 router.replace({ name: routeName });
+
+onMounted(() => {
+  window.document.body.dataset['testid'] = 'vue-app';
+});
 </script>
 
 <template>

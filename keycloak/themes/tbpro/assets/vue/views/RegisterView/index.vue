@@ -1,9 +1,12 @@
 <script setup>
 import { TextInput, BrandButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { computed, ref, useTemplateRef } from 'vue';
+import { useRoute } from 'vue-router';
 import { PhArrowRight } from '@phosphor-icons/vue';
 import MessageBar from '@kc/vue/components/MessageBar.vue';
 import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
+
+const route = useRoute();
 
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
@@ -19,6 +22,7 @@ const username = ref();
 const email = computed(() => {
   return `${username.value}@thundermail.com`;
 });
+const recoveryEmail = ref(route.query?.email || null);
 
 const usernameError = computed(() => {
   return errors?.username === '' ? null : errors?.username;
@@ -70,10 +74,10 @@ export default {
   <a :href="clientUrl" class="logo-link">
     <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
   </a>
-  <h2>{{ $t('registerTitle') }}</h2>
+  <h2 data-testid="title">{{ $t('registerTitle') }}</h2>
 
   <slot name="notice-bars">
-    <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
+    <notice-bar data-testid="error-notice-bar" :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
       {{ $t('registerError') }}
     </notice-bar>
     <message-bar v-else/>
@@ -104,6 +108,7 @@ export default {
         type="email"
         :error="recoveryEmailError"
         :help="$t('recoveryEmailHelp')"
+        v-model="recoveryEmail"
       >
         {{ $t('recoveryEmail') }}
       </text-input>
@@ -138,7 +143,7 @@ export default {
       <slot name="form-extras"/>
     </div>
     <div class="buttons">
-      <brand-button data-testid="submit" class="submit" @click="onSubmit">
+      <brand-button data-testid="submit-button" class="submit" @click="onSubmit">
         {{ $t('doRegister') }}
 
         <template #iconRight>

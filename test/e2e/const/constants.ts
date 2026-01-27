@@ -4,6 +4,9 @@ export const ACCTS_TARGET_ENV = String(process.env.ACCTS_TARGET_ENV);
 // tb accounts urls
 export const ACCTS_HUB_URL = String(process.env.ACCTS_HUB_URL);
 export const ACCTS_CONTACT_URL = String(`${ACCTS_HUB_URL}/contact`);
+export const ACCTS_SIGN_UP_URL = String(`${ACCTS_HUB_URL}/sign-up`);
+export const ACCTS_SUBSCRIBE_URL = String(`${ACCTS_HUB_URL}/subscribe`);
+export const TB_PRO_WAIT_LIST_URL = String(process.env.TB_PRO_WAIT_LIST_URL);
 
 // sign-in credentials and corresponding info
 export const ACCTS_OIDC_EMAIL = String(process.env.ACCTS_OIDC_EMAIL);
@@ -29,3 +32,6 @@ export const SMTP_PORT = Number(process.env.SMTP_PORT);
 export const IMAP_TLS = String(process.env.IMAP_TLS) ?? 'SSL/TLS';
 export const JMAP_TLS = String(process.env.JMAP_TLS) ?? 'SSL/TLS';
 export const SMTP_TLS = String(process.env.SMTP_TLS) ?? 'SSL/TLS';
+
+export const DEFAULT_LOCALE = 'en';
+export const DEFAULT_TIMEZONE = 'UTC';
