@@ -52,6 +52,13 @@ def home(request: HttpRequest):
     max_custom_domains = None
     max_email_aliases = None
 
+    # This state can only really happen when a user hits PermissionDenied immediately upon logging in.
+    # They will be logged in via Keycloak and then a redirect loop will happen as we deny them permission,
+    # redirect them to login. Since the store_token function occurs before the permission check, we can
+    # use these conditions to ship the user to logout and thus "fixing" the redirect loop.
+    if request.session.get('oidc_access_token') and not request.user.is_authenticated:
+        return HttpResponseRedirect(reverse('logout'))
+
     if request.user.is_authenticated and request.user.has_active_subscription:
         try:
             account = request.user.account_set.first()
@@ -95,7 +102,7 @@ def home(request: HttpRequest):
             max_email_aliases = request.user.plan.mail_address_count
     elif not request.user.is_authenticated:  # Only if the user is not authenticated
         # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
-        public_routes = ['/privacy', '/terms', '/contact', '/sign-up', '/sign-up/complete']
+        public_routes = ['/privacy', '/terms', '/contact', '/sign-up', '/sign-up/complete', '/logout']
 
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))

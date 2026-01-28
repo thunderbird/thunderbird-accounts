@@ -22,7 +22,7 @@ from thunderbird_accounts.authentication.exceptions import (
     InvalidDomainError,
     ImportUserError,
 )
-from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction
+from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction, is_email_in_allow_list
 from thunderbird_accounts.utils.utils import get_absolute_url
 
 
@@ -33,13 +33,21 @@ def start_reset_password_flow(request: HttpRequest):
     return HttpResponseRedirect(create_aia_url(KeycloakRequiredAction.UPDATE_PASSWORD))
 
 
-@login_required
 def start_oidc_logout(request: HttpRequest):
     """Begin the OIDC logout flow without logging out the local Django session.
 
     We redirect the user to the OP's logout endpoint with a post-logout redirect
     back to our callback. Only after the user confirms the logout do we clear the
     local Django session in the callback view.
+
+    This route does not require login due to an edge case with allow lists:
+        * The user somehow creates an account that is not on the allow list
+        * The user logins
+        * The user hits the PermissionDenied exception and is redirected to login
+        * Since Keycloak is logged in, we're immediately redirected back to Accounts
+        * The user is once again hit with PermissionDenied.
+
+    There is now logic to send a unauthenticated user with a oidc_access_token to the logout screen (this route!)
     """
     callback_url = get_absolute_url(reverse('logout_callback'))
     post_logout_redirect = quote(callback_url)
@@ -78,10 +86,12 @@ def sign_up(request: HttpRequest):
     username = f'{partial_username}@{settings.PRIMARY_EMAIL_DOMAIN}'
 
     generic_email_error = _('You cannot sign-up with that email address.')
-    try:
-        # Make sure they're on the allow list
-        allow_list_entry = AllowListEntry.objects.get(email=email)
-    except AllowListEntry.DoesNotExist:
+
+    if not email:
+        messages.error(request, generic_email_error)
+        return HttpResponseRedirect('/sign-up')
+
+    if not is_email_in_allow_list(email):
         # Redirect the user to the tbpro waitlist
         return HttpResponseRedirect(settings.TB_PRO_WAIT_LIST_URL)
 
@@ -90,7 +100,6 @@ def sign_up(request: HttpRequest):
     if user:
         messages.error(request, generic_email_error)
         return HttpResponseRedirect('/sign-up')
-
 
     if any(
         [
@@ -123,6 +132,7 @@ def sign_up(request: HttpRequest):
         user.save()
 
         # Tie the allow list entry with our new user
+        allow_list_entry = AllowListEntry.objects.get(email=email)
         allow_list_entry.user = user
         allow_list_entry.save()
     except (ValueError, InvalidDomainError):

@@ -405,6 +405,8 @@ resources:
                 value: '0'
               - name: REDIS_SHARED_DB
                 value: '10'
+              - name: USE_ALLOW_LIST
+                value: 'True'
               - name: SMTP_HOST
                 value: 'mail.stage-thundermail.com'
               - name: SMTP_PORT
@@ -569,6 +571,8 @@ resources:
                 value: '0'
               - name: REDIS_SHARED_DB
                 value: '10'
+              - name: USE_ALLOW_LIST
+                value: 'True'
               - name: SMTP_HOST
                 value: 'mail.stage-thundermail.com'
               - name: SMTP_PORT

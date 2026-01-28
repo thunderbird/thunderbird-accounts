@@ -409,6 +409,8 @@ resources:
                 value: '0'
               - name: REDIS_SHARED_DB
                 value: '10'
+              - name: USE_ALLOW_LIST
+                value: 'True'
               - name: SMTP_HOST
                 value: 'mail.thundermail.com'
               - name: SMTP_PORT
@@ -449,6 +451,7 @@ resources:
                 value: '44379231787027'
               - name: ZENDESK_FORM_OS_FIELD_ID
                 value: '44379263732755'
+
 
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -587,6 +590,8 @@ resources:
                 value: '10'
               - name: TBA_CELERY
                 value: "yes"
+              - name: USE_ALLOW_LIST
+                value: 'True'
               - name: OIDC_URL_AUTH
                 value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth/"
               - name: OIDC_URL_TOKEN

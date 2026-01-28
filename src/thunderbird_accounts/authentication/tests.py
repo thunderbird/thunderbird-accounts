@@ -7,7 +7,7 @@ from django.contrib.admin import AdminSite
 from django.core.exceptions import PermissionDenied
 from django.forms import model_to_dict
 from django.http import HttpRequest
-from django.test import Client as RequestClient
+from django.test import Client as RequestClient, override_settings
 from django.test import TestCase
 from django.utils.translation import gettext_lazy as _
 
@@ -474,6 +474,7 @@ class AdminDeleteUserTestCase(TestCase):
         mock_delete_principal.assert_not_called()
 
 
+@override_settings(USE_ALLOW_LIST=True)
 class AccountsOIDCBackendTestCase(TestCase):
     def setUp(self):
         self.claim_oidc_id = 'abc123'
@@ -488,6 +489,10 @@ class AccountsOIDCBackendTestCase(TestCase):
         self.backend.request = HttpRequest()
         self.backend.request._messages = MagicMock()
 
+        # Remove any allow list entries
+        AllowListEntry.objects.all().delete()
+
+
     def test_create_user_success(self):
         claims = {
             'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
@@ -501,6 +506,9 @@ class AccountsOIDCBackendTestCase(TestCase):
             'family_name': 'Example',
             'email': 'admin@example.com',
         }
+
+        # Allow the user to sign-up
+        AllowListEntry.objects.create(email=claims.get('email'))
 
         user = self.backend.create_user(claims)
         self.assertIsNotNone(user)
@@ -525,6 +533,9 @@ class AccountsOIDCBackendTestCase(TestCase):
             'email_verified': True,
         }
 
+        # Allow the user to sign-up
+        AllowListEntry.objects.create(email=claims.get('email'))
+
         user = self.backend.create_user(claims)
         self.assertIsNotNone(user)
         self.assertEqual(user.email, claims.get('email'))
@@ -543,23 +554,9 @@ class AccountsOIDCBackendTestCase(TestCase):
         with self.assertRaises(PermissionDenied):
             self.backend.create_user(claims)
 
-    def test_create_user_fail_on_not_in_allow_list(self):
-        settings.AUTH_ALLOW_LIST = 'not_example.org'
-        claims = {
-            'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
-            'preferred_username': 'admin@example.org',
-            'email': 'admin@example.com',
-            'email_verified': True,
-        }
-
-        with self.assertRaises(PermissionDenied):
-            self.backend.create_user(claims)
-
-        settings.AUTH_ALLOW_LIST = ''
-
     def test_create_user_fail_on_not_on_allow_list(self):
-        _original_settings = settings.ALLOWED_EMAIL_DOMAINS
-        settings.ALLOWED_EMAIL_DOMAINS = ['example.ca']
+        # Just here to demonstrate that this user isn't on the allow list
+        AllowListEntry.objects.create(email='admin@example.ca')
         claims = {
             'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
             'preferred_username': 'admin@example.org',
@@ -570,8 +567,6 @@ class AccountsOIDCBackendTestCase(TestCase):
         with self.assertRaises(PermissionDenied):
             self.backend.create_user(claims)
 
-        settings.ALLOWED_EMAIL_DOMAINS = _original_settings
-
     def test_create_user_superuser_access(self):
         claims = {
             'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
@@ -580,6 +575,9 @@ class AccountsOIDCBackendTestCase(TestCase):
             'email_verified': True,
             'is_services_admin': 'yes',
         }
+
+        # Allow the user to sign-up
+        AllowListEntry.objects.create(email=claims.get('email'))
 
         user = self.backend.create_user(claims)
         self.assertIsNotNone(user)
@@ -596,6 +594,9 @@ class AccountsOIDCBackendTestCase(TestCase):
             'given_name': 'Example Admin',
             'is_services_admin': 'yes',
         }
+
+        # Allow the user to sign-up
+        AllowListEntry.objects.create(email=claims.get('email'))
 
         user = User.objects.create(
             email=claims.get('email'),
@@ -686,7 +687,6 @@ class AccountsOIDCBackendTestCase(TestCase):
     def test_update_inactive_user_does_check_allowlist(self):
         """Testing update_user to make sure not including is_services_admin in claim will leave is_staff,
         and is_superuser fields alone."""
-        settings.AUTH_ALLOW_LIST = 'example.org'
         claims = {
             'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
             'preferred_username': 'admin@example.org',
@@ -852,6 +852,7 @@ class IsReservedUnitTests(TestCase):
             self.assertFalse(is_reserved(name))
 
 
+@override_settings(USE_ALLOW_LIST=True)
 @patch('thunderbird_accounts.authentication.clients.KeycloakClient.import_user')
 class SignUpViewTestcase(TestCase):
     def setUp(self):

@@ -21,6 +21,7 @@ from sentry_sdk.types import Event, Hint
 
 # Help language servers understand django
 import django_stubs_ext
+
 django_stubs_ext.monkeypatch()
 
 # Quick-start development settings - unsuitable for production
@@ -43,7 +44,7 @@ IS_DOCS = APP_ENV == 'docs'
 IS_DEV = APP_ENV == 'dev'
 
 # Only allow DEBUG on dev or test envs.
-DEBUG: bool = os.getenv('APP_DEBUG') and (IS_DEV or APP_ENV == 'test')
+DEBUG: bool = os.getenv('APP_DEBUG') == 'True' and (IS_DEV or APP_ENV == 'test')
 
 
 def before_send(event: Event, hint: Hint) -> Event | None:
@@ -95,7 +96,7 @@ LOGIN_MAX_AGE_IN_SECONDS = 60 * 3
 IS_IN_ALLOW_LIST_CACHE_KEY = 'is_in_allow_list'
 IS_IN_ALLOW_LIST_CACHE_MAX_AGE_IN_SECONDS = 60 * 60 * 24
 
-AUTH_ALLOW_LIST: str = os.getenv('AUTH_ALLOW_LIST')
+USE_ALLOW_LIST: bool = os.getenv('USE_ALLOW_LIST') == 'True'
 
 # MailChimp form URL for Wait List
 WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
@@ -170,7 +171,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'mozilla_django_oidc.middleware.SessionRefresh',
     # This should be last
-    'thunderbird_accounts.mail.middleware.FixMissingArchivesFolderMiddleware'
+    'thunderbird_accounts.mail.middleware.FixMissingArchivesFolderMiddleware',
 ]
 
 ROOT_URLCONF = 'thunderbird_accounts.urls'
@@ -311,7 +312,11 @@ LOGGING = {
         'level': 'DEBUG',
     },
     'loggers': {
-        'mozilla_django_oidc': {'handlers': ['console'], 'level': 'DEBUG'},
+        # Reduce spam logs
+        'mozilla_django_oidc': {'handlers': ['console'], 'level': 'WARNING'},
+        'asyncio': {
+            'level': 'WARNING',
+        },
     },
 }
 
