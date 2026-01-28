@@ -936,8 +936,10 @@ class SignUpViewTestcase(TestCase):
         # Set a return value for oidc_id
         mock_import_user.return_value = 1
 
-        user = User(email='not_in_examples@example.org', username='not_in_examples@example.org').save()
-        account = Account(name='not_in_examples@example.org', user=user).save()
+        alias = 'not_in_examples'
+
+        user = User(email='not_in_examples@example.org', username=f'{alias}@example.org').save()
+        account = Account(name='{alias}@example.org', user=user).save()
         Email(address=self.wait_list[0], type=Email.EmailType.ALIAS, account=account).save()
 
         response = self.client.post(
@@ -946,7 +948,7 @@ class SignUpViewTestcase(TestCase):
                 'email': self.wait_list[0],
                 'timezone': 'UTC',
                 'locale': 'en',
-                'partialUsername': 'hello',
+                'partialUsername': alias,
                 'password': '123',
                 'password-confirm': '123',
             },
