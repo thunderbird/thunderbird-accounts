@@ -419,10 +419,10 @@ CONNECTION_INFO = {
     'SMTP': {'HOST': os.getenv('SMTP_HOST'), 'PORT': os.getenv('SMTP_PORT'), 'TLS': os.getenv('SMTP_TLS') == 'True'},
 }
 
-ALLOWED_EMAIL_DOMAINS = (
-    [domain.strip() for domain in os.getenv('ALLOWED_EMAIL_DOMAINS').split(',')]
+ALLOWED_EMAIL_DOMAINS: list[str] = (
+    [domain.strip() for domain in os.getenv('ALLOWED_EMAIL_DOMAINS', '').split(',')]
     if os.getenv('ALLOWED_EMAIL_DOMAINS')
-    else None
+    else []
 )
 
 MIN_CUSTOM_DOMAIN_ALIAS_LENGTH = int(os.getenv('MIN_CUSTOM_DOMAIN_ALIAS_LENGTH', '3'))

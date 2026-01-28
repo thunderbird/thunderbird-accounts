@@ -28,7 +28,7 @@ from thunderbird_accounts.mail.exceptions import (
     DomainAlreadyExistsError,
     DomainNotFoundError,
 )
-from thunderbird_accounts.mail.utils import decode_app_password
+from thunderbird_accounts.mail.utils import decode_app_password, is_address_taken
 
 from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail.zendesk import ZendeskClient
@@ -576,11 +576,12 @@ def add_email_alias(request: HttpRequest):
     data = json.loads(request.body)
     email_alias = data.get('email-alias')
     domain = data.get('domain')
+    full_email_alias = f'{email_alias}@{domain}'
 
     if not email_alias or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)
 
-    if is_reserved(email_alias):
+    if is_reserved(email_alias) or is_address_taken(full_email_alias):
         return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
 
     if (
@@ -594,8 +595,6 @@ def add_email_alias(request: HttpRequest):
             {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
             status=400,
         )
-
-    full_email_alias = f'{email_alias}@{domain}'
 
     # Get the user's account
     try:
