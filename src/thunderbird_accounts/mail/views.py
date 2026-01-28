@@ -107,6 +107,11 @@ def home(request: HttpRequest):
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))
 
+    form_data = request.session.get('form_data')
+    if request.session.get('form_data'):
+        # Clear form_data for any additional reloads
+        request.session['form_data'] = {}
+
     return TemplateResponse(
         request,
         'mail/index.html',
@@ -125,6 +130,7 @@ def home(request: HttpRequest):
             'server_messages': [
                 {'level': message.level, 'message': str(message.message)} for message in get_messages(request)
             ],
+            'form_data': form_data or None,
         },
     )
 

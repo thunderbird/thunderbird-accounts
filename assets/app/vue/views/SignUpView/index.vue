@@ -30,6 +30,10 @@ window._page.currentView = {
   clientUrl: window.location.origin,
   currentLocale: locale,
   tbProPrimaryDomain: window._page.tbProPrimaryDomain,
+  attributes: {
+    'username': window._page?.formData?.username || '',
+    'email': window._page?.formData?.email || '',
+  }
 };
 window._page.pageId = route.name.toString();
 
