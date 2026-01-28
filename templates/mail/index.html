@@ -30,7 +30,7 @@
     userDisplayName: {{ user_display_name|to_json|safe }},
     username: {{ user.username|to_json|safe }},
     formError: {{ form_error|to_json|safe|default:'null' }},
-    formData: {{ request.session.form_data|to_json|safe|default:'null' }},
+    formData: {{ form_data|to_json|safe|default:'null' }},
     connectionInfo: {{ connection_info|to_json|safe }},
     appPasswords: {{ app_passwords|safe }},
     allowedDomains: {{ allowed_domains|safe }},
