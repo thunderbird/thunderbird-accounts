@@ -72,6 +72,13 @@ def oidc_logout_callback(request: HttpRequest):
 
 @sensitive_post_parameters('password', 'password-confirm')
 def sign_up(request: HttpRequest):
+    """POST endpoint for the Accounts hosted sign up form.
+    The frontend files technically live in Keycloak's vue app but are imported by Accounts so we can call this endpoint.
+    (See `https://pro-services-docs.thunderbird.net/en/latest/sign-up.html`_ for more details.)
+
+    We create the Keycloak user and attach its uuid to the local Account's user object.
+    We only create the local Accounts user object if the Keycloak user object was successfully created.
+    """
     # This file is loaded before models are ready, so we import locally here...for now.
     from thunderbird_accounts.authentication.clients import KeycloakClient
     from thunderbird_accounts.authentication.models import AllowListEntry, User
