@@ -20,6 +20,7 @@ declare global {
         'JMAP': {'HOST': string, 'PORT': number, 'TLS': boolean},
       };
       formError?: string | null;
+      formData?: object | string | null; // Should be object | null, but template rendering can be tricky...
       csrfToken?: string;
       paddleToken?: string;
       paddleEnvironment?: string;

@@ -16,6 +16,13 @@
         clientUrl: '${client.baseUrl}',
         currentLocale: '${(locale.currentLanguageTag)!"en"}',
         tbProPrimaryDomain: '${properties.tbproPrimaryDomain}',
+        attributes: {
+          // Holds the profile values between page loads, attributes can technically have multi-values but registration does not.
+          // For reference: https://github.com/keycloak/keycloak/blob/47b91b995dd3f2089bf15400fbcbe18ebd91f16e/themes/src/main/resources/theme/base/login/user-profile-commons.ftl
+          //<#list profile.attributes as attribute>
+          '${attribute.name}': '${(attribute.value)!""}',
+          //</#list>
+        },
       };
       window._l10n = {
         ...window._l10n,
@@ -37,7 +44,7 @@
         registerError: '${msg("registerError")}',
         recoveryEmail: '${msg("recoveryEmail")}',
         recoveryEmailHelp: '${msg("recoveryEmailHelp")}',
-        invalidPasswordDoesntMatch: '${msg("invalidPasswordConfirmMessage")}'
+        invalidPasswordDoesntMatch: '${msg("invalidPasswordConfirmMessage")}',
       };
     </script>
     </#if>

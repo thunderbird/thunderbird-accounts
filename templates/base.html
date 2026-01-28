@@ -25,6 +25,7 @@
     isAuthenticated: {{ user.is_authenticated|to_json }},
     userEmail: {{ user.email|to_json|safe }},
     formError: {{ form_error|to_json|safe|default:'null' }},
+    formData: {{ request.session.form_data|to_json|safe|default:'null' }},
     {% block extra_page_params %}{% endblock %}
   };
   csrfToken.remove();
