@@ -96,7 +96,7 @@ def sign_up(request: HttpRequest):
         return HttpResponseRedirect(settings.TB_PRO_WAIT_LIST_URL)
 
     # Make sure there's no email alias with this address
-    if is_address_taken(email):
+    if is_address_taken(username):
         messages.error(request, generic_email_error)
         return HttpResponseRedirect('/sign-up')
 

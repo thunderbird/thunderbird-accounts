@@ -171,6 +171,8 @@ def is_allowed_domain(email_address: str) -> bool:
 
 
 def is_address_taken(email_address: str) -> bool:
+    """Checks an email address (thundermail address or custom alias, not recovery email!) against known 
+    user's recovery email, thundermail address or custom aliases."""
     from thunderbird_accounts.authentication.models import User
     from thunderbird_accounts.mail.models import Email
     from django.db.models import Q
