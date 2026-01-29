@@ -12,17 +12,18 @@ const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
 const clientUrl = window._page.currentView?.clientUrl;
 const tbProPrimaryDomain = `@${window._page.currentView?.tbProPrimaryDomain}`;
+const attributeValues = window._page.currentView?.attributes;
 
 // Fixed values
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
 const locale = window._page.currentView?.currentLocale;
 
 // Computed values
-const username = ref();
+const username = ref(attributeValues?.username?.split('@')[0] || null);
 const email = computed(() => {
   return `${username.value}@thundermail.com`;
 });
-const recoveryEmail = ref(route.query?.email || null);
+const recoveryEmail = ref(route.query?.email || attributeValues?.email || null);
 
 const usernameError = computed(() => {
   return errors?.username === '' ? null : errors?.username;

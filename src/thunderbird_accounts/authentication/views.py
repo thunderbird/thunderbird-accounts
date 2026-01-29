@@ -70,6 +70,7 @@ def oidc_logout_callback(request: HttpRequest):
     return HttpResponseRedirect('/')
 
 
+@require_http_methods(['POST'])
 @sensitive_post_parameters('password', 'password-confirm')
 def sign_up(request: HttpRequest):
     """POST endpoint for the Accounts hosted sign up form.
@@ -93,6 +94,11 @@ def sign_up(request: HttpRequest):
     username = f'{partial_username}@{settings.PRIMARY_EMAIL_DOMAIN}'
 
     generic_email_error = _('You cannot sign-up with that email address.')
+
+    request.session['form_data'] = {
+        'username': username,
+        'email': email,
+    }
 
     if not email:
         messages.error(request, generic_email_error)
@@ -151,6 +157,9 @@ def sign_up(request: HttpRequest):
             request, ex.error_desc if ex.error_desc else _('There was an unknown error, please try again later.')
         )
         return HttpResponseRedirect('/sign-up')
+
+    # Clear form_data on success
+    request.session['form_data'] = {}
 
     return HttpResponseRedirect('/sign-up/complete')
 
