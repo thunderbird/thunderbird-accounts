@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute, useRouter } from 'vue-router';
 import { UserAvatar } from '@thunderbirdops/services-ui';
 
 defineProps<{
@@ -9,12 +8,14 @@ defineProps<{
 }>();
 
 const { t } = useI18n();
-const router = useRouter();
-const currentRoute = useRoute();
 
 const internalMenuItems = [
   {
-    label: t('components.userMenu.contact'),
+    label: t('components.userMenu.account'),
+    to: '/dashboard',
+  },
+  {
+    label: t('components.userMenu.support'),
     to: '/contact',
   },
 ]
@@ -27,14 +28,9 @@ const externalMenuItems = [
 ];
 
 const showMenu = ref(false);
-const menuRef = ref<HTMLElement | null>(null);
+const menuRef = useTemplateRef<HTMLElement>('menuRef');
 
 const toggleMenu = () => {
-  if (currentRoute.path.startsWith('/mail')) {
-    router.push('/');
-    return;
-  }
-
   showMenu.value = !showMenu.value;
 };
 
@@ -59,24 +55,17 @@ onBeforeUnmount(() => {
 
     <div v-if="showMenu" class="dropdown">
       <!-- Holds internal links (VueJS routes) -->
-      <router-link
-        v-for="internalItem in internalMenuItems"
-        :key="internalItem.label"
-        :to="internalItem.to"
-      >
+      <router-link v-for="internalItem in internalMenuItems" :key="internalItem.label" :to="internalItem.to"
+        @click="toggleMenu">
         {{ internalItem.label }}
       </router-link>
 
       <!-- Holds external links (primarily Django routes) -->
-      <a
-        v-for="externalItem in externalMenuItems"
-        :key="externalItem.label"
-        :href="externalItem.href"
-      >
+      <a v-for="externalItem in externalMenuItems" :key="externalItem.label" :href="externalItem.href">
         {{ externalItem.label }}
       </a>
     </div>
-</button>
+  </button>
 </template>
 
 <style scoped>
@@ -85,12 +74,14 @@ onBeforeUnmount(() => {
   display: inline-block;
   background: none;
   border: none;
-  cursor: pointer;
 
   /* TODO: Temporary fix for UserAvatar color bug */
   .avatar {
+    cursor: pointer;
+
     & :first-child {
-      color: #eeeef0; /* var(--colour-ti-base) dark mode */
+      color: #eeeef0;
+      /* var(--colour-ti-base) dark mode */
     }
   }
 
@@ -104,6 +95,7 @@ onBeforeUnmount(() => {
     box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
     padding: 0.5rem 0;
     min-width: 150px;
+    z-index: var(--z-index-header-dropdown);
 
     a {
       display: flex;

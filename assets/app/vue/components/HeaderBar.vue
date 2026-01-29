@@ -15,40 +15,16 @@ const navItemsAccounts = [
     route: '/dashboard',
     i18nKey: 'dashboard',
   },
-  // {
-  //   route: '/manage-mfa',
-  //   i18nKey: 'manageMfa',
-  // },
-  // {
-  //   route: '/privacy-and-data',
-  //   i18nKey: 'privacyAndData',
-  // },
-];
-
-const navItemsMail = [
   {
     route: '/mail',
-    i18nKey: 'dashboard',
+    i18nKey: 'manageThundermail',
   },
-  {
-    route: '/mail#email-settings',
-    i18nKey: 'manageEmails',
-  },
-  {
-    route: '/mail#custom-domains',
-    i18nKey: 'customDomains',
-  },
-  // TODO: Uncomment when implementing security settings
-  // {
-  //   route: '/mail/security-settings',
-  //   i18nKey: 'securitySettings',
-  // },
 ];
 
 const currentRoute = useRoute();
 
 const isThundermail = computed(() => currentRoute.path.startsWith('/mail'));
-const navItems = computed(() => isThundermail.value ? navItemsMail : navItemsAccounts);
+const navItems = computed(() => navItemsAccounts);
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const logoSrc = computed(() => {
@@ -103,13 +79,30 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   height: 68px;
   padding: 1rem;
   backdrop-filter: blur(24px);
   box-shadow: 0 0.5rem 1.5rem 0 rgba(0, 0, 0, 0.1);
   background-image: linear-gradient(to top, #1a202c, #2f3a50);
+  width: 100%;
+
+  /* Without this we can't be on top of main content when we need */
+  position: relative;
+  z-index: var(--z-index-header-dropdown);
+
+  &:first-child {
+    margin-right: auto;
+  }
+
+  &:last-child {
+    margin-left: auto;
+  }
 
   nav.desktop {
+    width: 100%;
+    position: absolute;
+    justify-content: center;
     display: none;
   }
 
@@ -117,7 +110,8 @@ header {
     text-decoration: none;
 
     .brand.outline {
-      color: #eeeef0; /* var(--colour-ti-base) dark mode */
+      color: #eeeef0;
+      /* var(--colour-ti-base) dark mode */
     }
   }
 
@@ -147,14 +141,17 @@ header {
 @media (min-width: 768px) {
   header {
     nav.desktop {
-      display: block;
+      display: flex;
     }
   }
 }
 
 @media (min-width: 1024px) {
-  header {
+
+  header> :first-child,
+  header> :last-child {
     padding: 1rem 3.5rem;
   }
+
 }
 </style>
