@@ -42,7 +42,6 @@ const handleClickOutside = (event: MouseEvent) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
-  console.log("Mounted click outside!");
 });
 
 onBeforeUnmount(() => {
