@@ -6,7 +6,6 @@ from django.contrib.auth.decorators import login_required, permission_required
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.db.models import Q
 from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
 from urllib.parse import quote
@@ -73,9 +72,17 @@ def oidc_logout_callback(request: HttpRequest):
 
 @sensitive_post_parameters('password', 'password-confirm')
 def sign_up(request: HttpRequest):
+    """POST endpoint for the Accounts hosted sign up form.
+    The frontend files technically live in Keycloak's vue app but are imported by Accounts so we can call this endpoint.
+    (See `https://pro-services-docs.thunderbird.net/en/latest/sign-up.html`_ for more details.)
+
+    We create the Keycloak user and attach its uuid to the local Account's user object.
+    We only create the local Accounts user object if the Keycloak user object was successfully created.
+    """
     # This file is loaded before models are ready, so we import locally here...for now.
     from thunderbird_accounts.authentication.clients import KeycloakClient
     from thunderbird_accounts.authentication.models import AllowListEntry, User
+    from thunderbird_accounts.mail.utils import is_address_taken
 
     data = request.POST
     email = data.get('email')
@@ -95,9 +102,8 @@ def sign_up(request: HttpRequest):
         # Redirect the user to the tbpro waitlist
         return HttpResponseRedirect(settings.TB_PRO_WAIT_LIST_URL)
 
-    # Make sure a user does not exist with their email address
-    user = User.objects.filter(Q(email=email) | Q(username=username)).exists()
-    if user:
+    # Make sure there's no email alias with this address
+    if is_address_taken(username):
         messages.error(request, generic_email_error)
         return HttpResponseRedirect('/sign-up')
 

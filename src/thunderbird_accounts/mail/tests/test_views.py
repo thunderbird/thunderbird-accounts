@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.mail.models import Account, Domain
+from thunderbird_accounts.mail.models import Account, Domain, Email
 
 
 class HomeViewRedirectTestCase(TestCase):
@@ -118,6 +118,26 @@ class AddEmailAliasTestCase(TestCase):
 
     def test_reserved(self):
         email_alias_url = reverse('add_email_alias')
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'admin', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(
+                json.loads(response.content.decode()),
+                {'success': False, 'error': _('You cannot use this email address.')},
+            )
+
+    def test_already_used_alias(self):
+        """Ensure that creating an email alias that is already in-use will error out."""
+        email_alias_url = reverse('add_email_alias')
+
+        Email(address=f'admin@{settings.PRIMARY_EMAIL_DOMAIN}').save()
 
         with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
             instance = Mock()
