@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { UserAvatar } from '@thunderbirdops/services-ui';
 
@@ -28,11 +28,26 @@ const externalMenuItems = [
 ];
 
 const showMenu = ref(false);
-const menuRef = ref<HTMLElement | null>(null);
+const menuRef = useTemplateRef<HTMLElement>('menuRef');
 
 const toggleMenu = () => {
   showMenu.value = !showMenu.value;
 };
+
+const handleClickOutside = (event: MouseEvent) => {
+  if (menuRef.value && !menuRef.value.contains(event.target as Node)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+  console.log("Mounted click outside!");
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <template>
@@ -52,28 +67,19 @@ const toggleMenu = () => {
       </a>
     </div>
   </button>
-  <div v-if="showMenu" @click="toggleMenu" id="fullscreen-clickbox" />
 </template>
 
 <style scoped>
-#fullscreen-clickbox {
-  width: 100vw;
-  height: 100vh;
-  top: 0;
-  left: 0;
-  position: fixed;
-  z-index: var(--z-index-fullscreen-clickbox);
-}
-
 .user-menu {
   position: relative;
   display: inline-block;
   background: none;
   border: none;
-  cursor: pointer;
 
   /* TODO: Temporary fix for UserAvatar color bug */
   .avatar {
+    cursor: pointer;
+
     & :first-child {
       color: #eeeef0;
       /* var(--colour-ti-base) dark mode */
