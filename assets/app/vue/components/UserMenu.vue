@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
+import { onBeforeUnmount, onMounted, ref, useTemplateRef, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import { UserAvatar } from '@thunderbirdops/services-ui';
 
 defineProps<{
@@ -8,17 +9,28 @@ defineProps<{
 }>();
 
 const { t } = useI18n();
+const currentRoute = useRoute();
 
-const internalMenuItems = [
-  {
-    label: t('components.userMenu.account'),
-    to: '/dashboard',
-  },
-  {
+const isSubscribePage = computed(() => currentRoute.path.startsWith('/subscribe'));
+
+const internalMenuItems = computed(() => {
+  const items = []
+
+  // Only show the account / dashboard link on non subscribe pages
+  if (!isSubscribePage.value) {
+    items.push({
+      label: t('components.userMenu.account'),
+      to: '/dashboard',
+    });
+  }
+
+  items.push({
     label: t('components.userMenu.support'),
     to: '/contact',
-  },
-]
+  });
+
+  return items;
+});
 
 const externalMenuItems = [
   {

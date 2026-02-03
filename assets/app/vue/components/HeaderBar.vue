@@ -24,6 +24,7 @@ const navItemsAccounts = [
 const currentRoute = useRoute();
 
 const isThundermail = computed(() => currentRoute.path.startsWith('/mail'));
+const isSubscribePage = computed(() => currentRoute.path.startsWith('/subscribe'));
 const navItems = computed(() => navItemsAccounts);
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
@@ -50,7 +51,7 @@ const logoSrc = computed(() => {
     </template>
 
     <template v-if="isAuthenticated">
-      <nav class="desktop">
+      <nav class="desktop" v-if="!isSubscribePage">
         <ul>
           <li v-for="navItem in navItems" :key="navItem.route">
             <router-link :to="navItem.route" :class="{ active: currentRoute.path === navItem.route }">
