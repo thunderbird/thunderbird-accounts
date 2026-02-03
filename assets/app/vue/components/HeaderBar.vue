@@ -100,9 +100,6 @@ header {
   }
 
   nav.desktop {
-    width: 100%;
-    position: absolute;
-    justify-content: center;
     display: none;
   }
 
@@ -141,7 +138,10 @@ header {
 @media (min-width: 768px) {
   header {
     nav.desktop {
-      display: flex;
+      display: block;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
     }
   }
 }
