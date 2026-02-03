@@ -1,0 +1,6 @@
+:root {
+    /* Z-index definitions */
+    --z-index-base: 1;
+    --z-index-header-dropdown: 10;
+    --z-index-fullscreen-clickbox: calc(var(--z-index-header-dropdown, 0) - 1);
+}
