@@ -14,7 +14,7 @@
       "needSupport": "Need Support?"
     },
     "yourServices": {
-      "yourServices": "Your Services"
+      "yourServices": "Manage Your Services"
     },
     "userMenu": {
       "account": "Account",
@@ -35,6 +35,19 @@
         "change": "change",
         "set": "Set",
         "on": "On"
+      },
+      "getStartedCard": {
+        "enableThunderbirdPro": "Enable Thunderbird Pro",
+        "enableThunderbirdProDescription": "Install the add-on from Thunderbird Desktop to automatically set up your Thundermail and Send accounts.",
+        "getStarted": "Get Started",
+        "stepOne": "Open {accountSettings}.",
+        "stepTwo": "Select {addonsAndThemes}.",
+        "stepThree": "Search for {thunderbirdPro}. Download and install the add-on.",
+        "accountSettings": "Account Settings",
+        "addonsAndThemes": "Add-ons and Themes",
+        "thunderbirdPro": "Thunderbird Pro",
+        "needThunderbirdDesktop": "Need Thunderbird Desktop?",
+        "installNow": "Install Now"
       },
       "privacyAndDataCard": {
         "privacyAndData": "Privacy & Data",

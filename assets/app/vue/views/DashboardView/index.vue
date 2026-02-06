@@ -4,6 +4,7 @@ import YourServices from '@/components/YourServices.vue';
 import AccountCard from './components/AccountCard.vue';
 import PrivacyAndDataCard from './components/PrivacyAndDataCard.vue';
 import YourCurrentSubscription from './components/YourCurrentSubscription.vue';
+import GetStartedCard from './components/GetStartedCard.vue';
 </script>
 
 <script lang="ts">
@@ -15,6 +16,7 @@ export default {
 <template>
   <div class="dashboard-view">
     <div class="dashboard-view-cards">
+      <get-started-card />
       <account-card />
       <privacy-and-data-card />
     </div>
