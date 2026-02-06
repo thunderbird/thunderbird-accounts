@@ -1,14 +1,37 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhArrowRight } from '@phosphor-icons/vue';
+import { PhArrowRight, PhX } from '@phosphor-icons/vue';
 import CardContainer from '@/components/CardContainer.vue';
 
 const { t } = useI18n();
+
+const GET_STARTED_CARD_STORAGE_KEY = 'tb_accounts_get_started_card_completed';
+
+const getInitialState = () => {
+  if (typeof localStorage !== 'undefined') {
+    return localStorage.getItem(GET_STARTED_CARD_STORAGE_KEY) !== 'true';
+  }
+
+  return true;
+};
+
+const handleDismissGetStartedCard = () => {
+  showGetStartedCard.value = false;
+  localStorage.setItem(GET_STARTED_CARD_STORAGE_KEY, 'true');
+};
+
+const showGetStartedCard = ref(getInitialState());
 </script>
 
 <template>
-  <card-container class="get-started-card">
-    <h2>{{ t('views.dashboard.getStartedCard.getStarted') }}</h2>
+  <card-container class="get-started-card" v-if="showGetStartedCard">
+    <header>
+      <h2>{{ t('views.dashboard.getStartedCard.getStarted') }}</h2>
+      <button @click="handleDismissGetStartedCard">
+        <ph-x size="24" />
+      </button>
+    </header>
 
     <div class="content-container">
       <strong>{{ t('views.dashboard.getStartedCard.enableThunderbirdPro') }}</strong>
@@ -49,13 +72,42 @@ const { t } = useI18n();
 .get-started-card {
   min-width: unset;
 
-  h2 {
-    font-family: metropolis;
-    font-weight: 400;
-    font-size: 1.5rem;
-    line-height: 1.2;
-    color: var(--colour-ti-highlight);
-    margin-block-end: 1rem;
+  header {
+    position: relative;
+
+    h2 {
+      font-family: metropolis;
+      font-weight: 400;
+      font-size: 1.5rem;
+      line-height: 1.2;
+      color: var(--colour-ti-highlight);
+      margin-block-end: 1rem;
+    }
+
+    button {
+      position: absolute;
+      top: -0.5rem;
+      right: 0;
+      background: #0000000D;
+      border: none;
+      border-radius: 999px;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      color: var(--colour-ti-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        background: #0000001A;
+      }
+
+      &:active {
+        background: #00000040;
+        color: var(--colour-neutral-base);
+      }
+    }
   }
 
   .content-container {
