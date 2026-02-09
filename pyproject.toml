@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thunderbird_accounts"
-version = "1.5.8"
+version = "1.5.9"
 dependencies = [
-    "django>=5.2.9",
+    "django>=5.2.11",
     "django-filter>=25.2",
     "djangorestframework>=3.16.1",
     "markdown>=3.10",
