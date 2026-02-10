@@ -8,6 +8,7 @@ export const generateDNSRecords = (domainName: string) => {
   // Currently, we don't have a separate host for JMAP, IMAP or SMTP
   // in the future, if we do, we'll need to pass this as a separate variable
   const dnsHostname = window._page?.connectionInfo?.SMTP?.HOST;
+  const dnsTopHost = dnsHostname?.split(".").slice(1).join(".");
 
   return [
     {
@@ -49,7 +50,7 @@ export const generateDNSRecords = (domainName: string) => {
     {
       type: 'TXT',
       name: domainName,
-      content: `v=spf1 include:spf.${dnsHostname} -all`,
+      content: `v=spf1 include:spf.${dnsTopHost} -all`,
       priority: '-',
     },
     {
