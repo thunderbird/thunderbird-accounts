@@ -1,4 +1,3 @@
-from thunderbird_accounts.settings import MAILCHIMP_API_KEY
 import requests
 import json
 import datetime
