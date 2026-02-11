@@ -244,7 +244,7 @@ def get_subscription_plan_info(request: Request):
         stalwart_client = MailClient()
         account = stalwart_client.get_account(request.user.stalwart_primary_email)
         quota = account.get('quota', 0)
-        used_quota = account.get('used_quota', 0)
+        used_quota = account.get('usedQuota', 0)
     except Exception as e:
         logging.error(f'Error getting used quota: {e}')
         return JsonResponse({'success': False, 'error': 'Error getting mail storage used quota'}, status=500)
