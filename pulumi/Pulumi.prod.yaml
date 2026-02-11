@@ -69,3 +69,9 @@ config:
     secure: AAABAL+jwS313yLJ4lPdw7sTUnDWz7JFxCdK7m3Ynexb9x15SZFRD6AzxUTrQTipTBoC1g5oM7j7aUNdnBMTtr7LbX0bYrYpcICG8syBMFbnHZWQg6j0983XbRc8ccGO5xQrFhOodpI=
   accounts:stalwart-api-auth-method:
     secure: AAABAIesea0SHkKIagR9AyMAr7sJPucCFdafKHZqGA25AXy/32Y=
+  accounts:mailchimp-dc:
+    secure: AAABAKzw2HPApUEKwo/wG265z/zEZRdXQ72uBRe0sf/jSNvt
+  accounts:mailchimp-api-key:
+    secure: AAABAB7ugu0+uj7p5z5TSYoXf/XZQ2ky0IKqed/7F03vlZYmVm7bxPE/EuLK+OJIOBg5wZKMbQvLCxJb++rjPDh5LHoY
+  accounts:mailchimp-list-id:
+    secure: AAABAKKnniR//7VeRPqSI1R3LCdVXg2EVRUL1wr55NIjNYFfOLY4JjsM
