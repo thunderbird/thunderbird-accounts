@@ -374,6 +374,9 @@ STALWART_DKIM_ALGO = 'Ed25519'
 
 LANGUAGE_CODE = 'en-us'
 
+# Default language in accounts (todo: merge with language_code)
+DEFAULT_LANGUAGE = 'en'
+
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
@@ -473,3 +476,15 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not IS_DEV else
 TB_PRO_APPOINTMENT_URL: str = os.getenv('TB_PRO_APPOINTMENT_URL')
 TB_PRO_SEND_URL: str = os.getenv('TB_PRO_SEND_URL')
 TB_PRO_WAIT_LIST_URL: str = os.getenv('TB_PRO_WAIT_LIST_URL')
+
+MAILCHIMP_DC = os.getenv('MAILCHIMP_DC')
+MAILCHIMP_API_KEY = os.getenv('MAILCHIMP_API_KEY')
+MAILCHIMP_LIST_ID = os.getenv('MAILCHIMP_LIST_ID')
+USE_MAILCHIMP = bool(MAILCHIMP_API_KEY)  # If we don't have an api key disable mailchimp
+
+# While they currently line up, we need to ensure that is consistent. 
+# https://mailchimp.com/help/view-and-edit-contact-languages/#Language_codes
+ACCOUNTS_TO_MAILCHIMP_LANGUAGES = {
+    'en': 'en',
+    'de': 'de',
+}

@@ -1,5 +1,9 @@
+from requests.exceptions import JSONDecodeError
+import base64
+from django.conf import settings
 import datetime
 import logging
+import requests
 
 from celery import shared_task
 from django.core.signing import Signer, BadSignature
@@ -401,4 +405,76 @@ def update_thundermail_quota(self, plan_uuid):
         'task_status': 'success',
         'updated': updated,
         'skipped': skipped,
+    }
+
+
+@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+def add_subscriber_to_mailchimp_list(self, user_uuid):
+    """Adds a user's thundermail address to the primary tbpro mailing list.
+    This mailing list contains automations to trigger welcome emails and such."""
+    try:
+        user: User = User.objects.get(pk=user_uuid)
+    except User.DoesNotExist:
+        logging.error(f'Could not find User with pk={user_uuid}!')
+        return {
+            'user_uuid': user_uuid,
+            'task_status': 'failed',
+            'reason': 'user does not exist',
+        }
+
+    if not user.has_active_subscription:
+        logging.error(f'User with pk={user_uuid} is not subscribed, and will not be added to the mailing list.')
+        return {
+            'user_uuid': user_uuid,
+            'task_status': 'failed',
+            'reason': 'user is not subscribed',
+        }
+
+    try:
+        basic_auth = base64.b64encode(
+            f'this_does_not_support_bearer_auth:{settings.MAILCHIMP_API_KEY}'.encode()
+        ).decode()
+    except (UnicodeEncodeError, UnicodeDecodeError) as ex:
+        logging.error(f'Could not send request to mailchimp due to error: {ex}')
+        return {
+            'user_uuid': user_uuid,
+            'task_status': 'failed',
+            'reason': 'unicode error',
+        }
+
+    for val in [(user.stalwart_primary_email, 'new_user'), (user.email, 'welcome')]:
+        try:
+            email, tag = val
+
+            response: requests.Response = requests.post(
+                f'https://{settings.MAILCHIMP_DC}.api.mailchimp.com/3.0/lists/{settings.MAILCHIMP_LIST_ID}/members',
+                headers={'Authorization': f'Basic {basic_auth}'},
+                json={
+                    'email_address': email,
+                    'status': 'subscribed',
+                    'email_type': 'html',
+                    'language': settings.ACCOUNTS_TO_MAILCHIMP_LANGUAGES.get(user.language)
+                    or settings.DEFAULT_LANGUAGE,
+                    'tags': [tag],  # Tagged for automation purposes
+                },
+            )
+            response.raise_for_status()
+        except requests.exceptions.RequestException as ex:
+            logging.error(f'Could not send request to mailchimp due to error: {ex}')
+
+            try:
+                title = ex.response.json().get('title')
+            except JSONDecodeError:
+                title = 'N/A'
+
+            return {
+                'user_uuid': user_uuid,
+                'task_status': 'failed',
+                'reason': 'mailchimp error',
+                'error_msg_title': title,
+                'error_status_code': ex.response.status_code,
+            }
+    return {
+        'user_uuid': user_uuid,
+        'task_status': 'success',
     }

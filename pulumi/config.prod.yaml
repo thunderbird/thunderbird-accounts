@@ -159,6 +159,9 @@ resources:
         - stalwart-api-auth-key
         - keycloak-admin-client-id
         - keycloak-admin-client-secret
+        - mailchimp-dc
+        - mailchimp-api-key
+        - mailchimp-list-id
 
 
   tb:ec2:SshableInstance: {}
@@ -354,6 +357,12 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN
               - name: STALWART_API_AUTH_METHOD
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR
+              - name: MAILCHIMP_DC
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-dc-SyLAUO
+              - name: MAILCHIMP_API_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-api-key-5xUoSN
+              - name: MAILCHIMP_LIST_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-list-id-OAj8yj
             environment:
               - name: TIMES_I_NEED_TO_REDEPLOY_WITHOUT_CHANGING_IMAGE
                 value: '2'
@@ -529,6 +538,12 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN
               - name: STALWART_API_AUTH_METHOD
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR
+              - name: MAILCHIMP_DC
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-dc-SyLAUO
+              - name: MAILCHIMP_API_KEY
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-api-key-5xUoSN
+              - name: MAILCHIMP_LIST_ID
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-list-id-OAj8yj
             environment:
               - name: ADMIN_CONTACT
                 value: dummy@example.org
