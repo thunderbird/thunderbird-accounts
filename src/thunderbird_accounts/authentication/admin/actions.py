@@ -1,3 +1,4 @@
+from thunderbird_accounts.subscription.tasks import add_subscriber_to_mailchimp_list
 import logging
 
 from django.conf import settings
@@ -206,5 +207,64 @@ def admin_sync_plan_to_keycloak(modeladmin, request, queryset):
         modeladmin.message_user(
             request,
             _('Nothing to update!'),
+            messages.INFO,
+        )
+
+
+@admin.action(description=_('Add to Mailchimp list'))
+def admin_add_to_mailchimp_list(modeladmin, request, queryset):
+    if not settings.USE_MAILCHIMP:
+        modeladmin.message_user(
+            request,
+            _('Mailchimp support is disabled.'),
+            messages.WARNING,
+        )
+        return
+
+    success = 0
+    errors = 0
+    error_titles = {}
+
+    for user in queryset:
+        results = add_subscriber_to_mailchimp_list.run(str(user.uuid))
+        if results.get('task_status') == 'failed':
+            errors += 1
+            if results.get('error_msg_title'):
+                error_titles[results.get('error_msg_title')] = True
+        else:
+            success += 1
+
+    if success:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Added %d user to the Mailchimp list.',
+                'Added %d users to the Mailchimp list.',
+                success,
+            )
+            % success,
+            messages.SUCCESS,
+        )
+    if errors:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Failed to add %d user to the Mailchimp list.',
+                'Failed to add %d users to the Mailchimp list.',
+                errors,
+            )
+            % errors,
+            messages.ERROR,
+        )
+        if len(error_titles) > 0:
+            modeladmin.message_user(
+                request,
+                _(f'Encountered the following errors: {', '.join(error_titles.keys())}'),
+                messages.ERROR,
+            )
+    if sum([success, errors]) == 0:
+        modeladmin.message_user(
+            request,
+            _('Nothing to do!'),
             messages.INFO,
         )

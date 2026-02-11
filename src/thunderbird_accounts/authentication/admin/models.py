@@ -7,6 +7,7 @@ from thunderbird_accounts.authentication.admin.actions import (
     admin_fix_broken_stalwart_account,
     admin_sync_plan_to_keycloak,
     admin_manual_activate_subscription_features,
+    admin_add_to_mailchimp_list
 )
 from thunderbird_accounts.authentication.admin.forms import CustomUserChangeForm, CustomNewUserForm
 from thunderbird_accounts.authentication.clients import KeycloakClient
@@ -81,6 +82,7 @@ class CustomUserAdmin(UserAdmin):
         admin_fix_broken_stalwart_account,
         admin_sync_plan_to_keycloak,
         admin_manual_activate_subscription_features,
+        admin_add_to_mailchimp_list,
     ]
     list_filter = ['is_staff', 'is_superuser', 'is_test_account', 'is_active', 'plan']
 

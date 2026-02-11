@@ -157,6 +157,8 @@ def create_stalwart_account(
     app_password: Optional[str] = None,
     quota: Optional[int] = None,
 ):
+    from thunderbird_accounts.subscription.tasks import add_subscriber_to_mailchimp_list
+
     """Creates a Stalwart Account with the given parameters. OIDC ID is currently just used for error logging,
     but is still required. App Passwords can be set now, or later.
 
@@ -254,6 +256,10 @@ def create_stalwart_account(
                 'account_id': account.uuid,
             },
         )
+
+    # Fire off the task to add folks to the mailing list (so we can send them a welcome email)
+    if settings.USE_MAILCHIMP:
+        add_subscriber_to_mailchimp_list.delay(str(user.uuid))
 
     return {
         'oidc_id': oidc_id,

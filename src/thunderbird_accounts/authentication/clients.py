@@ -338,5 +338,4 @@ class KeycloakClient:
                     ),
                 )
 
-
         return pkid
