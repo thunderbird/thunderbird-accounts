@@ -891,10 +891,15 @@ class SignUpViewTestcase(TestCase):
         # Set a return value for oidc_id
         mock_import_user.return_value = 1
 
+        mock_user_email = 'hello3@example.com'
+
+        # Redirect should include mock user's email in querystring
+        waitlist_url = f'{settings.TB_PRO_WAIT_LIST_URL}?email={mock_user_email}'
+
         response = self.client.post(
             '/users/sign-up/',
             {
-                'email': 'hello3@example.com',
+                'email': mock_user_email,
                 'timezone': 'UTC',
                 'locale': 'en',
                 'partialUsername': 'hello',
@@ -904,7 +909,7 @@ class SignUpViewTestcase(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
-            response.headers.get('Location'), settings.TB_PRO_WAIT_LIST_URL, msg=self.get_messages(response)
+            response.headers.get('Location'), waitlist_url, msg=self.get_messages(response)
         )
 
     def test_user_already_exists(self, mock_import_user: MagicMock):
