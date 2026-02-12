@@ -7,6 +7,7 @@ from django.contrib.admin import AdminSite
 from django.core.exceptions import PermissionDenied
 from django.forms import model_to_dict
 from django.http import HttpRequest
+from urllib.parse import quote
 from django.test import Client as RequestClient, override_settings
 from django.test import TestCase
 from django.utils.translation import gettext_lazy as _
@@ -894,7 +895,7 @@ class SignUpViewTestcase(TestCase):
         mock_user_email = 'hello3@example.com'
 
         # Redirect should include mock user's email in querystring
-        waitlist_url = f'{settings.TB_PRO_WAIT_LIST_URL}?email={mock_user_email}'
+        waitlist_url = f'{settings.TB_PRO_WAIT_LIST_URL}?email={quote(mock_user_email)}'
 
         response = self.client.post(
             '/users/sign-up/',
