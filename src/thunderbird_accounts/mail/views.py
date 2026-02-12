@@ -158,19 +158,19 @@ def contact_fields(request: HttpRequest):
 
     # Filter ticket fields based on being editable / visible (controlled through Zendesk Admin)
     for field in ticket_fields:
-        if field['active'] and field['visible_in_portal'] and field['editable_in_portal']:
+        if field.get('active') and field.get('visible_in_portal') and field.get('editable_in_portal'):
             field_data = {
-                'id': field['id'],
-                'title': field['title_in_portal'] if 'title_in_portal' in field else field['title'],
-                'description': field['description'],
-                'required': field['required_in_portal'] if 'required_in_portal' in field else field['required'],
-                'type': field['type'],
+                'id': field.get('id'),
+                'title': field.get('title_in_portal') or field.get('title', ''),
+                'description': field.get('description', ''),
+                'required': field.get('required_in_portal', field.get('required', False)),
+                'type': field.get('type', ''),
             }
 
             if 'custom_field_options' in field:
                 # Extract the id, name, and custom_field_options with id, name and value
                 field_data['custom_field_options'] = [
-                    {'id': option['id'], 'name': option['name'], 'value': option['value']}
+                    {'id': option.get('id'), 'name': option.get('name', ''), 'value': option.get('value', '')}
                     for option in field['custom_field_options']
                 ]
 
