@@ -1,6 +1,7 @@
 import requests
 import json
 import datetime
+import hashlib
 from pathlib import Path
 from unittest.mock import patch, Mock, MagicMock
 
@@ -1022,14 +1023,25 @@ class AddSubscriberToMailchimpList(TestCase):
     def tearDown(self):
         super().tearDown()
 
-    @patch('requests.post')
-    def test_success(self, requests_post_mock: MagicMock):
+    @patch('requests.request')
+    def test_success_create(self, request_mock: MagicMock):
         """Ensure that given a subscribed user with a valid stalwart email that
         they will successfully be added to the mailchimp list"""
-        fake_response = requests.Response()
-        fake_response.status_code = 200
+        get_member_response = requests.Response()
+        get_member_response.status_code = 404
 
-        requests_post_mock.return_value = fake_response
+        create_member_response = requests.Response()
+        create_member_response.status_code = 200
+
+        request_mock.side_effect = [
+            # Thundermail
+            get_member_response,
+            create_member_response,
+            # Recovery Email
+            get_member_response,
+            create_member_response,
+        ]
+
         task_results: dict | None = tasks.add_subscriber_to_mailchimp_list.delay(str(self.test_user.uuid)).get(
             timeout=10
         )
@@ -1038,23 +1050,86 @@ class AddSubscriberToMailchimpList(TestCase):
         self.assertEqual(task_results.get('task_status'), 'success')
         self.assertEqual(task_results.get('user_uuid'), str(self.test_user.uuid))
 
-        # We call it twice
-        self.assertEqual(requests_post_mock.call_count, 2)
-        thundermail_request, recovery_email_request = requests_post_mock.call_args_list
+        # We call it 4 times (2 for both emails)
+        self.assertEqual(request_mock.call_count, 4)
 
-        # Ensure the call args were correct
-        self.assertEqual(thundermail_request[1]['json']['email_address'], self.test_user.stalwart_primary_email)
-        self.assertEqual(recovery_email_request[1]['json']['email_address'], self.test_user.email)
+        # Reverse order because of .pop()
+        email_addresses = [self.test_user.email, self.test_user.stalwart_primary_email]
+        for i in range(0, 4, 2):
+            get_req = request_mock.call_args_list[i]
+            update_tag_req = request_mock.call_args_list[i + 1]
+            address_to_test = email_addresses.pop()
 
-    @patch('requests.post')
-    def test_bad_user(self, requests_post_mock: MagicMock):
+            md5_hasher = hashlib.new('md5')
+            md5_hasher.update(address_to_test.lower().encode())
+            hashed_email = md5_hasher.hexdigest()
+
+            # Test the GET request and the POST (update tag) request
+            self.assertIn(hashed_email, get_req[1]['url'])
+            self.assertNotIn('/tags', update_tag_req[1]['url'])
+            self.assertEqual(address_to_test, update_tag_req[1]['json']['email_address'])
+
+    @patch('requests.request')
+    def test_success_update(self, request_mock: MagicMock):
+        """Ensure that given a subscribed user with a valid stalwart email that
+        they will successfully have the proper tag added to their entry."""
+        fake_response = requests.Response()
+        fake_response.status_code = 200
+
+        get_member_response = requests.Response()
+        get_member_response.status_code = 200
+        get_member_response._content = b'{}'
+
+        update_member_tag = requests.Response()
+        update_member_tag.status_code = 200
+
+        request_mock.side_effect = [
+            # Thundermail
+            get_member_response,
+            update_member_tag,
+            # Recovery Email
+            get_member_response,
+            update_member_tag,
+        ]
+
+        task_results: dict | None = tasks.add_subscriber_to_mailchimp_list.delay(str(self.test_user.uuid)).get(
+            timeout=10
+        )
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('task_status'), 'success')
+        self.assertEqual(task_results.get('user_uuid'), str(self.test_user.uuid))
+
+        # We call it 4 times (2 for both emails)
+        self.assertEqual(request_mock.call_count, 4)
+
+        # Reverse order because of .pop()
+        email_addresses = [self.test_user.email, self.test_user.stalwart_primary_email]
+        tags = ['welcome', 'new_user']
+        for i in range(0, 4, 2):
+            get_req = request_mock.call_args_list[i]
+            update_tag_req = request_mock.call_args_list[i + 1]
+            address_to_test = email_addresses.pop()
+            tag_to_test = tags.pop()
+
+            md5_hasher = hashlib.new('md5')
+            md5_hasher.update(address_to_test.lower().encode())
+            hashed_email = md5_hasher.hexdigest()
+
+            # Test the GET request and the POST (update tag) request
+            self.assertIn(hashed_email, get_req[1]['url'])
+            self.assertIn('/tags', update_tag_req[1]['url'])
+            self.assertEqual([{'name': tag_to_test, 'status': 'active'}], update_tag_req[1]['json']['tags'])
+
+    @patch('requests.request')
+    def test_bad_user(self, request_mock: MagicMock):
         """Ensure that we catch users that do not exist."""
         fake_response = requests.Response()
         fake_response.status_code = 500
 
         bad_user_uuid = '4b6c15c9b2c94c9389de992f05d1441b'
 
-        requests_post_mock.return_value = fake_response
+        request_mock.return_value = fake_response
         task_results: dict | None = tasks.add_subscriber_to_mailchimp_list.delay(bad_user_uuid).get(timeout=10)
 
         self.assertIsNotNone(task_results)
@@ -1062,15 +1137,15 @@ class AddSubscriberToMailchimpList(TestCase):
         self.assertEqual(task_results.get('user_uuid'), bad_user_uuid)
         self.assertEqual(task_results.get('reason'), 'user does not exist')
 
-    @patch('requests.post')
-    def test_user_not_subscribed(self, requests_post_mock: MagicMock):
+    @patch('requests.request')
+    def test_user_not_subscribed(self, request_mock: MagicMock):
         """Ensure that we catch users who are not subscribed"""
         fake_response = requests.Response()
         fake_response.status_code = 500
 
         test_user = User.objects.create_user('test2@example.com', 'test2@example.org', '1234')
 
-        requests_post_mock.return_value = fake_response
+        request_mock.return_value = fake_response
         task_results: dict | None = tasks.add_subscriber_to_mailchimp_list.delay(str(test_user.uuid)).get(timeout=10)
 
         self.assertIsNotNone(task_results)
@@ -1078,13 +1153,13 @@ class AddSubscriberToMailchimpList(TestCase):
         self.assertEqual(task_results.get('user_uuid'), str(test_user.uuid))
         self.assertEqual(task_results.get('reason'), 'user is not subscribed')
 
-    @patch('requests.post')
-    def test_bad_request(self, requests_post_mock: MagicMock):
+    @patch('requests.request')
+    def test_bad_request(self, request_mock: MagicMock):
         """Ensure we catch bad requests from mailchimp"""
         fake_response = requests.Response()
         fake_response.status_code = 404
 
-        requests_post_mock.return_value = fake_response
+        request_mock.return_value = fake_response
         task_results: dict | None = tasks.add_subscriber_to_mailchimp_list.delay(str(self.test_user.uuid)).get(
             timeout=10
         )
