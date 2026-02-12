@@ -163,7 +163,7 @@ def contact_fields(request: HttpRequest):
                 'id': field['id'],
                 'title': field['title_in_portal'] if 'title_in_portal' in field else field['title'],
                 'description': field['description'],
-                'required': field['required'],
+                'required': field['required_in_portal'] if 'required_in_portal' in field else field['required'],
                 'type': field['type'],
             }
 
