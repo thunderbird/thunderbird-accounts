@@ -477,7 +477,7 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
                 continue
 
             response = mailchimp_api_query(
-                'post', f'/members/{hashed_email}/tags', json={'tags': [{'name': tag, 'status': 'active'}]}
+                'post', f'/members/{hashed_email}/tags', _json={'tags': [{'name': tag, 'status': 'active'}]}
             )
 
             # Update tag has no response, so if we haven't ran into an exception continue along to the next email/tag.
@@ -501,7 +501,7 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
             response = mailchimp_api_query(
                 'post',
                 '/members',
-                json={
+                _json={
                     'email_address': email,
                     'status': 'subscribed',
                     'email_type': 'html',
