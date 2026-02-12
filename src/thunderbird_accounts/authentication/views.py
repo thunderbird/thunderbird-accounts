@@ -106,8 +106,7 @@ def sign_up(request: HttpRequest):
 
     if not is_email_in_allow_list(email):
         # Redirect the user to the tbpro waitlist
-        wait_list_url = f'{settings.TB_PRO_WAIT_LIST_URL}?email={email}'
-        return HttpResponseRedirect(wait_list_url)
+        return HttpResponseRedirect(f'{settings.TB_PRO_WAIT_LIST_URL}?email={email}')
 
     # Make sure there's no email alias with this address
     if is_address_taken(username):
