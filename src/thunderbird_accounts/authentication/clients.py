@@ -339,3 +339,42 @@ class KeycloakClient:
                 )
 
         return pkid
+
+    def get_active_sessions(self, oidc_id: str):
+        endpoint = f'users/{oidc_id}/sessions'
+        response = self.request(endpoint, RequestMethods.GET)
+
+        if response.status_code != 200:
+            sentry_sdk.capture_exception(response.content.decode())
+            raise Exception(
+                f'Error<{response.status_code}>: Cannot fetch active sessions due to: {response.content.decode()}'
+            )
+
+        sessions = response.json()
+
+        active_sessions = []
+
+        for session in sessions:
+            active_sessions.append(
+                {
+                    'id': session['id'],
+                    'last_access': session['lastAccess'],
+                    'ip_address': session['ipAddress'],
+                    # TODO: Deferred to a magical Keycloak plugin or future own solution
+                    'device_info': None,
+                }
+            )
+
+        return active_sessions
+
+    def sign_out_session(self, session_id: str):
+        endpoint = f'sessions/{session_id}'
+        response = self.request(endpoint, RequestMethods.DELETE)
+
+        if response.status_code != 204:
+            sentry_sdk.capture_exception(response.content.decode())
+            raise Exception(
+                f'Error<{response.status_code}>: Cannot sign out session due to: {response.content.decode()}'
+            )
+
+        return { 'success': True }

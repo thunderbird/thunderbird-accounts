@@ -338,6 +338,8 @@ if AUTH_SCHEME == 'oidc':
     OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
     OIDC_STORE_ACCESS_TOKEN = True  # Needed to talk to jmap
     ALLOW_LOGOUT_GET_METHOD = True
+    OIDC_STORE_ID_TOKEN = True # Needed to store the ID token in the session for session verification
+    OIDC_USE_NONCE = False # Needed for .verify_token() check on the OIDC backend for session verification
 
     def oidc_logout(request):
         return f'{os.getenv("OIDC_URL_LOGOUT")}?client_id={OIDC_RP_CLIENT_ID}'
@@ -361,6 +363,8 @@ else:
     OIDC_OP_TOKEN_ENDPOINT = None
     OIDC_OP_USER_ENDPOINT = None
     OIDC_OP_JWKS_ENDPOINT = None
+    OIDC_STORE_ID_TOKEN = None
+    OIDC_USE_NONCE = None
 
 STALWART_ARCHIVES_FOLDER_NAME = 'Archives'
 STALWART_BASE_JMAP_URL = os.getenv('STALWART_BASE_JMAP_URL')
