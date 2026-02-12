@@ -526,7 +526,7 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
                 'task_status': 'failed',
                 'reason': 'mailchimp error',
                 'error_msg_title': error_details.get('title', 'N/A'),
-                'error_status_code': ex.response.status_code,
+                'error_status_code': ex.response.status_code if ex.response else None,
             }
     return {
         'user_uuid': user_uuid,
