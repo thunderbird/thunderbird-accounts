@@ -460,6 +460,8 @@ resources:
                 value: '44379231787027'
               - name: ZENDESK_FORM_OS_FIELD_ID
                 value: '44379263732755'
+              - name: VERIFY_PRIVATE_LINK_SSL
+                value: 'False'
 
 
     accounts-celery:
@@ -639,6 +641,8 @@ resources:
                 value: '44379231787027'
               - name: ZENDESK_FORM_OS_FIELD_ID
                 value: '44379263732755'
+              - name: VERIFY_PRIVATE_LINK_SSL
+                value: 'False'
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:

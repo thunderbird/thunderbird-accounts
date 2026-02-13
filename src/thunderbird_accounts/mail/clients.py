@@ -77,7 +77,10 @@ class MailClient:
             params['type'] = type
 
         response = requests.get(
-            f'{self.api_url}/principal', params=params, headers=self.authorized_headers, verify=False
+            f'{self.api_url}/principal',
+            params=params,
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
         )
         response.raise_for_status()
         self._raise_for_error(response)
@@ -95,7 +98,9 @@ class MailClient:
         Important: Don't use this directly!
         """
         response = requests.get(
-            f'{self.api_url}/principal/{principal_id}', headers=self.authorized_headers, verify=False
+            f'{self.api_url}/principal/{principal_id}',
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
         )
         response.raise_for_status()
         self._raise_for_error(response)
@@ -110,7 +115,9 @@ class MailClient:
         Important: Don't use this directly!
         """
         response = requests.delete(
-            f'{self.api_url}/principal/{principal_id}', headers=self.authorized_headers, verify=False
+            f'{self.api_url}/principal/{principal_id}',
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
         )
         response.raise_for_status()
         self._raise_for_error(response)
@@ -143,7 +150,10 @@ class MailClient:
         }
 
         response = requests.post(
-            f'{self.api_url}/principal/deploy', json=principal_data, headers=self.authorized_headers, verify=False
+            f'{self.api_url}/principal/deploy',
+            json=principal_data,
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
         )
 
         response.raise_for_status()
@@ -172,11 +182,14 @@ class MailClient:
         # TODO: Look into bringing in pydantic to handle schema validation
         for data in update_data:
             allowed_actions = patch_schema.get(data.get('field'))
-            if data.get('action') not in allowed_actions:
+            if allowed_actions and data.get('action') not in allowed_actions:
                 raise TypeError(f'{data.get("action")} is not allowed in')
 
         response = requests.patch(
-            f'{self.api_url}/principal/{principal_id}', json=update_data, headers=self.authorized_headers, verify=False
+            f'{self.api_url}/principal/{principal_id}',
+            json=update_data,
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
         )
         response.raise_for_status()
         self._raise_for_error(response)
@@ -185,7 +198,11 @@ class MailClient:
 
     def get_telemetry(self):
         """We actually only use this for the health check"""
-        response = requests.patch(f'{self.api_url}/telemetry/metrics', headers=self.authorized_headers, verify=False)
+        response = requests.patch(
+            f'{self.api_url}/telemetry/metrics',
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
+        )
         response.raise_for_status()
         self._raise_for_error(response)
         return response
@@ -207,10 +224,50 @@ class MailClient:
 
     def create_dkim(self, domain):
         data = {'id': None, 'algorithm': settings.STALWART_DKIM_ALGO, 'domain': domain, 'selector': None}
-        response = requests.post(f'{self.api_url}/dkim', json=data, headers=self.authorized_headers, verify=False)
+        response = requests.post(
+            f'{self.api_url}/dkim',
+            json=data,
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
+        )
         response.raise_for_status()
         data = response.json()
         return data.get('data')
+
+    def delete_dkim(self, domain) -> Optional[requests.Response]:
+        """
+        Removes all dkim signatures for a given domain from Stalwart.
+
+        Returns None if there's nothing to delete, otherwise returns the delete response.
+        """
+
+        # Look up dkim signatures related to this domain
+        data = {'suffix': 'algorithm', 'prefix': 'signature', 'filter': domain, 'limit': 50, 'page': 1}
+        response = requests.get(
+            f'{self.api_url}/settings/group',
+            params=data,
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
+        )
+        response.raise_for_status()
+
+        response_data = response.json().get('data')
+        if not response_data or not response_data.get('total'):
+            return None
+
+        # Dict comprehension to remove any duplicate _ids (there shouldn't be any, but I have trust issues.)
+        dkim_ids = {r.get('_id'): True for r in response_data.get('items', [])}
+
+        data = [{'type': 'clear', 'prefix': f'signature.{d}.'} for d in dkim_ids.keys()]
+        response = requests.post(
+            f'{self.api_url}/settings',
+            json=data,
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
+        )
+        response.raise_for_status()
+
+        return response
 
     def create_account(
         self,
@@ -421,13 +478,17 @@ class MailClient:
         data = response.json()
         error = data.get('error')
 
-        if error:
+        if error == StalwartErrors.NOT_FOUND.value:
+            raise DomainNotFoundError(domain_name)
+        elif error:
             logging.error(f'[delete_domain] err: {data}')
             raise RuntimeError(data)
 
     def get_dns_records(self, domain_name: str) -> list[dict]:
         response = requests.get(
-            f'{self.api_url}/dns/records/{domain_name}', headers=self.authorized_headers, verify=False
+            f'{self.api_url}/dns/records/{domain_name}',
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
         )
         response.raise_for_status()
         self._raise_for_error(response)
