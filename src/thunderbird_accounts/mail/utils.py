@@ -190,5 +190,5 @@ def is_address_taken(email_address: str) -> bool:
     return False
 
 
-def update_quota_on_stalwart_account(user: User, quota: int):
+def update_quota_on_stalwart_account(user: User, quota: Optional[int]):
     tasks.update_quota_on_stalwart_account.delay(username=user.username, quota=quota)

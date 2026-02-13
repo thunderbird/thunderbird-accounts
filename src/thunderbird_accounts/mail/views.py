@@ -418,10 +418,16 @@ def create_custom_domain(request: HttpRequest):
         except DomainNotFoundError:
             pass
 
+        # If request fails the dkim will hit our general exception catch
+        # we want this to happen before the local reference (Domain model) is created
+        # so we're not missing any dkim records in the dns record list.
+        stalwart_client.create_dkim(domain_name)
+
         try:
             Domain.objects.create(name=domain_name, user=request.user, stalwart_id=None, stalwart_created_at=None)
         except IntegrityError:
             raise DomainAlreadyExistsError(domain_name)
+
     except DomainAlreadyExistsError:
         return JsonResponse(
             {
@@ -432,6 +438,7 @@ def create_custom_domain(request: HttpRequest):
             },
             status=400,
         )
+
     except Exception as e:
         logging.error(f'Error creating custom domain: {e}')
         return JsonResponse(
@@ -496,6 +503,7 @@ def verify_custom_domain(request: HttpRequest):
 
             # Now attach the stalwart domain id to the user domain object
             domain_id = stalwart_client.create_domain(domain_name)
+            # Harmless to retry
             stalwart_client.create_dkim(domain_name)
             now = datetime.datetime.now(datetime.UTC)
 
@@ -560,11 +568,19 @@ def remove_custom_domain(request: HttpRequest):
     try:
         domains = request.user.domains.filter(name=domain_name).all()
         # There should only be one here, but just in case...
-        for domain in domains:
-            if domain.stalwart_id:
-                stalwart_client.delete_domain(domain.name)
+        for _domain in domains:
+            if _domain.stalwart_id:
+                try:
+                    stalwart_client.delete_domain(domain.name)
+                except DomainNotFoundError:
+                    # While it's not in Stalwart we seem to have a local reference,
+                    # so try deleting dkim and then local ref
+                    pass
+                stalwart_client.delete_dkim(domain.name)
                 break
-            domain.delete()
+
+        domain.delete()
+
     except Exception as e:
         logging.error(f'Error removing custom domain: {e}')
         return JsonResponse(

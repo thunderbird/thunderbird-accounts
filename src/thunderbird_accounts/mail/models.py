@@ -16,7 +16,7 @@ class SmallTextField(models.TextField):
     """A TextArea field with a CharField-sized widget"""
 
     def formfield(self, **kwargs):
-        return super(models.TextField, self).formfield(
+        return super().formfield(
             **{
                 'form_class': CharField,
             }
@@ -77,7 +77,7 @@ class Account(BaseStalwartObject):
     def __str__(self):
         return f'Stalwart Account - {self.name}'
 
-    def save(self, **kwargs):
+    def save(self, *args, **kwargs):
         """Override save to send updates to Stalwart if the quota changes"""
         from thunderbird_accounts.subscription import utils
 
@@ -92,7 +92,7 @@ class Account(BaseStalwartObject):
         except Account.DoesNotExist:
             pass
 
-        super().save(**kwargs)
+        super().save(*args, **kwargs)
 
         # Only ship the task out if the field has changed
         if self.user and previous_quota != new_quota:

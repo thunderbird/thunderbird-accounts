@@ -5,6 +5,8 @@
 
 [![Documentation Status](https://readthedocs.com/projects/thunderbird-thunderbird-pro-services/badge/?version=latest)](https://pro-services-docs.thunderbird.net/en/latest/?badge=latest)
 
+There is codebase documentation available at [https://pro-services-docs.thunderbird.net/en/latest](https://pro-services-docs.thunderbird.net/en/latest).
+
 This project uses [uv](https://github.com/astral-sh/uv).
 
 Thunderbird Accounts is a Django 5.2 application. Please read up on Django before diving in.
