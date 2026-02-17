@@ -220,7 +220,7 @@ class MailClient:
 
         assert data.get('data', {}).get('type') == 'domain'
 
-        return data
+        return data.get('data')
 
     def create_dkim(self, domain):
         data = {'id': None, 'algorithm': settings.STALWART_DKIM_ALGO, 'domain': domain, 'selector': None}
