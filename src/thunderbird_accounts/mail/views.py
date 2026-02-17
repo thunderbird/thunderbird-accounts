@@ -569,15 +569,14 @@ def remove_custom_domain(request: HttpRequest):
         domains = request.user.domains.filter(name=domain_name).all()
         # There should only be one here, but just in case...
         for _domain in domains:
-            if _domain.stalwart_id:
-                try:
-                    stalwart_client.delete_domain(domain.name)
-                except DomainNotFoundError:
-                    # While it's not in Stalwart we seem to have a local reference,
-                    # so try deleting dkim and then local ref
-                    pass
-                stalwart_client.delete_dkim(domain.name)
-                break
+            try:
+                stalwart_client.delete_domain(domain.name)
+            except DomainNotFoundError:
+                # While it's not in Stalwart we seem to have a local reference,
+                # so try deleting dkim and then local ref
+                pass
+            stalwart_client.delete_dkim(domain.name)
+            break
 
         domain.delete()
 
