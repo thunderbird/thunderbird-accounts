@@ -50,8 +50,8 @@ def admin_fix_stalwart_ids(modeladmin, request, queryset):
         modeladmin.message_user(
             request,
             ngettext(
-                'Matched %d Stalwart objects with their id.',
-                'Matched %d Stalwart objects with their ids.',
+                'Matched %d principal object with their id.',
+                'Matched %d principal objects with their ids.',
                 success,
             )
             % success,
