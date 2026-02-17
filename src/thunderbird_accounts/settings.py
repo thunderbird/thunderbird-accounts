@@ -488,3 +488,6 @@ ACCOUNTS_TO_MAILCHIMP_LANGUAGES = {
     'en': 'en',
     'de': 'de',
 }
+
+# For private stalwart communication
+VERIFY_PRIVATE_LINK_SSL = True if os.getenv('VERIFY_PRIVATE_LINK_SSL', 'true').lower() == 'true' else False

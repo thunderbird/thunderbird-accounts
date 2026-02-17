@@ -1,6 +1,8 @@
+import json
+import requests
 import dns.resolver
 from unittest.mock import MagicMock, patch
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase, override_settings, TestCase
 from thunderbird_accounts.mail.clients import MailClient, DomainVerificationErrors
 
 
@@ -12,7 +14,7 @@ from thunderbird_accounts.mail.clients import MailClient, DomainVerificationErro
 )
 class TestMailClientVerifyDomain(SimpleTestCase):
     def setUp(self):
-        self.client = MailClient()
+        self.mail_client = MailClient()
         self.domain = 'example.com'
         self.expected_host = 'mail.test.com'
 
@@ -46,7 +48,7 @@ class TestMailClientVerifyDomain(SimpleTestCase):
 
         mock_resolve.side_effect = resolve_side_effect
 
-        is_verified, critical_errors, warnings = self.client.verify_domain(self.domain)
+        is_verified, critical_errors, warnings = self.mail_client.verify_domain(self.domain)
 
         self.assertTrue(is_verified)
         self.assertEqual(critical_errors, [])
@@ -60,14 +62,14 @@ class TestMailClientVerifyDomain(SimpleTestCase):
         mock_mx.exchange.to_text.return_value = 'wrong.host.com.'
         mock_resolve.return_value = [mock_mx]
 
-        is_verified, critical_errors, warnings = self.client.verify_domain(self.domain)
+        is_verified, critical_errors, warnings = self.mail_client.verify_domain(self.domain)
 
         self.assertFalse(is_verified)
         self.assertIn(DomainVerificationErrors.MX_LOOKUP_ERROR, critical_errors)
 
         # Case 2: MX lookup raises exception
         mock_resolve.side_effect = dns.resolver.NoAnswer()
-        is_verified, critical_errors, _warnings = self.client.verify_domain(self.domain)
+        is_verified, critical_errors, _warnings = self.mail_client.verify_domain(self.domain)
 
         self.assertFalse(is_verified)
         self.assertIn(DomainVerificationErrors.MX_LOOKUP_ERROR, critical_errors)
@@ -91,7 +93,7 @@ class TestMailClientVerifyDomain(SimpleTestCase):
 
         mock_resolve.side_effect = resolve_side_effect
 
-        is_verified, critical_errors, warnings = self.client.verify_domain(self.domain)
+        is_verified, critical_errors, warnings = self.mail_client.verify_domain(self.domain)
 
         self.assertTrue(is_verified)  # SPF failure is not critical
         self.assertEqual(critical_errors, [])
@@ -125,7 +127,7 @@ class TestMailClientVerifyDomain(SimpleTestCase):
 
         mock_resolve.side_effect = resolve_side_effect
 
-        is_verified, critical_errors, warnings = self.client.verify_domain(self.domain)
+        is_verified, critical_errors, warnings = self.mail_client.verify_domain(self.domain)
 
         self.assertTrue(is_verified)  # DKIM failure is not critical
         self.assertEqual(critical_errors, [])
@@ -152,8 +154,119 @@ class TestMailClientVerifyDomain(SimpleTestCase):
 
         mock_resolve.side_effect = resolve_side_effect
 
-        is_verified, critical_errors, warnings = self.client.verify_domain(self.domain)
+        is_verified, critical_errors, warnings = self.mail_client.verify_domain(self.domain)
 
         self.assertTrue(is_verified)
         self.assertEqual(critical_errors, [])
         self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, warnings)
+
+
+class TestMailClientCreateDkim(TestCase):
+    def setUp(self):
+        self.mail_client = MailClient()
+        self.domain = 'example.com'
+        self.expected_host = 'mail.test.com'
+
+    @patch('requests.post')
+    def test_success(self, requests_mock: MagicMock):
+        success_response = requests.Response()
+        success_response.status_code = 200
+        success_response._content = b'{"data": {}}'
+
+        requests_mock.return_value = success_response
+
+        response_data = self.mail_client.create_dkim(self.domain)
+
+        self.assertIsNotNone(response_data)
+        requests_mock.assert_called_once()
+        call_args = requests_mock.call_args
+        self.assertEqual(self.domain, call_args[1].get('json', {}).get('domain'))
+
+
+class TestMailClientDeleteDkim(TestCase):
+    def setUp(self):
+        self.mail_client = MailClient()
+        self.domain = 'example.com'
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_success(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
+        """The GET and POST should not raise any errors and the function should return not None."""
+        success_get_response = requests.Response()
+        success_get_response.status_code = 200
+        success_get_response._content = bytes(
+            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}'}]}}), 'utf-8'
+        )
+
+        requests_get_mock.return_value = success_get_response
+
+        success_post_response = requests.Response()
+        success_post_response.status_code = 200
+
+        requests_post_mock.return_value = success_post_response
+
+        response_data = self.mail_client.delete_dkim(self.domain)
+        self.assertIsNotNone(response_data)
+
+        requests_get_mock.assert_called_once()
+        call_args = requests_get_mock.call_args
+        self.assertEqual(self.domain, call_args[1].get('params', {}).get('filter'))
+
+        requests_post_mock.assert_called_once()
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_success_not_found(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
+        """The GET should not raise any errors, the POST should not be called, and the function should return None"""
+        success_get_response = requests.Response()
+        success_get_response.status_code = 200
+        success_get_response._content = bytes(json.dumps({'data': {'total': 0, 'items': []}}), 'utf-8')
+
+        requests_get_mock.return_value = success_get_response
+
+        success_post_response = requests.Response()
+        success_post_response.status_code = 200
+
+        requests_post_mock.return_value = success_post_response
+
+        response_data = self.mail_client.delete_dkim(self.domain)
+        self.assertIsNone(response_data)
+
+        requests_get_mock.assert_called_once()
+        call_args = requests_get_mock.call_args
+        self.assertEqual(self.domain, call_args[1].get('params', {}).get('filter'))
+
+        requests_post_mock.assert_not_called()
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_internal_server_error_get(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
+        """GET raises the 500 error and we should catch it"""
+        success_get_response = requests.Response()
+        success_get_response.status_code = 500
+        success_get_response._content = bytes(json.dumps({'data': {'total': 0, 'items': []}}), 'utf-8')
+
+        requests_get_mock.return_value = success_get_response
+
+        with self.assertRaises(requests.RequestException):
+            self.mail_client.delete_dkim(self.domain)
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_internal_server_error(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
+        """GET calls successfully but the POST raises a 500 error and we should catch it"""
+        success_get_response = requests.Response()
+        success_get_response.status_code = 200
+        success_get_response._content = bytes(
+            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}'}]}}), 'utf-8'
+        )
+
+        requests_get_mock.return_value = success_get_response
+
+        success_post_response = requests.Response()
+        success_post_response.status_code = 500
+
+        requests_post_mock.return_value = success_post_response
+
+        with self.assertRaises(requests.RequestException):
+            self.mail_client.delete_dkim(self.domain)
