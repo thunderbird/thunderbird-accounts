@@ -7,7 +7,7 @@ from thunderbird_accounts.authentication.admin.actions import (
     admin_fix_broken_stalwart_account,
     admin_sync_plan_to_keycloak,
     admin_manual_activate_subscription_features,
-    admin_add_to_mailchimp_list
+    admin_add_to_mailchimp_list,
 )
 from thunderbird_accounts.authentication.admin.forms import CustomUserChangeForm, CustomNewUserForm
 from thunderbird_accounts.authentication.clients import KeycloakClient
@@ -161,6 +161,13 @@ class CustomUserAdmin(UserAdmin):
 class AllowListEntryAdmin(admin.ModelAdmin):
     search_fields = ('email',)
     search_help_text = _('Search the allow list by email address.')
+    list_filter = ['created_at', 'updated_at']
+    list_display = (
+        'email',
+        'user',
+        'created_at',
+        'updated_at',
+    )
 
 
 class LogEntryAdmin(admin.ModelAdmin):
