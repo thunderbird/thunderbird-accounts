@@ -14,7 +14,7 @@ from thunderbird_accounts.mail.models import Account, Email
 def _stalwart_check_or_create_domain_entry(stalwart, domain):
     # Check if we have the domain
     try:
-        domain = stalwart.get_domain(domain)
+        stalwart.get_domain(domain)
     except DomainNotFoundError:
         # The domain doesn't exist in our records, we'll need to create it first
         # And then the dkim record for the domain
