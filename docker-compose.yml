@@ -68,6 +68,14 @@ services:
       <<: *env
       TBA_CELERY: yes
 
+  flower:
+    <<: *accounts
+    ports:
+      - "5555:5555"
+    environment:
+      <<: *env
+      TBA_FLOWER: yes
+
   # Only used when APP_DEBUG=True
   vite-dev:
     build:

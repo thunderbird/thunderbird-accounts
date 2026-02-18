@@ -14,6 +14,8 @@ fi
 # Run the app with the appropriate command
 if [[ "$TBA_CELERY" == "yes" ]]; then
     CMD="uv run celery -A thunderbird_accounts worker -l INFO"
+elif [[ "$TBA_FLOWER" == "yes" ]]; then
+    CMD="uv run celery -A thunderbird_accounts flower -l INFO"
 else
     # Run migrations
     ./manage.py migrate
