@@ -1,3 +1,4 @@
+from thunderbird_accounts.celery.exceptions import TaskFailed
 from unittest.mock import patch, Mock
 
 from django.conf import settings
@@ -215,13 +216,14 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             mail_client_mock.return_value = instance_mock
 
             # Run sync so can look at the task results
-            task_results = tasks.create_stalwart_account.run(
-                oidc_id=oidc_id, username=username_and_email, email=username_and_email, quota=quota
-            )
+            with self.assertRaises(TaskFailed) as ex:
+                tasks.create_stalwart_account.run(
+                    oidc_id=oidc_id, username=username_and_email, email=username_and_email, quota=quota
+                )
+            task_results = ex.exception.other
 
-            self.assertEqual('failed', task_results.get('task_status'))
             self.assertEqual(
-                f'Cannot create Stalwart account with non-primary email domain: {domain}', task_results.get('reason')
+                f'Cannot create Stalwart account with non-primary email domain: {domain}', ex.exception.reason
             )
 
             mail_client_mock.assert_called_once()

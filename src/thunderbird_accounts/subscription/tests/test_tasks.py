@@ -1,3 +1,4 @@
+from thunderbird_accounts.celery.exceptions import TaskFailed
 import requests
 import json
 import datetime
@@ -266,14 +267,13 @@ class TransactionCreatedTaskTestCase(PaddleTestCase):
 
         self.assertIsNotNone(transaction)
 
-        task_results: dict | None = tasks.paddle_transaction_event.delay(
-            event_data, occurred_at, self.is_create_event
-        ).get(timeout=10)
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_transaction_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'transaction already exists')
+        self.assertEqual(ex.exception.reason, 'transaction already exists')
 
     def test_details_doesnt_exist(self):
         self.assertEqual(models.Transaction.objects.count(), 0)
@@ -284,14 +284,13 @@ class TransactionCreatedTaskTestCase(PaddleTestCase):
 
         event_data.pop('details', '')
 
-        task_results: dict | None = tasks.paddle_transaction_event.delay(
-            event_data, occurred_at, self.is_create_event
-        ).get(timeout=10)
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_transaction_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'no details or totals object')
+        self.assertEqual(ex.exception.reason, 'no details or totals object')
 
     def test_totals_is_bad(self):
         self.assertEqual(models.Transaction.objects.count(), 0)
@@ -305,14 +304,13 @@ class TransactionCreatedTaskTestCase(PaddleTestCase):
         del event_data['details']['totals']['tax']
         del event_data['details']['totals']['currency_code']
 
-        task_results: dict | None = tasks.paddle_transaction_event.delay(
-            event_data, occurred_at, self.is_create_event
-        ).get(timeout=10)
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_transaction_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'invalid total, tax, or currency strings')
+        self.assertEqual(ex.exception.reason, 'invalid total, tax, or currency strings')
 
 
 class TransactionUpdatedTaskTestCase(TransactionCreatedTaskTestCase):
@@ -389,14 +387,13 @@ class TransactionUpdatedTaskTestCase(TransactionCreatedTaskTestCase):
 
         self.assertIsNotNone(transaction)
 
-        task_results: dict | None = tasks.paddle_transaction_event.delay(
-            event_data, occurred_at, self.is_create_event
-        ).get(timeout=10)
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_transaction_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'webhook is out of date')
+        self.assertEqual(ex.exception.reason, 'webhook is out of date')
 
 
 class SubscriptionCreatedTaskTestCase(PaddleTestCase):
@@ -550,14 +547,13 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
 
         self.assertIsNotNone(subscription)
 
-        task_results: dict | None = tasks.paddle_subscription_event.delay(
-            event_data, occurred_at, self.is_create_event
-        ).get(timeout=10)
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_subscription_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
 
+        task_results = ex.exception.other
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'subscription already exists')
+        self.assertEqual(ex.exception.reason, 'subscription already exists')
 
     def test_subscription_error_no_signed_user_id(self):
         self.assertEqual(models.Subscription.objects.count(), 0)
@@ -570,14 +566,14 @@ class SubscriptionCreatedTaskTestCase(PaddleTestCase):
 
         occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
 
-        task_results: dict | None = tasks.paddle_subscription_event.delay(
-            event_data, occurred_at, self.is_create_event
-        ).get(timeout=10)
+        task_results = {}
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_subscription_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'no signed user id provided')
+        self.assertEqual(ex.exception.reason, 'no signed user id provided')
 
 
 class SubscriptionUpdatedTaskTestCase(SubscriptionCreatedTaskTestCase):
@@ -680,14 +676,14 @@ class SubscriptionUpdatedTaskTestCase(SubscriptionCreatedTaskTestCase):
 
         self.assertIsNotNone(subscription)
 
-        task_results: dict | None = tasks.paddle_subscription_event.delay(
-            event_data, occurred_at, self.is_create_event
-        ).get(timeout=10)
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_subscription_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'webhook is out of date')
+        self.assertEqual(ex.exception.reason, 'webhook is out of date')
 
 
 class SubscriptionUpdatedToCancelledTaskTestCase(SubscriptionCreatedTaskTestCase):
@@ -772,14 +768,13 @@ class SubscriptionUpdatedToCancelledTaskTestCase(SubscriptionCreatedTaskTestCase
 
         self.assertIsNotNone(subscription)
 
-        task_results: dict | None = tasks.paddle_subscription_event.delay(
-            event_data, occurred_at, self.is_create_event
-        ).get(timeout=10)
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_subscription_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'webhook is out of date')
+        self.assertEqual(ex.exception.reason, 'webhook is out of date')
 
 
 class ProductCreatedTaskTestCase(PaddleTestCase):
@@ -831,14 +826,13 @@ class ProductCreatedTaskTestCase(PaddleTestCase):
 
         self.assertIsNotNone(product)
 
-        task_results: dict | None = tasks.paddle_product_event.delay(event_data, occurred_at, self.is_create_event).get(
-            timeout=10
-        )
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_product_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'product already exists')
+        self.assertEqual(ex.exception.reason, 'product already exists')
 
 
 class ProductUpdatedTaskTestCase(ProductCreatedTaskTestCase):
@@ -863,9 +857,7 @@ class ProductUpdatedTaskTestCase(ProductCreatedTaskTestCase):
             status=models.Product.StatusValues.ACTIVE,
         )
 
-        task_results: dict | None = tasks.paddle_product_event.delay(event_data, occurred_at, self.is_create_event).get(
-            timeout=10
-        )
+        task_results = tasks.paddle_product_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
@@ -913,14 +905,13 @@ class ProductUpdatedTaskTestCase(ProductCreatedTaskTestCase):
 
         self.assertIsNotNone(product)
 
-        task_results: dict | None = tasks.paddle_product_event.delay(event_data, occurred_at, self.is_create_event).get(
-            timeout=10
-        )
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_product_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'webhook is out of date')
+        self.assertEqual(ex.exception.reason, 'webhook is out of date')
 
 
 class UpdateThundermailQuotaTestCase(TestCase):
@@ -988,12 +979,13 @@ class UpdateThundermailQuotaTestCase(TestCase):
             models.Plan.objects.get(pk=plan_uuid)
 
         # Run the task
-        task_results: dict | None = tasks.update_thundermail_quota.delay(plan_uuid=plan_uuid).get(timeout=10)
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.update_thundermail_quota.delay(plan_uuid=plan_uuid).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('plan_uuid'), plan_uuid)
-        self.assertEqual(task_results.get('task_status'), 'failed')
-        self.assertEqual(task_results.get('reason'), 'plan does not exist')
+        self.assertEqual(ex.exception.reason, 'plan does not exist')
 
 
 @override_settings(
@@ -1130,12 +1122,14 @@ class AddSubscriberToMailchimpList(TestCase):
         bad_user_uuid = '4b6c15c9b2c94c9389de992f05d1441b'
 
         request_mock.return_value = fake_response
-        task_results: dict | None = tasks.add_subscriber_to_mailchimp_list.delay(bad_user_uuid).get(timeout=10)
+
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.add_subscriber_to_mailchimp_list.delay(bad_user_uuid).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
-        self.assertEqual(task_results.get('task_status'), 'failed')
         self.assertEqual(task_results.get('user_uuid'), bad_user_uuid)
-        self.assertEqual(task_results.get('reason'), 'user does not exist')
+        self.assertEqual(ex.exception.reason, 'user does not exist')
 
     @patch('requests.request')
     def test_user_not_subscribed(self, request_mock: MagicMock):
@@ -1146,12 +1140,13 @@ class AddSubscriberToMailchimpList(TestCase):
         test_user = User.objects.create_user('test2@example.com', 'test2@example.org', '1234')
 
         request_mock.return_value = fake_response
-        task_results: dict | None = tasks.add_subscriber_to_mailchimp_list.delay(str(test_user.uuid)).get(timeout=10)
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.add_subscriber_to_mailchimp_list.delay(str(test_user.uuid)).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
-        self.assertEqual(task_results.get('task_status'), 'failed')
         self.assertEqual(task_results.get('user_uuid'), str(test_user.uuid))
-        self.assertEqual(task_results.get('reason'), 'user is not subscribed')
+        self.assertEqual(ex.exception.reason, 'user is not subscribed')
 
     @patch('requests.request')
     def test_bad_request(self, request_mock: MagicMock):
@@ -1160,11 +1155,10 @@ class AddSubscriberToMailchimpList(TestCase):
         fake_response.status_code = 404
 
         request_mock.return_value = fake_response
-        task_results: dict | None = tasks.add_subscriber_to_mailchimp_list.delay(str(self.test_user.uuid)).get(
-            timeout=10
-        )
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.add_subscriber_to_mailchimp_list.delay(str(self.test_user.uuid)).get(timeout=10)
+        task_results = ex.exception.other
 
         self.assertIsNotNone(task_results)
-        self.assertEqual(task_results.get('task_status'), 'failed')
         self.assertEqual(task_results.get('user_uuid'), str(self.test_user.uuid))
-        self.assertEqual(task_results.get('reason'), 'mailchimp error')
+        self.assertEqual(ex.exception.reason, 'mailchimp error')

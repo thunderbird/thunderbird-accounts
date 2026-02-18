@@ -1,3 +1,4 @@
+from thunderbird_accounts.celery.exceptions import TaskFailed
 import sentry_sdk
 from requests.exceptions import JSONDecodeError
 import base64
@@ -44,12 +45,13 @@ def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datet
 
             logging.info(err)
 
-            return {
-                'paddle_id': paddle_id,
-                'occurred_at': occurred_at,
-                'task_status': 'failed',
-                'reason': reason,
-            }
+            raise TaskFailed(
+                reason,
+                {
+                    'paddle_id': paddle_id,
+                    'occurred_at': occurred_at,
+                },
+            )
     except Transaction.DoesNotExist:
         pass
 
@@ -70,12 +72,13 @@ def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datet
 
     if not details or not details.get('totals'):
         logging.error(f'Transaction (paddle_id={paddle_id}) webhook contains no details or totals object.')
-        return {
-            'paddle_id': paddle_id,
-            'occurred_at': occurred_at,
-            'task_status': 'failed',
-            'reason': 'no details or totals object',
-        }
+        raise TaskFailed(
+            'no details or totals object',
+            {
+                'paddle_id': paddle_id,
+                'occurred_at': occurred_at,
+            },
+        )
 
     totals = details.get('totals', {})
     total = totals.get('total')
@@ -84,12 +87,13 @@ def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datet
 
     if total is None or tax is None or currency is None:
         logging.error(f'Transaction (paddle_id={paddle_id}) webhook contains invalid total, tax, or currency strings.')
-        return {
-            'paddle_id': paddle_id,
-            'occurred_at': occurred_at,
-            'task_status': 'failed',
-            'reason': 'invalid total, tax, or currency strings',
-        }
+        raise TaskFailed(
+            'invalid total, tax, or currency strings',
+            {
+                'paddle_id': paddle_id,
+                'occurred_at': occurred_at,
+            },
+        )
 
     # Okay now we can just do a big update.
     transaction, transaction_created = Transaction.objects.update_or_create(
@@ -147,12 +151,13 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
 
             logging.info(err)
 
-            return {
-                'paddle_id': paddle_id,
-                'occurred_at': occurred_at,
-                'task_status': 'failed',
-                'reason': reason,
-            }
+            raise TaskFailed(
+                reason,
+                {
+                    'paddle_id': paddle_id,
+                    'occurred_at': occurred_at,
+                },
+            )
     except Subscription.DoesNotExist:
         pass
 
@@ -166,12 +171,13 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
 
     if not signed_user_id:
         logging.info(f'Ignoring webhook as subscription (paddle_id={paddle_id}) as no signed user id was provided.')
-        return {
-            'paddle_id': paddle_id,
-            'occurred_at': occurred_at,
-            'task_status': 'failed',
-            'reason': 'no signed user id provided',
-        }
+        raise TaskFailed(
+            'no signed user id provided',
+            {
+                'paddle_id': paddle_id,
+                'occurred_at': occurred_at,
+            },
+        )
 
     try:
         signer = Signer()
@@ -180,24 +186,26 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
         logging.info(
             f'Ignoring webhook as subscription (paddle_id={paddle_id}) as an invalid signed user id was provided.'
         )
-        return {
-            'paddle_id': paddle_id,
-            'occurred_at': occurred_at,
-            'task_status': 'failed',
-            'reason': 'invalid signed user id provided (bad signature exception)',
-        }
+        raise TaskFailed(
+            'invalid signed user id provided (bad signature exception)',
+            {
+                'paddle_id': paddle_id,
+                'occurred_at': occurred_at,
+            },
+        )
 
     try:
         user = User.objects.get(pk=user_uuid)
     except User.DoesNotExist:
         logging.error(f'Signed user uuid {user_uuid} is invalid! ')
-        return {
-            'paddle_id': paddle_id,
-            'occurred_at': occurred_at,
-            'user_uuid': user_uuid,
-            'task_status': 'failed',
-            'reason': 'invalid signed user id provided (no user found)',
-        }
+        raise TaskFailed(
+            'invalid signed user id provided (no user found)',
+            {
+                'paddle_id': paddle_id,
+                'occurred_at': occurred_at,
+                'user_uuid': user_uuid,
+            },
+        )
 
     if next_billed_at:
         next_billed_at = datetime.datetime.fromisoformat(next_billed_at)
@@ -335,12 +343,13 @@ def paddle_product_event(self, event_data: dict, occurred_at: datetime.datetime,
 
             logging.info(err)
 
-            return {
-                'paddle_id': paddle_id,
-                'occurred_at': occurred_at,
-                'task_status': 'failed',
-                'reason': reason,
-            }
+            raise TaskFailed(
+                reason,
+                {
+                    'paddle_id': paddle_id,
+                    'occurred_at': occurred_at,
+                },
+            )
     except Product.DoesNotExist:
         pass
 
@@ -377,11 +386,13 @@ def update_thundermail_quota(self, plan_uuid):
         plan = Plan.objects.get(pk=plan_uuid)
     except Plan.DoesNotExist:
         logging.error(f'Could not find Plan with pk={plan_uuid}!')
-        return {
-            'plan_uuid': plan_uuid,
-            'task_status': 'failed',
-            'reason': 'plan does not exist',
-        }
+
+        raise TaskFailed(
+            'plan does not exist',
+            {
+                'plan_uuid': plan_uuid,
+            },
+        )
 
     updated = 0
     skipped = 0
@@ -420,11 +431,12 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
         ).decode()
     except (UnicodeEncodeError, UnicodeDecodeError) as ex:
         logging.error(f'Could not send request to mailchimp due to error: {ex}')
-        return {
-            'user_uuid': user_uuid,
-            'task_status': 'failed',
-            'reason': 'unicode error',
-        }
+        raise TaskFailed(
+            'unicode error',
+            {
+                'user_uuid': user_uuid,
+            },
+        )
 
     def mailchimp_api_query(method: str, api_endpoint: str, _json: dict | None = None) -> requests.Response:
         """Small method to query mailchimp's api"""
@@ -442,19 +454,21 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
         user: User = User.objects.get(pk=user_uuid)
     except User.DoesNotExist:
         logging.error(f'Could not find User with pk={user_uuid}!')
-        return {
-            'user_uuid': user_uuid,
-            'task_status': 'failed',
-            'reason': 'user does not exist',
-        }
+        raise TaskFailed(
+            'user does not exist',
+            {
+                'user_uuid': user_uuid,
+            },
+        )
 
     if not user.has_active_subscription:
         logging.error(f'User with pk={user_uuid} is not subscribed, and will not be added to the mailing list.')
-        return {
-            'user_uuid': user_uuid,
-            'task_status': 'failed',
-            'reason': 'user is not subscribed',
-        }
+        raise TaskFailed(
+            'user is not subscribed',
+            {
+                'user_uuid': user_uuid,
+            },
+        )
 
     # Loop through the thundermail and recovery email and attempt to update or add a new tag to the mailchimp entry.
     # It's a bit of a bit long and most of that is error catching.
@@ -521,13 +535,14 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
             sentry_sdk.set_extra('error_details', error_details)
             sentry_sdk.capture_exception(ex)
 
-            return {
-                'user_uuid': user_uuid,
-                'task_status': 'failed',
-                'reason': 'mailchimp error',
-                'error_msg_title': error_details.get('title', 'N/A'),
-                'error_status_code': ex.response.status_code if ex.response else None,
-            }
+            raise TaskFailed(
+                'mailchimp error',
+                {
+                    'user_uuid': user_uuid,
+                    'error_msg_title': error_details.get('title', 'N/A'),
+                    'error_status_code': ex.response.status_code if ex.response else None,
+                },
+            )
     return {
         'user_uuid': user_uuid,
         'task_status': 'success',

@@ -14,7 +14,6 @@ import os
 import sys
 from pathlib import Path
 
-from django.core.exceptions import DisallowedHost
 from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.types import Event, Hint
@@ -48,9 +47,14 @@ DEBUG: bool = os.getenv('APP_DEBUG') == 'True' and (IS_DEV or APP_ENV == 'test')
 
 
 def before_send(event: Event, hint: Hint) -> Event | None:
+    from django.core.exceptions import DisallowedHost
+    from thunderbird_accounts.celery.exceptions import TaskFailed
+
     """Filter out any exceptions we don't want to pollute sentry"""
     exc_info = hint.get('exc_info', [None])
     if DisallowedHost in exc_info:
+        return None
+    if TaskFailed in exc_info:
         return None
 
     return event
@@ -482,7 +486,7 @@ MAILCHIMP_API_KEY = os.getenv('MAILCHIMP_API_KEY')
 MAILCHIMP_LIST_ID = os.getenv('MAILCHIMP_LIST_ID')
 USE_MAILCHIMP = bool(MAILCHIMP_API_KEY)  # If we don't have an api key disable mailchimp
 
-# While they currently line up, we need to ensure that is consistent. 
+# While they currently line up, we need to ensure that is consistent.
 # https://mailchimp.com/help/view-and-edit-contact-languages/#Language_codes
 ACCOUNTS_TO_MAILCHIMP_LANGUAGES = {
     'en': 'en',

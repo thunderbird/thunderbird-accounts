@@ -1,3 +1,4 @@
+"""Celery related code, this includes any flower monitoring authentication code that may or may not exist."""
 import os
 
 from celery import Celery
