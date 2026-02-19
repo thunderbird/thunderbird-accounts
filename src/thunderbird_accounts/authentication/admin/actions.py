@@ -1,3 +1,4 @@
+from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.tasks import add_subscriber_to_mailchimp_list
 import logging
 
@@ -226,14 +227,14 @@ def admin_add_to_mailchimp_list(modeladmin, request, queryset):
     error_titles = {}
 
     for user in queryset:
-        results = add_subscriber_to_mailchimp_list.run(str(user.uuid))
-        if results.get('task_status') == 'failed':
-            errors += 1
-            if results.get('error_msg_title'):
-                error_titles[results.get('error_msg_title')] = True
-        else:
+        try:
+            add_subscriber_to_mailchimp_list.run(str(user.uuid))
             success += 1
-
+        except TaskFailed as ex:
+            errors += 1
+            if ex.other.get('error_msg_title'):
+                error_titles[ex.other.get('error_msg_title')] = True
+            continue
     if success:
         modeladmin.message_user(
             request,

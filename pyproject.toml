@@ -32,6 +32,7 @@ dependencies = [
     "dnspython>=2.8.0",
     "django-types>=0.22.0",
     "django-stubs-ext>=5.2.8",
+    "flower>=2.0.1",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"

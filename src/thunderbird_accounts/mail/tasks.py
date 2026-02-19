@@ -9,6 +9,7 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
 from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.celery.exceptions import TaskFailed
 
 
 def _stalwart_check_or_create_domain_entry(stalwart, domain):
@@ -44,12 +45,13 @@ def _base_email_address_to_stalwart_account(fn_name, username, emails):
     fn = getattr(stalwart, fn_name)
     if not fn:
         logging.error(f'[base_email_address_to_stalwart_account] {fn_name} does not exist!')
-        return {
-            'username': username,
-            'emails': emails,
-            'reason': f'{fn_name} does not exist',
-            'task_status': 'failed',
-        }
+        raise TaskFailed(
+            f'{fn_name} does not exist',
+            {
+                'username': username,
+                'emails': emails,
+            },
+        )
 
     fn(username, emails)
 
@@ -78,12 +80,13 @@ def add_email_addresses_to_stalwart_account(self, username: str, emails: list[st
     except RuntimeError as ex:
         logging.error(f'[add_email_addresses_to_stalwart_account] Error adding email address to stalwart account {ex}')
         error = ex
-    return {
-        'username': username,
-        'emails': emails,
-        'reason': error,
-        'task_status': 'failed',
-    }
+    raise TaskFailed(
+        str(error),
+        {
+            'username': username,
+            'emails': emails,
+        },
+    )
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -95,12 +98,13 @@ def replace_email_addresses_on_stalwart_account(self, username: str, emails: lis
             f'[replace_email_addresses_on_stalwart_account] Error replacing email address to stalwart account {ex}'
         )
         error = ex
-    return {
-        'username': username,
-        'emails': emails,
-        'reason': error,
-        'task_status': 'failed',
-    }
+    raise TaskFailed(
+        str(error),
+        {
+            'username': username,
+            'emails': emails,
+        },
+    )
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -112,12 +116,13 @@ def delete_email_addresses_from_stalwart_account(self, username: str, emails: li
             f'[delete_email_addresses_from_stalwart_account] Error deleting email address to stalwart account {ex}'
         )
         error = ex
-    return {
-        'username': username,
-        'emails': emails,
-        'reason': error,
-        'task_status': 'failed',
-    }
+    raise TaskFailed(
+        str(error),
+        {
+            'username': username,
+            'emails': emails,
+        },
+    )
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -134,12 +139,13 @@ def update_quota_on_stalwart_account(self, username: str, quota: Optional[int]):
         stalwart.update_quota(username, quota)
     except RuntimeError as ex:
         logging.error(f'[update_quota_on_stalwart_account] Error updating quota on stalwart account {ex}')
-        return {
-            'username': username,
-            'quota': quota,
-            'reason': ex,
-            'task_status': 'failed',
-        }
+        raise TaskFailed(
+            str(ex),
+            {
+                'username': username,
+                'quota': quota,
+            },
+        )
     return {
         'username': username,
         'quota': quota,
@@ -170,13 +176,14 @@ def create_stalwart_account(
         error = f'Cannot create Stalwart account with non-primary email domain: {domain}'
         logging.error(f'[create_stalwart_account] {error}')
 
-        return {
-            'oidc_id': oidc_id,
-            'username': username,
-            'email': email,
-            'reason': error,
-            'task_status': 'failed',
-        }
+        raise TaskFailed(
+            str(error),
+            {
+                'oidc_id': oidc_id,
+                'username': username,
+                'email': email,
+            },
+        )
 
     emails = [
         email,

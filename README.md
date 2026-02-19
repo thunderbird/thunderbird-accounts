@@ -13,6 +13,29 @@ Thunderbird Accounts is a Django 5.2 application. Please read up on Django befor
 
 Docker is the recommended way to run the server.
 
+## Services & Ports used
+
+During development it's great to have these handy!
+
+| Service    | Exposed Port | Remarks                                       |
+|------------|--------------|-----------------------------------------------|
+| postgres   | 5433         | Accounts DB                                   |
+| kcpostgres | 5434         | Keycloak DB                                   |
+| redis      | 6380         | Redis                                         |
+| redis      | 8071         | Redis Insights                                |
+| accounts   | 8087         | Accounts Web                                  |
+| flower     | 5555         | Celery task monitoring                        |
+| vite-dev   | 5173         | Used on Account's frontend for hot-reloading. |
+| mailpit    | 8025         | Mailpit Web                                   |
+| mailpit    | 1025         | Mailpit SMTP                                  |
+| stalwart   | 443          | Stalwart Admin                                |
+| stawart    | 8080         | Stalwart Admin                                |
+| stalwart   | 8081         | Stalwart JMAP                                 |
+| stalwart   | 143          | Stalwart IMAP                                 |
+| stalwart   | 993          | Stalwart IMAP TLS                             |
+| stalwart   | 25           | Stalwart SMTP                                 |
+| stalwart   | 465          | Stalwart SMTP TLS                             |
+
 ## Before you begin
 
 Make sure you have [uv](https://github.com/astral-sh/uv) up and running, and you adjust your hosts file to include:
