@@ -173,7 +173,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'mozilla_django_oidc.middleware.SessionRefresh',
+    #'mozilla_django_oidc.middleware.SessionRefresh',
+    'thunderbird_accounts.authentication.middleware.OIDCRefreshSession',
     # This should be last
     'thunderbird_accounts.mail.middleware.FixMissingArchivesFolderMiddleware',
 ]
@@ -341,6 +342,7 @@ if AUTH_SCHEME == 'oidc':
     OIDC_OP_USER_ENDPOINT = os.getenv('OIDC_URL_USER')
     OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
     OIDC_STORE_ACCESS_TOKEN = True  # Needed to talk to jmap
+    OIDC_STORE_REFRESH_TOKEN = True  # Needed to refresh existing sessions. Custom for #498
     ALLOW_LOGOUT_GET_METHOD = True
 
     def oidc_logout(request):
@@ -357,6 +359,8 @@ if AUTH_SCHEME == 'oidc':
     KEYCLOAK_ADMIN_CLIENT_ID = os.getenv('KEYCLOAK_ADMIN_CLIENT_ID')
     KEYCLOAK_ADMIN_CLIENT_SECRET = os.getenv('KEYCLOAK_ADMIN_CLIENT_SECRET')
     KEYCLOAK_ADMIN_TOKEN_ENDPOINT = os.getenv('KEYCLOAK_ADMIN_URL_TOKEN')
+
+    OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = os.getenv('OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS', 60 * 15)
 else:
     OIDC_RP_CLIENT_ID = None
     OIDC_RP_CLIENT_SECRET = None
