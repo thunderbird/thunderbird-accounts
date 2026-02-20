@@ -88,6 +88,18 @@ redis = tb_pulumi.elasticache.ElastiCacheReplicationGroup(
     **redis_opts,
 )
 
+# Build a single Fargate cluster to run and scale all our accounts-related services
+# autoscaling_fargate_clusters = {
+#     cluster_name: tb_pulumi.fargate.AutoscalingFargateCluster(
+#         name=f'{project.name_prefix}-afc',
+#         project=project,
+#         subnets=vpc.resources['subnets'],
+#         **cluster_config,
+#     )
+#     for cluster_name, cluster_config in resources.get('tb:fargate:AutoscalingFargateCluster', {})
+# }
+
+
 # Build Fargate clusters to run our containers
 autoscalers = {}
 fargate_clusters = {}
