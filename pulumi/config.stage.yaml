@@ -179,7 +179,7 @@ resources:
     keycloak:
       assign_public_ip: True
       desired_count: 1
-      health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
+      health_check_grace_period_seconds: 600 # Time before the LB checks for health of a new backend
       internal: False
       services:
         keycloak:
