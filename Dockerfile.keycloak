@@ -18,7 +18,7 @@ RUN rm -rf /app/keycloak/assets/*
 #
 # Keycloak dockerfile for local development
 #
-FROM quay.io/keycloak/keycloak:26.3
+FROM quay.io/keycloak/keycloak:26.5
 
 # Load in our dev setup
 COPY --chown=keycloak:keycloak keycloak/data/import /opt/keycloak/data/import
