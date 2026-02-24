@@ -616,9 +616,6 @@ resources:
       services:
         celery:
           assign_public_ip: yes
-          # container_name: null
-          # container_port: null
-          # load_balancer: null
           service:
             desired_count: 1
           target: null
