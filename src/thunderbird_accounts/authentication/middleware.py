@@ -225,14 +225,13 @@ class OIDCRefreshSession(SessionRefresh):
         return expiration > 0 and now >= expiration
 
     def process_request(self, request):
-        """Handle a refresh session request. If it's not refreshable or the token expired then we skip this
+        """Handle a refresh session request. If it's not refreshable or the token is not expired then we skip this
         and deal with the consequences elsewhere"""
         if not self.is_refreshable_url(request):
             logging.debug('request is not refreshable')
             return
 
         if not self.is_expired(request):
-            logging.debug('request has expired')
             return
 
         token_url = import_from_settings('OIDC_OP_TOKEN_ENDPOINT')
