@@ -3,7 +3,7 @@ resources:
   domains:
     accounts: accounts-stage.tb.pro
 
-  accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:54b1954de7ae3700681642a526c6566485982b90
+  accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:2cfec47ba65ac970e38f8414caa0ab4df81df48d
   keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-2f54e4913c25603ae4fe83107a5ed9c2bad38363
 
   tb:network:MultiCidrVpc:
