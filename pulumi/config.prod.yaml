@@ -162,6 +162,7 @@ resources:
         - mailchimp-dc
         - mailchimp-api-key
         - mailchimp-list-id
+        - appointment-caldav-secret
 
 
   tb:ec2:SshableInstance: {}
