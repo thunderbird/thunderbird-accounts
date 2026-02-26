@@ -1,13 +1,15 @@
 {% load django_vite %}
 {% load helpers %}
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="en">
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block page_title %}Thunderbird Accounts Hub{% endblock %}</title>
+  <title>{% block page_title %}{% translate 'Thunderbird Accounts Hub' %}{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/main.css' %}">
   <link rel="icon" href="{% static 'favicon.ico' %}">
   {% vite_hmr_client %}
@@ -32,10 +34,10 @@
     formError: {{ form_error|to_json|safe|default:'null' }},
     formData: {{ form_data|to_json|safe|default:'null' }},
     connectionInfo: {{ connection_info|to_json|safe }},
-    appPasswords: {{ app_passwords|safe }},
-    allowedDomains: {{ allowed_domains|safe }},
-    customDomains: {{ custom_domains|safe }},
-    emailAddresses: {{ email_addresses|safe }},
+    appPasswords: {{ app_passwords|safe|default:'[]' }},
+    allowedDomains: {{ allowed_domains|safe|default:'[]' }},
+    customDomains: {{ custom_domains|safe|default:'[]' }},
+    emailAddresses: {{ email_addresses|safe|default:'[]' }},
     maxCustomDomains: {{ max_custom_domains|to_json|safe }},
     maxEmailAliases: {{ max_email_aliases|to_json|safe }},
     tbProAppointmentUrl: {{ tb_pro_appointment_url|to_json|safe }},
@@ -46,6 +48,25 @@
   };
   csrfToken.remove();
 </script>
+<noscript>
+  {% block noscript %}
+  <style>
+    .center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  </style>
+  <div class="center">
+    {% translate 'website' as link_text %}
+    {% set website = '<a href="https://tb.pro/">{{ link_text }}</a>'}
+    <h2>{% translate 'This site requires Javascript.' %}</h2>
+    <p>{% translate 'Please visit our {{ website }} for more information.' %}</p>
+  </div>
+  {% endblock %}
+</noscript>
+{% block app_container %}
 <div id="app"></div>
+{% endblock %}
 </body>
 </html>

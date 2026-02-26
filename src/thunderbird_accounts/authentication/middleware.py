@@ -8,19 +8,22 @@ from mozilla_django_oidc.middleware import SessionRefresh
 from django.urls import reverse
 from mozilla_django_oidc.utils import absolutify, import_from_settings, generate_code_challenge
 import logging
-from typing import Optional
 from socket import gethostbyname, gethostname
+from typing import Optional
 
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, SuspiciousOperation
 from django.http import HttpRequest, JsonResponse, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
+from mozilla_django_oidc.auth import OIDCAuthenticationBackend
+from sentry_sdk import capture_exception
+
+from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
 
 from .models import User
 from .utils import is_email_in_allow_list
 
-from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 from mozilla_django_oidc.utils import add_state_and_verifier_and_nonce_to_session
 
 OIDC_ACCESS_TOKEN_KEY = 'oidc_access_token'
@@ -46,7 +49,6 @@ def store_tokens(request, access_token, id_token, refresh_token):
 
     expiration_interval = import_from_settings('OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS', 60 * 15)
     request.session['oidc_id_token_expiration'] = time() + expiration_interval
-
 
 class AccountsOIDCBackend(OIDCAuthenticationBackend):
     """User authentication middleware for OIDC
@@ -379,6 +381,17 @@ class OIDCRefreshSession(SessionRefresh):
         query = urlencode(params, quote_via=quote)
         return '{auth_url}?{query}'.format(auth_url=auth_url, query=query)
 
+    def get_userinfo(self, access_token, id_token, payload):
+        """Return user details dictionary. The id_token and payload are not used in
+        the default implementation, but may be used when overriding this method"""
+
+        try:
+            return super().get_userinfo(access_token, id_token, payload)
+        except requests.exceptions.RequestException as ex:
+            # Capture the exception
+            capture_exception(ex)
+            raise AuthenticationUnavailable()
+
 
 class SetHostIPInAllowedHostsMiddleware:
     def __init__(self, get_response):
@@ -398,3 +411,5 @@ class SetHostIPInAllowedHostsMiddleware:
         response = self.get_response(request)
 
         return response
+
+

@@ -1,3 +1,6 @@
+from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
+from gettext import gettext
+import sys
 import datetime
 import json
 import logging
@@ -102,7 +105,7 @@ def home(request: HttpRequest):
             max_email_aliases = request.user.plan.mail_address_count
     elif not request.user.is_authenticated:  # Only if the user is not authenticated
         # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
-        public_routes = ['/privacy', '/terms', '/contact', '/sign-up', '/sign-up/complete', '/logout']
+        public_routes = ['/privacy', '/terms', '/contact', '/sign-up', '/sign-up/complete', '/logout', '/error']
 
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))
@@ -114,7 +117,7 @@ def home(request: HttpRequest):
 
     return TemplateResponse(
         request,
-        'mail/index.html',
+        'index.html',
         {
             'connection_info': settings.CONNECTION_INFO,
             'app_passwords': json.dumps(app_passwords),
@@ -133,7 +136,23 @@ def home(request: HttpRequest):
             'form_data': form_data or None,
         },
     )
+def handle_500(request: HttpRequest, template_name = None):
+    # Retrieve the last known exception
+    last_exception = sys.exc_info()[1]
+    
+    error_title = gettext('Unknown Error')
+    if last_exception and isinstance(last_exception, AuthenticationUnavailable):
+        error_title = gettext('Thunderbird Accounts is currently unavailable')
 
+    # We ignore template_name and use our own here.
+    return TemplateResponse(
+        request,
+        'errors/tbpro_500.html',
+        {
+            'error_title': error_title,
+        },
+        status=500,
+    )
 
 @require_http_methods(['GET'])
 @cache_page(60 * 15)

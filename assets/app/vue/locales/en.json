@@ -74,6 +74,13 @@
         "footerText": "You’ll be taken to Paddle, our secure payment provider."
       }
     },
+    "error": {
+      "fallbackError": "Unknown Error",
+      "message": {
+        "text": "Please visit our {link} for more information.",
+        "link": "status page"
+      }
+    },
     "mail": {
       "sections": {
         "dashboard": {
