@@ -162,17 +162,7 @@ jobs:
           # Create a YAML config stump containing only the nested tree leading to the image tag update
           cat << EOF > newimage.yaml
           resources:
-            tb:fargate:FargateClusterWithLogging:
-              accounts:
-                task_definition:
-                  container_definitions:
-                    accounts:
-                      image: "$ECR_TAG"
-              accounts-celery:
-                task_definition:
-                  container_definitions:
-                    accounts:
-                      image: "$ECR_TAG"
+            accounts_image: &ACCOUNTS_IMAGE $ECR_TAG
           EOF
 
           # Use yq to merge the stump into the main config
@@ -183,7 +173,8 @@ jobs:
           pulumi stack select thunderbird/stage
           pulumi up -y --diff \
             --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-taskdef' \
-            --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-celery-taskdef' \
+            --target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-celery' \
+            --target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-flower' \
             --target-dependents
 
   # When accounts changes are merged in, build and push a new Docker image
@@ -296,12 +287,7 @@ jobs:
           # Create a YAML config stump containing only the nested tree leading to the image tag update
           cat << EOF > newimage.yaml
           resources:
-            tb:fargate:FargateClusterWithLogging:
-              keycloak:
-                task_definition:
-                  container_definitions:
-                    keycloak:
-                      image: "$ECR_TAG"
+            keycloak_image: &KEYCLOAK_IMAGE $ECR_TAG
           EOF
 
           # Use yq to merge the stump into the main config

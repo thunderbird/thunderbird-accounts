@@ -77,16 +77,17 @@ for instance in resources['tb:ec2:SshableInstance'].keys():
         **instance_opts,
     )
 
-# Build an ElastiCache Redis cluster allowing access from the Accounts containers
-redis_opts = resources['tb:elasticache:ElastiCacheReplicaGroup']['accounts']
-redis = tb_pulumi.elasticache.ElastiCacheReplicationGroup(
-    name=f'{project.name_prefix}-redis',
-    project=project,
-    source_sgids=[container_sgs['accounts'].resources['sg'].id, container_sgs['accounts-celery'].resources['sg'].id],
-    subnets=vpc.resources['subnets'],
-    opts=pulumi.ResourceOptions(depends_on=[vpc, container_sgs['accounts']]),
-    **redis_opts,
-)
+# Build a single Fargate cluster to run and scale all our accounts-related services
+autoscaling_fargate_clusters = {
+    cluster_name: tb_pulumi.fargate.AutoscalingFargateCluster(
+        f'{project.name_prefix}-afc-{cluster_name}',
+        project=project,
+        subnets=vpc.resources['subnets'],
+        **cluster_config,
+    )
+    for cluster_name, cluster_config in resources.get('tb:fargate:AutoscalingFargateCluster', {}).items()
+}
+
 
 # Build Fargate clusters to run our containers
 autoscalers = {}
@@ -124,6 +125,24 @@ for service, opts in resources['tb:fargate:FargateClusterWithLogging'].items():
             opts=pulumi.ResourceOptions(depends_on=[fargate_clusters[service]]),
             **autoscaler_opts,
         )
+
+# Build an ElastiCache Redis cluster allowing access from the Accounts containers
+redis_opts = resources['tb:elasticache:ElastiCacheReplicaGroup']['accounts']
+redis_source_sgids = [
+    container_sgs['accounts'].resources['sg'].id,
+    container_sgs['accounts-celery'].resources['sg'].id,
+]
+for afc_name, afc in autoscaling_fargate_clusters.items():
+    for container_name, lbs in afc.resources['container_security_groups'].items():
+        redis_source_sgids.extend([sg.resources['sg'].id for sg in lbs.values()])
+redis = tb_pulumi.elasticache.ElastiCacheReplicationGroup(
+    name=f'{project.name_prefix}-redis',
+    project=project,
+    source_sgids=redis_source_sgids,
+    subnets=vpc.resources['subnets'],
+    opts=pulumi.ResourceOptions(depends_on=[vpc, container_sgs['accounts']]),
+    **redis_opts,
+)
 
 
 cloudflare_backend_record = cloudflare.Record(
