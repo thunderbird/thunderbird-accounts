@@ -857,13 +857,21 @@ class AppointmentCalDAVSetupTestCase(TestCase):
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
     @override_settings(AUTH_SCHEME='oidc')
     @override_settings(OIDC_OP_USER_ENDPOINT='http://oidc-provider/userinfo')
+    @patch('thunderbird_accounts.mail.views.secrets.token_urlsafe')
     @patch('thunderbird_accounts.mail.views.requests.get')
     @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
+    @patch('thunderbird_accounts.mail.views.utils.save_app_password')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_success_existing_app_password_found(self, mock_mail_client_cls, mock_backend_cls, mock_requests_get):
-        """Test successful retrieval of existing app password."""
+    def test_success_existing_app_password_replaced(
+        self, mock_mail_client_cls, mock_save_app_password, mock_backend_cls, mock_requests_get, mock_token_urlsafe
+    ):
+        """Test that an existing app password is deleted and replaced with a new one."""
         label = f'appointment-caldav-setup-{self.user.stalwart_primary_email}'
         existing_app_password = f'$app${label}$hashed-password'
+        new_hash = f'$app${label}$new-hashed-password'
+
+        mock_token_urlsafe.return_value = 'random-plain-password'
+        mock_save_app_password.return_value = new_hash
 
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
@@ -888,26 +896,34 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = json.loads(response.content.decode())
         self.assertTrue(payload['success'])
-        self.assertEqual(payload['app_password'], existing_app_password)
+        self.assertEqual(payload['app_password'], 'random-plain-password')
 
-        # Verify MailClient was called correctly
         mock_instance.get_account.assert_called_once_with(self.user.stalwart_primary_email)
-        # Should not call save_app_password since existing password was found
-        mock_instance.save_app_password.assert_not_called()
+        # Old app password should be deleted (only the one matching the label, not the other)
+        mock_instance.delete_app_password.assert_called_once_with(
+            self.user.stalwart_primary_email, existing_app_password
+        )
+        # New password should be hashed and saved
+        mock_save_app_password.assert_called_once_with(label, 'random-plain-password')
+        mock_instance.save_app_password.assert_called_once_with(self.user.stalwart_primary_email, new_hash)
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
     @override_settings(AUTH_SCHEME='oidc')
     @override_settings(OIDC_OP_USER_ENDPOINT='http://oidc-provider/userinfo')
+    @patch('thunderbird_accounts.mail.views.secrets.token_urlsafe')
     @patch('thunderbird_accounts.mail.views.requests.get')
     @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
     @patch('thunderbird_accounts.mail.views.utils.save_app_password')
     @patch('thunderbird_accounts.mail.views.MailClient')
     def test_success_new_app_password_created(
-        self, mock_mail_client_cls, mock_save_app_password, mock_backend_cls, mock_requests_get
+        self, mock_mail_client_cls, mock_save_app_password, mock_backend_cls, mock_requests_get, mock_token_urlsafe
     ):
-        """Test successful creation of new app password when none exists."""
+        """Test successful creation of new app password when no matching one exists."""
         label = f'appointment-caldav-setup-{self.user.stalwart_primary_email}'
-        new_app_password = f'$app${label}$new-hashed-password'
+        new_hash = f'$app${label}$new-hashed-password'
+
+        mock_token_urlsafe.return_value = 'random-plain-password'
+        mock_save_app_password.return_value = new_hash
 
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
@@ -923,7 +939,6 @@ class AppointmentCalDAVSetupTestCase(TestCase):
             'secrets': ['$app$other-label$other-hash'],
         }
         mock_mail_client_cls.return_value = mock_instance
-        mock_save_app_password.return_value = new_app_password
 
         response = self.client.post(
             self.url,
@@ -933,27 +948,32 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = json.loads(response.content.decode())
         self.assertTrue(payload['success'])
-        self.assertEqual(payload['app_password'], new_app_password)
+        self.assertEqual(payload['app_password'], 'random-plain-password')
 
-        # Verify MailClient was called correctly
         mock_instance.get_account.assert_called_once_with(self.user.stalwart_primary_email)
-        # Verify save_app_password was called with correct parameters
-        mock_save_app_password.assert_called_once_with(label, self.access_token)
-        mock_instance.save_app_password.assert_called_once_with(self.user.stalwart_primary_email, new_app_password)
+        # No matching label to delete
+        mock_instance.delete_app_password.assert_not_called()
+        # New password hashed with the random plain-text, not the access token
+        mock_save_app_password.assert_called_once_with(label, 'random-plain-password')
+        mock_instance.save_app_password.assert_called_once_with(self.user.stalwart_primary_email, new_hash)
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
     @override_settings(AUTH_SCHEME='oidc')
     @override_settings(OIDC_OP_USER_ENDPOINT='http://oidc-provider/userinfo')
+    @patch('thunderbird_accounts.mail.views.secrets.token_urlsafe')
     @patch('thunderbird_accounts.mail.views.requests.get')
     @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
     @patch('thunderbird_accounts.mail.views.utils.save_app_password')
     @patch('thunderbird_accounts.mail.views.MailClient')
     def test_success_no_existing_secrets(
-        self, mock_mail_client_cls, mock_save_app_password, mock_backend_cls, mock_requests_get
+        self, mock_mail_client_cls, mock_save_app_password, mock_backend_cls, mock_requests_get, mock_token_urlsafe
     ):
         """Test successful creation when user has no existing secrets."""
         label = f'appointment-caldav-setup-{self.user.stalwart_primary_email}'
-        new_app_password = f'$app${label}$new-hashed-password'
+        new_hash = f'$app${label}$new-hashed-password'
+
+        mock_token_urlsafe.return_value = 'random-plain-password'
+        mock_save_app_password.return_value = new_hash
 
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
@@ -969,7 +989,6 @@ class AppointmentCalDAVSetupTestCase(TestCase):
             'secrets': [],
         }
         mock_mail_client_cls.return_value = mock_instance
-        mock_save_app_password.return_value = new_app_password
 
         response = self.client.post(
             self.url,
@@ -979,9 +998,11 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = json.loads(response.content.decode())
         self.assertTrue(payload['success'])
-        self.assertEqual(payload['app_password'], new_app_password)
+        self.assertEqual(payload['app_password'], 'random-plain-password')
 
-        mock_instance.save_app_password.assert_called_once_with(self.user.stalwart_primary_email, new_app_password)
+        mock_instance.delete_app_password.assert_not_called()
+        mock_save_app_password.assert_called_once_with(label, 'random-plain-password')
+        mock_instance.save_app_password.assert_called_once_with(self.user.stalwart_primary_email, new_hash)
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
     @override_settings(AUTH_SCHEME='oidc')
