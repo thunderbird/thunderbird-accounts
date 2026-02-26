@@ -38,13 +38,13 @@ class HomeViewRedirectTestCase(TestCase):
         """Test that unauthenticated users can access the /privacy public route."""
         response = self.client.get('/privacy')
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'mail/index.html')
+        self.assertTemplateUsed(response, 'index.html')
 
     def test_unauthenticated_user_can_access_terms_page(self):
         """Test that unauthenticated users can access the /terms public route."""
         response = self.client.get('/terms')
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'mail/index.html')
+        self.assertTemplateUsed(response, 'index.html')
 
     def test_authenticated_user_can_access_home(self):
         """Test that authenticated users can access home without redirect."""
@@ -66,7 +66,7 @@ class HomeViewRedirectTestCase(TestCase):
 
             response = self.client.get('/')
             self.assertEqual(response.status_code, 200)
-            self.assertTemplateUsed(response, 'mail/index.html')
+            self.assertTemplateUsed(response, 'index.html')
 
     def test_authenticated_user_can_access_any_path(self):
         """Test that authenticated users can access any path without redirect."""
@@ -92,7 +92,7 @@ class HomeViewRedirectTestCase(TestCase):
 
                     response = self.client.get(path)
                     self.assertEqual(response.status_code, 200)
-                    self.assertTemplateUsed(response, 'mail/index.html')
+                    self.assertTemplateUsed(response, 'index.html')
 
 
 class AddEmailAliasTestCase(TestCase):

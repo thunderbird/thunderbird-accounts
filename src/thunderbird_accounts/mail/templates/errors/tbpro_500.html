@@ -20,6 +20,6 @@ isErrorPage: true,
   {% translate 'status page' as status_page_text %}
   {% set website = '<a href="https://status.tb.pro/">{{ status_page_text }}</a>'}
   <h2>{{ error_title }}</h2>
-  <p>{% translate 'Please visit our <a href="https://status.tb.pro/">status page</a> for more information.' %}</p>
+  <p>{% translate 'Please visit our {{ website }} for more information.' %}</p>
 </div>
 {% endblock %}
