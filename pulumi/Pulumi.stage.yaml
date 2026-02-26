@@ -70,3 +70,5 @@ config:
     secure: AAABAE9oRmGhKSDJL0/fvUIqwN/+zvZkPxdOwi5Nd9oglK8Mjk5w9+EkDuVmJpecbA==
   accounts:keycloak-admin-client-secret:
     secure: AAABACh3RnRJFRb37U658qPm+wN8GUDqeZ/Ck90/qJnGWmULNhVtn5u/+BD8NtVVvaqiMhRmwzja7wLeYypciQ==
+  accounts:appointment-caldav-secret:
+    secure: AAABAForTqyhyLA5jEP8mv6uX1s2Kp9CFim/R+NCEAvC8ZgmBhqxsmcL8zWeTBsOZlfLGlkVNBFVo7/teEknbw==
