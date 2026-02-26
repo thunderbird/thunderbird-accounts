@@ -70,6 +70,9 @@ def oidc_logout_callback(request: HttpRequest):
     return HttpResponseRedirect('/')
 
 
+
+
+
 @require_http_methods(['POST'])
 @sensitive_post_parameters('password', 'password-confirm')
 def sign_up(request: HttpRequest):

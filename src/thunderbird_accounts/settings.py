@@ -376,7 +376,7 @@ STALWART_DKIM_ALGO = 'Ed25519'
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
 
 # Default language in accounts (todo: merge with language_code)
 DEFAULT_LANGUAGE = 'en'

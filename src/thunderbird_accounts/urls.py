@@ -19,6 +19,9 @@ from thunderbird_accounts.subscription import views as subscription_views
 
 from thunderbird_accounts.authentication.api import get_user_profile
 
+# Error handler overrides
+handler500 = 'thunderbird_accounts.mail.views.handle_500'
+
 urlpatterns = [
     # Custom admin routes need to be before admin.site.urls
     path(
@@ -76,6 +79,7 @@ if settings.AUTH_SCHEME == 'oidc':
     urlpatterns.append(path('reset-password/', auth_views.start_reset_password_flow, name='reset_password'))
     # Test url for ensuring jmap connection works
     urlpatterns.append(path('test/jmap/', jmap_test_page, name='jmap-test'))
+
 
 if settings.DEBUG:
     urlpatterns.append(path('docs/', include('rest_framework.urls')))

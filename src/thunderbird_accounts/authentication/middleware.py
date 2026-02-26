@@ -1,17 +1,20 @@
 import logging
-from typing import Optional
 from socket import gethostbyname, gethostname
+from typing import Optional
 
+import requests
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
+from mozilla_django_oidc.auth import OIDCAuthenticationBackend
+from sentry_sdk import capture_exception
+
+from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
 
 from .models import User
 from .utils import is_email_in_allow_list
-
-from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
 
 class AccountsOIDCBackend(OIDCAuthenticationBackend):
@@ -118,6 +121,17 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
                 user_query = user_query[:1]
         return user_query
 
+    def get_userinfo(self, access_token, id_token, payload):
+        """Return user details dictionary. The id_token and payload are not used in
+        the default implementation, but may be used when overriding this method"""
+
+        try:
+            return super().get_userinfo(access_token, id_token, payload)
+        except requests.exceptions.RequestException as ex:
+            # Capture the exception
+            capture_exception(ex)
+            raise AuthenticationUnavailable()
+
 
 class SetHostIPInAllowedHostsMiddleware:
     def __init__(self, get_response):
@@ -137,3 +151,5 @@ class SetHostIPInAllowedHostsMiddleware:
         response = self.get_response(request)
 
         return response
+
+

@@ -1,0 +1,25 @@
+{% extends 'index.html' %}
+{% load django_vite %}
+{% load helpers %}
+{% load static %}
+{% load i18n %}
+{% block extra_page_params %}
+errorTitle: {{ error_title|to_json|safe|default:'' }},
+isErrorPage: true,
+{% endblock %}
+
+{% block noscript %}
+<style>
+  .center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+</style>
+<div class="center">
+  {% translate 'status page' as status_page_text %}
+  {% set website = '<a href="https://status.tb.pro/">{{ status_page_text }}</a>'}
+  <h2>{{ error_title }}</h2>
+  <p>{% translate 'Please visit our <a href="https://status.tb.pro/">status page</a> for more information.' %}</p>
+</div>
+{% endblock %}
