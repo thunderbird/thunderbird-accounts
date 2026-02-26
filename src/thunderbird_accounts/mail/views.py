@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import secrets
 import requests
 
 import requests.exceptions
@@ -808,21 +809,20 @@ def appointment_caldav_setup(request: HttpRequest):
         stalwart_client = MailClient()
         email_user = stalwart_client.get_account(user.stalwart_primary_email)
 
-        # Attempt to find existing special app password for this user
-        app_password = None
+        # Remove any existing app password for this label so we can
+        # replace it with a fresh one whose plain-text we still know.
         expected_prefix = f'$app${label}$'
-
         for secret in email_user.get('secrets', []):
             if secret.startswith(expected_prefix):
-                app_password = secret
-                break
+                stalwart_client.delete_app_password(user.stalwart_primary_email, secret)
 
-        # If no existing app password is found, create a new one using the access token as the password
-        if not app_password:
-            app_password = utils.save_app_password(label, access_token)
-            stalwart_client.save_app_password(user.stalwart_primary_email, app_password)
+        # Generate a random plain-text password, hash it for Stalwart
+        # storage, and return the plain-text to the caller for CalDAV auth.
+        plain_password = secrets.token_urlsafe(32)
+        app_password_hash = utils.save_app_password(label, plain_password)
+        stalwart_client.save_app_password(user.stalwart_primary_email, app_password_hash)
 
-        return JsonResponse({'success': True, 'app_password': app_password})
+        return JsonResponse({'success': True, 'app_password': plain_password})
 
     except Exception as ex:
         sentry_sdk.capture_exception(ex)
