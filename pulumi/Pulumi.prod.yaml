@@ -75,3 +75,5 @@ config:
     secure: AAABAB7ugu0+uj7p5z5TSYoXf/XZQ2ky0IKqed/7F03vlZYmVm7bxPE/EuLK+OJIOBg5wZKMbQvLCxJb++rjPDh5LHoY
   accounts:mailchimp-list-id:
     secure: AAABAKKnniR//7VeRPqSI1R3LCdVXg2EVRUL1wr55NIjNYFfOLY4JjsM
+  accounts:appointment-caldav-secret:
+    secure: AAABADpuLw71MLJ5RyYEN7G47RC88uj8dznCXUo3JS4p8Mwnvw+FG3j19+CyhM6jnpdtGGbSnc3QGQwMlBrrxA==

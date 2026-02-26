@@ -158,6 +158,7 @@ resources:
         - stalwart-api-auth-key
         - keycloak-admin-client-id
         - keycloak-admin-client-secret
+        - appointment-caldav-secret
 
   tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
