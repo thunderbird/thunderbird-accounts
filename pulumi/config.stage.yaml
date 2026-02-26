@@ -644,8 +644,8 @@ resources:
 
       autoscalers:
         celery:
-          min_capacity: 1
-          max_capacity: 3
+          min_capacity: 2
+          max_capacity: 4
         flower:
           min_capacity: 1
           max_capacity: 3
@@ -927,14 +927,6 @@ resources:
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:
-      cpu_threshold: 80
-      ram_threshold: 80
-      cooldown: 180
-      disable_scale_in: False
-      min_capacity: 2
-      max_capacity: 4
-      suspend: False
-    accounts-celery:
       cpu_threshold: 80
       ram_threshold: 80
       cooldown: 180
