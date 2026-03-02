@@ -36,7 +36,6 @@ urlpatterns = [
     ),
     path('admin/', admin.site.urls),
     # Django-specific routes (not handled by Vue)
-    path('wait-list/', mail_views.wait_list),
     path('contact/fields', mail_views.contact_fields, name='contact_fields'),
     # Post only
     path('contact/submit', mail_views.contact_submit, name='contact_submit'),

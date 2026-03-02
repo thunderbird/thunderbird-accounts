@@ -738,10 +738,6 @@ def remove_email_alias(request: HttpRequest):
     return JsonResponse({'success': True})
 
 
-def wait_list(request: HttpRequest):
-    return TemplateResponse(request, 'mail/wait-list.html', {'form_action': settings.WAIT_LIST_FORM_ACTION})
-
-
 @login_required
 def jmap_test_page(request: HttpRequest):
     from thunderbird_accounts.mail.tiny_jmap_client import TinyJMAPClient
