@@ -50,6 +50,7 @@ def store_tokens(request, access_token, id_token, refresh_token):
     expiration_interval = import_from_settings('OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS', 60 * 15)
     request.session['oidc_id_token_expiration'] = time() + expiration_interval
 
+
 class AccountsOIDCBackend(OIDCAuthenticationBackend):
     """User authentication middleware for OIDC
 
@@ -206,6 +207,17 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
                 return None
 
         return None
+
+    def get_userinfo(self, access_token, id_token, payload):
+        """Return user details dictionary. The id_token and payload are not used in
+        the default implementation, but may be used when overriding this method"""
+
+        try:
+            return super().get_userinfo(access_token, id_token, payload)
+        except requests.exceptions.RequestException as ex:
+            # Capture the exception
+            capture_exception(ex)
+            raise AuthenticationUnavailable()
 
 
 class OIDCRefreshSession(SessionRefresh):
@@ -380,17 +392,6 @@ class OIDCRefreshSession(SessionRefresh):
 
         query = urlencode(params, quote_via=quote)
         return '{auth_url}?{query}'.format(auth_url=auth_url, query=query)
-
-    def get_userinfo(self, access_token, id_token, payload):
-        """Return user details dictionary. The id_token and payload are not used in
-        the default implementation, but may be used when overriding this method"""
-
-        try:
-            return super().get_userinfo(access_token, id_token, payload)
-        except requests.exceptions.RequestException as ex:
-            # Capture the exception
-            capture_exception(ex)
-            raise AuthenticationUnavailable()
 
 
 class SetHostIPInAllowedHostsMiddleware:
