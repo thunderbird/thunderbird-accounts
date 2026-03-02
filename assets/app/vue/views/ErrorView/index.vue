@@ -2,10 +2,24 @@
 import { useI18n } from 'vue-i18n';
 import FooterBar from '@/components/FooterBar.vue';
 import { STATUS_PAGE_URL } from '@/defines';
+import { computed } from 'vue';
+
+const isAuthenticated = window._page?.isAuthenticated;
 
 const { t } = useI18n();
+const props = defineProps<{
+  is404: boolean;
+}>();
 
-const error_title = window._page.errorTitle ?? t('views.error.fallbackError');
+const error_title = computed(() => props?.is404 ? t('views.error.notFoundError') : (window._page.errorTitle ?? t('views.error.fallbackError')));
+const error_message = computed(() => {
+  if (props?.is404) {
+    return isAuthenticated ? 'views.error.notFoundMessage.textAuth' : 'views.error.notFoundMessage.textNoAuth';
+  }
+  return 'views.error.message.serverErrorText';
+});
+const error_link = computed(() => props?.is404 ? t('views.error.notFoundMessage.link') : t('views.error.serverErrorMessage.link'));
+const error_href = computed(() => props?.is404 ? '/' : STATUS_PAGE_URL);
 </script>
 
 <script lang="ts">
@@ -19,9 +33,9 @@ export default {
     <main>
       <div class="error-view">
         <h2>{{ error_title }}</h2>
-        <i18n-t keypath="views.error.message.text" tag="p">
+        <i18n-t :keypath="error_message" tag="p">
           <template #link>
-            <a :href="STATUS_PAGE_URL">{{ t('views.error.message.link') }}</a>
+            <a :href="error_href">{{ error_link }}</a>
           </template>
         </i18n-t>
       </div>

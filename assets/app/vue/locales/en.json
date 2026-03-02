@@ -76,7 +76,13 @@
     },
     "error": {
       "fallbackError": "Unknown Error",
-      "message": {
+      "notFoundError": "Sorry this page doesn't exist.",
+      "notFoundMessage": {
+        "textAuth": "Please {link} to go back to your dashboard.",
+        "textNoAuth": "Please {link} to login.",
+        "link": "click here"
+      },
+      "serverErrorMessage": {
         "text": "Please visit our {link} for more information.",
         "link": "status page"
       }

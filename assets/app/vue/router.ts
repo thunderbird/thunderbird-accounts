@@ -112,6 +112,19 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
       isPublic: true,
     },
   },
+  // Fallback 404 page
+  {
+    path: '/:pathMatch(.*)*', 
+    name: 'not-found',
+    component: ErrorView,
+    props: {
+      is404: true,
+    },
+    meta: {
+      isPublic: true,
+      useAppTemplate: false,
+    }
+  },
 ];
 
 const router = createRouter({
