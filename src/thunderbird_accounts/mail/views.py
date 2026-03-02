@@ -136,10 +136,12 @@ def home(request: HttpRequest):
             'form_data': form_data or None,
         },
     )
-def handle_500(request: HttpRequest, template_name = None):
+
+
+def handle_500(request: HttpRequest, template_name=None):
     # Retrieve the last known exception
     last_exception = sys.exc_info()[1]
-    
+
     error_title = gettext('Unknown Error')
     if last_exception and isinstance(last_exception, AuthenticationUnavailable):
         error_title = gettext('Thunderbird Accounts is currently unavailable')
@@ -153,6 +155,7 @@ def handle_500(request: HttpRequest, template_name = None):
         },
         status=500,
     )
+
 
 @require_http_methods(['GET'])
 @cache_page(60 * 15)
