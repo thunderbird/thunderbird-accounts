@@ -162,7 +162,7 @@ jobs:
           # Create a YAML config stump containing only the nested tree leading to the image tag update
           cat << EOF > newimage.yaml
           resources:
-            accounts_image: &ACCOUNTS_IMAGE $ECR_TAG
+            .accounts_image: &ACCOUNTS_IMAGE $ECR_TAG
           EOF
 
           # Use yq to merge the stump into the main config
