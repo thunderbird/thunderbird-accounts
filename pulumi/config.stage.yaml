@@ -297,13 +297,13 @@ resources:
         - keycloak-admin-client-id
         - keycloak-admin-client-secret
 
-  # tb:ec2:SshableInstance: {}
+  tb:ec2:SshableInstance: {}
   # Fill out this template to build an SSH bastion
-  tb:ec2:SshableInstance:
-    bastion:
-      ssh_keypair_name: rjung-crunchwrap
-      source_cidrs:
-        - 38.15.46.29/32
+  # tb:ec2:SshableInstance:
+  #   bastion:
+  #     ssh_keypair_name: your-keypair
+  #     source_cidrs:
+  #       - 1.2.3.4/32
 
   tb:elasticache:ElastiCacheReplicaGroup:
     accounts:
