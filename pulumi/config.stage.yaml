@@ -97,8 +97,7 @@
 # This forms the base of Accounts-based container definitions. The blank fields commented here must be set on any
 # inheriting container definition:
 #   environment:
-#   logConfiguration.options.awslogs-group:
-#   logConfiguration.options.awslogs-stream-prefix:
+#   logConfiguration
 .accounts_contdef: &ACCOUNTS_CONTAINER_DEFINITION
   image: *ACCOUNTS_IMAGE
   essential: true
