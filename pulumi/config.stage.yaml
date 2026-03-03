@@ -94,51 +94,52 @@
 .zendesk_subdomain: &SECRET_ZENDESK_SUBDOMAIN {name: "ZENDESK_SUBDOMAIN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-subdomain-96tdDy"}
 .zendesk_user_email: &SECRET_ZENDESK_USER_EMAIL {name: "ZENDESK_USER_EMAIL", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-user-email-Irmh4I"}
 
+# This forms the base of Accounts-based container definitions. The blank fields commented here must be set on any
+# inheriting container definition:
+#   environment:
+#   logConfiguration.options.awslogs-group:
+#   logConfiguration.options.awslogs-stream-prefix:
+.accounts_contdef: &ACCOUNTS_CONTAINER_DEFINITION
+  image: *ACCOUNTS_IMAGE
+  essential: true
+  mountPoints: []
+  linuxParameters:
+    initProcessEnabled: True
+  restartPolicy:
+    enabled: yes
+    restartAttemptPeriod: 300
+  secrets:
+    - *SECRET_AUTH_ALLOW_LIST
+    - *SECRET_DATABASE_NAME
+    - *SECRET_DATABASE_PASSWORD
+    - *SECRET_DATABASE_USER
+    - *SECRET_FXA_CLIENT_ID
+    - *SECRET_FXA_ENCRYPT_SECRET
+    - *SECRET_FXA_SECRET
+    - *SECRET_KEYCLOAK_ADMIN_CLIENT_ID
+    - *SECRET_KEYCLOAK_ADMIN_CLIENT_SECRET
+    - *SECRET_LOGIN_CODE_SECRET
+    - *SECRET_OIDC_CLIENT_ID
+    - *SECRET_OIDC_CLIENT_SECRET
+    - *SECRET_OIDC_SIGN_ALGO
+    - *SECRET_PADDLE_PRICE_ID_LO
+    - *SECRET_PADDLE_PRICE_ID_MD
+    - *SECRET_PADDLE_PRICE_ID_HI
+    - *SECRET_PADDLE_TOKEN
+    - *SECRET_REDIS_URL
+    - *SECRET_SECRET_KEY
+    - *SECRET_SENTRY_DSN
+    - *SECRET_STALWART_API_AUTH_METHOD
+    - *SECRET_STALWART_API_AUTH_STRING
+    - *SECRET_ZENDESK_API_TOKEN
+    - *SECRET_ZENDESK_SUBDOMAIN
+    - *SECRET_ZENDESK_USER_EMAIL
+
 ### tb_pulumi resource configs
 resources:
   domains:
     accounts: accounts-stage.tb.pro
 
-  # This forms the base of Accounts-based container definitions. The blank fields commented here must be set on any
-  # inheriting container definition:
-  #   environment:
-  #   logConfiguration.options.awslogs-group:
-  #   logConfiguration.options.awslogs-stream-prefix:
-  accounts_contdef: &ACCOUNTS_CONTAINER_DEFINITION
-    image: *ACCOUNTS_IMAGE
-    essential: true
-    mountPoints: []
-    linuxParameters:
-      initProcessEnabled: True
-    restartPolicy:
-      enabled: yes
-      restartAttemptPeriod: 300
-    secrets:
-      - *SECRET_AUTH_ALLOW_LIST
-      - *SECRET_DATABASE_NAME
-      - *SECRET_DATABASE_PASSWORD
-      - *SECRET_DATABASE_USER
-      - *SECRET_FXA_CLIENT_ID
-      - *SECRET_FXA_ENCRYPT_SECRET
-      - *SECRET_FXA_SECRET
-      - *SECRET_KEYCLOAK_ADMIN_CLIENT_ID
-      - *SECRET_KEYCLOAK_ADMIN_CLIENT_SECRET
-      - *SECRET_LOGIN_CODE_SECRET
-      - *SECRET_OIDC_CLIENT_ID
-      - *SECRET_OIDC_CLIENT_SECRET
-      - *SECRET_OIDC_SIGN_ALGO
-      - *SECRET_PADDLE_PRICE_ID_LO
-      - *SECRET_PADDLE_PRICE_ID_MD
-      - *SECRET_PADDLE_PRICE_ID_HI
-      - *SECRET_PADDLE_TOKEN
-      - *SECRET_REDIS_URL
-      - *SECRET_SECRET_KEY
-      - *SECRET_SENTRY_DSN
-      - *SECRET_STALWART_API_AUTH_METHOD
-      - *SECRET_STALWART_API_AUTH_STRING
-      - *SECRET_ZENDESK_API_TOKEN
-      - *SECRET_ZENDESK_SUBDOMAIN
-      - *SECRET_ZENDESK_USER_EMAIL
 
 
   tb:network:MultiCidrVpc:
