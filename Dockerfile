@@ -15,6 +15,7 @@ ENV IN_CONTAINER=True
 RUN apt update && \
     apt install -y cron npm && \
     apt install -y postgresql && \
+    apt install -y gettext && \
     apt-get clean && \
     mkdir scripts && \
     pip --no-cache install --upgrade pip uv

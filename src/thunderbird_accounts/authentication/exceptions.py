@@ -118,3 +118,7 @@ class SendExecuteActionsEmailError(KeycloakError):
 
     def __str__(self):
         return f'SendExecuteActionsEmailError: {self.error} for {self.action}. <keycloak-id:{self.oidc_id}>'
+
+class AuthenticationUnavailable(RuntimeError):
+    """Used in AccountsOIDCBackend to indicate we need to show a service unavailable page."""
+    pass

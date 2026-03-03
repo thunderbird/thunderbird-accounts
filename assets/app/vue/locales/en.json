@@ -74,6 +74,19 @@
         "footerText": "You’ll be taken to Paddle, our secure payment provider."
       }
     },
+    "error": {
+      "fallbackError": "Unknown Error",
+      "notFoundError": "Sorry this page doesn't exist.",
+      "notFoundMessage": {
+        "textAuth": "Please {link} to go back to your dashboard.",
+        "textNoAuth": "Please {link} to login.",
+        "link": "click here"
+      },
+      "serverErrorMessage": {
+        "text": "Please visit our {link} for more information.",
+        "link": "status page"
+      }
+    },
     "mail": {
       "sections": {
         "dashboard": {
