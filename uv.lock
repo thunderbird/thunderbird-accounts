@@ -1338,7 +1338,7 @@ wheels = [
 
 [[package]]
 name = "thunderbird-accounts"
-version = "1.6.3"
+version = "1.6.4"
 source = { editable = "." }
 dependencies = [
     { name = "argon2-cffi" },
@@ -1399,7 +1399,7 @@ requires-dist = [
     { name = "celery", extras = ["redis"], specifier = ">=5.5.3" },
     { name = "coverage", marker = "extra == 'cli'" },
     { name = "cryptography", specifier = ">=46.0.3" },
-    { name = "django", specifier = ">=5.2.11" },
+    { name = "django", specifier = ">=5.2.12" },
     { name = "django-cors-headers", specifier = ">=4.9.0" },
     { name = "django-filter", specifier = ">=25.2" },
     { name = "django-stubs-ext", specifier = ">=5.2.8" },
