@@ -753,79 +753,72 @@ def appointment_caldav_setup(request: HttpRequest):
     Receives an OIDC token, retrieves the user's Stalwart account
     and creates or retrieves a special App Password to be used in Appointment's CalDAV auto-setup"""
 
+    if not settings.APPOINTMENT_CALDAV_SECRET:
+        logging.error('Appointment CalDAV secret is not set')
+        return JsonResponse(
+            {'success': False, 'error': _('An error has occurred while setting up the Appointment CalDAV.')},
+            status=500,
+        )
+
+    data = None
+
     try:
         data = json.loads(request.body)
-        appointment_secret = data.get('appointment-secret')
-
-        # This endpoint is only meant to be called by Appointment's backend
-        # so we need to verify a shared secret between them before proceeding
-        if not appointment_secret or appointment_secret != settings.APPOINTMENT_CALDAV_SECRET:
-            return JsonResponse(
-                {'success': False, 'error': _('Invalid appointment secret.')},
-                status=400,
-            )
-
-        access_token = data.get('oidc-access-token')
-
-        if not access_token:
-            return JsonResponse(
-                {'success': False, 'error': _('OIDC access token is required.')},
-                status=400,
-            )
-
     except json.JSONDecodeError:
         return JsonResponse(
             {'success': False, 'error': _('Invalid request data')},
             status=400,
         )
 
+    appointment_secret = data.get('appointment-secret')
+
+    # This endpoint is only meant to be called by Appointment's backend
+    # so we need to verify a shared secret between them before proceeding
+    if not appointment_secret or appointment_secret != settings.APPOINTMENT_CALDAV_SECRET:
+        logging.error('Invalid appointment secret during Appointment CalDAV setup')
+        return JsonResponse(
+            {'success': False, 'error': _('An error has occurred while setting up the Appointment CalDAV.')},
+            status=400,
+        )
+
+    access_token = data.get('oidc-access-token')
+
+    if not access_token:
+        logging.warning('OIDC access token is missing during Appointment CalDAV setup')
+        return JsonResponse(
+            {'success': False, 'error': _('An error has occurred while setting up the Appointment CalDAV.')},
+            status=400,
+        )
+
     user = None
 
     # Validate the access token against the OIDC provider to identify the user
-    if settings.AUTH_SCHEME == 'oidc' and settings.OIDC_OP_USER_ENDPOINT:
-        try:
-            response = requests.get(
-                settings.OIDC_OP_USER_ENDPOINT,
-                headers={'Authorization': f'Bearer {access_token}'},
-                timeout=10
-            )
-            response.raise_for_status()
-            claims = response.json()
-
-            backend = AccountsOIDCBackend(request)
-            users = backend.filter_users_by_claims(claims)
-            user = users.first()
-        except requests.RequestException as ex:
-            sentry_sdk.capture_exception(ex)
-            return JsonResponse(
-                {'success': False, 'error': _('Failed to validate OIDC token.')},
-                status=401,
-            )
-    else:
+    try:
+        oidc_backend = AccountsOIDCBackend(None)
+        user = oidc_backend.get_user_from_access_token(access_token)
+    except Exception as ex:
+        sentry_sdk.capture_exception(ex)
         return JsonResponse(
-            {'success': False, 'error': _('OIDC is not configured.')},
-            status=501,
+            {'success': False, 'error': _('An error has occurred while setting up the Appointment CalDAV.')},
+            status=401,
         )
 
     if not user:
+        logging.error('User not found for access token during Appointment CalDAV setup')
         return JsonResponse(
-            {'success': False, 'error': _('User not found.')},
+            {'success': False, 'error': _('An error has occurred while setting up the Appointment CalDAV.')},
             status=404,
         )
 
-    if not user.stalwart_primary_email:
-        sentry_sdk.capture_message(
-            f'Stalwart Primary Email address is not set for user {user.uuid}',
-            level='error',
-            user={'user_id': user.uuid},
-        )
+    if not user.has_active_subscription:
+        logging.error('User does not have an active subscription during Appointment CalDAV setup')
         return JsonResponse(
-            {'success': False, 'error': _('Primary email address is not set.')},
+            {'success': False, 'error': _('An error has occurred while setting up the Appointment CalDAV.')},
             status=400,
         )
 
     # Use a special label for the App Password to be used in Appointment's CalDAV auto-setup
-    label = f'appointment-caldav-setup-{user.stalwart_primary_email}'
+    label = f'{settings.APPOINTMENT_APP_PASSWORD_PREFIX}{user.stalwart_primary_email}'
 
     try:
         stalwart_client = MailClient()
@@ -849,7 +842,7 @@ def appointment_caldav_setup(request: HttpRequest):
     except Exception as ex:
         sentry_sdk.capture_exception(ex)
         return JsonResponse(
-            {'success': False, 'error': _('An error occurred while creating the app password.')},
+            {'success': False, 'error': _('An error has occurred while setting up the Appointment CalDAV.')},
             status=500,
         )
 
