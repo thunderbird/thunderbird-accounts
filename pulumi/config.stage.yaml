@@ -648,7 +648,7 @@ resources:
           max_capacity: 4
         flower:
           min_capacity: 1
-          max_capacity: 3
+          max_capacity: 1
 
   tb:fargate:FargateClusterWithLogging:
     keycloak:
