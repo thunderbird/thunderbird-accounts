@@ -838,13 +838,13 @@ def appointment_caldav_setup(request: HttpRequest):
             if secret.startswith(expected_prefix):
                 stalwart_client.delete_app_password(user.stalwart_primary_email, secret)
 
-        # Generate a random plain-text password, hash it for Stalwart
-        # storage, and return the plain-text to the caller for CalDAV auth.
-        plain_password = secrets.token_urlsafe(32)
-        app_password_hash = utils.save_app_password(label, plain_password)
+        # Generate a random base64 password, hash it for Stalwart
+        # storage, and return the base64 password to the caller for CalDAV auth.
+        base64_password = secrets.token_urlsafe(64)
+        app_password_hash = utils.save_app_password(label, base64_password)
         stalwart_client.save_app_password(user.stalwart_primary_email, app_password_hash)
 
-        return JsonResponse({'success': True, 'app_password': plain_password})
+        return JsonResponse({'success': True, 'app_password': base64_password})
 
     except Exception as ex:
         sentry_sdk.capture_exception(ex)
