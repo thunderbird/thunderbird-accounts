@@ -16,7 +16,7 @@ const error_message = computed(() => {
   if (props?.is404) {
     return isAuthenticated ? 'views.error.notFoundMessage.textAuth' : 'views.error.notFoundMessage.textNoAuth';
   }
-  return 'views.error.message.serverErrorMessage';
+  return 'views.error.serverErrorMessage.text';
 });
 const error_link = computed(() => props?.is404 ? t('views.error.notFoundMessage.link') : t('views.error.serverErrorMessage.link'));
 const error_href = computed(() => props?.is404 ? '/' : STATUS_PAGE_URL);
