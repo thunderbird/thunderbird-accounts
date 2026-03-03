@@ -28,6 +28,17 @@ def save_app_password(label, password):
     return secret_string
 
 
+def filter_app_passwords(secrets: list[str], *, keep_prefix: str | None = None) -> list[str]:
+    """Return app-password secrets with Appointment CalDAV entry excluded.
+
+    If keep_prefix is given, only secrets whose label starts with that
+    prefix are kept (all others are returned).  By default the
+    ``APPOINTMENT_APP_PASSWORD_PREFIX`` is stripped out.
+    """
+    prefix = f'$app${keep_prefix or settings.APPOINTMENT_APP_PASSWORD_PREFIX}'
+    return [s for s in secrets if not s.startswith(prefix)]
+
+
 def decode_app_password(secret):
     if not secret:
         return ''

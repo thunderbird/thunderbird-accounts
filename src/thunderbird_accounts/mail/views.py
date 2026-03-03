@@ -35,7 +35,7 @@ from thunderbird_accounts.mail.exceptions import (
     DomainAlreadyExistsError,
     DomainNotFoundError,
 )
-from thunderbird_accounts.mail.utils import decode_app_password, is_address_taken
+from thunderbird_accounts.mail.utils import decode_app_password, filter_app_passwords, is_address_taken
 
 from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail.zendesk import ZendeskClient
@@ -370,8 +370,9 @@ def app_password_set(request: HttpRequest):
 
         email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
 
-        # Find and delete all previously existing app passwords
-        for secret in email_user.get('secrets', []):
+        # Find and delete all previously existing app passwords, keeping
+        # the one created by the Appointment CalDAV setup flow.
+        for secret in filter_app_passwords(email_user.get('secrets', [])):
             stalwart_client.delete_app_password(request.user.stalwart_primary_email, secret)
 
         # Create and save the new app password
@@ -825,7 +826,7 @@ def appointment_caldav_setup(request: HttpRequest):
         email_user = stalwart_client.get_account(user.stalwart_primary_email)
 
         # Remove any existing app password for this label so we can
-        # replace it with a fresh one whose plain-text we still know.
+        # replace it with a fresh one.
         expected_prefix = f'$app${label}$'
         for secret in email_user.get('secrets', []):
             if secret.startswith(expected_prefix):
