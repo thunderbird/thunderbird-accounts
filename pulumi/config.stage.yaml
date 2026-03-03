@@ -8,17 +8,6 @@
 # Update this value to update all containers based on this Keycloak image
 .keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-54b1954de7ae3700681642a526c6566485982b90
 
-# This forms the base of Accounts-based task definitions. The blank fields commented here must be set on any
-# inheriting task definition:
-#   family:
-#   cpu:
-#   memory:
-#   container_definitions:
-.accounts_taskdef: &ACCOUNTS_TASK_DEFINITION
-  network_mode: awsvpc
-  requires_compatibilities:
-   - FARGATE
-
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
 .admin_website: &VAR_ADMIN_WEBSITE {name: "ADMIN_WEBSITE", value: "https://www.thunderbird.net"}
@@ -94,6 +83,17 @@
 .zendesk_subdomain: &SECRET_ZENDESK_SUBDOMAIN {name: "ZENDESK_SUBDOMAIN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-subdomain-96tdDy"}
 .zendesk_user_email: &SECRET_ZENDESK_USER_EMAIL {name: "ZENDESK_USER_EMAIL", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-user-email-Irmh4I"}
 
+# This forms the base of Accounts-based task definitions. The blank fields commented here must be set on any
+# inheriting task definition:
+#   family:
+#   cpu:
+#   memory:
+#   container_definitions:
+.accounts_taskdef: &ACCOUNTS_TASK_DEFINITION
+  network_mode: awsvpc
+  requires_compatibilities:
+   - FARGATE
+
 # This forms the base of Accounts-based container definitions. The blank fields commented here must be set on any
 # inheriting container definition:
 #   environment:
@@ -139,8 +139,6 @@
 resources:
   domains:
     accounts: accounts-stage.tb.pro
-
-
 
   tb:network:MultiCidrVpc:
     vpc:
