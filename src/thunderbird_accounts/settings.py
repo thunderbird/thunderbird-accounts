@@ -502,3 +502,6 @@ ACCOUNTS_TO_MAILCHIMP_LANGUAGES = {
 
 # For private stalwart communication
 VERIFY_PRIVATE_LINK_SSL = True if os.getenv('VERIFY_PRIVATE_LINK_SSL', 'true').lower() == 'true' else False
+
+# For Appointment's CalDAV auto-setup
+APPOINTMENT_APP_PASSWORD_PREFIX: str = 'appointment-caldav-setup-'
