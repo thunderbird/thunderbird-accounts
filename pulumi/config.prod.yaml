@@ -3,6 +3,147 @@
 .log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", "value": "INFO"}
 .sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": 0.66} 
 
+# These variables are common to Accounts application environments. Some tasks will require additional configuration.
+.admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
+.admin_website: &VAR_ADMIN_WEBSITE {name: "ADMIN_WEBSITE", value: "https://www.thunderbird.net"}
+.allowed_email_domains: &VAR_ALLOWED_EMAIL_DOMAINS {name: "ALLOWED_EMAIL_DOMAINS", value: "thundermail.com,tb.pro"}
+.allowed_hosts: &VAR_ALLOWED_HOSTS {name: "ALLOWED_HOSTS", value: "accounts.tb.pro"}
+.app_env: &VAR_APP_ENV {name: "APP_ENV", value: "prod"}
+.auth_scheme: &VAR_AUTH_SCHEME {name: "AUTH_SCHEME", value: "oidc"}
+.csrf_httponly: &VAR_CSRF_HTTPONLY {name: "CSRF_HTTPONLY", value: "True"}
+.csrf_secure: &VAR_CSRF_SECURE {name: "CSRF_SECURE", value: "True"}
+.csrf_trusted_origins: &VAR_CSRF_TRUSTED_ORIGINS {name: "CSRF_TRUSTED_ORIGINS", value: "https://accounts.tb.pro"}
+.fxa_callback: &VAR_FXA_CALLBACK {name: "FXA_CALLBACK", value: "https://accounts.tb.pro/api/v1/auth/fxa/callback"}
+.fxa_oauth_server_url: &VAR_FXA_OAUTH_SERVER_URL {name: "FXA_OAUTH_SERVER_URL", value: "https://oauth.accounts.firefox.com/v1"}
+.fxa_open_id_config: &VAR_FXA_OPEN_ID_CONFIG {name: "FXA_OPEN_ID_CONFIG", value: "https://accounts.firefox.com/.well-known/openid-configuration"}
+.fxa_profile_server_url: &VAR_FXA_PROFILE_SERVER_URL {name: "FXA_PROFILE_SERVER_URL", value: "https://profile.accounts.firefox.com/v1"}
+.imap_host: &VAR_IMAP_HOST {name: "IMAP_HOST", value: "mail.thundermail.com"}
+.imap_port: &VAR_IMAP_PORT {name: "IMAP_PORT", value: "993"}
+.imap_tls: &VAR_IMAP_TLS {name: "IMAP_TLS", value: "True"}
+.keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth.tb.pro/admin/realms/tbpro/"}
+.keycloak_admin_url_token: &VAR_KEYCLOAK_ADMIN_URL_TOKEN {name: "KEYCLOAK_ADMIN_URL_TOKEN", value: "https://auth.tb.pro/realms/master/protocol/openid-connect/token/"}
+.jmap_host: &VAR_JMAP_HOST {name: "JMAP_HOST", value: "mail.thundermail.com"}
+.jmap_port: &VAR_JMAP_PORT {name: "JMAP_PORT", value: "443"}
+.jmap_tls: &VAR_JMAP_TLS {name: "JMAP_TLS", value: "True"}
+.min_custom_domain_alias_length: &VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH {name: "MIN_CUSTOM_DOMAIN_ALIAS_LENGTH", value: "3"}
+.oidc_fallback_match_by_email: &VAR_OIDC_FALLBACK_MATCH_BY_EMAIL {name: "OIDC_FALLBACK_MATCH_BY_EMAIL", value: "True"}
+.oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth/"}
+.oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/token/"}
+.oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/userinfo/"}
+.oidc_url_jwks: &VAR_OIDC_URL_JWKS {name: "OIDC_URL_JWKS", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs/"}
+.oidc_url_logout: &VAR_OIDC_URL_LOGOUT {name: "OIDC_URL_LOGOUT", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout/"}
+.paddle_env: &VAR_PADDLE_ENV {name: "PADDLE_ENV", value: "production"}
+.public_base_url: &VAR_PUBLIC_BASE_URL {name: "PUBLIC_BASE_URL", value: "https://accounts.tb.pro"}
+.redis_celery_db: &VAR_REDIS_CELERY_DB {name: "REDIS_CELERY_DB", value: "5"}
+.redis_celery_results_db: &VAR_REDIS_CELERY_RESULTS_DB {name: "REDIS_CELERY_RESULTS_DB", value: "6"}
+.redis_internal_db: &VAR_REDIS_INTERNAL_DB {name: "REDIS_INTERNAL_DB", value: "0"}
+.redis_shared_db: &VAR_REDIS_SHARED_DB {name: "REDIS_SHARED_DB", value: "10"}
+.smtp_host: &VAR_SMTP_HOST {name: "SMTP_HOST", value: "mail.thundermail.com"}
+.smtp_port: &VAR_SMTP_PORT {name: "SMTP_PORT", value: "465"}
+.smtp_tls: &VAR_SMTP_TLS {name: "SMTP_TLS", value: "True"}
+.stalwart_base_api_url: &VAR_STALWART_BASE_API_URL {name: "STALWART_BASE_API_URL", value: "https://mailstrom-prod-management-i.thundermail.com:8080"}
+.stalwart_base_jmap_url: &VAR_STALWART_BASE_JMAP_URL {name: "STALWART_BASE_JMAP_URL", value: "https://mail.thundermail.com"}
+.support_contact: &VAR_SUPPORT_CONTACT {name: "SUPPORT_CONTACT", value: "dummy@example.org"}
+.tb_pro_appointment_url: &VAR_TB_PRO_APPOINTMENT_URL {name: "TB_PRO_APPOINTMENT_URL", value: "https://appointment.tb.pro/"}
+.tb_pro_send_url: &VAR_TB_PRO_SEND_URL {name: "TB_PRO_SEND_URL", value: "https://send.tb.pro/"}
+.tb_pro_wait_list_url: &VAR_TB_PRO_WAIT_LIST_URL {name: "TB_PRO_WAIT_LIST_URL", value: "https://tb.pro/waitlist/"}
+.use_allow_list: &VAR_USE_ALLOW_LIST {name: "USE_ALLOW_LIST", value: "True"}
+.verify_private_link_ssl: &VAR_VERIFY_PRIVATE_LINK_SSL {name: "VERIFY_PRIVATE_LINK_SSL", value: "False"}
+.zendesk_form_id: &VAR_ZENDESK_FORM_ID {name: "ZENDESK_FORM_ID", value: "38216134664083"}
+.zendesk_form_browser_field_id: &VAR_ZENDESK_FORM_BROWSER_FIELD_ID {name: "ZENDESK_FORM_BROWSER_FIELD_ID", value: "44379231787027"}
+.zendesk_form_os_field_id: &VAR_ZENDESK_FORM_OS_FIELD_ID {name: "ZENDESK_FORM_OS_FIELD_ID", value: "44379263732755"}
+
+# These variables are also common to our environments, but are pulled from secret stores instead
+.auth_allow_list: &SECRET_AUTH_ALLOW_LIST {name: "AUTH_ALLOW_LIST", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-allow-list-6iQipk"}
+.database_host: &SECRET_DATABASE_HOST {name: "DATABASE_HOST", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-host-u5Ly46"}
+.database_name: &SECRET_DATABASE_NAME {name: "DATABASE_NAME", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-name-1LT9GX"}
+.database_password: &SECRET_DATABASE_PASSWORD {name: "DATABASE_PASSWORD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-password-YEuGDS"}
+.database_user: &SECRET_DATABASE_USER {name: "DATABASE_USER", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-user-aLCuis"}
+.fxa_client_id: &SECRET_FXA_CLIENT_ID {name: "FXA_CLIENT_ID", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-client-id-ggzLOI"}
+.fxa_encrypt_secret: &SECRET_FXA_ENCRYPT_SECRET {name: "FXA_ENCRYPT_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-encrypt-secret-MXgdBx"}
+.fxa_secret: &SECRET_FXA_SECRET {name: "FXA_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-secret-yPR6T4"}
+.keycloak_admin_client_id: &SECRET_KEYCLOAK_ADMIN_CLIENT_ID {name: "KEYCLOAK_ADMIN_CLIENT_ID", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-client-id-DOpTIZ"}
+.keycloak_admin_client_secret: &SECRET_KEYCLOAK_ADMIN_CLIENT_SECRET {name: "KEYCLOAK_ADMIN_CLIENT_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-client-secret-3CMuUp"}
+.login_code_secret: &SECRET_LOGIN_CODE_SECRET {name: "LOGIN_CODE_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/login-code-secret-OSoact"}
+.mailchimp_api_key: &SECRET_MAILCHIMP_API_KEY {name: "MAILCHIMP_API_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-api-key-5xUoSN"}
+.mailchimp_dc: &SECRET_MAILCHIMP_DC {name: "MAILCHIMP_DC", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-dc-SyLAUO"}
+.mailchimp_list_id: &SECRET_MAILCHIMP_LIST_ID {name: "MAILCHIMP_LIST_ID", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-list-id-OAj8yj"}
+.oidc_client_id: &SECRET_OIDC_CLIENT_ID {name: "OIDC_CLIENT_ID", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-client-id-HjOG4R"}
+.oidc_client_secret: &SECRET_OIDC_CLIENT_SECRET {name: "OIDC_CLIENT_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-client-secret-mg3bCN"}
+.oidc_sign_algo: &SECRET_OIDC_SIGN_ALGO {name: "OIDC_SIGN_ALGO", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-sign-algo-N6vK9L"}
+.paddle_api_key: &SECRET_PADDLE_API_KEY {Name: "PADDLE_API_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-api-key-yz3XNN"}
+.paddle_price_id_lo: &SECRET_PADDLE_PRICE_ID_LO {name: "PADDLE_PRICE_ID_LO", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-lo-MhLJdH"}
+.paddle_price_id_md: &SECRET_PADDLE_PRICE_ID_MD {name: "PADDLE_PRICE_ID_MD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-md-HAbQbW"}
+.paddle_price_id_hi: &SECRET_PADDLE_PRICE_ID_HI {name: "PADDLE_PRICE_ID_HI", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-hi-0gHjja"}
+.paddle_token: &SECRET_PADDLE_TOKEN {name: "PADDLE_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-token-aNOfo6"}
+.paddle_webhook_key: &SECRET_PADDLE_WEBHOOK_KEY {name: "PADDLE_WEBHOOK_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-webhook-key-vX5JHE"}
+.redis_url: &SECRET_REDIS_URL {name: "REDIS_URL", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/redis-url-Nq3x1a"}
+.secret_key: &SECRET_SECRET_KEY {name: "SECRET_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK"}
+.sentry_dsn: &SECRET_SENTRY_DSN {name: "SENTRY_DSN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV"}
+.stalwart_api_auth_method: &SECRET_STALWART_API_AUTH_METHOD {name: "STALWART_API_AUTH_METHOD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR"}
+.stalwart_api_auth_string: &SECRET_STALWART_API_AUTH_STRING {name: "STALWART_API_AUTH_STRING", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN"}
+.zendesk_api_token: &SECRET_ZENDESK_API_TOKEN {name: "ZENDESK_API_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-api-token-2rsztq"}
+.zendesk_subdomain: &SECRET_ZENDESK_SUBDOMAIN {name: "ZENDESK_SUBDOMAIN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-subdomain-C2G7He"}
+.zendesk_user_email: &SECRET_ZENDESK_USER_EMAIL {name: "ZENDESK_USER_EMAIL", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-user-email-HR9Al8"}
+
+# This forms the base of Accounts-based task definitions. The blank fields commented here must be set on any
+# inheriting task definition:
+#   family:
+#   cpu:
+#   memory:
+#   container_definitions:
+.accounts_taskdef: &ACCOUNTS_TASK_DEFINITION
+  network_mode: awsvpc
+  requires_compatibilities:
+   - FARGATE
+
+# This forms the base of Accounts-based container definitions. The blank fields commented here must be set on any
+# inheriting container definition:
+#   environment:
+#   logConfiguration:
+.accounts_contdef: &ACCOUNTS_CONTAINER_DEFINITION
+  image: *ACCOUNTS_IMAGE
+  essential: true
+  mountPoints: []
+  linuxParameters:
+    initProcessEnabled: True
+  restartPolicy:
+    enabled: yes
+    restartAttemptPeriod: 300
+  secrets:
+    - *SECRET_AUTH_ALLOW_LIST
+    - *SECRET_DATABASE_HOST
+    - *SECRET_DATABASE_NAME
+    - *SECRET_DATABASE_PASSWORD
+    - *SECRET_DATABASE_USER
+    - *SECRET_FXA_CLIENT_ID
+    - *SECRET_FXA_ENCRYPT_SECRET
+    - *SECRET_FXA_SECRET
+    - *SECRET_KEYCLOAK_ADMIN_CLIENT_ID
+    - *SECRET_KEYCLOAK_ADMIN_CLIENT_SECRET
+    - *SECRET_LOGIN_CODE_SECRET
+    - *SECRET_MAILCHIMP_API_KEY
+    - *SECRET_MAILCHIMP_DC
+    - *SECRET_MAILCHIMP_LIST_ID
+    - *SECRET_OIDC_CLIENT_ID
+    - *SECRET_OIDC_CLIENT_SECRET
+    - *SECRET_OIDC_SIGN_ALGO
+    - *SECRET_PADDLE_PRICE_ID_LO
+    - *SECRET_PADDLE_PRICE_ID_MD
+    - *SECRET_PADDLE_PRICE_ID_HI
+    - *SECRET_PADDLE_TOKEN
+    - *SECRET_PADDLE_WEBHOOK_KEY
+    - *SECRET_REDIS_URL
+    - *SECRET_SECRET_KEY
+    - *SECRET_SENTRY_DSN
+    - *SECRET_STALWART_API_AUTH_METHOD
+    - *SECRET_STALWART_API_AUTH_STRING
+    - *SECRET_ZENDESK_API_TOKEN
+    - *SECRET_ZENDESK_SUBDOMAIN
+    - *SECRET_ZENDESK_USER_EMAIL
+
+
+### tb_pulumi resource configs
 resources:
 
   domains:
@@ -185,6 +326,271 @@ resources:
       transit_encryption_enabled: True
       apply_immediately: True
       
+  tb:fargate:AutoscalingFargateCluster:
+    accounts:
+      cluster: {}
+
+      cluster_name: accounts-prod
+
+      task_definitions:
+        celery:
+          <<: *ACCOUNTS_TASK_DEFINITION
+          family: accounts-celery
+          cpu: 512
+          memory: 1024
+          container_definitions:
+            - <<: *ACCOUNTS_CONTAINER_DEFINITION
+              name: celery
+              logConfiguration:
+                logDriver: awslogs
+                options:
+                  awslogs-group: accounts-prod-afc-accounts-loggroup-celery
+                  awslogs-stream-prefix: accounts/prod/celery/
+                  awslogs-region: eu-central-1
+              environment:
+                - *VAR_ADMIN_CONTACT
+                - *VAR_ADMIN_WEBSITE
+                - *VAR_ALLOWED_EMAIL_DOMAINS
+                - *VAR_ALLOWED_HOSTS
+                - *VAR_APP_ENV
+                - *VAR_AUTH_SCHEME
+                - *VAR_CSRF_HTTPONLY
+                - *VAR_CSRF_SECURE
+                - *VAR_CSRF_TRUSTED_ORIGINS
+                - *VAR_FXA_CALLBACK
+                - *VAR_FXA_OAUTH_SERVER_URL
+                - *VAR_FXA_OPEN_ID_CONFIG
+                - *VAR_FXA_PROFILE_SERVER_URL
+                - *VAR_IMAP_HOST
+                - *VAR_IMAP_PORT
+                - *VAR_IMAP_TLS
+                - *VAR_KEYCLOAK_URL_API
+                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
+                - *VAR_JMAP_HOST
+                - *VAR_JMAP_PORT
+                - *VAR_JMAP_TLS
+                - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                - *VAR_OIDC_FALLBACK_MATCH_BY_EMAIL
+                - *VAR_OIDC_URL_AUTH
+                - *VAR_OIDC_URL_TOKEN
+                - *VAR_OIDC_URL_USER
+                - *VAR_OIDC_URL_JWKS
+                - *VAR_OIDC_URL_LOGOUT
+                - *VAR_PADDLE_ENV
+                - *VAR_PUBLIC_BASE_URL
+                - *VAR_REDIS_CELERY_DB
+                - *VAR_REDIS_CELERY_RESULTS_DB
+                - *VAR_REDIS_INTERNAL_DB
+                - *VAR_REDIS_SHARED_DB
+                - *VAR_SMTP_HOST
+                - *VAR_SMTP_PORT
+                - *VAR_SMTP_TLS
+                - *VAR_STALWART_BASE_API_URL
+                - *VAR_STALWART_BASE_JMAP_URL
+                - *VAR_SUPPORT_CONTACT
+                - *VAR_TB_PRO_APPOINTMENT_URL
+                - *VAR_TB_PRO_SEND_URL
+                - *VAR_TB_PRO_WAIT_LIST_URL
+                - *VAR_USE_ALLOW_LIST
+                - *VAR_VERIFY_PRIVATE_LINK_SSL
+                - *VAR_ZENDESK_FORM_ID
+                - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
+                - *VAR_ZENDESK_FORM_OS_FIELD_ID
+                - name: TBA_CELERY
+                  value: "yes"
+                - name: TBA_FLOWER
+                  value: "no"
+
+        flower:
+          <<: *ACCOUNTS_TASK_DEFINITION
+          family: accounts-flower
+          cpu: 512
+          memory: 1024
+          container_definitions:
+            - <<: *ACCOUNTS_CONTAINER_DEFINITION
+              name: flower
+              logConfiguration:
+                logDriver: awslogs
+                options:
+                  awslogs-group: accounts-prod-afc-accounts-loggroup-flower
+                  awslogs-stream-prefix: accounts/prod/flower/
+                  awslogs-region: eu-central-1
+              portMappings:
+                - containerPort: 5555
+                  hostPort: 5555
+                  protocol: tcp
+              environment:
+                - *VAR_ADMIN_CONTACT
+                - *VAR_ADMIN_WEBSITE
+                - *VAR_ALLOWED_EMAIL_DOMAINS
+                - *VAR_ALLOWED_HOSTS
+                - *VAR_APP_ENV
+                - *VAR_AUTH_SCHEME
+                - *VAR_CSRF_HTTPONLY
+                - *VAR_CSRF_SECURE
+                - *VAR_CSRF_TRUSTED_ORIGINS
+                - *VAR_FXA_CALLBACK
+                - *VAR_FXA_OAUTH_SERVER_URL
+                - *VAR_FXA_OPEN_ID_CONFIG
+                - *VAR_FXA_PROFILE_SERVER_URL
+                - *VAR_IMAP_HOST
+                - *VAR_IMAP_PORT
+                - *VAR_IMAP_TLS
+                - *VAR_KEYCLOAK_URL_API
+                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
+                - *VAR_JMAP_HOST
+                - *VAR_JMAP_PORT
+                - *VAR_JMAP_TLS
+                - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                - *VAR_OIDC_FALLBACK_MATCH_BY_EMAIL
+                - *VAR_OIDC_URL_AUTH
+                - *VAR_OIDC_URL_TOKEN
+                - *VAR_OIDC_URL_USER
+                - *VAR_OIDC_URL_JWKS
+                - *VAR_OIDC_URL_LOGOUT
+                - *VAR_PADDLE_ENV
+                - *VAR_PUBLIC_BASE_URL
+                - *VAR_REDIS_CELERY_DB
+                - *VAR_REDIS_CELERY_RESULTS_DB
+                - *VAR_REDIS_INTERNAL_DB
+                - *VAR_REDIS_SHARED_DB
+                - *VAR_SMTP_HOST
+                - *VAR_SMTP_PORT
+                - *VAR_SMTP_TLS
+                - *VAR_STALWART_BASE_API_URL
+                - *VAR_STALWART_BASE_JMAP_URL
+                - *VAR_SUPPORT_CONTACT
+                - *VAR_TB_PRO_APPOINTMENT_URL
+                - *VAR_TB_PRO_SEND_URL
+                - *VAR_TB_PRO_WAIT_LIST_URL
+                - *VAR_USE_ALLOW_LIST
+                - *VAR_VERIFY_PRIVATE_LINK_SSL
+                - *VAR_ZENDESK_FORM_ID
+                - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
+                - *VAR_ZENDESK_FORM_OS_FIELD_ID
+                - name: TBA_CELERY
+                  value: "no"
+                - name: TBA_FLOWER
+                  value: "yes"
+
+      targets:
+        flower:
+          name: flower-prod
+          health_check:
+            enabled: true
+            healthy_threshold: 3
+            interval: 15
+            path: /
+            port: 5555
+            protocol: HTTP
+            timeout: 5
+            unhealthy_threshold: 3
+          port: 5555
+          protocol: HTTP
+          target_type: ip
+          ip_address_type: ipv4
+      
+      load_balancers:
+        flower:
+          enable_cross_zone_load_balancing: yes
+          internal: yes
+          ip_address_type: ipv4
+          load_balancer_type: application
+          name: flower-prod
+
+      container_security_groups:
+        celery:
+          none:
+            description: Network config for Celery containers in accounts-prod
+            rules:
+              egress:
+                - from_port: 0
+                  to_port: 65535
+                  protocol: tcp
+                  description: Allow all egress
+                  cidr_blocks:
+                    - 0.0.0.0/0
+              ingress: []  # Celery is a "pull" based system, requiring no ingress
+        flower:    # Service to connect
+          flower:  # LB to allow connections from
+            description: Network config for Flower containers in accounts-prod
+            rules:
+              egress:
+                - from_port: 0
+                  to_port: 65535
+                  protocol: tcp
+                  description: Allow all egress
+                  cidr_blocks:
+                    - 0.0.0.0/0
+              ingress:
+                - from_port: 5555
+                  to_port: 5555
+                  protocol: tcp
+                  description: Allow traffic to Flower service
+
+      load_balancer_security_groups:
+        flower:  # LB to apply the rules to
+          description: Network config for Flower load balancer in accounts-prod
+          rules:
+            egress:
+              - from_port: 0
+                to_port: 65535
+                protocol: tcp
+                description: Allow all egress
+                cidr_blocks:
+                  - 0.0.0.0/0
+            ingress:
+              - from_port: 443
+                to_port: 443
+                protocol: tcp
+                description: Allow local TLS traffic only
+                cidr_blocks:
+                  - 10.11.0.0/16
+      
+      listeners:
+        flower:  # Load balancer to attach to
+          flower:  # Target to route traffic to
+            certificate_arn: arn:aws:acm:eu-central-1:768512802988:certificate/bd27f0e2-2b1a-4b38-9211-110975e4f945  # flower.tb.pro
+            port: 443
+            protocol: HTTPS
+
+      services:
+        celery:
+          assign_public_ip: yes
+          service:
+            desired_count: 1
+          target: null
+        flower:
+          assign_public_ip: yes
+          container_name: flower
+          container_port: 5555
+          load_balancer: flower
+          service:
+            desired_count: 1
+          target: flower
+
+      registries:
+        celery:
+          - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
+        flower:
+          - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
+
+      secrets:
+        celery:
+          - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/*
+        flower:
+          - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/*
+      
+      ssm_params: {}
+
+      autoscalers:
+        celery:
+          min_capacity: 2
+          max_capacity: 4
+        flower:
+          min_capacity: 1
+          max_capacity: 1
+
   tb:fargate:FargateClusterWithLogging:
     keycloak:
       assign_public_ip: True
