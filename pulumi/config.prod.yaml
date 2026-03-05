@@ -214,7 +214,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-8f4b2f2785124d1c36f3b29dac0cf5a5c39e8687
+            image: *KEYCLOAK_IMAGE
             command:
               - start
             portMappings:
@@ -296,7 +296,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.4.0
+            image: *ACCOUNTS_IMAGE
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -487,7 +487,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.4.0
+            image: *ACCOUNTS_IMAGE
             linuxParameters:
               initProcessEnabled: True
             secrets:
