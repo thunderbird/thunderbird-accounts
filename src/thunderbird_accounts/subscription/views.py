@@ -1,20 +1,17 @@
 import datetime
 import json
 import logging
-import time
 
 import sentry_sdk
 from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
+from django.http import HttpResponse, JsonResponse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.core.signing import Signer
 
 from paddle_billing import Client
 from paddle_billing.Resources.CustomerPortalSessions.Operations import CreateCustomerPortalSession
-from paddle_billing.Resources.Notifications.Operations import ListNotifications
 
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.request import Request

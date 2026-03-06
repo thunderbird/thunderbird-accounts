@@ -121,17 +121,12 @@ class PaddleCheckoutIsDoneTestCase(TestCase):
 
             instance.notifications.list.assert_not_called()
 
-    @override_settings(IS_DEV=False)
-    def test_transaction_found_and_is_doneish_by_being_paid(self):
-        """We found the transaction but it's doneish (status=PAID). This should trigger payment verification
-        and remove txid from session.
-
-        We should also ensure IS_DEV=False does not call Paddle or the fake webhook task."""
-
+    def _test_doneish_by_status(self, tx_status):
+        """Helper function so we can reduce some code without introducing artifacts between test runs."""
         # Make sure we have a txid in session
         self.set_paddle_transaction_id()
 
-        transaction = Transaction.objects.create(paddle_id=self.txid, status=Transaction.StatusValues.PAID.value)
+        transaction = Transaction.objects.create(paddle_id=self.txid, status=tx_status)
         self.assertIsNotNone(transaction)
 
         with patch('thunderbird_accounts.subscription.tasks.dev_only_paddle_fake_webhook', MagicMock()) as task_mock:
@@ -149,10 +144,28 @@ class PaddleCheckoutIsDoneTestCase(TestCase):
 
                 data = response.json()
                 self.assertTrue(data)
-                self.assertEqual(data.get('status'), Transaction.StatusValues.PAID.value)
+                self.assertEqual(data.get('status'), tx_status)
 
                 self.user.refresh_from_db()
                 self.assertTrue(self.user.is_awaiting_payment_verification)
 
                 instance.notifications.list.assert_not_called()
                 task_mock.assert_not_called()
+
+    @override_settings(IS_DEV=False)
+    def test_transaction_found_and_is_doneish_by_being_paid(self):
+        """We found the transaction but it's doneish (status=PAID). This should trigger payment verification
+        and remove txid from session.
+
+        We should also ensure IS_DEV=False does not call Paddle or the fake webhook task."""
+
+        self._test_doneish_by_status(Transaction.StatusValues.PAID.value)
+
+    @override_settings(IS_DEV=False)
+    def test_transaction_found_and_is_doneish_by_being_completed(self):
+        """We found the transaction but it's doneish (status=PAID). This should trigger payment verification
+        and remove txid from session.
+
+        We should also ensure IS_DEV=False does not call Paddle or the fake webhook task."""
+
+        self._test_doneish_by_status(Transaction.StatusValues.COMPLETED.value)
