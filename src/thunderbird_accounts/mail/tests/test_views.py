@@ -989,4 +989,4 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
         payload = json.loads(response.content.decode())
         self.assertFalse(payload['success'])
-        self.assertEqual(payload['error'], _('Invalid request data'))
+        self.assertEqual(payload['error'], _('An error has occurred while setting up the Appointment CalDAV.'))
