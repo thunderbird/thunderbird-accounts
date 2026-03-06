@@ -163,7 +163,7 @@ class PaddleCheckoutIsDoneTestCase(TestCase):
 
     @override_settings(IS_DEV=False)
     def test_transaction_found_and_is_doneish_by_being_completed(self):
-        """We found the transaction but it's doneish (status=PAID). This should trigger payment verification
+        """We found the transaction but it's doneish (status=COMPLETED). This should trigger payment verification
         and remove txid from session.
 
         We should also ensure IS_DEV=False does not call Paddle or the fake webhook task."""
