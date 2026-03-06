@@ -35,8 +35,8 @@ def filter_app_passwords(secrets: list[str], *, keep_prefix: str | None = None) 
     prefix are kept (all others are returned).  By default the
     ``APPOINTMENT_APP_PASSWORD_PREFIX`` is stripped out.
     """
-    prefix = f'$app${keep_prefix or settings.APPOINTMENT_APP_PASSWORD_PREFIX}'
-    return [s for s in secrets if not s.startswith(prefix)]
+    filter_prefix = f'$app${keep_prefix or settings.APPOINTMENT_APP_PASSWORD_PREFIX}'
+    return [s for s in secrets if not s.startswith(filter_prefix)]
 
 
 def decode_app_password(secret):
