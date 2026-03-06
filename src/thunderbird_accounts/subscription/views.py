@@ -73,7 +73,7 @@ def set_paddle_transaction_id(request: Request):
 
 
 @login_required
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 @inject_paddle
 def is_paddle_transaction_done(request: Request, paddle: Client):
     """Checks if the Paddle transaction has finished and returns True or False.
@@ -88,9 +88,14 @@ def is_paddle_transaction_done(request: Request, paddle: Client):
 
     status = Transaction.StatusValues.DRAFT.value
 
-    # Just ask Paddle directly
-    transaction = paddle.transactions.get(transaction_id=transaction_id)
-    status = transaction.status.value
+    # For dev machines we have to inquire directly, otherwise we rely on information given to us by the Paddle webhooks
+    if settings.IS_DEV:
+        transaction = paddle.transactions.get(transaction_id=transaction_id)
+        status = transaction.status.value
+    else:
+        transaction = Transaction.objects.filter(paddle_id=transaction_id).first()
+        if transaction:
+            status = transaction.status
 
     # Once the transaction is doneish, set the user to awaiting verification and if on dev mode deploy the fake webhook
     if transaction and status in [Transaction.StatusValues.COMPLETED.value, Transaction.StatusValues.PAID.value]:

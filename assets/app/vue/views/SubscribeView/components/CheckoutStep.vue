@@ -52,7 +52,7 @@ const areWeDoneHere = async () => {
   const response = await fetch('/api/v1/subscription/paddle/tx/is-done/', {
     mode: 'same-origin',
     credentials: 'include',
-    method: 'GET',
+    method: 'POST',
     headers: {
       'X-CSRFToken': csrfToken,
     },
@@ -180,8 +180,6 @@ const setupPaddle = async () => {
     eventCallback: onPaddleEvent,
     checkout: {
       settings: {
-        // Must be a full url
-        //successUrl: `${window.location.origin}/subscription/paddle/complete/`,
         displayMode: 'inline',
         frameTarget: 'checkout-container',
         frameInitialHeight: 992,
