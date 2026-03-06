@@ -23,7 +23,7 @@ from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks, models
 from thunderbird_accounts.subscription.decorators import inject_paddle
-from thunderbird_accounts.subscription.models import Plan, Price, Subscription
+from thunderbird_accounts.subscription.models import Plan, Price, Subscription, Transaction
 from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
 
 # We only need this here right now
@@ -67,85 +67,43 @@ def get_paddle_information(request: Request):
 def set_paddle_transaction_id(request: Request):
     """This error is used to work-around the fact we don't get a transaction id from Paddle's successUrl redirect.
     It kinda sucks, but it works for now."""
-    if settings.IS_DEV:
-        data = json.loads(request.body.decode())
-        request.session[SESSION_PADDLE_TRANSACTION_ID] = data.get('txid')
+    data = json.loads(request.body.decode())
+    request.session[SESSION_PADDLE_TRANSACTION_ID] = data.get('txid')
     return JsonResponse({'success': True})
 
 
 @login_required
+@require_http_methods(['GET'])
 @inject_paddle
-def on_paddle_checkout_complete(request: Request, paddle: Client):
-    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID, default=None)
+def is_paddle_transaction_done(request: Request, paddle: Client):
+    """Checks if the Paddle transaction has finished and returns True or False.
+    Also cleans up transaction id once the transaction is completed."""
+    transaction_id = request.session.get(SESSION_PADDLE_TRANSACTION_ID, default=None)
     user = request.user
-    if not user:
-        sentry_sdk.capture_message(
-            '[on_paddle_checkout_complete] User passed login_required but did not have user object!'
-        )
+    if user.is_awaiting_payment_verification:
+        return JsonResponse({'status': Transaction.StatusValues.PAID.value})
 
-        # I hope to never see this as it's technically impossible.
-        messages.error(
-            request,
-            _('There was a problem verifying your user. Please re-login.'),
-        )
-        return HttpResponseRedirect('/')
+    if not transaction_id:
+        return JsonResponse({'status': 'no-id?'})
 
-    # The webhook could technically be processed before we get to this request, it's not likely to happen
-    # but don't shoot ourselves in the foot if it does.
-    if not user.has_active_subscription:
+    status = Transaction.StatusValues.DRAFT.value
+
+    # Just ask Paddle directly
+    transaction = paddle.transactions.get(transaction_id=transaction_id)
+    status = transaction.status.value
+
+    # Once the transaction is doneish, set the user to awaiting verification and if on dev mode deploy the fake webhook
+    if transaction and status in [Transaction.StatusValues.COMPLETED.value, Transaction.StatusValues.PAID.value]:
         user.is_awaiting_payment_verification = True
         user.save()
 
-    # We can't get webhook events on dev, so we need to manually check the event stream
-    if settings.IS_DEV:
-        # Dev only error
-        if not transaction_id:
-            # Let's send them to the dashboard
-            messages.error(
-                request,
-                _('The paddle transaction id was not in your session so we cannot pull the subscription information.'),
-            )
-            return HttpResponseRedirect('/subscribe')
+        # Clean up transaction id if it's still in session
+        request.session.pop(SESSION_PADDLE_TRANSACTION_ID, default=None)
 
-        # Give paddle some time to update their end
-        # Yes this is not perfect, I know.
-        time.sleep(5)
+        if settings.IS_DEV:
+            tasks.dev_only_paddle_fake_webhook.delay(transaction_id=transaction_id, user_uuid=user.uuid.hex)
 
-        subscription_id = None
-        notification_list = paddle.notifications.list(ListNotifications(filter=transaction_id))
-
-        # First look for the transaction
-        for notification in notification_list:
-            # Normalize the data to dict then a json blob then back to a dict.
-            notification_data = json.loads(paddle.serialize_json_payload(notification.payload.data.to_dict()))
-            if (
-                notification_data.get('id') == transaction_id
-                and notification.type == 'transaction.updated'
-                and notification_data.get('status') == 'completed'
-            ):
-                tasks.paddle_transaction_event.run(notification_data, notification.occurred_at, is_create_event=True)
-                subscription_id = notification_data.get('subscription_id')
-                break
-
-        # If we've found the transaction then we should have the subscription_id
-        if subscription_id:
-            subscription_list = paddle.notifications.list(ListNotifications(filter=subscription_id))
-
-            # Look up the subscription now
-            for notification in subscription_list:
-                notification_data = json.loads(paddle.serialize_json_payload(notification.payload.data.to_dict()))
-                # The serialization trick is not perfect, we need to flatten custom_data
-                notification_data['custom_data'] = notification_data.get('custom_data', {}).get('data', {})
-
-                if notification_data.get('id') == subscription_id and notification.type == 'subscription.created':
-                    tasks.paddle_subscription_event.run(
-                        notification_data,
-                        notification.occurred_at,
-                        is_create_event=True,
-                    )
-                    break
-
-    return HttpResponseRedirect('/dashboard')
+    return JsonResponse({'status': status})
 
 
 @login_required

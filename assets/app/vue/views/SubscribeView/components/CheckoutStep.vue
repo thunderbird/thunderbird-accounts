@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { LoadingSkeleton, NoticeBar, NoticeBarTypes, VisualDivider } from '@thunderbirdops/services-ui';
-import { initializePaddle, PaddleEventData } from '@paddle/paddle-js';
+import { initializePaddle, PaddleEventData, CheckoutEventNames, CheckoutEventsStatus } from '@paddle/paddle-js';
 import CardContainer from '@/components/CardContainer.vue';
 import { ref } from 'vue';
 
@@ -18,12 +18,14 @@ const initCurrencyFormatter = (code: string) => {
 
 let currencyFormatter = initCurrencyFormatter('USD');
 let paddle = null;
+let doneCheckerHandler = null;
 
 const planName = ref();
 const planSystemError = ref(false);
 const paymentComplete = ref(false);
 const paddleLoading = ref(true);
 const paddleUnknownError = ref(false);
+const ARE_WE_DONE_YET_TIMER_IN_SECONDS = 2500;
 
 // Placeholder information for the skeletons
 const order_summary = ref({
@@ -38,6 +40,33 @@ const order_summary = ref({
   dueToday: 'US$000.00',
   dueOnRenewal: 'US$000.00',
 });
+
+/**
+ * Work-around for Paddle's checkout.completed event not working with PayPal checkouts, 
+ * and their successUrl not working as intended...
+ * 
+ * Poll the is-done api route every 2.5 seconds, and if we're doneish (paid or complete) 
+ * then reload the window to let the payment verification screen do their magic.
+ */
+const areWeDoneHere = async () => {
+  const response = await fetch('/api/v1/subscription/paddle/tx/is-done/', {
+    mode: 'same-origin',
+    credentials: 'include',
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': csrfToken,
+    },
+  });
+  const data = await response.json();
+  const { status } = data;
+
+  // For some reason PaddleJS has paid's constant as undefined. Hmmm...
+  if (['completed', 'paid'].indexOf(status) > -1) {
+    window.location.reload();
+  }
+
+  doneCheckerHandler = window.setTimeout(() => areWeDoneHere(), ARE_WE_DONE_YET_TIMER_IN_SECONDS);
+}
 
 /**
  * "Open" the checkout, which just really involves passing Paddle some settings for the iframe that is loaded inline.
@@ -63,7 +92,7 @@ const openCheckout = (paddleItems: any, signedUserId: string) => {
  * @param evt
  */
 const onPaddleEvent = async (evt: PaddleEventData) => {
-  if (evt?.name == 'checkout.completed') {
+  if (evt?.name == CheckoutEventNames.CHECKOUT_COMPLETED) {
     paymentComplete.value = true;
     return;
   }
@@ -76,9 +105,9 @@ const onPaddleEvent = async (evt: PaddleEventData) => {
   if (evt.name.indexOf('checkout.') === 0) {
     const data = evt.data;
 
-    // Set the transaction id if we're on a dev build
-    if (import.meta.env.DEV && data?.transaction_id) {
-      await fetch('/api/v1/subscription/paddle/txid/', {
+    // Set the transaction id
+    if (!doneCheckerHandler && data?.transaction_id) {
+      await fetch('/api/v1/subscription/paddle/tx/set/', {
         mode: 'same-origin',
         credentials: 'include',
         method: 'PUT',
@@ -89,6 +118,9 @@ const onPaddleEvent = async (evt: PaddleEventData) => {
           'X-CSRFToken': csrfToken,
         },
       });
+
+      // Setup our done checker
+      doneCheckerHandler = window.setTimeout(() => areWeDoneHere(), ARE_WE_DONE_YET_TIMER_IN_SECONDS);
     }
 
     currencyFormatter = initCurrencyFormatter(data.currency_code);
@@ -149,7 +181,7 @@ const setupPaddle = async () => {
     checkout: {
       settings: {
         // Must be a full url
-        successUrl: `${window.location.origin}/subscription/paddle/complete/`,
+        //successUrl: `${window.location.origin}/subscription/paddle/complete/`,
         displayMode: 'inline',
         frameTarget: 'checkout-container',
         frameInitialHeight: 992,
@@ -183,10 +215,10 @@ export default {
     <h2>{{ t('views.subscribe.title') }}</h2>
     <notice-bar v-if="paddleUnknownError" :type="NoticeBarTypes.Critical">{{
       t('views.subscribe.paddleUnknownError')
-    }}</notice-bar>
+      }}</notice-bar>
     <notice-bar v-if="planSystemError" :type="NoticeBarTypes.Critical">{{
       t('views.subscribe.planSystemError')
-    }}</notice-bar>
+      }}</notice-bar>
     <div class="container">
       <card-container class="summary-card">
         <ul class="summary">

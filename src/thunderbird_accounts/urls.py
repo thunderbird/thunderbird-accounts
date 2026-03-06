@@ -47,11 +47,7 @@ urlpatterns = [
     path('custom-domains/dns-records', mail_views.get_dns_records, name='get_dns_records'),
     path('email-aliases/add', mail_views.add_email_alias, name='add_email_alias'),
     path('email-aliases/remove', mail_views.remove_email_alias, name='remove_email_alias'),
-    path(
-        'subscription/paddle/complete/',
-        subscription_views.on_paddle_checkout_complete,
-        name='paddle_complete',
-    ),
+    
     # Authentication
     path('users/sign-up/', auth_views.sign_up, name='sign_up'),
     # API
@@ -61,7 +57,9 @@ urlpatterns = [
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
     path('api/v1/subscription/paddle/info/', subscription_views.get_paddle_information, name='paddle_info'),
     path('api/v1/subscription/paddle/portal/', subscription_views.get_paddle_portal_link, name='paddle_portal'),
-    path('api/v1/subscription/paddle/txid/', subscription_views.set_paddle_transaction_id, name='paddle_txid'),
+    path('api/v1/subscription/paddle/tx/set/', subscription_views.set_paddle_transaction_id, name='paddle_txid'),
+    path('api/v1/subscription/paddle/tx/is-done/', subscription_views.is_paddle_transaction_done, name='paddle_is_done'),
+
     path(
         'api/v1/subscription/plan/info/', subscription_views.get_subscription_plan_info, name='subscription_plan_info'
     ),
