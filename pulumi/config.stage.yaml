@@ -3,7 +3,7 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:081dc5e4feaa43de254182a54698b7624c302cdc
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:378ccb8058f181e609ca79060f45adceb2affef4
 
 # Update this value to update all containers based on this Keycloak image
 .keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-54b1954de7ae3700681642a526c6566485982b90
@@ -887,7 +887,11 @@ resources:
         - accounts-stage-fargate-accounts
         - accounts-stage-fargate-accounts-celery
         - accounts-stage-fargate-keycloak
+        - accounts-stage
       fargate_task_role_arns:
         - arn:aws:iam::768512802988:role/accounts-stage-fargate-accounts
         - arn:aws:iam::768512802988:role/accounts-stage-fargate-accounts-celery
         - arn:aws:iam::768512802988:role/accounts-stage-fargate-keycloak
+        - arn:aws:iam::768512802988:role/accounts-stage-afc-accounts-celery
+        - arn:aws:iam::768512802988:role/accounts-stage-afc-accounts-flower
+
