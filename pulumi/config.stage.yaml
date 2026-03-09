@@ -480,7 +480,7 @@ resources:
           name: flower-stage
 
       container_security_groups:
-        celery:
+        celery-stage:
           none:
             description: Network config for Celery containers in accounts-stage
             rules:
@@ -492,7 +492,7 @@ resources:
                   cidr_blocks:
                     - 0.0.0.0/0
               ingress: []  # Celery is a "pull" based system, requiring no ingress
-        flower:    # Service to connect
+        flower-stage:    # Service to connect
           flower:  # LB to allow connections from
             description: Network config for Flower containers in accounts-stage
             rules:
