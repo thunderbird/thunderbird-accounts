@@ -287,7 +287,7 @@ jobs:
           # Create a YAML config stump containing only the nested tree leading to the image tag update
           cat << EOF > newimage.yaml
           resources:
-            keycloak_image: &KEYCLOAK_IMAGE $ECR_TAG
+            .keycloak_image: &KEYCLOAK_IMAGE $ECR_TAG
           EOF
 
           # Use yq to merge the stump into the main config
