@@ -1,3 +1,8 @@
+import time
+import json
+from paddle_billing.Resources.Notifications.Operations.ListNotifications import ListNotifications
+from thunderbird_accounts.subscription.decorators import init_paddle
+from paddle_billing.Client import Client
 from thunderbird_accounts.celery.exceptions import TaskFailed
 import sentry_sdk
 from requests.exceptions import JSONDecodeError
@@ -14,6 +19,62 @@ from django.core.signing import Signer, BadSignature
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product, Plan
 from thunderbird_accounts.subscription.utils import activate_subscription_features
+
+
+@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+def dev_only_paddle_fake_webhook(self, transaction_id: str, user_uuid: str):
+    """A task that only runs in dev mode. This will simulate the paddle webhook after a checkout has been completed."""
+    if not settings.IS_DEV:
+        return
+    
+    # Give paddle some time to update their end
+    # Yes this is not perfect, I know.
+    time.sleep(5)
+
+    paddle: Client = init_paddle()
+
+    subscription_id = None
+    notification_list = paddle.notifications.list(ListNotifications(filter=transaction_id))
+
+    # First look for the transaction
+    for notification in notification_list:
+        # Normalize the data to dict then a json blob then back to a dict.
+        notification_data = json.loads(paddle.serialize_json_payload(notification.payload.data.to_dict()))
+        if (
+            notification_data.get('id') == transaction_id
+            and notification.type == 'transaction.updated'
+            and notification_data.get('status') == 'completed'
+        ):
+            paddle_transaction_event.run(notification_data, notification.occurred_at, is_create_event=True)
+            subscription_id = notification_data.get('subscription_id')
+            break
+
+    # If we've found the transaction then we should have the subscription_id
+    if subscription_id:
+        subscription_list = paddle.notifications.list(ListNotifications(filter=subscription_id))
+
+        # Look up the subscription now
+        for notification in subscription_list:
+            notification_data = json.loads(paddle.serialize_json_payload(notification.payload.data.to_dict()))
+            # The serialization trick is not perfect, we need to flatten custom_data
+            notification_data['custom_data'] = notification_data.get('custom_data', {}).get('data', {})
+
+            if notification_data.get('id') == subscription_id and notification.type == 'subscription.created':
+                try:
+                    paddle_subscription_event.run(
+                        notification_data,
+                        notification.occurred_at,
+                        is_create_event=True,
+                    )
+                except TaskFailed as ex:
+                    # Acceptable failure, especially when testing.
+                    if ex.reason == 'subscription already exists':
+                        user = User.objects.get(user_uuid)
+                        user.is_awaiting_payment_verification = False
+                        user.save()
+                    else:
+                        raise ex
+                break
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)

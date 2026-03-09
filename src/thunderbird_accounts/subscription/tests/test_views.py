@@ -1,8 +1,8 @@
+from thunderbird_accounts.subscription.models import Transaction
 import json
 from unittest.mock import patch, MagicMock
 
 from django.conf import settings
-from django.http import JsonResponse
 from django.test import TestCase, Client as RequestClient, override_settings
 from django.urls import reverse
 
@@ -10,58 +10,162 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.utils.tests.utils import oidc_force_login
 
 
-class PaddleCheckoutCompleteTestCase(TestCase):
+class PaddleCheckoutIsDoneTestCase(TestCase):
     def setUp(self):
         self.client = RequestClient()
         self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
         oidc_force_login(self.client, self.user)
-        self.url = reverse('paddle_complete')
+        self.url = reverse('paddle_is_done')
+        self.txid = 'abc123'
+
+    def set_paddle_transaction_id(self):
+        """This actually tests set_paddle_transaction_id too!"""
+        txid_response = self.client.put(reverse('paddle_txid'), data=json.dumps({'txid': self.txid}))
+        self.assertEqual(txid_response.status_code, 200)
+        data = txid_response.json()
+        self.assertTrue(data.get('success'))
 
     @override_settings(IS_DEV=False)
-    def test_success_not_dev(self):
+    def test_no_tx_id_in_session(self):
+        """This route requires a transaction id in their session. So if they don't have a transaction id,
+        we'll respond accordingly."""
         with patch('thunderbird_accounts.subscription.decorators.Client', MagicMock()) as paddle_client_mock:
             instance = paddle_client_mock()
 
-            response = self.client.get(
+            response = self.client.post(
                 self.url,
                 follow=False,
             )
-            self.assertEqual(response.status_code, 302)
-            self.assertEqual(response.url, '/dashboard')
+            self.assertTrue(response)
+            self.assertEqual(response.status_code, 200)
+
+            data = response.json()
+            self.assertTrue(data)
+            self.assertEqual(data.get('status'), 'no-id?')
+
             instance.notifications.list.assert_not_called()
 
-    @patch('time.sleep', MagicMock())
-    @patch('thunderbird_accounts.subscription.tasks.paddle_subscription_event', MagicMock())
-    @override_settings(IS_DEV=True)
-    def test_success_dev(self):
-        """Simple test, this doesn't actually test if we've got the correct data, it just makes sure we don't crash"""
-        txid = 'abc123'
-        txid_response: JsonResponse = self.client.put(reverse('paddle_txid'), data=json.dumps({'txid': txid}))
-        self.assertEqual(txid_response.status_code, 200)
-        self.assertEqual(json.loads(txid_response.content), {'success': True})
+    @override_settings(IS_DEV=False)
+    def test_no_tx_in_db(self):
+        """This route should still return correctly (as draft) if there's no transaction in our db.
+        We should also ensure IS_DEV=False does not call Paddle."""
 
-        # Don't actually send anything to Paddle!
+        # Make sure we have a txid in session
+        self.set_paddle_transaction_id()
+
         with patch('thunderbird_accounts.subscription.decorators.Client', MagicMock()) as paddle_client_mock:
             instance = paddle_client_mock()
 
-            response = self.client.get(
+            response = self.client.post(
                 self.url,
                 follow=False,
             )
-            self.assertEqual(response.status_code, 302)
-            self.assertEqual(response.url, '/dashboard')
-            instance.notifications.list.assert_called()
+            self.assertTrue(response)
+            self.assertEqual(response.status_code, 200)
 
-    @patch('time.sleep', MagicMock())
-    @patch('thunderbird_accounts.subscription.tasks.paddle_subscription_event', MagicMock())
-    @override_settings(IS_DEV=True)
-    def test_fail_without_txid_dev(self):
-        """We don't have a transaction id in the session, so we are sent back to /subscribe
+            data = response.json()
+            self.assertTrue(data)
+            self.assertEqual(data.get('status'), Transaction.StatusValues.DRAFT.value)
 
-        We can't handle these requests because we need the transaction id to fill in paddle subscription data"""
-        response = self.client.get(
-            self.url,
-            follow=False,
-        )
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/subscribe')
+            instance.notifications.list.assert_not_called()
+
+    @override_settings(IS_DEV=False)
+    def test_user_payment_already_being_verified(self):
+        """This route shouldn't run and instead return PAID if we're awaiting the Paddle webhook.
+        Additionally we don't set a transaction id here because we explicitly
+        remove it when we set the awaiting payment verification flag."""
+
+        self.user.is_awaiting_payment_verification = True
+        self.user.save()
+
+        with patch('thunderbird_accounts.subscription.decorators.Client', MagicMock()) as paddle_client_mock:
+            instance = paddle_client_mock()
+
+            response = self.client.post(
+                self.url,
+                follow=False,
+            )
+            self.assertTrue(response)
+            self.assertEqual(response.status_code, 200)
+
+            data = response.json()
+            self.assertTrue(data)
+            self.assertEqual(data.get('status'), Transaction.StatusValues.PAID.value)
+
+            instance.notifications.list.assert_not_called()
+
+    @override_settings(IS_DEV=False)
+    def test_transaction_found_but_not_doneish(self):
+        """We found the transaction but it's not done enough for us to consider it done.
+        We should also ensure IS_DEV=False does not call Paddle."""
+
+        # Make sure we have a txid in session
+        self.set_paddle_transaction_id()
+
+        transaction = Transaction.objects.create(paddle_id=self.txid, status=Transaction.StatusValues.READY.value)
+        self.assertIsNotNone(transaction)
+
+        with patch('thunderbird_accounts.subscription.decorators.Client', MagicMock()) as paddle_client_mock:
+            instance = paddle_client_mock()
+
+            response = self.client.post(
+                self.url,
+                follow=False,
+            )
+            self.assertTrue(response)
+            self.assertEqual(response.status_code, 200)
+
+            data = response.json()
+            self.assertTrue(data)
+            self.assertEqual(data.get('status'), Transaction.StatusValues.READY.value)
+
+            instance.notifications.list.assert_not_called()
+
+    def _test_doneish_by_status(self, tx_status):
+        """Helper function so we can reduce some code without introducing artifacts between test runs."""
+        # Make sure we have a txid in session
+        self.set_paddle_transaction_id()
+
+        transaction = Transaction.objects.create(paddle_id=self.txid, status=tx_status)
+        self.assertIsNotNone(transaction)
+
+        with patch('thunderbird_accounts.subscription.tasks.dev_only_paddle_fake_webhook', MagicMock()) as task_mock:
+            with patch('thunderbird_accounts.subscription.decorators.Client', MagicMock()) as paddle_client_mock:
+                instance = paddle_client_mock()
+
+                self.assertFalse(self.user.is_awaiting_payment_verification)
+
+                response = self.client.post(
+                    self.url,
+                    follow=False,
+                )
+                self.assertTrue(response)
+                self.assertEqual(response.status_code, 200)
+
+                data = response.json()
+                self.assertTrue(data)
+                self.assertEqual(data.get('status'), tx_status)
+
+                self.user.refresh_from_db()
+                self.assertTrue(self.user.is_awaiting_payment_verification)
+
+                instance.notifications.list.assert_not_called()
+                task_mock.assert_not_called()
+
+    @override_settings(IS_DEV=False)
+    def test_transaction_found_and_is_doneish_by_being_paid(self):
+        """We found the transaction but it's doneish (status=PAID). This should trigger payment verification
+        and remove txid from session.
+
+        We should also ensure IS_DEV=False does not call Paddle or the fake webhook task."""
+
+        self._test_doneish_by_status(Transaction.StatusValues.PAID.value)
+
+    @override_settings(IS_DEV=False)
+    def test_transaction_found_and_is_doneish_by_being_completed(self):
+        """We found the transaction but it's doneish (status=COMPLETED). This should trigger payment verification
+        and remove txid from session.
+
+        We should also ensure IS_DEV=False does not call Paddle or the fake webhook task."""
+
+        self._test_doneish_by_status(Transaction.StatusValues.COMPLETED.value)
