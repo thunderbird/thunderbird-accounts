@@ -5,7 +5,7 @@ from requests.exceptions import HTTPError
 from django.contrib.auth.hashers import make_password, identify_hasher
 import sentry_sdk
 
-from django.contrib import settings
+from django.conf import settings
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.mail import tasks
