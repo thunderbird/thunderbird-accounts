@@ -764,8 +764,6 @@ def appointment_caldav_setup(request: HttpRequest):
         error_response.status_code = 500
         return error_response
 
-    data = None
-
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, UnicodeDecodeError):
@@ -786,8 +784,6 @@ def appointment_caldav_setup(request: HttpRequest):
     if not access_token:
         logging.warning('OIDC access token is missing during Appointment CalDAV setup')
         return error_response
-
-    user = None
 
     # Validate the access token against the OIDC provider to identify the user
     try:
