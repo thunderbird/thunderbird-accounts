@@ -909,4 +909,3 @@ resources:
         - arn:aws:iam::768512802988:role/accounts-stage-fargate-keycloak
         - arn:aws:iam::768512802988:role/accounts-stage-afc-accounts-celery-stage
         - arn:aws:iam::768512802988:role/accounts-stage-afc-accounts-flower-stage
-
