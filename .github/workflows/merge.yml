@@ -172,8 +172,8 @@ jobs:
           pulumi stack select thunderbird/stage
           pulumi up -y --diff \
             --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-taskdef' \
-            --target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-celery' \
-            --target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-flower' \
+            --target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-celery-stage' \
+            --target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-flower-stage' \
             --target-dependents
 
   # When accounts changes are merged in, build and push a new Docker image

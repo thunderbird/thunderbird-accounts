@@ -6,7 +6,7 @@
 .accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:378ccb8058f181e609ca79060f45adceb2affef4
 
 # Update this value to update all containers based on this Keycloak image
-.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-54b1954de7ae3700681642a526c6566485982b90
+.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-7f3dfbfb801149e2557a2c100c989ca836d2b966
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
@@ -318,9 +318,9 @@ resources:
       cluster_name: accounts-stage
 
       task_definitions:
-        celery:
+        celery-stage:
           <<: *ACCOUNTS_TASK_DEFINITION
-          family: accounts-celery
+          family: accounts-stage-celery
           cpu: 512
           memory: 1024
           container_definitions:
@@ -329,8 +329,8 @@ resources:
               logConfiguration:
                 logDriver: awslogs
                 options:
-                  awslogs-group: accounts-stage-afc-accounts-loggroup-celery
-                  awslogs-stream-prefix: accounts/stage/celery/
+                  awslogs-group: accounts-stage-afc-accounts-loggroup-celery-stage
+                  awslogs-stream-prefix: accounts/stage/celery-stage/
                   awslogs-region: eu-central-1
               environment:
                 - *VAR_ADMIN_CONTACT
@@ -384,9 +384,9 @@ resources:
                 - name: TBA_FLOWER
                   value: "no"
 
-        flower:
+        flower-stage:
           <<: *ACCOUNTS_TASK_DEFINITION
-          family: accounts-flower
+          family: accounts-stage-flower
           cpu: 512
           memory: 1024
           container_definitions:
@@ -395,8 +395,8 @@ resources:
               logConfiguration:
                 logDriver: awslogs
                 options:
-                  awslogs-group: accounts-stage-afc-accounts-loggroup-flower
-                  awslogs-stream-prefix: accounts/stage/flower/
+                  awslogs-group: accounts-stage-afc-accounts-loggroup-flower-stage
+                  awslogs-stream-prefix: accounts/stage/flower-stage/
                   awslogs-region: eu-central-1
               portMappings:
                 - containerPort: 5555
@@ -480,7 +480,7 @@ resources:
           name: flower-stage
 
       container_security_groups:
-        celery:
+        celery-stage:
           none:
             description: Network config for Celery containers in accounts-stage
             rules:
@@ -492,7 +492,7 @@ resources:
                   cidr_blocks:
                     - 0.0.0.0/0
               ingress: []  # Celery is a "pull" based system, requiring no ingress
-        flower:    # Service to connect
+        flower-stage:    # Service to connect
           flower:  # LB to allow connections from
             description: Network config for Flower containers in accounts-stage
             rules:
@@ -536,12 +536,12 @@ resources:
             protocol: HTTPS
 
       services:
-        celery:
+        celery-stage:
           assign_public_ip: yes
           service:
             desired_count: 1
           target: null
-        flower:
+        flower-stage:
           assign_public_ip: yes
           container_name: flower
           container_port: 5555
@@ -551,24 +551,24 @@ resources:
           target: flower
 
       registries:
-        celery:
+        celery-stage:
           - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
-        flower:
+        flower-stage:
           - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
 
       secrets:
-        celery:
+        celery-stage:
           - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/*
-        flower:
+        flower-stage:
           - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/*
       
       ssm_params: {}
 
       autoscalers:
-        celery:
+        celery-stage:
           min_capacity: 2
           max_capacity: 4
-        flower:
+        flower-stage:
           min_capacity: 1
           max_capacity: 1
 
