@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { LoadingSkeleton, NoticeBar, NoticeBarTypes, VisualDivider } from '@thunderbirdops/services-ui';
-import { initializePaddle, PaddleEventData, CheckoutEventNames, CheckoutEventsStatus } from '@paddle/paddle-js';
+import { initializePaddle, PaddleEventData, CheckoutEventNames } from '@paddle/paddle-js';
 import CardContainer from '@/components/CardContainer.vue';
-import { ref } from 'vue';
+import { onUnmounted, ref } from 'vue';
 
 const { t } = useI18n();
 
@@ -19,13 +19,16 @@ const initCurrencyFormatter = (code: string) => {
 let currencyFormatter = initCurrencyFormatter('USD');
 let paddle = null;
 let doneCheckerHandler = null;
+let exceptionCounter = 0;
+
 
 const planName = ref();
 const planSystemError = ref(false);
 const paymentComplete = ref(false);
 const paddleLoading = ref(true);
 const paddleUnknownError = ref(false);
-const ARE_WE_DONE_YET_TIMER_IN_SECONDS = 2500;
+const ARE_WE_DONE_YET_TIMER_MS = 2500;
+const EXCEPTIONS_UNTIL_ERROR_SHOWN = 3;
 
 // Placeholder information for the skeletons
 const order_summary = ref({
@@ -42,6 +45,16 @@ const order_summary = ref({
 });
 
 /**
+ * Clear the done checker handler in case we navigate away from the page
+ */
+onUnmounted(() => {
+  if (doneCheckerHandler) {
+    window.clearTimeout(doneCheckerHandler);
+    doneCheckerHandler = null;
+  }
+})
+
+/**
  * Work-around for Paddle's checkout.completed event not working with PayPal checkouts, 
  * and their successUrl not working as intended...
  * 
@@ -49,23 +62,38 @@ const order_summary = ref({
  * then reload the window to let the payment verification screen do their magic.
  */
 const areWeDoneHere = async () => {
-  const response = await fetch('/api/v1/subscription/paddle/tx/is-done/', {
-    mode: 'same-origin',
-    credentials: 'include',
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': csrfToken,
-    },
-  });
-  const data = await response.json();
-  const { status } = data;
+  try {
+    const response = await fetch('/api/v1/subscription/paddle/tx/is-done/', {
+      mode: 'same-origin',
+      credentials: 'include',
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+      },
+    });
+    const data = await response.json();
+    const { status } = data;
 
-  // For some reason PaddleJS has paid's constant as undefined. Hmmm...
-  if (['completed', 'paid'].indexOf(status) > -1) {
-    window.location.reload();
+    // For some reason PaddleJS has paid's constant as undefined. Hmmm...
+    if (['completed', 'paid'].indexOf(status) > -1) {
+      window.location.reload();
+    }
+
+    // Lastly clear up the exception counter, if we've reached here there's no exceptions happening and no errors need to be shown.
+    exceptionCounter = 0;
+  } catch (e) {
+    console.error("Error checking done status: ", e);
+    exceptionCounter++;
   }
 
-  doneCheckerHandler = window.setTimeout(() => areWeDoneHere(), ARE_WE_DONE_YET_TIMER_IN_SECONDS);
+  // If this occurs a few times in a row we should show an error
+  if (exceptionCounter >= EXCEPTIONS_UNTIL_ERROR_SHOWN) {
+    paddleUnknownError.value = true;
+  } else {
+    paddleUnknownError.value = false;
+  }
+
+  doneCheckerHandler = window.setTimeout(() => areWeDoneHere(), ARE_WE_DONE_YET_TIMER_MS);
 }
 
 /**
@@ -120,7 +148,7 @@ const onPaddleEvent = async (evt: PaddleEventData) => {
       });
 
       // Setup our done checker
-      doneCheckerHandler = window.setTimeout(() => areWeDoneHere(), ARE_WE_DONE_YET_TIMER_IN_SECONDS);
+      doneCheckerHandler = window.setTimeout(() => areWeDoneHere(), ARE_WE_DONE_YET_TIMER_MS);
     }
 
     currencyFormatter = initCurrencyFormatter(data.currency_code);
