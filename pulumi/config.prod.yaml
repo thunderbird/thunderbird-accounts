@@ -135,6 +135,7 @@
     - *SECRET_OIDC_CLIENT_ID
     - *SECRET_OIDC_CLIENT_SECRET
     - *SECRET_OIDC_SIGN_ALGO
+    - *SECRET_PADDLE_API_KEY
     - *SECRET_PADDLE_PRICE_ID_LO
     - *SECRET_PADDLE_PRICE_ID_MD
     - *SECRET_PADDLE_PRICE_ID_HI
@@ -152,7 +153,6 @@
 
 ### tb_pulumi resource configs
 resources:
-
   domains:
     accounts: accounts.tb.pro
 
@@ -340,9 +340,9 @@ resources:
       cluster_name: accounts-prod
 
       task_definitions:
-        celery:
+        celery-prod:
           <<: *ACCOUNTS_TASK_DEFINITION
-          family: accounts-celery
+          family: accounts-prod-celery
           cpu: 512
           memory: 1024
           container_definitions:
@@ -351,8 +351,8 @@ resources:
               logConfiguration:
                 logDriver: awslogs
                 options:
-                  awslogs-group: accounts-prod-afc-accounts-loggroup-celery
-                  awslogs-stream-prefix: accounts/prod/celery/
+                  awslogs-group: accounts-prod-afc-accounts-loggroup-celery-prod
+                  awslogs-stream-prefix: accounts/prod/celery-prod/
                   awslogs-region: eu-central-1
               environment:
                 - *VAR_ADMIN_CONTACT
@@ -408,9 +408,9 @@ resources:
                 - name: TBA_FLOWER
                   value: "no"
 
-        flower:
+        flower-prod:
           <<: *ACCOUNTS_TASK_DEFINITION
-          family: accounts-flower
+          family: accounts-prod-flower
           cpu: 512
           memory: 1024
           container_definitions:
@@ -419,8 +419,8 @@ resources:
               logConfiguration:
                 logDriver: awslogs
                 options:
-                  awslogs-group: accounts-prod-afc-accounts-loggroup-flower
-                  awslogs-stream-prefix: accounts/prod/flower/
+                  awslogs-group: accounts-prod-afc-accounts-loggroup-flower-prod
+                  awslogs-stream-prefix: accounts/prod/flower-prod/
                   awslogs-region: eu-central-1
               portMappings:
                 - containerPort: 5555
@@ -506,7 +506,7 @@ resources:
           name: flower-prod
 
       container_security_groups:
-        celery:
+        celery-prod:
           none:
             description: Network config for Celery containers in accounts-prod
             rules:
@@ -518,7 +518,7 @@ resources:
                   cidr_blocks:
                     - 0.0.0.0/0
               ingress: []  # Celery is a "pull" based system, requiring no ingress
-        flower:    # Service to connect
+        flower-prod:    # Service to connect
           flower:  # LB to allow connections from
             description: Network config for Flower containers in accounts-prod
             rules:
@@ -562,41 +562,41 @@ resources:
             protocol: HTTPS
 
       services:
-        celery:
+        celery-prod:
           assign_public_ip: yes
           service:
-            desired_count: 1
+            desired_count: 0
           target: null
-        flower:
+        flower-prod:
           assign_public_ip: yes
           container_name: flower
           container_port: 5555
           load_balancer: flower
           service:
-            desired_count: 1
+            desired_count: 0
           target: flower
 
       registries:
-        celery:
+        celery-prod:
           - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
-        flower:
+        flower-prod:
           - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
 
       secrets:
-        celery:
+        celery-prod:
           - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/*
-        flower:
+        flower-prod:
           - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/*
       
       ssm_params: {}
 
       autoscalers:
-        celery:
-          min_capacity: 2
-          max_capacity: 4
-        flower:
-          min_capacity: 1
-          max_capacity: 1
+        celery-prod:
+          min_capacity: 0
+          max_capacity: 0
+        flower-prod:
+          min_capacity: 0
+          max_capacity: 0
 
   tb:fargate:FargateClusterWithLogging:
     keycloak:
