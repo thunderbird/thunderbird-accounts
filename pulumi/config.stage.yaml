@@ -3,7 +3,7 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:94e4611ea77dda883d533c4ebd67b4a76553513f
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:0ca8bc25c05a3e87012db11d5141e03cc7f8da7b
 
 # Update this value to update all containers based on this Keycloak image
 .keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-94e4611ea77dda883d533c4ebd67b4a76553513f
@@ -459,6 +459,8 @@ resources:
                   value: "no"
                 - name: TBA_FLOWER
                   value: "yes"
+                - name: FLOWER_UNAUTHENTICATED_API
+                  value: 'true'
 
       targets:
         flower:
