@@ -2,6 +2,7 @@
 
 ### Special variables used throughout this file
 .log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", "value": "INFO"}
+.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": 0.66} 
 
 resources:
 
@@ -467,6 +468,7 @@ resources:
               - name: VERIFY_PRIVATE_LINK_SSL
                 value: 'False'
               - *VAR_LOG_LEVEL
+              - *VAR_SENTRY_PROFILE_SAMPLE_RATE
 
 
     accounts-celery:
@@ -649,6 +651,7 @@ resources:
               - name: VERIFY_PRIVATE_LINK_SSL
                 value: 'False'
               - *VAR_LOG_LEVEL
+              - *VAR_SENTRY_PROFILE_SAMPLE_RATE
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:

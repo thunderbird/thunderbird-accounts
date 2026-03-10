@@ -70,7 +70,7 @@ if not IS_DEV and not IS_TEST:
         # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
         send_default_pii=False,
         traces_sample_rate=1.0,
-        profiles_sample_rate=0.66 if IS_PROD else 0.25,  # Match Appointment's profile sample rate
+        profiles_sample_rate=float(os.getenv('SENTRY_PROFILE_SAMPLE_RATE', 0.0)),
         environment=APP_ENV,
         before_send=before_send,
         attach_stacktrace=True,
