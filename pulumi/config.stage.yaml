@@ -6,7 +6,7 @@
 .accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:0ca8bc25c05a3e87012db11d5141e03cc7f8da7b
 
 # Update this value to update all containers based on this Keycloak image
-.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-e14d46467c921269a4a68dcc4affaaca8c921477
+.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-ecdbdfc1c9ad2394836dff14bfb26f1589005623
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
@@ -42,7 +42,7 @@
 .redis_celery_results_db: &VAR_REDIS_CELERY_RESULTS_DB {name: "REDIS_CELERY_RESULTS_DB", value: "6"}
 .redis_internal_db: &VAR_REDIS_INTERNAL_DB {name: "REDIS_INTERNAL_DB", value: "0"}
 .redis_shared_db: &VAR_REDIS_SHARED_DB {name: "REDIS_SHARED_DB", value: "10"}
-.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": 0.33} 
+.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": "0.33"} 
 .smtp_host: &VAR_SMTP_HOST {name: "SMTP_HOST", value: "mail.stage-thundermail.com"}
 .smtp_port: &VAR_SMTP_PORT {name: "SMTP_PORT", value: "465"}
 .smtp_tls: &VAR_SMTP_TLS {name: "SMTP_TLS", value: "True"}

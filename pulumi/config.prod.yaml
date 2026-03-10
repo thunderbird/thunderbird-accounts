@@ -1,7 +1,7 @@
 ---
 ### Special variables used throughout this file
 .log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", "value": "INFO"}
-.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": 0.66} 
+.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": "0.66"} 
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
