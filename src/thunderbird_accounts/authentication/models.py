@@ -102,6 +102,7 @@ class AllowListEntry(BaseModel):
 
     If a user is created from an allow list entry their user will generally be populated in the user_id field / user
     relationship. (Unless they're created by outside means.)"""
+
     email = models.EmailField(_('email address'), unique=True)
     user = models.ForeignKey(
         User,

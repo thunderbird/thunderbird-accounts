@@ -151,7 +151,6 @@ class FixMissingArchivesFolderMiddlewareTestCase(TestCase):
         account.refresh_from_db()
         self.assertTrue(account.verified_archive_folder)
 
-
     @patch('thunderbird_accounts.mail.utils.fix_archives_folder')
     def test_authenticated_user_without_oidc_access_token_should_not_call_fix_archives_folder(
         self, tiny_jmap_mock: MagicMock, fix_archives_folder_mock: MagicMock

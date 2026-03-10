@@ -260,7 +260,7 @@ def admin_add_to_mailchimp_list(modeladmin, request, queryset):
         if len(error_titles) > 0:
             modeladmin.message_user(
                 request,
-                _(f'Encountered the following errors: {', '.join(error_titles.keys())}'),
+                _(f'Encountered the following errors: {", ".join(error_titles.keys())}'),
                 messages.ERROR,
             )
     if sum([success, errors]) == 0:
