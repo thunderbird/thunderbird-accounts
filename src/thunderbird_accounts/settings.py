@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 import sys
 from pathlib import Path
+from importlib.metadata import version
 
 from dotenv import load_dotenv
 import sentry_sdk
@@ -41,6 +42,8 @@ APP_ENV = os.getenv('APP_ENV')
 
 IS_DOCS = APP_ENV == 'docs'
 IS_DEV = APP_ENV == 'dev'
+IS_STAGE = APP_ENV == 'stage'
+IS_PROD = APP_ENV == 'prod'
 
 # Only allow DEBUG on dev or test envs.
 DEBUG: bool = os.getenv('APP_DEBUG') == 'True' and (IS_DEV or APP_ENV == 'test')
@@ -67,10 +70,11 @@ if not IS_DEV and not IS_TEST:
         # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
         send_default_pii=False,
         traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
+        profiles_sample_rate=float(os.getenv('SENTRY_PROFILE_SAMPLE_RATE', 0.0)),
         environment=APP_ENV,
         before_send=before_send,
         attach_stacktrace=True,
+        release=version('thunderbird_accounts'),
     )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -314,7 +318,7 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console'],
-        'level': 'DEBUG',
+        'level': os.getenv('LOG_LEVEL', 'INFO'),
     },
     'loggers': {
         # Reduce spam logs

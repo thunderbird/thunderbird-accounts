@@ -24,6 +24,7 @@
 .imap_host: &VAR_IMAP_HOST {name: "IMAP_HOST", value: "mail.stage-thundermail.com"}
 .imap_port: &VAR_IMAP_PORT {name: "IMAP_PORT", value: "993"}
 .imap_tls: &VAR_IMAP_TLS {name: "IMAP_TLS", value: "True"}
+.log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", "value": "DEBUG"}
 .keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth-stage.tb.pro/admin/realms/tbpro/"}
 .keycloak_admin_url_token: &VAR_KEYCLOAK_ADMIN_URL_TOKEN {name: "KEYCLOAK_ADMIN_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/master/protocol/openid-connect/token/"}
 .jmap_host: &VAR_JMAP_HOST {name: "JMAP_HOST", value: "mail.stage-thundermail.com"}
@@ -41,6 +42,7 @@
 .redis_celery_results_db: &VAR_REDIS_CELERY_RESULTS_DB {name: "REDIS_CELERY_RESULTS_DB", value: "6"}
 .redis_internal_db: &VAR_REDIS_INTERNAL_DB {name: "REDIS_INTERNAL_DB", value: "0"}
 .redis_shared_db: &VAR_REDIS_SHARED_DB {name: "REDIS_SHARED_DB", value: "10"}
+.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": 0.33} 
 .smtp_host: &VAR_SMTP_HOST {name: "SMTP_HOST", value: "mail.stage-thundermail.com"}
 .smtp_port: &VAR_SMTP_PORT {name: "SMTP_PORT", value: "465"}
 .smtp_tls: &VAR_SMTP_TLS {name: "SMTP_TLS", value: "True"}
@@ -379,6 +381,8 @@ resources:
                 - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
+                - *VAR_LOG_LEVEL
+                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
                 - name: TBA_CELERY
                   value: "yes"
                 - name: TBA_FLOWER
@@ -449,6 +453,8 @@ resources:
                 - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
+                - *VAR_LOG_LEVEL
+                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
                 - name: TBA_CELERY
                   value: "no"
                 - name: TBA_FLOWER
@@ -846,6 +852,8 @@ resources:
                 value: '46642417675539'
               - name: VERIFY_PRIVATE_LINK_SSL
                 value: 'False'
+              - *VAR_LOG_LEVEL
+              - *VAR_SENTRY_PROFILE_SAMPLE_RATE
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:
