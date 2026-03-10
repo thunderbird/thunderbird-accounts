@@ -407,6 +407,8 @@ resources:
                   value: "yes"
                 - name: TBA_FLOWER
                   value: "no"
+                - name: SENTRY_TRACES_SAMPLE_RATE
+                  value: "0.1"
 
         flower-prod:
           <<: *ACCOUNTS_TASK_DEFINITION
@@ -479,6 +481,8 @@ resources:
                   value: "no"
                 - name: TBA_FLOWER
                   value: "yes"
+                - name: SENTRY_TRACES_SAMPLE_RATE
+                  value: "0.0"
 
       targets:
         flower:

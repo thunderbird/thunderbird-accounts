@@ -69,8 +69,8 @@ if not IS_DEV and not IS_TEST:
         # Add data like request headers and IP for users,
         # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
         send_default_pii=False,
-        traces_sample_rate=1.0,
         profiles_sample_rate=float(os.getenv('SENTRY_PROFILE_SAMPLE_RATE', 0.0)),
+        traces_sample_rate=float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', 0.0)),
         environment=APP_ENV,
         before_send=before_send,
         attach_stacktrace=True,

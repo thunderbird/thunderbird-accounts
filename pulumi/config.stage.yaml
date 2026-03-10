@@ -394,6 +394,8 @@ resources:
                   value: "yes"
                 - name: TBA_FLOWER
                   value: "no"
+                - name: SENTRY_TRACES_SAMPLE_RATE
+                  value: "0.1"
 
         flower-stage:
           <<: *ACCOUNTS_TASK_DEFINITION
@@ -468,6 +470,8 @@ resources:
                   value: "yes"
                 - name: FLOWER_UNAUTHENTICATED_API
                   value: 'true'
+                - name: SENTRY_TRACES_SAMPLE_RATE
+                  value: "0.0"
 
       targets:
         flower:
