@@ -38,12 +38,8 @@ During development it's great to have these handy!
 
 ## Before you begin
 
-Make sure you have [uv](https://github.com/astral-sh/uv) up and running, and you adjust your hosts file to include:
+Make sure you have [uv](https://github.com/astral-sh/uv) up and running.
 
-```
-127.0.0.1 keycloak
-127.0.0.1 stalwart
-```
 
 ## Getting Started
 

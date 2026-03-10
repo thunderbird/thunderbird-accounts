@@ -60,6 +60,20 @@ services:
     depends_on:
       - postgres
       - redis
+    develop:
+      watch:
+        - action: rebuild
+          path: .env
+        - action: rebuild
+          path: .env.test
+        - action: rebuild
+          path: ./src
+        - action: rebuild
+          path: ./assets
+        - action: rebuild
+          path: ./keycloak
+        - action: rebuild
+          path: ./templates
 
   celery:
     <<: *accounts
