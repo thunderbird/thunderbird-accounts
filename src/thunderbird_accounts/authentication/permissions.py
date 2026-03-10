@@ -3,7 +3,7 @@ import logging
 
 from rest_framework.authentication import BaseAuthentication
 
-from thunderbird_accounts import settings
+from django.conf import settings
 from thunderbird_accounts.authentication.models import User
 
 # We don't want hard requirements on having paddle package installed

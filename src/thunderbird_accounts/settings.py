@@ -109,6 +109,9 @@ USE_ALLOW_LIST: bool = os.getenv('USE_ALLOW_LIST') == 'True'
 # MailChimp form URL for Wait List
 WAIT_LIST_FORM_ACTION: str = os.getenv('WAIT_LIST_FORM_ACTION')
 
+# Appointment CalDAV auto-setup secret
+APPOINTMENT_CALDAV_SECRET: str = os.getenv('APPOINTMENT_CALDAV_SECRET')
+
 # Paddle integration
 PADDLE_TOKEN: str = os.getenv('PADDLE_TOKEN')
 PADDLE_ENV: str = os.getenv('PADDLE_ENV')
@@ -503,3 +506,6 @@ ACCOUNTS_TO_MAILCHIMP_LANGUAGES = {
 
 # For private stalwart communication
 VERIFY_PRIVATE_LINK_SSL = True if os.getenv('VERIFY_PRIVATE_LINK_SSL', 'true').lower() == 'true' else False
+
+# For Appointment's CalDAV auto-setup
+APPOINTMENT_APP_PASSWORD_PREFIX: str = 'appointment-caldav-setup-'

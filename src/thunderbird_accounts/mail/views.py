@@ -4,6 +4,8 @@ import sys
 import datetime
 import json
 import logging
+import secrets
+import requests
 
 import requests.exceptions
 import sentry_sdk
@@ -17,12 +19,14 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page, never_cache
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 from django.contrib.messages import get_messages
 
+from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import (
@@ -31,7 +35,7 @@ from thunderbird_accounts.mail.exceptions import (
     DomainAlreadyExistsError,
     DomainNotFoundError,
 )
-from thunderbird_accounts.mail.utils import decode_app_password, is_address_taken
+from thunderbird_accounts.mail.utils import decode_app_password, filter_app_passwords, is_address_taken
 
 from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail.zendesk import ZendeskClient
@@ -73,8 +77,8 @@ def home(request: HttpRequest):
             email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
             user_display_name = email_user.get('description')
 
-            # Get user's app password from Stalwart
-            for secret in email_user.get('secrets', []):
+            # Get user's app passwords from Stalwart, excluding internal ones
+            for secret in filter_app_passwords(email_user.get('secrets', [])):
                 app_passwords.append(decode_app_password(secret))
 
             # Get user's email addresses from Stalwart
@@ -366,8 +370,9 @@ def app_password_set(request: HttpRequest):
 
         email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
 
-        # Find and delete all previously existing app passwords
-        for secret in email_user.get('secrets', []):
+        # Find and delete all previously existing app passwords, keeping
+        # the one created by the Appointment CalDAV setup flow.
+        for secret in filter_app_passwords(email_user.get('secrets', [])):
             stalwart_client.delete_app_password(request.user.stalwart_primary_email, secret)
 
         # Create and save the new app password
@@ -739,6 +744,92 @@ def remove_email_alias(request: HttpRequest):
         logging.error(f'Error deleting email alias record: {e}')
 
     return JsonResponse({'success': True})
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def appointment_caldav_setup(request: HttpRequest):
+    """Auto-setup for CalDAV for Appointment.
+    This is meant to be called by Appointment's backend only.
+    Receives an OIDC token, retrieves the user's Stalwart account
+    and creates or retrieves a special App Password to be used in Appointment's CalDAV auto-setup"""
+
+    error_response = JsonResponse(
+        {'success': False, 'error': _('An error has occurred while setting up the Appointment CalDAV.')},
+        status=400,
+    )
+
+    if not settings.APPOINTMENT_CALDAV_SECRET:
+        logging.error('Appointment CalDAV secret is not set')
+        error_response.status_code = 500
+        return error_response
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logging.error('Invalid JSON body during Appointment CalDAV setup')
+        error_response.status_code = 400
+        return error_response
+
+    appointment_secret = data.get('appointment-secret')
+
+    # This endpoint is only meant to be called by Appointment's backend
+    # so we need to verify a shared secret between them before proceeding
+    if not appointment_secret or appointment_secret != settings.APPOINTMENT_CALDAV_SECRET:
+        logging.error('Invalid appointment secret during Appointment CalDAV setup')
+        return error_response
+
+    access_token = data.get('oidc-access-token')
+
+    if not access_token:
+        logging.warning('OIDC access token is missing during Appointment CalDAV setup')
+        return error_response
+
+    # Validate the access token against the OIDC provider to identify the user
+    try:
+        oidc_backend = AccountsOIDCBackend(None)
+        user = oidc_backend.get_user_from_access_token(access_token)
+    except Exception as ex:
+        sentry_sdk.capture_exception(ex)
+        error_response.status_code = 401
+        return error_response
+
+    if not user:
+        logging.error('User not found for access token during Appointment CalDAV setup')
+        error_response.status_code = 404
+        return error_response
+
+    if not user.has_active_subscription:
+        logging.error('User does not have an active subscription during Appointment CalDAV setup')
+        error_response.status_code = 400
+        return error_response
+
+    # Use a special label for the App Password to be used in Appointment's CalDAV auto-setup
+    label = f'{settings.APPOINTMENT_APP_PASSWORD_PREFIX}{user.stalwart_primary_email}'
+
+    try:
+        stalwart_client = MailClient()
+        email_user = stalwart_client.get_account(user.stalwart_primary_email)
+
+        # Remove any existing app password for this label so we can
+        # replace it with a fresh one.
+        expected_prefix = f'$app${label}$'
+        for secret in email_user.get('secrets', []):
+            if secret.startswith(expected_prefix):
+                stalwart_client.delete_app_password(user.stalwart_primary_email, secret)
+
+        # Generate a random base64 password, hash it for Stalwart
+        # storage, and return the base64 password to the caller for CalDAV auth.
+        base64_password = secrets.token_urlsafe(64)
+        app_password_hash = utils.save_app_password(label, base64_password)
+        stalwart_client.save_app_password(user.stalwart_primary_email, app_password_hash)
+
+        return JsonResponse({'success': True, 'app_password': base64_password})
+
+    except Exception as ex:
+        sentry_sdk.capture_exception(ex)
+        error_response.status_code = 500
+        return error_response
 
 
 @login_required

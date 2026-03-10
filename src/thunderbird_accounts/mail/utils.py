@@ -5,7 +5,7 @@ from requests.exceptions import HTTPError
 from django.contrib.auth.hashers import make_password, identify_hasher
 import sentry_sdk
 
-from thunderbird_accounts import settings
+from django.conf import settings
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.mail import tasks
@@ -26,6 +26,17 @@ def save_app_password(label, password):
 
     secret_string = f'$app${label}${hashed_password}'
     return secret_string
+
+
+def filter_app_passwords(secrets: list[str], *, filter_prefix: str | None = None) -> list[str]:
+    """Return app-password secrets with Appointment CalDAV entry excluded.
+
+    If filter_prefix is given, only secrets whose label starts with that
+    prefix are kept (all others are returned).  By default the
+    ``APPOINTMENT_APP_PASSWORD_PREFIX`` is stripped out.
+    """
+    prefix = f'$app${filter_prefix or settings.APPOINTMENT_APP_PASSWORD_PREFIX}'
+    return [s for s in secrets if not s.startswith(prefix)]
 
 
 def decode_app_password(secret):

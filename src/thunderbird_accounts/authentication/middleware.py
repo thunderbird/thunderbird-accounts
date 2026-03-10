@@ -219,6 +219,26 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
             capture_exception(ex)
             raise AuthenticationUnavailable()
 
+    def get_user_from_access_token(self, access_token, verify=True):
+        """Retrieve a user from an access_token, and optionally verify the claims"""
+        user_info = self.get_userinfo(access_token, None, None)
+        claims_verified = self.verify_claims(user_info) if verify else True
+
+        if not claims_verified:
+            msg = "Claims verification failed"
+            raise SuspiciousOperation(msg)
+
+        # email based filtering
+        users = self.filter_users_by_claims(user_info)
+
+        if len(users) > 1:
+            msg = "Multiple users returned"
+            raise SuspiciousOperation(msg)
+        elif len(users) == 0:
+            return None
+
+        return users.first()
+
 
 class OIDCRefreshSession(SessionRefresh):
     """
