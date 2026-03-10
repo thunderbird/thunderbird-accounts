@@ -199,3 +199,28 @@ docker compose exec backend uv run manage.py test thunderbird_accounts.client.te
 ## Running the E2E tests
 
 Please see the [E2E tests README](./test/e2e/README.md).
+
+
+## Accessing the Flower Web Interface
+
+We run Flower to surface information about Celery tasks. This service exposes a web interface on
+port 5555. In development, you can access this at `http://localhost:5555` after bringing services
+online with `docker-compose`. In Thunderbird's live (protected) environments, we have to create an
+SSH proxy through a bastion.
+
+How to build a bastion is documented in the Pulumi config files themselves. Once you have one that
+allows traffic from your IP, you'll need to gather some info:
+
+- Your bastion's public IP address (`$BASTION_IP`)
+- The DNS address for the Flower load balancer in the environment (`$FLOWER_LB_DBS`)
+- An available local port to forward through, let's say `8443`.
+
+Open an SSH proxy to the bastion server:
+
+```bash
+ssh -L 8443:$FLOWER_LB_DNS:443 ec2-user@$BASTION_IP
+```
+
+Our live environments all use TLS, so you will need to browse to https://localhost:8443/. You will
+have to push past an SSL certificate hostname mismatch alert, but then you will find yourself at the
+Flower landing page, listing Celery workers on the network.
