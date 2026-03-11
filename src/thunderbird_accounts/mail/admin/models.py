@@ -21,6 +21,7 @@ class AccountAdmin(admin.ModelAdmin):
     inlines = (EmailInline,)
     readonly_fields = ('uuid', 'stalwart_id', 'stalwart_created_at', 'stalwart_updated_at')
 
+
 class DomainAdmin(admin.ModelAdmin):
     actions = [admin_fix_stalwart_ids]
 

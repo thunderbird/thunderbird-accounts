@@ -1,4 +1,5 @@
 """Stores admin panel related config classes"""
+
 from django.contrib import admin
 from django.contrib.admin.apps import AdminConfig
 from django.utils.translation import gettext_lazy as _

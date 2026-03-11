@@ -3,10 +3,10 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:378ccb8058f181e609ca79060f45adceb2affef4
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:0ca8bc25c05a3e87012db11d5141e03cc7f8da7b
 
 # Update this value to update all containers based on this Keycloak image
-.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-e14d46467c921269a4a68dcc4affaaca8c921477
+.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-ecdbdfc1c9ad2394836dff14bfb26f1589005623
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
@@ -24,25 +24,26 @@
 .imap_host: &VAR_IMAP_HOST {name: "IMAP_HOST", value: "mail.stage-thundermail.com"}
 .imap_port: &VAR_IMAP_PORT {name: "IMAP_PORT", value: "993"}
 .imap_tls: &VAR_IMAP_TLS {name: "IMAP_TLS", value: "True"}
-.log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", "value": "DEBUG"}
-.keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth-stage.tb.pro/admin/realms/tbpro/"}
-.keycloak_admin_url_token: &VAR_KEYCLOAK_ADMIN_URL_TOKEN {name: "KEYCLOAK_ADMIN_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/master/protocol/openid-connect/token/"}
 .jmap_host: &VAR_JMAP_HOST {name: "JMAP_HOST", value: "mail.stage-thundermail.com"}
 .jmap_port: &VAR_JMAP_PORT {name: "JMAP_PORT", value: "443"}
 .jmap_tls: &VAR_JMAP_TLS {name: "JMAP_TLS", value: "True"}
+.keycloak_admin_url_token: &VAR_KEYCLOAK_ADMIN_URL_TOKEN {name: "KEYCLOAK_ADMIN_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/master/protocol/openid-connect/token/"}
+.keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth-stage.tb.pro/admin/realms/tbpro/"}
+.log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", "value": "DEBUG"}
 .min_custom_domain_alias_length: &VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH {name: "MIN_CUSTOM_DOMAIN_ALIAS_LENGTH", value: "3"}
 .oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/auth"}
-.oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token"}
-.oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"}
 .oidc_url_jwks: &VAR_OIDC_URL_JWKS {name: "OIDC_URL_JWKS", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"}
 .oidc_url_logout: &VAR_OIDC_URL_LOGOUT {name: "OIDC_URL_LOGOUT", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"}
-.paddle_env: &VAR_PADDLE_ENV {name: "PADDLE_ENV", value: "sandbox"}
+.oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token"}
+.oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"}
 .public_base_url: &VAR_PUBLIC_BASE_URL {name: "PUBLIC_BASE_URL", value: "https://accounts-stage.tb.pro"}
+.paddle_env: &VAR_PADDLE_ENV {name: "PADDLE_ENV", value: "sandbox"}
 .redis_celery_db: &VAR_REDIS_CELERY_DB {name: "REDIS_CELERY_DB", value: "5"}
 .redis_celery_results_db: &VAR_REDIS_CELERY_RESULTS_DB {name: "REDIS_CELERY_RESULTS_DB", value: "6"}
 .redis_internal_db: &VAR_REDIS_INTERNAL_DB {name: "REDIS_INTERNAL_DB", value: "0"}
 .redis_shared_db: &VAR_REDIS_SHARED_DB {name: "REDIS_SHARED_DB", value: "10"}
-.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": 0.33} 
+.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": "0.33"} 
+.sentry_traces_sample_rate: &VAR_SENTRY_TRACES_SAMPLE_RATE {name: "SENTRY_TRACES_SAMPLE_RATE", value: "1.0"}
 .smtp_host: &VAR_SMTP_HOST {name: "SMTP_HOST", value: "mail.stage-thundermail.com"}
 .smtp_port: &VAR_SMTP_PORT {name: "SMTP_PORT", value: "465"}
 .smtp_tls: &VAR_SMTP_TLS {name: "SMTP_TLS", value: "True"}
@@ -54,12 +55,13 @@
 .tb_pro_wait_list_url: &VAR_TB_PRO_WAIT_LIST_URL {name: "TB_PRO_WAIT_LIST_URL", value: "https://tb.pro/waitlist/"}
 .use_allow_list: &VAR_USE_ALLOW_LIST {name: "USE_ALLOW_LIST", value: "True"}
 .verify_private_link_ssl: &VAR_VERIFY_PRIVATE_LINK_SSL {name: "VERIFY_PRIVATE_LINK_SSL", value: "False"}
-.zendesk_form_id: &VAR_ZENDESK_FORM_ID {name: "ZENDESK_FORM_ID", value: "46642378723859"}
 .zendesk_form_browser_field_id: &VAR_ZENDESK_FORM_BROWSER_FIELD_ID {name: "ZENDESK_FORM_BROWSER_FIELD_ID", value: "46642389601427"}
+.zendesk_form_id: &VAR_ZENDESK_FORM_ID {name: "ZENDESK_FORM_ID", value: "46642378723859"}
 .zendesk_form_os_field_id: &VAR_ZENDESK_FORM_OS_FIELD_ID {name: "ZENDESK_FORM_OS_FIELD_ID", value: "46642417675539"}
 
 # These variables are also common to our environments, but are pulled from secret stores instead
 .auth_allow_list: &SECRET_AUTH_ALLOW_LIST {name: "AUTH_ALLOW_LIST", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-Rjs24C"}
+.database_host: &SECRET_DATABASE_HOST {name: "DATABASE_HOST", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-host-zmv0GO"}
 .database_name: &SECRET_DATABASE_NAME {name: "DATABASE_NAME", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-name-ZCR7dN"}
 .database_password: &SECRET_DATABASE_PASSWORD {name: "DATABASE_PASSWORD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-password-8RraYV"}
 .database_user: &SECRET_DATABASE_USER {name: "DATABASE_USER", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/database-user-a99f03"}
@@ -72,10 +74,12 @@
 .oidc_client_id: &SECRET_OIDC_CLIENT_ID {name: "OIDC_CLIENT_ID", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-client-id-UzCPWF"}
 .oidc_client_secret: &SECRET_OIDC_CLIENT_SECRET {name: "OIDC_CLIENT_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-client-secret-RzOIiH"}
 .oidc_sign_algo: &SECRET_OIDC_SIGN_ALGO {name: "OIDC_SIGN_ALGO", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/oidc-sign-algo-nEhTVJ"}
+.paddle_api_key: &SECRET_PADDLE_API_KEY {Name: "PADDLE_API_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-api-key-WlhcMj"}
 .paddle_price_id_lo: &SECRET_PADDLE_PRICE_ID_LO {name: "PADDLE_PRICE_ID_LO", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-lo-BOxRwS"}
 .paddle_price_id_md: &SECRET_PADDLE_PRICE_ID_MD {name: "PADDLE_PRICE_ID_MD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-md-YShIxp"}
 .paddle_price_id_hi: &SECRET_PADDLE_PRICE_ID_HI {name: "PADDLE_PRICE_ID_HI", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-price-id-hi-8muS08"}
 .paddle_token: &SECRET_PADDLE_TOKEN {name: "PADDLE_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-token-1Xo0np"}
+.paddle_webhook_key: &SECRET_PADDLE_WEBHOOK_KEY {name: "PADDLE_WEBHOOK_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-webhook-key-JuvcOr"}
 .redis_url: &SECRET_REDIS_URL {name: "REDIS_URL", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L"}
 .secret_key: &SECRET_SECRET_KEY {name: "SECRET_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-RMUzrl"}
 .sentry_dsn: &SECRET_SENTRY_DSN {name: "SENTRY_DSN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-rgui8C"}
@@ -99,7 +103,7 @@
 # This forms the base of Accounts-based container definitions. The blank fields commented here must be set on any
 # inheriting container definition:
 #   environment:
-#   logConfiguration
+#   logConfiguration:
 .accounts_contdef: &ACCOUNTS_CONTAINER_DEFINITION
   image: *ACCOUNTS_IMAGE
   essential: true
@@ -111,6 +115,7 @@
     restartAttemptPeriod: 300
   secrets:
     - *SECRET_AUTH_ALLOW_LIST
+    - *SECRET_DATABASE_HOST
     - *SECRET_DATABASE_NAME
     - *SECRET_DATABASE_PASSWORD
     - *SECRET_DATABASE_USER
@@ -123,10 +128,12 @@
     - *SECRET_OIDC_CLIENT_ID
     - *SECRET_OIDC_CLIENT_SECRET
     - *SECRET_OIDC_SIGN_ALGO
+    - *SECRET_PADDLE_API_KEY
     - *SECRET_PADDLE_PRICE_ID_LO
     - *SECRET_PADDLE_PRICE_ID_MD
     - *SECRET_PADDLE_PRICE_ID_HI
     - *SECRET_PADDLE_TOKEN
+    - *SECRET_PADDLE_WEBHOOK_KEY
     - *SECRET_REDIS_URL
     - *SECRET_SECRET_KEY
     - *SECRET_SENTRY_DSN
@@ -351,23 +358,26 @@ resources:
                 - *VAR_IMAP_HOST
                 - *VAR_IMAP_PORT
                 - *VAR_IMAP_TLS
-                - *VAR_KEYCLOAK_URL_API
-                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
                 - *VAR_JMAP_HOST
                 - *VAR_JMAP_PORT
                 - *VAR_JMAP_TLS
+                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
+                - *VAR_KEYCLOAK_URL_API
+                - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 - *VAR_OIDC_URL_AUTH
-                - *VAR_OIDC_URL_TOKEN
-                - *VAR_OIDC_URL_USER
                 - *VAR_OIDC_URL_JWKS
                 - *VAR_OIDC_URL_LOGOUT
+                - *VAR_OIDC_URL_TOKEN
+                - *VAR_OIDC_URL_USER
                 - *VAR_PADDLE_ENV
                 - *VAR_PUBLIC_BASE_URL
                 - *VAR_REDIS_CELERY_DB
                 - *VAR_REDIS_CELERY_RESULTS_DB
                 - *VAR_REDIS_INTERNAL_DB
                 - *VAR_REDIS_SHARED_DB
+                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+                - *VAR_SENTRY_TRACES_SAMPLE_RATE
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
@@ -379,11 +389,10 @@ resources:
                 - *VAR_TB_PRO_WAIT_LIST_URL
                 - *VAR_USE_ALLOW_LIST
                 - *VAR_VERIFY_PRIVATE_LINK_SSL
-                - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
+                - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
-                - *VAR_LOG_LEVEL
-                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+                # These vars indicate this container runs as Celery, not Flower or Django
                 - name: TBA_CELERY
                   value: "yes"
                 - name: TBA_FLOWER
@@ -423,11 +432,12 @@ resources:
                 - *VAR_IMAP_HOST
                 - *VAR_IMAP_PORT
                 - *VAR_IMAP_TLS
-                - *VAR_KEYCLOAK_URL_API
-                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
                 - *VAR_JMAP_HOST
                 - *VAR_JMAP_PORT
                 - *VAR_JMAP_TLS
+                - *VAR_KEYCLOAK_URL_API
+                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
+                - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 - *VAR_OIDC_URL_AUTH
                 - *VAR_OIDC_URL_TOKEN
@@ -454,12 +464,21 @@ resources:
                 - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
-                - *VAR_LOG_LEVEL
                 - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+                # These vars indicate this container runs as Flower, not Celery or Django
                 - name: TBA_CELERY
                   value: "no"
                 - name: TBA_FLOWER
                   value: "yes"
+                # Since this service is on private network space, we allow the API without auth
+                - name: FLOWER_UNAUTHENTICATED_API
+                  value: 'true'
+                # Flower is not our product, and it's for infrequent internal use only.
+                # Disable all Sentry monitoring except for actual errors.
+                - name: SENTRY_PROFILE_SAMPLE_RATE
+                  value: "0.0"
+                - name: SENTRY_TRACES_SAMPLE_RATE
+                  value: "0.0"
 
       targets:
         flower:
@@ -903,4 +922,3 @@ resources:
         - arn:aws:iam::768512802988:role/accounts-stage-fargate-keycloak
         - arn:aws:iam::768512802988:role/accounts-stage-afc-accounts-celery-stage
         - arn:aws:iam::768512802988:role/accounts-stage-afc-accounts-flower-stage
-

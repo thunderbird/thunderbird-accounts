@@ -493,7 +493,6 @@ class AccountsOIDCBackendTestCase(TestCase):
         # Remove any allow list entries
         AllowListEntry.objects.all().delete()
 
-
     def test_create_user_success(self):
         claims = {
             'sub': '5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2',
@@ -909,9 +908,7 @@ class SignUpViewTestcase(TestCase):
             },
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(
-            response.headers.get('Location'), waitlist_url, msg=self.get_messages(response)
-        )
+        self.assertEqual(response.headers.get('Location'), waitlist_url, msg=self.get_messages(response))
 
     def test_user_already_exists(self, mock_import_user: MagicMock):
         """Test that we check if a user exists before creating a user"""
@@ -962,7 +959,6 @@ class SignUpViewTestcase(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers.get('Location'), '/sign-up', msg=self.get_messages(response))
         self.assertEqual(str(_('You cannot sign-up with that email address.')), self.get_messages(response)[0].message)
-
 
     def test_passwords_are_empty(self, mock_import_user: MagicMock):
         """Test that we check if passwords exist"""
