@@ -1,7 +1,5 @@
 ---
 ### Special variables used throughout this file
-.log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", "value": "INFO"}
-.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": "0.66"} 
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
@@ -20,24 +18,27 @@
 .imap_host: &VAR_IMAP_HOST {name: "IMAP_HOST", value: "mail.thundermail.com"}
 .imap_port: &VAR_IMAP_PORT {name: "IMAP_PORT", value: "993"}
 .imap_tls: &VAR_IMAP_TLS {name: "IMAP_TLS", value: "True"}
-.keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth.tb.pro/admin/realms/tbpro/"}
-.keycloak_admin_url_token: &VAR_KEYCLOAK_ADMIN_URL_TOKEN {name: "KEYCLOAK_ADMIN_URL_TOKEN", value: "https://auth.tb.pro/realms/master/protocol/openid-connect/token/"}
 .jmap_host: &VAR_JMAP_HOST {name: "JMAP_HOST", value: "mail.thundermail.com"}
 .jmap_port: &VAR_JMAP_PORT {name: "JMAP_PORT", value: "443"}
 .jmap_tls: &VAR_JMAP_TLS {name: "JMAP_TLS", value: "True"}
+.keycloak_admin_url_token: &VAR_KEYCLOAK_ADMIN_URL_TOKEN {name: "KEYCLOAK_ADMIN_URL_TOKEN", value: "https://auth.tb.pro/realms/master/protocol/openid-connect/token/"}
+.keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth.tb.pro/admin/realms/tbpro/"}
+.log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", "value": "INFO"}
 .min_custom_domain_alias_length: &VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH {name: "MIN_CUSTOM_DOMAIN_ALIAS_LENGTH", value: "3"}
 .oidc_fallback_match_by_email: &VAR_OIDC_FALLBACK_MATCH_BY_EMAIL {name: "OIDC_FALLBACK_MATCH_BY_EMAIL", value: "True"}
 .oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth/"}
-.oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/token/"}
-.oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/userinfo/"}
 .oidc_url_jwks: &VAR_OIDC_URL_JWKS {name: "OIDC_URL_JWKS", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs/"}
 .oidc_url_logout: &VAR_OIDC_URL_LOGOUT {name: "OIDC_URL_LOGOUT", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout/"}
+.oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/token/"}
+.oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/userinfo/"}
 .paddle_env: &VAR_PADDLE_ENV {name: "PADDLE_ENV", value: "production"}
 .public_base_url: &VAR_PUBLIC_BASE_URL {name: "PUBLIC_BASE_URL", value: "https://accounts.tb.pro"}
 .redis_celery_db: &VAR_REDIS_CELERY_DB {name: "REDIS_CELERY_DB", value: "5"}
 .redis_celery_results_db: &VAR_REDIS_CELERY_RESULTS_DB {name: "REDIS_CELERY_RESULTS_DB", value: "6"}
 .redis_internal_db: &VAR_REDIS_INTERNAL_DB {name: "REDIS_INTERNAL_DB", value: "0"}
 .redis_shared_db: &VAR_REDIS_SHARED_DB {name: "REDIS_SHARED_DB", value: "10"}
+.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": "0.66"} 
+.sentry_traces_sample_rate: &VAR_SENTRY_TRACES_SAMPLE_RATE {name: "SENTRY_TRACES_SAMPLE_RATE", value: "1.0"}
 .smtp_host: &VAR_SMTP_HOST {name: "SMTP_HOST", value: "mail.thundermail.com"}
 .smtp_port: &VAR_SMTP_PORT {name: "SMTP_PORT", value: "465"}
 .smtp_tls: &VAR_SMTP_TLS {name: "SMTP_TLS", value: "True"}
@@ -49,8 +50,8 @@
 .tb_pro_wait_list_url: &VAR_TB_PRO_WAIT_LIST_URL {name: "TB_PRO_WAIT_LIST_URL", value: "https://tb.pro/waitlist/"}
 .use_allow_list: &VAR_USE_ALLOW_LIST {name: "USE_ALLOW_LIST", value: "True"}
 .verify_private_link_ssl: &VAR_VERIFY_PRIVATE_LINK_SSL {name: "VERIFY_PRIVATE_LINK_SSL", value: "False"}
-.zendesk_form_id: &VAR_ZENDESK_FORM_ID {name: "ZENDESK_FORM_ID", value: "38216134664083"}
 .zendesk_form_browser_field_id: &VAR_ZENDESK_FORM_BROWSER_FIELD_ID {name: "ZENDESK_FORM_BROWSER_FIELD_ID", value: "44379231787027"}
+.zendesk_form_id: &VAR_ZENDESK_FORM_ID {name: "ZENDESK_FORM_ID", value: "38216134664083"}
 .zendesk_form_os_field_id: &VAR_ZENDESK_FORM_OS_FIELD_ID {name: "ZENDESK_FORM_OS_FIELD_ID", value: "44379263732755"}
 
 # These variables are also common to our environments, but are pulled from secret stores instead
@@ -78,8 +79,8 @@
 .paddle_token: &SECRET_PADDLE_TOKEN {name: "PADDLE_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-token-aNOfo6"}
 .paddle_webhook_key: &SECRET_PADDLE_WEBHOOK_KEY {name: "PADDLE_WEBHOOK_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-webhook-key-vX5JHE"}
 .redis_url: &SECRET_REDIS_URL {name: "REDIS_URL", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/redis-url-Nq3x1a"}
-.secret_key: &SECRET_SECRET_KEY {name: "SECRET_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK"}
 .sentry_dsn: &SECRET_SENTRY_DSN {name: "SENTRY_DSN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV"}
+.secret_key: &SECRET_SECRET_KEY {name: "SECRET_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK"}
 .stalwart_api_auth_method: &SECRET_STALWART_API_AUTH_METHOD {name: "STALWART_API_AUTH_METHOD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR"}
 .stalwart_api_auth_string: &SECRET_STALWART_API_AUTH_STRING {name: "STALWART_API_AUTH_STRING", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN"}
 .zendesk_api_token: &SECRET_ZENDESK_API_TOKEN {name: "ZENDESK_API_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-api-token-2rsztq"}
@@ -134,8 +135,8 @@
     - *SECRET_PADDLE_TOKEN
     - *SECRET_PADDLE_WEBHOOK_KEY
     - *SECRET_REDIS_URL
-    - *SECRET_SECRET_KEY
     - *SECRET_SENTRY_DSN
+    - *SECRET_SECRET_KEY
     - *SECRET_STALWART_API_AUTH_METHOD
     - *SECRET_STALWART_API_AUTH_STRING
     - *SECRET_ZENDESK_API_TOKEN
@@ -364,24 +365,27 @@ resources:
                 - *VAR_IMAP_HOST
                 - *VAR_IMAP_PORT
                 - *VAR_IMAP_TLS
-                - *VAR_KEYCLOAK_URL_API
-                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
                 - *VAR_JMAP_HOST
                 - *VAR_JMAP_PORT
                 - *VAR_JMAP_TLS
+                - *VAR_KEYCLOAK_URL_API
+                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
+                - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 - *VAR_OIDC_FALLBACK_MATCH_BY_EMAIL
                 - *VAR_OIDC_URL_AUTH
-                - *VAR_OIDC_URL_TOKEN
-                - *VAR_OIDC_URL_USER
                 - *VAR_OIDC_URL_JWKS
                 - *VAR_OIDC_URL_LOGOUT
+                - *VAR_OIDC_URL_TOKEN
+                - *VAR_OIDC_URL_USER
                 - *VAR_PADDLE_ENV
                 - *VAR_PUBLIC_BASE_URL
                 - *VAR_REDIS_CELERY_DB
                 - *VAR_REDIS_CELERY_RESULTS_DB
                 - *VAR_REDIS_INTERNAL_DB
                 - *VAR_REDIS_SHARED_DB
+                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+                - *VAR_SENTRY_TRACES_SAMPLE_RATE
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
@@ -393,15 +397,14 @@ resources:
                 - *VAR_TB_PRO_WAIT_LIST_URL
                 - *VAR_USE_ALLOW_LIST
                 - *VAR_VERIFY_PRIVATE_LINK_SSL
-                - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
+                - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
+                # These vars indicate this container runs as Celery, not Flower or Django
                 - name: TBA_CELERY
                   value: "yes"
                 - name: TBA_FLOWER
                   value: "no"
-                - name: SENTRY_TRACES_SAMPLE_RATE
-                  value: "0.1"
 
         flower-prod:
           <<: *ACCOUNTS_TASK_DEFINITION
@@ -438,24 +441,27 @@ resources:
                 - *VAR_IMAP_HOST
                 - *VAR_IMAP_PORT
                 - *VAR_IMAP_TLS
-                - *VAR_KEYCLOAK_URL_API
-                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
                 - *VAR_JMAP_HOST
                 - *VAR_JMAP_PORT
                 - *VAR_JMAP_TLS
+                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
+                - *VAR_KEYCLOAK_URL_API
+                - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 - *VAR_OIDC_FALLBACK_MATCH_BY_EMAIL
                 - *VAR_OIDC_URL_AUTH
-                - *VAR_OIDC_URL_TOKEN
-                - *VAR_OIDC_URL_USER
                 - *VAR_OIDC_URL_JWKS
                 - *VAR_OIDC_URL_LOGOUT
+                - *VAR_OIDC_URL_TOKEN
+                - *VAR_OIDC_URL_USER
                 - *VAR_PADDLE_ENV
                 - *VAR_PUBLIC_BASE_URL
                 - *VAR_REDIS_CELERY_DB
                 - *VAR_REDIS_CELERY_RESULTS_DB
                 - *VAR_REDIS_INTERNAL_DB
                 - *VAR_REDIS_SHARED_DB
+                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+                - *VAR_SENTRY_TRACES_SAMPLE_RATE
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
@@ -467,15 +473,13 @@ resources:
                 - *VAR_TB_PRO_WAIT_LIST_URL
                 - *VAR_USE_ALLOW_LIST
                 - *VAR_VERIFY_PRIVATE_LINK_SSL
-                - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
+                - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
                 - name: TBA_CELERY
                   value: "no"
                 - name: TBA_FLOWER
                   value: "yes"
-                - name: SENTRY_TRACES_SAMPLE_RATE
-                  value: "0.0"
 
       targets:
         flower:
