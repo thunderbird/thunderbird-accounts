@@ -43,12 +43,12 @@ def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
 @login_required
 @inject_paddle
 def subscription_complete(request: HttpRequest, paddle: Client):
-    """User is redirected by Paddle via the successUrl. """
+    """User is redirected by Paddle via the successUrl."""
     user = request.user
     transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
     payment_type = request.session.pop(SESSION_PADDLE_PAYMENT_TYPE)
 
-    # Hmm this shouldn't happen...send them home. (They'll be redirected to subscribe if they're not subscribed anyways.)
+    # Hmm this shouldn't happen...send them home. They'll be redirected to subscribe if they're not subscribed anyways.
     if not transaction_id or not payment_type:
         return HttpResponseRedirect('/')
 
@@ -67,7 +67,7 @@ def subscription_complete(request: HttpRequest, paddle: Client):
         """
         if payment_type in [
             PaymentMethodType.Paypal.value,
-            # We don't use these, but for completeness' sake. 
+            # We don't use these, but for completeness' sake.
             PaymentMethodType.Alipay.value,
             PaymentMethodType.Bancontact.value,
             PaymentMethodType.Ideal.value,
