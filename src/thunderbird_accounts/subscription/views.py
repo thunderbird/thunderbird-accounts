@@ -41,49 +41,6 @@ def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
 
 
 @login_required
-@inject_paddle
-def subscription_complete(request: HttpRequest, paddle: Client):
-    """User is redirected by Paddle via the successUrl."""
-    user = request.user
-    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
-    payment_type = request.session.pop(SESSION_PADDLE_PAYMENT_TYPE)
-
-    # Hmm this shouldn't happen...send them home. They'll be redirected to subscribe if they're not subscribed anyways.
-    if not transaction_id or not payment_type:
-        return HttpResponseRedirect('/')
-
-    transaction = paddle.transactions.get(transaction_id=transaction_id)
-    status = transaction.status.value
-
-    if transaction and status in [Transaction.StatusValues.COMPLETED.value, Transaction.StatusValues.PAID.value]:
-        user.is_awaiting_payment_verification = True
-        user.save()
-
-        if settings.IS_DEV:
-            tasks.dev_only_paddle_fake_webhook.delay(transaction_id=transaction_id, user_uuid=user.uuid.hex)
-
-        """
-        Paddle folks mentioned these are the types that open pop-up windows:
-        """
-        if payment_type in [
-            PaymentMethodType.Paypal.value,
-            # We don't use these, but for completeness' sake.
-            PaymentMethodType.Alipay.value,
-            PaymentMethodType.Bancontact.value,
-            PaymentMethodType.Ideal.value,
-            PaymentMethodType.KoreaLocal.value,
-        ]:
-            # Tell their window to close
-            return TemplateResponse(
-                request,
-                'close_window.html',
-                status=200,
-            )
-
-    return HttpResponseRedirect('/subscribe')
-
-
-@login_required
 @require_http_methods(['POST'])
 def get_paddle_information(request: Request):
     signer = Signer()
@@ -118,8 +75,7 @@ def set_paddle_transaction_id(request: Request):
 
 @login_required
 @require_http_methods(['POST'])
-@inject_paddle
-def is_paddle_transaction_done(request: Request, paddle: Client):
+def is_paddle_transaction_done(request: Request):
     """Checks if the Paddle transaction has finished and returns True or False.
     Also cleans up transaction id once the transaction is completed."""
     transaction_id = request.session.get(SESSION_PADDLE_TRANSACTION_ID, default=None)
@@ -132,16 +88,77 @@ def is_paddle_transaction_done(request: Request, paddle: Client):
 
     status = Transaction.StatusValues.DRAFT.value
 
-    # For dev machines we have to inquire directly, otherwise we rely on information given to us by the Paddle webhooks
-    if settings.IS_DEV:
-        transaction = paddle.transactions.get(transaction_id=transaction_id)
-        status = transaction.status.value
-    else:
-        transaction = Transaction.objects.filter(paddle_id=transaction_id).first()
-        if transaction:
-            status = transaction.status
+    transaction = Transaction.objects.filter(paddle_id=transaction_id).first()
+    if transaction:
+        status = transaction.status
 
     return JsonResponse({'status': status})
+
+
+@login_required
+@inject_paddle
+def paddle_transaction_complete(request: HttpRequest, paddle: Client):
+    """User is redirected by Paddle via the successUrl. This means we have a transaction that's paid or
+    completed (noted as doneish.)
+
+    There's some special logic for certain payment processors that open a pop-up window instead of
+    redirecting to another page or completeing on page. Those processors are defined in code, and
+    will redirect the pop-up window to a django template that _should_ immediately close the window.
+    For those processors the doneish/redirect logic is handled in
+    :any:`thunderbird_accounts.subscription.views.is_paddle_transaction_done`
+
+    For regular payment processors like the default ``card`` we will simply redirect to the subscribe page.
+    The front-end will handle if the check to see if the user's transaction and subscription has been pulled
+    in our db via webhooks.
+    """
+    user = request.user
+    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
+    payment_type = request.session.pop(SESSION_PADDLE_PAYMENT_TYPE)
+    redirect_response = HttpResponseRedirect('/subscribe')
+
+    # Hmm this shouldn't happen...
+    if not transaction_id or not payment_type:
+        return redirect_response
+
+    transaction = paddle.transactions.get(transaction_id=transaction_id)
+    status = transaction.status.value
+
+    if transaction and status in [Transaction.StatusValues.COMPLETED.value, Transaction.StatusValues.PAID.value]:
+        user.is_awaiting_payment_verification = True
+        user.save()
+
+        if settings.IS_DEV:
+            tasks.dev_only_paddle_fake_webhook.delay(transaction_id=transaction_id, user_uuid=user.uuid.hex)
+
+        """
+        Paddle folks mentioned these are the types that open pop-up windows:
+         * PayPal
+         * Alipay
+         * Bancontact
+         * BLIK
+         * iDEAL
+         * MB WAY
+         * South Korea local cards
+         * Naver Pay, Kakao Pay, Samsung Pay, Payco
+         * Pix
+         * UPI
+        """
+        if payment_type in [
+            PaymentMethodType.Paypal.value,
+            # We don't use these, but for completeness' sake.
+            PaymentMethodType.Alipay.value,
+            PaymentMethodType.Bancontact.value,
+            PaymentMethodType.Ideal.value,
+            PaymentMethodType.KoreaLocal.value,
+        ]:
+            # Tell their window to close
+            return TemplateResponse(
+                request,
+                'close_window.html',
+                status=200,
+            )
+
+    return redirect_response
 
 
 @login_required

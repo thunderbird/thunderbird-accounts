@@ -85,16 +85,13 @@ const areWeDoneHere = async () => {
     if (['completed', 'paid'].indexOf(status) > -1) {
       // Remove the Paddle checkout form, and after a short wait reload the page.
       paymentComplete.value = true;
-    }
-
-    if (status === 'completed') {
       // We re-use this handler since it's not currently used, and it's hooked up to unMount.
       doneCheckerHandler = window.setTimeout(() => {
         window.location.reload();
       }, SHORT_WAIT_MS);
       return;
     }
-
+    
     // Lastly clear up the exception counter, if we've reached here there's no exceptions happening and no errors need to be shown.
     exceptionCounter = 0;
   } catch (e) {
@@ -271,10 +268,10 @@ export default {
     <h2>{{ t('views.subscribe.title') }}</h2>
     <notice-bar v-if="paddleUnknownError" :type="NoticeBarTypes.Critical">{{
       t('views.subscribe.paddleUnknownError')
-    }}</notice-bar>
+      }}</notice-bar>
     <notice-bar v-if="planSystemError" :type="NoticeBarTypes.Critical">{{
       t('views.subscribe.planSystemError')
-    }}</notice-bar>
+      }}</notice-bar>
     <div class="container">
       <card-container class="summary-card">
         <ul class="summary">
