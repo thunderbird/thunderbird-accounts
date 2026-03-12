@@ -49,6 +49,8 @@ urlpatterns = [
     path('email-aliases/remove', mail_views.remove_email_alias, name='remove_email_alias'),
     # Authentication
     path('users/sign-up/', auth_views.sign_up, name='sign_up'),
+    # Subscription
+    path('subscription/paddle/complete/', subscription_views.subscription_complete, name='paddle_completed'),
     # CalDAV auto-setup for Appointment
     path('appointment/caldav/setup/', mail_views.appointment_caldav_setup, name='appointment_caldav_setup'),
     # API

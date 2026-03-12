@@ -16,19 +16,24 @@ const initCurrencyFormatter = (code: string) => {
   });
 };
 
+const DEFAULT_PAYMENT_TYPE = 'card';
+const ARE_WE_DONE_YET_TIMER_MS = 2500;
+const SHORT_WAIT_MS = 2500;
+const EXCEPTIONS_UNTIL_ERROR_SHOWN = 3;
+
+// We don't need these to be reactive
 let currencyFormatter = initCurrencyFormatter('USD');
 let paddle = null;
 let doneCheckerHandler = null;
 let exceptionCounter = 0;
-
+let transactionId = null;
+let paymentType = DEFAULT_PAYMENT_TYPE;
 
 const planName = ref();
 const planSystemError = ref(false);
 const paymentComplete = ref(false);
 const paddleLoading = ref(true);
 const paddleUnknownError = ref(false);
-const ARE_WE_DONE_YET_TIMER_MS = 2500;
-const EXCEPTIONS_UNTIL_ERROR_SHOWN = 3;
 
 // Placeholder information for the skeletons
 const order_summary = ref({
@@ -60,6 +65,8 @@ onUnmounted(() => {
  * 
  * Poll the is-done api route every 2.5 seconds, and if we're doneish (paid or complete) 
  * then reload the window to let the payment verification screen do their magic.
+ * 
+ * Triggered by PaddleJS's checkout events. (Anyone with a transaction ID!)
  */
 const areWeDoneHere = async () => {
   try {
@@ -76,7 +83,16 @@ const areWeDoneHere = async () => {
 
     // For some reason PaddleJS has paid's constant as undefined. Hmmm...
     if (['completed', 'paid'].indexOf(status) > -1) {
-      window.location.reload();
+      // Remove the Paddle checkout form, and after a short wait reload the page.
+      paymentComplete.value = true;
+    }
+
+    if (status === 'completed') {
+      // We re-use this handler since it's not currently used, and it's hooked up to unMount.
+      doneCheckerHandler = window.setTimeout(() => {
+        window.location.reload();
+      }, SHORT_WAIT_MS);
+      return;
     }
 
     // Lastly clear up the exception counter, if we've reached here there's no exceptions happening and no errors need to be shown.
@@ -132,21 +148,34 @@ const onPaddleEvent = async (evt: PaddleEventData) => {
   // Just update the cart, every checkout.* event has all the information on it.
   if (evt.name.indexOf('checkout.') === 0) {
     const data = evt.data;
+    const backendNeedsUpdate = transactionId !== (data?.transaction_id ?? null) || paymentType !== data.payment.method_details.type;
 
-    // Set the transaction id
-    if (!doneCheckerHandler && data?.transaction_id) {
+    // Transaction ID should only update if we're not falsey.
+    if (data?.transaction_id) {
+      transactionId = data?.transaction_id ?? null;
+    }
+
+    // Payment type is only reliably updated on payment selected.
+    if (evt.name == 'checkout.payment.selected') {
+      paymentType = data.payment.method_details.type;
+    }
+
+    if (backendNeedsUpdate) {
       await fetch('/api/v1/subscription/paddle/tx/set/', {
         mode: 'same-origin',
         credentials: 'include',
         method: 'PUT',
         body: JSON.stringify({
-          txid: data?.transaction_id,
+          payment_type: paymentType,
+          txid: transactionId,
         }),
         headers: {
           'X-CSRFToken': csrfToken,
         },
       });
+    }
 
+    if (!doneCheckerHandler && transactionId) {
       // Setup our done checker
       doneCheckerHandler = window.setTimeout(() => areWeDoneHere(), ARE_WE_DONE_YET_TIMER_MS);
     }
@@ -208,8 +237,9 @@ const setupPaddle = async () => {
     eventCallback: onPaddleEvent,
     checkout: {
       settings: {
+        successUrl: `${window.location.origin}/subscription/paddle/complete/`,
         displayMode: 'inline',
-        frameTarget: 'checkout-container',
+        frameTarget: 'paddle-checkout',
         frameInitialHeight: 992,
         frameStyle: 'width: 100%; background-color: transparent; border: none;',
         variant: 'one-page',
@@ -241,10 +271,10 @@ export default {
     <h2>{{ t('views.subscribe.title') }}</h2>
     <notice-bar v-if="paddleUnknownError" :type="NoticeBarTypes.Critical">{{
       t('views.subscribe.paddleUnknownError')
-      }}</notice-bar>
+    }}</notice-bar>
     <notice-bar v-if="planSystemError" :type="NoticeBarTypes.Critical">{{
       t('views.subscribe.planSystemError')
-      }}</notice-bar>
+    }}</notice-bar>
     <div class="container">
       <card-container class="summary-card">
         <ul class="summary">
@@ -318,6 +348,7 @@ export default {
         <!-- Paddle's checkout will just disappear into the void once it starts redirecting us to successUrl.
              It looks ugly, so show a small message in its place. -->
         <p v-if="paymentComplete">{{ t('views.subscribe.paymentComplete') }}</p>
+        <div v-else class="paddle-checkout"></div>
       </card-container>
     </div>
   </div>
@@ -350,6 +381,7 @@ export default {
 
   .checkout-container {
     width: 100%;
+    min-height: 1090px;
   }
 
   .summary-card {

@@ -1,3 +1,5 @@
+from django.template.response import TemplateResponse
+from paddle_billing.Notifications.Entities.Shared.PaymentMethodType import PaymentMethodType
 import datetime
 import json
 import logging
@@ -5,7 +7,7 @@ import logging
 import sentry_sdk
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpRequest, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.core.signing import Signer
@@ -25,6 +27,7 @@ from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
 
 # We only need this here right now
 SESSION_PADDLE_TRANSACTION_ID = 'paddle_txid'
+SESSION_PADDLE_PAYMENT_TYPE = str(PaymentMethodType.Card)
 
 
 def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
@@ -35,6 +38,48 @@ def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
         return False
 
     return True
+
+
+@login_required
+@inject_paddle
+def subscription_complete(request: HttpRequest, paddle: Client):
+    """User is redirected by Paddle via the successUrl. """
+    user = request.user
+    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
+    payment_type = request.session.pop(SESSION_PADDLE_PAYMENT_TYPE)
+
+    if not transaction_id or not payment_type:
+        pass
+
+    transaction = paddle.transactions.get(transaction_id=transaction_id)
+    status = transaction.status.value
+
+    if transaction and status in [Transaction.StatusValues.COMPLETED.value, Transaction.StatusValues.PAID.value]:
+        user.is_awaiting_payment_verification = True
+        user.save()
+
+        if settings.IS_DEV:
+            tasks.dev_only_paddle_fake_webhook.delay(transaction_id=transaction_id, user_uuid=user.uuid.hex)
+
+        """
+        Paddle folks mentioned these are the types that open pop-up windows:
+        """
+        if payment_type in [
+            PaymentMethodType.Paypal.value,
+            # We don't use these, but for completeness' sake. 
+            PaymentMethodType.Alipay.value,
+            PaymentMethodType.Bancontact.value,
+            PaymentMethodType.Ideal.value,
+            PaymentMethodType.KoreaLocal.value,
+        ]:
+            # Tell their window to close
+            return TemplateResponse(
+                request,
+                'close_window.html',
+                status=200,
+            )
+
+    return HttpResponseRedirect('/subscribe')
 
 
 @login_required
@@ -66,6 +111,7 @@ def set_paddle_transaction_id(request: Request):
     It kinda sucks, but it works for now."""
     data = json.loads(request.body.decode())
     request.session[SESSION_PADDLE_TRANSACTION_ID] = data.get('txid')
+    request.session[SESSION_PADDLE_PAYMENT_TYPE] = data.get('payment_type')
     return JsonResponse({'success': True})
 
 
@@ -93,17 +139,6 @@ def is_paddle_transaction_done(request: Request, paddle: Client):
         transaction = Transaction.objects.filter(paddle_id=transaction_id).first()
         if transaction:
             status = transaction.status
-
-    # Once the transaction is doneish, set the user to awaiting verification and if on dev mode deploy the fake webhook
-    if transaction and status in [Transaction.StatusValues.COMPLETED.value, Transaction.StatusValues.PAID.value]:
-        user.is_awaiting_payment_verification = True
-        user.save()
-
-        # Clean up transaction id if it's still in session
-        request.session.pop(SESSION_PADDLE_TRANSACTION_ID, default=None)
-
-        if settings.IS_DEV:
-            tasks.dev_only_paddle_fake_webhook.delay(transaction_id=transaction_id, user_uuid=user.uuid.hex)
 
     return JsonResponse({'status': status})
 
