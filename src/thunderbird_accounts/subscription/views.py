@@ -48,8 +48,9 @@ def subscription_complete(request: HttpRequest, paddle: Client):
     transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
     payment_type = request.session.pop(SESSION_PADDLE_PAYMENT_TYPE)
 
+    # Hmm this shouldn't happen...send them home. (They'll be redirected to subscribe if they're not subscribed anyways.)
     if not transaction_id or not payment_type:
-        pass
+        return HttpResponseRedirect('/')
 
     transaction = paddle.transactions.get(transaction_id=transaction_id)
     status = transaction.status.value
