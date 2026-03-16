@@ -36,8 +36,8 @@
 .oidc_url_logout: &VAR_OIDC_URL_LOGOUT {name: "OIDC_URL_LOGOUT", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"}
 .oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token"}
 .oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"}
-.public_base_url: &VAR_PUBLIC_BASE_URL {name: "PUBLIC_BASE_URL", value: "https://accounts-stage.tb.pro"}
 .paddle_env: &VAR_PADDLE_ENV {name: "PADDLE_ENV", value: "sandbox"}
+.public_base_url: &VAR_PUBLIC_BASE_URL {name: "PUBLIC_BASE_URL", value: "https://accounts-stage.tb.pro"}
 .redis_celery_db: &VAR_REDIS_CELERY_DB {name: "REDIS_CELERY_DB", value: "5"}
 .redis_celery_results_db: &VAR_REDIS_CELERY_RESULTS_DB {name: "REDIS_CELERY_RESULTS_DB", value: "6"}
 .redis_internal_db: &VAR_REDIS_INTERNAL_DB {name: "REDIS_INTERNAL_DB", value: "0"}
