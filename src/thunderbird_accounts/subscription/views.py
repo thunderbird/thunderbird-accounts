@@ -124,8 +124,11 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     status = transaction.status.value
 
     if transaction and status in [Transaction.StatusValues.COMPLETED.value, Transaction.StatusValues.PAID.value]:
-        user.is_awaiting_payment_verification = True
-        user.save()
+        # Only set enable payment verification mode if they don't have an active subscription
+        # As the webhook could technically come in before or during this successUrl redirect...
+        if not user.has_active_subscription:
+            user.is_awaiting_payment_verification = True
+            user.save()
 
         if settings.IS_DEV:
             tasks.dev_only_paddle_fake_webhook.delay(transaction_id=transaction_id, user_uuid=user.uuid.hex)
