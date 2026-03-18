@@ -1,5 +1,12 @@
 ---
+
 ### Special variables used throughout this file
+
+# Update this value to update all containers based on this thunderbird/accounts image
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.6.4
+
+# Update this value to update all containers based on this Keycloak image
+.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-8f4b2f2785124d1c36f3b29dac0cf5a5c39e8687
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
@@ -23,7 +30,7 @@
 .jmap_tls: &VAR_JMAP_TLS {name: "JMAP_TLS", value: "True"}
 .keycloak_admin_url_token: &VAR_KEYCLOAK_ADMIN_URL_TOKEN {name: "KEYCLOAK_ADMIN_URL_TOKEN", value: "https://auth.tb.pro/realms/master/protocol/openid-connect/token/"}
 .keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth.tb.pro/admin/realms/tbpro/"}
-.log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", "value": "INFO"}
+.log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", value: "INFO"}
 .min_custom_domain_alias_length: &VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH {name: "MIN_CUSTOM_DOMAIN_ALIAS_LENGTH", value: "3"}
 .oidc_fallback_match_by_email: &VAR_OIDC_FALLBACK_MATCH_BY_EMAIL {name: "OIDC_FALLBACK_MATCH_BY_EMAIL", value: "True"}
 .oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth/"}
@@ -37,8 +44,8 @@
 .redis_celery_results_db: &VAR_REDIS_CELERY_RESULTS_DB {name: "REDIS_CELERY_RESULTS_DB", value: "6"}
 .redis_internal_db: &VAR_REDIS_INTERNAL_DB {name: "REDIS_INTERNAL_DB", value: "0"}
 .redis_shared_db: &VAR_REDIS_SHARED_DB {name: "REDIS_SHARED_DB", value: "10"}
-.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", "value": "0.66"} 
-.sentry_traces_sample_rate: &VAR_SENTRY_TRACES_SAMPLE_RATE {name: "SENTRY_TRACES_SAMPLE_RATE", value: "1.0"}
+.sentry_profile_sample_rate: &SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", value: "0.33"}
+.sentry_traces_sample_rate: &SENTRY_TRACES_SAMPLE_RATE {name: "SENTRY_TRACES_SAMPLE_RATE", value: "1.0"}
 .smtp_host: &VAR_SMTP_HOST {name: "SMTP_HOST", value: "mail.thundermail.com"}
 .smtp_port: &VAR_SMTP_PORT {name: "SMTP_PORT", value: "465"}
 .smtp_tls: &VAR_SMTP_TLS {name: "SMTP_TLS", value: "True"}
@@ -79,8 +86,8 @@
 .paddle_token: &SECRET_PADDLE_TOKEN {name: "PADDLE_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-token-aNOfo6"}
 .paddle_webhook_key: &SECRET_PADDLE_WEBHOOK_KEY {name: "PADDLE_WEBHOOK_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-webhook-key-vX5JHE"}
 .redis_url: &SECRET_REDIS_URL {name: "REDIS_URL", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/redis-url-Nq3x1a"}
-.sentry_dsn: &SECRET_SENTRY_DSN {name: "SENTRY_DSN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV"}
 .secret_key: &SECRET_SECRET_KEY {name: "SECRET_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK"}
+.sentry_dsn: &SECRET_SENTRY_DSN {name: "SENTRY_DSN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV"}
 .stalwart_api_auth_method: &SECRET_STALWART_API_AUTH_METHOD {name: "STALWART_API_AUTH_METHOD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR"}
 .stalwart_api_auth_string: &SECRET_STALWART_API_AUTH_STRING {name: "STALWART_API_AUTH_STRING", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN"}
 .zendesk_api_token: &SECRET_ZENDESK_API_TOKEN {name: "ZENDESK_API_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-api-token-2rsztq"}
@@ -129,14 +136,15 @@
     - *SECRET_OIDC_CLIENT_ID
     - *SECRET_OIDC_CLIENT_SECRET
     - *SECRET_OIDC_SIGN_ALGO
+    - *SECRET_PADDLE_API_KEY
     - *SECRET_PADDLE_PRICE_ID_LO
     - *SECRET_PADDLE_PRICE_ID_MD
     - *SECRET_PADDLE_PRICE_ID_HI
     - *SECRET_PADDLE_TOKEN
     - *SECRET_PADDLE_WEBHOOK_KEY
     - *SECRET_REDIS_URL
-    - *SECRET_SENTRY_DSN
     - *SECRET_SECRET_KEY
+    - *SECRET_SENTRY_DSN
     - *SECRET_STALWART_API_AUTH_METHOD
     - *SECRET_STALWART_API_AUTH_STRING
     - *SECRET_ZENDESK_API_TOKEN
@@ -146,7 +154,6 @@
 
 ### tb_pulumi resource configs
 resources:
-
   domains:
     accounts: accounts.tb.pro
 
@@ -368,24 +375,22 @@ resources:
                 - *VAR_JMAP_HOST
                 - *VAR_JMAP_PORT
                 - *VAR_JMAP_TLS
-                - *VAR_KEYCLOAK_URL_API
                 - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
+                - *VAR_KEYCLOAK_URL_API
                 - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 - *VAR_OIDC_FALLBACK_MATCH_BY_EMAIL
                 - *VAR_OIDC_URL_AUTH
-                - *VAR_OIDC_URL_JWKS
-                - *VAR_OIDC_URL_LOGOUT
                 - *VAR_OIDC_URL_TOKEN
                 - *VAR_OIDC_URL_USER
+                - *VAR_OIDC_URL_JWKS
+                - *VAR_OIDC_URL_LOGOUT
                 - *VAR_PADDLE_ENV
                 - *VAR_PUBLIC_BASE_URL
                 - *VAR_REDIS_CELERY_DB
                 - *VAR_REDIS_CELERY_RESULTS_DB
                 - *VAR_REDIS_INTERNAL_DB
                 - *VAR_REDIS_SHARED_DB
-                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
-                - *VAR_SENTRY_TRACES_SAMPLE_RATE
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
@@ -397,10 +402,9 @@ resources:
                 - *VAR_TB_PRO_WAIT_LIST_URL
                 - *VAR_USE_ALLOW_LIST
                 - *VAR_VERIFY_PRIVATE_LINK_SSL
-                - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_ID
+                - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
-                # These vars indicate this container runs as Celery, not Flower or Django
                 - name: TBA_CELERY
                   value: "yes"
                 - name: TBA_FLOWER
@@ -450,18 +454,16 @@ resources:
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 - *VAR_OIDC_FALLBACK_MATCH_BY_EMAIL
                 - *VAR_OIDC_URL_AUTH
-                - *VAR_OIDC_URL_JWKS
-                - *VAR_OIDC_URL_LOGOUT
                 - *VAR_OIDC_URL_TOKEN
                 - *VAR_OIDC_URL_USER
+                - *VAR_OIDC_URL_JWKS
+                - *VAR_OIDC_URL_LOGOUT
                 - *VAR_PADDLE_ENV
                 - *VAR_PUBLIC_BASE_URL
                 - *VAR_REDIS_CELERY_DB
                 - *VAR_REDIS_CELERY_RESULTS_DB
                 - *VAR_REDIS_INTERNAL_DB
                 - *VAR_REDIS_SHARED_DB
-                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
-                - *VAR_SENTRY_TRACES_SAMPLE_RATE
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
@@ -473,8 +475,8 @@ resources:
                 - *VAR_TB_PRO_WAIT_LIST_URL
                 - *VAR_USE_ALLOW_LIST
                 - *VAR_VERIFY_PRIVATE_LINK_SSL
-                - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_ID
+                - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
                 - name: TBA_CELERY
                   value: "no"
@@ -628,7 +630,7 @@ resources:
           - FARGATE
         container_definitions:
           keycloak:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-8f4b2f2785124d1c36f3b29dac0cf5a5c39e8687
+            image: *KEYCLOAK_IMAGE
             command:
               - start
             portMappings:
@@ -710,7 +712,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.4.0
+            image: *ACCOUNTS_IMAGE
             portMappings:
               - name: accounts
                 containerPort: 8087
@@ -881,8 +883,6 @@ resources:
                 value: '44379263732755'
               - name: VERIFY_PRIVATE_LINK_SSL
                 value: 'False'
-              - *VAR_LOG_LEVEL
-              - *VAR_SENTRY_PROFILE_SAMPLE_RATE
 
 
     accounts-celery:
@@ -901,7 +901,7 @@ resources:
           - FARGATE
         container_definitions:
           accounts:
-            image: 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.4.0
+            image: *ACCOUNTS_IMAGE
             linuxParameters:
               initProcessEnabled: True
             secrets:
@@ -1064,8 +1064,6 @@ resources:
                 value: '44379263732755'
               - name: VERIFY_PRIVATE_LINK_SSL
                 value: 'False'
-              - *VAR_LOG_LEVEL
-              - *VAR_SENTRY_PROFILE_SAMPLE_RATE
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:

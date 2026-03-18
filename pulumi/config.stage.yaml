@@ -24,17 +24,18 @@
 .imap_host: &VAR_IMAP_HOST {name: "IMAP_HOST", value: "mail.stage-thundermail.com"}
 .imap_port: &VAR_IMAP_PORT {name: "IMAP_PORT", value: "993"}
 .imap_tls: &VAR_IMAP_TLS {name: "IMAP_TLS", value: "True"}
-.keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth-stage.tb.pro/admin/realms/tbpro/"}
-.keycloak_admin_url_token: &VAR_KEYCLOAK_ADMIN_URL_TOKEN {name: "KEYCLOAK_ADMIN_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/master/protocol/openid-connect/token/"}
 .jmap_host: &VAR_JMAP_HOST {name: "JMAP_HOST", value: "mail.stage-thundermail.com"}
 .jmap_port: &VAR_JMAP_PORT {name: "JMAP_PORT", value: "443"}
 .jmap_tls: &VAR_JMAP_TLS {name: "JMAP_TLS", value: "True"}
+.keycloak_admin_url_token: &VAR_KEYCLOAK_ADMIN_URL_TOKEN {name: "KEYCLOAK_ADMIN_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/master/protocol/openid-connect/token/"}
+.keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth-stage.tb.pro/admin/realms/tbpro/"}
+.log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", value: "DEBUG"}
 .min_custom_domain_alias_length: &VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH {name: "MIN_CUSTOM_DOMAIN_ALIAS_LENGTH", value: "3"}
 .oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/auth"}
-.oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token"}
-.oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"}
 .oidc_url_jwks: &VAR_OIDC_URL_JWKS {name: "OIDC_URL_JWKS", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"}
 .oidc_url_logout: &VAR_OIDC_URL_LOGOUT {name: "OIDC_URL_LOGOUT", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"}
+.oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token"}
+.oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"}
 .paddle_env: &VAR_PADDLE_ENV {name: "PADDLE_ENV", value: "sandbox"}
 .public_base_url: &VAR_PUBLIC_BASE_URL {name: "PUBLIC_BASE_URL", value: "https://accounts-stage.tb.pro"}
 .redis_celery_db: &VAR_REDIS_CELERY_DB {name: "REDIS_CELERY_DB", value: "5"}
@@ -355,11 +356,12 @@ resources:
                 - *VAR_IMAP_HOST
                 - *VAR_IMAP_PORT
                 - *VAR_IMAP_TLS
-                - *VAR_KEYCLOAK_URL_API
-                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
                 - *VAR_JMAP_HOST
                 - *VAR_JMAP_PORT
                 - *VAR_JMAP_TLS
+                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
+                - *VAR_KEYCLOAK_URL_API
+                - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 - *VAR_OIDC_URL_AUTH
                 - *VAR_OIDC_URL_TOKEN
@@ -425,11 +427,12 @@ resources:
                 - *VAR_IMAP_HOST
                 - *VAR_IMAP_PORT
                 - *VAR_IMAP_TLS
-                - *VAR_KEYCLOAK_URL_API
-                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
                 - *VAR_JMAP_HOST
                 - *VAR_JMAP_PORT
                 - *VAR_JMAP_TLS
+                - *VAR_KEYCLOAK_ADMIN_URL_TOKEN
+                - *VAR_KEYCLOAK_URL_API
+                - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 - *VAR_OIDC_URL_AUTH
                 - *VAR_OIDC_URL_TOKEN
