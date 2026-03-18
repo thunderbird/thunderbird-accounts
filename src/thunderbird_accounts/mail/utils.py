@@ -48,7 +48,6 @@ def decode_app_password(secret):
 
 
 def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
-    # Run this immediately for now, in the future we'll ship these to celery
     if user.account_set.count() > 0 and user.account_set.first().stalwart_id:
         return False
 
