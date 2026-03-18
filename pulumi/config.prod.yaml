@@ -3,7 +3,7 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.6.4
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.6.5
 
 # Update this value to update all containers based on this Keycloak image
 .keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-8f4b2f2785124d1c36f3b29dac0cf5a5c39e8687
@@ -1113,6 +1113,7 @@ resources:
         - accounts-prod-fargate-keycloak
         - accounts-prod-fargate-accounts
         - accounts-prod-fargate-accounts-celery
+        - accounts-prod
       fargate_task_role_arns:
         - arn:aws:iam::768512802988:role/accounts-prod-fargate-keycloak
         - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts
