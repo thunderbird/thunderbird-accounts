@@ -1117,3 +1117,5 @@ resources:
         - arn:aws:iam::768512802988:role/accounts-prod-fargate-keycloak
         - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts
         - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts-celery
+        - arn:aws:iam::768512802988:role/accounts-stage-afc-accounts-celery-prod
+        - arn:aws:iam::768512802988:role/accounts-stage-afc-accounts-flower-prod
