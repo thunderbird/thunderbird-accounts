@@ -131,6 +131,14 @@ redis_opts = resources['tb:elasticache:ElastiCacheReplicaGroup']['accounts']
 redis_source_sgids = [
     container_sgs['accounts'].resources['sg'].id,
     container_sgs['accounts-celery'].resources['sg'].id,
+    autoscaling_fargate_clusters['accounts']
+    .resources['container_security_groups'][f'celery-{project.stack}']['none']
+    .resources['sg']
+    .id,
+    autoscaling_fargate_clusters['accounts']
+    .resources['container_security_groups'][f'flower-{project.stack}']['flower']
+    .resources['sg']
+    .id,
 ]
 for afc_name, afc in autoscaling_fargate_clusters.items():
     for container_name, lbs in afc.resources['container_security_groups'].items():
