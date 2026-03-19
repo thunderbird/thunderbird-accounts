@@ -132,7 +132,7 @@ redis_source_sgids = [
     container_sgs['accounts'].resources['sg'].id,
     container_sgs['accounts-celery'].resources['sg'].id,
     autoscaling_fargate_clusters['accounts']
-    .resources['container_security_groups'][f'celery-{project.stack}']
+    .resources['container_security_groups'][f'celery-{project.stack}']['none']
     .resources['sg']
     .id,
 ]
