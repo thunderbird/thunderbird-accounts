@@ -576,7 +576,7 @@ resources:
           container_port: 5555
           load_balancer: flower
           service:
-            desired_count: 0
+            desired_count: 1
           target: flower
 
       registries:
@@ -598,8 +598,8 @@ resources:
           min_capacity: 0
           max_capacity: 0
         flower-prod:
-          min_capacity: 0
-          max_capacity: 0
+          min_capacity: 1
+          max_capacity: 1
 
   tb:fargate:FargateClusterWithLogging:
     keycloak:
