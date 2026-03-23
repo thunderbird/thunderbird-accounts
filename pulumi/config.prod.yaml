@@ -568,7 +568,7 @@ resources:
         celery-prod:
           assign_public_ip: yes
           service:
-            desired_count: 0
+            desired_count: 1
           target: null
         flower-prod:
           assign_public_ip: yes
@@ -595,8 +595,8 @@ resources:
 
       autoscalers:
         celery-prod:
-          min_capacity: 0
-          max_capacity: 0
+          min_capacity: 1
+          max_capacity: 1
         flower-prod:
           min_capacity: 1
           max_capacity: 1
