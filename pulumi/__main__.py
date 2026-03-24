@@ -127,18 +127,22 @@ for service, opts in resources['tb:fargate:FargateClusterWithLogging'].items():
         )
 
 # Build an ElastiCache Redis cluster allowing access from the Accounts containers
+celery_sg = (
+    autoscaling_fargate_clusters['accounts']
+    .resources['container_security_groups'][f'celery-{project.stack}']['none']
+    .resources['sg']
+)
+flower_sg = (
+    autoscaling_fargate_clusters['accounts']
+    .resources['container_security_groups'][f'flower-{project.stack}']['flower']
+    .resources['sg']
+)
 redis_opts = resources['tb:elasticache:ElastiCacheReplicaGroup']['accounts']
 redis_source_sgids = [
     container_sgs['accounts'].resources['sg'].id,
     container_sgs['accounts-celery'].resources['sg'].id,
-    autoscaling_fargate_clusters['accounts']
-    .resources['container_security_groups'][f'celery-{project.stack}']['none']
-    .resources['sg']
-    .id,
-    autoscaling_fargate_clusters['accounts']
-    .resources['container_security_groups'][f'flower-{project.stack}']['flower']
-    .resources['sg']
-    .id,
+    celery_sg.id,
+    flower_sg.id,
 ]
 for afc_name, afc in autoscaling_fargate_clusters.items():
     for container_name, lbs in afc.resources['container_security_groups'].items():
@@ -148,7 +152,7 @@ redis = tb_pulumi.elasticache.ElastiCacheReplicationGroup(
     project=project,
     source_sgids=redis_source_sgids,
     subnets=vpc.resources['subnets'],
-    opts=pulumi.ResourceOptions(depends_on=[vpc, container_sgs['accounts']]),
+    opts=pulumi.ResourceOptions(depends_on=[vpc, container_sgs['accounts'], celery_sg, flower_sg]),
     **redis_opts,
 )
 
