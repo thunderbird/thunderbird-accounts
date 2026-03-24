@@ -8,7 +8,7 @@ services:
   postgres:
     image: postgres:17
     volumes:
-      - db:/var/lib/postgresql/data
+      - "db:/var/lib/postgresql/data"
     ports:
       - "5433:5432" # Note: host is exposed to 5433!
     environment:
@@ -22,7 +22,7 @@ services:
   kcpostgres:
     image: postgres:17
     volumes:
-      - kcdb:/var/lib/postgresql/data
+      - "kcdb:/var/lib/postgresql/data"
     ports:
       - "5434:5434" # Note: host is exposed to 5434!
     environment:
@@ -36,7 +36,7 @@ services:
   redis:
     image: redis/redis-stack
     volumes:
-      - cache:/data
+      - "cache:/data"
     ports:
       - "6380:6379" # Redis exposed on port 6380
       - "8071:8001" # Insights exposed on port 8071
@@ -51,12 +51,12 @@ services:
       <<: *env
       ALLOWED_HOSTS: '*'
     volumes:
-      - ./.env:/app/.env
-      - ./.env.test:/app/.env.test
-      - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
-      - ./assets:/app/assets
-      - ./keycloak:/app/assets/keycloak
-      - ./templates:/app/templates
+      - "./.env:/app/.env:z"
+      - "./.env.test:/app/.env.test:z"
+      - "./src/thunderbird_accounts:/app/src/thunderbird_accounts:z"
+      - "./assets:/app/assets:z"
+      - "./keycloak:/app/assets/keycloak:z"
+      - "./templates:/app/templates:z"
     depends_on:
       - postgres
       - redis
@@ -100,14 +100,14 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./.env:/app/.env
-      - ./.env.test:/app/.env.test
-      - ./vite.config.mts:/app/vite.config.mts
-      - ./tsconfig.json:/app/tsconfig.json
-      - ./src/thunderbird_accounts:/app/src/thunderbird_accounts
-      - ./assets:/app/assets
-      - ./templates:/app/templates
-      - ./keycloak/themes:/app/keycloak/themes
+      - "./.env:/app/.env:z"
+      - "./.env.test:/app/.env.test:z"
+      - "./vite.config.mts:/app/vite.config.mts:z"
+      - "./tsconfig.json:/app/tsconfig.json:z"
+      - "./src/thunderbird_accounts:/app/src/thunderbird_accounts:z"
+      - "./assets:/app/assets:z"
+      - "./templates:/app/templates:z"
+      - "./keycloak/themes:/app/keycloak/themes:z"
 
   stalwart:
     image: stalwartlabs/stalwart:v0.13
@@ -115,7 +115,7 @@ services:
     #  context: ../stalwart
     #  dockerfile: Dockerfile
     volumes:
-      - ./mail:/opt/stalwart
+      - ./mail:/opt/stalwart:z
     ports:
       - "443:443"
       - "8080:8080"
@@ -161,8 +161,8 @@ services:
       KC_TBPRO_CONTACT: "http://localhost:8087/contact"
       KC_TBPRO_PRIMARY_DOMAIN: "example.org"
     volumes:
-      - "./keycloak/themes:/opt/keycloak/themes"
-      - "./keycloak/data/export:/opt/keycloak/data/export"
+      - "./keycloak/themes:/opt/keycloak/themes:z"
+      - "./keycloak/data/export:/opt/keycloak/data/export:z"
 
   # Capturing keycloak emails for dev
   mailpit:
