@@ -58,7 +58,9 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.src-changed == 'true'
     runs-on: ubuntu-latest
-    environment: staging
+    environment:
+      name: staging
+      deployment: false
     steps:
       - uses: actions/checkout@v4
 
@@ -87,7 +89,9 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.iac-changed
     runs-on: ubuntu-latest
-    environment: staging
+    environment:
+      name: staging
+      deployment: false
     steps:
       - uses: actions/checkout@v4
 
@@ -106,7 +110,9 @@ jobs:
     needs: detect-changes
     if: false
     runs-on: ubuntu-latest
-    environment: staging
+    environment:
+      name: staging
+      deployment: false
     env:
       ACCTS_FXA_EMAIL: ${{ secrets.E2E_ACCTS_FXA_EMAIL }}
       ACCTS_FXA_PWORD: ${{ secrets.E2E_ACCTS_FXA_PWORD }}
