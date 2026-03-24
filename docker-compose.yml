@@ -115,7 +115,7 @@ services:
     #  context: ../stalwart
     #  dockerfile: Dockerfile
     volumes:
-      - ./mail:/opt/stalwart:z
+      - "./mail:/opt/stalwart:z"
     ports:
       - "443:443"
       - "8080:8080"
