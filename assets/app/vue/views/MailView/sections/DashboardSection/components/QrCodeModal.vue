@@ -17,6 +17,7 @@ const genericModal = useTemplateRef<InstanceType<typeof GenericModal>>('genericM
 
 const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
 const connectionInfo = computed(() => window._page?.connectionInfo);
+const userDisplayName = computed(() => window._page?.userDisplayName);
 
 const qrInput = computed(() => encodeAccounts([ {
   incomingProtocol: INCOMING_PROTOCOL.IMAP,
@@ -31,7 +32,7 @@ const qrInput = computed(() => encodeAccounts([ {
   outgoingAuthenticationType: AUTHENTICATION_TYPE.PasswordCleartext,
   outgoingUsername: primaryEmail.value,
   identityEmailAddress: primaryEmail.value,
-  identityDisplayName: "Thundermail",
+  identityDisplayName: userDisplayName.value,
 } ]));
 
 const qrCode = computed(() => encodeQR(qrInput.value, "svg"));
