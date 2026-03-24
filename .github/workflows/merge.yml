@@ -58,7 +58,7 @@ jobs:
     if: needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true'
     environment:
       name: staging
-      deployment: false
+      deployment: true
     runs-on: ubuntu-latest
     env:
       IS_CI_AUTOMATION: "yes"
