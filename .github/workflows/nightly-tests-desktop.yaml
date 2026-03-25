@@ -18,7 +18,9 @@ jobs:
   prod-sanity-browserstack:
     name: nightly-tests-desktop-browserstack
     runs-on: ubuntu-latest
-    environment: production
+    environment:
+      name: production
+      deployment: false
     env:
       ACCTS_OIDC_EMAIL: ${{ secrets.E2E_ACCTS_OIDC_EMAIL }}
       ACCTS_OIDC_PWORD: ${{ secrets.E2E_ACCTS_OIDC_PWORD }}
