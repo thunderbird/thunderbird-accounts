@@ -595,8 +595,8 @@ resources:
 
       autoscalers:
         celery-prod:
-          min_capacity: 1
-          max_capacity: 1
+          min_capacity: 2
+          max_capacity: 4
         flower-prod:
           min_capacity: 1
           max_capacity: 1
