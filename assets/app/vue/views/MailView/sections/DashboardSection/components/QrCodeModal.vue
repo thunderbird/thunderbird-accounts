@@ -17,7 +17,7 @@ const genericModal = useTemplateRef<InstanceType<typeof GenericModal>>('genericM
 
 const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
 const connectionInfo = computed(() => window._page?.connectionInfo);
-const userDisplayName = computed(() => window._page?.userDisplayName);
+const userDisplayName = computed(() => window._page?.userDisplayName || primaryEmail.value);
 
 const qrInput = computed(() => encodeAccounts([ {
   incomingProtocol: INCOMING_PROTOCOL.IMAP,
