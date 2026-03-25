@@ -784,6 +784,8 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-api-key-5xUoSN
               - name: MAILCHIMP_LIST_ID
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-list-id-OAj8yj
+              - name: APPOINTMENT_CALDAV_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/appointment-caldav-secret-eJOI7y
             environment:
               - name: TIMES_I_NEED_TO_REDEPLOY_WITHOUT_CHANGING_IMAGE
                 value: '2'

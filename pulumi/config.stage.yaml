@@ -761,6 +761,8 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-id-Qgsr8Y
               - name: KEYCLOAK_ADMIN_CLIENT_SECRET
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-secret-z97o1p
+              - name: APPOINTMENT_CALDAV_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/appointment-caldav-secret-CU7WNc
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net
