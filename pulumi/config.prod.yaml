@@ -888,7 +888,7 @@ resources:
     accounts-celery:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
       build_load_balancer: False  # This service has no network inputs and thus needs no LB
-      desired_count: 1
+      desired_count: 0
       ecr_resources:
         - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts-celery-worker*
       internal: True
@@ -1079,8 +1079,8 @@ resources:
       ram_threshold: 80
       cooldown: 180
       disable_scale_in: False
-      min_capacity: 2
-      max_capacity: 4
+      min_capacity: 0
+      max_capacity: 0
     keycloak:
       cpu_threshold: 80
       ram_threshold: 80
@@ -1099,7 +1099,6 @@ resources:
           accounts-prod-fargate-accounts-fargateservicealb-alb-accounts:
             response_time:
               threshold: 2
-
 
   tb:ci:AwsAutomationUser:
     ci:
