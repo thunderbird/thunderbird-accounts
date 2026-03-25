@@ -47,7 +47,7 @@ defineExpose({
 <template>
 <generic-modal ref="genericModal" :title="t('views.mail.sections.dashboard.qrCodeModal.title')" >
   <p>{{ t('views.mail.sections.dashboard.qrCodeModal.description') }}</p>
-  <img :src="`data:image/svg+xml,${qrCode}`" />
+  <img :src="`data:image/svg+xml,${qrCode}`" :alt="t('views.mail.sections.dashboard.qrCodeModal.qrCodeAltDescription')" />
 </generic-modal>
 </template>
 

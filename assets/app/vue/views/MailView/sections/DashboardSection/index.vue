@@ -52,14 +52,6 @@ export default {
           <div class="content">
             <p>{{ t('views.mail.sections.dashboard.downloadDescription') }}</p>
             <div class="buttons-container">
-              <!-- TODO: Uncomment for checking QR code modal -->
-              <!-- <primary-button @click="qrCodeModalRef?.open()">
-                <template #iconLeft>
-                  <ph-qr-code size="16"/>
-                </template>
-                {{ t('views.mail.sections.dashboard.generateQrCodeButtonLabel') }}
-              </primary-button> -->
-
               <a class="download-link" href="https://www.thunderbird.net/thunderbird/all/?utm_campaign=main&utm_medium=tb_pro&utm_source=thundermail_dashboard&utm_content=banner_top" target="_blank">
                 <primary-button>
                   <template #iconLeft>
@@ -68,6 +60,13 @@ export default {
                   {{ t('views.mail.sections.dashboard.downloadButtonLabel') }}
                 </primary-button>
               </a>
+
+              <primary-button @click="qrCodeModalRef?.open()">
+                <template #iconLeft>
+                  <ph-qr-code size="16"/>
+                </template>
+                {{ t('views.mail.sections.dashboard.generateQrCodeButtonLabel') }}
+              </primary-button>
             </div>
           </div>
 
