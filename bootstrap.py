@@ -31,6 +31,7 @@ def main():
 
     if not os.path.isfile('mail/etc/config.toml') or from_scratch:
         try:
+            os.makedirs('mail/etc', exist_ok=True)
             shutil.copy('config.toml.example', 'mail/etc/config.toml')
             print('\t* Copied config.toml.example to mail/etc/config.toml')  # noqa: T201
         except SameFileError:
