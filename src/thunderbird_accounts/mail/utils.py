@@ -145,10 +145,19 @@ def fix_archives_folder(access_token, account: Account) -> bool:
                 ], 'sessionState': '3e25b2a0'
             }
             """
+            already_exists_description = "A mailbox with name 'Archives' already exists."
 
-            # Note: If the request didn't work, it won't have temp_id in it,
-            # or if it's malformed it'll raise a keyerror.
-            if temp_id not in inbox_res['methodResponses'][0][1]['created']:
+            method_response = inbox_res['methodResponses'][0][1]
+            return_response = method_response.get('created')
+            if not return_response:
+                return_response = method_response.get('notCreated', {})
+                # The only way we're getting out of here without an error, is if the folder already exists
+                desc = return_response.get(temp_id, {}).get('description')
+                if desc and already_exists_description not in desc:
+                    raise Exception(f'Failed to create archive folder: {desc}')
+            elif temp_id not in return_response:
+                # Note: If the request didn't work, it won't have temp_id in it,
+                # or if it's malformed it'll raise a keyerror.
                 raise Exception('Failed to create archive folder')
 
         # If we got here without an error, then we can mark this as verified
@@ -158,6 +167,7 @@ def fix_archives_folder(access_token, account: Account) -> bool:
         return True
     except (HTTPError, Exception, KeyError) as ex:
         logging.error('fix_archive_folder failed!')
+        sentry_sdk.set_extra('inbox_response', inbox_res)
         sentry_sdk.capture_exception(ex)
 
     return False
