@@ -53,6 +53,9 @@ urlpatterns = [
     path('subscription/paddle/complete/', subscription_views.paddle_transaction_complete, name='paddle_completed'),
     # CalDAV auto-setup for Appointment
     path('appointment/caldav/setup/', mail_views.appointment_caldav_setup, name='appointment_caldav_setup'),
+    # Apple Mail mobileconfig QR setup
+    path('apple-mail/qr', mail_views.apple_mail_qr, name='apple_mail_qr'),
+    path('apple-mail/download/<str:token>', mail_views.apple_mail_profile_download, name='apple_mail_profile_download'),
     # API
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),

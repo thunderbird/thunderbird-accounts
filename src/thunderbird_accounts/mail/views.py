@@ -1,11 +1,15 @@
 from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
 from gettext import gettext
+import io
 import sys
 import datetime
 import json
 import logging
 import secrets
+import uuid
+
 import requests
+import segno
 
 import requests.exceptions
 import sentry_sdk
@@ -14,7 +18,8 @@ from django.contrib import messages
 from django.db import IntegrityError
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
+from django.core.cache import cache
+from django.http import HttpRequest, HttpResponse, HttpResponseNotFound, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
@@ -830,6 +835,77 @@ def appointment_caldav_setup(request: HttpRequest):
         sentry_sdk.capture_exception(ex)
         error_response.status_code = 500
         return error_response
+
+
+@login_required
+@require_http_methods(['GET'])
+def apple_mail_qr(request: HttpRequest) -> HttpResponse:
+    """Generate a QR code SVG that encodes a one-time download URL for
+    an Apple Mail .mobileconfig profile pre-filled with the user's
+    credentials."""
+    user = request.user
+
+    stalwart_client = MailClient()
+    email_user = stalwart_client.get_account(user.stalwart_primary_email)
+    display_name = email_user.get('description', '')
+
+    label = f'{settings.APPLE_MAIL_APP_PASSWORD_PREFIX}{user.stalwart_primary_email}'
+    expected_prefix = f'$app${label}$'
+    for secret in email_user.get('secrets', []):
+        if secret.startswith(expected_prefix):
+            stalwart_client.delete_app_password(user.stalwart_primary_email, secret)
+
+    base64_password = secrets.token_urlsafe(64)
+    app_password_hash = utils.save_app_password(label, base64_password)
+    stalwart_client.save_app_password(user.stalwart_primary_email, app_password_hash)
+
+    imap = settings.CONNECTION_INFO['IMAP']
+    smtp = settings.CONNECTION_INFO['SMTP']
+
+    apple_mobileconfig_template = settings.APPLE_MOBILECONFIG_TEMPLATE_PATH.read_text()
+
+    mobileconfig_content = apple_mobileconfig_template.substitute(
+        display_name=display_name,
+        email_address=user.stalwart_primary_email,
+        app_password=base64_password,
+        imap_host=imap['HOST'],
+        imap_port=imap['PORT'],
+        imap_use_ssl='true' if imap['TLS'] else 'false',
+        smtp_host=smtp['HOST'],
+        smtp_port=smtp['PORT'],
+        smtp_use_ssl='true' if smtp['TLS'] else 'false',
+        payload_uuid_inner=str(uuid.uuid4()),
+        payload_uuid_outer=str(uuid.uuid4()),
+        payload_identifier_inner=f'com.thunderbird.thundermail.email.{uuid.uuid4()}',
+        payload_identifier_outer=f'com.thunderbird.thundermail.profile.{uuid.uuid4()}',
+    )
+
+    token = secrets.token_urlsafe(32)
+    cache.set(f'apple-mail-profile:{token}', mobileconfig_content, timeout=600)
+
+    download_url = request.build_absolute_uri(f'/apple-mail/download/{token}')
+
+    svg_buffer = io.BytesIO()
+    qr = segno.make(download_url)
+    qr.save(svg_buffer, kind='svg', scale=4)
+
+    return HttpResponse(svg_buffer.getvalue(), content_type='image/svg+xml')
+
+
+@require_http_methods(['GET'])
+def apple_mail_profile_download(request: HttpRequest, token: str) -> HttpResponse:
+    """Serve a one-time .mobileconfig download keyed by *token*."""
+    cache_key = f'apple-mail-profile:{token}'
+    mobileconfig_content = cache.get(cache_key)
+
+    if mobileconfig_content is None:
+        return HttpResponseNotFound()
+
+    cache.delete(cache_key)
+
+    response = HttpResponse(mobileconfig_content, content_type='application/x-apple-aspen-config')
+    response['Content-Disposition'] = 'attachment; filename="thundermail-profile.mobileconfig"'
+    return response
 
 
 @login_required
