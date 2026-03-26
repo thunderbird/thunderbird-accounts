@@ -887,7 +887,7 @@ def apple_mail_qr(request: HttpRequest) -> HttpResponse:
 
     svg_buffer = io.BytesIO()
     qr = segno.make(download_url)
-    qr.save(svg_buffer, kind='svg', scale=4)
+    qr.save(svg_buffer, kind='svg', border=3, scale=10)
 
     return HttpResponse(svg_buffer.getvalue(), content_type='image/svg+xml')
 
