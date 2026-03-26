@@ -4,7 +4,7 @@ from urllib.parse import quote, urljoin
 from django.conf import settings
 from django.urls import reverse
 
-from thunderbird_accounts.utils.utils import get_absolute_url
+from thunderbird_accounts.core.utils import get_absolute_url
 from thunderbird_accounts.authentication.reserved import is_reserved
 
 

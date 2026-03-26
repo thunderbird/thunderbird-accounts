@@ -23,7 +23,7 @@ from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks, models
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price, Subscription, Transaction
-from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
+from thunderbird_accounts.core.exceptions import UnexpectedBehaviour
 
 # We only need this here right now
 SESSION_PADDLE_TRANSACTION_ID = 'paddle_txid'

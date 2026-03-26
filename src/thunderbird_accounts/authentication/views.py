@@ -22,7 +22,7 @@ from thunderbird_accounts.authentication.exceptions import (
     ImportUserError,
 )
 from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction, is_email_in_allow_list
-from thunderbird_accounts.utils.utils import get_absolute_url
+from thunderbird_accounts.core.utils import get_absolute_url
 
 
 @login_required

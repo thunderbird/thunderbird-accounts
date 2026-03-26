@@ -15,8 +15,8 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription import tasks, models
 from thunderbird_accounts.mail import models as mail_models
-from thunderbird_accounts.utils.exceptions import UnexpectedBehaviour
-from thunderbird_accounts.utils.tests.utils import (
+from thunderbird_accounts.core.exceptions import UnexpectedBehaviour
+from thunderbird_accounts.core.tests.utils import (
     build_keycloak_success_response,
     build_mail_get_account,
     build_mail_update_account,
