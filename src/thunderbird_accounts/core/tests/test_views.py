@@ -9,6 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account
 
+
 class HomeViewRedirectTestCase(TestCase):
     """Test redirect behavior for authenticated and unauthenticated users."""
 
@@ -91,7 +92,6 @@ class HomeViewRedirectTestCase(TestCase):
                     response = self.client.get(path)
                     self.assertEqual(response.status_code, 200)
                     self.assertTemplateUsed(response, 'index.html')
-
 
 
 class ZendeskContactFieldsTestCase(TestCase):
@@ -502,4 +502,3 @@ class ZendeskContactSubmitTestCase(TestCase):
         self.assertEqual(sent_fields['name'], 'John Doe')
         self.assertEqual(sent_fields['email'], 'user@example.org')
         instance.update_ticket.assert_called_once()
-

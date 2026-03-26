@@ -34,6 +34,7 @@ from thunderbird_accounts.mail.utils import filter_app_passwords, is_address_tak
 from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail import utils
 
+
 @login_required
 @require_http_methods(['POST'])
 @sensitive_post_parameters('password')
@@ -563,6 +564,7 @@ def jmap_test_page(request: HttpRequest):
             'connection': len(inboxes) > 0,
         }
     )
+
 
 @method_decorator(never_cache, name='dispatch')
 @method_decorator(staff_member_required, name='dispatch')

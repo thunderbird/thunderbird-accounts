@@ -10,7 +10,6 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account, Domain, Email
 
 
-
 class AddEmailAliasTestCase(TestCase):
     def setUp(self):
         self.client = RequestClient()
@@ -201,6 +200,7 @@ class AddEmailAliasTestCase(TestCase):
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
 
 class AppointmentCalDAVSetupTestCase(TestCase):
     def setUp(self):
