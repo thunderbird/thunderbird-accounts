@@ -23,7 +23,7 @@ from thunderbird_accounts.authentication.exceptions import (
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.utils import KeycloakRequiredAction
 from thunderbird_accounts.mail.utils import is_allowed_domain
-from thunderbird_accounts.utils.utils import get_absolute_url
+from thunderbird_accounts.core.utils import get_absolute_url
 
 
 class RequestMethods(enum.StrEnum):

@@ -323,7 +323,7 @@ def contact_submit(request: HttpRequest):
     ticket_id = response_data['request']['id']
 
     # Add browser and OS information to hidden custom fields
-    from thunderbird_accounts.utils.utils import parse_user_agent_info
+    from thunderbird_accounts.core.utils import parse_user_agent_info
 
     user_agent_string = request.headers.get('User-Agent')
     browser_string, os_string = parse_user_agent_info(user_agent_string)

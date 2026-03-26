@@ -21,7 +21,7 @@ from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.reserved import is_reserved, servers, support
 from thunderbird_accounts.mail.models import Account, Email
-from thunderbird_accounts.utils.tests.utils import build_keycloak_success_response
+from thunderbird_accounts.core.tests.utils import build_keycloak_success_response
 from thunderbird_accounts.authentication.models import AllowListEntry
 
 FAKE_OIDC_UUID = '39a7b5e8-7a64-45e3-acf1-ca7d314bfcec'

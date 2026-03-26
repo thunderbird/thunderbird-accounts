@@ -152,7 +152,7 @@ INSTALLED_APPS = [
     'thunderbird_accounts.authentication',
     'thunderbird_accounts.subscription',
     'thunderbird_accounts.mail',
-    'thunderbird_accounts.utils',
+    'thunderbird_accounts.core',
     'thunderbird_accounts.admin.AccountsAdminConfig',  # Instead of 'django.contrib.admin'
     # Django
     'django.contrib.auth',
@@ -275,7 +275,7 @@ AVAILABLE_CACHES = {
             'TIMEOUT': None,  # No expiry
             'MAX_ENTRIES': 300_000_000,  # TODO: Come up with a solution to also remove db entries
             'OPTIONS': {
-                'serializer': 'thunderbird_accounts.utils.utils.JsonSerializer',
+                'serializer': 'thunderbird_accounts.core.utils.JsonSerializer',
             },
         },
     },
@@ -289,7 +289,7 @@ AVAILABLE_CACHES = {
             'LOCATION': 'cookie-dispenser',
             'TIMEOUT': None,  # No expiry
             'OPTIONS': {
-                'serializer': 'thunderbird_accounts.utils.utils.JsonSerializer',
+                'serializer': 'thunderbird_accounts.core.utils.JsonSerializer',
             },
         },
     },
