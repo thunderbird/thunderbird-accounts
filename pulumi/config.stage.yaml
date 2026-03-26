@@ -3,10 +3,10 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c4cc17bbc24a58fdc7ef71983a579529385855bf
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:dc8d8ea6e76d8c7f25b260e964bada9d38a38e4b
 
 # Update this value to update all containers based on this Keycloak image
-.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-592208aba42635bb752a05a4683af3c4fad7264b
+.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-dc8d8ea6e76d8c7f25b260e964bada9d38a38e4b
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
