@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhDownloadSimple, PhGlobe, PhQrCode } from '@phosphor-icons/vue';
+import { PhAppleLogo, PhDownloadSimple, PhGlobe, PhQrCode } from '@phosphor-icons/vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTour, FTUE_STEPS } from '@/composables/useTour';
 
@@ -14,10 +14,12 @@ import TourCard from '@/components/TourCard.vue';
 import WelcomeHeader from './components/WelcomeHeader.vue';
 import ViewServerSettings from './components/ViewServerSettings.vue';
 import QrCodeModal from './components/QrCodeModal.vue';
+import QrCodeAppleMailModal from './components/QrCodeAppleMailModal.vue';
 
 const { t } = useI18n();
 const tour = useTour();
 const qrCodeModalRef = useTemplateRef<InstanceType<typeof QrCodeModal>>('qrCodeModal');
+const qrCodeAppleMailModalRef = useTemplateRef<InstanceType<typeof QrCodeAppleMailModal>>('qrCodeAppleMailModal');
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const thunderbirdClientImage = new URL('@/assets/png/thundermail-dashboard-client.png', import.meta.url).href;
@@ -67,6 +69,13 @@ export default {
                 </template>
                 {{ t('views.mail.sections.dashboard.generateQrCodeButtonLabel') }}
               </primary-button>
+
+              <primary-button @click="qrCodeAppleMailModalRef?.open()">
+                <template #iconLeft>
+                  <ph-apple-logo size="16" />
+                </template>
+                {{ t('views.mail.sections.dashboard.generateAppleMailQrCodeButtonLabel') }}
+              </primary-button>
             </div>
           </div>
 
@@ -90,6 +99,7 @@ export default {
   </section>
 
   <qr-code-modal ref="qrCodeModal" />
+  <qr-code-apple-mail-modal ref="qrCodeAppleMailModal" />
 </template>
 
 <style scoped>

@@ -100,7 +100,15 @@
             "description": "Scan the QR code from within the app to automatically configure your account:",
             "qrCodeAltDescription": "A QR Code to be used with Thunderbird for Android account importing."
           },
+          "appleMailQrModal": {
+            "title": "Setup Apple Mail",
+            "description": "Scan this QR code with your iPhone camera to install a mail profile that automatically configures your Thundermail account in Apple Mail:",
+            "qrCodeAltDescription": "A QR code to configure Apple Mail with your Thundermail account.",
+            "loading": "Generating QR code…",
+            "errorMessage": "Failed to generate the Apple Mail QR code. Please try again."
+          },
           "generateQrCodeButtonLabel": "Generate QR Code for Thunderbird for Android",
+          "generateAppleMailQrCodeButtonLabel": "Generate QR Code for Apple Mail",
           "setUpAnEmailApp": "Set up an Email app",
           "downloadDescription": "For a quick and easy setup, we recommend using Thunderbird. Just download the app, enter your email address and password, and you're ready to go.",
           "downloadButtonLabel": "Download",
