@@ -7,6 +7,7 @@ import json
 import logging
 import secrets
 import uuid
+from string import Template
 
 import requests
 import segno
@@ -862,9 +863,8 @@ def apple_mail_qr(request: HttpRequest) -> HttpResponse:
     imap = settings.CONNECTION_INFO['IMAP']
     smtp = settings.CONNECTION_INFO['SMTP']
 
-    apple_mobileconfig_template = settings.APPLE_MOBILECONFIG_TEMPLATE_PATH.read_text()
-
-    mobileconfig_content = apple_mobileconfig_template.substitute(
+    template = Template(settings.APPLE_MOBILECONFIG_TEMPLATE_PATH.read_text())
+    mobileconfig_content = template.substitute(
         display_name=display_name,
         email_address=user.stalwart_primary_email,
         app_password=base64_password,
@@ -905,6 +905,7 @@ def apple_mail_profile_download(request: HttpRequest, token: str) -> HttpRespons
 
     response = HttpResponse(mobileconfig_content, content_type='application/x-apple-aspen-config')
     response['Content-Disposition'] = 'attachment; filename="thundermail-profile.mobileconfig"'
+
     return response
 
 
