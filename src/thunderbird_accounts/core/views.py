@@ -22,7 +22,7 @@ from thunderbird_accounts.mail.exceptions import (
 )
 from thunderbird_accounts.mail.utils import decode_app_password, filter_app_passwords
 
-from thunderbird_accounts.mail.zendesk import ZendeskClient
+from thunderbird_accounts.core.zendesk import ZendeskClient
 
 
 def handle_500(request: HttpRequest, template_name=None):
