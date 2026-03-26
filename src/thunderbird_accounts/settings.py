@@ -509,3 +509,7 @@ VERIFY_PRIVATE_LINK_SSL = True if os.getenv('VERIFY_PRIVATE_LINK_SSL', 'true').l
 
 # For Appointment's CalDAV auto-setup
 APPOINTMENT_APP_PASSWORD_PREFIX: str = 'appointment-caldav-setup-'
+
+# For Apple Mail qr code / .mobileconfig profile template
+APPLE_MAIL_APP_PASSWORD_PREFIX: str = 'apple-mail-setup-'
+APPLE_MOBILECONFIG_TEMPLATE_PATH: Path = Path(__file__).parent / 'mail' / 'files' / 'thundermail-profile.mobileconfig'
