@@ -26,7 +26,7 @@ def dev_only_paddle_fake_webhook(self, transaction_id: str, user_uuid: str):
     """A task that only runs in dev mode. This will simulate the paddle webhook after a checkout has been completed."""
     if not settings.IS_DEV:
         return
-    
+
     # Give paddle some time to update their end
     # Yes this is not perfect, I know.
     time.sleep(5)
