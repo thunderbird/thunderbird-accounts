@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>ConsentText</key>
+	<dict>
+		<key>default</key>
+		<string>This profile configures your Thundermail email account in Apple Mail.</string>
+	</dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>EmailAccountDescription</key>
+			<string>Thundermail</string>
+			<key>EmailAccountName</key>
+			<string>$display_name</string>
+			<key>EmailAccountType</key>
+			<string>EmailTypeIMAP</string>
+			<key>EmailAddress</key>
+			<string>$email_address</string>
+			<key>IncomingMailServerAuthentication</key>
+			<string>EmailAuthPassword</string>
+			<key>IncomingMailServerHostName</key>
+			<string>$imap_host</string>
+			<key>IncomingMailServerPortNumber</key>
+			<integer>$imap_port</integer>
+			<key>IncomingMailServerUseSSL</key>
+			<$imap_use_ssl/>
+			<key>IncomingMailServerUsername</key>
+			<string>$email_address</string>
+			<key>IncomingPassword</key>
+			<string>$app_password</string>
+			<key>OutgoingMailServerAuthentication</key>
+			<string>EmailAuthPassword</string>
+			<key>OutgoingMailServerHostName</key>
+			<string>$smtp_host</string>
+			<key>OutgoingMailServerPortNumber</key>
+			<integer>$smtp_port</integer>
+			<key>OutgoingMailServerUseSSL</key>
+			<$smtp_use_ssl/>
+			<key>OutgoingMailServerUsername</key>
+			<string>$email_address</string>
+			<key>OutgoingPasswordSameAsIncomingPassword</key>
+			<true/>
+			<key>PayloadDescription</key>
+			<string>Configures Email settings</string>
+			<key>PayloadDisplayName</key>
+			<string>Thundermail</string>
+			<key>PayloadIdentifier</key>
+			<string>$payload_identifier_inner</string>
+			<key>PayloadType</key>
+			<string>com.apple.mail.managed</string>
+			<key>PayloadUUID</key>
+			<string>$payload_uuid_inner</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>SMIMEEnableEncryptionPerMessageSwitch</key>
+			<false/>
+			<key>SMIMEEnablePerMessageSwitch</key>
+			<false/>
+			<key>SMIMEEnabled</key>
+			<false/>
+			<key>SMIMEEncryptionEnabled</key>
+			<false/>
+			<key>SMIMESigningEnabled</key>
+			<false/>
+			<key>SMIMESigningUserOverrideable</key>
+			<false/>
+			<key>allowMailDrop</key>
+			<true/>
+			<key>disableMailRecentsSyncing</key>
+			<false/>
+		</dict>
+	</array>
+	<key>PayloadDescription</key>
+	<string>Configure Thundermail in Apple Mail</string>
+	<key>PayloadDisplayName</key>
+	<string>Thundermail</string>
+	<key>PayloadIdentifier</key>
+	<string>$payload_identifier_outer</string>
+	<key>PayloadOrganization</key>
+	<string>Thunderbird</string>
+	<key>PayloadRemovalDisallowed</key>
+	<false/>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>$payload_uuid_outer</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+</dict>
+</plist>
