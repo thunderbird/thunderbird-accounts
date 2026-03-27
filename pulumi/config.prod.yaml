@@ -206,7 +206,6 @@ resources:
               to_port: 65535
               cidr_blocks:
                 - 0.0.0.0/0
-      accounts-celery: null
       keycloak:
         rules:
           ingress:
@@ -885,13 +884,6 @@ resources:
       min_capacity: 2
       max_capacity: 4
       suspend: False
-    accounts-celery:
-      cpu_threshold: 80
-      ram_threshold: 80
-      cooldown: 180
-      disable_scale_in: False
-      min_capacity: 0
-      max_capacity: 0
     keycloak:
       cpu_threshold: 80
       ram_threshold: 80
