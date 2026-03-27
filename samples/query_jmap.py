@@ -5,7 +5,7 @@ import pprint
 """
 Simple script to query prod's jmap with an app password
 
-Don't commit changes to this script, run in root with 
+Don't commit changes to this script, run in project directory with 
 
 ``uv run ./samples/query_jmap.py``
 
