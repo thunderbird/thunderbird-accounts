@@ -922,11 +922,9 @@ resources:
       fargate_clusters:
         - accounts-prod-fargate-keycloak
         - accounts-prod-fargate-accounts
-        - accounts-prod-fargate-accounts-celery
         - accounts-prod
       fargate_task_role_arns:
         - arn:aws:iam::768512802988:role/accounts-prod-fargate-keycloak
         - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts
-        - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts-celery
         - arn:aws:iam::768512802988:role/accounts-prod-afc-accounts-celery-prod
         - arn:aws:iam::768512802988:role/accounts-prod-afc-accounts-flower-prod
