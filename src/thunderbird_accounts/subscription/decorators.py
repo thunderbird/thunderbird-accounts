@@ -7,6 +7,7 @@ except ImportError:
     Options = None
     Environment = None
 
+
 def init_paddle():
     if Options:
         options = Options(Environment.SANDBOX if settings.PADDLE_ENV == 'sandbox' else Environment.PRODUCTION)
@@ -15,9 +16,10 @@ def init_paddle():
 
     if not settings.PADDLE_API_KEY or not Client:
         return None
-    
+
     return Client(settings.PADDLE_API_KEY, options=options)
-    
+
+
 def inject_paddle(func):
     """Inject an initialized Paddle Client into a function as ``paddle``.
     If the paddle python sdk is not installed this will return None."""

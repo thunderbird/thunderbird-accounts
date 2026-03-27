@@ -12,6 +12,7 @@ from django.urls import path, include, re_path
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from thunderbird_accounts.authentication import views as auth_views
+from thunderbird_accounts.core import views as core_views
 from thunderbird_accounts.infra import views as infra_views
 from thunderbird_accounts.mail import views as mail_views
 from thunderbird_accounts.mail.views import jmap_test_page
@@ -20,7 +21,7 @@ from thunderbird_accounts.subscription import views as subscription_views
 from thunderbird_accounts.authentication.api import get_user_profile
 
 # Error handler overrides
-handler500 = 'thunderbird_accounts.mail.views.handle_500'
+handler500 = 'thunderbird_accounts.core.views.handle_500'
 
 urlpatterns = [
     # Custom admin routes need to be before admin.site.urls
@@ -36,9 +37,9 @@ urlpatterns = [
     ),
     path('admin/', admin.site.urls),
     # Django-specific routes (not handled by Vue)
-    path('contact/fields', mail_views.contact_fields, name='contact_fields'),
+    path('contact/fields', core_views.contact_fields, name='contact_fields'),
     # Post only
-    path('contact/submit', mail_views.contact_submit, name='contact_submit'),
+    path('contact/submit', core_views.contact_submit, name='contact_submit'),
     path('app-passwords/set', mail_views.app_password_set, name='app_password_set'),
     path('display-name/set', mail_views.display_name_set, name='display_name_set'),
     path('custom-domains/add', mail_views.create_custom_domain, name='add_custom_domain'),
@@ -91,14 +92,9 @@ urlpatterns += [
         mail_views.AdminStalwartList.as_view(),
         name='admin_stalwart_list',
     ),
-    path(
-        'mail/admin/stalwart/purge',
-        mail_views.purge_stalwart_accounts,
-        name='purge_stalwart_accounts',
-    ),
 ]
 
 urlpatterns += [
     # Vue App catch-all: keep this last so all explicit Django routes above take precedence
-    re_path(r'^.*$', mail_views.home, name='vue_app'),
+    re_path(r'^.*$', core_views.home, name='vue_app'),
 ]

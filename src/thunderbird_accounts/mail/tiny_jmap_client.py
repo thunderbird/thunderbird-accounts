@@ -1,3 +1,4 @@
+import enum
 import json
 import requests
 
@@ -6,7 +7,11 @@ class TinyJMAPClient:
     """The tiniest JMAP client you can imagine.
     Source: https://github.com/fastmail/JMAP-Samples/blob/main/python3/tiny_jmap_library.py"""
 
-    def __init__(self, hostname, username, token):
+    class AUTH_TYPES(enum.Enum):
+        BASIC = 0
+        BEARER = 1
+
+    def __init__(self, hostname, username, token, auth_type=AUTH_TYPES.BEARER):
         """Initialize using a hostname, username and bearer token"""
         assert len(hostname) > 0
         assert len(username) > 0
@@ -15,10 +20,14 @@ class TinyJMAPClient:
         self.hostname = hostname
         self.username = username
         self.token = token
+        self.auth_type = auth_type
         self.session = None
         self.api_url = None
         self.account_id = None
         self.identity_id = None
+
+    def _authorization_value(self):
+        return f'Bearer {self.token}' if self.auth_type == self.AUTH_TYPES.BEARER else f'Basic {self.token}'
 
     def get_session(self):
         """Return the JMAP Session Resource as a Python dict"""
@@ -28,7 +37,7 @@ class TinyJMAPClient:
             self.hostname + '/.well-known/jmap',
             headers={
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {self.token}',
+                'Authorization': self._authorization_value(),
             },
             allow_redirects=True,
         )
@@ -80,7 +89,7 @@ class TinyJMAPClient:
             self.api_url,
             headers={
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {self.token}',
+                'Authorization': self._authorization_value(),
             },
             data=json.dumps(call),
         )

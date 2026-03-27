@@ -225,14 +225,14 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         claims_verified = self.verify_claims(user_info) if verify else True
 
         if not claims_verified:
-            msg = "Claims verification failed"
+            msg = 'Claims verification failed'
             raise SuspiciousOperation(msg)
 
         # email based filtering
         users = self.filter_users_by_claims(user_info)
 
         if len(users) > 1:
-            msg = "Multiple users returned"
+            msg = 'Multiple users returned'
             raise SuspiciousOperation(msg)
         elif len(users) == 0:
             return None
