@@ -140,6 +140,7 @@ flower_sg = (
 redis_opts = resources['tb:elasticache:ElastiCacheReplicaGroup']['accounts']
 redis_source_sgids = [
     container_sgs['accounts'].resources['sg'].id,
+    container_sgs['accounts-celery'].resources['sg'].id,
     celery_sg.id,
     flower_sg.id,
 ]
