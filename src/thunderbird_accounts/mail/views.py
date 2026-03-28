@@ -28,7 +28,7 @@ from django.contrib.messages import get_messages
 
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
-from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.clients import MailClient, StalwartPrincipalType
 from thunderbird_accounts.mail.exceptions import (
     AccessTokenNotFound,
     AccountNotFoundError,
@@ -892,7 +892,7 @@ def purge_stalwart_accounts(request: HttpRequest):
     stalwart = MailClient()
 
     # Grab list of individuals
-    response = stalwart._list_principals(type='individual')
+    response = stalwart._list_principals(type=StalwartPrincipalType.INDIVIDUAL)
     data = response.json().get('data', {}).get('items', [])
 
     # Loop through and delete them
