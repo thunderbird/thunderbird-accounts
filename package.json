@@ -27,7 +27,7 @@
   "dependencies": {
     "@paddle/paddle-js": "^1.6.2",
     "@phosphor-icons/vue": "^2.2.1",
-    "@thunderbirdops/services-ui": "^1.5.0",
+    "@thunderbirdops/services-ui": "^1.5.2",
     "qr": "^0.5.5",
     "thunderbird-account-qr-code": "^1.1.0",
     "vue": "^3.5.13",
