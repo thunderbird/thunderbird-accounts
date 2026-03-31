@@ -22,7 +22,7 @@ from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
-from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.clients import MailClient, StalwartPrincipalType
 from thunderbird_accounts.mail.exceptions import (
     AccessTokenNotFound,
     AccountNotFoundError,
@@ -564,6 +564,28 @@ def jmap_test_page(request: HttpRequest):
             'connection': len(inboxes) > 0,
         }
     )
+
+
+@require_http_methods(['POST'])
+@staff_member_required()
+def purge_stalwart_accounts(request: HttpRequest):
+    """
+    Allows up to clean up the test data before the proper oidc schema has been finallized.
+    """
+    stalwart = MailClient()
+
+    # Grab list of individuals
+    response = stalwart._list_principals(type=StalwartPrincipalType.INDIVIDUAL)
+    data = response.json().get('data', {}).get('items', [])
+
+    # Loop through and delete them
+    for account in data:
+        stalwart._delete_principal(account.get('name'))
+
+    # Grab a fresh list of all principals to confirm
+    response = stalwart._list_principals()
+    rest_of_data = response.json().get('data', {}).get('items', [])
+    return JsonResponse({'deleted_individuals': data, 'not_deleted_data': rest_of_data})
 
 
 @method_decorator(never_cache, name='dispatch')
