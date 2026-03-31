@@ -95,6 +95,12 @@
             "storageOf": "{used} of {total}",
             "errorMessage": "Failed to load subscription information"
           },
+          "qrCodeModal": {
+            "title": "Setup Thunderbird for Android",
+            "description": "Scan the QR code from within the app to automatically configure your account:",
+            "qrCodeAltDescription": "A QR Code to be used with Thunderbird for Android account importing."
+          },
+          "generateQrCodeButtonLabel": "Generate QR Code for Thunderbird for Android",
           "setUpAnEmailApp": "Set up an Email app",
           "downloadDescription": "For a quick and easy setup, we recommend using Thunderbird. Just download the app, enter your email address and password, and you're ready to go.",
           "downloadButtonLabel": "Download",

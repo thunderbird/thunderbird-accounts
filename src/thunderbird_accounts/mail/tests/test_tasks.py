@@ -8,7 +8,7 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail import tasks
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError
 from thunderbird_accounts.mail.models import Account, Email
-from thunderbird_accounts.utils.tests.utils import build_mail_get_account
+from thunderbird_accounts.core.tests.utils import build_mail_get_account
 
 
 class TaskTestCase(TestCase):

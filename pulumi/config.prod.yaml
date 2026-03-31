@@ -3,7 +3,7 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.6.5
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.6.6
 
 # Update this value to update all containers based on this Keycloak image
 .keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-8f4b2f2785124d1c36f3b29dac0cf5a5c39e8687
@@ -206,7 +206,6 @@ resources:
               to_port: 65535
               cidr_blocks:
                 - 0.0.0.0/0
-      accounts-celery: null
       keycloak:
         rules:
           ingress:
@@ -233,16 +232,6 @@ resources:
               protocol: tcp
               from_port: 8087
               to_port: 8087
-          egress:
-            - description: Allow traffic from the container out to the Internet
-              cidr_blocks:
-                - 0.0.0.0/0
-              protocol: tcp
-              from_port: 0
-              to_port: 65535
-      accounts-celery:
-        rules:
-          ingress: []
           egress:
             - description: Allow traffic from the container out to the Internet
               cidr_blocks:
@@ -595,8 +584,8 @@ resources:
 
       autoscalers:
         celery-prod:
-          min_capacity: 1
-          max_capacity: 1
+          min_capacity: 2
+          max_capacity: 4
         flower-prod:
           min_capacity: 1
           max_capacity: 1
@@ -784,6 +773,8 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-api-key-5xUoSN
               - name: MAILCHIMP_LIST_ID
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-list-id-OAj8yj
+              - name: APPOINTMENT_CALDAV_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/appointment-caldav-secret-eJOI7y
             environment:
               - name: TIMES_I_NEED_TO_REDEPLOY_WITHOUT_CHANGING_IMAGE
                 value: '2'
@@ -884,187 +875,6 @@ resources:
               - name: VERIFY_PRIVATE_LINK_SSL
                 value: 'False'
 
-
-    accounts-celery:
-      assign_public_ip: True  # Necessary, or else it can't talk out through the IG
-      build_load_balancer: False  # This service has no network inputs and thus needs no LB
-      desired_count: 1
-      ecr_resources:
-        - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts-celery-worker*
-      internal: True
-      services: { }
-      task_definition:
-        network_mode: awsvpc
-        cpu: 512
-        memory: 2048
-        requires_compatibilities:
-          - FARGATE
-        container_definitions:
-          accounts:
-            image: *ACCOUNTS_IMAGE
-            linuxParameters:
-              initProcessEnabled: True
-            secrets:
-              - name: DATABASE_HOST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-host-u5Ly46
-              - name: DATABASE_NAME
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-name-1LT9GX
-              - name: DATABASE_PASSWORD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-password-YEuGDS
-              - name: DATABASE_USER
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/database-user-aLCuis
-              - name: AUTH_ALLOW_LIST
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-allow-list-6iQipk
-              - name: FXA_CLIENT_ID
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-client-id-ggzLOI
-              - name: FXA_ENCRYPT_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-encrypt-secret-MXgdBx
-              - name: FXA_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/fxa-secret-yPR6T4
-              - name: LOGIN_CODE_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/login-code-secret-OSoact
-              - name: PADDLE_TOKEN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-token-aNOfo6
-              - name: PADDLE_PRICE_ID_LO
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-lo-MhLJdH
-              - name: PADDLE_PRICE_ID_MD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-md-HAbQbW
-              - name: PADDLE_PRICE_ID_HI
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-price-id-hi-0gHjja
-              - name: SECRET_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/secret-key-omYUWK
-              - name: SENTRY_DSN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV
-              - name: REDIS_URL
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/redis-url-Nq3x1a
-              - name: OIDC_CLIENT_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-client-secret-mg3bCN
-              - name: OIDC_CLIENT_ID
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-client-id-HjOG4R
-              - name: OIDC_SIGN_ALGO
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/oidc-sign-algo-N6vK9L
-              - name: ZENDESK_SUBDOMAIN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-subdomain-C2G7He
-              - name: ZENDESK_USER_EMAIL
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-user-email-HR9Al8
-              - name: ZENDESK_API_TOKEN
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/zendesk-api-token-2rsztq
-              - name: PADDLE_WEBHOOK_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-webhook-key-vX5JHE
-              - name: PADDLE_API_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/paddle-api-key-yz3XNN
-              - name: KEYCLOAK_ADMIN_CLIENT_ID
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-client-id-DOpTIZ
-              - name: KEYCLOAK_ADMIN_CLIENT_SECRET
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-client-secret-3CMuUp
-              - name: STALWART_API_AUTH_STRING
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN
-              - name: STALWART_API_AUTH_METHOD
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR
-              - name: MAILCHIMP_DC
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-dc-SyLAUO
-              - name: MAILCHIMP_API_KEY
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-api-key-5xUoSN
-              - name: MAILCHIMP_LIST_ID
-                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-list-id-OAj8yj
-            environment:
-              - name: ADMIN_CONTACT
-                value: dummy@example.org
-              - name: ADMIN_WEBSITE
-                value: https://www.thunderbird.net
-              - name: ALLOWED_EMAIL_DOMAINS
-                value: 'thundermail.com,tb.pro'
-              - name: MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
-                value: '3'
-              - name: APP_ENV
-                value: 'prod'
-              - name: AUTH_SCHEME
-                value: 'oidc'
-              - name: CSRF_HTTPONLY
-                value: 'True'
-              - name: CSRF_SECURE
-                value: 'True'
-              - name: CSRF_TRUSTED_ORIGINS
-                value: 'https://accounts.tb.pro'
-              - name: FXA_CALLBACK
-                value: https://accounts.tb.pro/api/v1/auth/fxa/callback
-              - name: FXA_OAUTH_SERVER_URL
-                value: https://oauth.accounts.firefox.com/v1
-              - name: FXA_OPEN_ID_CONFIG
-                value: https://accounts.firefox.com/.well-known/openid-configuration
-              - name: FXA_PROFILE_SERVER_URL
-                value: https://profile.accounts.firefox.com/v1
-              - name: IMAP_HOST
-                value: 'mail.thundermail.com'
-              - name: IMAP_PORT
-                value: '993'
-              - name: IMAP_TLS
-                value: 'True'
-              - name: JMAP_HOST
-                value: 'mail.thundermail.com'
-              - name: JMAP_PORT
-                value: '443'
-              - name: JMAP_TLS
-                value: 'True'
-              - name: PADDLE_ENV
-                value: 'sandbox'
-              - name: PUBLIC_BASE_URL
-                value: 'https://accounts.tb.pro'
-              - name: SMTP_HOST
-                value: 'mail.thundermail.com'
-              - name: SMTP_PORT
-                value: '465'
-              - name: SMTP_TLS
-                value: 'True'
-              - name: SUPPORT_CONTACT
-                value: dummy@example.org
-              - name: REDIS_CELERY_DB
-                value: '5'
-              - name: REDIS_CELERY_RESULTS_DB
-                value: '6'
-              - name: REDIS_INTERNAL_DB
-                value: '0'
-              - name: REDIS_SHARED_DB
-                value: '10'
-              - name: TBA_CELERY
-                value: "yes"
-              - name: USE_ALLOW_LIST
-                value: 'True'
-              - name: OIDC_URL_AUTH
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth/"
-              - name: OIDC_URL_TOKEN
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/token/"
-              - name: OIDC_URL_USER
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/userinfo/"
-              - name: OIDC_URL_JWKS
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs/"
-              - name: OIDC_URL_LOGOUT
-                value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/logout/"
-              - name: OIDC_FALLBACK_MATCH_BY_EMAIL
-                value: 'True'
-              - name: STALWART_BASE_JMAP_URL
-                value: 'https://mail.thundermail.com'
-              - name: STALWART_BASE_API_URL
-                value: 'https://mailstrom-prod-management-i.thundermail.com:8080'
-              - name: TB_PRO_APPOINTMENT_URL
-                value: 'https://appointment.tb.pro/'
-              - name: TB_PRO_SEND_URL
-                value: 'https://send.tb.pro/'
-              - name: TB_PRO_WAIT_LIST_URL
-                value: 'https://tb.pro/waitlist/'
-              - name: KEYCLOAK_URL_API
-                value: 'https://auth.tb.pro/admin/realms/tbpro/'
-              - name: KEYCLOAK_ADMIN_URL_TOKEN
-                value: 'https://auth.tb.pro/realms/master/protocol/openid-connect/token/'
-              - name: ZENDESK_FORM_ID
-                value: '38216134664083'
-              - name: ZENDESK_FORM_BROWSER_FIELD_ID
-                value: '44379231787027'
-              - name: ZENDESK_FORM_OS_FIELD_ID
-                value: '44379263732755'
-              - name: VERIFY_PRIVATE_LINK_SSL
-                value: 'False'
-
   tb:autoscale:EcsServiceAutoscaler:
     accounts:
       cpu_threshold: 80
@@ -1074,13 +884,6 @@ resources:
       min_capacity: 2
       max_capacity: 4
       suspend: False
-    accounts-celery:
-      cpu_threshold: 80
-      ram_threshold: 80
-      cooldown: 180
-      disable_scale_in: False
-      min_capacity: 2
-      max_capacity: 4
     keycloak:
       cpu_threshold: 80
       ram_threshold: 80
@@ -1100,7 +903,6 @@ resources:
             response_time:
               threshold: 2
 
-
   tb:ci:AwsAutomationUser:
     ci:
       access_keys: {}
@@ -1112,11 +914,9 @@ resources:
       fargate_clusters:
         - accounts-prod-fargate-keycloak
         - accounts-prod-fargate-accounts
-        - accounts-prod-fargate-accounts-celery
         - accounts-prod
       fargate_task_role_arns:
         - arn:aws:iam::768512802988:role/accounts-prod-fargate-keycloak
         - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts
-        - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts-celery
         - arn:aws:iam::768512802988:role/accounts-prod-afc-accounts-celery-prod
         - arn:aws:iam::768512802988:role/accounts-prod-afc-accounts-flower-prod

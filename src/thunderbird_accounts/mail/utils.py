@@ -72,6 +72,8 @@ def fix_archives_folder(access_token, account: Account) -> bool:
     if not access_token:
         return False
 
+    inboxes = None
+
     try:
         client = TinyJMAPClient(
             hostname=settings.STALWART_BASE_JMAP_URL,
@@ -146,9 +148,23 @@ def fix_archives_folder(access_token, account: Account) -> bool:
             }
             """
 
-            # Note: If the request didn't work, it won't have temp_id in it,
-            # or if it's malformed it'll raise a keyerror.
-            if temp_id not in inbox_res['methodResponses'][0][1]['created']:
+            # Either a mailbox named Archives or with the role archive will do
+            already_exists_descriptions = [
+                f"A mailbox with name '{settings.STALWART_ARCHIVES_FOLDER_NAME}' already exists.",
+                "A mailbox with role 'archive' already exists.",
+            ]
+
+            method_response = inbox_res['methodResponses'][0][1]
+            return_response = method_response.get('created')
+            if not return_response:
+                return_response = method_response.get('notCreated', {})
+                # The only way we're getting out of here without an error, is if the folder already exists
+                desc = return_response.get(temp_id, {}).get('description')
+                if desc and desc in already_exists_descriptions:
+                    raise Exception(f'Failed to create archive folder: {desc}')
+            elif temp_id not in return_response:
+                # Note: If the request didn't work, it won't have temp_id in it,
+                # or if it's malformed it'll raise a keyerror.
                 raise Exception('Failed to create archive folder')
 
         # If we got here without an error, then we can mark this as verified
@@ -158,6 +174,7 @@ def fix_archives_folder(access_token, account: Account) -> bool:
         return True
     except (HTTPError, Exception, KeyError) as ex:
         logging.error('fix_archive_folder failed!')
+        sentry_sdk.set_extra('inbox_response', inboxes)
         sentry_sdk.capture_exception(ex)
 
     return False

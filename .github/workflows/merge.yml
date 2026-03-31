@@ -56,7 +56,9 @@ jobs:
   accounts-deploy:
     needs: detect-changes
     if: needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true'
-    environment: staging
+    environment:
+      name: staging
+      deployment: true
     runs-on: ubuntu-latest
     env:
       IS_CI_AUTOMATION: "yes"
@@ -180,7 +182,9 @@ jobs:
   keycloak-deploy:
     needs: detect-changes
     if: needs.detect-changes.outputs.keycloak-theme-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true'
-    environment: staging
+    environment:
+      name: staging
+      deployment: false
     runs-on: ubuntu-latest
     env:
       IS_CI_AUTOMATION: "yes"
@@ -348,7 +352,9 @@ jobs:
     needs: accounts-deploy
     if: '!cancelled()'
     runs-on: ubuntu-latest
-    environment: staging
+    environment:
+      name: staging
+      deployment: false
     env:
       ACCTS_OIDC_EMAIL: ${{ secrets.E2E_ACCTS_OIDC_EMAIL }}
       ACCTS_OIDC_PWORD: ${{ secrets.E2E_ACCTS_OIDC_PWORD }}

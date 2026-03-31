@@ -7,7 +7,7 @@ from django.test import TestCase, Client as RequestClient, override_settings
 from django.urls import reverse
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.utils.tests.utils import oidc_force_login
+from thunderbird_accounts.core.tests.utils import oidc_force_login
 
 
 class PaddleCheckoutIsDoneTestCase(TestCase):

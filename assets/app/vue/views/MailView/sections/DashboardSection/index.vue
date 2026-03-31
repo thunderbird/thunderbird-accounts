@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhDownloadSimple, PhGlobe } from '@phosphor-icons/vue';
+import { PhDownloadSimple, PhGlobe, PhQrCode } from '@phosphor-icons/vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTour, FTUE_STEPS } from '@/composables/useTour';
 
@@ -12,9 +13,11 @@ import TourCard from '@/components/TourCard.vue';
 // Local components
 import WelcomeHeader from './components/WelcomeHeader.vue';
 import ViewServerSettings from './components/ViewServerSettings.vue';
+import QrCodeModal from './components/QrCodeModal.vue';
 
 const { t } = useI18n();
 const tour = useTour();
+const qrCodeModalRef = useTemplateRef<InstanceType<typeof QrCodeModal>>('qrCodeModal');
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const thunderbirdClientImage = new URL('@/assets/png/thundermail-dashboard-client.png', import.meta.url).href;
@@ -48,14 +51,23 @@ export default {
         <div class="download-card">
           <div class="content">
             <p>{{ t('views.mail.sections.dashboard.downloadDescription') }}</p>
-            <a class="download-link" href="https://www.thunderbird.net/thunderbird/all/?utm_campaign=main&utm_medium=tb_pro&utm_source=thundermail_dashboard&utm_content=banner_top" target="_blank">
-              <primary-button>
+            <div class="buttons-container">
+              <a class="download-link" href="https://www.thunderbird.net/thunderbird/all/?utm_campaign=main&utm_medium=tb_pro&utm_source=thundermail_dashboard&utm_content=banner_top" target="_blank">
+                <primary-button>
+                  <template #iconLeft>
+                    <ph-download-simple size="16"/>
+                  </template>
+                  {{ t('views.mail.sections.dashboard.downloadButtonLabel') }}
+                </primary-button>
+              </a>
+
+              <primary-button @click="qrCodeModalRef?.open()">
                 <template #iconLeft>
-                  <ph-download-simple size="16"/>
+                  <ph-qr-code size="16"/>
                 </template>
-                {{ t('views.mail.sections.dashboard.downloadButtonLabel') }}
+                {{ t('views.mail.sections.dashboard.generateQrCodeButtonLabel') }}
               </primary-button>
-            </a>
+            </div>
           </div>
 
           <img :src="thunderbirdClientImage" :alt="t('views.mail.sections.dashboard.thunderbirdClientAlt')" />
@@ -76,6 +88,8 @@ export default {
       </div>
     </card-container>
   </section>
+
+  <qr-code-modal ref="qrCodeModal" />
 </template>
 
 <style scoped>
@@ -96,6 +110,7 @@ h2 {
 .download-card {
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
   border-radius: 8px;
   background-image:
     linear-gradient(125deg, rgba(88, 201, 255, 0) 74%, rgba(88, 201, 255, 1) 135%),
@@ -108,11 +123,21 @@ h2 {
       display: inline-block;
       text-decoration: none;
     }
+
+    .buttons-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      & > button {
+        max-width: fit-content;
+      }
+    }
   }
 
   > img {
     width: 100%;
-    max-width: 400px;
+    max-width: 530px;
     object-fit: cover;
   }
 
