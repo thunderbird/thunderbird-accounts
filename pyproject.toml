@@ -126,6 +126,7 @@ quote-style = "single"
 select = [
     "E",      # pycodestyle
     "F",      # Pyflakes
+    "FURB",   # refurb
     "PERF",   # performance
     "T201",   # Enable flagging print (T201)
 ]
