@@ -154,7 +154,7 @@ def sign_up(request: HttpRequest):
     except ImportUserError as ex:
         sentry_sdk.capture_exception(ex)
         messages.error(
-            request, ex.error_desc if ex.error_desc else _('There was an unknown error, please try again later.')
+            request, ex.error_desc or _('There was an unknown error, please try again later.')
         )
         return HttpResponseRedirect('/sign-up')
 
