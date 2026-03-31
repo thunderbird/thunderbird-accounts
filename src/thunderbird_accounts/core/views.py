@@ -75,8 +75,9 @@ def home(request: HttpRequest):
             user_display_name = email_user.get('description')
 
             # Get user's app passwords from Stalwart, excluding internal ones
-            for secret in filter_app_passwords(email_user.get('secrets', [])):
-                app_passwords.append(decode_app_password(secret))
+            app_passwords.extend(
+                decode_app_password(secret) for secret in filter_app_passwords(email_user.get('secrets', []))
+            )
 
             # Get user's email addresses from Stalwart
             email_addresses = email_user.get('emails', [])
