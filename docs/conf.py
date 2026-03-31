@@ -106,8 +106,7 @@ def linkcode_resolve(domain, info):
         file = os.path.relpath(file, os.path.abspath('.'))
 
         # Depending on where the docs are built from this could be slightly different...
-        if file.startswith('../'):
-            file = file[3:]
+        file = file.removeprefix('../')
 
         if not file.startswith('src/thunderbird_accounts'):
             print(f'Ignoring {file}')  # noqa: T201
