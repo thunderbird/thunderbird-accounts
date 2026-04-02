@@ -28,7 +28,7 @@ export default {
 
 <template>
   <section id="email-settings">
-    <card-container>
+    <card-container :title="t('views.mail.sections.emailSettings.emailSettings')">
       <tour-card
         v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.FINAL"
         :text="t('views.mail.ftue.step3Text')"
@@ -40,8 +40,6 @@ export default {
         @back="tour.back()"
         @close="tour.skip()"
       />
-
-      <h2>{{ t('views.mail.sections.emailSettings.emailSettings') }}</h2>
 
       <div class="email-settings-content">
         <user-info-side/>
@@ -60,14 +58,6 @@ export default {
 </template>
 
 <style scoped>
-h2 {
-  font-size: 1.5rem;
-  font-weight: 500;
-  font-family: metropolis;
-  color: var(--colour-ti-highlight);
-  margin-block-end: 1.5rem;
-}
-
 .email-settings-content {
   display: grid;
   grid-template-columns: 1fr;

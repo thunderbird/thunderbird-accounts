@@ -51,10 +51,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 2rem;
-
-  section {
-    width: 100%;
-  }
 }
 
 /* Overriding the link button font size */
@@ -86,15 +82,6 @@ export default {
     display: flex;
     gap: 0.5rem;
     justify-content: flex-end;
-  }
-}
-
-@media (min-width: 1024px) {
-  .mail-view {
-    section {
-      width: 971px;
-      margin: 0 auto;
-    }
   }
 }
 </style>
