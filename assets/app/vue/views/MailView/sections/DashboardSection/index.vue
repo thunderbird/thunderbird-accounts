@@ -13,7 +13,6 @@ import TourCard from '@/components/TourCard.vue';
 // Local components
 import WelcomeHeader from './components/WelcomeHeader.vue';
 import GetStartedWithThundermail from './components/GetStartedWithThundermail.vue';
-import ViewServerSettings from './components/ViewServerSettings.vue';
 import QrCodeModal from './components/QrCodeModal.vue';
 
 const { t } = useI18n();
@@ -85,8 +84,6 @@ export default {
             <p>{{ t('views.mail.sections.dashboard.connectYourAccountSecondLine') }}</p>
           </div>
         </details-summary>
-
-        <view-server-settings />
       </div>
     </card-container>
   </section>
