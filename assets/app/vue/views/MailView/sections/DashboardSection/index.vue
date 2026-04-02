@@ -12,6 +12,7 @@ import TourCard from '@/components/TourCard.vue';
 
 // Local components
 import WelcomeHeader from './components/WelcomeHeader.vue';
+import GetStartedWithThundermail from './components/GetStartedWithThundermail.vue';
 import ViewServerSettings from './components/ViewServerSettings.vue';
 import QrCodeModal from './components/QrCodeModal.vue';
 
@@ -32,6 +33,7 @@ export default {
 <template>
   <section id="dashboard">
     <welcome-header />
+    <get-started-with-thundermail />
 
     <card-container>
       <tour-card

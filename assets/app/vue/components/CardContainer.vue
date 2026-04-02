@@ -47,6 +47,7 @@ section {
     font-family: Inter;
     line-height: 1.32;
     margin-block-end: 1.5rem;
+    color: var(--colour-ti-secondary);
   }
 
   &.dark {

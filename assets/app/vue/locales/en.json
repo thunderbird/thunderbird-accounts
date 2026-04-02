@@ -100,6 +100,23 @@
             "description": "Scan the QR code from within the app to automatically configure your account:",
             "qrCodeAltDescription": "A QR Code to be used with Thunderbird for Android account importing."
           },
+          "getStartedWithThundermail": {
+            "title": "Get started with Thundermail",
+            "description": "Connect your new email address to start sending and receiving.",
+            "tabs": {
+              "desktop": "Desktop",
+              "mobile": "Mobile",
+              "otherApps": "Other Apps"
+            },
+            "desktopPanel": {
+              "connectTitle": "Connect Thunderbird Desktop",
+              "connectDescription": "Launch the configuration wizard to add Thundermail to desktop automatically.",
+              "connectButton": "Connect now",
+              "downloadTitle": "Download Thunderbird Desktop",
+              "downloadDescription": "We recommend using the desktop application for the best experience.",
+              "downloadButton": "Download"
+            }
+          },
           "generateQrCodeButtonLabel": "Generate QR Code for Thunderbird for Android",
           "setUpAnEmailApp": "Set up an Email app",
           "downloadDescription": "For a quick and easy setup, we recommend using Thunderbird. Just download the app, enter your email address and password, and you're ready to go.",

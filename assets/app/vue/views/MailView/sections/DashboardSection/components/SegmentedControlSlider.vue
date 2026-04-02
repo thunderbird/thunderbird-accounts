@@ -144,7 +144,7 @@ export default {
 }
 
 .tab-panel {
-  margin-block-start: 1rem;
+  margin-block-start: 0.625rem;
 
   &:focus-visible {
     outline: 2px solid var(--colour-primary-default);
