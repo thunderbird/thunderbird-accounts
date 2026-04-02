@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhDownloadSimple, PhGlobe, PhQrCode } from '@phosphor-icons/vue';
+import { PhDownloadSimple, PhQrCode } from '@phosphor-icons/vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTour, FTUE_STEPS } from '@/composables/useTour';
 
 // Shared components
 import CardContainer from '@/components/CardContainer.vue';
-import DetailsSummary from '@/components/DetailsSummary.vue';
 import TourCard from '@/components/TourCard.vue';
 
 // Local components
@@ -73,17 +72,6 @@ export default {
 
           <img :src="thunderbirdClientImage" :alt="t('views.mail.sections.dashboard.thunderbirdClientAlt')" />
         </div>
-  
-        <details-summary :title="t('views.mail.sections.dashboard.connectYourAccount')" :expandable="false">
-          <template #icon>
-            <ph-globe size="24" />
-          </template>
-  
-          <div class="connect-your-account-content">
-            <p>{{ t('views.mail.sections.dashboard.connectYourAccountFirstLine') }}</p>
-            <p>{{ t('views.mail.sections.dashboard.connectYourAccountSecondLine') }}</p>
-          </div>
-        </details-summary>
       </div>
     </card-container>
   </section>
