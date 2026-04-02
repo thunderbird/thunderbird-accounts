@@ -79,7 +79,10 @@ export default {
 
 <template>
   <section id="custom-domains">
-    <card-container>
+    <card-container
+      :title="t('views.mail.sections.customDomains.customDomains')"
+      :subtitle="customDomainsDescription"
+    >
       <tour-card
         v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.CUSTOM_DOMAINS"
         :text="t('views.mail.ftue.step2Text')"
@@ -91,8 +94,6 @@ export default {
         @close="tour.skip()"
       />
 
-      <h2>{{ t('views.mail.sections.customDomains.customDomains') }}</h2>
-      <p class="custom-domains-description">{{ customDomainsDescription }}</p>
       <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: maxCustomDomains }) }}</strong>
 
       <div class="custom-domains-list" v-if="customDomains.length > 0">
@@ -168,24 +169,6 @@ export default {
 <style scoped>
 section#custom-domains {
   color: var(--colour-ti-secondary);
-
-  h2 {
-    font-size: 1.5rem;
-    font-weight: 500;
-    font-family: metropolis;
-    color: var(--colour-ti-highlight);
-    margin-block-end: 0.25rem;
-  }
-
-  p {
-    font-family: Inter;
-    line-height: 1.32;
-    margin-block-end: 1.5rem;
-
-    &.custom-domains-description {
-      max-width: 730px;
-    }
-  }
 
   strong {
     display: block;
