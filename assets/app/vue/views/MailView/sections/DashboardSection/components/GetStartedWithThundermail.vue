@@ -4,11 +4,11 @@ import { useI18n } from 'vue-i18n';
 import { PhDesktop, PhDeviceMobile, PhGlobe } from '@phosphor-icons/vue';
 
 import CardContainer from '@/components/CardContainer.vue';
-import { SETUP_TABS } from '../types';
-import type { SegmentedControlTab } from '../types';
+import { SETUP_TABS, SegmentedControlTab } from '../types';
 import SegmentedControlSlider from './SegmentedControlSlider.vue';
 import GetStartedWithThundermailDesktop from './GetStartedWithThundermailDesktop.vue';
 import GetStartedWithThundermailMobile from './GetStartedWithThundermailMobile.vue';
+import GetStartedWithThundermailOtherApps from './GetStartedWithThundermailOtherApps.vue';
 
 const { t } = useI18n();
 const selectedTab = ref<string>(SETUP_TABS.DESKTOP);
@@ -57,7 +57,7 @@ export default {
       </template>
 
       <template #other>
-        <!-- Other Apps panel content -->
+        <get-started-with-thundermail-other-apps />
       </template>
     </segmented-control-slider>
   </card-container>
