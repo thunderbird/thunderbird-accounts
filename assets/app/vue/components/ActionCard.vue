@@ -14,6 +14,7 @@ defineProps<{
       </div>
       <p class="action-description">{{ description }}</p>
     </div>
+
     <slot name="action" />
   </div>
 </template>
@@ -27,38 +28,35 @@ defineProps<{
   border: 1px solid var(--colour-neutral-border);
   border-radius: 8px;
   overflow: clip;
-}
 
-.action-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1 0 0;
-  gap: 0.5rem;
-}
+  .action-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 0;
+    gap: 0.5rem;
 
-.action-header {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  color: var(--colour-ti-base);
+    .action-header {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: var(--colour-ti-highlight);
 
-  :deep(svg) {
-    color: var(--colour-ti-highlight);
+      .action-title {
+        flex: 1 0 0;
+        font-family: Inter, sans-serif;
+        font-size: 0.875rem;
+        line-height: 1.23;
+        color: var(--colour-ti-base);
+      }
+    }
+
+    .action-description {
+      font-family: Inter, sans-serif;
+      font-size: 0.75rem;
+      line-height: normal;
+      color: var(--colour-ti-secondary);
+    }
   }
 }
 
-.action-title {
-  flex: 1 0 0;
-  font-family: Inter, sans-serif;
-  font-size: 0.875rem;
-  line-height: 1.23;
-  color: var(--colour-ti-base);
-}
-
-.action-description {
-  font-family: Inter, sans-serif;
-  font-size: 0.75rem;
-  line-height: normal;
-  color: var(--colour-ti-secondary);
-}
 </style>

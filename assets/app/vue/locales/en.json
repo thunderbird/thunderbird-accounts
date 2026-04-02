@@ -115,6 +115,14 @@
               "downloadTitle": "Download Thunderbird Desktop",
               "downloadDescription": "We recommend using the desktop application for the best experience.",
               "downloadButton": "Download"
+            },
+            "mobilePanel": {
+              "qrCodeTitle": "Scan QR Code",
+              "qrCodeDescription": "Open Thunderbird for Android and scan the QR code below.",
+              "qrCodeAlt": "A QR Code to be used with Thunderbird for Android account importing.",
+              "downloadTitle": "Download Thunderbird for Android",
+              "downloadDescription": "Install the mobile app on your phone or tablet.",
+              "downloadButton": "Download"
             }
           },
           "generateQrCodeButtonLabel": "Generate QR Code for Thunderbird for Android",
