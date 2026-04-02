@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhDownloadSimple, PhQrCode } from '@phosphor-icons/vue';
+import { PhDownloadSimple } from '@phosphor-icons/vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTour, FTUE_STEPS } from '@/composables/useTour';
 
@@ -12,11 +11,9 @@ import TourCard from '@/components/TourCard.vue';
 // Local components
 import WelcomeHeader from './components/WelcomeHeader.vue';
 import GetStartedWithThundermail from './components/GetStartedWithThundermail.vue';
-import QrCodeModal from './components/QrCodeModal.vue';
 
 const { t } = useI18n();
 const tour = useTour();
-const qrCodeModalRef = useTemplateRef<InstanceType<typeof QrCodeModal>>('qrCodeModal');
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const thunderbirdClientImage = new URL('@/assets/png/thundermail-dashboard-client.png', import.meta.url).href;
@@ -60,13 +57,6 @@ export default {
                   {{ t('views.mail.sections.dashboard.downloadButtonLabel') }}
                 </primary-button>
               </a>
-
-              <primary-button @click="qrCodeModalRef?.open()">
-                <template #iconLeft>
-                  <ph-qr-code size="16"/>
-                </template>
-                {{ t('views.mail.sections.dashboard.generateQrCodeButtonLabel') }}
-              </primary-button>
             </div>
           </div>
 
