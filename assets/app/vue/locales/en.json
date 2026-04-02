@@ -123,6 +123,16 @@
               "downloadTitle": "Download Thunderbird for Android",
               "downloadDescription": "Install the mobile app on your phone or tablet.",
               "downloadButton": "Download"
+            },
+            "otherAppsPanel": {
+              "title": "Automatic Configuration",
+              "descriptionOne": "Most modern email applications will detect your account settings automatically. Just enter your email and password.",
+              "descriptionTwo": "Some email apps may require an {appPassword} instead of your regular account sign-in.",
+              "appPassword": "app password",
+              "manualConfigurationTitle": "Manual Configuration",
+              "needHelpTitle": "Need Help?",
+              "needHelpDescription": "Read our step-by-step guide for connecting popular email applications.",
+              "needHelpButtonLabel": "Visit Support Article"
             }
           },
           "generateQrCodeButtonLabel": "Generate QR Code for Thunderbird for Android",
