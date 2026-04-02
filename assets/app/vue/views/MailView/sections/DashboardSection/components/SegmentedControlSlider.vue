@@ -57,44 +57,50 @@ export default {
 </script>
 
 <template>
-  <div class="segmented-control" role="tablist" :aria-label="label">
-    <button
-      v-for="(tab, index) in tabs"
+  <div class="container">
+    <div class="segmented-control" role="tablist" :aria-label="label">
+      <button
+        v-for="(tab, index) in tabs"
+        :key="tab.id"
+        :id="tabId(tab.id)"
+        role="tab"
+        :aria-selected="modelValue === tab.id"
+        :aria-controls="panelId(tab.id)"
+        :tabindex="modelValue === tab.id ? 0 : -1"
+        :class="['tab-button', { active: modelValue === tab.id }]"
+        @click="selectTab(tab.id)"
+        @keydown="onTabKeydown($event, index)"
+      >
+        <component
+          v-if="tab.icon"
+          :is="tab.icon"
+          :size="16"
+          aria-hidden="true"
+        />
+        <span>{{ tab.label }}</span>
+      </button>
+    </div>
+  
+    <div
+      v-for="tab in tabs"
       :key="tab.id"
-      :id="tabId(tab.id)"
-      role="tab"
-      :aria-selected="modelValue === tab.id"
-      :aria-controls="panelId(tab.id)"
-      :tabindex="modelValue === tab.id ? 0 : -1"
-      :class="['tab-button', { active: modelValue === tab.id }]"
-      @click="selectTab(tab.id)"
-      @keydown="onTabKeydown($event, index)"
+      :id="panelId(tab.id)"
+      role="tabpanel"
+      :aria-labelledby="tabId(tab.id)"
+      :hidden="modelValue !== tab.id"
+      :tabindex="modelValue === tab.id ? 0 : undefined"
+      class="tab-panel"
     >
-      <component
-        v-if="tab.icon"
-        :is="tab.icon"
-        :size="16"
-        aria-hidden="true"
-      />
-      <span>{{ tab.label }}</span>
-    </button>
-  </div>
-
-  <div
-    v-for="tab in tabs"
-    :key="tab.id"
-    :id="panelId(tab.id)"
-    role="tabpanel"
-    :aria-labelledby="tabId(tab.id)"
-    :hidden="modelValue !== tab.id"
-    :tabindex="modelValue === tab.id ? 0 : undefined"
-    class="tab-panel"
-  >
-    <slot :name="tab.id" />
+      <slot :name="tab.id" />
+    </div>
   </div>
 </template>
 
 <style scoped>
+.container {
+  flex: 1;
+}
+
 .segmented-control {
   display: flex;
   align-items: center;

@@ -30,6 +30,9 @@ const tabs = computed<SegmentedControlTab[]>(() => [
     icon: PhGlobe,
   },
 ]);
+
+// https://vite.dev/guide/assets.html#new-url-url-import-meta-url
+const thunderbirdClientImage = new URL('@/assets/png/thundermail-dashboard-client.png', import.meta.url).href;
 </script>
 
 <script lang="ts">
@@ -43,22 +46,39 @@ export default {
     :title="t('views.mail.sections.dashboard.getStartedWithThundermail.title')"
     :subtitle="t('views.mail.sections.dashboard.getStartedWithThundermail.description')"
   >
-    <segmented-control-slider
-      v-model="selectedTab"
-      :tabs="tabs"
-      :label="t('views.mail.sections.dashboard.getStartedWithThundermail.title')"
-    >
-      <template #desktop>
-        <get-started-with-thundermail-desktop />
-      </template>
+    <div class="get-started-with-thundermail-content">
+      <segmented-control-slider
+        v-model="selectedTab"
+        :tabs="tabs"
+        :label="t('views.mail.sections.dashboard.getStartedWithThundermail.title')"
+      >
+        <template #desktop>
+          <get-started-with-thundermail-desktop />
+        </template>
+  
+        <template #mobile>
+          <get-started-with-thundermail-mobile />
+        </template>
+  
+        <template #other>
+          <get-started-with-thundermail-other-apps />
+        </template>
+      </segmented-control-slider>
 
-      <template #mobile>
-        <get-started-with-thundermail-mobile />
-      </template>
-
-      <template #other>
-        <get-started-with-thundermail-other-apps />
-      </template>
-    </segmented-control-slider>
+      <img class="thunderbird-client-image" :src="thunderbirdClientImage" :alt="t('views.mail.sections.dashboard.getStartedWithThundermail.imgAlt')" />
+    </div>
   </card-container>
 </template>
+
+<style scoped>
+.get-started-with-thundermail-content {
+  display: flex;
+  gap: 1.5rem;
+
+  .thunderbird-client-image {
+    max-width: 306px;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+</style>

@@ -98,6 +98,7 @@
           "getStartedWithThundermail": {
             "title": "Get started with Thundermail",
             "description": "Connect your new email address to start sending and receiving.",
+            "imgAlt": "Thunderbird client",
             "tabs": {
               "desktop": "Desktop",
               "mobile": "Mobile",
