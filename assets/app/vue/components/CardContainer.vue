@@ -66,7 +66,7 @@ section {
 
 @media (min-width: 1024px) {
   section {
-    width: 968px;
+    max-width: 968px;
     margin: 0 auto;
   }
 }

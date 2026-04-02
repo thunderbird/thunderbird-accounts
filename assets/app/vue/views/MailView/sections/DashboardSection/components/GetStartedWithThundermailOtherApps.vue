@@ -42,7 +42,7 @@ const { t } = useI18n();
         <ph-question :size="20" />
       </template>
       <template #action>
-        <link-button size="small" href="#">
+        <link-button size="small" href="#" class="need-help-button">
           {{ t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.needHelpButtonLabel') }}
 
           <template #iconRight>
@@ -72,6 +72,11 @@ const { t } = useI18n();
   .app-password-link {
     text-decoration: underline;
     color: var(--colour-ti-secondary);
+  }
+
+  .need-help-button {
+    color: var(--colour-primary-pressed);
+    padding-inline-end: 0;
   }
 }
 </style>

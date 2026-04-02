@@ -74,6 +74,7 @@ export default {
 .get-started-with-thundermail-content {
   display: flex;
   gap: 1.5rem;
+  flex-wrap: wrap;
 
   .thunderbird-client-image {
     max-width: 306px;
