@@ -1,203 +1,151 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhCopySimple, PhDatabase, PhShieldCheck } from '@phosphor-icons/vue';
-
-export type ServerSettingsDetails = {
-  protocol: string;
-  server: string;
-  port: string;
-};
-
-defineProps<{
-  title: string;
-  details: ServerSettingsDetails;
-}>();
+import { PhInfo } from '@phosphor-icons/vue';
+import { ToolTip } from '@thunderbirdops/services-ui';
+import ServerSettingsCardItem from '@/components/ServerSettingsCardItem.vue';
 
 const { t } = useI18n();
 
-const copyValue = async (value: string | number) => {
-  try {
-    await navigator.clipboard.writeText(String(value));
-  } catch (_err) {
-    // noop
-  }
-};
+enum INCOMING_SERVER_TABS {
+  IMAP = 'imap',
+  JMAP = 'jmap',
+}
+
+const connectionInfo = computed(() => window._page?.connectionInfo);
+
+const incomingServerSelectedTab = ref<INCOMING_SERVER_TABS>(INCOMING_SERVER_TABS.IMAP);
+
+const imapServerDetails = computed(() => ({
+  protocol: 'IMAP',
+  server: `imap.${connectionInfo.value.IMAP.HOST}`,
+  port: `${connectionInfo.value.IMAP.PORT}${connectionInfo.value.IMAP.TLS ? ' (SSL/TLS)' : ''}`,
+}));
+
+const jmapServerDetails = computed(() => ({
+  protocol: 'JMAP',
+  server: `jmap.${connectionInfo.value.JMAP.HOST}`,
+  port: `${connectionInfo.value.JMAP.PORT}${connectionInfo.value.JMAP.TLS ? ' (SSL/TLS)' : ''}`,
+}));
+
+const smtpServerDetails = computed(() => ({
+  protocol: 'SMTP',
+  server: `smtp.${connectionInfo.value.SMTP.HOST}`,
+  port: `${connectionInfo.value.SMTP.PORT}${connectionInfo.value.SMTP.TLS ? ' (SSL/TLS)' : ''}`,
+}));
+
+const incomingServerDetails = computed(() =>
+  incomingServerSelectedTab.value === INCOMING_SERVER_TABS.IMAP
+    ? imapServerDetails.value
+    : jmapServerDetails.value,
+);
 </script>
 
 <template>
-  <div class="server-settings-card">
-    <header>
-      <slot name="icon" />
-      <span>{{ title }}</span>
-    </header>
+  <div class="view-server-settings-content">
+    <server-settings-card-item
+      :title="t('views.mail.sections.dashboard.incomingServer')"
+      :details="incomingServerDetails"
+    >
+      <template #icon>
+        <img src="@/assets/svg/inbox-icon.svg" alt="Inbox icon" />
+      </template>
 
-    <slot name="tabs" />
+      <template #tabs>
+        <div class="incoming-server-tabs">
+          <button
+            :class="{ 'active': incomingServerSelectedTab === INCOMING_SERVER_TABS.IMAP }"
+            class="incoming-server-tab"
+            @click="incomingServerSelectedTab = INCOMING_SERVER_TABS.IMAP"
+          >
+            {{ t('views.mail.sections.dashboard.imap') }}
+          </button>
+          <button
+            :class="{ 'active': incomingServerSelectedTab === INCOMING_SERVER_TABS.JMAP }"
+            class="incoming-server-tab"
+            @click="incomingServerSelectedTab = INCOMING_SERVER_TABS.JMAP"
+          >
+            {{ t('views.mail.sections.dashboard.jmap') }}
+          </button>
+        </div>
+      </template>
 
-    <div class="server-detail-item">
-      <div class="server-detail-item-label">
-        <ph-database size="16" />
-        <strong>{{ t('views.mail.sections.dashboard.server') }}</strong>
-      </div>
-      <div class="server-detail-item-value">
-        <span>{{ details.server }}</span>
-        <button type="button" class="copy-btn" @click="copyValue(details.server)">
-          <ph-copy-simple size="12" />
-        </button>
-      </div>
-    </div>
+      <template #footer>
+        <template v-if="incomingServerSelectedTab === INCOMING_SERVER_TABS.IMAP">
+          <div class="what-is-container">
+            <ph-info size="24" weight="fill" />
+            <span>{{ t('views.mail.sections.dashboard.whatIsImap') }}</span>
 
-    <div class="server-detail-item">
-      <div class="server-detail-item-label">
-        <ph-shield-check size="16" />
-        <strong>{{ t('views.mail.sections.dashboard.port') }}</strong>
-      </div>
-      <div class="server-detail-item-value">
-        <span>{{ details.port }}</span>
-        <button type="button" class="copy-btn" @click="copyValue(details.port)">
-          <ph-copy-simple size="12" />
-        </button>
-      </div>
-    </div>
+            <tool-tip :alt="t('views.mail.sections.dashboard.whatIsImap')">
+              <i18n-t keypath="views.mail.sections.dashboard.whatIsImapContent" tag="span">
+                <template #supportUrl>
+                  <a href="https://support.tb.pro/hc/articles/46108465880467-What-is-IMAP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
+                </template>
+              </i18n-t>
+            </tool-tip>
+          </div>
+        </template>
+        <template v-else>
+          <div class="what-is-container">
+            <ph-info size="24" weight="fill" />
+            <span>{{ t('views.mail.sections.dashboard.whatIsJmap') }}</span>
 
-    <slot name="footer" />
+            <tool-tip :alt="t('views.mail.sections.dashboard.whatIsJmap')">
+              <i18n-t keypath="views.mail.sections.dashboard.whatIsJmapContent" tag="span">
+                <template #supportUrl>
+                  <a href="https://support.tb.pro/hc/articles/46109214513939-What-is-JMAP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
+                </template>
+              </i18n-t>
+            </tool-tip>
+          </div>
+        </template>
+      </template>
+    </server-settings-card-item>
+
+    <server-settings-card-item
+      :title="t('views.mail.sections.dashboard.outgoingServer')"
+      :details="smtpServerDetails"
+    >
+      <template #icon>
+        <img src="@/assets/svg/outbox-icon.svg" alt="Outgoing icon" />
+      </template>
+
+      <template #tabs>
+        <div class="incoming-server-tabs">
+          <button class="active incoming-server-tab" type="button">
+            {{ t('views.mail.sections.dashboard.smtp') }}
+          </button>
+        </div>
+      </template>
+
+      <template #footer>
+        <div class="what-is-container">
+          <ph-info size="24" weight="fill" />
+          <span>{{ t('views.mail.sections.dashboard.whatIsSmtp') }}</span>
+
+          <tool-tip :alt="t('views.mail.sections.dashboard.whatIsSmtp')">
+            <i18n-t keypath="views.mail.sections.dashboard.whatIsSmtpContent" tag="span">
+              <template #supportUrl>
+                <a href="https://support.tb.pro/hc/articles/46106891841043-What-is-SMTP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
+              </template>
+            </i18n-t>
+          </tool-tip>
+        </div>
+      </template>
+    </server-settings-card-item>
   </div>
 </template>
 
 <style scoped>
-.server-settings-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.view-server-settings-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
 }
 
-.server-settings-card header {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.375rem;
-  background-color: var(--colour-primary-soft);
-  border-radius: 0.1875rem;
-  padding: 0.1875rem;
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--colour-ti-base);
-  letter-spacing: 0.42px;
-}
-
-.server-settings-card :deep(.incoming-server-tabs) {
-  display: flex;
-  flex-direction: row;
-}
-
-.server-settings-card :deep(.incoming-server-tab) {
-  padding-block: 0.5rem;
-  font-size: 0.6875rem;
-  font-family: Inter;
-  color: var(--colour-ti-base);
-  width: 100%;
-  border: none;
-  border-block-end: 2px solid transparent;
-  background-color: transparent;
-  cursor: pointer;
-}
-
-.server-settings-card :deep(.incoming-server-tab.active) {
-  border-block-end: 2px solid var(--colour-ti-highlight);
-}
-
-.server-settings-card :deep(.incoming-server-tab:not(.active)) {
-  color: var(--colour-ti-muted);
-  background-color: var(--colour-neutral-lower);
-}
-
-.server-settings-card .server-detail-item {
-  display: flex;
-  align-items: center;
-  padding: 0.25rem 0.375rem;
-  color: var(--colour-ti-secondary);
-  font-size: 0.75rem;
-
-  .server-detail-item-label {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    gap: 0.1875rem;
+@media (min-width: 1024px) {
+  .view-server-settings-content {
+    grid-template-columns: 1fr 1fr;
   }
-
-  .server-detail-item-value {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  strong {
-    font-size: 0.6875rem;
-  }
-}
-
-.server-settings-card .copy-btn {
-  background: none;
-  border: none;
-  padding: 0.25rem 0.38rem;
-  margin: 0;
-  color: inherit;
-  cursor: pointer;
-}
-
-.server-settings-card .copy-btn:hover {
-  color: var(--colour-primary-hover);
-}
-
-.server-settings-card .copy-btn:active {
-  color: var(--colour-primary-pressed);
-}
-
-.server-settings-card :deep(.what-is-container) {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  flex-grow: 0;
-  gap: 0.25rem;
-  cursor: pointer;
-  text-decoration: none;
-  width: max-content;
-  color: var(--colour-ti-base);
-
-  a {
-    color: var(--colour-ti-highlight);
-  }
-}
-
-/* Fills the gap between the trigger row and the tooltip so :hover is not lost in dead space */
-.server-settings-card :deep(.what-is-container::before) {
-  content: '';
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  width: max(100%, 18rem);
-  height: 0.75rem;
-  transform: translateX(-50%);
-}
-
-.server-settings-card :deep(.what-is-container .tooltip) {
-  visibility: hidden;
-  opacity: 0;
-  width: max-content;
-  bottom: calc(100% + 0.5rem);
-  left: 50%;
-  top: auto;
-  transform: translateX(-50%);
-}
-
-.server-settings-card :deep(.what-is-container:hover .tooltip),
-.server-settings-card :deep(.what-is-container .tooltip:hover) {
-  visibility: visible;
-  opacity: 1;
-  cursor: default;
-}
-
-.server-settings-card :deep(.what-is-container span) {
-  color: var(--colour-ti-muted);
-  font-size: 0.75rem;
 }
 </style>
