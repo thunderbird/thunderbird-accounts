@@ -10,6 +10,16 @@ import GetStartedWithThundermailDesktop from './GetStartedWithThundermailDesktop
 import GetStartedWithThundermailMobile from './GetStartedWithThundermailMobile.vue';
 import GetStartedWithThundermailOtherApps from './GetStartedWithThundermailOtherApps.vue';
 
+withDefaults(defineProps<{
+  isPinned?: boolean;
+}>(), {
+  isPinned: true,
+});
+
+defineEmits<{
+  (e: 'togglePinned'): void;
+}>();
+
 const { t } = useI18n();
 const selectedTab = ref<string>(SETUP_TABS.DESKTOP);
 
@@ -45,6 +55,9 @@ export default {
   <card-container
     :title="t('views.mail.sections.dashboard.getStartedWithThundermail.title')"
     :subtitle="t('views.mail.sections.dashboard.getStartedWithThundermail.description')"
+    is-pinnable
+    :is-pinned="isPinned"
+    @toggle-pinned="$emit('togglePinned')"
   >
     <div class="get-started-with-thundermail-content">
       <segmented-control-slider

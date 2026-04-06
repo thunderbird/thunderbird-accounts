@@ -1,13 +1,20 @@
 <script setup lang="ts">
+import { PhPushPin, PhPushPinSimple } from '@phosphor-icons/vue';
 
 withDefaults(defineProps<{
   dark?: boolean;
   padding?: 'small' | 'default';
   title?: string;
   subtitle?: string;
+  isPinnable?: boolean;
+  isPinned?: boolean;
 }>(), {
   padding: 'default',
 });
+
+defineEmits<{
+  (e: 'togglePinned'): void;
+}>();
 </script>
 
 <template>
@@ -16,7 +23,15 @@ withDefaults(defineProps<{
     'padding-small': padding === 'small',
     'padding-default': padding === 'default',
   }">
-    <h2 v-if="title" :class="{ 'with-subtitle': !!subtitle }">{{ title }}</h2>
+    <header>
+      <h2 v-if="title" :class="{ 'with-subtitle': !!subtitle }">{{ title }}</h2>
+
+      <button v-if="isPinnable" @click="$emit('togglePinned')">
+        <ph-push-pin v-if="isPinned" size="20" />
+        <ph-push-pin-simple v-else size="20" />
+      </button>
+    </header>
+
     <p v-if="subtitle">{{ subtitle }}</p>
 
     <slot />
@@ -30,6 +45,25 @@ section {
   border-radius: 1.5rem;
   box-shadow: 0.25rem 0.25rem 1rem 0 rgba(0, 0, 0, 0.04);
   width: 100%;
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    button {
+      all: unset;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      color: var(--colour-ti-secondary);
+      flex-shrink: 0;
+
+      &:hover {
+        color: var(--colour-ti-base);
+      }
+    }
+  }
 
   h2 {
     font-size: 1.5rem;
