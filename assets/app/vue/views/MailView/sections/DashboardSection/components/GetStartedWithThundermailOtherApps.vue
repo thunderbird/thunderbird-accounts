@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { PhArrowSquareOut, PhQuestion, PhArrowRight, PhGear } from '@phosphor-icons/vue';
-import ActionCard from '@/components/ActionCard.vue';
 import { LinkButton } from '@thunderbirdops/services-ui';
+import ActionCard from '@/components/ActionCard.vue';
+import ServerSettingsCard from '@/components/ServerSettingsCard.vue';
 
 const { t } = useI18n();
 </script>
@@ -31,6 +32,8 @@ const { t } = useI18n();
       <template #icon>
         <ph-gear :size="20" />
       </template>
+
+      <server-settings-card is-manual-configuration-section />
     </action-card>
 
     <!-- Need Help? -->

@@ -5,6 +5,10 @@ import { PhInfo } from '@phosphor-icons/vue';
 import { ToolTip } from '@thunderbirdops/services-ui';
 import ServerSettingsCardItem from '@/components/ServerSettingsCardItem.vue';
 
+defineProps<{
+  isManualConfigurationSection?: boolean;
+}>();
+
 const { t } = useI18n();
 
 enum INCOMING_SERVER_TABS {
@@ -42,97 +46,104 @@ const incomingServerDetails = computed(() =>
 </script>
 
 <template>
-  <div class="view-server-settings-content">
-    <server-settings-card-item
-      :title="t('views.mail.sections.dashboard.incomingServer')"
-      :details="incomingServerDetails"
+  <div>
+    <div v-if="isManualConfigurationSection" class="inner-spacing" />
+
+    <div
+      class="view-server-settings-content"
+      :class="{ 'spacing-small': isManualConfigurationSection }"
     >
-      <template #icon>
-        <img src="@/assets/svg/inbox-icon.svg" alt="Inbox icon" />
-      </template>
-
-      <template #tabs>
-        <div class="incoming-server-tabs">
-          <button
-            :class="{ 'active': incomingServerSelectedTab === INCOMING_SERVER_TABS.IMAP }"
-            class="incoming-server-tab"
-            @click="incomingServerSelectedTab = INCOMING_SERVER_TABS.IMAP"
-          >
-            {{ t('views.mail.sections.dashboard.imap') }}
-          </button>
-          <button
-            :class="{ 'active': incomingServerSelectedTab === INCOMING_SERVER_TABS.JMAP }"
-            class="incoming-server-tab"
-            @click="incomingServerSelectedTab = INCOMING_SERVER_TABS.JMAP"
-          >
-            {{ t('views.mail.sections.dashboard.jmap') }}
-          </button>
-        </div>
-      </template>
-
-      <template #footer>
-        <template v-if="incomingServerSelectedTab === INCOMING_SERVER_TABS.IMAP">
+      <server-settings-card-item
+        :title="t('views.mail.sections.dashboard.incomingServer')"
+        :details="incomingServerDetails"
+      >
+        <template #icon>
+          <img src="@/assets/svg/inbox-icon.svg" alt="Inbox icon" />
+        </template>
+  
+        <template #tabs>
+          <div class="incoming-server-tabs">
+            <button
+              :class="{ 'active': incomingServerSelectedTab === INCOMING_SERVER_TABS.IMAP }"
+              class="incoming-server-tab"
+              @click="incomingServerSelectedTab = INCOMING_SERVER_TABS.IMAP"
+            >
+              {{ t('views.mail.sections.dashboard.imap') }}
+            </button>
+            <button
+              :class="{ 'active': incomingServerSelectedTab === INCOMING_SERVER_TABS.JMAP }"
+              class="incoming-server-tab"
+              @click="incomingServerSelectedTab = INCOMING_SERVER_TABS.JMAP"
+            >
+              {{ t('views.mail.sections.dashboard.jmap') }}
+            </button>
+          </div>
+        </template>
+  
+        <template #footer>
+          <template v-if="incomingServerSelectedTab === INCOMING_SERVER_TABS.IMAP">
+            <div class="what-is-container">
+              <ph-info size="24" weight="fill" />
+              <span>{{ t('views.mail.sections.dashboard.whatIsImap') }}</span>
+  
+              <tool-tip :alt="t('views.mail.sections.dashboard.whatIsImap')">
+                <i18n-t keypath="views.mail.sections.dashboard.whatIsImapContent" tag="span">
+                  <template #supportUrl>
+                    <a href="https://support.tb.pro/hc/articles/46108465880467-What-is-IMAP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
+                  </template>
+                </i18n-t>
+              </tool-tip>
+            </div>
+          </template>
+          <template v-else>
+            <div class="what-is-container">
+              <ph-info size="24" weight="fill" />
+              <span>{{ t('views.mail.sections.dashboard.whatIsJmap') }}</span>
+  
+              <tool-tip :alt="t('views.mail.sections.dashboard.whatIsJmap')">
+                <i18n-t keypath="views.mail.sections.dashboard.whatIsJmapContent" tag="span">
+                  <template #supportUrl>
+                    <a href="https://support.tb.pro/hc/articles/46109214513939-What-is-JMAP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
+                  </template>
+                </i18n-t>
+              </tool-tip>
+            </div>
+          </template>
+        </template>
+      </server-settings-card-item>
+  
+      <server-settings-card-item
+        :title="t('views.mail.sections.dashboard.outgoingServer')"
+        :details="smtpServerDetails"
+      >
+        <template #icon>
+          <img src="@/assets/svg/outbox-icon.svg" alt="Outgoing icon" />
+        </template>
+  
+        <template #tabs>
+          <div class="incoming-server-tabs">
+            <button class="active incoming-server-tab" type="button">
+              {{ t('views.mail.sections.dashboard.smtp') }}
+            </button>
+          </div>
+        </template>
+  
+        <template #footer>
           <div class="what-is-container">
             <ph-info size="24" weight="fill" />
-            <span>{{ t('views.mail.sections.dashboard.whatIsImap') }}</span>
-
-            <tool-tip :alt="t('views.mail.sections.dashboard.whatIsImap')">
-              <i18n-t keypath="views.mail.sections.dashboard.whatIsImapContent" tag="span">
+            <span>{{ t('views.mail.sections.dashboard.whatIsSmtp') }}</span>
+  
+            <tool-tip :alt="t('views.mail.sections.dashboard.whatIsSmtp')">
+              <i18n-t keypath="views.mail.sections.dashboard.whatIsSmtpContent" tag="span">
                 <template #supportUrl>
-                  <a href="https://support.tb.pro/hc/articles/46108465880467-What-is-IMAP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
+                  <a href="https://support.tb.pro/hc/articles/46106891841043-What-is-SMTP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
                 </template>
               </i18n-t>
             </tool-tip>
           </div>
         </template>
-        <template v-else>
-          <div class="what-is-container">
-            <ph-info size="24" weight="fill" />
-            <span>{{ t('views.mail.sections.dashboard.whatIsJmap') }}</span>
-
-            <tool-tip :alt="t('views.mail.sections.dashboard.whatIsJmap')">
-              <i18n-t keypath="views.mail.sections.dashboard.whatIsJmapContent" tag="span">
-                <template #supportUrl>
-                  <a href="https://support.tb.pro/hc/articles/46109214513939-What-is-JMAP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
-                </template>
-              </i18n-t>
-            </tool-tip>
-          </div>
-        </template>
-      </template>
-    </server-settings-card-item>
-
-    <server-settings-card-item
-      :title="t('views.mail.sections.dashboard.outgoingServer')"
-      :details="smtpServerDetails"
-    >
-      <template #icon>
-        <img src="@/assets/svg/outbox-icon.svg" alt="Outgoing icon" />
-      </template>
-
-      <template #tabs>
-        <div class="incoming-server-tabs">
-          <button class="active incoming-server-tab" type="button">
-            {{ t('views.mail.sections.dashboard.smtp') }}
-          </button>
-        </div>
-      </template>
-
-      <template #footer>
-        <div class="what-is-container">
-          <ph-info size="24" weight="fill" />
-          <span>{{ t('views.mail.sections.dashboard.whatIsSmtp') }}</span>
-
-          <tool-tip :alt="t('views.mail.sections.dashboard.whatIsSmtp')">
-            <i18n-t keypath="views.mail.sections.dashboard.whatIsSmtpContent" tag="span">
-              <template #supportUrl>
-                <a href="https://support.tb.pro/hc/articles/46106891841043-What-is-SMTP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
-              </template>
-            </i18n-t>
-          </tool-tip>
-        </div>
-      </template>
-    </server-settings-card-item>
+      </server-settings-card-item>
+    </div>
   </div>
 </template>
 
@@ -141,6 +152,14 @@ const incomingServerDetails = computed(() =>
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
+
+  &.spacing-small {
+    gap: 0.5rem;
+  }
+}
+
+.inner-spacing {
+  margin-block-end: 0.25rem;
 }
 
 @media (min-width: 1024px) {
