@@ -9,9 +9,10 @@ import {
   LinkButton,
   PrimaryButton,
   TextInput,
+  ToolTip,
 } from '@thunderbirdops/services-ui';
+import { PhX, PhInfo } from '@phosphor-icons/vue';
 import { APP_PASSWORD_SUPPORT_URL } from '@/defines';
-import { PhX } from '@phosphor-icons/vue';
 
 const { t } = useI18n();
 
@@ -100,15 +101,34 @@ const onCancelSetPassword = () => {
       </template>
     </div>
 
-    <p>
-      <i18n-t keypath="views.mail.sections.emailSettings.changePasswordDescription">
-        <template v-slot:supportUrl>
-          <a :href="APP_PASSWORD_SUPPORT_URL" data-testid="go-to-app-password-support-url">
-            {{ $t('views.mail.sections.emailSettings.appPasswords') }}
-          </a>
-        </template>
-      </i18n-t>
-    </p>
+    <p>{{ t('views.mail.sections.emailSettings.changePasswordDescription') }}</p>
+
+    <template v-if="accountHasAppPasswords">
+      <p>
+        {{ t('views.mail.sections.emailSettings.changePasswordDescriptionTwo') }}
+        <span class="info-tooltip-trigger">
+          <ph-info size="16" />
+          <tool-tip :alt="t('views.mail.sections.emailSettings.changePasswordTooltip')">
+            <span>{{ t('views.mail.sections.emailSettings.changePasswordTooltip') }}</span>
+          </tool-tip>
+        </span>
+      </p>
+    </template>
+    <template v-else>
+      <p>
+        {{ t('views.mail.sections.emailSettings.createPasswordDescriptionTwo') }}
+        <span class="info-tooltip-trigger">
+          <ph-info size="16" />
+          <tool-tip :alt="t('views.mail.sections.emailSettings.createPasswordTooltip')">
+            <i18n-t keypath="views.mail.sections.emailSettings.createPasswordTooltip" tag="span">
+              <template #supportUrl>
+                <a :href="APP_PASSWORD_SUPPORT_URL" target="_blank">{{ t('views.mail.sections.emailSettings.clickHere') }}</a>
+              </template>
+            </i18n-t>
+          </tool-tip>
+        </span>
+      </p>
+    </template>
 
     <notice-bar :type="NoticeBarTypes.Success" v-if="successMessage" class="success-message">
       {{ successMessage }}
@@ -155,7 +175,6 @@ const onCancelSetPassword = () => {
           </link-button>
         </div>
       </form>
-      <p>{{ t('views.mail.sections.emailSettings.changePasswordDescriptionTwo') }}</p>
     </template>
     <template v-else-if="appPasswords.length > 0">
       <primary-button variant="outline" @click="showPasswordForm = true">{{
@@ -173,9 +192,16 @@ const onCancelSetPassword = () => {
 <style scoped>
 .app-password-side-container {
   p {
+    display: flex;
+    align-items: center;
+    gap: 1ch;
     margin-block-end: 1rem;
     line-height: 1.32;
     color: var(--colour-ti-secondary);
+
+    svg {
+      cursor: pointer;
+    }
   }
 
   form {
@@ -203,6 +229,45 @@ const onCancelSetPassword = () => {
 
   .success-message {
     margin-block-end: 1rem;
+  }
+
+  .info-tooltip-trigger {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+
+    &::before {
+      content: '';
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      width: max(100%, 18rem);
+      height: 0.75rem;
+      transform: translateX(-50%);
+    }
+  }
+
+  .info-tooltip-trigger :deep(.tooltip) {
+    visibility: hidden;
+    opacity: 0;
+    width: max-content;
+    bottom: calc(100% + 0.5rem);
+    left: 50%;
+    top: auto;
+    transform: translateX(-50%);
+    font-size: 0.8125rem;
+  }
+
+  .info-tooltip-trigger:hover :deep(.tooltip),
+  .info-tooltip-trigger :deep(.tooltip:hover) {
+    visibility: visible;
+    opacity: 1;
+    cursor: default;
+  }
+
+  .info-tooltip-trigger :deep(.tooltip a) {
+    color: var(--colour-ti-highlight);
   }
 }
 
