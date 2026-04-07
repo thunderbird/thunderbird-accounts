@@ -10,6 +10,8 @@ withDefaults(defineProps<{
   isPinned?: boolean;
 }>(), {
   padding: 'default',
+  isPinnable: false,
+  isPinned: false,
 });
 
 defineEmits<{

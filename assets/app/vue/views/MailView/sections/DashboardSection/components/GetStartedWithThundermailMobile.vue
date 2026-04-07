@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhDownloadSimple } from '@phosphor-icons/vue';
+import encodeQR from 'qr';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import {
   encodeAccounts,
@@ -9,8 +10,7 @@ import {
   CONNECTION_SECURITY,
   AUTHENTICATION_TYPE,
 } from 'thunderbird-account-qr-code';
-import encodeQR from 'qr';
-
+import { DOWNLOAD_THUNDERBIRD_MOBILE_URL } from '@/defines';
 import ActionCard from '@/components/ActionCard.vue';
 
 const { t } = useI18n();
@@ -65,7 +65,7 @@ export default {
         <ph-download-simple :size="20" />
       </template>
       <template #action>
-        <a href="https://play.google.com/store/apps/details?id=net.thunderbird.android" target="_blank" rel="noopener noreferrer" class="download-link">
+        <a :href="DOWNLOAD_THUNDERBIRD_MOBILE_URL" target="_blank" rel="noopener noreferrer" class="download-link">
           <primary-button size="small" variant="outline">
             {{ t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.downloadButton') }}
           </primary-button>

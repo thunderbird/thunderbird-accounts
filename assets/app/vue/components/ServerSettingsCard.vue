@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { PhInfo } from '@phosphor-icons/vue';
 import { ToolTip } from '@thunderbirdops/services-ui';
 import ServerSettingsCardItem from '@/components/ServerSettingsCardItem.vue';
+import { WHAT_IS_IMAP_SUPPORT_URL, WHAT_IS_JMAP_SUPPORT_URL, WHAT_IS_SMTP_SUPPORT_URL } from '@/defines';
 
 defineProps<{
   isManualConfigurationSection?: boolean;
@@ -89,7 +90,7 @@ const incomingServerDetails = computed(() =>
               <tool-tip :alt="t('views.mail.sections.dashboard.whatIsImap')">
                 <i18n-t keypath="views.mail.sections.dashboard.whatIsImapContent" tag="span">
                   <template #supportUrl>
-                    <a href="https://support.tb.pro/hc/articles/46108465880467-What-is-IMAP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
+                    <a :href="WHAT_IS_IMAP_SUPPORT_URL" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
                   </template>
                 </i18n-t>
               </tool-tip>
@@ -103,7 +104,7 @@ const incomingServerDetails = computed(() =>
               <tool-tip :alt="t('views.mail.sections.dashboard.whatIsJmap')">
                 <i18n-t keypath="views.mail.sections.dashboard.whatIsJmapContent" tag="span">
                   <template #supportUrl>
-                    <a href="https://support.tb.pro/hc/articles/46109214513939-What-is-JMAP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
+                    <a :href="WHAT_IS_JMAP_SUPPORT_URL" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
                   </template>
                 </i18n-t>
               </tool-tip>
@@ -136,7 +137,7 @@ const incomingServerDetails = computed(() =>
             <tool-tip :alt="t('views.mail.sections.dashboard.whatIsSmtp')">
               <i18n-t keypath="views.mail.sections.dashboard.whatIsSmtpContent" tag="span">
                 <template #supportUrl>
-                  <a href="https://support.tb.pro/hc/articles/46106891841043-What-is-SMTP" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
+                  <a :href="WHAT_IS_SMTP_SUPPORT_URL" target="_blank">{{ t('views.mail.sections.dashboard.clickHere') }}</a>
                 </template>
               </i18n-t>
             </tool-tip>

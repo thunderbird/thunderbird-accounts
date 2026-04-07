@@ -2,8 +2,8 @@
 import { useI18n } from 'vue-i18n';
 import { PhArrowSquareOut, PhDownloadSimple } from '@phosphor-icons/vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
-
 import ActionCard from '@/components/ActionCard.vue';
+import { DOWNLOAD_THUNDERBIRD_DESKTOP_URL } from '@/defines';
 
 const { t } = useI18n();
 
@@ -42,7 +42,7 @@ export default {
         <ph-download-simple :size="20" />
       </template>
       <template #action>
-        <a href="https://www.thunderbird.net/thunderbird/all/" target="_blank" rel="noopener noreferrer" class="download-link">
+        <a :href="DOWNLOAD_THUNDERBIRD_DESKTOP_URL" target="_blank" rel="noopener noreferrer" class="download-link">
           <primary-button size="small" variant="outline">
             {{ t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.downloadButton') }}
           </primary-button>
