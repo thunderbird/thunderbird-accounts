@@ -4,6 +4,7 @@ import { PhArrowSquareOut, PhQuestion, PhArrowRight, PhGear } from '@phosphor-ic
 import { LinkButton } from '@thunderbirdops/services-ui';
 import ActionCard from '@/components/ActionCard.vue';
 import ServerSettingsCard from '@/components/ServerSettingsCard.vue';
+import { OTHER_APPS_SUPPORT_URL } from '@/defines';
 
 const { t } = useI18n();
 </script>
@@ -45,7 +46,7 @@ const { t } = useI18n();
         <ph-question :size="20" />
       </template>
       <template #action>
-        <link-button size="small" href="#" class="need-help-button">
+        <link-button size="small" :href="OTHER_APPS_SUPPORT_URL" target="_blank" class="need-help-button">
           {{ t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.needHelpButtonLabel') }}
 
           <template #iconRight>

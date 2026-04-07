@@ -29,7 +29,6 @@ defineProps<{
   padding: 0.75rem 0.5rem 0.5rem;
   border: 1px solid var(--colour-neutral-border);
   border-radius: 8px;
-  overflow: clip;
 
   .action-content {
     display: flex;
