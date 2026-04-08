@@ -105,7 +105,6 @@
           "getStartedWithThundermail": {
             "title": "Get started with Thundermail",
             "description": "Connect your new email address to start sending and receiving.",
-            "imgAlt": "Thunderbird client",
             "tabs": {
               "desktop": "Desktop",
               "mobile": "Mobile",
@@ -152,7 +151,9 @@
           "whatIsImapContent": "IMAP stands for Internet Message Access Protocol. It allows an email client (such as Thunderbird) to access messages stored on a mail server. For more information, {supportUrl}.",
           "whatIsJmap": "What is JMAP?",
           "whatIsJmapContent": "JMAP stands for JSON Meta Application Protocol. It’s a robust way to receive and relay mail server messages in modern web-based or mobile environments. For more information, {supportUrl}.",
-          "clickHere": "click here"
+          "clickHere": "click here",
+          "copyServer": "Copy server hostname to clipboard",
+          "copyPort": "Copy server port to clipboard"
         },
         "emailSettings": {
           "emailSettings": "Email Settings",

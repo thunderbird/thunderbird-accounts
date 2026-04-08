@@ -78,7 +78,7 @@ export default {
         </template>
       </segmented-control-slider>
 
-      <img class="thunderbird-client-image" :src="thunderbirdClientImage" :alt="t('views.mail.sections.dashboard.getStartedWithThundermail.imgAlt')" />
+      <img class="thunderbird-client-image" :src="thunderbirdClientImage" alt="" />
     </div>
   </card-container>
 </template>

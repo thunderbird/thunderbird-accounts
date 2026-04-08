@@ -65,11 +65,16 @@ export default {
         <ph-download-simple :size="20" />
       </template>
       <template #action>
-        <a :href="DOWNLOAD_THUNDERBIRD_MOBILE_URL" target="_blank" rel="noopener noreferrer" class="download-link">
-          <primary-button size="small" variant="outline">
-            {{ t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.downloadButton') }}
-          </primary-button>
-        </a>
+        <primary-button
+          size="small"
+          variant="outline"
+          :href="DOWNLOAD_THUNDERBIRD_MOBILE_URL"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="download-button"
+        >
+          {{ t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.downloadButton') }}
+        </primary-button>
       </template>
     </action-card>
   </div>
@@ -81,9 +86,8 @@ export default {
   flex-direction: column;
   gap: 0.625rem;
 
-  .download-link {
-    display: inline-block;
-    text-decoration: none;
+  .download-button {
+    height: 2rem;
   }
   
   .qr-code-container {
