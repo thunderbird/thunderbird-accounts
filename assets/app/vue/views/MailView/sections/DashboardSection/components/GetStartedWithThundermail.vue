@@ -90,9 +90,18 @@ export default {
   flex-wrap: wrap;
 
   .thunderbird-client-image {
+    display: none;
     max-width: 306px;
     height: 100%;
     object-fit: contain;
+  }
+}
+
+@media (min-width: 768px) {
+  .get-started-with-thundermail-content {
+    .thunderbird-client-image {
+      display: block;
+    }
   }
 }
 </style>
