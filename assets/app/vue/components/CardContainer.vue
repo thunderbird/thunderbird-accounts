@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { PhPushPin, PhPushPinSimple } from '@phosphor-icons/vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 withDefaults(defineProps<{
   dark?: boolean;
@@ -28,7 +31,12 @@ defineEmits<{
     <header>
       <h2 v-if="title" :class="{ 'with-subtitle': !!subtitle }">{{ title }}</h2>
 
-      <button v-if="isPinnable" @click="$emit('togglePinned')">
+      <button
+        v-if="isPinnable"
+        :aria-label="isPinned ? t('components.cardContainer.unpin') : t('components.cardContainer.pin')"
+        :title="isPinned ? t('components.cardContainer.unpin') : t('components.cardContainer.pin')"
+        @click="$emit('togglePinned')"
+      >
         <ph-push-pin v-if="isPinned" size="20" />
         <ph-push-pin-simple v-else size="20" />
       </button>
@@ -60,9 +68,15 @@ section {
       align-items: center;
       color: var(--colour-ti-secondary);
       flex-shrink: 0;
+      border-radius: 4px;
 
       &:hover {
         color: var(--colour-ti-base);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--colour-primary-default);
+        outline-offset: 2px;
       }
     }
   }
