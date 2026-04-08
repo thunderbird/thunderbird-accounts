@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhCopySimple, PhDatabase, PhShieldCheck } from '@phosphor-icons/vue';
 
@@ -14,12 +15,18 @@ defineProps<{
 }>();
 
 const { t } = useI18n();
+const copyError = ref('');
+let copyErrorTimer: ReturnType<typeof setTimeout> | undefined;
 
 const copyValue = async (value: string | number) => {
+  copyError.value = '';
+  clearTimeout(copyErrorTimer);
+
   try {
     await navigator.clipboard.writeText(String(value));
   } catch (_err) {
-    // noop
+    copyError.value = t('components.serverSettingsCardItem.copyError');
+    copyErrorTimer = setTimeout(() => { copyError.value = ''; }, 4000);
   }
 };
 </script>
@@ -58,6 +65,8 @@ const copyValue = async (value: string | number) => {
         </button>
       </div>
     </div>
+
+    <p v-if="copyError" class="copy-error" role="alert">{{ copyError }}</p>
 
     <slot name="footer" />
   </div>
@@ -133,6 +142,13 @@ const copyValue = async (value: string | number) => {
   strong {
     font-size: 0.6875rem;
   }
+}
+
+.server-settings-card .copy-error {
+  color: var(--colour-danger-default);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.375rem;
+  margin: 0;
 }
 
 .server-settings-card .copy-btn {
