@@ -59,7 +59,7 @@ const incomingServerDetails = computed(() =>
         :details="incomingServerDetails"
       >
         <template #icon>
-          <img src="@/assets/svg/inbox-icon.svg" alt="Inbox icon" />
+          <img src="@/assets/svg/inbox-icon.svg" alt="" />
         </template>
   
         <template #tabs>
@@ -118,7 +118,7 @@ const incomingServerDetails = computed(() =>
         :details="smtpServerDetails"
       >
         <template #icon>
-          <img src="@/assets/svg/outbox-icon.svg" alt="Outgoing icon" />
+          <img src="@/assets/svg/outbox-icon.svg" alt="" />
         </template>
   
         <template #tabs>
