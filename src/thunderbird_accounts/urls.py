@@ -14,7 +14,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from thunderbird_accounts.authentication import views as auth_views
 from thunderbird_accounts.core import views as core_views
 from thunderbird_accounts.infra import views as infra_views
-from thunderbird_accounts.mail import views as mail_views
+from thunderbird_accounts.mail import views as mail_views, api as mail_api
 from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
 
@@ -68,6 +68,7 @@ urlpatterns = [
     path(
         'api/v1/subscription/plan/info/', subscription_views.get_subscription_plan_info, name='subscription_plan_info'
     ),
+    path('api/v1/mail/is-username-available/', mail_api.is_username_available, name='api_is_username_available'),
     # Health check
     path('health', infra_views.health_check),
 ]
