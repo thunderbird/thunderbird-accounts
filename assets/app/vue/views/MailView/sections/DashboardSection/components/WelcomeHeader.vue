@@ -168,6 +168,8 @@ header {
 @media (min-width: 1024px) {
   header {
     grid-template-columns: 1fr 1fr;
+    width: 968px;
+    margin-inline: auto;
   }
 }
 </style>

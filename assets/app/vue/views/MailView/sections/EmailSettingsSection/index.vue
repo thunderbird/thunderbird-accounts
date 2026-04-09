@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhSliders } from '@phosphor-icons/vue';
 import { useTour, FTUE_STEPS } from '@/composables/useTour';
@@ -12,7 +13,7 @@ import TourCard from '@/components/TourCard.vue';
 import AppPasswordSide from './components/AppPasswordSide.vue';
 import UserInfoSide from './components/UserInfoSide.vue';
 import EmailAliases from './components/EmailAliases.vue';
-import { ref } from 'vue';
+import ViewServerSettings from './components/ViewServerSettings.vue';
 
 const { t } = useI18n();
 const tour = useTour();
@@ -28,7 +29,7 @@ export default {
 
 <template>
   <section id="email-settings">
-    <card-container>
+    <card-container :title="t('views.mail.sections.emailSettings.emailSettings')">
       <tour-card
         v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.FINAL"
         :text="t('views.mail.ftue.step3Text')"
@@ -41,39 +42,39 @@ export default {
         @close="tour.skip()"
       />
 
-      <h2>{{ t('views.mail.sections.emailSettings.emailSettings') }}</h2>
-
       <div class="email-settings-content">
         <user-info-side/>
         <app-password-side :app-passwords="appPasswords" />
       </div>
 
-      <details-summary :title="t('views.mail.sections.emailSettings.emailAliases')" default-open>
+      <details-summary
+        class="email-aliases-details-summary"
+        :title="t('views.mail.sections.emailSettings.emailAliases')"
+        default-open
+      >
         <template #icon>
           <ph-sliders size="24" />
         </template>
 
         <email-aliases />
       </details-summary>
+
+      <view-server-settings />
     </card-container>
   </section>
 </template>
 
 <style scoped>
-h2 {
-  font-size: 1.5rem;
-  font-weight: 500;
-  font-family: metropolis;
-  color: var(--colour-ti-highlight);
-  margin-block-end: 1.5rem;
-}
-
 .email-settings-content {
   display: grid;
   grid-template-columns: 1fr;
   column-gap: 2rem;
   margin-block-end: 2.25rem;
   color: var(--colour-ti-secondary);
+}
+
+.email-aliases-details-summary {
+  margin-block-end: 2.25rem;
 }
 
 @media (min-width: 768px) {

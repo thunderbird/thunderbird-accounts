@@ -19,9 +19,10 @@ export default {
 
 <template>
   <div class="security-settings-view">
-    <card-container class="security-settings-card">
-      <h2>{{ t('views.mail.views.securitySettings.securitySettings') }}</h2>
-
+    <card-container
+      class="security-settings-card"
+      :title="t('views.mail.views.securitySettings.securitySettings')"
+    >
       <account-activity />
       <allow-list />
     </card-container>
@@ -39,22 +40,6 @@ export default {
     flex-direction: column;
     gap: 2.25rem;
     width: 100%;
-
-    h2 {
-      font-size: 1.5rem;
-      font-weight: 500;
-      font-family: metropolis;
-      color: var(--colour-ti-highlight);
-    }
-  }
-}
-
-@media (min-width: 1024px) {
-  .security-settings-view {
-    .security-settings-card {
-      width: 971px;
-      margin: 0 auto;
-    }
   }
 }
 </style>

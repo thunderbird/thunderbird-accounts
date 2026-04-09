@@ -10,6 +10,13 @@
     "login": "Login"
   },
   "components": {
+    "cardContainer": {
+      "unpin": "Unpin",
+      "pin": "Pin"
+    },
+    "serverSettingsCardItem": {
+      "copyError": "Unable to copy to clipboard"
+    },
     "needSupportCard": {
       "needSupport": "Need Support?"
     },
@@ -95,31 +102,58 @@
             "storageOf": "{used} of {total}",
             "errorMessage": "Failed to load subscription information"
           },
-          "qrCodeModal": {
-            "title": "Setup Thunderbird for Android",
-            "description": "Scan the QR code from within the app to automatically configure your account:",
-            "qrCodeAltDescription": "A QR Code to be used with Thunderbird for Android account importing."
+          "getStartedWithThundermail": {
+            "title": "Get started with Thundermail",
+            "description": "Connect your new email address to start sending and receiving.",
+            "tabs": {
+              "desktop": "Desktop",
+              "mobile": "Mobile",
+              "otherApps": "Other Apps"
+            },
+            "desktopPanel": {
+              "connectTitle": "Connect Thunderbird Desktop",
+              "connectDescription": "Launch the configuration wizard to add Thundermail to desktop automatically.",
+              "connectButton": "Connect now",
+              "downloadTitle": "Download Thunderbird Desktop",
+              "downloadDescription": "We recommend using the desktop application for the best experience.",
+              "downloadButton": "Download"
+            },
+            "mobilePanel": {
+              "qrCodeTitle": "Scan QR Code",
+              "qrCodeDescription": "Open Thunderbird for Android and scan the QR code below.",
+              "qrCodeAlt": "A QR Code to be used with Thunderbird for Android account importing.",
+              "downloadTitle": "Download Thunderbird for Android",
+              "downloadDescription": "Install the mobile app on your phone or tablet.",
+              "downloadButton": "Download"
+            },
+            "otherAppsPanel": {
+              "title": "Automatic Configuration",
+              "descriptionOne": "Most modern email applications will detect your account settings automatically. Just enter your email and password.",
+              "descriptionTwo": "Some email apps may require an {appPassword} instead of your regular account sign-in.",
+              "appPassword": "app password",
+              "manualConfigurationTitle": "Manual Configuration",
+              "needHelpTitle": "Need Help?",
+              "needHelpDescription": "Read our step-by-step guide for connecting popular email applications.",
+              "needHelpButtonLabel": "Visit Support Article"
+            }
           },
-          "generateQrCodeButtonLabel": "Generate QR Code for Thunderbird for Android",
-          "setUpAnEmailApp": "Set up an Email app",
-          "downloadDescription": "For a quick and easy setup, we recommend using Thunderbird. Just download the app, enter your email address and password, and you're ready to go.",
-          "downloadButtonLabel": "Download",
-          "thunderbirdClientAlt": "Thunderbird client",
-          "connectYourAccount": "Connect your account",
-          "connectYourAccountFirstLine": "Many email apps can configure your account automatically. Enter your email address and password to get started.",
-          "connectYourAccountSecondLine": "If setup doesn’t work, try connecting manually using server settings.",
           "viewServerSettings": "View server settings",
           "incomingServer": "Incoming server",
           "outgoingServer": "Outgoing server",
-          "imap": "IMAP (Recommended)",
+          "imap": "IMAP",
           "jmap": "JMAP",
-          "protocol": "Protocol",
-          "hostname": "Hostname",
-          "port": "Port",
-          "authentication": "Authentication",
+          "smtp": "SMTP",
+          "server": "SERVER:",
+          "port": "PORT:",
           "whatIsSmtp": "What is SMTP?",
+          "whatIsSmtpContent": "SMTP stands for Simple Mail Transfer Protocol. It enables an email client (such as Thunderbird) to deliver messages to other email addresses through a mail server. For more information, {supportUrl}.",
           "whatIsImap": "What is IMAP?",
-          "whatIsJmap": "What is JMAP?"
+          "whatIsImapContent": "IMAP stands for Internet Message Access Protocol. It allows an email client (such as Thunderbird) to access messages stored on a mail server. For more information, {supportUrl}.",
+          "whatIsJmap": "What is JMAP?",
+          "whatIsJmapContent": "JMAP stands for JSON Meta Application Protocol. It’s a robust way to receive and relay mail server messages in modern web-based or mobile environments. For more information, {supportUrl}.",
+          "clickHere": "click here",
+          "copyServer": "Copy server hostname to clipboard",
+          "copyPort": "Copy server port to clipboard"
         },
         "emailSettings": {
           "emailSettings": "Email Settings",
@@ -127,12 +161,16 @@
           "displayName": "Display name",
           "appPassword": "App Password",
           "appPasswords": "App Passwords",
+          "clickHere": "click here",
           "close": "Close",
           "change": "change",
           "set": "Set",
           "notSet": "Not set",
-          "changePasswordDescription": "{supportUrl} allows you to sign in to some apps using a separate password. They are used for email clients that do not support modern secure authentication via OAuth2.",
-          "changePasswordDescriptionTwo": "For security reasons, this password cannot be shown again. Changing your app password will log you out of all clients using the prior password.",
+          "changePasswordDescription": "Use this separate password to connect apps that can't use your regular Thundermail sign-in.",
+          "changePasswordDescriptionTwo": "Misplaced it? Create a new one.",
+          "createPasswordDescriptionTwo": "Once set, it can't be viewed or recovered.",
+          "createPasswordTooltip": "For security reasons, this password is never stored or shown again. For more information, {supportUrl}.",
+          "changePasswordTooltip": "Changing your app password will log you out of all current email clients.",
           "changePasswordButtonLabel": "Change app password",
           "createPasswordButtonLabel": "Create app password",
           "emailAliases": "Email aliases",
