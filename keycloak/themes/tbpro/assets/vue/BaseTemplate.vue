@@ -1,19 +1,46 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import OrbGraphic from '@kc/images/orb-graphic.png';
+import ThundermailLogo from '@kc/svg/thundermail-logo-blue.svg';
+
+// Featured image imports / dpi variants
+import featuredImagePng from '@kc/images/featured-image/left-graphic.png';
+import featuredImageWebp from '@kc/images/featured-image/left-graphic.webp';
+import featuredImageAvif from '@kc/images/featured-image/left-graphic.avif';
+
+import featuredImagePng2x from '@kc/images/featured-image/left-graphic@2x.png';
+import featuredImageWebp2x from '@kc/images/featured-image/left-graphic@2x.webp';
+import featuredImageAvif2x from '@kc/images/featured-image/left-graphic@2x.avif';
+
+import featuredImagePng3x from '@kc/images/featured-image/left-graphic@3x.png';
+import featuredImageWebp3x from '@kc/images/featured-image/left-graphic@3x.webp';
+import featuredImageAvif3x from '@kc/images/featured-image/left-graphic@3x.avif';
+
+const clientUrl = window._page.currentView?.clientUrl;
+
 </script>
 
 <template>
   <section class="bolt-defaults">
     <div class="card">
-      <!-- Left side: Orb graphic -->
+      <!-- Left side: Featured image -->
       <div class="left-side">
-        <img :src="OrbGraphic" alt="Thunderbird Orb" class="orb-graphic" />
+        <picture>
+          <source :srcset="`${featuredImageAvif}, ${featuredImageAvif2x} 2.0x, ${featuredImageAvif3x} 3.0x`"
+            type="image/avif" />
+          <source :srcset="`${featuredImageWebp}, ${featuredImageWebp2x} 2.0x, ${featuredImageWebp3x} 3.0x`"
+            type="image/webp" />
+          <source :srcset="`${featuredImagePng}, ${featuredImagePng2x} 2.0x, ${featuredImagePng3x} 3.0x`"
+            type="image/png" />
+          <img class="featured-image" :src="featuredImagePng" alt="" />
+        </picture>
       </div>
 
       <!-- Right side: Panel -->
       <div class="right-side">
         <div class="panel">
+          <a :href="clientUrl" class="logo-link">
+            <img :src="ThundermailLogo" alt="Thundermail" class="base-template__logo" />
+          </a>
           <slot />
         </div>
       </div>
@@ -23,15 +50,22 @@ import OrbGraphic from '@kc/images/orb-graphic.png';
 
 <style scoped>
 section {
+  /* A little over 52rem to avoid some overlap. Ideally this should align with the featured image's height. */
+  --max-card-height: 52.1rem;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
 
+  .base-template__logo {
+    height: 3rem;
+  }
+
   .card {
     width: 100%;
     height: auto;
     min-height: 100vh;
+    max-height: var(--max-card-height);
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -39,6 +73,7 @@ section {
 
     .left-side {
       display: none;
+      position: relative;
     }
 
     .right-side {
@@ -64,6 +99,8 @@ section {
 @media (min-width: 640px) {
   section {
     .card {
+      max-height: auto;
+
       .left-side {
         display: block;
         flex: 1;
@@ -71,7 +108,7 @@ section {
         min-height: 100vh;
         background-color: var(--colour-ti-base);
 
-        .orb-graphic {
+        .featured-image {
           display: block;
           width: 100%;
           height: 100%;
@@ -105,7 +142,7 @@ section {
         height: auto;
         min-height: auto;
 
-        .orb-graphic {
+        .featured-image {
           min-height: auto;
           border-radius: 2rem 0 0 2rem;
         }
