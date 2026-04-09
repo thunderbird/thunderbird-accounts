@@ -45,11 +45,7 @@ export default {
 <template>
   <notice-bar :type="NoticeBarTypes.Critical" v-if="firstError">{{ firstError }}</notice-bar>
   <message-bar v-else/>
-
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
-
+  
   <h2 data-testid="header-text">{{ $t('loginAccountTitle') }}</h2>
   <form id="kc-form-login" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
         @keyup.enter="onSubmit">

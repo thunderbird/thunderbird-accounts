@@ -63,7 +63,7 @@ const onSubmit = () => {
 </script>
 
 <script>
-export default {
+export default { 
   name: 'RegisterView'
 };
 </script>
@@ -72,9 +72,7 @@ export default {
   <div id="i18n-workaround">
     <span id="invalidPasswordConfirmMessage">{{ $t('invalidPasswordConfirmMessage') }}</span>
   </div>
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
+
   <h2 data-testid="title">{{ $t('registerTitle') }}</h2>
 
   <slot name="notice-bars">

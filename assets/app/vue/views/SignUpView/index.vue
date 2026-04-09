@@ -7,6 +7,8 @@ import kcEn from '@/locales/en.kc.json';
 import RegisterView from '@kc/vue/views/RegisterView/index.vue';
 import BaseTemplate from '@kc/vue/BaseTemplate.vue';
 
+import Step1Username from './views/Step1Username/index.vue';
+
 // Import our i18n composable
 import i18nInstance from '@/composables/i18n';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
@@ -15,20 +17,27 @@ import { SERVER_MESSAGE_LEVEL } from '@/types';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
+import { useSignUpFlowStore } from './stores/signUpFlowStore';
+import { storeToRefs } from 'pinia';
 
 const { t } = useI18n();
 const route = useRoute();
+const signUpFlowStore = useSignUpFlowStore();
 const isSignUpComplete = route.name === 'sign-up-complete';
 
-// Note: We only support english right now
-const locale = 'en';
+const { lang, timezone } = storeToRefs(signUpFlowStore);
 
+// We only support english right now :(
+lang.value = 'en';
+timezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
+
+// TODO: Remove me
 // Keycloak also uses window page variables, so set them up as it expects
 window._page.currentView = {
   errors: [],
   formAction: '/users/sign-up/',
   clientUrl: window.location.origin,
-  currentLocale: locale,
+  currentLocale: lang.value,
   tbProPrimaryDomain: window._page.tbProPrimaryDomain,
   attributes: {
     'username': window._page?.formData?.username || '',
@@ -36,9 +45,6 @@ window._page.currentView = {
   }
 };
 window._page.pageId = route.name.toString();
-
-// Merge some localization
-i18nInstance.global.mergeLocaleMessage(locale, { ...(kcEn ?? {}) });
 
 // Load in our django error messages
 const serverMessages = window._page.serverMessages;
@@ -64,7 +70,7 @@ export default {
 
 <template>
   <base-template>
-    <register-view v-if="!isSignUpComplete">
+    <step1-username v-if="!isSignUpComplete">
       <template v-slot:notice-bars>
         <section class="server-messages" v-if="serverMessages !== null">
           <template v-for="message in serverMessages" :key="message.message">
@@ -81,7 +87,7 @@ export default {
       <template v-slot:form-extras>
         <csrf-token />
       </template>
-    </register-view>
+    </step1-username>
     <section v-else>
       <a href="/" class="logo-link">
         <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
