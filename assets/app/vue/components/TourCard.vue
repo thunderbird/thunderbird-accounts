@@ -26,17 +26,19 @@ const emit = defineEmits(['next', 'back', 'close']);
       </button>
     </header>
 
-    <p>{{ text }}</p>
-    <p v-if="subtitle">{{ subtitle }}</p>
-
-    <div class="buttons-container">
-      <link-button v-if="showBack" size="small" @click="emit('back')">
-        {{ t('views.mail.ftue.back') }}
-      </link-button>
-
-      <primary-button size="small" @click="emit('next')">
-        {{ nextLabel || t('views.mail.ftue.next') }}
-      </primary-button>
+    <div class="content">
+      <p>{{ text }}</p>
+      <p v-if="subtitle">{{ subtitle }}</p>
+  
+      <div class="buttons-container">
+        <link-button v-if="showBack" size="small" @click="emit('back')">
+          {{ t('views.mail.ftue.back') }}
+        </link-button>
+  
+        <primary-button size="small" @click="emit('next')">
+          {{ nextLabel || t('views.mail.ftue.next') }}
+        </primary-button>
+      </div>
     </div>
   </div>
 </template>
@@ -54,12 +56,12 @@ const emit = defineEmits(['next', 'back', 'close']);
   transform: translateX(50%);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
   width: 240px;
   padding: 0.75rem 1rem;
   color: var(--colour-ti-base);
   background-color: var(--colour-neutral-base);
-  box-shadow: 0.25rem 0.25rem 1rem 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0.5rem 1rem 0 rgba(0, 0, 0, 0.2);
   border-radius: 0.5rem;
   font-size: 0.875rem;
   z-index: 2;
@@ -85,12 +87,19 @@ const emit = defineEmits(['next', 'back', 'close']);
     }
 
     .close-button {
+      height: 1.5rem;
       background: none;
       border: none;
       cursor: pointer;
       padding: 0;
       color: var(--colour-ti-muted);
     }
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
   }
 
   .buttons-container {
@@ -100,8 +109,9 @@ const emit = defineEmits(['next', 'back', 'close']);
   }
 }
 
-@media (min-width: 1300px) {
+@media (min-width: 768px) {
   .tour-card {
+    top: -0.625rem;
     right: 0;
   }
 }

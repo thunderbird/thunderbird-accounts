@@ -13,8 +13,11 @@ import {
 } from '@thunderbirdops/services-ui';
 import { PhX, PhInfo } from '@phosphor-icons/vue';
 import { APP_PASSWORD_SUPPORT_URL } from '@/defines';
+import { useTour, FTUE_STEPS } from '@/composables/useTour';
+import TourCard from '@/components/TourCard.vue';
 
 const { t } = useI18n();
+const tour = useTour();
 
 const props = defineProps<{
   appPasswords?: string[];
@@ -29,6 +32,10 @@ const successMessage = ref<string>(null);
 const isSubmitting = ref(false);
 
 const userEmail = computed(() => window._page?.userEmail);
+
+const nextStepText = computed(() => {
+  return t('views.mail.ftue.nextStep', { step: t('views.mail.ftue.emailAliases') });
+})
 
 const resetPasswordForm = () => {
   errorMessage.value = '';
@@ -91,6 +98,18 @@ const onCancelSetPassword = () => {
 
 <template>
   <div id="app-password-container" class="app-password-side-container">
+    <tour-card
+      v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.APP_PASSWORDS"
+      :text="t('views.mail.ftue.step2Text')"
+      :current-step="tour.currentStep.value"
+      :total-steps="FTUE_STEPS.FINAL"
+      :subtitle="nextStepText"
+      show-back
+      @next="tour.next()"
+      @back="tour.back()"
+      @close="tour.skip()"
+    />
+
     <div class="app-password-set-indicator-container">
       <strong>{{ t('views.mail.sections.emailSettings.appPassword') }}:</strong>
       <template v-if="accountHasAppPasswords">

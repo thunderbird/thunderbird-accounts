@@ -2,9 +2,11 @@ import { ref, watch } from 'vue';
 
 export const FTUE_STEPS = {
   INITIAL: 0,
-  DASHBOARD: 1,
-  CUSTOM_DOMAINS: 2,
-  FINAL: 3,
+  CONNECT_EMAIL: 1,
+  APP_PASSWORDS: 2,
+  EMAIL_ALIASES: 3,
+  CUSTOM_DOMAINS: 4,
+  FINAL: 5,
 }
 
 const FTUE_STORAGE_KEY = 'tb_accounts_ftue_completed';
@@ -34,8 +36,16 @@ export const useTour = () => {
       id: FTUE_STEPS.INITIAL,
     },
     {
-      id: FTUE_STEPS.DASHBOARD,
-      targetId: 'dashboard',
+      id: FTUE_STEPS.CONNECT_EMAIL,
+      targetId: 'connect-email',
+    },
+    {
+      id: FTUE_STEPS.APP_PASSWORDS,
+      targetId: 'email-settings',
+    },
+    {
+      id: FTUE_STEPS.EMAIL_ALIASES,
+      targetId: 'email-aliases',
     },
     {
       id: FTUE_STEPS.CUSTOM_DOMAINS,
@@ -43,12 +53,11 @@ export const useTour = () => {
     },
     {
       id: FTUE_STEPS.FINAL,
-      targetId: 'email-settings',
     }
   ];
 
   const start = () => {
-    currentStep.value = FTUE_STEPS.DASHBOARD;
+    currentStep.value = FTUE_STEPS.CONNECT_EMAIL;
   };
 
   const next = () => {
@@ -76,7 +85,7 @@ export const useTour = () => {
     const noPrefersReducedMotion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
     const behavior = noPrefersReducedMotion ? 'smooth' : 'auto';
 
-    if (newStep === FTUE_STEPS.INITIAL) {
+    if (newStep === FTUE_STEPS.INITIAL || newStep === FTUE_STEPS.FINAL) {
       window.scrollTo({ top: 0, behavior });
       return;
     }

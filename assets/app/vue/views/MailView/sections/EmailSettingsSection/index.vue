@@ -29,9 +29,12 @@ export default {
 
 <template>
   <section id="email-settings">
-    <card-container :title="t('views.mail.sections.emailSettings.emailSettings')">
+    <card-container
+      id="email-settings"
+      :title="t('views.mail.sections.emailSettings.emailSettings')"
+    >
       <tour-card
-        v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.FINAL"
+        v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.APP_PASSWORDS"
         :text="t('views.mail.ftue.step3Text')"
         :next-label="t('views.mail.ftue.done')"
         :current-step="tour.currentStep.value"
@@ -74,12 +77,17 @@ export default {
 }
 
 .email-aliases-details-summary {
+  position: relative;
   margin-block-end: 2.25rem;
 }
 
 @media (min-width: 768px) {
   .email-settings-content {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .email-aliases-details-summary :deep(.tour-card) {
+    right: -1.5rem;
   }
 }
 </style>

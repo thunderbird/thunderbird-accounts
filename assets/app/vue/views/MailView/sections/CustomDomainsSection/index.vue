@@ -32,6 +32,10 @@ const customDomainFormRef = ref(null);
 const verificationCriticalErrors = ref<string[]>([]);
 const maxCustomDomains = window._page?.maxCustomDomains;
 
+const nextStepText = computed(() => {
+  return t('views.mail.ftue.nextStep', { step: t('views.mail.ftue.yourAccount') });
+})
+
 const handleStepChange = (step: STEP) => {
   currentStep.value = step;
 };
@@ -85,7 +89,8 @@ export default {
     >
       <tour-card
         v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.CUSTOM_DOMAINS"
-        :text="t('views.mail.ftue.step2Text')"
+        :text="t('views.mail.ftue.step4Text')"
+        :subtitle="nextStepText"
         :current-step="tour.currentStep.value"
         :total-steps="FTUE_STEPS.FINAL"
         show-back

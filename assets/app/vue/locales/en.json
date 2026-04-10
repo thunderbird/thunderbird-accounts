@@ -277,9 +277,16 @@
         "back": "Back",
         "done": "Done",
         "step": "Step {step} of {total}",
-        "step1Text": "Download Thunderbird (or your preferred email app) and sign in with your primary email and password to access your new account.",
-        "step2Text": "{'Add a custom domain you own to create additional email addresses like you@yourdomain.com.'}",
-        "step3Text": "Add email addresses using your custom domains."
+        "nextStep": "Next: {step}",
+        "appPassword": "App Password",
+        "emailAliases": "Email aliases",
+        "customDomains": "Custom domains",
+        "yourAccount": "Your account",
+        "step1Text": "Connect your new email address to start sending and receiving messages. Use Thunderbird or any email app you prefer.",
+        "step2Text": "Create an app password for email, calendar, and other apps that need a separate sign-in.",
+        "step3Text": "Claim any additional email aliases you would like to use.",
+        "step4Text": "Add custom domains to create email aliases for any need.",
+        "step5Text": "Go to your Thunderbird Pro account to view account details, manage billing, or cancel your service."
       }
     },
     "manageMfa": {

@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n';
 import { PhDesktop, PhDeviceMobile, PhGlobe } from '@phosphor-icons/vue';
 
 import CardContainer from '@/components/CardContainer.vue';
+import TourCard from '@/components/TourCard.vue';
+import { useTour, FTUE_STEPS } from '@/composables/useTour';
 import { SETUP_TABS, SegmentedControlTab } from '../types';
 import SegmentedControlSlider from './SegmentedControlSlider.vue';
 import GetStartedWithThundermailDesktop from './GetStartedWithThundermailDesktop.vue';
@@ -21,6 +23,7 @@ defineEmits<{
 }>();
 
 const { t } = useI18n();
+const tour = useTour();
 const selectedTab = ref<string>(SETUP_TABS.DESKTOP);
 
 const tabs = computed<SegmentedControlTab[]>(() => [
@@ -43,6 +46,10 @@ const tabs = computed<SegmentedControlTab[]>(() => [
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const thunderbirdClientImage = new URL('@/assets/png/thundermail-dashboard-client.png', import.meta.url).href;
+
+const nextStepText = computed(() => {
+  return t('views.mail.ftue.nextStep', { step: t('views.mail.ftue.appPassword') });
+})
 </script>
 
 <script lang="ts">
@@ -53,6 +60,7 @@ export default {
 
 <template>
   <card-container
+    id="connect-email"
     :title="t('views.mail.sections.dashboard.getStartedWithThundermail.title')"
     :subtitle="t('views.mail.sections.dashboard.getStartedWithThundermail.description')"
     is-pinnable
@@ -60,6 +68,18 @@ export default {
     @toggle-pinned="$emit('togglePinned')"
   >
     <div class="get-started-with-thundermail-content">
+      <tour-card
+        v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.CONNECT_EMAIL"
+        :text="t('views.mail.ftue.step1Text')"
+        :subtitle="nextStepText"
+        :current-step="tour.currentStep.value"
+        :total-steps="FTUE_STEPS.FINAL"
+        show-back
+        @next="tour.next()"
+        @back="tour.back()"
+        @close="tour.skip()"
+      />
+
       <segmented-control-slider
         v-model="selectedTab"
         :tabs="tabs"
