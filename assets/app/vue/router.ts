@@ -31,11 +31,12 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     }
   }
 ] : [
-  // Accounts Routes
+  // Root path
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: '/mail'
   },
+  // Accounts Routes
   {
     path: '/sign-up',
     name: 'sign-up',
