@@ -18,10 +18,16 @@ const emit = defineEmits(['next', 'back', 'close']);
 </script>
 
 <template>
-  <div class="tour-card">
+  <div
+    class="tour-card"
+    role="dialog"
+    :aria-label="t('views.mail.ftue.step', { step: currentStep, total: totalSteps })"
+    aria-modal="false"
+    tabindex="-1"
+  >
     <header>
       <p>{{ t('views.mail.ftue.step', { step: currentStep, total: totalSteps }) }}</p>
-      <button class="close-button" @click="emit('close')">
+      <button class="close-button" :aria-label="t('views.mail.ftue.close')" @click="emit('close')">
         <ph-x-circle size="24" />
       </button>
     </header>
@@ -109,7 +115,7 @@ const emit = defineEmits(['next', 'back', 'close']);
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1280px) {
   .tour-card {
     top: -0.625rem;
     right: 0;

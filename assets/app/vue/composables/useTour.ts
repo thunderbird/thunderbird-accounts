@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 
 export const FTUE_STEPS = {
   INITIAL: 0,
@@ -10,6 +10,7 @@ export const FTUE_STEPS = {
 }
 
 const FTUE_STORAGE_KEY = 'tb_accounts_ftue_completed';
+const TOUR_CARD_SELECTOR = '[role="dialog"][tabindex="-1"]';
 
 // Get the initial state of the FTUE from localStorage or return true if not available
 const getInitialState = () => {
@@ -23,12 +24,31 @@ const getInitialState = () => {
 const currentStep = ref(FTUE_STEPS.INITIAL);
 const showFTUE = ref(getInitialState());
 
-// When the showFTUE state changes to false, we mark it the FTUE as completed in localStorage
+const onEscapeKey = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    showFTUE.value = false;
+  }
+};
+
+const focusTourCard = () => {
+  nextTick(() => {
+    const card = document.querySelector<HTMLElement>(TOUR_CARD_SELECTOR);
+    card?.focus();
+  });
+};
+
 watch(showFTUE, (value) => {
-  if (!value && typeof localStorage !== 'undefined') {
+  if (value) {
+    document.addEventListener('keydown', onEscapeKey);
+    return;
+  }
+
+  document.removeEventListener('keydown', onEscapeKey);
+
+  if (typeof localStorage !== 'undefined') {
     localStorage.setItem(FTUE_STORAGE_KEY, 'true');
   }
-});
+}, { immediate: true });
 
 export const useTour = () => {
   const steps = [
@@ -78,7 +98,7 @@ export const useTour = () => {
     showFTUE.value = false;
   };
 
-  // Auto-scroll to target when step changes
+  // Auto-scroll to target and move focus when step changes
   watch(currentStep, (newStep) => {
     if (!showFTUE.value) return;
 
@@ -87,6 +107,7 @@ export const useTour = () => {
 
     if (newStep === FTUE_STEPS.INITIAL || newStep === FTUE_STEPS.FINAL) {
       window.scrollTo({ top: 0, behavior });
+      focusTourCard();
       return;
     }
 
@@ -99,6 +120,8 @@ export const useTour = () => {
         element.scrollIntoView({ behavior, block: 'center' });
       }
     }
+
+    focusTourCard();
   });
 
   return {

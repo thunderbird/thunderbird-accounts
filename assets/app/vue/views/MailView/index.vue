@@ -47,7 +47,14 @@ export default {
     <!-- <security-settings-section /> -->
 
     <!-- FTUE Initial Welcome Tour Card -->
-    <div class="header-card" v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.INITIAL">
+    <div
+      class="header-card"
+      v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.INITIAL"
+      role="dialog"
+      :aria-label="t('views.mail.ftue.initialWelcomeTitle')"
+      aria-modal="false"
+      tabindex="-1"
+    >
       <h2>{{ t('views.mail.ftue.initialWelcomeTitle') }}</h2>
       <p>{{ t('views.mail.ftue.initialWelcomeDescription') }}</p>
 
@@ -62,10 +69,17 @@ export default {
     </div>
 
     <!-- FTUE Final Tour Card -->
-    <div class="header-card final" v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.FINAL">
+    <div
+      class="header-card final"
+      v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.FINAL"
+      role="dialog"
+      :aria-label="t('views.mail.ftue.step', { step: tour.currentStep.value, total: FTUE_STEPS.FINAL })"
+      aria-modal="false"
+      tabindex="-1"
+    >
       <header>
         <p class="step-label">{{ t('views.mail.ftue.step', { step: tour.currentStep.value, total: FTUE_STEPS.FINAL }) }}</p>
-        <button class="close-button" @click="tour.skip()">
+        <button class="close-button" :aria-label="t('views.mail.ftue.close')" @click="tour.skip()">
           <ph-x-circle size="24" />
         </button>
       </header>
