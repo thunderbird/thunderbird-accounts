@@ -7,6 +7,7 @@ import PrivacyAndDataView from '@/views/PrivacyAndDataView.vue';
 import PrivacyView from '@/views/PrivacyView.vue';
 import SubscribeView from '@/views/SubscribeView/index.vue';
 import TermsView from '@/views/TermsView.vue';
+import TosPrivacyView from '@/views/TosPrivacyView.vue';
 
 // Thundermail Routes
 import MailView from '@/views/MailView/index.vue';
@@ -68,6 +69,11 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     path: '/privacy-and-data',
     name: 'privacy-and-data',
     component: PrivacyAndDataView,
+  },
+  {
+    path: '/tos-privacy',
+    name: 'tos-privacy',
+    component: TosPrivacyView,
   },
   // Thundermail Routes
   {
