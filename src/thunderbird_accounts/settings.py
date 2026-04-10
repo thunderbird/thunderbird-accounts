@@ -467,6 +467,23 @@ CELERY_RESULT_EXPIRES = 3600
 # If true, immediately run tasks instead of queueing them
 CELERY_TASK_ALWAYS_EAGER = os.getenv('CELERY_EAGER', False) == 'True'
 
+# Celery Beat — use redbeat for distributed locking across multiple workers.
+# redbeat_redis_url defaults to broker_url, so no separate config needed.
+CELERY_BEAT_SCHEDULER = 'redbeat.RedBeatScheduler'
+
+CELERY_BEAT_SCHEDULE = {}
+
+KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS = int(os.getenv('KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS', '900'))
+
+POSTHOG_API_KEY = os.getenv('POSTHOG_API_KEY', '')
+POSTHOG_HOST = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com')
+
+if POSTHOG_API_KEY:
+    CELERY_BEAT_SCHEDULE['poll-keycloak-events'] = {
+        'task': 'thunderbird_accounts.authentication.tasks.poll_keycloak_events',
+        'schedule': KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS,
+    }
+
 # Some debug info for sentry
 sentry_sdk.set_extra('REDIS_URL', REDIS_URL)
 sentry_sdk.set_extra('CELERY_BROKER_URL', CELERY_BROKER_URL)

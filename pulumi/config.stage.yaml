@@ -80,6 +80,7 @@
 .paddle_webhook_key: &SECRET_PADDLE_WEBHOOK_KEY {name: "PADDLE_WEBHOOK_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/paddle-webhook-key-JuvcOr"}
 .redis_url: &SECRET_REDIS_URL {name: "REDIS_URL", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/redis-url-5zg81L"}
 .secret_key: &SECRET_SECRET_KEY {name: "SECRET_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/secret-key-RMUzrl"}
+.posthog_api_key: &SECRET_POSTHOG_API_KEY {name: "POSTHOG_API_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/posthog-api-key-w16NMi"}
 .sentry_dsn: &SECRET_SENTRY_DSN {name: "SENTRY_DSN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-rgui8C"}
 .stalwart_api_auth_method: &SECRET_STALWART_API_AUTH_METHOD {name: "STALWART_API_AUTH_METHOD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm"}
 .stalwart_api_auth_string: &SECRET_STALWART_API_AUTH_STRING {name: "STALWART_API_AUTH_STRING", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc"}
@@ -132,6 +133,7 @@
     - *SECRET_PADDLE_PRICE_ID_HI
     - *SECRET_PADDLE_TOKEN
     - *SECRET_PADDLE_WEBHOOK_KEY
+    - *SECRET_POSTHOG_API_KEY
     - *SECRET_REDIS_URL
     - *SECRET_SECRET_KEY
     - *SECRET_SENTRY_DSN
@@ -392,6 +394,8 @@ resources:
                   value: "yes"
                 - name: TBA_FLOWER
                   value: "no"
+                - name: POSTHOG_HOST
+                  value: "https://us.i.posthog.com"
 
         flower-stage:
           <<: *ACCOUNTS_TASK_DEFINITION
