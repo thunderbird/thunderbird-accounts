@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTour, FTUE_STEPS } from '@/composables/useTour';
 import { LinkButton, PrimaryButton } from '@thunderbirdops/services-ui';
-import { PhXCircle } from '@phosphor-icons/vue';
+import TourCard from '@/components/TourCard.vue';
 
 import WelcomeHeader from './sections/DashboardSection/components/WelcomeHeader.vue';
 import GetStartedWithThundermail from './sections/DashboardSection/components/GetStartedWithThundermail.vue';
@@ -69,34 +69,18 @@ export default {
     </div>
 
     <!-- FTUE Final Tour Card -->
-    <div
-      class="header-card final"
+    <tour-card
       v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.FINAL"
-      role="dialog"
-      :aria-label="t('views.mail.ftue.step', { step: tour.currentStep.value, total: FTUE_STEPS.FINAL })"
-      aria-modal="false"
-      tabindex="-1"
-    >
-      <header>
-        <p class="step-label">{{ t('views.mail.ftue.step', { step: tour.currentStep.value, total: FTUE_STEPS.FINAL }) }}</p>
-        <button class="close-button" :aria-label="t('views.mail.ftue.close')" @click="tour.skip()">
-          <ph-x-circle size="24" />
-        </button>
-      </header>
-
-      <div class="content">
-        <p>{{ t('views.mail.ftue.step5Text') }}</p>
-  
-        <div class="buttons-container">
-          <link-button size="small" @click="tour.back()">
-            {{ t('views.mail.ftue.back') }}
-          </link-button>
-          <primary-button size="small" @click="tour.next()">
-            {{ t('views.mail.ftue.done') }}
-          </primary-button>
-        </div>
-      </div>
-    </div>
+      variant="header"
+      :text="t('views.mail.ftue.step5Text')"
+      :current-step="tour.currentStep.value"
+      :total-steps="FTUE_STEPS.FINAL"
+      :next-label="t('views.mail.ftue.done')"
+      show-back
+      @next="tour.next()"
+      @back="tour.back()"
+      @close="tour.skip()"
+    />
   </div>
 </template>
 
@@ -135,10 +119,6 @@ export default {
   font-size: 0.875rem;
   z-index: 10;
 
-  &.final {
-    gap: 0.5rem;
-  }
-
   h2 {
     font-weight: 700;
     font-size: 0.875rem;
@@ -148,30 +128,6 @@ export default {
   p {
     margin: 0;
     line-height: 1.4;
-  }
-
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    .step-label {
-      font-size: 0.6875rem;
-    }
-  }
-
-  .content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.875rem;
-  }
-
-  .close-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    color: var(--colour-ti-muted);
   }
 
   .buttons-container {

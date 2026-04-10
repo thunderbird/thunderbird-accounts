@@ -5,14 +5,17 @@ import { PhXCircle } from '@phosphor-icons/vue';
 
 const { t } = useI18n();
 
-defineProps<{
+withDefaults(defineProps<{
   text: string;
   subtitle?: string;
   currentStep: number;
   totalSteps: number;
   showBack?: boolean;
   nextLabel?: string;
-}>();
+  variant?: 'section' | 'header';
+}>(), {
+  variant: 'section',
+});
 
 const emit = defineEmits(['next', 'back', 'close']);
 </script>
@@ -20,6 +23,7 @@ const emit = defineEmits(['next', 'back', 'close']);
 <template>
   <div
     class="tour-card"
+    :class="{ 'tour-card--header': variant === 'header' }"
     role="dialog"
     :aria-label="t('views.mail.ftue.step', { step: currentStep, total: totalSteps })"
     aria-modal="false"
@@ -115,10 +119,22 @@ const emit = defineEmits(['next', 'back', 'close']);
   }
 }
 
+.tour-card--header {
+  top: 4.75rem;
+  right: 2rem;
+  z-index: 10;
+  transform: none;
+}
+
 @media (min-width: 1280px) {
   .tour-card {
     top: -0.625rem;
     right: 0;
+  }
+
+  .tour-card--header {
+    top: 4.75rem;
+    right: 2rem;
   }
 }
 </style>
