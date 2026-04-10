@@ -10,24 +10,13 @@ defineProps<{
 
 const { t } = useI18n();
 const currentRoute = useRoute();
-
-const isSubscribePage = computed(() => currentRoute.path.startsWith('/subscribe'));
+const isThundermail = computed(() => currentRoute.path.startsWith('/mail'));
 
 const internalMenuItems = computed(() => {
-  const items = []
-
-  // Only show the account / dashboard link on non subscribe pages
-  if (!isSubscribePage.value) {
-    items.push({
-      label: t('components.userMenu.account'),
-      to: '/dashboard',
-    });
-  }
-
-  items.push({
+  const items = [{
     label: t('components.userMenu.support'),
     to: '/contact',
-  });
+  }]
 
   return items;
 });
@@ -62,40 +51,54 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <button class="user-menu" ref="menuRef">
-    <user-avatar :username="username" class="avatar" @click="toggleMenu" />
-
-    <div v-if="showMenu" class="dropdown">
-      <!-- Holds internal links (VueJS routes) -->
-      <router-link v-for="internalItem in internalMenuItems" :key="internalItem.label" :to="internalItem.to"
-        @click="toggleMenu">
-        {{ internalItem.label }}
-      </router-link>
-
-      <!-- Holds external links (primarily Django routes) -->
-      <a v-for="externalItem in externalMenuItems" :key="externalItem.label" :href="externalItem.href">
-        {{ externalItem.label }}
-      </a>
-    </div>
-  </button>
+  <template v-if="isThundermail">
+    <router-link to="/dashboard" class="user-avatar-link">
+      <user-avatar :username="username" class="avatar" />
+    </router-link>
+  </template>
+  <template v-else>
+    <button class="user-menu" ref="menuRef">
+      <user-avatar :username="username" class="avatar" @click="toggleMenu" />
+  
+      <div v-if="showMenu" class="dropdown">
+        <!-- Holds internal links (VueJS routes) -->
+        <router-link v-for="internalItem in internalMenuItems" :key="internalItem.label" :to="internalItem.to"
+          @click="toggleMenu">
+          {{ internalItem.label }}
+        </router-link>
+  
+        <!-- Holds external links (primarily Django routes) -->
+        <a v-for="externalItem in externalMenuItems" :key="externalItem.label" :href="externalItem.href">
+          {{ externalItem.label }}
+        </a>
+      </div>
+    </button>
+  </template>
 </template>
 
 <style scoped>
+.user-avatar-link {
+  text-decoration: none;
+}
+
+/* TODO: Temporary fix for UserAvatar color bug */
+.avatar {
+  cursor: pointer;
+  font-size: 0.8125rem;
+
+  & :first-child {
+    color: #eeeef0;
+    /* var(--colour-ti-base) dark mode */
+  }
+}
+
 .user-menu {
   position: relative;
   display: inline-block;
   background: none;
   border: none;
-
-  /* TODO: Temporary fix for UserAvatar color bug */
-  .avatar {
-    cursor: pointer;
-
-    & :first-child {
-      color: #eeeef0;
-      /* var(--colour-ti-base) dark mode */
-    }
-  }
+  font: inherit;
+  padding: 0;
 
   .dropdown {
     position: absolute;

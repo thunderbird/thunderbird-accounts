@@ -1,7 +1,5 @@
 {
   "navigationLinks": {
-    "dashboard": "Dashboard",
-    "manageThundermail": "Manage Thundermail",
     "manageMfa": "Manage MFA",
     "privacyAndData": "Privacy & Data",
     "manageEmails": "Manage Emails",
@@ -24,7 +22,6 @@
       "yourServices": "Manage Your Services"
     },
     "userMenu": {
-      "account": "Account",
       "support": "Support",
       "logout": "Logout"
     }
