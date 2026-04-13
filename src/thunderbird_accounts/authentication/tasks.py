@@ -95,7 +95,6 @@ def poll_keycloak_events(self):
     try:
         submitted = 0
         skipped = 0
-        new_seen_ids = set()
         for event in all_events:
             event_id = event.get('id', '')
             if event_id in seen_event_ids:
@@ -121,15 +120,12 @@ def poll_keycloak_events(self):
                 },
             )
             submitted += 1
-            if event_id:
-                new_seen_ids.add(event_id)
 
         flush()
         # Cache every event ID from this poll so the next run can skip them.
         # Only IDs from the current poll are stored (not unioned with previous
         # runs) because Keycloak's eventsExpiration (30 min) guarantees older
-        # events won't reappear. The TTL (1 hour) is deliberately longer than
-        # the retention period so the cache survives delayed polls.
+        # events won't reappear.
         all_seen_ids = [e.get('id', '') for e in all_events if e.get('id')]
         cache.set(SEEN_EVENTS_CACHE_KEY, all_seen_ids, SEEN_EVENTS_CACHE_TTL)
     except Exception as exc:
