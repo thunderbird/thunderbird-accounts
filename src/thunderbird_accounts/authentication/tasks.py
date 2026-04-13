@@ -66,10 +66,11 @@ def poll_keycloak_events(self):
         logger.debug('POSTHOG_API_KEY not configured, skipping Keycloak event polling')
         return {'task_status': 'skipped', 'reason': 'POSTHOG_API_KEY not configured'}
 
-    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    now = datetime.now(timezone.utc)
+    today = now.strftime('%Y-%m-%d')
 
     poll_interval = int(getattr(settings, 'KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS', 900))
-    cutoff_ms = int((datetime.now(timezone.utc) - timedelta(seconds=poll_interval + 30)).timestamp() * 1000)
+    cutoff_ms = int((now - timedelta(seconds=poll_interval + 30)).timestamp() * 1000)
 
     seen_event_ids = set(cache.get(SEEN_EVENTS_CACHE_KEY, []))
 
@@ -124,7 +125,13 @@ def poll_keycloak_events(self):
                 new_seen_ids.add(event_id)
 
         flush()
-        cache.set(SEEN_EVENTS_CACHE_KEY, list(seen_event_ids | new_seen_ids), SEEN_EVENTS_CACHE_TTL)
+        # Cache every event ID from this poll so the next run can skip them.
+        # Only IDs from the current poll are stored (not unioned with previous
+        # runs) because Keycloak's eventsExpiration (30 min) guarantees older
+        # events won't reappear. The TTL (1 hour) is deliberately longer than
+        # the retention period so the cache survives delayed polls.
+        all_seen_ids = [e.get('id', '') for e in all_events if e.get('id')]
+        cache.set(SEEN_EVENTS_CACHE_KEY, all_seen_ids, SEEN_EVENTS_CACHE_TTL)
     except Exception as exc:
         sentry_sdk.capture_exception(exc)
         logger.error(f'Failed to submit events to PostHog: {exc}')
