@@ -475,8 +475,23 @@ CELERY_BEAT_SCHEDULE = {}
 
 KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS = int(os.getenv('KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS', '900'))
 
-POSTHOG_API_KEY = os.getenv('POSTHOG_API_KEY', '')
+POSTHOG_API_KEY = os.getenv('POSTHOG_API_KEY')
 POSTHOG_HOST = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com')
+
+KEYCLOAK_EVENT_MAP = {
+    'LOGIN': 'accounts.login',
+    'LOGIN_ERROR': 'accounts.login_error',
+    'REGISTER': 'accounts.register',
+    'REGISTER_ERROR': 'accounts.register_error',
+    'LOGOUT': 'accounts.logout',
+    'CODE_TO_TOKEN': 'accounts.activity',
+    'CODE_TO_TOKEN_ERROR': 'accounts.activity',
+    'INTROSPECT_TOKEN': 'accounts.activity',
+    'REFRESH_TOKEN': 'accounts.activity',
+}
+KEYCLOAK_SEEN_EVENTS_CACHE_KEY = 'keycloak_poll:seen_event_ids'
+KEYCLOAK_SEEN_EVENTS_CACHE_TTL = 3600
+KEYCLOAK_EVENTS_PAGE_SIZE = 500
 
 if POSTHOG_API_KEY:
     CELERY_BEAT_SCHEDULE['poll-keycloak-events'] = {

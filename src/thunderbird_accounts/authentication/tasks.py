@@ -7,29 +7,13 @@ from django.conf import settings
 from django.core.cache import cache
 
 from thunderbird_accounts.authentication.clients import KeycloakClient
-from thunderbird_accounts.telemetry import capture, flush
+from thunderbird_accounts.telemetry import capture, shutdown
 
 logger = logging.getLogger(__name__)
 
-EVENT_MAP = {
-    'LOGIN': 'accounts.login',
-    'LOGIN_ERROR': 'accounts.login_error',
-    'REGISTER': 'accounts.register',
-    'REGISTER_ERROR': 'accounts.register_error',
-    'LOGOUT': 'accounts.logout',
-    'CODE_TO_TOKEN': 'accounts.activity',
-    'CODE_TO_TOKEN_ERROR': 'accounts.activity',
-    'INTROSPECT_TOKEN': 'accounts.activity',
-    'REFRESH_TOKEN': 'accounts.activity',
-}
-
-SEEN_EVENTS_CACHE_KEY = 'keycloak_poll:seen_event_ids'
-SEEN_EVENTS_CACHE_TTL = 3600
-EVENTS_PAGE_SIZE = 500
-
 
 def _fetch_keycloak_events(client, date_from):
-    """Fetch all events from Keycloak, paginating in EVENTS_PAGE_SIZE chunks.
+    """Fetch all events from Keycloak, paginating in configured page-size chunks.
 
     Which event types Keycloak records is controlled by enabledEventTypes in the
     realm config; callers are responsible for filtering to relevant types.
@@ -42,14 +26,14 @@ def _fetch_keycloak_events(client, date_from):
             params={
                 'dateFrom': date_from,
                 'first': offset,
-                'max': EVENTS_PAGE_SIZE,
+                'max': settings.KEYCLOAK_EVENTS_PAGE_SIZE,
             },
         )
         page = response.json()
         all_events.extend(page)
-        if len(page) < EVENTS_PAGE_SIZE:
+        if len(page) < settings.KEYCLOAK_EVENTS_PAGE_SIZE:
             break
-        offset += EVENTS_PAGE_SIZE
+        offset += settings.KEYCLOAK_EVENTS_PAGE_SIZE
     return all_events
 
 
@@ -61,27 +45,25 @@ def poll_keycloak_events(self):
     This task runs every 15 minutes, deduplicating via a cached set of seen event IDs.
     Each event is hashed, stripped of PII, and submitted directly to PostHog.
     """
-    posthog_api_key = getattr(settings, 'POSTHOG_API_KEY', '')
-    if not posthog_api_key:
+    if not settings.POSTHOG_API_KEY:
         logger.debug('POSTHOG_API_KEY not configured, skipping Keycloak event polling')
         return {'task_status': 'skipped', 'reason': 'POSTHOG_API_KEY not configured'}
 
     now = datetime.now(timezone.utc)
     today = now.strftime('%Y-%m-%d')
 
-    poll_interval = int(getattr(settings, 'KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS', 900))
-    cutoff_ms = int((now - timedelta(seconds=poll_interval + 30)).timestamp() * 1000)
+    cutoff_ms = int((now - timedelta(seconds=settings.KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS + 30)).timestamp() * 1000)
 
-    seen_event_ids = set(cache.get(SEEN_EVENTS_CACHE_KEY, []))
+    seen_event_ids = set(cache.get(settings.KEYCLOAK_SEEN_EVENTS_CACHE_KEY, []))
 
     try:
         client = KeycloakClient()
 
         # dateFrom=today is intentionally coarse; Keycloak's eventsExpiration (30 min)
         # limits the number of events available, so the response is always small.
-        # EVENT_MAP filters which event types are forwarded to PostHog.
         raw_events = _fetch_keycloak_events(client, today)
-        all_events = [e for e in raw_events if e.get('time', 0) >= cutoff_ms and e.get('type') in EVENT_MAP]
+        event_map = settings.KEYCLOAK_EVENT_MAP
+        all_events = [e for e in raw_events if e.get('time', 0) >= cutoff_ms and e.get('type') in event_map]
 
     except Exception as exc:
         sentry_sdk.capture_exception(exc)
@@ -90,7 +72,7 @@ def poll_keycloak_events(self):
 
     if not all_events:
         logger.info('No Keycloak events found in polling window')
-        return {'task_status': 'success', 'events_submitted': 0}
+        return {'task_status': 'success', 'events_submitted': 0, 'events_skipped': 0}
 
     try:
         submitted = 0
@@ -101,9 +83,9 @@ def poll_keycloak_events(self):
                 skipped += 1
                 continue
 
-            kc_type = event.get('type', 'UNKNOWN')
-            user_id = event.get('userId', '')
-            event_name = EVENT_MAP.get(kc_type, 'accounts.activity')
+            kc_type = event['type']
+            user_id = event.get('userId')
+            event_name = event_map[kc_type]
 
             if not user_id:
                 skipped += 1
@@ -121,13 +103,13 @@ def poll_keycloak_events(self):
             )
             submitted += 1
 
-        flush()
         # Cache every event ID from this poll so the next run can skip them.
         # Only IDs from the current poll are stored (not unioned with previous
         # runs) because Keycloak's eventsExpiration (30 min) guarantees older
         # events won't reappear.
-        all_seen_ids = [e.get('id', '') for e in all_events if e.get('id')]
-        cache.set(SEEN_EVENTS_CACHE_KEY, all_seen_ids, SEEN_EVENTS_CACHE_TTL)
+        shutdown()
+        all_seen_ids = [e['id'] for e in all_events if e.get('id')]
+        cache.set(settings.KEYCLOAK_SEEN_EVENTS_CACHE_KEY, all_seen_ids, settings.KEYCLOAK_SEEN_EVENTS_CACHE_TTL)
     except Exception as exc:
         sentry_sdk.capture_exception(exc)
         logger.error(f'Failed to submit events to PostHog: {exc}')
