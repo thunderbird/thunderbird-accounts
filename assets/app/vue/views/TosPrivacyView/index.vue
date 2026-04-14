@@ -18,6 +18,8 @@ const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 
+const declineButtonLabel = window._page?.hasActiveSubscription ? t('views.tosPrivacy.declineAfterPayment') : t('views.tosPrivacy.declineButton');
+
 const tosSelectedTab = ref<LEGAL_DOCUMENT_TYPES>(LEGAL_DOCUMENT_TYPES.TOS);
 const loading = ref(true);
 const accepting = ref(false);
@@ -133,7 +135,7 @@ onMounted(async () => {
 
       <div class="buttons">
         <primary-button variant="outline" :disabled="declining" @click="handleDecline">
-          {{ declining ? t('views.tosPrivacy.loading') : t('views.tosPrivacy.declineButton') }}
+          {{ declining ? t('views.tosPrivacy.loading') : declineButtonLabel }}
         </primary-button>
         <primary-button :disabled="accepting" @click="handleAccept">
           {{ accepting ? t('views.tosPrivacy.loading') : t('views.tosPrivacy.acceptButton') }}
