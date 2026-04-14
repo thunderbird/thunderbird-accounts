@@ -30,6 +30,7 @@ const passwordError = computed(() => {
 
 // CheckboxInput requires a valid ref as a model to show the check icon
 const rememberMeChecked = ref(rememberMe);
+const username = ref(window._page.currentView?.loginHint);
 
 defineProps<{
   hidePassword: boolean;
@@ -58,6 +59,7 @@ export default {
         autocomplete="username webauthn"
         autofocus
         :error="usernameError"
+        v-model="username"
       >
         {{ $t('email') }}
       </text-input>
