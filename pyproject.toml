@@ -33,6 +33,8 @@ dependencies = [
     "django-types>=0.22.0",
     "django-stubs-ext>=5.2.8",
     "flower>=2.0.1",
+    "celery-redbeat>=2.3.0",
+    "posthog>=3.0.0",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"
