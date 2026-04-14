@@ -41,7 +41,9 @@ const clientUrl = window._page.currentView?.clientUrl;
           <a :href="clientUrl" class="logo-link">
             <img :src="ThundermailLogo" alt="Thundermail" class="base-template__logo" />
           </a>
-          <slot />
+          <div class="panel-contents">
+            <slot />
+          </div>
         </div>
       </div>
     </div>
@@ -51,7 +53,8 @@ const clientUrl = window._page.currentView?.clientUrl;
 <style scoped>
 section {
   /* A little over 52rem to avoid some overlap. Ideally this should align with the featured image's height. */
-  --max-card-height: 52.1rem;
+  /*--max-card-height: 52.1rem;*/
+  --max-card-height: 45rem;
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -80,7 +83,6 @@ section {
       position: relative;
       display: flex;
       flex-direction: column;
-      justify-content: center;
       min-height: 100vh;
       flex: 1;
       background-color: var(--colour-neutral-base, #ffffff);
@@ -153,11 +155,21 @@ section {
         min-height: auto;
 
         .panel {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 3rem;
+
           padding: 6rem 10rem 5.625rem 6rem;
 
           &:has(.notice-bar) {
             padding: 6rem 10rem 5.625rem 6rem;
           }
+        }
+        .panel-contents {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
       }
     }

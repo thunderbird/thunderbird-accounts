@@ -1,0 +1,65 @@
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
+import { TextInput } from '@thunderbirdops/services-ui';
+import { ref } from 'vue';
+import MessageBar from '@kc/vue/components/MessageBar.vue';
+import { storeToRefs } from 'pinia';
+import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
+import SignUpLayout from '../../components/SignUpLayout.vue';
+
+const { t } = useI18n();
+const loading = ref(false);
+
+const signUpFlowStore = useSignUpFlowStore();
+
+const { password, confirmPassword, name } = storeToRefs(signUpFlowStore);
+const { nextStep } = signUpFlowStore;
+const confirmPasswordError = ref(null);
+
+const onSubmit = async () => {
+  loading.value = true;
+  confirmPasswordError.value = null;
+
+  if (password.value !== confirmPassword.value) {
+    confirmPasswordError.value = t('views.mail.views.signUp.step2.confirmPasswordDoesNotMatchError');
+    loading.value = false;
+    return;
+  }
+
+  nextStep();
+};
+</script>
+
+<script lang="ts">
+export default {
+  name: 'Step2Password'
+};
+</script>
+
+<template>
+  <sign-up-layout :title="$t('views.mail.views.signUp.step2.title')"
+    :subtitle="$t('views.mail.views.signUp.step2.subtitle')" :submitDisabled="loading || confirmPasswordError"
+    :submitTitle="$t('views.mail.views.signUp.continue')" @submit="onSubmit">
+    <slot name="notice-bars"/>
+    <template v-slot:form-elements>
+      <text-input data-testid="password-input" id="password" name="password" type="password" required
+        autocomplete="new-password" :help="$t('views.mail.views.signUp.step2.passwordHelp')" v-model="password">
+        {{ $t('views.mail.views.signUp.fields.password') }}
+      </text-input>
+
+      <text-input data-testid="confirm-password-input" id="confirmPassword" name="confirmPassword" type="password"
+        required autocomplete="new-password" :error="confirmPasswordError"
+        :help="$t('views.mail.views.signUp.step2.confirmPasswordHelp')" v-model="confirmPassword">
+        {{ $t('views.mail.views.signUp.fields.confirmPassword') }}
+      </text-input>
+
+      <text-input data-testid="name-input" id="name" name="name" autocomplete="name"
+        :help="$t('views.mail.views.signUp.step2.yourNameHelp')" v-model="name">
+        {{ $t('views.mail.views.signUp.fields.yourName') }}
+      </text-input>
+
+      <slot name="form-extras" />
+    </template>
+  </sign-up-layout>
+</template>

@@ -8,6 +8,8 @@ import RegisterView from '@kc/vue/views/RegisterView/index.vue';
 import BaseTemplate from '@kc/vue/BaseTemplate.vue';
 
 import Step1Username from './views/Step1Username/index.vue';
+import Step2Password from './views/Step2Password/index.vue';
+import Step3Verify from './views/Step3Verify/index.vue';
 
 // Import our i18n composable
 import i18nInstance from '@/composables/i18n';
@@ -17,7 +19,7 @@ import { SERVER_MESSAGE_LEVEL } from '@/types';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
-import { useSignUpFlowStore } from './stores/signUpFlowStore';
+import { SignUpSteps, useSignUpFlowStore } from './stores/signUpFlowStore';
 import { storeToRefs } from 'pinia';
 
 const { t } = useI18n();
@@ -25,7 +27,7 @@ const route = useRoute();
 const signUpFlowStore = useSignUpFlowStore();
 const isSignUpComplete = route.name === 'sign-up-complete';
 
-const { lang, timezone } = storeToRefs(signUpFlowStore);
+const { lang, timezone, step } = storeToRefs(signUpFlowStore);
 
 // We only support english right now :(
 lang.value = 'en';
@@ -60,6 +62,13 @@ const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
       return NoticeBarTypes.Info;
   }
 };
+
+// Map of enum steps and SFC
+const stepSFCMap = {
+  [SignUpSteps.USERNAME]: Step1Username,
+  [SignUpSteps.PASSWORD]: Step2Password,
+  [SignUpSteps.VERIFY]: Step3Verify,
+}
 </script>
 
 <script lang="ts">
@@ -70,15 +79,12 @@ export default {
 
 <template>
   <base-template>
-    <step1-username v-if="!isSignUpComplete">
+    <component v-if="!isSignUpComplete" :is="stepSFCMap[step]">
       <template v-slot:notice-bars>
         <section class="server-messages" v-if="serverMessages !== null">
           <template v-for="message in serverMessages" :key="message.message">
-            <notice-bar
-              class="server-message"
-              v-if="message.message.trim() !== ''"
-              :type="serverLevelToNoticeBarType(message.level)"
-            >
+            <notice-bar class="server-message" v-if="message.message.trim() !== ''"
+              :type="serverLevelToNoticeBarType(message.level)">
               {{ message.message }}
             </notice-bar>
           </template>
@@ -87,7 +93,8 @@ export default {
       <template v-slot:form-extras>
         <csrf-token />
       </template>
-    </step1-username>
+    </component>
+
     <section v-else>
       <a href="/" class="logo-link">
         <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
@@ -135,5 +142,4 @@ h2 {
   color: var(--colour-primary-default);
   margin: 0 0 1.5rem 0;
 }
-
 </style>
