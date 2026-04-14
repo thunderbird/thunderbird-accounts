@@ -457,6 +457,10 @@ CELERY_RESULT_BACKEND = '/'.join(
     filter(None, [os.getenv('CELERY_BACKEND') or REDIS_URL, os.getenv('REDIS_CELERY_RESULTS_DB')])
 )
 
+# redbeat adds ssl_cert_reqs itself; including it in the URL breaks because
+# redis-py URL query args override kwargs and "CERT_REQUIRED" isn't valid.
+CELERY_REDBEAT_REDIS_URL = CELERY_BROKER_URL
+
 # If we are using a rediss url, require certs!
 if CELERY_BROKER_URL.startswith('rediss://'):
     CELERY_BROKER_URL = f'{CELERY_BROKER_URL}?ssl_cert_reqs=CERT_REQUIRED'
@@ -468,7 +472,6 @@ CELERY_RESULT_EXPIRES = 3600
 CELERY_TASK_ALWAYS_EAGER = os.getenv('CELERY_EAGER', False) == 'True'
 
 # Celery Beat — use redbeat for distributed locking across multiple workers.
-# redbeat_redis_url defaults to broker_url, so no separate config needed.
 CELERY_BEAT_SCHEDULER = 'redbeat.RedBeatScheduler'
 
 CELERY_BEAT_SCHEDULE = {}
