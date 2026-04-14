@@ -39,6 +39,7 @@ declare global {
       tbProPrimaryDomain?: string;
       currentView?: Record<string, any>;
       serverMessages: ServerMessage[];
+      needsTosAcceptance?: boolean;
       // Special, only used for tbpro_500.html
       errorTitle?: string;
       isErrorPage?: boolean
