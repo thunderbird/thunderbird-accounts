@@ -397,7 +397,10 @@
       "declineAfterPayment": "Decline and cancel account",
       "acceptButton": "Accept policies and continue",
       "questionsToSupport": "Questions? {supportLink}",
-      "contactSupport": "Contact Support"
+      "contactSupport": "Contact Support",
+      "loading": "Loading...",
+      "errorAccepting": "Failed to record acceptance. Please try again.",
+      "errorLoading": "Failed to load legal documents. Please try again later."
     },
     "subscribe": {
       "lineItems": {
