@@ -7,7 +7,7 @@ import PrivacyAndDataView from '@/views/PrivacyAndDataView.vue';
 import PrivacyView from '@/views/PrivacyView.vue';
 import SubscribeView from '@/views/SubscribeView/index.vue';
 import TermsView from '@/views/TermsView.vue';
-import TosPrivacyView from '@/views/TosPrivacyView.vue';
+import TosPrivacyView from '@/views/TosPrivacyView/index.vue';
 
 // Thundermail Routes
 import MailView from '@/views/MailView/index.vue';
@@ -165,21 +165,36 @@ router.beforeEach((to, _from) => {
   }
 
   const isAuthenticated = window._page?.isAuthenticated;
-  const hasActiveSubscription = window._page?.hasActiveSubscription;
-  const isAwaitingPaymentVerification = window._page?.isAwaitingPaymentVerification;
-  const sendToSubscribe = isAwaitingPaymentVerification || !hasActiveSubscription;
+  const routeName = to.name?.toString();
 
-  // Don't let unauthenticated users anywhere except the home view
-  if (!isAuthenticated && !to.meta?.isPublic) {
-    // Login is done through Django routing and not Vue router
-    window.location.href = '/login/';
-    return false;
+  // Unauthenticated users can only visit public routes
+  if (!isAuthenticated) {
+    if (!to.meta?.isPublic) {
+      window.location.href = '/login/';
+      return false;
+    }
+    return true;
   }
 
-  // Don't let unsubscribed users anywhere except the subscribe view
-  if (isAuthenticated && sendToSubscribe && !['subscribe', 'contact'].includes(to.name.toString())) {
+  // --- Authenticated users below ---
+  // Guards are ordered by priority: TOS > subscription > normal access.
+
+  const allowedFor = {
+    tos: new Set(['tos-privacy', 'contact']),
+    subscription: new Set(['subscribe', 'contact', 'tos-privacy']),
+  };
+
+  if (window._page?.needsTosAcceptance && !allowedFor.tos.has(routeName)) {
+    return { name: 'tos-privacy' };
+  }
+
+  const needsSubscription = window._page?.isAwaitingPaymentVerification || !window._page?.hasActiveSubscription;
+
+  if (needsSubscription && !allowedFor.subscription.has(routeName)) {
     return { name: 'subscribe' };
-  } else if (isAuthenticated && !sendToSubscribe && to.name === 'subscribe') {
+  }
+
+  if (!needsSubscription && routeName === 'subscribe') {
     return { name: 'mail' };
   }
 
