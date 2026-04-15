@@ -7,9 +7,10 @@ import { DOWNLOAD_THUNDERBIRD_DESKTOP_URL } from '@/defines';
 
 const { t } = useI18n();
 
-function onConnectNow() {
-  // TODO: Implement connect action, custom protocol mapping TBD
-}
+const showConnectNow = window.localStorage.getItem('feature.show-connect-now') === 'true';
+
+// TODO: Update this when the full URL is ready
+const tbDesktopCustomProtocolUrl = 'net.thunderbird://replay';
 </script>
 
 <script lang="ts">
@@ -21,6 +22,7 @@ export default {
 <template>
   <div class="action-cards">
     <action-card
+      v-if="showConnectNow"
       :title="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectTitle')"
       :description="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectDescription')"
     >
@@ -28,7 +30,11 @@ export default {
         <ph-arrow-square-out :size="20" />
       </template>
       <template #action>
-        <primary-button size="small" @click="onConnectNow">
+        <primary-button
+          size="small"
+          :href="tbDesktopCustomProtocolUrl"
+          class="button-link"
+        >
           {{ t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButton') }}
         </primary-button>
       </template>
@@ -44,11 +50,11 @@ export default {
       <template #action>
         <primary-button
           size="small"
-          variant="outline"
+          :variant="showConnectNow ? 'outline' : 'filled'"
           :href="DOWNLOAD_THUNDERBIRD_DESKTOP_URL"
           target="_blank"
           rel="noopener noreferrer"
-          class="download-button"
+          class="button-link"
         >
           {{ t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.downloadButton') }}
         </primary-button>
@@ -64,7 +70,7 @@ export default {
   gap: 0.625rem;
 }
 
-.download-button {
+.button-link {
   height: 2rem;
 }
 </style>
