@@ -473,6 +473,9 @@ CELERY_TASK_ALWAYS_EAGER = os.getenv('CELERY_EAGER', False) == 'True'
 
 # Celery Beat — use redbeat for distributed locking across multiple workers.
 CELERY_BEAT_SCHEDULER = 'redbeat.RedBeatScheduler'
+# Scheduled tasks can be missed when the beat worker dies if this is set too long.
+# A new beat worker can't do work until the lock is released.
+CELERY_REDBEAT_LOCK_TIMEOUT = 330
 
 CELERY_BEAT_SCHEDULE = {}
 
