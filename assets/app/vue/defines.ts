@@ -5,4 +5,4 @@ export const WHAT_IS_JMAP_SUPPORT_URL = 'https://support.tb.pro/hc/articles/4610
 export const WHAT_IS_SMTP_SUPPORT_URL = 'https://support.tb.pro/hc/articles/46106891841043-What-is-SMTP';
 export const DOWNLOAD_THUNDERBIRD_DESKTOP_URL = 'https://www.thunderbird.net/thunderbird/all/';
 export const DOWNLOAD_THUNDERBIRD_MOBILE_URL = 'https://play.google.com/store/apps/details?id=net.thunderbird.android';
-export const STATUS_PAGE_URL = 'https://status.tb.pro/'
+export const STATUS_PAGE_URL = 'https://status.tb.pro/';
