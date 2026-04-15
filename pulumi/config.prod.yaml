@@ -668,7 +668,7 @@ resources:
               - name: KC_SPI_THEME_WELCOME_THEME
                 value: "tbpro"
               - name: KC_TBPRO_HOME
-                value: "https://accounts.tb.pro/dashboard"
+                value: "https://accounts.tb.pro/"
               - name: KC_TBPRO_SIGN_UP
                 value: "https://accounts.tb.pro/sign-up"
               - name: KC_TBPRO_CONTACT

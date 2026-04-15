@@ -9,10 +9,6 @@ const { t } = useI18n();
 const isAuthenticated = ref(window._page?.isAuthenticated);
 
 const navItemsAccounts = [
-  {
-    route: '/dashboard',
-    i18nKey: 'dashboard',
-  },
   // {
   //   route: '/manage-mfa',
   //   i18nKey: 'manageMfa',
@@ -24,18 +20,6 @@ const navItemsAccounts = [
 ];
 
 const navItemsMail = [
-  {
-    route: '/mail',
-    i18nKey: 'dashboard',
-  },
-  {
-    route: '/mail#manage-emails',
-    i18nKey: 'manageEmails',
-  },
-  {
-    route: '/mail#custom-domains',
-    i18nKey: 'customDomains',
-  },
   // TODO: Uncomment when implementing security settings
   // {
   //   route: '/mail/security-settings',

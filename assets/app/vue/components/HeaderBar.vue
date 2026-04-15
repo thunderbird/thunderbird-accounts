@@ -10,22 +10,9 @@ const { t } = useI18n();
 const isAuthenticated = ref(window._page?.isAuthenticated);
 const avatarUsername = ref(window._page?.userDisplayName || window._page?.userEmail);
 
-const navItemsAccounts = [
-  {
-    route: '/dashboard',
-    i18nKey: 'dashboard',
-  },
-  {
-    route: '/mail',
-    i18nKey: 'manageThundermail',
-  },
-];
-
 const currentRoute = useRoute();
 
 const isThundermail = computed(() => currentRoute.path.startsWith('/mail'));
-const isSubscribePage = computed(() => currentRoute.path.startsWith('/subscribe'));
-const navItems = computed(() => navItemsAccounts);
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const logoSrc = computed(() => {
@@ -51,16 +38,6 @@ const logoSrc = computed(() => {
     </template>
 
     <template v-if="isAuthenticated">
-      <nav class="desktop" v-if="!isSubscribePage">
-        <ul>
-          <li v-for="navItem in navItems" :key="navItem.route">
-            <router-link :to="navItem.route" :class="{ active: currentRoute.path === navItem.route }">
-              {{ t(`navigationLinks.${navItem.i18nKey}`) }}
-            </router-link>
-          </li>
-        </ul>
-      </nav>
-
       <user-menu :username="avatarUsername" />
     </template>
 
@@ -100,10 +77,6 @@ header {
     margin-left: auto;
   }
 
-  nav.desktop {
-    display: none;
-  }
-
   .login-button-link {
     text-decoration: none;
 
@@ -132,17 +105,6 @@ header {
         border-radius: 0.5rem;
         box-shadow: inset 0 0.25rem 0.25rem 0 rgba(0, 0, 0, 0.15);
       }
-    }
-  }
-}
-
-@media (min-width: 768px) {
-  header {
-    nav.desktop {
-      display: block;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
     }
   }
 }
