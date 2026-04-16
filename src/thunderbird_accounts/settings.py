@@ -261,7 +261,8 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'is_username_available': '30/minute'
+        'is_username_available': '30/minute',
+        'sign_up': '2/minute'
     }
 }
 

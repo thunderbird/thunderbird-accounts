@@ -18,7 +18,7 @@ from thunderbird_accounts.mail import views as mail_views, api as mail_api
 from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
 
-from thunderbird_accounts.authentication.api import get_user_profile
+from thunderbird_accounts.authentication.api import get_user_profile, sign_up
 
 # Error handler overrides
 handler500 = 'thunderbird_accounts.core.views.handle_500'
@@ -58,6 +58,7 @@ urlpatterns = [
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
+    path('api/v1/auth/sign-up/', sign_up, name='api_sign_up'),
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
     path('api/v1/subscription/paddle/info/', subscription_views.get_paddle_information, name='paddle_info'),
     path('api/v1/subscription/paddle/portal/', subscription_views.get_paddle_portal_link, name='paddle_portal'),
