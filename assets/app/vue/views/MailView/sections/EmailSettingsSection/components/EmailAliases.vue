@@ -78,6 +78,7 @@ const onDeleteAliasError = (error: string) => {
 <template>
   <div class="email-aliases-content">
     <tour-card
+      data-tour-card
       v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.EMAIL_ALIASES"
       :text="t('views.mail.ftue.step3Text')"
       :current-step="tour.currentStep.value"

@@ -48,6 +48,7 @@ export default {
 
     <!-- FTUE Initial Welcome Tour Card -->
     <div
+      data-tour-card
       class="header-card"
       v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.INITIAL"
       role="dialog"
@@ -70,6 +71,7 @@ export default {
 
     <!-- FTUE Final Tour Card -->
     <tour-card
+      data-tour-card
       v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.FINAL"
       variant="header"
       :text="t('views.mail.ftue.step5Text')"

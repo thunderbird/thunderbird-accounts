@@ -99,6 +99,7 @@ const onCancelSetPassword = () => {
 <template>
   <div id="app-password-container" class="app-password-side-container">
     <tour-card
+      data-tour-card
       v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.APP_PASSWORDS"
       :text="t('views.mail.ftue.step2Text')"
       :current-step="tour.currentStep.value"

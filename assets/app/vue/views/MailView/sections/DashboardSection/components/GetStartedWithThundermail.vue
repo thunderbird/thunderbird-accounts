@@ -69,14 +69,13 @@ export default {
   >
     <div class="get-started-with-thundermail-content">
       <tour-card
+        data-tour-card
         v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.CONNECT_EMAIL"
         :text="t('views.mail.ftue.step1Text')"
         :subtitle="nextStepText"
         :current-step="tour.currentStep.value"
         :total-steps="FTUE_STEPS.FINAL"
-        show-back
         @next="tour.next()"
-        @back="tour.back()"
         @close="tour.skip()"
       />
 

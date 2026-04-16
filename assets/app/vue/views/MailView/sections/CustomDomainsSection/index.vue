@@ -88,6 +88,7 @@ export default {
       :subtitle="customDomainsDescription"
     >
       <tour-card
+        data-tour-card
         v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.CUSTOM_DOMAINS"
         :text="t('views.mail.ftue.step4Text')"
         :subtitle="nextStepText"

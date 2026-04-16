@@ -10,7 +10,7 @@ export const FTUE_STEPS = {
 } as const;
 
 const FTUE_STORAGE_KEY = 'tb_accounts_ftue_completed';
-const TOUR_CARD_SELECTOR = '[role="dialog"][tabindex="-1"]';
+const TOUR_CARD_SELECTOR = '[data-tour-card]';
 
 // Get the initial state of the FTUE from localStorage or return true if not available
 const getInitialState = () => {
