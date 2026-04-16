@@ -35,7 +35,7 @@ const userEmail = computed(() => window._page?.userEmail);
 
 const nextStepText = computed(() => {
   return t('views.mail.ftue.nextStep', { step: t('views.mail.ftue.emailAliases') });
-})
+});
 
 const resetPasswordForm = () => {
   errorMessage.value = '';

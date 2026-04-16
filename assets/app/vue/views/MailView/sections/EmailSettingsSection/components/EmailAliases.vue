@@ -33,7 +33,7 @@ const errorMessage = ref<string>(null);
 
 const nextStepText = computed(() => {
   return t('views.mail.ftue.nextStep', { step: t('views.mail.ftue.customDomains') });
-})
+});
 
 const allDomainOptions = computed(() => {
   // Allowed domains include any verified custom domains

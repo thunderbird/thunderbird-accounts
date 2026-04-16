@@ -34,7 +34,7 @@ const maxCustomDomains = window._page?.maxCustomDomains;
 
 const nextStepText = computed(() => {
   return t('views.mail.ftue.nextStep', { step: t('views.mail.ftue.yourAccount') });
-})
+});
 
 const handleStepChange = (step: STEP) => {
   currentStep.value = step;

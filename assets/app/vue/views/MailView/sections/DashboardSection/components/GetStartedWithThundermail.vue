@@ -49,7 +49,7 @@ const thunderbirdClientImage = new URL('@/assets/png/thundermail-dashboard-clien
 
 const nextStepText = computed(() => {
   return t('views.mail.ftue.nextStep', { step: t('views.mail.ftue.appPassword') });
-})
+});
 </script>
 
 <script lang="ts">
