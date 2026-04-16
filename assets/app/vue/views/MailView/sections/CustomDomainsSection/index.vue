@@ -3,21 +3,17 @@ import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhGlobe, PhCheckCircle, PhX } from '@phosphor-icons/vue';
 import { BaseBadge, BaseBadgeTypes, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
-import { useTour, FTUE_STEPS } from '@/composables/useTour';
-
 // Types
 import { CustomDomain, DOMAIN_STATUS, STEP } from './types';
 
 // Shared components
 import CardContainer from '@/components/CardContainer.vue';
-import TourCard from '@/components/TourCard.vue';
 
 // Local components
 import CustomDomainForm from './components/CustomDomainForm.vue';
 import ActionsMenu from './components/ActionsMenu.vue';
 
 const { t } = useI18n();
-const tour = useTour();
 
 const currentStep = ref<STEP>(STEP.INITIAL);
 const customDomains = ref<CustomDomain[]>(window._page?.customDomains || []);
@@ -31,10 +27,6 @@ const errorMessage = ref<string>(null);
 const customDomainFormRef = ref(null);
 const verificationCriticalErrors = ref<string[]>([]);
 const maxCustomDomains = window._page?.maxCustomDomains;
-
-const nextStepText = computed(() => {
-  return t('views.mail.ftue.nextStep', { step: t('views.mail.ftue.yourAccount') });
-});
 
 const handleStepChange = (step: STEP) => {
   currentStep.value = step;
@@ -87,18 +79,7 @@ export default {
       :title="t('views.mail.sections.customDomains.customDomains')"
       :subtitle="customDomainsDescription"
     >
-      <tour-card
-        data-tour-card
-        v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.CUSTOM_DOMAINS"
-        :text="t('views.mail.ftue.step4Text')"
-        :subtitle="nextStepText"
-        :current-step="tour.currentStep.value"
-        :total-steps="FTUE_STEPS.FINAL"
-        show-back
-        @next="tour.next()"
-        @back="tour.back()"
-        @close="tour.skip()"
-      />
+      <div id="tour-target-custom-domains" />
 
       <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: maxCustomDomains }) }}</strong>
 

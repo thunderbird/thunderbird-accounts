@@ -1,35 +1,41 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { LinkButton, PrimaryButton } from '@thunderbirdops/services-ui';
 import { PhXCircle } from '@phosphor-icons/vue';
 
 const { t } = useI18n();
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   text: string;
+  title?: string;
   subtitle?: string;
   currentStep: number;
   totalSteps: number;
   showBack?: boolean;
   nextLabel?: string;
-  variant?: 'section' | 'header';
+  variant?: 'section' | 'header' | 'welcome';
 }>(), {
   variant: 'section',
 });
 
 const emit = defineEmits(['next', 'back', 'close']);
+
+const isWelcome = computed(() => props.variant === 'welcome');
 </script>
 
 <template>
   <div
     class="tour-card"
-    :class="{ 'tour-card--header': variant === 'header' }"
+    :class="{
+      'tour-card--header': variant === 'header' || variant === 'welcome',
+    }"
     role="dialog"
-    :aria-label="t('views.mail.ftue.step', { step: currentStep, total: totalSteps })"
+    :aria-label="isWelcome ? title : t('views.mail.ftue.step', { step: currentStep, total: totalSteps })"
     aria-modal="false"
     tabindex="-1"
   >
-    <header>
+    <header v-if="!isWelcome">
       <p>{{ t('views.mail.ftue.step', { step: currentStep, total: totalSteps }) }}</p>
       <button class="close-button" :aria-label="t('views.mail.ftue.close')" @click="emit('close')">
         <ph-x-circle size="24" />
@@ -37,11 +43,15 @@ const emit = defineEmits(['next', 'back', 'close']);
     </header>
 
     <div class="content">
+      <h2 v-if="isWelcome && title">{{ title }}</h2>
       <p>{{ text }}</p>
       <p v-if="subtitle">{{ subtitle }}</p>
   
       <div class="buttons-container">
-        <link-button v-if="showBack" size="small" @click="emit('back')">
+        <link-button v-if="isWelcome" size="small" @click="emit('close')">
+          {{ t('views.mail.ftue.skip') }}
+        </link-button>
+        <link-button v-else-if="showBack" size="small" @click="emit('back')">
           {{ t('views.mail.ftue.back') }}
         </link-button>
   

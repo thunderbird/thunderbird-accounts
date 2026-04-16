@@ -3,8 +3,6 @@ import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NoticeBar, NoticeBarTypes, BaseBadge, BaseBadgeTypes } from '@thunderbirdops/services-ui';
 import { PhX } from '@phosphor-icons/vue';
-import TourCard from '@/components/TourCard.vue';
-import { useTour, FTUE_STEPS } from '@/composables/useTour';
 
 // Local components
 import EmailAliasActionsMenu from './EmailAliasActionsMenu.vue';
@@ -18,7 +16,6 @@ import { EmailAlias } from '../types';
 import { addEmailAlias } from '../api';
 
 const { t } = useI18n();
-const tour = useTour();
 
 const aliasLimit = window._page?.maxEmailAliases;
 
@@ -30,10 +27,6 @@ const emailAliases = ref<EmailAlias[]>(window._page?.emailAddresses?.map((email,
 })) || []);
 const isAddingEmailAlias = ref(false);
 const errorMessage = ref<string>(null);
-
-const nextStepText = computed(() => {
-  return t('views.mail.ftue.nextStep', { step: t('views.mail.ftue.customDomains') });
-});
 
 const allDomainOptions = computed(() => {
   // Allowed domains include any verified custom domains
@@ -77,18 +70,7 @@ const onDeleteAliasError = (error: string) => {
 
 <template>
   <div class="email-aliases-content">
-    <tour-card
-      data-tour-card
-      v-if="tour.showFTUE.value && tour.currentStep.value === FTUE_STEPS.EMAIL_ALIASES"
-      :text="t('views.mail.ftue.step3Text')"
-      :current-step="tour.currentStep.value"
-      :total-steps="FTUE_STEPS.FINAL"
-      :subtitle="nextStepText"
-      show-back
-      @next="tour.next()"
-      @back="tour.back()"
-      @close="tour.skip()"
-    />
+    <div id="tour-target-email-aliases" />
 
     <div id="email-aliases" class="header-content">
       <p>{{ t('views.mail.sections.emailSettings.emailAliasesDescription') }}</p>

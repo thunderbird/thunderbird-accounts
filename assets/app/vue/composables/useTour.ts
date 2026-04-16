@@ -1,4 +1,4 @@
-import { ref, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 
 export const FTUE_STEPS = {
   INITIAL: 0,
@@ -8,6 +8,19 @@ export const FTUE_STEPS = {
   CUSTOM_DOMAINS: 4,
   FINAL: 5,
 } as const;
+
+type FtueStepId = typeof FTUE_STEPS[keyof typeof FTUE_STEPS];
+
+interface StepConfig {
+  targetId?: string;
+  teleportTarget?: string;
+  titleKey?: string;
+  textKey?: string;
+  subtitleNextStepKey?: string;
+  showBack?: boolean;
+  variant?: 'section' | 'header' | 'welcome';
+  nextLabelKey?: string;
+}
 
 const FTUE_STORAGE_KEY = 'tb_accounts_ftue_completed';
 const TOUR_CARD_SELECTOR = '[data-tour-card]';
@@ -21,7 +34,7 @@ const getInitialState = () => {
   return true;
 };
 
-const currentStep = ref<typeof FTUE_STEPS[keyof typeof FTUE_STEPS]>(FTUE_STEPS.INITIAL);
+const currentStep = ref<FtueStepId>(FTUE_STEPS.INITIAL);
 const showFTUE = ref(getInitialState());
 
 const onEscapeKey = (event: KeyboardEvent) => {
@@ -51,33 +64,55 @@ watch(showFTUE, (value) => {
 }, { immediate: true });
 
 export const useTour = () => {
-  const steps = [
-    {
-      id: FTUE_STEPS.INITIAL,
+  const steps: Record<FtueStepId, StepConfig> = {
+    [FTUE_STEPS.INITIAL]: {
+      teleportTarget: '#tour-target-header',
+      titleKey: 'views.mail.ftue.initialWelcomeTitle',
+      textKey: 'views.mail.ftue.initialWelcomeDescription',
+      variant: 'welcome',
+      nextLabelKey: 'views.mail.ftue.letsGo',
     },
-    {
-      id: FTUE_STEPS.CONNECT_EMAIL,
+    [FTUE_STEPS.CONNECT_EMAIL]: {
       targetId: 'connect-email',
+      teleportTarget: '#tour-target-connect-email',
+      textKey: 'views.mail.ftue.step1Text',
+      subtitleNextStepKey: 'views.mail.ftue.appPassword',
+      showBack: false,
     },
-    {
-      id: FTUE_STEPS.APP_PASSWORDS,
+    [FTUE_STEPS.APP_PASSWORDS]: {
       targetId: 'email-settings',
+      teleportTarget: '#tour-target-app-passwords',
+      textKey: 'views.mail.ftue.step2Text',
+      subtitleNextStepKey: 'views.mail.ftue.emailAliases',
+      showBack: true,
     },
-    {
-      id: FTUE_STEPS.EMAIL_ALIASES,
+    [FTUE_STEPS.EMAIL_ALIASES]: {
       targetId: 'email-aliases',
+      teleportTarget: '#tour-target-email-aliases',
+      textKey: 'views.mail.ftue.step3Text',
+      subtitleNextStepKey: 'views.mail.ftue.customDomains',
+      showBack: true,
     },
-    {
-      id: FTUE_STEPS.CUSTOM_DOMAINS,
+    [FTUE_STEPS.CUSTOM_DOMAINS]: {
       targetId: 'custom-domains',
+      teleportTarget: '#tour-target-custom-domains',
+      textKey: 'views.mail.ftue.step4Text',
+      subtitleNextStepKey: 'views.mail.ftue.yourAccount',
+      showBack: true,
     },
-    {
-      id: FTUE_STEPS.FINAL,
-    }
-  ];
+    [FTUE_STEPS.FINAL]: {
+      teleportTarget: '#tour-target-header',
+      textKey: 'views.mail.ftue.step5Text',
+      showBack: true,
+      variant: 'header',
+      nextLabelKey: 'views.mail.ftue.done',
+    },
+  };
+
+  const currentStepConfig = computed(() => steps[currentStep.value]);
 
   const next = () => {
-    if (currentStep.value < steps.length - 1) {
+    if (currentStep.value < FTUE_STEPS.FINAL) {
       currentStep.value++;
     } else {
       showFTUE.value = false;
@@ -85,7 +120,7 @@ export const useTour = () => {
   };
 
   const back = () => {
-    if (currentStep.value > 0) {
+    if (currentStep.value > FTUE_STEPS.INITIAL) {
       currentStep.value--;
     }
   };
@@ -107,9 +142,9 @@ export const useTour = () => {
       return;
     }
 
-    const step = steps.find(s => s.id === newStep);
+    const step = steps[newStep];
 
-    if (step && step.targetId) {
+    if (step.targetId) {
       const element = document.getElementById(step.targetId);
 
       if (element) {
@@ -122,6 +157,7 @@ export const useTour = () => {
 
   return {
     currentStep,
+    currentStepConfig,
     showFTUE,
     next,
     back,
