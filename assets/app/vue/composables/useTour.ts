@@ -76,10 +76,6 @@ export const useTour = () => {
     }
   ];
 
-  const start = () => {
-    currentStep.value = FTUE_STEPS.CONNECT_EMAIL;
-  };
-
   const next = () => {
     if (currentStep.value < steps.length - 1) {
       currentStep.value++;
@@ -127,7 +123,6 @@ export const useTour = () => {
   return {
     currentStep,
     showFTUE,
-    start,
     next,
     back,
     skip
