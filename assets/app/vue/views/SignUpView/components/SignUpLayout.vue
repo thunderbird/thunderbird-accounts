@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import MessageBar from '@kc/vue/components/MessageBar.vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
+import { useThrottleFn } from '@vueuse/core';
 
 const route = useRoute();
 const { t } = useI18n();
@@ -20,12 +21,13 @@ const emit = defineEmits<{
   (e: 'submit'): void;
 }>();
 
-const onSubmit = () => {
+// Throttle to prevent emitting a bunch of events at once
+const onSubmit = useThrottleFn(() => {
   if (!form?.value.checkValidity()) {
     return;
   }
   emit('submit');
-}
+}, 1000);
 </script>
 
 <script lang="ts">
@@ -36,12 +38,9 @@ export default {
 
 <template>
   <header>
-    <h1 class="title" data-testid="title">{{ title }}</h1>
-    <p class="text" data-testid="subtitle">{{ subtitle }}</p>
-
-    <slot name="notice-bars">
-      <message-bar />
-    </slot>
+    <h1 aria-live="polite" class="title" data-testid="title">{{ title }}</h1>
+    <p  aria-live="polite" class="text" data-testid="subtitle">{{ subtitle }}</p>
+    <slot name="notice-bars"/>
   </header>
 
   <main>
@@ -51,7 +50,7 @@ export default {
           <slot name="form-extras" />
         </div>
         <div class="buttons">
-          <primary-button data-testid="submit-button" class="submit" :disabled="submitDisabled"
+          <primary-button form-action="submit" data-testid="submit-button" class="submit" :disabled="submitDisabled"
             @click="onSubmit()">
             {{ $t('views.mail.views.signUp.continue') }}
           </primary-button>

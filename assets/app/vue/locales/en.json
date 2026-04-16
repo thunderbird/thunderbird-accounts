@@ -75,6 +75,7 @@
       }
     },
     "error": {
+      "dismiss": "Dismiss message.",
       "fallbackError": "Unknown Error",
       "notFoundError": "Sorry this page doesn't exist.",
       "notFoundMessage": {

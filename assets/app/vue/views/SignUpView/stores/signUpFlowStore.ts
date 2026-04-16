@@ -1,7 +1,7 @@
 import { LOGIN_ORIGIN } from '@/defines';
 import { useSessionStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 
 export const enum SignUpSteps {
   INVALID = 0,
@@ -39,9 +39,9 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
   const submit = async () => {
     if (password.value !== confirmPassword.value) {
       return false;
-    } 
+    }
 
-    const response = await fetch('/users/sign-up/', {
+    const response = await fetch('/api/v1/auth/sign-up/', {
       method: 'POST',
       body: JSON.stringify({
         'email': verificationEmail.value,
@@ -57,12 +57,15 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
       },
     });
   
+
     if (response.status === 200) {
-      // Force a reset to remove any sensitive information
       $reset();
+    } else if (response.status === 429) {
+      errors.value = (await response.json())?.detail ?? null;
+      console.log(errors.value);
+      return false;
     } else {
-      const data = await response.json();
-      console.log(response.status, ' : ', data);
+      errors.value = (await response.json()) ?? null;
       return false;
     }
 
@@ -84,8 +87,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
         nextStepValue = SignUpSteps.VERIFY;
         break;
       case SignUpSteps.VERIFY:
-        nextStepValue = SignUpSteps.DONE;
-        break; 
+        return;
     }
     step.value = nextStepValue;
   }

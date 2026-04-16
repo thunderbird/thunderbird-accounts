@@ -13,7 +13,7 @@ const loading = ref(false);
 
 const signUpFlowStore = useSignUpFlowStore();
 
-const { password, confirmPassword, name } = storeToRefs(signUpFlowStore);
+const { fullUsername, password, confirmPassword, name } = storeToRefs(signUpFlowStore);
 const { nextStep } = signUpFlowStore;
 const confirmPasswordError = ref(null);
 
@@ -41,8 +41,13 @@ export default {
   <sign-up-layout :title="$t('views.mail.views.signUp.step2.title')"
     :subtitle="$t('views.mail.views.signUp.step2.subtitle')" :submitDisabled="loading || confirmPasswordError"
     :submitTitle="$t('views.mail.views.signUp.continue')" @submit="onSubmit">
-    <slot name="notice-bars"/>
+    <template v-slot:notice-bars>
+      <slot name="notice-bars"/>
+    </template>
     <template v-slot:form-elements>
+      <!-- Send some hints to any password managers out there that this is something to save -->
+      <input type="text" name="username" autocomplete="username" v-model="fullUsername" hidden>
+
       <text-input data-testid="password-input" id="password" name="password" type="password" required
         autocomplete="new-password" :help="$t('views.mail.views.signUp.step2.passwordHelp')" v-model="password">
         {{ $t('views.mail.views.signUp.fields.password') }}

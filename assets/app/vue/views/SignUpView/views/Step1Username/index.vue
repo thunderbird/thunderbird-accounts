@@ -63,11 +63,21 @@ export default {
   <sign-up-layout :title="$t('views.mail.views.signUp.step1.title')"
     :subtitle="$t('views.mail.views.signUp.step1.subtitle')" :submitDisabled="loading || usernameError"
     :submitTitle="$t('views.mail.views.signUp.continue')" @submit="onSubmit">
-    <slot name="notice-bars"/>
+    <template v-slot:notice-bars>
+      <slot name="notice-bars"/>
+    </template>
     <template v-slot:form-elements>
-      <text-input data-testid="username-input" id="partialUsername" name="partialUsername" required
-        autocomplete="username" @input="usernameCheckDebounced" :error="usernameError" :outerSuffix="tbProPrimaryDomain"
-        :help="$t('views.mail.views.signUp.step1.usernameHelp', { 'domain': tbProPrimaryDomain })" v-model="username">
+      <text-input 
+      data-testid="username-input" 
+      id="partialUsername" 
+      name="partialUsername" 
+      required
+      autocomplete="username" 
+      @input="usernameCheckDebounced"
+      :error="usernameError"
+      :outerSuffix="tbProPrimaryDomain"
+      :help="$t('views.mail.views.signUp.step1.usernameHelp', { 'domain': tbProPrimaryDomain })"
+      v-model="username">
         {{ $t('views.mail.views.signUp.fields.username') }}
       </text-input>
       <slot name="form-extras" />
