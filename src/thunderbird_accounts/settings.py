@@ -262,7 +262,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'is_username_available': '30/minute',
-        'sign_up': '2/minute'
+        'sign_up': '10/minute'
     }
 }
 

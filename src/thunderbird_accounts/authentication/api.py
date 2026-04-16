@@ -1,3 +1,4 @@
+from urllib.parse import quote
 from django.conf import settings
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny
@@ -40,13 +41,11 @@ def sign_up(request: Request):
     from thunderbird_accounts.authentication.clients import KeycloakClient
     from thunderbird_accounts.authentication.models import AllowListEntry, User
     from thunderbird_accounts.mail.utils import is_address_taken
-    return Response({})
 
     data = request.data
     email = data.get('email')
     timezone = data.get('zoneinfo', 'UTC')
     locale = data.get('locale', 'en')
-    print('->', email)
 
     partial_username = data.get('partialUsername')
     username = f'{partial_username}@{settings.PRIMARY_EMAIL_DOMAIN}'
@@ -59,32 +58,28 @@ def sign_up(request: Request):
     }
 
     if not email:
-        return Response(
-            {
-                'error': generic_email_error,
-                'type': 1,
-            }
-        )
-        # return HttpResponseRedirect('/sign-up')
+        return Response({'error': generic_email_error, 'type': 'no-email'}, status=400)
 
     if not is_email_in_allow_list(email):
         # Redirect the user to the tbpro waitlist
-        return Response({'error': 'no'})
-        # return HttpResponseRedirect(f'{settings.TB_PRO_WAIT_LIST_URL}?email={quote(email)}')
+        return Response(
+            {
+                'error': _('You are not on the allow list.'),
+                'type': 'go-to-wait-list',
+                'href': f'{settings.TB_PRO_WAIT_LIST_URL}?email={quote(email)}',
+            },
+            status=403,
+        )
 
     # Make sure there's no email alias with this address
     if is_address_taken(username):
-        return Response(
-            {
-                'error': generic_email_error,
-                'type': 2,
-            }
-        )
-        # return HttpResponseRedirect('/sign-up')
+        return Response({'error': generic_email_error, 'type': 'username-in-use'}, status=400)
 
     if not data.get('password'):
-        return Response({'error': _("Your password doesn't match the confirm password field.")})
-        # return HttpResponseRedirect('/sign-up')
+        return Response(
+            {'error': _("Your password doesn't match the confirm password field."), 'type': 'password-does-not-match'},
+            status=400,
+        )
 
     user = User(username=username, email=email, display_name=username, language=locale, timezone=timezone)
 
@@ -107,27 +102,30 @@ def sign_up(request: Request):
         user.save()
 
         # Tie the allow list entry with our new user
-        allow_list_entry = AllowListEntry.objects.get(email=email)
-        allow_list_entry.user = user
-        allow_list_entry.save()
+        if settings.USE_ALLOW_LIST:
+            allow_list_entry = AllowListEntry.objects.get(email=email)
+            allow_list_entry.user = user
+            allow_list_entry.save()
     except (ValueError, InvalidDomainError):
         # Only username errors raise ValueErrors right now
         return Response(
             {
                 'error': generic_email_error,
-                'type': 3,
-            }
+                'type': 'invalid-domain',
+            },
+            status=400,
         )
-        # return HttpResponseRedirect('/sign-up')
     except ImportUserError as ex:
         sentry_sdk.capture_exception(ex)
         return Response(
-            {'error': ex.error_desc if ex.error_desc else _('There was an unknown error, please try again later.')}
+            {
+                'error': ex.error_desc if ex.error_desc else _('There was an unknown error, please try again later.'),
+                'type': ex.error_code if ex.error_code else 'unknown-error',
+            },
+            status=400 if ex.error_code else 500,
         )
-        # return HttpResponseRedirect('/sign-up')
 
     # Clear form_data on success
     request.session['form_data'] = {}
 
-    return Response({})
-    # return HttpResponseRedirect('/sign-up/complete')
+    return Response({'success': True})

@@ -39,21 +39,21 @@ export default {
 
 <template>
   <sign-up-layout :title="$t('views.mail.views.signUp.step2.title')"
-    :subtitle="$t('views.mail.views.signUp.step2.subtitle')" :submitDisabled="loading || confirmPasswordError"
+    :subtitle="$t('views.mail.views.signUp.step2.subtitle')" :submitDisabled="loading"
     :submitTitle="$t('views.mail.views.signUp.continue')" @submit="onSubmit">
     <template v-slot:notice-bars>
-      <slot name="notice-bars"/>
+      <slot name="notice-bars" />
     </template>
     <template v-slot:form-elements>
       <!-- Send some hints to any password managers out there that this is something to save -->
       <input type="text" name="username" autocomplete="username" v-model="fullUsername" hidden>
 
-      <text-input data-testid="password-input" id="password" name="password" type="password" required
+      <text-input minlength="12" data-testid="password-input" id="password" name="password" type="password" required
         autocomplete="new-password" :help="$t('views.mail.views.signUp.step2.passwordHelp')" v-model="password">
         {{ $t('views.mail.views.signUp.fields.password') }}
       </text-input>
 
-      <text-input data-testid="confirm-password-input" id="confirmPassword" name="confirmPassword" type="password"
+      <text-input minlength="12" data-testid="confirm-password-input" id="confirmPassword" name="confirmPassword" type="password"
         required autocomplete="new-password" :error="confirmPasswordError"
         :help="$t('views.mail.views.signUp.step2.confirmPasswordHelp')" v-model="confirmPassword">
         {{ $t('views.mail.views.signUp.fields.confirmPassword') }}

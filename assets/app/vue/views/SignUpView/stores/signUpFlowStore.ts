@@ -45,7 +45,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
       method: 'POST',
       body: JSON.stringify({
         'email': verificationEmail.value,
-        'partial_username': username.value,
+        'partialUsername': username.value,
         'name': name.value,
         'password': password.value,
         'zoneinfo': timezone.value,
@@ -60,12 +60,33 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
 
     if (response.status === 200) {
       $reset();
-    } else if (response.status === 429) {
+    } else if (response.status === 429) { // Throttled by rate limiter
       errors.value = (await response.json())?.detail ?? null;
       console.log(errors.value);
       return false;
-    } else {
-      errors.value = (await response.json()) ?? null;
+    } else { // Server errors
+      try {
+        const error = (await response.json()) ?? null;
+        if (!error) {
+          return false;
+        }
+        errors.value = error['error'] ?? 'Unknown Error';
+
+        // What step are we moving the user back to?
+        const type: string = error['type'] ?? 'unknown-error';
+        if (type.indexOf('invalidPassword') === 0) {
+          step.value = SignUpSteps.PASSWORD;
+        } else if (type === 'go-to-wait-list') {
+          window.setTimeout(() => {
+            // Oh we need to ship them outside of this page
+            window.location.href = error['href'];
+          }, 500);
+        } else {
+          step.value = SignUpSteps.USERNAME;
+        }
+      } catch {
+        errors.value = 'Unknown error';
+      }
       return false;
     }
 
