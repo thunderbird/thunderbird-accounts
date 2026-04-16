@@ -54,10 +54,9 @@ export const navigateToAccountsHubAndSignIn = async (page: Page) => {
 
 
     await waitForVueApp(page);
-    // now that we're signed into the accounts hub give it time to load
-    //await page.waitForTimeout(TIMEOUT_5_SECONDS);
-    await expect(tbAcctsHubPage.dashboardTitle).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-    await expect(tbAcctsHubPage.userMenu).toBeVisible();
+    // Confirm the signed-in hub actually rendered by waiting for the banner's
+    // UserAvatar (the stable signed-in signal after the nav overhaul in #695).
+    await expect(tbAcctsHubPage.userAvatar).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
 }
 
 /**
