@@ -7,7 +7,7 @@ export const FTUE_STEPS = {
   EMAIL_ALIASES: 3,
   CUSTOM_DOMAINS: 4,
   FINAL: 5,
-}
+} as const;
 
 const FTUE_STORAGE_KEY = 'tb_accounts_ftue_completed';
 const TOUR_CARD_SELECTOR = '[role="dialog"][tabindex="-1"]';
@@ -21,7 +21,7 @@ const getInitialState = () => {
   return true;
 };
 
-const currentStep = ref(FTUE_STEPS.INITIAL);
+const currentStep = ref<typeof FTUE_STEPS[keyof typeof FTUE_STEPS]>(FTUE_STEPS.INITIAL);
 const showFTUE = ref(getInitialState());
 
 const onEscapeKey = (event: KeyboardEvent) => {
