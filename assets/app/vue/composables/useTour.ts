@@ -20,7 +20,7 @@ interface StepConfig {
   showBack?: boolean;
   variant?: 'section' | 'header' | 'welcome';
   nextLabelKey?: string;
-}
+};
 
 const FTUE_STORAGE_KEY = 'tb_accounts_ftue_completed';
 const TOUR_CARD_SELECTOR = '[data-tour-card]';
