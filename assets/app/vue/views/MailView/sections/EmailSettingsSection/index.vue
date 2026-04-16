@@ -26,10 +26,7 @@ export default {
 
 <template>
   <section id="email-settings">
-    <card-container
-      id="email-settings"
-      :title="t('views.mail.sections.emailSettings.emailSettings')"
-    >
+    <card-container :title="t('views.mail.sections.emailSettings.emailSettings')">
       <div class="email-settings-content">
         <user-info-side/>
         <app-password-side :app-passwords="appPasswords" />
