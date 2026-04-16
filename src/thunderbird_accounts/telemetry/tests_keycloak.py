@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 
-from thunderbird_accounts.authentication.tasks import poll_keycloak_events
+from thunderbird_accounts.telemetry.tasks import poll_keycloak_events
 
 import thunderbird_accounts.telemetry.client as telemetry_module
 
@@ -57,7 +57,7 @@ class PollKeycloakEventsTestCase(TestCase):
         self.assertEqual(result['task_status'], 'skipped')
 
     @patch('thunderbird_accounts.telemetry.client.Posthog')
-    @patch('thunderbird_accounts.authentication.tasks.KeycloakClient')
+    @patch('thunderbird_accounts.telemetry.tasks.KeycloakClient')
     @override_settings(POSTHOG_API_KEY='phc_test', POSTHOG_HOST='https://ph.test')
     def test_no_events_returns_zero(self, mock_kc_class, mock_posthog_class):
         _setup_keycloak_mock(mock_kc_class, [])
@@ -68,7 +68,7 @@ class PollKeycloakEventsTestCase(TestCase):
         self.assertEqual(result['events_submitted'], 0)
 
     @patch('thunderbird_accounts.telemetry.client.Posthog')
-    @patch('thunderbird_accounts.authentication.tasks.KeycloakClient')
+    @patch('thunderbird_accounts.telemetry.tasks.KeycloakClient')
     @override_settings(POSTHOG_API_KEY='phc_test', POSTHOG_HOST='https://ph.test')
     def test_raw_user_id_never_in_posthog_payload(self, mock_kc_class, mock_posthog_class):
         """The raw Keycloak UUID must not appear anywhere in the PostHog call."""
@@ -87,7 +87,7 @@ class PollKeycloakEventsTestCase(TestCase):
                 self.assertNotEqual(value, secret_uuid)
 
     @patch('thunderbird_accounts.telemetry.client.Posthog')
-    @patch('thunderbird_accounts.authentication.tasks.KeycloakClient')
+    @patch('thunderbird_accounts.telemetry.tasks.KeycloakClient')
     @override_settings(POSTHOG_API_KEY='phc_test', POSTHOG_HOST='https://ph.test')
     def test_unmapped_event_types_are_filtered_out(self, mock_kc_class, mock_posthog_class):
         """Events with types not in KEYCLOAK_EVENT_MAP must not be forwarded."""
@@ -101,7 +101,7 @@ class PollKeycloakEventsTestCase(TestCase):
         self.assertEqual(result['events_submitted'], 0)
 
     @patch('thunderbird_accounts.telemetry.client.Posthog')
-    @patch('thunderbird_accounts.authentication.tasks.KeycloakClient')
+    @patch('thunderbird_accounts.telemetry.tasks.KeycloakClient')
     @override_settings(POSTHOG_API_KEY='phc_test', POSTHOG_HOST='https://ph.test')
     def test_duplicate_events_are_skipped(self, mock_kc_class, mock_posthog_class):
         """Events already in the seen-ID cache must not be resubmitted."""
@@ -118,7 +118,7 @@ class PollKeycloakEventsTestCase(TestCase):
         self.assertEqual(result['events_skipped'], 1)
 
     @patch('thunderbird_accounts.telemetry.client.Posthog')
-    @patch('thunderbird_accounts.authentication.tasks.KeycloakClient')
+    @patch('thunderbird_accounts.telemetry.tasks.KeycloakClient')
     @override_settings(POSTHOG_API_KEY='phc_test', POSTHOG_HOST='https://ph.test')
     def test_seen_ids_are_persisted_to_cache(self, mock_kc_class, mock_posthog_class):
         """After a successful run, submitted event IDs should be in the cache."""
@@ -133,7 +133,7 @@ class PollKeycloakEventsTestCase(TestCase):
         self.assertIn('new-event-123', cached)
 
     @patch('thunderbird_accounts.telemetry.client.Posthog')
-    @patch('thunderbird_accounts.authentication.tasks.KeycloakClient')
+    @patch('thunderbird_accounts.telemetry.tasks.KeycloakClient')
     @override_settings(POSTHOG_API_KEY='phc_test', POSTHOG_HOST='https://ph.test')
     def test_is_error_flag_for_all_event_types(self, mock_kc_class, mock_posthog_class):
         """Exercise every mapped event type through the task and verify is_error matches the _ERROR suffix."""
@@ -160,7 +160,7 @@ class PollKeycloakEventsTestCase(TestCase):
             )
 
     @patch('thunderbird_accounts.telemetry.client.Posthog')
-    @patch('thunderbird_accounts.authentication.tasks.KeycloakClient')
+    @patch('thunderbird_accounts.telemetry.tasks.KeycloakClient')
     @override_settings(POSTHOG_API_KEY='phc_test', POSTHOG_HOST='https://ph.test', KEYCLOAK_EVENTS_PAGE_SIZE=3)
     def test_pagination_fetches_all_events(self, mock_kc_class, mock_posthog_class):
         """Events spanning multiple pages must all be fetched and submitted."""
