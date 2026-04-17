@@ -2,8 +2,6 @@
 import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter, useRoute } from 'vue-router';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { defaultLocale } from '@/utils';
 import {
@@ -31,15 +29,9 @@ const privacyDoc = ref<LegalDocMeta | null>(null);
 const tosContent = ref('');
 const privacyContent = ref('');
 
-const renderedTosHtml = computed(() => {
-  if (!tosContent.value) return '';
-  return DOMPurify.sanitize(marked.parse(tosContent.value) as string);
-});
+const renderedTosHtml = computed(() => tosContent.value);
 
-const renderedPrivacyHtml = computed(() => {
-  if (!privacyContent.value) return '';
-  return DOMPurify.sanitize(marked.parse(privacyContent.value) as string);
-});
+const renderedPrivacyHtml = computed(() => privacyContent.value);
 
 const sourceContext = computed(() => {
   return (route.query.source as string) || 'accounts-dashboard';
@@ -91,6 +83,12 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+</script>
+
+<script lang="ts">
+export default {
+  name: 'TosPrivacyView',
+};
 </script>
 
 <template>
