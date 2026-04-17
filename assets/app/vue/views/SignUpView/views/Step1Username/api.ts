@@ -11,10 +11,10 @@ export const isUsernameAvailable = async (username: string) => {
   });
 
   if (response.status === 200) {
-    return true;
+    return { success: true, error: null };
   } else if (response.status === 429) { // Throttled
-    return (await response.json())['detail'] || false;
+    return { success: false, error: (await response.json())['detail'] || false };
   }
 
-  return (await response.json())['0'] || false;
+  return { success: false, error: (await response.json())['0'] || false };
 }

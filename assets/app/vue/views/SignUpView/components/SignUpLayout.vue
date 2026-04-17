@@ -40,7 +40,7 @@ export default {
 <template>
   <!-- Hidden element for testing purposes, don't worry about it. -->
   <input type="hidden" aria-hidden="true" data-testid="step-id" :value="stepId"/>
-  
+
   <header>
     <h1 aria-live="polite" class="title" data-testid="title">{{ title }}</h1>
     <p  aria-live="polite" class="text" data-testid="subtitle">{{ subtitle }}</p>
@@ -55,7 +55,7 @@ export default {
         </div>
         <div class="buttons">
           <primary-button form-action="submit" data-testid="submit-button" class="submit" :disabled="submitDisabled"
-            @click="onSubmit()">
+            @click.prevent="onSubmit()">
             {{ $t('views.mail.views.signUp.continue') }}
           </primary-button>
         </div>

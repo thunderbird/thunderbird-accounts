@@ -56,21 +56,23 @@ export class TbAcctsSignUpPage {
     await this.userNameInput?.fill(username);
 
     await this.submitForm();
-    await expect(this.stepId).toHaveValue('step-password');
 
     if (!password || !passwordConfirm) {
       return;
     }
+    
+    await expect(this.stepId).toHaveValue('step-password');
 
     await this.passwordInput?.fill(password);
     await this.passwordConfirmInput?.fill(passwordConfirm);
 
     await this.submitForm();
-    await expect(this.stepId).toHaveValue('step-verify-email');
 
     if (!verificationEmail) {
       return;
     }
+
+    await expect(this.stepId).toHaveValue('step-verify-email');
 
     await this.verificationEmailInput?.fill(verificationEmail);
   }

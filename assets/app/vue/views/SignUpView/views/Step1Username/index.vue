@@ -22,30 +22,29 @@ const usernameOk = ref(false);
 const usernameError = ref(null);
 
 const usernameCheckDebounced = useDebounceFn(async () => {
-  const response = await isUsernameAvailable(username.value);
+  const { success, error } = await isUsernameAvailable(username.value);
   loading.value = false;
 
-  if (response === true) {
+  if (success === true) {
     usernameOk.value = true;
     usernameError.value = null;
     return;
   }
 
   usernameOk.value = false;
-
-  if (response === false) {
+  if (error === false) {
     usernameError.value = t('views.mail.views.signUp.step1.unknownError');
     return;
   }
 
-  usernameError.value = response;
+  usernameError.value = error;
 }, 250);
 
 const onSubmit = async () => {
   loading.value = true;
 
   await usernameCheckDebounced();
-  if (!usernameOk) {
+  if (!usernameOk.value) {
     return;
   }
 
@@ -70,7 +69,7 @@ export default {
 
 <template>
   <sign-up-layout step-id="step-username" :title="$t('views.mail.views.signUp.step1.title')"
-    :subtitle="$t('views.mail.views.signUp.step1.subtitle')" :submitDisabled="loading || usernameError"
+    :subtitle="$t('views.mail.views.signUp.step1.subtitle')" :submitDisabled="loading || !!usernameError"
     :submitTitle="$t('views.mail.views.signUp.continue')" @submit="onSubmit">
     <template v-slot:notice-bars>
       <slot name="notice-bars"/>
@@ -81,6 +80,7 @@ export default {
       id="partialUsername" 
       name="partialUsername" 
       required
+      maxlength="150"
       autocomplete="username" 
       @input="usernameCheckDebounced"
       :error="usernameError"

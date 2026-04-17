@@ -52,4 +52,42 @@ test.describe('sign up form', {
     expect(signUpPage.verificationEmailInput).toBeTruthy();
     await expect(signUpPage.verificationEmailInput).toHaveValue(verificationEmail);
   });
+
+  test('step username fails with bad username', async ({ page }) => {
+    // Local part of an email address cannot contain the '@' character.
+    const testUsername: string = 'IM@A@BAD@LOCAL@PART@OF@AN@EMAIL';
+
+    await signUpPage.userNameInput?.fill(testUsername);
+    await signUpPage.submitForm();
+
+    // Make sure we're still on the first step
+    await expect(signUpPage.stepId).toHaveValue('step-username');
+
+    const errorText = page.getByText('This username is not valid. Try another one.');
+    await expect(errorText).toBeVisible();
+  });
+
+  test('step password fails with password length below minimum', async ({ page }) => {
+    const testUsername: string = crypto.randomUUID().replaceAll('-', '');
+    const testPassword: string = 'this-is-my-password-and-it-is-long';
+    const testConfirmPassword: string = 'yay';
+
+    await signUpPage.fillForm(testUsername, testPassword, testConfirmPassword);
+    await signUpPage.submitForm();
+
+    const errorText = page.getByText('Please use at least 12 characters (you are currently using 3 characters).');
+    await expect(errorText).toBeVisible();
+  });
+
+  test('step password fails with password mismatch', async ({ page }) => {
+    const testUsername: string = crypto.randomUUID().replaceAll('-', '');
+    const testPassword: string = 'this-is-my-password-and-it-is-long';
+    const testConfirmPassword: string = 'this-is-my-password-and-it-is-long-tpyo';
+
+    await signUpPage.fillForm(testUsername, testPassword, testConfirmPassword);
+    await signUpPage.submitForm();
+
+    const errorText = page.getByText('Password and confirm password must match.');
+    await expect(errorText).toBeVisible();
+  });
 });

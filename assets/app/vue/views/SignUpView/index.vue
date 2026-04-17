@@ -66,7 +66,7 @@ export default {
         <!-- Orca at least will only detect updated dom elements not "new" dom elements. 
         So we need a wrapper that updates, otherwise we won't announce anything -->
         <div aria-live="assertive">
-          <notice-bar  class="server-message" :type="NoticeBarTypes.Critical" v-if="errors !== null">
+          <notice-bar class="server-message" :type="NoticeBarTypes.Critical" v-if="errors !== null">
             {{ errors }}
 
             <template #cta>
