@@ -29,12 +29,10 @@ async function handleConnectClick() {
     }
 
     const url =
-      'net.thunderbird://accounts/new' +
+      'net.thunderbird://add-thundermail/' +
       `?name=${encodeURIComponent(userDisplayName)}` +
       `&email=${encodeURIComponent(primaryEmail)}` +
       `&token=${encodeURIComponent(data.token)}`;
-
-    console.log('url', url);
 
     window.location.href = url;
   } catch (error) {
