@@ -2,19 +2,6 @@
 import { ref } from 'vue';
 import ThundermailLogo from '@kc/svg/thundermail-logo-blue.svg';
 
-// Featured image imports / dpi variants
-import featuredImagePng from '@kc/images/featured-image/left-graphic.png';
-import featuredImageWebp from '@kc/images/featured-image/left-graphic.webp';
-import featuredImageAvif from '@kc/images/featured-image/left-graphic.avif';
-
-import featuredImagePng2x from '@kc/images/featured-image/left-graphic@2x.png';
-import featuredImageWebp2x from '@kc/images/featured-image/left-graphic@2x.webp';
-import featuredImageAvif2x from '@kc/images/featured-image/left-graphic@2x.avif';
-
-import featuredImagePng3x from '@kc/images/featured-image/left-graphic@3x.png';
-import featuredImageWebp3x from '@kc/images/featured-image/left-graphic@3x.webp';
-import featuredImageAvif3x from '@kc/images/featured-image/left-graphic@3x.avif';
-
 const clientUrl = window._page.currentView?.clientUrl;
 
 </script>
@@ -23,17 +10,7 @@ const clientUrl = window._page.currentView?.clientUrl;
   <section class="bolt-defaults">
     <div class="card">
       <!-- Left side: Featured image -->
-      <div class="left-side">
-        <picture>
-          <source :srcset="`${featuredImageAvif}, ${featuredImageAvif2x} 2.0x, ${featuredImageAvif3x} 3.0x`"
-            type="image/avif" />
-          <source :srcset="`${featuredImageWebp}, ${featuredImageWebp2x} 2.0x, ${featuredImageWebp3x} 3.0x`"
-            type="image/webp" />
-          <source :srcset="`${featuredImagePng}, ${featuredImagePng2x} 2.0x, ${featuredImagePng3x} 3.0x`"
-            type="image/png" />
-          <img class="featured-image" :src="featuredImagePng" alt="" />
-        </picture>
-      </div>
+      <div class="left-side"></div>
 
       <!-- Right side: Panel -->
       <div class="right-side">
@@ -59,6 +36,25 @@ section {
   display: flex;
   align-items: center;
   justify-content: center;
+
+  .left-side {
+    /* Fallback support */
+    background-image: url("@kc/images/featured-image/left-graphic.png");
+    /* Handle the resolution and image type picks for supported devices. */
+    background-image: image-set(
+      url("@kc/images/featured-image/left-graphic.avif") 1x type("image/avif"),
+      url("@kc/images/featured-image/left-graphic@2x.avif") 2x type("image/avif"),
+      url("@kc/images/featured-image/left-graphic@3x.avif") 3x type("image/avif"),
+
+      url("@kc/images/featured-image/left-graphic.webp") 1x type("image/webp"),
+      url("@kc/images/featured-image/left-graphic@2x.webp") 2x type("image/webp"),
+      url("@kc/images/featured-image/left-graphic@3x.webp") 3x type("image/webp"),
+
+      url("@kc/images/featured-image/left-graphic.png") 1x type("image/png"),
+      url("@kc/images/featured-image/left-graphic@2x.png") 2x type("image/png"),
+      url("@kc/images/featured-image/left-graphic@3x.png") 3x type("image/png"),
+    );
+  }
 
   .base-template__logo {
     height: 3rem;
@@ -132,10 +128,11 @@ section {
     padding: 1rem;
 
     .card {
+      --border-radius: 2rem;
       width: 1280px;
       height: auto;
       min-height: 720px;
-      border-radius: 2rem;
+      border-radius: var(--border-radius);
       align-items: initial;
       border: 0.0625rem solid var(--colour-neutral-border-intense);
 
@@ -143,6 +140,7 @@ section {
         background-color: unset;
         height: auto;
         min-height: auto;
+        border-radius: var(--border-radius);
 
         .featured-image {
           min-height: auto;
