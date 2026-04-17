@@ -516,6 +516,23 @@ def appointment_caldav_setup(request: HttpRequest):
 
 
 @login_required
+@require_http_methods(['POST'])
+def generate_desktop_connect_token(request: HttpRequest):
+    """Returns the OIDC access token for the Thunderbird Desktop custom
+    protocol connect flow. The token is fetched on-click rather than
+    embedded in the page to limit its exposure in the DOM."""
+
+    access_token = request.session.get('oidc_access_token')
+    if not access_token:
+        return JsonResponse(
+            {'success': False, 'error': str(_('Authentication token not available. Please try logging in again.'))},
+            status=401,
+        )
+
+    return JsonResponse({'success': True, 'token': access_token})
+
+
+@login_required
 def jmap_test_page(request: HttpRequest):
     from thunderbird_accounts.mail.tiny_jmap_client import TinyJMAPClient
 
