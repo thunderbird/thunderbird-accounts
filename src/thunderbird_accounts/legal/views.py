@@ -13,13 +13,13 @@ from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentRespon
 
 
 def _read_legal_content(content_path: str, locale: str) -> str:
-    """Read markdown content for a legal document, falling back to English."""
+    """Read pre-rendered HTML content for a legal document, falling back to English."""
     safe_locale = Path(locale).name
     content_dir = settings.ASSETS_ROOT / 'legal' / content_path
-    content_file = content_dir / f'{safe_locale}.md'
+    content_file = content_dir / f'{safe_locale}.html'
 
     if not content_file.exists():
-        content_file = content_dir / 'en.md'
+        content_file = content_dir / 'en.html'
 
     if not content_file.exists():
         return ''
@@ -55,7 +55,7 @@ def _record_response(request, action: str) -> JsonResponse:
 @login_required
 @require_http_methods(['GET'])
 def get_current_legal_docs(request):
-    """Returns current TOS and Privacy documents with their markdown content
+    """Returns current TOS and Privacy documents with their pre-rendered HTML content
     and whether the authenticated user has accepted them."""
     current_docs = LegalDocument.objects.filter(is_current=True)
     locale = request.GET.get('locale', 'en')
