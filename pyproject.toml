@@ -124,9 +124,14 @@ target-version = "py312"
 quote-style = "single"
 
 [tool.ruff.lint]
-# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-# Enable flagging print (T201)
-select = ["E", "F", "T201"]
+# Enable several ruff linting rules
+select = [
+    "E",      # pycodestyle
+    "F",      # Pyflakes
+    "FURB",   # refurb
+    "PERF",   # performance
+    "T201",   # Enable flagging print (T201)
+]
 ignore = []
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.

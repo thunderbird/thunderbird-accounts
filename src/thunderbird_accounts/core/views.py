@@ -75,8 +75,9 @@ def home(request: HttpRequest):
             user_display_name = email_user.get('description')
 
             # Get user's app passwords from Stalwart, excluding internal ones
-            for secret in filter_app_passwords(email_user.get('secrets', [])):
-                app_passwords.append(decode_app_password(secret))
+            app_passwords.extend(
+                decode_app_password(secret) for secret in filter_app_passwords(email_user.get('secrets', []))
+            )
 
             # Get user's email addresses from Stalwart
             email_addresses = email_user.get('emails', [])
@@ -123,7 +124,7 @@ def home(request: HttpRequest):
             'connection_info': settings.CONNECTION_INFO,
             'app_passwords': json.dumps(app_passwords),
             'user_display_name': user_display_name,
-            'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS if settings.ALLOWED_EMAIL_DOMAINS else [],
+            'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS or [],
             'custom_domains': json.dumps(custom_domains),
             'email_addresses': json.dumps(email_addresses),
             'max_custom_domains': max_custom_domains,
