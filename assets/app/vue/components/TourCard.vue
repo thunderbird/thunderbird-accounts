@@ -1,42 +1,64 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { LinkButton, PrimaryButton } from '@thunderbirdops/services-ui';
 import { PhXCircle } from '@phosphor-icons/vue';
 
 const { t } = useI18n();
 
-defineProps<{
+const props = withDefaults(defineProps<{
   text: string;
+  title?: string;
   subtitle?: string;
   currentStep: number;
   totalSteps: number;
   showBack?: boolean;
   nextLabel?: string;
-}>();
+  variant?: 'section' | 'header' | 'welcome';
+}>(), {
+  variant: 'section',
+});
 
 const emit = defineEmits(['next', 'back', 'close']);
+
+const isWelcome = computed(() => props.variant === 'welcome');
 </script>
 
 <template>
-  <div class="tour-card">
-    <header>
+  <div
+    class="tour-card"
+    :class="{
+      'tour-card--header': variant === 'header' || variant === 'welcome',
+    }"
+    role="dialog"
+    :aria-label="isWelcome ? title : t('views.mail.ftue.step', { step: currentStep, total: totalSteps })"
+    aria-modal="false"
+    tabindex="-1"
+  >
+    <header v-if="!isWelcome">
       <p>{{ t('views.mail.ftue.step', { step: currentStep, total: totalSteps }) }}</p>
-      <button class="close-button" @click="emit('close')">
+      <button class="close-button" :aria-label="t('views.mail.ftue.close')" @click="emit('close')">
         <ph-x-circle size="24" />
       </button>
     </header>
 
-    <p>{{ text }}</p>
-    <p v-if="subtitle">{{ subtitle }}</p>
-
-    <div class="buttons-container">
-      <link-button v-if="showBack" size="small" @click="emit('back')">
-        {{ t('views.mail.ftue.back') }}
-      </link-button>
-
-      <primary-button size="small" @click="emit('next')">
-        {{ nextLabel || t('views.mail.ftue.next') }}
-      </primary-button>
+    <div class="content">
+      <h2 v-if="isWelcome && title">{{ title }}</h2>
+      <p>{{ text }}</p>
+      <p v-if="subtitle">{{ subtitle }}</p>
+  
+      <div class="buttons-container">
+        <link-button v-if="isWelcome" size="small" @click="emit('close')">
+          {{ t('views.mail.ftue.skip') }}
+        </link-button>
+        <link-button v-else-if="showBack" size="small" @click="emit('back')">
+          {{ t('views.mail.ftue.back') }}
+        </link-button>
+  
+        <primary-button size="small" @click="emit('next')">
+          {{ nextLabel || t('views.mail.ftue.next') }}
+        </primary-button>
+      </div>
     </div>
   </div>
 </template>
@@ -54,12 +76,12 @@ const emit = defineEmits(['next', 'back', 'close']);
   transform: translateX(50%);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
   width: 240px;
   padding: 0.75rem 1rem;
   color: var(--colour-ti-base);
   background-color: var(--colour-neutral-base);
-  box-shadow: 0.25rem 0.25rem 1rem 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0.5rem 1rem 0 rgba(0, 0, 0, 0.2);
   border-radius: 0.5rem;
   font-size: 0.875rem;
   z-index: 2;
@@ -85,12 +107,19 @@ const emit = defineEmits(['next', 'back', 'close']);
     }
 
     .close-button {
+      height: 1.5rem;
       background: none;
       border: none;
       cursor: pointer;
       padding: 0;
       color: var(--colour-ti-muted);
     }
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
   }
 
   .buttons-container {
@@ -100,9 +129,22 @@ const emit = defineEmits(['next', 'back', 'close']);
   }
 }
 
-@media (min-width: 1300px) {
+.tour-card--header {
+  top: 4.75rem;
+  right: 2rem;
+  z-index: 10;
+  transform: none;
+}
+
+@media (min-width: 1280px) {
   .tour-card {
+    top: -0.625rem;
     right: 0;
+  }
+
+  .tour-card--header {
+    top: 4.75rem;
+    right: 2rem;
   }
 }
 </style>

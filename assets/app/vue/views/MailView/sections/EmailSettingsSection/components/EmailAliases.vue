@@ -70,7 +70,9 @@ const onDeleteAliasError = (error: string) => {
 
 <template>
   <div class="email-aliases-content">
-    <div class="header-content">
+    <div id="tour-target-email-aliases" />
+
+    <div id="email-aliases" class="header-content">
       <p>{{ t('views.mail.sections.emailSettings.emailAliasesDescription') }}</p>
       <p class="email-aliases-count-text">
         {{ t('views.mail.sections.emailSettings.emailAliasesDescriptionTwo', {

@@ -53,13 +53,16 @@ export default {
 
 <template>
   <card-container
+    id="connect-email"
     :title="t('views.mail.sections.dashboard.getStartedWithThundermail.title')"
     :subtitle="t('views.mail.sections.dashboard.getStartedWithThundermail.description')"
     is-pinnable
     :is-pinned="isPinned"
     @toggle-pinned="$emit('togglePinned')"
   >
+    <div id="tour-target-connect-email" />
     <div class="get-started-with-thundermail-content">
+
       <segmented-control-slider
         v-model="selectedTab"
         :tabs="tabs"

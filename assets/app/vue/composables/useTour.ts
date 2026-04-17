@@ -1,13 +1,29 @@
-import { ref, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 
 export const FTUE_STEPS = {
   INITIAL: 0,
-  DASHBOARD: 1,
-  CUSTOM_DOMAINS: 2,
-  FINAL: 3,
-}
+  CONNECT_EMAIL: 1,
+  APP_PASSWORDS: 2,
+  EMAIL_ALIASES: 3,
+  CUSTOM_DOMAINS: 4,
+  FINAL: 5,
+} as const;
+
+type FtueStepId = typeof FTUE_STEPS[keyof typeof FTUE_STEPS];
+
+interface StepConfig {
+  targetId?: string;
+  teleportTarget?: string;
+  titleKey?: string;
+  textKey?: string;
+  subtitleNextStepKey?: string;
+  showBack?: boolean;
+  variant?: 'section' | 'header' | 'welcome';
+  nextLabelKey?: string;
+};
 
 const FTUE_STORAGE_KEY = 'tb_accounts_ftue_completed';
+const TOUR_CARD_SELECTOR = '[data-tour-card]';
 
 // Get the initial state of the FTUE from localStorage or return true if not available
 const getInitialState = () => {
@@ -18,41 +34,85 @@ const getInitialState = () => {
   return true;
 };
 
-const currentStep = ref(FTUE_STEPS.INITIAL);
+const currentStep = ref<FtueStepId>(FTUE_STEPS.INITIAL);
 const showFTUE = ref(getInitialState());
 
-// When the showFTUE state changes to false, we mark it the FTUE as completed in localStorage
+const onEscapeKey = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    showFTUE.value = false;
+  }
+};
+
+const focusTourCard = () => {
+  nextTick(() => {
+    const card = document.querySelector<HTMLElement>(TOUR_CARD_SELECTOR);
+    card?.focus();
+  });
+};
+
 watch(showFTUE, (value) => {
-  if (!value && typeof localStorage !== 'undefined') {
+  if (value) {
+    document.addEventListener('keydown', onEscapeKey);
+    return;
+  }
+
+  document.removeEventListener('keydown', onEscapeKey);
+
+  if (typeof localStorage !== 'undefined') {
     localStorage.setItem(FTUE_STORAGE_KEY, 'true');
   }
-});
+}, { immediate: true });
 
 export const useTour = () => {
-  const steps = [
-    {
-      id: FTUE_STEPS.INITIAL,
+  const steps: Record<FtueStepId, StepConfig> = {
+    [FTUE_STEPS.INITIAL]: {
+      teleportTarget: '#tour-target-header',
+      titleKey: 'views.mail.ftue.initialWelcomeTitle',
+      textKey: 'views.mail.ftue.initialWelcomeDescription',
+      variant: 'welcome',
+      nextLabelKey: 'views.mail.ftue.letsGo',
     },
-    {
-      id: FTUE_STEPS.DASHBOARD,
-      targetId: 'dashboard',
+    [FTUE_STEPS.CONNECT_EMAIL]: {
+      targetId: 'connect-email',
+      teleportTarget: '#tour-target-connect-email',
+      textKey: 'views.mail.ftue.step1Text',
+      subtitleNextStepKey: 'views.mail.ftue.appPassword',
+      showBack: false,
     },
-    {
-      id: FTUE_STEPS.CUSTOM_DOMAINS,
-      targetId: 'custom-domains',
-    },
-    {
-      id: FTUE_STEPS.FINAL,
+    [FTUE_STEPS.APP_PASSWORDS]: {
       targetId: 'email-settings',
-    }
-  ];
-
-  const start = () => {
-    currentStep.value = FTUE_STEPS.DASHBOARD;
+      teleportTarget: '#tour-target-app-passwords',
+      textKey: 'views.mail.ftue.step2Text',
+      subtitleNextStepKey: 'views.mail.ftue.emailAliases',
+      showBack: true,
+    },
+    [FTUE_STEPS.EMAIL_ALIASES]: {
+      targetId: 'email-aliases',
+      teleportTarget: '#tour-target-email-aliases',
+      textKey: 'views.mail.ftue.step3Text',
+      subtitleNextStepKey: 'views.mail.ftue.customDomains',
+      showBack: true,
+    },
+    [FTUE_STEPS.CUSTOM_DOMAINS]: {
+      targetId: 'custom-domains',
+      teleportTarget: '#tour-target-custom-domains',
+      textKey: 'views.mail.ftue.step4Text',
+      subtitleNextStepKey: 'views.mail.ftue.yourAccount',
+      showBack: true,
+    },
+    [FTUE_STEPS.FINAL]: {
+      teleportTarget: '#tour-target-header',
+      textKey: 'views.mail.ftue.step5Text',
+      showBack: true,
+      variant: 'header',
+      nextLabelKey: 'views.mail.ftue.done',
+    },
   };
 
+  const currentStepConfig = computed(() => steps[currentStep.value]);
+
   const next = () => {
-    if (currentStep.value < steps.length - 1) {
+    if (currentStep.value < FTUE_STEPS.FINAL) {
       currentStep.value++;
     } else {
       showFTUE.value = false;
@@ -60,7 +120,7 @@ export const useTour = () => {
   };
 
   const back = () => {
-    if (currentStep.value > 0) {
+    if (currentStep.value > FTUE_STEPS.INITIAL) {
       currentStep.value--;
     }
   };
@@ -69,33 +129,36 @@ export const useTour = () => {
     showFTUE.value = false;
   };
 
-  // Auto-scroll to target when step changes
+  // Auto-scroll to target and move focus when step changes
   watch(currentStep, (newStep) => {
     if (!showFTUE.value) return;
 
     const noPrefersReducedMotion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
     const behavior = noPrefersReducedMotion ? 'smooth' : 'auto';
 
-    if (newStep === FTUE_STEPS.INITIAL) {
+    if (newStep === FTUE_STEPS.INITIAL || newStep === FTUE_STEPS.FINAL) {
       window.scrollTo({ top: 0, behavior });
+      focusTourCard();
       return;
     }
 
-    const step = steps.find(s => s.id === newStep);
+    const step = steps[newStep];
 
-    if (step && step.targetId) {
+    if (step.targetId) {
       const element = document.getElementById(step.targetId);
 
       if (element) {
         element.scrollIntoView({ behavior, block: 'center' });
       }
     }
+
+    focusTourCard();
   });
 
   return {
     currentStep,
+    currentStepConfig,
     showFTUE,
-    start,
     next,
     back,
     skip
