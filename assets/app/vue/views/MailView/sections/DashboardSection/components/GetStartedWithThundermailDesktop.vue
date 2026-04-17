@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhArrowSquareOut, PhDownloadSimple } from '@phosphor-icons/vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
@@ -6,13 +7,44 @@ import ActionCard from '@/components/ActionCard.vue';
 import { DOWNLOAD_THUNDERBIRD_DESKTOP_URL } from '@/defines';
 import { FeatureFlag, FeatureFlagValue } from '@/types';
 import { isFeatureFlagEnabled } from '@/utils';
+import { getDesktopConnectToken } from '../api';
 
 const { t } = useI18n();
+const isConnecting = ref(false);
+const error = ref<string | null>(null);
 
+// From Stalwart, primary email is always the first email address in the list
+const primaryEmail = window._page?.emailAddresses?.[0] || '';
+const userDisplayName = window._page?.userDisplayName || primaryEmail;
 const showConnectNow = isFeatureFlagEnabled(FeatureFlag.SHOW_CONNECT_NOW, FeatureFlagValue.TRUE);
 
-// TODO: Update this when the full URL is ready
-const tbDesktopCustomProtocolUrl = 'net.thunderbird://replay';
+async function handleConnectClick() {
+  isConnecting.value = true;
+  error.value = null;
+
+  try {
+    const data = await getDesktopConnectToken();
+
+    if (!data.success) {
+      error.value = t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.failedToGenerateToken');
+      return;
+    }
+
+    const url =
+      'net.thunderbird://thundermail/add' +
+      `?name=${encodeURIComponent(userDisplayName)}` +
+      `&email=${encodeURIComponent(primaryEmail)}` +
+      `&token=${encodeURIComponent(data.token)}`;
+
+    console.log('url', url);
+
+    window.location.href = url;
+  } catch (error) {
+    error.value = t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.desktopConnectionFailed');
+  } finally {
+    isConnecting.value = false;
+  }
+};
 </script>
 
 <script lang="ts">
@@ -34,7 +66,8 @@ export default {
         <template #action>
           <primary-button
             size="small"
-            :href="tbDesktopCustomProtocolUrl"
+            :disabled="isConnecting"
+            @click="handleConnectClick"
             class="button-link"
           >
             {{ t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButton') }}
@@ -81,5 +114,10 @@ export default {
 
 .button-link {
   height: 2rem;
+}
+
+.error-message {
+  font-size: 0.75rem;
+  color: var(--colour-danger-default);
 }
 </style>
