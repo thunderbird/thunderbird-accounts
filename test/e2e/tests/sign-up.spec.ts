@@ -25,27 +25,31 @@ test.describe('sign up form', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
 }, () => {
   test('form successfully submits but is not on allow list', async ({ page }) => {
-    const testEmail: string = 'test@example.com';
+    const testUsername: string = crypto.randomUUID().replaceAll('-', '');
+    const testEmail: string = `${testUsername}@example.com`;
+    const testPassword: string = 'this-is-my-password-and-it-is-long';
 
-    // Test that no query params = empty recovery email
-    await expect(signUpPage.recoveryEmailInput).toBeEmpty();
-
-    // go to the contact / submit an issue form and wait for it to load
-    const randomUUID = crypto.randomUUID().replaceAll('-', '');
-    await signUpPage.fillForm(randomUUID, testEmail, 'abc123', 'abc123');
+    await signUpPage.fillForm(testUsername, testPassword, testPassword, testEmail);
     await signUpPage.submitForm();
 
     // new page!
     await page.waitForLoadState('domcontentloaded');
-    expect(page.url()).toEqual(`${TB_PRO_WAIT_LIST_URL}?email=${encodeURIComponent(testEmail)}`);
+    await page.waitForURL(`${TB_PRO_WAIT_LIST_URL}?email=${encodeURIComponent(testEmail)}`);
   });
 
   test('navigating to sign-up with query param pre-fills form', async ({ page }) => {
-    const recoveryEmail = 'test@example.com';
-    await page.goto(`${ACCTS_SIGN_UP_URL}?email=${recoveryEmail}`);
+    const testUsername: string = crypto.randomUUID().replaceAll('-', '');
+    const testPassword: string = 'this-is-my-password-and-it-is-long';
+
+    const verificationEmail = 'test@example.com';
+    await page.goto(`${ACCTS_SIGN_UP_URL}?email=${verificationEmail}`);
     await waitForVueApp(page);
 
-    expect(signUpPage.recoveryEmailInput).toBeTruthy();
-    await expect(signUpPage.recoveryEmailInput).toHaveValue(recoveryEmail);
+
+    await signUpPage.fillForm(testUsername, testPassword, testPassword);
+    await signUpPage.submitForm();
+
+    expect(signUpPage.verificationEmailInput).toBeTruthy();
+    await expect(signUpPage.verificationEmailInput).toHaveValue(verificationEmail);
   });
 });
