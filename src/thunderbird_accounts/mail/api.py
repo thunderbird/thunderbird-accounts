@@ -4,14 +4,13 @@ from django.core.validators import EmailValidator
 from django.conf import settings
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
-from rest_framework.exceptions import NotAuthenticated, ValidationError
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
 
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.authentication.serializers import UserProfileSerializer
 
 
 class UsernameAvailableThrottle(UserRateThrottle):

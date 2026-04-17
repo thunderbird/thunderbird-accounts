@@ -5,12 +5,11 @@ from rest_framework.permissions import AllowAny
 import sentry_sdk
 from thunderbird_accounts.authentication.exceptions import InvalidDomainError, ImportUserError
 from thunderbird_accounts.authentication.utils import is_email_in_allow_list, KeycloakRequiredAction
-from django.views.decorators.debug import sensitive_post_parameters
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.exceptions import NotAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from django.utils.translation import ngettext, gettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.serializers import UserProfileSerializer
 
