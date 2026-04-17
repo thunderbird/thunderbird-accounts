@@ -31,21 +31,21 @@ class ReadLegalContentTestCase(TestCase):
             shutil.rmtree(cleanup_dir)
 
     def test_returns_localized_content_when_available(self):
-        (self.content_dir / 'de.md').write_text('# AGB', encoding='utf-8')
-        (self.content_dir / 'en.md').write_text('# TOS', encoding='utf-8')
+        (self.content_dir / 'de.html').write_text('<h1>AGB</h1>', encoding='utf-8')
+        (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
 
         from thunderbird_accounts.legal.views import _read_legal_content
 
         result = _read_legal_content('tos/v2.0', 'de')
-        self.assertEqual(result, '# AGB')
+        self.assertEqual(result, '<h1>AGB</h1>')
 
     def test_falls_back_to_english(self):
-        (self.content_dir / 'en.md').write_text('# TOS', encoding='utf-8')
+        (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
 
         from thunderbird_accounts.legal.views import _read_legal_content
 
         result = _read_legal_content('tos/v2.0', 'fr')
-        self.assertEqual(result, '# TOS')
+        self.assertEqual(result, '<h1>TOS</h1>')
 
     def test_returns_empty_string_when_no_content(self):
         from thunderbird_accounts.legal.views import _read_legal_content
@@ -54,12 +54,12 @@ class ReadLegalContentTestCase(TestCase):
         self.assertEqual(result, '')
 
     def test_sanitizes_path_traversal_in_locale(self):
-        (self.content_dir / 'en.md').write_text('# TOS', encoding='utf-8')
+        (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
 
         from thunderbird_accounts.legal.views import _read_legal_content
 
         result = _read_legal_content('tos/v2.0', '../../etc/passwd')
-        self.assertIn(result, ['# TOS', ''])
+        self.assertIn(result, ['<h1>TOS</h1>', ''])
 
 
 class GetCurrentLegalDocsTestCase(LegalDocCleanSlateTestCase):
@@ -73,7 +73,7 @@ class GetCurrentLegalDocsTestCase(LegalDocCleanSlateTestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 302)
 
-    @patch('thunderbird_accounts.legal.views._read_legal_content', return_value='# Mock content')
+    @patch('thunderbird_accounts.legal.views._read_legal_content', return_value='<h1>Mock content</h1>')
     def test_returns_current_docs_with_accepted_status(self, mock_read):
         oidc_force_login(self.client, self.user)
 
@@ -108,7 +108,7 @@ class GetCurrentLegalDocsTestCase(LegalDocCleanSlateTestCase):
 
         self.assertTrue(tos_doc['accepted'])
         self.assertFalse(privacy_doc['accepted'])
-        self.assertEqual(tos_doc['content'], '# Mock content')
+        self.assertEqual(tos_doc['content'], '<h1>Mock content</h1>')
         self.assertEqual(tos_doc['version'], '2.0')
 
     @patch('thunderbird_accounts.legal.views._read_legal_content', return_value='')
@@ -127,7 +127,7 @@ class GetCurrentLegalDocsTestCase(LegalDocCleanSlateTestCase):
         data = json.loads(response.content)
         self.assertEqual(data['documents'], [])
 
-    @patch('thunderbird_accounts.legal.views._read_legal_content', return_value='# Content')
+    @patch('thunderbird_accounts.legal.views._read_legal_content', return_value='<h1>Content</h1>')
     def test_passes_locale_param(self, mock_read):
         oidc_force_login(self.client, self.user)
 
@@ -141,7 +141,7 @@ class GetCurrentLegalDocsTestCase(LegalDocCleanSlateTestCase):
         self.client.get(self.url + '?locale=de')
         mock_read.assert_called_with('tos/v2.0', 'de')
 
-    @patch('thunderbird_accounts.legal.views._read_legal_content', return_value='# Content')
+    @patch('thunderbird_accounts.legal.views._read_legal_content', return_value='<h1>Content</h1>')
     def test_defaults_locale_to_en(self, mock_read):
         oidc_force_login(self.client, self.user)
 
@@ -160,7 +160,7 @@ class GetCurrentLegalDocsTestCase(LegalDocCleanSlateTestCase):
         response = self.client.post(self.url, data='{}', content_type='application/json')
         self.assertEqual(response.status_code, 405)
 
-    @patch('thunderbird_accounts.legal.views._read_legal_content', return_value='# Content')
+    @patch('thunderbird_accounts.legal.views._read_legal_content', return_value='<h1>Content</h1>')
     def test_declined_doc_not_counted_as_accepted(self, mock_read):
         oidc_force_login(self.client, self.user)
 
