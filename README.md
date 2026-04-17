@@ -172,6 +172,16 @@ Ensure to nest all internal apps inside `src/thunderbird_accounts` by appending 
 Once the app is created go to `src/thunderbird_accounts/<app name>/apps.py` and prepend `thunderbird_accounts.` to
 AuthConfig.name so it looks like `thunderbird_accounts.<app name>`.
 
+## Feature flags
+
+Currently we have a simple mechanism of feature flags through local storage keys. These keys follow the pattern `feature.feature-name` and their values need to be `true` or `false`. Non-existence of a key is considered `false`.
+
+Here's a list of features and keys in use:
+
+| Local storage key | What is does  |
+| ---  | --- |
+| `feature.show-connect-now`  | Show / Hide the "Connect now" card in Thundermail's Dashboard that uses a custom mapping protocol to open Thunderbird Desktop and setup Thundermail |
+
 ## Building documentation locally
 
 Ensure you have the requirements in docs installed and run the following command in the project's root folder:
@@ -187,13 +197,13 @@ Make sure that the containers are already running.
 To run all tests:
 
 ```shell
-docker compose exec backend uv run python manage.py test
+docker compose exec accounts uv run python manage.py test
 ```
 
 To run tests for a specific module:
 
 ```shell
-docker compose exec backend uv run manage.py test thunderbird_accounts.client.tests
+docker compose exec accounts uv run manage.py test thunderbird_accounts.mail.tests
 ```
 
 ## Running the E2E tests

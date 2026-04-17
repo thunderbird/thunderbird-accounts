@@ -100,7 +100,9 @@
               "connectButton": "Connect now",
               "downloadTitle": "Download Thunderbird Desktop",
               "downloadDescription": "We recommend using the desktop application for the best experience.",
-              "downloadButton": "Download"
+              "downloadButton": "Download",
+              "failedToGenerateToken": "Failed to generate token",
+              "desktopConnectionFailed": "Desktop connection failed"
             },
             "mobilePanel": {
               "qrCodeTitle": "Scan QR Code",
