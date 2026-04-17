@@ -24,7 +24,7 @@ class LegalDocument(BaseModel):
         ]
         indexes = [
             *BaseModel.Meta.indexes,
-            models.Index(fields=['document_type', 'is_current']),
+            models.Index(fields=['is_current']),
         ]
 
     def __str__(self):
