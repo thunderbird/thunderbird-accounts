@@ -19,10 +19,10 @@ export const PLAYWRIGHT_TAG_E2E_SUITE = '@e2e-suite';
 export const PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY = '@e2e-prod-desktop-nighlty';
 
 // timeouts
-export const TIMEOUT_2_SECONDS = 0;//2000;
-export const TIMEOUT_5_SECONDS = 0;//5000;
-export const TIMEOUT_10_SECONDS = 0;//5000;
-export const TIMEOUT_30_SECONDS = 0;//30000;
+export const TIMEOUT_2_SECONDS = 2000;
+export const TIMEOUT_5_SECONDS = 5000;
+export const TIMEOUT_10_SECONDS = 5000;
+export const TIMEOUT_30_SECONDS = 30000;
 
 // connection info
 export const ACCTS_HOST = String(process.env.ACCTS_HOST);
