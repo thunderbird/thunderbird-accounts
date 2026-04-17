@@ -18,6 +18,7 @@
         forgotPasswordUrl: null,
         // </#if>
         rememberMe: '${(login.rememberMe)!"off"}' === 'on',
+        loginHint: '${login.username!''}',
         socialProviders: [
             //<#if realm.password && social?? && social.providers?has_content>
             //<#list social.providers as p>

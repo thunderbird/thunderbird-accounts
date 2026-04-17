@@ -66,6 +66,7 @@
       }
     },
     "error": {
+      "dismiss": "Dismiss message.",
       "fallbackError": "Unknown Error",
       "notFoundError": "Sorry this page doesn't exist.",
       "notFoundMessage": {
@@ -266,6 +267,37 @@
           "save": "Save",
           "removedSuccessfully": "Removed {email} from allow list",
           "undo": "Undo"
+        },
+        "signUp": {
+          "continue": "Continue",
+          "fields": {
+            "username": "Username",
+            "password": "Password",
+            "confirmPassword": "Confirm Password",
+            "yourName": "Your Name",
+            "verificationEmail": "Verification email"
+          },
+          "step1": {
+            "title": "Create an account",
+            "subtitle": "Choose your Thundermail username.",
+            "emailSuggestions": "Try one of these:",
+            "usernameHelp": "This will become your email. e.g. yourname{domain}",
+            "unknownError": "There was a problem with your username. Please try another one."
+          },
+          "step2": {
+            "title": "Set a password",
+            "subtitle": "",
+            "passwordHelp": "Use a strong password you haven’t used elsewhere.",
+            "confirmPasswordHelp": "Re-enter your password to confirm.",
+            "yourNameHelp": "Set the name people will see when you send emails.",
+            "confirmPasswordDoesNotMatchError": "Password and confirm password must match."
+          },
+          "step3": {
+            "title": "Add a verification email",
+            "subtitle": "Use an email address you already have access to. It must be different from your new Thundermail address.",
+            "action": "Verify email",
+            "verificationEmailHelp": "Thundermail will send a verification link to this address to confirm it belongs to you."
+          }
         }
       },
       "ftue": {

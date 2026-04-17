@@ -30,6 +30,7 @@ const passwordError = computed(() => {
 
 // CheckboxInput requires a valid ref as a model to show the check icon
 const rememberMeChecked = ref(rememberMe);
+const username = ref(window._page.currentView?.loginHint);
 
 defineProps<{
   hidePassword: boolean;
@@ -45,11 +46,7 @@ export default {
 <template>
   <notice-bar :type="NoticeBarTypes.Critical" v-if="firstError">{{ firstError }}</notice-bar>
   <message-bar v-else/>
-
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
-
+  
   <h2 data-testid="header-text">{{ $t('loginAccountTitle') }}</h2>
   <form id="kc-form-login" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
         @keyup.enter="onSubmit">
@@ -62,6 +59,7 @@ export default {
         autocomplete="username webauthn"
         autofocus
         :error="usernameError"
+        v-model="username"
       >
         {{ $t('email') }}
       </text-input>
