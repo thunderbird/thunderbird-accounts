@@ -179,17 +179,17 @@ router.beforeEach((to, _from) => {
   // Guards are ordered by priority: TOS > subscription > normal access.
 
   const allowedFor = {
-    tos: new Set(['tos-privacy', 'contact']),
-    subscription: new Set(['subscribe', 'contact', 'tos-privacy']),
+    tos: ['tos-privacy', 'contact'],
+    subscription: ['subscribe', 'contact', 'tos-privacy'],
   };
 
-  if (window._page?.needsTosAcceptance && !allowedFor.tos.has(routeName)) {
+  if (window._page?.needsTosAcceptance && !allowedFor.tos.includes(routeName)) {
     return { name: 'tos-privacy' };
   }
 
   const needsSubscription = window._page?.isAwaitingPaymentVerification || !window._page?.hasActiveSubscription;
 
-  if (needsSubscription && !allowedFor.subscription.has(routeName)) {
+  if (needsSubscription && !allowedFor.subscription.includes(routeName)) {
     return { name: 'subscribe' };
   }
 
