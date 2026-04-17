@@ -10,5 +10,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'thunderbird_accounts.settings')
 app = Celery('thunderbird_accounts')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Load task modules from all registered Django apps.
+# Load task modules from all registered Django apps + telemetry.
 app.autodiscover_tasks()
+app.autodiscover_tasks(['thunderbird_accounts.telemetry'])
