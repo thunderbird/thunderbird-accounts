@@ -36,8 +36,6 @@ async function handleConnectClick() {
       `&email=${encodeURIComponent(primaryEmail)}` +
       `&token=${encodeURIComponent(data.token)}`;
 
-    console.log('url', url);
-
     window.location.href = url;
   } catch (error) {
     error.value = t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.desktopConnectionFailed');
