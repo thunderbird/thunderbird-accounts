@@ -379,6 +379,21 @@
       "deleteAccountButtonLabel": "Request to delete data",
       "cancelButtonLabel": "Cancel"
     },
+    "tosPrivacy": {
+      "title": "One quick step before you continue",
+      "description": "Please review the Terms of Service and Privacy Policy, then accept to continue using Thunderbird Pro.",
+      "tosTab": "Terms of Service",
+      "privacyTab": "Privacy Policy",
+      "acknowledgment": "By accepting, you acknowledge that you have read and understood our policies.",
+      "declineButton": "Decline and cancel registration",
+      "declineAfterPayment": "Decline and cancel account",
+      "acceptButton": "Accept policies and continue",
+      "questionsToSupport": "Questions? {supportLink}",
+      "contactSupport": "Contact Support",
+      "loading": "Loading...",
+      "errorAccepting": "Failed to record acceptance. Please try again.",
+      "errorLoading": "Failed to load legal documents. Please try again later."
+    },
     "subscribe": {
       "lineItems": {
         "annualLong": "Annual Subscription",
