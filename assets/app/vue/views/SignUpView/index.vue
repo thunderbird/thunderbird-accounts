@@ -12,7 +12,6 @@ import Step3Verify from './views/Step3Verify/index.vue';
 // Import our i18n composable
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
-import { SERVER_MESSAGE_LEVEL } from '@/types';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';

@@ -3,7 +3,6 @@ import { useI18n } from 'vue-i18n';
 
 import { TextInput } from '@thunderbirdops/services-ui';
 import { ref } from 'vue';
-import MessageBar from '@kc/vue/components/MessageBar.vue';
 import { storeToRefs } from 'pinia';
 import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
 import SignUpLayout from '../../components/SignUpLayout.vue';

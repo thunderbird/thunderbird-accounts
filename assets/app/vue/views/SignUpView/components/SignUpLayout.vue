@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
-import MessageBar from '@kc/vue/components/MessageBar.vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
 import { useThrottleFn } from '@vueuse/core';
 
-const route = useRoute();
-const { t } = useI18n();
 const form = useTemplateRef<HTMLFormElement>("form");
 
 defineProps<{

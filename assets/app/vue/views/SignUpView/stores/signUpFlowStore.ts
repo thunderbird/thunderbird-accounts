@@ -1,6 +1,6 @@
 import { useSessionStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
-import { computed, ref, useTemplateRef } from 'vue';
+import { computed, ref } from 'vue';
 
 export const enum SignUpSteps {
   INVALID = 0,

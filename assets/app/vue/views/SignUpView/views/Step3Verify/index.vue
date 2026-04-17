@@ -1,18 +1,10 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
-
 import { TextInput } from '@thunderbirdops/services-ui';
 import { onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useDebounceFn } from '@vueuse/core';
-import { isUsernameAvailable } from './api';
 import { storeToRefs } from 'pinia';
 import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
 import SignUpLayout from '../../components/SignUpLayout.vue';
 
-const router = useRouter();
-const { t } = useI18n();
-const tbProPrimaryDomain = `@${window._page.currentView?.tbProPrimaryDomain}`;
 const loading = ref(false);
 
 const signUpFlowStore = useSignUpFlowStore();

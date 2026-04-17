@@ -3,7 +3,6 @@ import { useI18n } from 'vue-i18n';
 
 import { TextInput } from '@thunderbirdops/services-ui';
 import { onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
 import { useDebounceFn } from '@vueuse/core';
 import { isUsernameAvailable } from './api';
 import { storeToRefs } from 'pinia';
