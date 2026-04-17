@@ -115,16 +115,13 @@ def home(request: HttpRequest):
 
     # Check if the user needs to accept the latest legal documents
     if request.user.is_authenticated:
-        current_docs = LegalDocument.objects.filter(is_current=True)
-        if current_docs.exists():
-            accepted_doc_ids = set(
-                LegalDocumentResponse.objects.filter(
-                    user=request.user,
-                    document__in=current_docs,
-                    action=LegalDocumentResponse.Action.ACCEPTED,
-                ).values_list('document_id', flat=True)
-            )
-            needs_tos_acceptance = current_docs.exclude(uuid__in=accepted_doc_ids).exists()
+        legal_doc_count = LegalDocument.objects.filter(is_current=True).count()
+        accepted_current_doc_count = LegalDocument.objects.filter(
+            is_current=True,
+            responses__user=request.user,
+            responses__action=LegalDocumentResponse.Action.ACCEPTED,
+        ).count()
+        needs_tos_acceptance = legal_doc_count != accepted_current_doc_count
 
     form_data = request.session.get('form_data')
     if request.session.get('form_data'):
