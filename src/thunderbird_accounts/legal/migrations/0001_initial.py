@@ -85,7 +85,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='legaldocument',
-            index=models.Index(fields=['document_type', 'is_current'], name='legal_legald_doctype_current_idx'),
+            index=models.Index(fields=['is_current'], name='legal_legald_is_current_idx'),
         ),
         migrations.AddIndex(
             model_name='legaldocumentresponse',
