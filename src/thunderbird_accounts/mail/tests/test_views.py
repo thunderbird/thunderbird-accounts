@@ -6,6 +6,7 @@ from django.test import TestCase, Client as RequestClient, override_settings
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+from thunderbird_accounts.authentication.middleware import OIDC_REFRESH_TOKEN_KEY
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account, Domain, Email
 
@@ -505,19 +506,19 @@ class DesktopConnectTokenTestCase(TestCase):
         response = self.client.post(self.url, content_type='application/json')
         self.assertEqual(response.status_code, 302)
 
-    def test_returns_access_token(self):
+    def test_returns_refresh_token(self):
         self.client.force_login(self.user)
         session = self.client.session
-        session['oidc_access_token'] = 'test-access-token-abc'
+        session[OIDC_REFRESH_TOKEN_KEY] = 'test-refresh-token-abc'
         session.save()
 
         response = self.client.post(self.url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         payload = json.loads(response.content.decode())
         self.assertTrue(payload['success'])
-        self.assertEqual(payload['token'], 'test-access-token-abc')
+        self.assertEqual(payload['token'], 'test-refresh-token-abc')
 
-    def test_missing_access_token_returns_401(self):
+    def test_missing_refresh_token_returns_401(self):
         self.client.force_login(self.user)
 
         response = self.client.post(self.url, content_type='application/json')

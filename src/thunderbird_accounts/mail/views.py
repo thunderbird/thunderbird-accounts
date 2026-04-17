@@ -20,7 +20,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 
-from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
+from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend, OIDC_REFRESH_TOKEN_KEY
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import (
@@ -518,18 +518,18 @@ def appointment_caldav_setup(request: HttpRequest):
 @login_required
 @require_http_methods(['POST'])
 def generate_desktop_connect_token(request: HttpRequest):
-    """Returns the OIDC access token for the Thunderbird Desktop custom
+    """Returns the OIDC refresh token for the Thunderbird Desktop custom
     protocol connect flow. The token is fetched on-click rather than
     embedded in the page to limit its exposure in the DOM."""
 
-    access_token = request.session.get('oidc_access_token')
-    if not access_token:
+    refresh_token = request.session.get(OIDC_REFRESH_TOKEN_KEY)
+    if not refresh_token:
         return JsonResponse(
             {'success': False, 'error': str(_('Authentication token not available. Please try logging in again.'))},
             status=401,
         )
 
-    return JsonResponse({'success': True, 'token': access_token})
+    return JsonResponse({'success': True, 'token': refresh_token})
 
 
 @login_required
