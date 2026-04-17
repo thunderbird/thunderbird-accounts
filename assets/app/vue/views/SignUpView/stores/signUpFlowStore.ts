@@ -1,4 +1,3 @@
-import { LOGIN_ORIGIN } from '@/defines';
 import { useSessionStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import { computed, ref, useTemplateRef } from 'vue';
@@ -77,10 +76,9 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
         if (type.indexOf('invalidPassword') === 0) {
           step.value = SignUpSteps.PASSWORD;
         } else if (type === 'go-to-wait-list') {
-          window.setTimeout(() => {
-            // Oh we need to ship them outside of this page
-            window.location.href = error['href'];
-          }, 500);
+          // Don't show this error, just redirect!
+          errors.value = null;
+          window.location.href = error['href'];
         } else {
           step.value = SignUpSteps.USERNAME;
         }

@@ -24,12 +24,13 @@ const emailError = ref(null);
 const onSubmit = async () => {
   loading.value = true;
   const response = await submit();
-  window.setTimeout(() => {
-    loading.value = false;
-  }, 0);
-
+  
   if (response === true) {
     window.location.href = '/sign-up/complete';
+  } else {
+    window.setTimeout(() => {
+      loading.value = false;
+    }, 0);
   }
 };
 
@@ -48,7 +49,7 @@ export default {
 </script>
 
 <template>
-  <sign-up-layout :title="$t('views.mail.views.signUp.step3.title')"
+  <sign-up-layout step-id="step-verify-email" :title="$t('views.mail.views.signUp.step3.title')"
     :subtitle="$t('views.mail.views.signUp.step3.subtitle')" :submitDisabled="loading || emailError"
     :submitTitle="$t('views.mail.views.signUp.continue')" @submit="onSubmit">
     <template v-slot:notice-bars>

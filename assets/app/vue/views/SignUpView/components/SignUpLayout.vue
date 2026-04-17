@@ -11,6 +11,7 @@ const { t } = useI18n();
 const form = useTemplateRef<HTMLFormElement>("form");
 
 defineProps<{
+  stepId: string;
   title: string;
   subtitle: string;
   submitDisabled: boolean | null;
@@ -37,6 +38,9 @@ export default {
 </script>
 
 <template>
+  <!-- Hidden element for testing purposes, don't worry about it. -->
+  <input type="hidden" aria-hidden="true" data-testid="step-id" :value="stepId"/>
+  
   <header>
     <h1 aria-live="polite" class="title" data-testid="title">{{ title }}</h1>
     <p  aria-live="polite" class="text" data-testid="subtitle">{{ subtitle }}</p>

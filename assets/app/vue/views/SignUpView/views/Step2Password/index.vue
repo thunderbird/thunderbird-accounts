@@ -38,7 +38,7 @@ export default {
 </script>
 
 <template>
-  <sign-up-layout :title="$t('views.mail.views.signUp.step2.title')"
+  <sign-up-layout step-id="step-password" :title="$t('views.mail.views.signUp.step2.title')"
     :subtitle="$t('views.mail.views.signUp.step2.subtitle')" :submitDisabled="loading"
     :submitTitle="$t('views.mail.views.signUp.continue')" @submit="onSubmit">
     <template v-slot:notice-bars>

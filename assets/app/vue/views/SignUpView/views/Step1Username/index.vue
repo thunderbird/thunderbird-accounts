@@ -69,7 +69,7 @@ export default {
 </script>
 
 <template>
-  <sign-up-layout :title="$t('views.mail.views.signUp.step1.title')"
+  <sign-up-layout step-id="step-username" :title="$t('views.mail.views.signUp.step1.title')"
     :subtitle="$t('views.mail.views.signUp.step1.subtitle')" :submitDisabled="loading || usernameError"
     :submitTitle="$t('views.mail.views.signUp.continue')" @submit="onSubmit">
     <template v-slot:notice-bars>

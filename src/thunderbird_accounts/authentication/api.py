@@ -105,7 +105,7 @@ def sign_up(request: Request):
             allow_list_entry = AllowListEntry.objects.get(email=email)
             allow_list_entry.user = user
             allow_list_entry.save()
-    except (ValueError, InvalidDomainError):
+    except (ValueError, InvalidDomainError, AllowListEntry.DoesNotExist):
         # Only username errors raise ValueErrors right now
         return Response(
             {
