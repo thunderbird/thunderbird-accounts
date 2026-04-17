@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n';
 
 import { TextInput } from '@thunderbirdops/services-ui';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useDebounceFn } from '@vueuse/core';
 import { isUsernameAvailable } from './api';
@@ -32,6 +32,13 @@ const onSubmit = async () => {
     window.location.href = '/sign-up/complete';
   }
 };
+
+onMounted(() => {
+  // Prefer a query param username over one that might be in storage.
+  if (window._page.currentView?.attributes?.email) {
+    verificationEmail.value = window._page.currentView?.attributes?.email;
+  }
+});
 </script>
 
 <script lang="ts">

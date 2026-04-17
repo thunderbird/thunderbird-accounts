@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n';
 
 import { TextInput } from '@thunderbirdops/services-ui';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useDebounceFn } from '@vueuse/core';
 import { isUsernameAvailable } from './api';
@@ -51,6 +51,15 @@ const onSubmit = async () => {
 
   nextStep();
 };
+
+
+onMounted(() => {
+  // Prefer a query param username over one that might be in storage.
+  if (window._page.currentView?.attributes?.username) {
+    username.value = window._page.currentView?.attributes?.username;
+  }
+});
+
 </script>
 
 <script lang="ts">

@@ -35,13 +35,12 @@ timezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
 // Keycloak also uses window page variables, so set them up as it expects
 window._page.currentView = {
   errors: [],
-  formAction: '/users/sign-up/',
   clientUrl: window.location.origin,
   currentLocale: lang.value,
   tbProPrimaryDomain: window._page.tbProPrimaryDomain,
   attributes: {
-    'username': window._page?.formData?.username || '',
-    'email': window._page?.formData?.email || '',
+    'username': route.query?.username || null,
+    'email': route.query?.email || null,
   }
 };
 window._page.pageId = route.name.toString();
