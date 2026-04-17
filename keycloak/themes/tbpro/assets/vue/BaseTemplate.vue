@@ -105,14 +105,6 @@ section {
         max-width: 556px;
         min-height: 100vh;
         background-color: var(--colour-ti-base);
-
-        .featured-image {
-          display: block;
-          width: 100%;
-          height: 100%;
-          min-height: 100vh;
-          object-fit: cover;
-        }
       }
     }
   }
@@ -128,11 +120,11 @@ section {
     padding: 1rem;
 
     .card {
-      --border-radius: 2rem;
+      --card-border-radius: 2rem;
       width: 1280px;
       height: auto;
       min-height: 720px;
-      border-radius: var(--border-radius);
+      border-radius: var(--card-border-radius);
       align-items: initial;
       border: 0.0625rem solid var(--colour-neutral-border-intense);
 
@@ -140,12 +132,7 @@ section {
         background-color: unset;
         height: auto;
         min-height: auto;
-        border-radius: var(--border-radius);
-
-        .featured-image {
-          min-height: auto;
-          border-radius: 2rem 0 0 2rem;
-        }
+        border-radius: var(--card-border-radius);
       }
 
       .right-side {
