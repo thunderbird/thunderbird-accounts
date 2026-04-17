@@ -30,7 +30,7 @@ class Command(BaseCommand):
             self.stderr.write(self.style.ERROR(f'Legal assets directory not found: {legal_dir}'))
             return
 
-        md = markdown.Markdown(extensions=['tables'])
+        md = markdown.Markdown(extensions=['attr_list', 'tables'])
         md_files = sorted(legal_dir.rglob('*.md'))
 
         if not md_files:

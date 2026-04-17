@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter, useRoute } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { defaultLocale } from '@/utils';
 import {
@@ -13,7 +13,6 @@ import {
 import { LEGAL_DOCUMENT_TYPES } from './types';
 
 const { t } = useI18n();
-const router = useRouter();
 const route = useRoute();
 
 const declineButtonLabel = window._page?.hasActiveSubscription ? t('views.tosPrivacy.declineAfterPayment') : t('views.tosPrivacy.declineButton');
@@ -22,7 +21,7 @@ const tosSelectedTab = ref<LEGAL_DOCUMENT_TYPES>(LEGAL_DOCUMENT_TYPES.TOS);
 const loading = ref(true);
 const accepting = ref(false);
 const declining = ref(false);
-const error = ref('');
+const error = ref<string | null>(null);
 
 const tosDoc = ref<LegalDocMeta | null>(null);
 const privacyDoc = ref<LegalDocMeta | null>(null);
@@ -42,8 +41,10 @@ async function handleAccept() {
   error.value = '';
   try {
     await acceptLegalDocs(sourceContext.value);
-    window._page.needsTosAcceptance = false;
-    router.push({ name: 'dashboard' });
+
+    // Forcing page reload to re-serve the page with the
+    // updated need_tos_acceptance flag value
+    window.location.href = '/';
   } catch (e) {
     error.value = t('views.tosPrivacy.errorAccepting');
   } finally {
