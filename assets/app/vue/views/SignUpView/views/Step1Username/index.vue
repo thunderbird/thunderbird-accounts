@@ -76,7 +76,6 @@ export default {
     <template v-slot:form-elements>
       <text-input 
       data-testid="username-input" 
-      id="partialUsername" 
       name="partialUsername" 
       required
       maxlength="150"

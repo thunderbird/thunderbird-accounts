@@ -48,7 +48,7 @@ export default {
       <slot name="notice-bars" />
     </template>
     <template v-slot:form-elements>
-      <text-input data-testid="verification-email-input" id="verification-email" name="verification-email" required
+      <text-input data-testid="verification-email-input" name="verification-email" required
         autocomplete="email" :error="emailError" :help="$t('views.mail.views.signUp.step3.verificationEmailHelp')"
         v-model="verificationEmail">
         {{ $t('views.mail.views.signUp.fields.verificationEmail') }}
