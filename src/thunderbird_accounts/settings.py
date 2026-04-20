@@ -409,6 +409,8 @@ LANGUAGE_CODE = 'en'
 # Default language in accounts (todo: merge with language_code)
 DEFAULT_LANGUAGE = 'en'
 
+SUPPORTED_LEGAL_LANGUAGES = ['en']
+
 TIME_ZONE = 'UTC'
 
 USE_I18N = True

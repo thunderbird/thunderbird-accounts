@@ -193,6 +193,7 @@ back to `en.html` when a requested locale is not available.
 5. In Django admin, create or update the `LegalDocument` record -- set `content_path` (e.g.
    `tos/v2.0`), `version`, and check `is_current`. Saving will automatically unset `is_current` on
    the previous version of the same document type.
+6. If adding new locales, update the SUPPORTED_LEGAL_LANGUAGES value in settings.py
 
 ### Regenerating HTML from markdown
 

@@ -14,25 +14,17 @@ from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentRespon
 
 def _read_legal_content(content_path: str, locale: str) -> str:
     """Read pre-rendered HTML content for a legal document, falling back to English."""
-    # locale comes as a user defined query param, so getting only the file name
-    # and discarding the path to avoid path traversal attacks
-    safe_locale = Path(locale).name
-    content_dir = Path(settings.ASSETS_ROOT, 'legal', content_path)
-    content_file = content_dir / f'{safe_locale}.html'
+    if locale not in settings.SUPPORTED_LEGAL_LANGUAGES:
+        locale = settings.DEFAULT_LANGUAGE
 
-    if not content_file.exists():
-        content_file = content_dir / f'{settings.DEFAULT_LANGUAGE}.html'
+    content_dir = Path(settings.ASSETS_ROOT, 'legal', content_path)
+    content_file = content_dir / f'{locale}.html'
 
     if not content_file.exists():
         logging.error(f'Legal content file not found: {content_file}')
         return ''
 
-    resolved = content_file.resolve()
-    if not resolved.is_relative_to(Path(settings.ASSETS_ROOT).resolve()):
-        logging.error(f'Legal content path escapes assets root: {content_file}')
-        return ''
-
-    return resolved.read_text(encoding='utf-8')
+    return content_file.read_text(encoding='utf-8')
 
 
 def _record_response(request, action: str) -> JsonResponse:
