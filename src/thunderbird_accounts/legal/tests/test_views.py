@@ -30,6 +30,7 @@ class ReadLegalContentTestCase(TestCase):
         if cleanup_dir.exists():
             shutil.rmtree(cleanup_dir)
 
+    @override_settings(SUPPORTED_LEGAL_LANGUAGES=['en', 'de'])
     def test_returns_localized_content_when_available(self):
         (self.content_dir / 'de.html').write_text('<h1>AGB</h1>', encoding='utf-8')
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
@@ -39,7 +40,7 @@ class ReadLegalContentTestCase(TestCase):
         result = _read_legal_content('tos/v2.0', 'de')
         self.assertEqual(result, '<h1>AGB</h1>')
 
-    def test_falls_back_to_english(self):
+    def test_falls_back_to_default_for_unsupported_locale(self):
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
 
         from thunderbird_accounts.legal.views import _read_legal_content
@@ -50,16 +51,16 @@ class ReadLegalContentTestCase(TestCase):
     def test_returns_empty_string_when_no_content(self):
         from thunderbird_accounts.legal.views import _read_legal_content
 
-        result = _read_legal_content('tos/v99.0', 'fr')
+        result = _read_legal_content('tos/v99.0', 'en')
         self.assertEqual(result, '')
 
-    def test_sanitizes_path_traversal_in_locale(self):
+    def test_rejects_path_traversal_in_locale(self):
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
 
         from thunderbird_accounts.legal.views import _read_legal_content
 
         result = _read_legal_content('tos/v2.0', '../../etc/passwd')
-        self.assertIn(result, ['<h1>TOS</h1>', ''])
+        self.assertEqual(result, '<h1>TOS</h1>')
 
 
 class GetCurrentLegalDocsTestCase(LegalDocCleanSlateTestCase):
