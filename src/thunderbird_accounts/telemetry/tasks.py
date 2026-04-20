@@ -215,13 +215,16 @@ def poll_keycloak_events(self):
             # correct client at the top level and have no `token_issued_for`
             # in details, so the fallback path returns the unchanged value.
             details = event.get('details') or {}
-            client_id = details.get('token_issued_for') or event.get('clientId')
+            caller_client_id = event.get('clientId')
+            # Attributed client (e.g. desktop): prefer token_issued_for on introspection.
+            client_id = details.get('token_issued_for') or caller_client_id
 
             capture(
                 event=event_name,
                 keycloak_user_id=user_id,
                 properties={
                     'clientId': client_id,
+                    'keycloakCallerClientId': caller_client_id,
                     'keycloak_event_type': kc_type,
                     'keycloak_event_id': event_id,
                     'is_error': kc_type.endswith('_ERROR'),

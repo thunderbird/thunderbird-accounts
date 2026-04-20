@@ -126,23 +126,32 @@ class PollKeycloakEventsTestCase(TestCase):
         self.assertIn('new-event-123', cached)
 
     def test_is_error_flag_for_all_event_types(self):
-        """Exercise every mapped event type through the task and verify is_error matches the _ERROR suffix."""
-        self._set_keycloak_events([_make_keycloak_event(kc_type) for kc_type in settings.KEYCLOAK_EVENT_MAP])
+        """Every mapped event type is submitted with the correct is_error flag."""
+        # Hardcoded so the test catches regressions in the _ERROR suffix rule
+        # (instead of re-deriving it the same way the production code does).
+        expected_is_error = {
+            'LOGIN': False,
+            'LOGIN_ERROR': True,
+            'REGISTER': False,
+            'REGISTER_ERROR': True,
+            'LOGOUT': False,
+            'CODE_TO_TOKEN': False,
+            'CODE_TO_TOKEN_ERROR': True,
+            'INTROSPECT_TOKEN': False,
+            'REFRESH_TOKEN': False,
+        }
+        # If a new type is added to KEYCLOAK_EVENT_MAP, extend the table above.
+        self.assertEqual(set(expected_is_error), set(settings.KEYCLOAK_EVENT_MAP))
+
+        self._set_keycloak_events([_make_keycloak_event(kc_type) for kc_type in expected_is_error])
 
         poll_keycloak_events()
 
-        submitted_types = {
+        submitted = {
             call.kwargs['properties']['keycloak_event_type']: call.kwargs['properties']['is_error']
             for call in self.mock_ph.capture.call_args_list
         }
-        for kc_type in settings.KEYCLOAK_EVENT_MAP:
-            self.assertIn(kc_type, submitted_types, f'{kc_type} was not submitted')
-            expected_error = kc_type.endswith('_ERROR')
-            self.assertEqual(
-                submitted_types[kc_type],
-                expected_error,
-                f'{kc_type}: expected is_error={expected_error}, got {submitted_types[kc_type]}',
-            )
+        self.assertEqual(submitted, expected_is_error)
 
     @override_settings(KEYCLOAK_EVENTS_PAGE_SIZE=3)
     def test_pagination_fetches_all_events(self):
@@ -154,48 +163,53 @@ class PollKeycloakEventsTestCase(TestCase):
         self.assertEqual(mock_kc_client.request.call_count, 3)  # pages: 3+3+1
 
     def test_client_id_resolution(self):
-        """clientId is taken from details.token_issued_for when present, else from the top-level clientId."""
+        """clientId is attributed (token_issued_for or top-level); keycloakCallerClientId is raw Keycloak clientId."""
         cases = [
             (
-                'INTROSPECT_TOKEN uses details.token_issued_for',
+                'INTROSPECT_TOKEN from stalwart for a send-backend token: attributed=send-backend, caller=stalwart',
                 _make_keycloak_event(
                     'INTROSPECT_TOKEN',
                     client_id='stalwart',
                     details={
-                        'token_issued_for': 'desktop',
+                        'token_issued_for': 'thunderbird-send-backend',
                         'token_id': 'ofrtrt:fake',
                         'token_type': 'Bearer',
                         'client_auth_method': 'client-secret',
                     },
                 ),
-                'desktop',
+                'thunderbird-send-backend',
+                'stalwart',
             ),
             (
-                'LOGIN has no details; top-level clientId wins',
-                _make_keycloak_event('LOGIN', client_id='desktop'),
-                'desktop',
-            ),
-            (
-                'REFRESH_TOKEN details without token_issued_for; top-level clientId wins',
+                'INTROSPECT_TOKEN from send-backend directly: attributed and caller both send-backend',
                 _make_keycloak_event(
-                    'REFRESH_TOKEN',
-                    client_id='desktop',
+                    'INTROSPECT_TOKEN',
+                    client_id='thunderbird-send-backend',
                     details={
+                        'token_issued_for': 'thunderbird-send-backend',
                         'token_id': 'ofrtrt:fake',
-                        'grant_type': 'refresh_token',
-                        'refresh_token_type': 'Offline',
+                        'token_type': 'Bearer',
+                        'client_auth_method': 'client-secret',
                     },
                 ),
+                'thunderbird-send-backend',
+                'thunderbird-send-backend',
+            ),
+            (
+                'LOGIN has no details; top-level clientId wins for both fields',
+                _make_keycloak_event('LOGIN', client_id='desktop'),
+                'desktop',
                 'desktop',
             ),
             (
                 'no top-level clientId and no token_issued_for',
                 _make_keycloak_event('LOGIN', include_client_id=False),
                 None,
+                None,
             ),
         ]
 
-        for label, event, expected_client_id in cases:
+        for label, event, expected_client_id, expected_caller in cases:
             with self.subTest(case=label):
                 self.mock_ph.reset_mock()
                 cache.delete(settings.KEYCLOAK_SEEN_EVENTS_CACHE_KEY)
@@ -203,4 +217,6 @@ class PollKeycloakEventsTestCase(TestCase):
 
                 poll_keycloak_events()
 
-                self.assertEqual(self._last_capture_properties()['clientId'], expected_client_id)
+                props = self._last_capture_properties()
+                self.assertEqual(props['clientId'], expected_client_id)
+                self.assertEqual(props['keycloakCallerClientId'], expected_caller)
