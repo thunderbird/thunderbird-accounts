@@ -91,11 +91,20 @@ def poll_keycloak_events(self):
                 skipped += 1
                 continue
 
+            # INTROSPECT_TOKEN events carry `clientId=stalwart` at the top
+            # level (the introspection-endpoint caller), and the real token
+            # owner in `details.token_issued_for`. Other event types
+            # (LOGIN, REFRESH_TOKEN, CODE_TO_TOKEN) already carry the
+            # correct client at the top level and have no `token_issued_for`
+            # in details, so the fallback path returns the unchanged value.
+            details = event.get('details') or {}
+            client_id = details.get('token_issued_for') or event.get('clientId')
+
             capture(
                 event=event_name,
                 keycloak_user_id=user_id,
                 properties={
-                    'clientId': event.get('clientId', ''),
+                    'clientId': client_id,
                     'keycloak_event_type': kc_type,
                     'keycloak_event_id': event_id,
                     'is_error': kc_type.endswith('_ERROR'),
