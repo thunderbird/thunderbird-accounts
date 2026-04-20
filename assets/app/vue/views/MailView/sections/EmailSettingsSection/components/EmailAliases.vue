@@ -103,6 +103,7 @@ const onDeleteAliasError = (error: string) => {
         </template>
 
         <email-alias-actions-menu
+          v-if="!alias.isSubscription"
           :alias="alias"
           @delete-alias-success="onDeleteAliasSuccess"
           @delete-alias-error="onDeleteAliasError"
