@@ -153,6 +153,7 @@ INSTALLED_APPS = [
     'thunderbird_accounts.subscription',
     'thunderbird_accounts.mail',
     'thunderbird_accounts.core',
+    'thunderbird_accounts.telemetry',
     'thunderbird_accounts.admin.AccountsAdminConfig',  # Instead of 'django.contrib.admin'
     # Django
     'django.contrib.auth',
@@ -501,7 +502,7 @@ KEYCLOAK_EVENTS_PAGE_SIZE = 500
 
 if POSTHOG_API_KEY:
     CELERY_BEAT_SCHEDULE['poll-keycloak-events'] = {
-        'task': 'thunderbird_accounts.authentication.tasks.poll_keycloak_events',
+        'task': 'thunderbird_accounts.telemetry.tasks.poll_keycloak_events',
         'schedule': KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS,
     }
 
