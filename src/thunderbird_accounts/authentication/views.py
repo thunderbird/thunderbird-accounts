@@ -1,4 +1,3 @@
-import sentry_sdk
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import logout as django_logout
@@ -11,17 +10,12 @@ from django.urls import reverse
 from urllib.parse import quote
 from django.conf import settings
 from django.utils.decorators import method_decorator
-from django.utils.translation import ngettext, gettext_lazy as _
+from django.utils.translation import ngettext
 from django.views.decorators.cache import never_cache
-from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.views.generic import TemplateView
 
-from thunderbird_accounts.authentication.exceptions import (
-    InvalidDomainError,
-    ImportUserError,
-)
-from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction, is_email_in_allow_list
+from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction
 from thunderbird_accounts.core.utils import get_absolute_url
 
 

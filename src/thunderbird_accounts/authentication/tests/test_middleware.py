@@ -1,27 +1,16 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import freezegun
 from django.conf import settings
-from django.contrib import messages
-from django.contrib.admin import AdminSite
 from django.core.exceptions import PermissionDenied
 from django.forms import model_to_dict
 from django.http import HttpRequest
-from urllib.parse import quote
-from django.test import Client as RequestClient, override_settings
+from django.test import override_settings
 from django.test import TestCase
-from django.utils.translation import gettext_lazy as _
 
-from requests import Response
 
-from thunderbird_accounts.authentication.admin import CustomUserAdmin
-from thunderbird_accounts.authentication.clients import RequestMethods
-from thunderbird_accounts.authentication.exceptions import ImportUserError
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.authentication.reserved import is_reserved, servers, support
-from thunderbird_accounts.mail.models import Account, Email
-from thunderbird_accounts.core.tests.utils import build_keycloak_success_response
 from thunderbird_accounts.authentication.models import AllowListEntry
 
 
