@@ -5,13 +5,16 @@ import { useThrottleFn } from '@vueuse/core';
 
 const form = useTemplateRef<HTMLFormElement>("form");
 
-defineProps<{
+withDefaults(defineProps<{
   stepId: string;
   title: string;
   subtitle: string;
-  submitDisabled: boolean | null;
-  submitTitle: string;
-}>();
+  submitDisabled?: boolean | null;
+  hideActions?: boolean | null;
+}>(), {
+  submitDisabled: false,
+  hideActions: false
+});
 
 const emit = defineEmits<{
   (e: 'submit'): void;
@@ -34,27 +37,27 @@ export default {
 
 <template>
   <!-- Hidden element for testing purposes, don't worry about it. -->
-  <input type="hidden" aria-hidden="true" data-testid="step-id" :value="stepId"/>
+  <input type="hidden" aria-hidden="true" data-testid="step-id" :value="stepId" />
 
   <header>
     <h1 aria-live="polite" class="title" data-testid="title">{{ title }}</h1>
-    <p  aria-live="polite" class="text" data-testid="subtitle">{{ subtitle }}</p>
-    <slot name="notice-bars"/>
+    <p aria-live="polite" class="text" data-testid="subtitle">{{ subtitle }}</p>
+    <slot name="notice-bars" />
   </header>
 
   <main>
     <form @submit.prevent="onSubmit()" @keyup.enter="onSubmit()" ref="form">
-        <div class="form-elements">
-          <slot name="form-elements" />
-          <slot name="form-extras" />
-        </div>
-        <div class="buttons">
-          <primary-button form-action="submit" data-testid="submit-button" class="submit" :disabled="submitDisabled"
-            @click.prevent="onSubmit()">
-            {{ $t('views.mail.views.signUp.continue') }}
-          </primary-button>
-        </div>
-      </form>
+      <div class="form-elements">
+        <slot name="form-elements" />
+        <slot name="form-extras" />
+      </div>
+      <div class="buttons" v-if="!hideActions">
+        <primary-button form-action="submit" data-testid="submit-button" class="submit" :disabled="submitDisabled"
+          @click.prevent="onSubmit()">
+          {{ $t('views.mail.views.signUp.continue') }}
+        </primary-button>
+      </div>
+    </form>
   </main>
 </template>
 

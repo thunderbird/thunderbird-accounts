@@ -52,9 +52,7 @@ export class TbAcctsSignUpPage {
    */
   async fillForm(username: string, password?: string, passwordConfirm?: string, verificationEmail?: string) {
     await expect(this.stepId).toHaveValue('step-username');
-    
     await this.userNameInput?.fill(username);
-
     await this.submitForm();
 
     if (!password || !passwordConfirm) {
@@ -62,10 +60,8 @@ export class TbAcctsSignUpPage {
     }
     
     await expect(this.stepId).toHaveValue('step-password');
-
     await this.passwordInput?.fill(password);
     await this.passwordConfirmInput?.fill(passwordConfirm);
-
     await this.submitForm();
 
     if (!verificationEmail) {
@@ -73,7 +69,6 @@ export class TbAcctsSignUpPage {
     }
 
     await expect(this.stepId).toHaveValue('step-verify-email');
-
     await this.verificationEmailInput?.fill(verificationEmail);
   }
 

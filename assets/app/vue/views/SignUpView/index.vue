@@ -8,13 +8,13 @@ import BaseTemplate from '@kc/vue/BaseTemplate.vue';
 import Step1Username from './views/Step1Username/index.vue';
 import Step2Password from './views/Step2Password/index.vue';
 import Step3Verify from './views/Step3Verify/index.vue';
+import SignUpLayout from './components/SignUpLayout.vue';
 
 // Import our i18n composable
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 import { SignUpSteps, useSignUpFlowStore } from './stores/signUpFlowStore';
 import { storeToRefs } from 'pinia';
 import { PhX } from '@phosphor-icons/vue';
@@ -81,11 +81,12 @@ export default {
       </template>
     </component>
     <section v-else>
-      <a href="/" class="logo-link">
-        <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-      </a>
-      <h2>{{ t('verifyTitle') }}</h2>
-      <p>{{ t('emailVerifyInstruction') }}</p>
+    <sign-up-layout step-id="step-check-your-mail" :title="$t('views.mail.views.signUp.step4.title')"
+      :subtitle="$t('views.mail.views.signUp.step4.subtitle')" :hide-actions="true" :submit-disabled="false">
+      <template v-slot:notice-bars>
+        <slot name="notice-bars" />
+      </template>
+    </sign-up-layout>
     </section>
   </base-template>
 </template>

@@ -275,6 +275,10 @@
             "subtitle": "Use an email address you already have access to. It must be different from your new Thundermail address.",
             "action": "Verify email",
             "verificationEmailHelp": "Thundermail will send a verification link to this address to confirm it belongs to you."
+          },
+          "step4": {
+            "title": "Check your email",
+            "subtitle": "In a few moments you should receive an email with instructions on how to activate your account."
           }
         }
       },
