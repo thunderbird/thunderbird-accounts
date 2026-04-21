@@ -29,9 +29,7 @@ def get_user_profile(request: Request):
 @permission_classes([AllowAny])
 @throttle_classes([SignUpThrottle])
 def sign_up(request: Request):
-    """POST endpoint for the Accounts hosted sign up form.
-    The frontend files technically live in Keycloak's vue app but are imported by Accounts so we can call this endpoint.
-    (See `https://pro-services-docs.thunderbird.net/en/latest/sign-up.html`_ for more details.)
+    """The api endpoint for signing up a new user. 
 
     We create the Keycloak user and attach its uuid to the local Account's user object.
     We only create the local Accounts user object if the Keycloak user object was successfully created.
@@ -50,11 +48,6 @@ def sign_up(request: Request):
     username = f'{partial_username}@{settings.PRIMARY_EMAIL_DOMAIN}'
 
     generic_email_error = _('You cannot sign-up with that email address.')
-
-    request.session['form_data'] = {
-        'username': username,
-        'email': email,
-    }
 
     if not email:
         return Response({'error': generic_email_error, 'type': 'no-email'}, status=400)
@@ -76,13 +69,11 @@ def sign_up(request: Request):
 
     if not data.get('password'):
         return Response(
-            {'error': _("Your password doesn't match the confirm password field."), 'type': 'password-does-not-match'},
+            {'error': _("You need to enter a password to sign-up."), 'type': 'password-is-empty'},
             status=400,
         )
 
     user = User(username=username, email=email, display_name=username, language=locale, timezone=timezone)
-
-    # TODO: Move this to a task!
 
     # Create the user on keycloak's end
     keycloak = KeycloakClient()
@@ -123,8 +114,5 @@ def sign_up(request: Request):
             },
             status=400 if ex.error_code else 500,
         )
-
-    # Clear form_data on success
-    request.session['form_data'] = {}
 
     return Response({'success': True})
