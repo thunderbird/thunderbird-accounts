@@ -3,10 +3,10 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.6.6
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.7.3
 
 # Update this value to update all containers based on this Keycloak image
-.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-8f4b2f2785124d1c36f3b29dac0cf5a5c39e8687
+.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-45961da09b140c985513951fdc9f7f007f92d9ea
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
@@ -598,7 +598,7 @@ resources:
     keycloak:
       assign_public_ip: True
       desired_count: 1
-      health_check_grace_period_seconds: 600 # Time before the LB checks for health of a new backend
+      health_check_grace_period_seconds: 800 # Time before the LB checks for health of a new backend
       internal: False
       services:
         keycloak:
