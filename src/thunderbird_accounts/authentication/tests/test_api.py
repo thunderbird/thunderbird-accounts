@@ -2,10 +2,8 @@ from json import JSONDecodeError
 from unittest.mock import MagicMock, patch
 
 from django.conf import settings
-from django.contrib import messages
 from urllib.parse import quote
 from django.test import Client as RequestClient, override_settings
-from django.utils.translation import gettext_lazy as _
 from rest_framework.test import APITestCase
 
 from thunderbird_accounts.authentication.exceptions import ImportUserError
