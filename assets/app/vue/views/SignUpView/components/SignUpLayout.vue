@@ -63,10 +63,6 @@ export default {
 </template>
 
 <style scoped>
-#i18n-workaround {
-  display: none;
-}
-
 .hidden {
   display: none;
 }
@@ -77,22 +73,6 @@ export default {
   left: 1.5rem;
   right: 1.5rem;
   z-index: 1;
-}
-
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
 }
 
 header {
@@ -121,7 +101,6 @@ header {
   }
 
 }
-
 
 .form-elements {
   display: flex;

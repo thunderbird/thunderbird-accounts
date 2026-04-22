@@ -102,31 +102,4 @@ export default {
     cursor: pointer;
   }
 }
-
-
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-}
-
-h2 {
-  font-size: 2.25rem;
-  font-family: metropolis;
-  font-weight: normal;
-  letter-spacing: -0.36px;
-  line-height: 1.2;
-  color: var(--colour-primary-default);
-  margin: 0 0 1.5rem 0;
-}
 </style>
