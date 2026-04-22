@@ -41,19 +41,21 @@ section {
     /* Fallback support */
     background-image: url("@kc/images/featured-image/left-graphic.png");
     /* Handle the resolution and image type picks for supported devices. */
-    background-image: image-set(
-      url("@kc/images/featured-image/left-graphic.avif") 1x type("image/avif"),
-      url("@kc/images/featured-image/left-graphic@2x.avif") 2x type("image/avif"),
-      url("@kc/images/featured-image/left-graphic@3x.avif") 3x type("image/avif"),
+    background-image: image-set(url("@kc/images/featured-image/left-graphic.avif") 1x type("image/avif"),
+        url("@kc/images/featured-image/left-graphic@2x.avif") 2x type("image/avif"),
+        url("@kc/images/featured-image/left-graphic@3x.avif") 3x type("image/avif"),
 
-      url("@kc/images/featured-image/left-graphic.webp") 1x type("image/webp"),
-      url("@kc/images/featured-image/left-graphic@2x.webp") 2x type("image/webp"),
-      url("@kc/images/featured-image/left-graphic@3x.webp") 3x type("image/webp"),
+        url("@kc/images/featured-image/left-graphic.webp") 1x type("image/webp"),
+        url("@kc/images/featured-image/left-graphic@2x.webp") 2x type("image/webp"),
+        url("@kc/images/featured-image/left-graphic@3x.webp") 3x type("image/webp"),
 
-      url("@kc/images/featured-image/left-graphic.png") 1x type("image/png"),
-      url("@kc/images/featured-image/left-graphic@2x.png") 2x type("image/png"),
-      url("@kc/images/featured-image/left-graphic@3x.png") 3x type("image/png"),
-    );
+        url("@kc/images/featured-image/left-graphic.png") 1x type("image/png"),
+        url("@kc/images/featured-image/left-graphic@2x.png") 2x type("image/png"),
+        url("@kc/images/featured-image/left-graphic@3x.png") 3x type("image/png"),
+      );
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
   }
 
   .base-template__logo {
@@ -85,7 +87,11 @@ section {
     }
 
     .panel {
-      padding: 0 2rem;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 3rem;
+      padding: 6rem 2rem;
 
       &:has(.notice-bar) {
         padding: 6rem 2rem;
@@ -140,10 +146,7 @@ section {
         min-height: auto;
 
         .panel {
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-          gap: 3rem;
+
 
           padding: 6rem 10rem 5.625rem 6rem;
 
@@ -151,6 +154,7 @@ section {
             padding: 6rem 10rem 5.625rem 6rem;
           }
         }
+
         .panel-contents {
           display: flex;
           flex-direction: column;
