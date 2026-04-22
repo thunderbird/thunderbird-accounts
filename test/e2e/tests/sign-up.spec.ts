@@ -1,7 +1,7 @@
 import { TB_PRO_WAIT_LIST_URL } from '../const/constants';
 import { test, expect } from '@playwright/test';
 import { TbAcctsSignUpPage } from '../pages/tb-accts-signup-page';
-import { waitForVueApp } from '../utils/utils';
+import { isAllowListEnabled, waitForVueApp } from '../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -25,6 +25,8 @@ test.describe('sign up form', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
 }, () => {
   test('form successfully submits but is not on allow list', async ({ page }) => {
+    test.skip(!(await isAllowListEnabled(page)), 'Only enabled if backend\'s .env includes USE_ALLOW_LIST=True');
+    
     const testUsername: string = crypto.randomUUID().replaceAll('-', '');
     const testEmail: string = `${testUsername}@example.com`;
     const testPassword: string = 'this-is-my-password-and-it-is-long';
