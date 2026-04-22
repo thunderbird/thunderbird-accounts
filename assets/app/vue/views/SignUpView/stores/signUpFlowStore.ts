@@ -24,7 +24,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
   const password = ref(null);
   const confirmPassword = ref(null);
 
-  const errors = ref(null);
+  const errorMessage = ref<string|null>(null);
 
   const fullUsername = computed(() => `${username.value}@${window._page.currentView?.tbProPrimaryDomain}`)
 
@@ -60,8 +60,8 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
       $reset();
       return true;
     } else if (response.status === 429) { // Throttled by rate limiter
-      errors.value = (await response.json())?.detail ?? null;
-      console.log(errors.value);
+      errorMessage.value = (await response.json())?.detail ?? null;
+      console.log(errorMessage.value);
       return false;
     }  
 
@@ -71,12 +71,12 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
       if (!error) {
         return false;
       }
-      errors.value = error['error'] ?? 'Unknown Error';
+      errorMessage.value = error['error'] ?? 'Unknown Error';
 
       const type: string = error['type'] ?? 'unknown-error';
       if (type === 'go-to-wait-list') {
         // Don't show this error, just redirect!
-        errors.value = null;
+        errorMessage.value = null;
         window.location.href = error['href'];
         return false;
       }
@@ -90,7 +90,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
         step.value = SignUpSteps.USERNAME;
       }
     } catch {
-      errors.value = 'Unknown error';
+      errorMessage.value = 'Unknown error';
     }
     return false;
   };
@@ -127,10 +127,10 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
     timezone.value = null;
     lang.value = null;
     step.value = SignUpSteps.USERNAME;
-    errors.value = null;
+    errorMessage.value = null;
   };
 
   return {
-    name, username, password, confirmPassword, timezone, lang, errors, step, nextStep, fullUsername, verificationEmail, submit, $reset,
+    name, username, password, confirmPassword, timezone, lang, errorMessage, step, nextStep, fullUsername, verificationEmail, submit, $reset,
   };
 });

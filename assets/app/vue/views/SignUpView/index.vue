@@ -24,7 +24,7 @@ const route = useRoute();
 const signUpFlowStore = useSignUpFlowStore();
 const isSignUpComplete = route.name === 'sign-up-complete';
 
-const { lang, timezone, step, errors } = storeToRefs(signUpFlowStore);
+const { lang, timezone, step, errorMessage } = storeToRefs(signUpFlowStore);
 
 // We only support english right now :(
 lang.value = 'en';
@@ -65,11 +65,11 @@ export default {
         <!-- Orca at least will only detect updated dom elements not "new" dom elements. 
         So we need a wrapper that updates, otherwise we won't announce anything -->
         <div aria-live="assertive">
-          <notice-bar class="server-message" :type="NoticeBarTypes.Critical" v-if="errors !== null">
-            {{ errors }}
+          <notice-bar class="server-message" :type="NoticeBarTypes.Critical" v-if="errorMessage !== null">
+            {{ errorMessage }}
 
             <template #cta>
-              <button :title="t('views.error.dismiss')" class="close-button" @click="errors = null">
+              <button :title="t('views.error.dismiss')" class="close-button" @click="errorMessage = null">
                 <ph-x size="16" />
               </button>
             </template>
