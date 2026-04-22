@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { TextInput } from '@thunderbirdops/services-ui';
-import { onMounted, ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
 import SignUpLayout from '../../components/SignUpLayout.vue';
@@ -20,9 +20,8 @@ const onSubmit = async () => {
   if (response === true) {
     window.location.href = '/sign-up/complete';
   } else {
-    window.setTimeout(() => {
-      loading.value = false;
-    }, 0);
+    await nextTick();
+    loading.value = false;
   }
 };
 
