@@ -43,14 +43,14 @@ export default {
 <template>
   <sign-up-layout step-id="step-verify-email" :title="$t('views.mail.views.signUp.step3.title')"
     :subtitle="$t('views.mail.views.signUp.step3.subtitle')" :submitDisabled="loading || !!emailError"
-    @submit="onSubmit">
+    @submit="onSubmit" :submit-title="$t('views.mail.views.signUp.step3.action')">
     <template v-slot:notice-bars>
       <slot name="notice-bars" />
     </template>
     <template v-slot:form-elements>
       <text-input data-testid="verification-email-input" name="verification-email" required autocomplete="email"
         :error="emailError" :help="$t('views.mail.views.signUp.step3.verificationEmailHelp')"
-        v-model="verificationEmail">
+        :placeholder="$t('views.mail.views.signUp.step3.verificationEmailPlaceholder')" v-model="verificationEmail">
         {{ $t('views.mail.views.signUp.fields.verificationEmail') }}
       </text-input>
       <slot name="form-extras" />

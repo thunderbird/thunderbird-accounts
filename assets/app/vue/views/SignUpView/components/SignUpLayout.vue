@@ -2,6 +2,9 @@
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
 import { useThrottleFn } from '@vueuse/core';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const form = useTemplateRef<HTMLFormElement>("form");
 
@@ -9,8 +12,9 @@ withDefaults(defineProps<{
   stepId: string;
   title: string;
   subtitle: string;
-  submitDisabled?: boolean | null;
-  hideActions?: boolean | null;
+  submitDisabled?: boolean;
+  submitTitle?: string;
+  hideActions?: boolean;
 }>(), {
   submitDisabled: false,
   hideActions: false
@@ -54,7 +58,7 @@ export default {
       <div class="buttons" v-if="!hideActions">
         <primary-button form-action="submit" data-testid="submit-button" class="submit" :disabled="submitDisabled"
           @click.prevent="onSubmit()">
-          {{ $t('views.mail.views.signUp.continue') }}
+          {{ submitTitle || $t('views.mail.views.signUp.continue') }}
         </primary-button>
       </div>
     </form>

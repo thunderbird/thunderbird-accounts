@@ -259,6 +259,7 @@
             "title": "Create an account",
             "subtitle": "Choose your Thundermail username.",
             "emailSuggestions": "Try one of these:",
+            "usernamePlaceholder": "yourname",
             "usernameHelp": "This will become your email. e.g. yourname{domain}",
             "unknownError": "There was a problem with your username. Please try another one."
           },
@@ -274,6 +275,7 @@
             "title": "Add a verification email",
             "subtitle": "Use an email address you already have access to. It must be different from your new Thundermail address.",
             "action": "Verify email",
+            "verificationEmailPlaceholder": "yourname{'@'}example.com",
             "verificationEmailHelp": "Thundermail will send a verification link to this address to confirm it belongs to you."
           },
           "step4": {

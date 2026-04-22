@@ -83,6 +83,7 @@ export default {
       @input="usernameCheckDebounced"
       :error="usernameError"
       :outerSuffix="tbProPrimaryDomain"
+      :placeholder="$t('views.mail.views.signUp.step1.usernamePlaceholder')"
       :help="$t('views.mail.views.signUp.step1.usernameHelp', { 'domain': tbProPrimaryDomain })"
       v-model="username">
         {{ $t('views.mail.views.signUp.fields.username') }}
