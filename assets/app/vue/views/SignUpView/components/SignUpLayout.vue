@@ -2,9 +2,6 @@
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
 import { useThrottleFn } from '@vueuse/core';
-import { useI18n } from 'vue-i18n';
-
-const { t } = useI18n();
 
 const form = useTemplateRef<HTMLFormElement>("form");
 
