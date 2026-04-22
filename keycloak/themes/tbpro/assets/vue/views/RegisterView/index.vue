@@ -4,13 +4,11 @@ import { computed, ref, useTemplateRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { PhArrowRight } from '@phosphor-icons/vue';
 import MessageBar from '@kc/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const route = useRoute();
 
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
-const clientUrl = window._page.currentView?.clientUrl;
 const tbProPrimaryDomain = `@${window._page.currentView?.tbProPrimaryDomain}`;
 const attributeValues = window._page.currentView?.attributes;
 
