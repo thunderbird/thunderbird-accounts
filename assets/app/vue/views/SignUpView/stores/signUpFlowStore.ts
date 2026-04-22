@@ -56,39 +56,43 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
       },
     });
   
-
     if (response.status === 200) {
       $reset();
+      return true;
     } else if (response.status === 429) { // Throttled by rate limiter
       errors.value = (await response.json())?.detail ?? null;
       console.log(errors.value);
       return false;
-    } else { // Server errors
-      try {
-        const error = (await response.json()) ?? null;
-        if (!error) {
-          return false;
-        }
-        errors.value = error['error'] ?? 'Unknown Error';
+    }  
 
-        // What step are we moving the user back to?
-        const type: string = error['type'] ?? 'unknown-error';
-        if (type.indexOf('invalidPassword') === 0) {
-          step.value = SignUpSteps.PASSWORD;
-        } else if (type === 'go-to-wait-list') {
-          // Don't show this error, just redirect!
-          errors.value = null;
-          window.location.href = error['href'];
-        } else {
-          step.value = SignUpSteps.USERNAME;
-        }
-      } catch {
-        errors.value = 'Unknown error';
+    // Server errors
+    try {
+      const error = (await response.json()) ?? null;
+      if (!error) {
+        return false;
       }
-      return false;
-    }
+      errors.value = error['error'] ?? 'Unknown Error';
 
-    return true;
+      const type: string = error['type'] ?? 'unknown-error';
+      if (type === 'go-to-wait-list') {
+        // Don't show this error, just redirect!
+        errors.value = null;
+        window.location.href = error['href'];
+        return false;
+      }
+
+      // What step are we moving the user back to?
+      if (type.indexOf('invalidPassword') === 0) {
+        step.value = SignUpSteps.PASSWORD;
+      } else if (type === 'status-409') { // User already exists error (this comes from keycloak)
+        step.value = SignUpSteps.VERIFY;
+      } else {
+        step.value = SignUpSteps.USERNAME;
+      }
+    } catch {
+      errors.value = 'Unknown error';
+    }
+    return false;
   };
 
   /**
@@ -123,7 +127,6 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
     timezone.value = null;
     lang.value = null;
     step.value = SignUpSteps.USERNAME;
-    // Hmm...
     errors.value = null;
   };
 
