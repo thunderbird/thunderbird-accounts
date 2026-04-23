@@ -8,6 +8,7 @@ from django.urls import reverse
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.core.tests.utils import oidc_force_login
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
+from thunderbird_accounts.legal.views import _read_legal_content
 
 
 class LegalDocCleanSlateTestCase(TestCase):
@@ -34,31 +35,20 @@ class ReadLegalContentTestCase(TestCase):
     def test_returns_localized_content_when_available(self):
         (self.content_dir / 'de.html').write_text('<h1>AGB</h1>', encoding='utf-8')
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
-
-        from thunderbird_accounts.legal.views import _read_legal_content
-
         result = _read_legal_content('tos/v2.0', 'de')
         self.assertEqual(result, '<h1>AGB</h1>')
 
     def test_falls_back_to_default_for_unsupported_locale(self):
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
-
-        from thunderbird_accounts.legal.views import _read_legal_content
-
         result = _read_legal_content('tos/v2.0', 'fr')
         self.assertEqual(result, '<h1>TOS</h1>')
 
     def test_returns_empty_string_when_no_content(self):
-        from thunderbird_accounts.legal.views import _read_legal_content
-
         result = _read_legal_content('tos/v99.0', 'en')
         self.assertEqual(result, '')
 
     def test_rejects_path_traversal_in_locale(self):
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
-
-        from thunderbird_accounts.legal.views import _read_legal_content
-
         result = _read_legal_content('tos/v2.0', '../../etc/passwd')
         self.assertEqual(result, '<h1>TOS</h1>')
 
