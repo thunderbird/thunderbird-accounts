@@ -11,7 +11,6 @@ export const TB_PRO_WAIT_LIST_URL = String(process.env.TB_PRO_WAIT_LIST_URL);
 // sign-in credentials and corresponding info
 export const ACCTS_OIDC_EMAIL = String(process.env.ACCTS_OIDC_EMAIL);
 export const ACCTS_OIDC_PWORD = String(process.env.ACCTS_OIDC_PWORD);
-export const ACCTS_RECOVERY_EMAIL = String(process.env.ACCTS_RECOVERY_EMAIL);
 export const PRIMARY_THUNDERMAIL_EMAIL = String(process.env.PRIMARY_THUNDERMAIL_EMAIL);
 
 // playwright test tags
