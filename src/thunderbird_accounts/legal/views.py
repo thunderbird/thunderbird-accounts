@@ -17,7 +17,11 @@ def _read_legal_content(content_path: str, locale: str) -> str:
     if locale not in settings.SUPPORTED_LEGAL_LANGUAGES:
         locale = settings.DEFAULT_LANGUAGE
 
-    content_dir = Path(settings.ASSETS_ROOT, 'legal', content_path)
+    base_path = Path(settings.ASSETS_ROOT, 'legal')
+    content_dir = Path(base_path, content_path)
+    if not content_dir.resolve().is_relative_to(base_path):
+        logging.error('directory traversal attack!')
+        return ''
     content_file = content_dir / f'{locale}.html'
 
     if not content_file.exists():
