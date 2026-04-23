@@ -43,6 +43,12 @@ class ReadLegalContentTestCase(TestCase):
         result = _read_legal_content('tos/v2.0', 'fr')
         self.assertEqual(result, '<h1>TOS</h1>')
 
+    @override_settings(SUPPORTED_LEGAL_LANGUAGES=['en', 'de'])
+    def test_falls_back_to_default_language_when_locale_file_missing(self):
+        (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
+        result = _read_legal_content('tos/v2.0', 'de')
+        self.assertEqual(result, '<h1>TOS</h1>')
+
     def test_returns_empty_string_when_no_content(self):
         result = _read_legal_content('tos/v99.0', 'en')
         self.assertEqual(result, '')

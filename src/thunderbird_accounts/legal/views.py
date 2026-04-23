@@ -13,20 +13,28 @@ from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentRespon
 
 
 def _read_legal_content(content_path: str, locale: str) -> str:
-    """Read pre-rendered HTML content for a legal document, falling back to English."""
+    """Read pre-rendered HTML for a legal document.
+
+    Unsupported locales use ``settings.DEFAULT_LANGUAGE``. If the requested
+    locale file is missing but the default-language file exists in the same
+    directory, that file is returned instead.
+    """
     if locale not in settings.SUPPORTED_LEGAL_LANGUAGES:
         locale = settings.DEFAULT_LANGUAGE
 
     base_path = Path(settings.ASSETS_ROOT, 'legal')
     content_dir = Path(base_path, content_path)
+    default_file = content_dir / f'{settings.DEFAULT_LANGUAGE}.html'
+
     if not content_dir.resolve().is_relative_to(base_path):
         logging.error('directory traversal attack!')
-        return ''
+        return default_file.read_text(encoding='utf-8')
+
     content_file = content_dir / f'{locale}.html'
 
     if not content_file.exists():
         logging.error(f'Legal content file not found: {content_file}')
-        return ''
+        return default_file.read_text(encoding='utf-8')
 
     return content_file.read_text(encoding='utf-8')
 
