@@ -103,6 +103,7 @@ const onDeleteAliasError = (error: string) => {
         </template>
 
         <email-alias-actions-menu
+          v-if="!alias.isSubscription"
           :alias="alias"
           @delete-alias-success="onDeleteAliasSuccess"
           @delete-alias-error="onDeleteAliasError"
@@ -129,9 +130,14 @@ const onDeleteAliasError = (error: string) => {
 </template>
 
 <style scoped>
+#email-aliases {
+  padding-inline: 0.5rem;
+}
+
 .email-aliases-content {
   line-height: 1.32;
   color: var(--colour-ti-secondary);
+  padding-block-start: 0.25rem;
 
   .notice-bar-warning {
     margin-block-end: 1rem;
@@ -141,7 +147,7 @@ const onDeleteAliasError = (error: string) => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-block-end: 1rem;
+    margin-block-end: 1.25rem;
   }
 
   .email-aliases-count-text {
@@ -152,21 +158,20 @@ const onDeleteAliasError = (error: string) => {
   }
 
   .aliases-list {
-    border-block-start: 1px solid var(--colour-neutral-border);
-    border-block-end: 1px solid var(--colour-neutral-border);
     margin-block-end: 1.5rem;
 
     .alias-item {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      padding: 1rem 0.5rem;
+      padding: 0.5rem;
       gap: 0.5rem;
       height: 100%;
       min-height: 60px;
+      background-color: var(--colour-neutral-lower);
 
       & + .alias-item {
-        border-block-start: 1px solid var(--colour-neutral-border);
+        background-color: transparent;
       }
 
       p {
