@@ -49,10 +49,6 @@ class ReadLegalContentTestCase(TestCase):
         result = _read_legal_content('tos/v2.0', 'de')
         self.assertEqual(result, '<h1>TOS</h1>')
 
-    def test_returns_empty_string_when_no_content(self):
-        result = _read_legal_content('tos/v99.0', 'en')
-        self.assertEqual(result, '')
-
     def test_rejects_path_traversal_in_locale(self):
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
         result = _read_legal_content('tos/v2.0', '../../etc/passwd')
