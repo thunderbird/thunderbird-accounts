@@ -14,11 +14,11 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from thunderbird_accounts.authentication import views as auth_views
 from thunderbird_accounts.core import views as core_views
 from thunderbird_accounts.infra import views as infra_views
-from thunderbird_accounts.mail import views as mail_views
+from thunderbird_accounts.mail import views as mail_views, api as mail_api
 from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
 
-from thunderbird_accounts.authentication.api import get_user_profile
+from thunderbird_accounts.authentication.api import get_user_profile, sign_up
 
 # Error handler overrides
 handler500 = 'thunderbird_accounts.core.views.handle_500'
@@ -48,8 +48,6 @@ urlpatterns = [
     path('custom-domains/dns-records', mail_views.get_dns_records, name='get_dns_records'),
     path('email-aliases/add', mail_views.add_email_alias, name='add_email_alias'),
     path('email-aliases/remove', mail_views.remove_email_alias, name='remove_email_alias'),
-    # Authentication
-    path('users/sign-up/', auth_views.sign_up, name='sign_up'),
     # Subscription
     path('subscription/paddle/complete/', subscription_views.paddle_transaction_complete, name='paddle_completed'),
     # CalDAV auto-setup for Appointment
@@ -58,6 +56,7 @@ urlpatterns = [
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
+    path('api/v1/auth/sign-up/', sign_up, name='api_sign_up'),
     path('api/v1/subscription/paddle/webhook/', subscription_views.handle_paddle_webhook, name='paddle_webhook'),
     path('api/v1/subscription/paddle/info/', subscription_views.get_paddle_information, name='paddle_info'),
     path('api/v1/subscription/paddle/portal/', subscription_views.get_paddle_portal_link, name='paddle_portal'),
@@ -68,6 +67,7 @@ urlpatterns = [
     path(
         'api/v1/subscription/plan/info/', subscription_views.get_subscription_plan_info, name='subscription_plan_info'
     ),
+    path('api/v1/mail/is-username-available/', mail_api.is_username_available, name='api_is_username_available'),
     # Health check
     path('health', infra_views.health_check),
 ]

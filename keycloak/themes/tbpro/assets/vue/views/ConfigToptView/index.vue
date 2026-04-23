@@ -10,10 +10,8 @@ import { computed, ref, useTemplateRef } from "vue";
 import { i18n } from '@kc/composables/i18n.js';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
 import MessageBar from "@kc/vue/components/MessageBar.vue";
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const isManualMode = ref(false);
-const clientUrl = window._page.currentView?.clientUrl;
 const formAction = window._page.currentView?.formAction;
 const settingsForm = useTemplateRef('settings-form');
 const cancelForm = useTemplateRef('cancel-form');
@@ -120,9 +118,7 @@ export default {
 
 <template>
   <message-bar/>
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
+
   <h2>{{ $t('loginTotpTitle') }}</h2>
   <cancel-form ref="cancel-form" :action="formAction" cancelId="cancelTOTPBtn" cancelValue="true"
                 cancelName="cancel-aia"/>

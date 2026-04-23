@@ -1,8 +1,6 @@
 <script setup>
 import MessageBar from '@kc/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
-const clientUrl = window._page.currentView?.clientUrl;
 const actionUrl = window._page.currentView?.actionUrl;
 const actionText = window._page.currentView?.actionText;
 </script>
@@ -15,10 +13,6 @@ export default {
 
 <template>
   <message-bar/>
-
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
 
   <h2>{{ $t('errorTitle') }}</h2>
   <template v-if="actionUrl">

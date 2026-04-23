@@ -2,11 +2,9 @@
 import { TextInput, PrimaryButton, CheckboxInput } from "@thunderbirdops/services-ui";
 import { computed, useTemplateRef } from 'vue';
 import MessageBar from '@kc/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const formAction = window._page.currentView?.formAction;
 const updatePasswordForm = useTemplateRef('update-password-form');
-const clientUrl = window._page.currentView?.clientUrl;
 const errors = window._page.currentView?.errors;
 const passwordError = computed(() => {
   return errors.value?.password === '' ? null : errors.value?.password;
@@ -29,10 +27,6 @@ export default {
 
 <template>
   <message-bar/>
-
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
 
   <h2>{{ $t('updatePasswordTitle') }}</h2>
   <form id="kc-passwd-update-form" ref="update-password-form" method="POST" :action="formAction" @submit.prevent="onSubmit" @keyup.enter="onSubmit">

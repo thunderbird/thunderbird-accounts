@@ -13,6 +13,10 @@ import {
 
 const authFile = path.join(__dirname, '../test-results/.auth/user.json');
 
+export const isAllowListEnabled = async (page: Page) => {
+    return await page.evaluate('window?._page?.features?.be_allowList');
+};
+
 /**
  * Allows you to show the current page's console log in stdout
  */

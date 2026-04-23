@@ -2,7 +2,6 @@
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
 import MessageBar from '@kc/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const formAction = window._page.currentView?.formAction;
 const logoutForm = useTemplateRef('logout-form');
@@ -22,10 +21,6 @@ export default {
 
 <template>
   <message-bar />
-
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
 
   <h2>{{ $t('logoutConfirmTitle') }}</h2>
   <form id="kc-logout-confirm" ref="logout-form" method="POST" :action="formAction" @submit.prevent="onSubmit"

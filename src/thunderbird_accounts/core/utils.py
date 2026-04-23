@@ -4,6 +4,14 @@ from ua_parser import parse_user_agent, parse_os
 
 from django.conf import settings
 
+def get_feature_flags() -> dict:
+    """Return a list of feature flags that the server has enabled via env or db.
+    This is for the frontend, but the frontend might have its own list of features
+    so we prefix everything with `be_` (for backend) to avoid collision."""
+    return {
+        'be_allowList': settings.USE_ALLOW_LIST
+    }
+
 
 def get_absolute_url(path: str) -> str:
     """Prepend a path with the correct public facing url,
