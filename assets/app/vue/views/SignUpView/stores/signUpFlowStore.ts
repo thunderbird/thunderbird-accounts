@@ -57,7 +57,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
     });
   
     if (response.status === 200) {
-      $reset();
+      $reset(false);
       return true;
     } else if (response.status === 429) { // Throttled by rate limiter
       errorMessage.value = (await response.json())?.detail ?? null;
@@ -117,8 +117,9 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
 
   /**
    * Restore default state
+   * By default we also reset the current step, but this behaviour can be disabled with the resetStep param.
    */
-  const $reset = () => {
+  const $reset = (resetStep: boolean = true) => {
     name.value = null;
     username.value = null;
     verificationEmail.value = null;
@@ -126,8 +127,10 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
     confirmPassword.value = null;
     timezone.value = null;
     lang.value = null;
-    step.value = SignUpSteps.USERNAME;
     errorMessage.value = null;
+    if (resetStep) {
+      step.value = SignUpSteps.USERNAME;
+    }
   };
 
   return {
