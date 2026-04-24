@@ -1,11 +1,16 @@
 <script setup>
 import MessageBar from '@kc/vue/components/MessageBar.vue';
+import { PrimaryButton } from '@thunderbirdops/services-ui';
+import { computed, onMounted } from 'vue';
 
 const message = window._page.message;
 const messageHeader = window._page.currentView?.messageHeader;
 const actionUrl = window._page.currentView?.actionUrl;
 const actionText = window._page.currentView?.actionText;
-const requiredActions = window._page.currentView?.requiredActions ?? [];
+const requiredActions = window._page.currentView?.requiredActions ?? {};
+
+const isSingleAction = computed(() => Object.keys(requiredActions).length === 1);
+const isVerifyEmailAction = computed(() => isSingleAction.value && Object.keys(requiredActions)[0] === 'VERIFY_EMAIL');
 </script>
 
 <script>
@@ -15,21 +20,30 @@ export default {
 </script>
 
 <template>
-  <message-bar />
-  <h2>
-    <template v-if="messageHeader">
-      {{ messageHeader }}
+  <header>
+    <h1 class="title">
+      <template v-if="isVerifyEmailAction">
+        {{ $t('infoVerifyEmailTitle') }}
+      </template>
+      <template v-else-if="messageHeader">
+        {{ messageHeader }}
+      </template>
+      <template v-else>
+        {{ message?.summary }}
+      </template>
+    </h1>
+    <p class="text" v-if="isVerifyEmailAction">{{ $t('infoVerifyEmailText') }}</p>
+    <message-bar v-if="messageHeader && messageHeader !== message?.summary" />
+  </header>
+  <main>
+    <ul class="required-actions" v-if="!isSingleAction">
+      <li v-for="action in requiredActions" v-bind:key="action">{{ action }}</li>
+    </ul>
+    <template v-if="actionUrl">
+      <primary-button class="perform-action" :href="actionUrl" data-testid="action-url">{{ actionText
+        }}</primary-button>
     </template>
-    <template v-else>
-      {{ message?.summary }}
-    </template>
-  </h2>
-  <ul class="required-actions">
-    <li v-for="action in requiredActions" v-bind:key="action">{{ action }}</li>
-  </ul>
-  <template v-if="actionUrl">
-    <a :href="actionUrl" data-testid="action-url">{{ actionText }}</a>
-  </template>
+  </main>
 </template>
 
 <style scoped>
@@ -42,35 +56,52 @@ export default {
 }
 
 .required-actions {
-  margin-bottom: 1rem;
+  margin: 0;
+  margin-bottom: 1.5rem;
 
   li {
     list-style: none;
   }
 }
 
-h2 {
-  font-size: 1.5rem;
-  font-family: metropolis;
-  font-weight: normal;
-  line-height: 1.1;
-  color: var(--colour-primary-default);
-  margin: 0 0 1.5rem 0;
+header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0 0 3rem 0;
+
+  .title {
+    font-size: 2.25rem;
+    font-family: metropolis;
+    font-weight: normal;
+    font-weight: 300;
+
+    font-stretch: normal;
+
+    font-style: normal;
+    letter-spacing: -0.36px;
+    line-height: 1.2;
+    color: var(--colour-primary-default);
+  }
+
+  .text {
+    font-size: 1rem;
+    line-height: 1.32;
+  }
+
+  .title,
+  .text {
+    margin: 0;
+  }
 }
 
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
+main {
+  display: flex;
+  flex-direction: column;
+}
 
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
+.perform-action {
+  align-self: flex-end;
+  width: fit-content;
 }
 </style>

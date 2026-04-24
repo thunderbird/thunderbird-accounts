@@ -23,13 +23,20 @@
         // <#else>
         messageHeader: null,
         // </#if>
-        requiredActions: [
+        requiredActions: {
             //<#if requiredActions??><#list requiredActions>
               //<#items as reqActionItem>
-              '${kcSanitize(msg("requiredAction.${reqActionItem}"))?no_esc}',
+              ${reqActionItem}: '${kcSanitize(msg("requiredAction.${reqActionItem}"))?no_esc}',
               //</#items>
             // </#list></#if>
-        ],
+        },
+      };
+      window._l10n = {
+        ...window._l10n,
+        infoRedirectTitle: '${kcSanitize(msg("infoRedirectTitle"))?no_esc}',
+        infoRedirectText: '${kcSanitize(msg("infoRedirectText"))?no_esc}',
+        infoVerifyEmailTitle: '${kcSanitize(msg("infoVerifyEmailTitle"))?no_esc}',
+        infoVerifyEmailText:'${kcSanitize(msg("infoVerifyEmailText"))?no_esc}',
       };
     </script>
     </#if>
