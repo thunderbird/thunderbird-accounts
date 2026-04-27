@@ -23,19 +23,19 @@ const incomingServerSelectedTab = ref<INCOMING_SERVER_TABS>(INCOMING_SERVER_TABS
 
 const imapServerDetails = computed(() => ({
   protocol: 'IMAP',
-  server: `imap.${connectionInfo.value.IMAP.HOST}`,
+  server: connectionInfo.value.IMAP.HOST,
   port: `${connectionInfo.value.IMAP.PORT}${connectionInfo.value.IMAP.TLS ? ' (SSL/TLS)' : ''}`,
 }));
 
 const jmapServerDetails = computed(() => ({
   protocol: 'JMAP',
-  server: `jmap.${connectionInfo.value.JMAP.HOST}`,
+  server: connectionInfo.value.JMAP.HOST,
   port: `${connectionInfo.value.JMAP.PORT}${connectionInfo.value.JMAP.TLS ? ' (SSL/TLS)' : ''}`,
 }));
 
 const smtpServerDetails = computed(() => ({
   protocol: 'SMTP',
-  server: `smtp.${connectionInfo.value.SMTP.HOST}`,
+  server: connectionInfo.value.SMTP.HOST,
   port: `${connectionInfo.value.SMTP.PORT}${connectionInfo.value.SMTP.TLS ? ' (SSL/TLS)' : ''}`,
 }));
 
