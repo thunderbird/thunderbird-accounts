@@ -9,6 +9,8 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.core.tests.utils import oidc_force_login
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 from thunderbird_accounts.legal.views import _read_legal_content
+from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.subscription.models import Subscription
 
 
 class LegalDocCleanSlateTestCase(TestCase):
@@ -256,17 +258,24 @@ class AcceptLegalDocsTestCase(LegalDocCleanSlateTestCase):
 
 
 class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
+    """Tests the decline flow for users WITH an active subscription (logout only, no deletion)."""
+
     def setUp(self):
         super().setUp()
         self.client = RequestClient()
         self.user = User.objects.create(username=f'declinetest@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='decline-1')
         self.url = reverse('legal_decline')
 
+    def _give_active_subscription(self):
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
+
     def test_requires_authentication(self):
         response = self.client.post(self.url, data='{}', content_type='application/json')
         self.assertEqual(response.status_code, 302)
 
-    def test_creates_declined_responses_and_logs_out(self):
+    @patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')
+    def test_creates_declined_responses_and_logs_out(self, mock_kc_request):
+        self._give_active_subscription()
         oidc_force_login(self.client, self.user)
 
         LegalDocument.objects.create(
@@ -294,6 +303,7 @@ class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
     @override_settings(AUTH_SCHEME='oidc')
     @patch('thunderbird_accounts.legal.views.sentry_sdk')
     def test_decline_calls_keycloak_logout_for_oidc_user(self, mock_sentry):
+        self._give_active_subscription()
         oidc_force_login(self.client, self.user)
 
         LegalDocument.objects.create(
@@ -317,6 +327,7 @@ class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
     @override_settings(AUTH_SCHEME='oidc')
     @patch('thunderbird_accounts.legal.views.sentry_sdk')
     def test_decline_handles_keycloak_logout_failure(self, mock_sentry):
+        self._give_active_subscription()
         oidc_force_login(self.client, self.user)
 
         LegalDocument.objects.create(
@@ -341,6 +352,7 @@ class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
 
     @override_settings(AUTH_SCHEME='password')
     def test_decline_skips_keycloak_for_password_auth(self):
+        self._give_active_subscription()
         oidc_force_login(self.client, self.user)
 
         LegalDocument.objects.create(
@@ -361,3 +373,101 @@ class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
         oidc_force_login(self.client, self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 405)
+
+
+@patch('thunderbird_accounts.mail.clients.MailClient._delete_principal')
+@patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')
+class DeclineLegalDocsDeleteUserTestCase(LegalDocCleanSlateTestCase):
+    """Tests that declining TOS without an active subscription deletes all user data."""
+
+    def setUp(self):
+        super().setUp()
+        self.client = RequestClient()
+        self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
+        self.user = User.objects.create(
+            username=f'deletetest@{self.subdomain}',
+            email='deletetest@example.com',
+            oidc_id='delete-oidc-1',
+        )
+        self.url = reverse('legal_decline')
+        self.tos = LegalDocument.objects.create(
+            document_type=LegalDocument.DocumentType.TOS,
+            version='2.0',
+            is_current=True,
+            content_path='tos/v2.0',
+        )
+
+    def test_deletes_user_from_keycloak_and_db(self, mock_kc_request, mock_delete_principal):
+        oidc_force_login(self.client, self.user)
+        payload = json.dumps({'source_context': 'dashboard'})
+        response = self.client.post(self.url, data=payload, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertEqual(data['redirect_url'], '/')
+
+        mock_kc_request.assert_called_once()
+        endpoint, method = mock_kc_request.call_args[0]
+        self.assertEqual(endpoint, f'users/{self.user.oidc_id}')
+
+        with self.assertRaises(User.DoesNotExist):
+            self.user.refresh_from_db()
+
+    def test_deletes_stalwart_account_when_present(self, mock_kc_request, mock_delete_principal):
+        account = Account.objects.create(name='deletetest', user=self.user)
+        Email.objects.create(
+            address=self.user.username,
+            type=Email.EmailType.PRIMARY,
+            account=account,
+        )
+
+        oidc_force_login(self.client, self.user)
+        payload = json.dumps({})
+        self.client.post(self.url, data=payload, content_type='application/json')
+
+        mock_kc_request.assert_called_once()
+        mock_delete_principal.assert_called_once()
+
+        with self.assertRaises(User.DoesNotExist):
+            self.user.refresh_from_db()
+        with self.assertRaises(Account.DoesNotExist):
+            account.refresh_from_db()
+
+    def test_skips_stalwart_when_no_email(self, mock_kc_request, mock_delete_principal):
+        oidc_force_login(self.client, self.user)
+        payload = json.dumps({})
+        self.client.post(self.url, data=payload, content_type='application/json')
+
+        mock_kc_request.assert_called_once()
+        mock_delete_principal.assert_not_called()
+
+        with self.assertRaises(User.DoesNotExist):
+            self.user.refresh_from_db()
+
+    def test_decline_response_is_cascade_deleted_with_user(self, mock_kc_request, mock_delete_principal):
+        oidc_force_login(self.client, self.user)
+        payload = json.dumps({'source_context': 'dashboard'})
+        self.client.post(self.url, data=payload, content_type='application/json')
+
+        with self.assertRaises(User.DoesNotExist):
+            self.user.refresh_from_db()
+
+        self.assertFalse(
+            LegalDocumentResponse.objects.filter(user_id=self.user.pk).exists()
+        )
+
+    @patch('thunderbird_accounts.authentication.utils.sentry_sdk')
+    def test_still_deletes_db_user_on_keycloak_failure(self, mock_sentry, mock_kc_request, mock_delete_principal):
+        from thunderbird_accounts.authentication.exceptions import DeleteUserError
+
+        mock_kc_request.side_effect = DeleteUserError(error='Connection refused', oidc_id=self.user.oidc_id)
+
+        oidc_force_login(self.client, self.user)
+        payload = json.dumps({})
+        response = self.client.post(self.url, data=payload, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        mock_sentry.capture_exception.assert_called_once()
+
+        with self.assertRaises(User.DoesNotExist):
+            self.user.refresh_from_db()

@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
+from thunderbird_accounts.authentication.utils import delete_user_data
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 
 
@@ -106,8 +107,13 @@ def accept_legal_docs(request):
 def decline_legal_docs(request):
     _record_response(request, LegalDocumentResponse.Action.DECLINED)
 
-    # TODO: Offboard the user / Delete user data (?)
+    if not request.user.has_active_subscription:
+        delete_user_data(request.user)
+        django_logout(request)
+        return JsonResponse({'redirect_url': '/'})
 
+    # User has an active subscription!
+    # Until we have a way to delete the user data across all services we'll just log them out.
     if settings.AUTH_SCHEME == 'oidc' and request.user.oidc_id:
         try:
             from thunderbird_accounts.authentication.clients import KeycloakClient, RequestMethods
@@ -115,7 +121,7 @@ def decline_legal_docs(request):
             kc_client = KeycloakClient()
             kc_client.request(f'users/{request.user.oidc_id}/logout', RequestMethods.POST)
         except Exception as ex:
-            logging.error('Failed to logout Keycloak session', ex)
+            logging.error('Failed to logout Keycloak session', exc_info=ex)
             sentry_sdk.capture_exception(ex)
 
     django_logout(request)
