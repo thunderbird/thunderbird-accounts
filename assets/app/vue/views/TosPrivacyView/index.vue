@@ -134,10 +134,10 @@ export default {
 
       <div class="buttons">
         <primary-button variant="outline" :disabled="declining" @click="handleDecline">
-          {{ declining ? t('views.tosPrivacy.loading') : declineButtonLabel }}
+          {{ declineButtonLabel }}
         </primary-button>
         <primary-button :disabled="accepting" @click="handleAccept">
-          {{ accepting ? t('views.tosPrivacy.loading') : t('views.tosPrivacy.acceptButton') }}
+          {{ t('views.tosPrivacy.acceptButton') }}
         </primary-button>
       </div>
 
