@@ -174,7 +174,7 @@ router.beforeEach((to, _from) => {
   if (isAuthenticated && sendToSubscribe && !['subscribe', 'contact'].includes(to.name.toString())) {
     return { name: 'subscribe' };
   } else if (isAuthenticated && !sendToSubscribe && to.name === 'subscribe') {
-    return { name: 'dashboard' };
+    return { name: 'mail' };
   }
 
   return true;
