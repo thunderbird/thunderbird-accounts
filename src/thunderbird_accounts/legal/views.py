@@ -2,11 +2,12 @@ import json
 import logging
 from pathlib import Path
 
-import sentry_sdk
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import logout as django_logout
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 
 from thunderbird_accounts.authentication.utils import delete_user_data
@@ -113,17 +114,8 @@ def decline_legal_docs(request):
         return JsonResponse({'redirect_url': '/'})
 
     # User has an active subscription!
-    # Until we have a way to delete the user data across all services we'll just log them out.
-    if settings.AUTH_SCHEME == 'oidc' and request.user.oidc_id:
-        try:
-            from thunderbird_accounts.authentication.clients import KeycloakClient, RequestMethods
+    # Until we have a way to delete the user data across all services
+    # We'll redirect them to the contact page with a message.
+    messages.warning(request, _("We're sorry to see you go! Please contact support to cancel your account."))
 
-            kc_client = KeycloakClient()
-            kc_client.request(f'users/{request.user.oidc_id}/logout', RequestMethods.POST)
-        except Exception as ex:
-            logging.error('Failed to logout Keycloak session', exc_info=ex)
-            sentry_sdk.capture_exception(ex)
-
-    django_logout(request)
-
-    return JsonResponse({'redirect_url': '/'})
+    return JsonResponse({'redirect_url': '/contact'})
