@@ -1,5 +1,5 @@
 import json
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 from django.conf import settings
 from django.test import TestCase, Client as RequestClient, override_settings
@@ -258,7 +258,7 @@ class AcceptLegalDocsTestCase(LegalDocCleanSlateTestCase):
 
 
 class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
-    """Tests the decline flow for users WITH an active subscription (logout only, no deletion)."""
+    """Tests the decline flow for users WITH an active subscription (redirect to contact, no deletion)."""
 
     def setUp(self):
         super().setUp()
@@ -273,8 +273,7 @@ class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
         response = self.client.post(self.url, data='{}', content_type='application/json')
         self.assertEqual(response.status_code, 302)
 
-    @patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')
-    def test_creates_declined_responses_and_logs_out(self, mock_kc_request):
+    def test_creates_declined_responses_and_redirects_to_contact(self):
         self._give_active_subscription()
         oidc_force_login(self.client, self.user)
 
@@ -290,7 +289,7 @@ class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
         self.assertEqual(response.status_code, 200)
 
         data = json.loads(response.content)
-        self.assertEqual(data['redirect_url'], '/')
+        self.assertEqual(data['redirect_url'], '/contact')
 
         self.assertTrue(
             LegalDocumentResponse.objects.filter(
@@ -300,9 +299,7 @@ class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
             ).exists()
         )
 
-    @override_settings(AUTH_SCHEME='oidc')
-    @patch('thunderbird_accounts.legal.views.sentry_sdk')
-    def test_decline_calls_keycloak_logout_for_oidc_user(self, mock_sentry):
+    def test_decline_with_subscription_sets_warning_message(self):
         self._give_active_subscription()
         oidc_force_login(self.client, self.user)
 
@@ -313,61 +310,14 @@ class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
             content_path='tos/v2.0',
         )
 
-        with patch('thunderbird_accounts.authentication.clients.KeycloakClient') as mock_kc_cls:
-            mock_kc = Mock()
-            mock_kc_cls.return_value = mock_kc
+        payload = json.dumps({})
+        response = self.client.post(self.url, data=payload, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
 
-            payload = json.dumps({})
-            self.client.post(self.url, data=payload, content_type='application/json')
-
-            mock_kc.request.assert_called_once()
-            call_args = mock_kc.request.call_args[0]
-            self.assertEqual(call_args[0], f'users/{self.user.oidc_id}/logout')
-
-    @override_settings(AUTH_SCHEME='oidc')
-    @patch('thunderbird_accounts.legal.views.sentry_sdk')
-    def test_decline_handles_keycloak_logout_failure(self, mock_sentry):
-        self._give_active_subscription()
-        oidc_force_login(self.client, self.user)
-
-        LegalDocument.objects.create(
-            document_type=LegalDocument.DocumentType.TOS,
-            version='2.0',
-            is_current=True,
-            content_path='tos/v2.0',
-        )
-
-        with patch('thunderbird_accounts.authentication.clients.KeycloakClient') as mock_kc_cls:
-            mock_kc = Mock()
-            mock_kc_cls.return_value = mock_kc
-            mock_kc.request.side_effect = Exception('Keycloak unavailable')
-
-            payload = json.dumps({})
-            response = self.client.post(self.url, data=payload, content_type='application/json')
-
-            self.assertEqual(response.status_code, 200)
-            data = json.loads(response.content)
-            self.assertEqual(data['redirect_url'], '/')
-            mock_sentry.capture_exception.assert_called_once()
-
-    @override_settings(AUTH_SCHEME='password')
-    def test_decline_skips_keycloak_for_password_auth(self):
-        self._give_active_subscription()
-        oidc_force_login(self.client, self.user)
-
-        LegalDocument.objects.create(
-            document_type=LegalDocument.DocumentType.TOS,
-            version='2.0',
-            is_current=True,
-            content_path='tos/v2.0',
-        )
-
-        with patch('thunderbird_accounts.authentication.clients.KeycloakClient') as mock_kc_cls:
-            payload = json.dumps({})
-            response = self.client.post(self.url, data=payload, content_type='application/json')
-
-            self.assertEqual(response.status_code, 200)
-            mock_kc_cls.assert_not_called()
+        from django.contrib.messages import get_messages
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(len(messages), 1)
+        self.assertIn('contact support', str(messages[0]).lower())
 
     def test_rejects_non_post_methods(self):
         oidc_force_login(self.client, self.user)
