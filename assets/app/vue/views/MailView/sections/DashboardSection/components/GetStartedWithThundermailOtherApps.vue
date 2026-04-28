@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { PhArrowSquareOut, PhQuestion, PhArrowRight, PhGear } from '@phosphor-icons/vue';
+import { PhLifebuoy, PhArrowRight, PhGear } from '@phosphor-icons/vue';
 import { LinkButton } from '@thunderbirdops/services-ui';
 import ActionCard from '@/components/ActionCard.vue';
 import ServerSettingsCard from '@/components/ServerSettingsCard.vue';
@@ -13,15 +13,7 @@ const { t } = useI18n();
   <div class="action-cards">
     <!-- Automatic Configuration -->
     <action-card :title="t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.title')">
-      <template #icon>
-        <ph-arrow-square-out :size="20" />
-      </template>
-
-      <p class="action-description">
-        {{ t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.descriptionOne') }}
-      </p>
-
-      <i18n-t keypath="views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.descriptionTwo" tag="p">
+      <i18n-t keypath="views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.description" tag="p">
         <template #appPassword>
           <a href="#app-password-container" class="app-password-link">{{ t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.appPassword') }}</a>
         </template>
@@ -43,7 +35,7 @@ const { t } = useI18n();
       :description="t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.needHelpDescription')"
     >
       <template #icon>
-        <ph-question :size="20" />
+        <ph-lifebuoy :size="20" />
       </template>
       <template #action>
         <link-button size="small" :href="OTHER_APPS_SUPPORT_URL" target="_blank" class="need-help-button">
@@ -67,10 +59,6 @@ const { t } = useI18n();
   p {
     font-size: 0.75rem;
     color: var(--colour-ti-secondary);
-  }
-
-  .action-description {
-    margin-block-end: 1ch;
   }
 
   .app-password-link {

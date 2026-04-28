@@ -114,8 +114,7 @@
             },
             "otherAppsPanel": {
               "title": "Automatic Configuration",
-              "descriptionOne": "Most modern email applications will detect your account settings automatically. Just enter your email and password.",
-              "descriptionTwo": "Some email apps may require an {appPassword} instead of your regular account sign-in.",
+              "description": "Most email apps will set up your account automatically with your email address and password. Some applications may require your {appPassword}.",
               "appPassword": "app password",
               "manualConfigurationTitle": "Manual Configuration",
               "needHelpTitle": "Need Help?",
