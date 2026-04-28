@@ -26,31 +26,56 @@ def hash_id(raw_id: str) -> str:
     return hashlib.sha256(raw_id.encode('utf-8')).hexdigest()
 
 
-def capture(event: str, keycloak_user_id: str, properties: dict | None = None):
-    """Submit an event to PostHog with standardized identity and privacy controls.
+def submit_event(
+    distinct_id: str,
+    event: str,
+    properties: dict | None = None,
+    service: str = 'accounts',
+    uuid: str | None = None,
+    timestamp: str | None = None,
+):
+    """Submit an event to PostHog with an already-hashed distinct_id.
 
-    All events are tagged with sha256(keycloak_user_id) as distinct_id,
-    and service/environment are added automatically.
+    service/environment are added automatically. Pass `uuid` and `timestamp`
+    (RFC3339 string or datetime) when you have a stable source-side identifier
+    and time; PostHog dedupes on (timestamp, distinct_id, event, uuid), so this
+    makes retries idempotent. Callers that have a raw Keycloak user id should
+    use capture() instead so hashing is centralized.
     """
     client = _get_client()
     if client is None:
         logger.debug(f'PostHog not configured, skipping event {event}')
         return
 
+    event_properties = {
+        'environment': settings.APP_ENV,
+        'service': service,
+        **(properties or {}),
+    }
+    client.capture(
+        distinct_id=distinct_id,
+        event=event,
+        properties=event_properties,
+        uuid=uuid,
+        timestamp=timestamp,
+    )
+
+
+def capture(event: str, keycloak_user_id: str, properties: dict | None = None, service: str = 'accounts'):
+    """Submit an event to PostHog with standardized identity and privacy controls.
+
+    All events are tagged with sha256(keycloak_user_id) as distinct_id,
+    and service/environment are added automatically.
+    """
     if not keycloak_user_id:
         logger.warning(f'No keycloak_user_id provided, skipping event {event}')
         return
-
-    distinct_id = hash_id(keycloak_user_id)
-    env = settings.APP_ENV
-
-    event_properties = {
-        'environment': env,
-        'service': 'accounts',
-        **(properties or {}),
-    }
-
-    client.capture(distinct_id=distinct_id, event=event, properties=event_properties)
+    submit_event(
+        distinct_id=hash_id(keycloak_user_id),
+        event=event,
+        properties=properties,
+        service=service,
+    )
 
 
 def shutdown():

@@ -84,6 +84,9 @@
 .sentry_dsn: &SECRET_SENTRY_DSN {name: "SENTRY_DSN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-rgui8C"}
 .stalwart_api_auth_method: &SECRET_STALWART_API_AUTH_METHOD {name: "STALWART_API_AUTH_METHOD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm"}
 .stalwart_api_auth_string: &SECRET_STALWART_API_AUTH_STRING {name: "STALWART_API_AUTH_STRING", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc"}
+# Shared HMAC secret that Stalwart uses to sign outgoing webhook payloads. Must match the
+# `webhook.posthog.signature-key` value configured in Stalwart's admin API on mailstrom-stage.
+.stalwart_webhook_secret: &SECRET_STALWART_WEBHOOK_SECRET {name: "STALWART_WEBHOOK_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-webhook-secret-poF35r"}
 .zendesk_api_token: &SECRET_ZENDESK_API_TOKEN {name: "ZENDESK_API_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-api-token-dOxdeo"}
 .zendesk_subdomain: &SECRET_ZENDESK_SUBDOMAIN {name: "ZENDESK_SUBDOMAIN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-subdomain-96tdDy"}
 .zendesk_user_email: &SECRET_ZENDESK_USER_EMAIL {name: "ZENDESK_USER_EMAIL", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/zendesk-user-email-Irmh4I"}
@@ -301,6 +304,7 @@ resources:
         - oidc-sign-algo
         - stalwart-api-auth-method
         - stalwart-api-auth-key
+        - stalwart-webhook-secret
         - keycloak-admin-client-id
         - keycloak-admin-client-secret
         - appointment-caldav-secret
@@ -761,6 +765,8 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm
               - name: STALWART_API_AUTH_STRING
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc
+              - name: STALWART_WEBHOOK_SECRET
+                valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-webhook-secret-poF35r
               - name: KEYCLOAK_ADMIN_CLIENT_ID
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-id-Qgsr8Y
               - name: KEYCLOAK_ADMIN_CLIENT_SECRET

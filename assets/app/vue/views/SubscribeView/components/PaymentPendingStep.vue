@@ -4,7 +4,8 @@ import { useI18n } from 'vue-i18n';
 const { t } = useI18n();
 
 onMounted(() => {
-  // After 5 seconds reload the page, if the payment came through they'll see the dashboard.
+  // After 5 seconds reload the page, if the payment came through they'll see the Mail view.
+  // This is controlled by a beforeEach hook in router.ts.
   window.setTimeout(() => {
     window.location.reload();
   }, 5000);

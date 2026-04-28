@@ -19,6 +19,7 @@ class User(AbstractUser, BaseModel):
     :param avatar_url: Avatar URL from oidc profile
     :param timezone: The user's timezone
     """
+    USERNAME_MAX_LENGTH = 150
 
     class UserLanguageType(models.TextChoices):
         ENGLISH = 'en', _('English')
@@ -26,9 +27,9 @@ class User(AbstractUser, BaseModel):
 
     username = models.CharField(
         _('username'),
-        max_length=150,
+        max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        help_text=_('Required. 150 characters or fewer.'),
+        help_text=_(f'Required. {USERNAME_MAX_LENGTH} characters or fewer.'),
         error_messages={
             'unique': _('A user with that username already exists.'),
         },

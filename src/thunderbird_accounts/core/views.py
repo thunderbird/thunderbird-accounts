@@ -1,3 +1,4 @@
+from thunderbird_accounts.core.utils import get_feature_flags
 from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
 from gettext import gettext
 import sys
@@ -135,6 +136,7 @@ def home(request: HttpRequest):
                 {'level': message.level, 'message': str(message.message)} for message in get_messages(request)
             ],
             'form_data': form_data or None,
+            'features': json.dumps(get_feature_flags()),
         },
     )
 

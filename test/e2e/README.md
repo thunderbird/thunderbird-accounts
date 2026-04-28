@@ -52,7 +52,6 @@ Then edit your local `.env` file and provide the following values:
 ACCTS_HUB_URL=<URL-for-TB-Accts-Hub>
 ACCTS_OIDC_EMAIL=<existing-tbpro-user-email>
 ACCTS_OIDC_PWORD=<exisiting-tbro-password>
-ACCTS_RECOVERY_EMAIL=<tbpro-recovery-email>
 PRIMARY_THUNDERMAIL_EMAIL=<primary-thundermail-email-address>
 ```
 
@@ -114,7 +113,6 @@ Then edit your local `.env` file and provide the following values:
 ACCTS_HUB_URL=<URL-for-TB-Accts-Hub>
 ACCTS_OIDC_EMAIL=<existing-tbpro-user-email>
 ACCTS_OIDC_PWORD=<exisiting-tbro-password>
-ACCTS_RECOVERY_EMAIL=<tbpro-recovery-email>
 PRIMARY_THUNDERMAIL_EMAIL=<primary-thundermail-email-address>
 ```
 
@@ -148,7 +146,6 @@ Once you have credentials for an existing TB Accounts test account, edit your lo
 ACCTS_HUB_URL=<URL-for-TB-Accts-Hub>
 ACCTS_OIDC_EMAIL=<existing-tbpro-user-email>
 ACCTS_OIDC_PWORD=<exisiting-tbro-password>
-ACCTS_RECOVERY_EMAIL=<tbpro-recovery-email>
 PRIMARY_THUNDERMAIL_EMAIL=<primary-thundermail-email-address>
 ```
 

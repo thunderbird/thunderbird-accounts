@@ -2,13 +2,11 @@
 import { TextInput, PrimaryButton, NoticeBar, NoticeBarTypes } from "@thunderbirdops/services-ui";
 import { ref, computed, useTemplateRef } from 'vue';
 import MessageBar from '@kc/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
 const loginUrl = window._page.currentView?.loginUrl;
 const username = window._page.currentView?.attemptedUserName;
-const clientUrl = window._page.currentView?.clientUrl;
 const resetPasswordForm = useTemplateRef('reset-password-form');
 
 const onSubmit = () => {
@@ -33,10 +31,6 @@ export default {
 <template>
   <notice-bar :type="NoticeBarTypes.Critical" v-if="usernameError">{{ $t('forgotPasswordError') }}</notice-bar>
   <message-bar v-else/>
-
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
 
   <h2>{{ $t('emailForgotTitle') }}</h2>
   <form id="kc-reset-password-form" ref="reset-password-form" method="POST" :action="formAction"

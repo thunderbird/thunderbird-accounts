@@ -1,12 +1,10 @@
 <script setup>
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { computed, useTemplateRef } from 'vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
 
 const formAction = window._page.currentView?.formAction;
 const showForm = computed(() => window._page.appInitiatedAction !== 'false');
-const clientUrl = window._page.currentView?.clientUrl;
 const verifyEmailInstruction = window._page.currentView?.verifyEmailInstruction;
 const submitText = window._page.currentView?.submitText;
 
@@ -29,9 +27,6 @@ export default {
 </script>
 
 <template>
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
   <h2>{{ $t('emailVerifyTitle') }}</h2>
   <cancel-form ref="cancel-form" :action="formAction" cancelId="cancelBtn" cancelValue="true"
                 cancelName="cancel-aia"/>

@@ -7,7 +7,7 @@ import {
   PLAYWRIGHT_TAG_E2E_SUITE,
   PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
   ACCTS_OIDC_EMAIL,
-  ACCTS_RECOVERY_EMAIL,
+  PRIMARY_THUNDERMAIL_EMAIL,
   TIMEOUT_2_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
@@ -146,7 +146,7 @@ test.describe('contact support form', {
     await contactPage.verifyFormDisplayed();
 
     // since we're signed in, email field should be pre-filled with the user's recovery email
-    await expect(contactPage.emailInput).toHaveValue(ACCTS_RECOVERY_EMAIL);
+    await expect(contactPage.emailInput).toHaveValue(PRIMARY_THUNDERMAIL_EMAIL);
   });
   
   test('contact form displayed correctly when not signed in', async ({ page }) => {

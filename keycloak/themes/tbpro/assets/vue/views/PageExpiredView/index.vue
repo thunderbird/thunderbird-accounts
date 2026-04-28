@@ -1,10 +1,8 @@
 <script setup>
 import MessageBar from '@kc/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const restartFlowUrl = window._page.currentView?.restartFlowUrl;
 const loginUrl = window._page.currentView?.loginUrl;
-const clientUrl = window._page.currentView?.clientUrl;
 </script>
 
 <script>
@@ -15,10 +13,6 @@ export default {
 
 <template>
   <message-bar/>
-
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
 
   <h2>{{ $t('pageExpiredTitle') }}</h2>
   <div class="buttons">

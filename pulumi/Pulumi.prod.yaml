@@ -77,3 +77,5 @@ config:
     secure: AAABAKKnniR//7VeRPqSI1R3LCdVXg2EVRUL1wr55NIjNYFfOLY4JjsM
   accounts:appointment-caldav-secret:
     secure: AAABADpuLw71MLJ5RyYEN7G47RC88uj8dznCXUo3JS4p8Mwnvw+FG3j19+CyhM6jnpdtGGbSnc3QGQwMlBrrxA==
+  accounts:stalwart-webhook-secret:
+    secure: AAABABaIJ/x287l9pyLW3HzJ5f7mCJv/o/96+jaI0KFU9VfIj6O+4OtFq5vfVJqqKH1LPOnkpMk0bneC3m/6TU/cmGdIPu2B/+U/qb6odlegj2TO1Gzu45wrGd2Qgthl

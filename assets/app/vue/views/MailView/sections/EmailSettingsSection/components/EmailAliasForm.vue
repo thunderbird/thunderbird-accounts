@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { TextInput, SelectInput, PrimaryButton } from '@thunderbirdops/services-ui';
+import { TextInput, SelectInput, PrimaryButton, LinkButton } from '@thunderbirdops/services-ui';
 
 // Types
 import { EMAIL_ALIAS_STEP } from '../types';
@@ -104,9 +104,14 @@ watch(selectedDomain, () => {
         </select-input>
       </div>
 
-      <primary-button @click="onSubmit">
-        {{ t('views.mail.sections.emailSettings.submit') }}
-      </primary-button>
+      <div class="email-alias-form-buttons">
+        <primary-button @click="onSubmit">
+          {{ t('views.mail.sections.emailSettings.submit') }}
+        </primary-button>
+        <link-button @click="step = EMAIL_ALIAS_STEP.INITIAL">
+          {{ t('views.mail.sections.emailSettings.cancel') }}
+        </link-button>
+      </div>
     </form>
   </template>
 </template>
@@ -138,5 +143,11 @@ watch(selectedDomain, () => {
 
 .notice-bar-error {
   margin-block-end: 1.5rem;
+}
+
+.email-alias-form-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 </style>
