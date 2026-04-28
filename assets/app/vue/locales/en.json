@@ -112,7 +112,9 @@
               "qrCodeAlt": "A QR Code to be used with Thunderbird for Android account importing.",
               "downloadTitle": "Download Thunderbird for Android",
               "downloadDescription": "Install the mobile app on your phone or tablet.",
-              "downloadButton": "Download"
+              "downloadButton": "Download",
+              "autoConfigTitle": "Automatic Configuration",
+              "autoConfigDescription": "Add a new account in Thunderbird for Android using your Thundermail email and password."
             },
             "otherAppsPanel": {
               "title": "Automatic Configuration",
