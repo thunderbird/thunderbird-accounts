@@ -11,3 +11,8 @@ export type ServerMessage = {
   level: SERVER_MESSAGE_LEVEL;
   message: string;
 };
+
+export enum FeatureFlag {
+  SHOW_CONNECT_NOW = 'feature.show-connect-now',
+  PHASE = 'feature.phase',
+}
