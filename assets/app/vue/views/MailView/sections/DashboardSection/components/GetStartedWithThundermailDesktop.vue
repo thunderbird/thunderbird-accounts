@@ -4,10 +4,13 @@ import { PhArrowSquareOut, PhDownloadSimple } from '@phosphor-icons/vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import ActionCard from '@/components/ActionCard.vue';
 import { DOWNLOAD_THUNDERBIRD_DESKTOP_URL } from '@/defines';
+import { FeatureFlag } from '@/types';
+import { getFeatureFlag } from '@/utils';
 
 const { t } = useI18n();
 
-const showConnectNow = window.localStorage.getItem('feature.show-connect-now') === 'true';
+const showConnectNow = getFeatureFlag(FeatureFlag.SHOW_CONNECT_NOW, 'true');
+const phaseTwo = getFeatureFlag(FeatureFlag.PHASE, '2');
 
 // TODO: Update this when the full URL is ready
 const tbDesktopCustomProtocolUrl = 'net.thunderbird://replay';
@@ -21,24 +24,32 @@ export default {
 
 <template>
   <div class="action-cards">
-    <action-card
-      v-if="showConnectNow"
-      :title="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectTitle')"
-      :description="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectDescription')"
-    >
-      <template #icon>
-        <ph-arrow-square-out :size="20" />
-      </template>
-      <template #action>
-        <primary-button
-          size="small"
-          :href="tbDesktopCustomProtocolUrl"
-          class="button-link"
-        >
-          {{ t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButton') }}
-        </primary-button>
-      </template>
-    </action-card>
+    <template v-if="phaseTwo">
+      <action-card
+        v-if="showConnectNow"
+        :title="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectTitle')"
+        :description="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectDescription')"
+      >
+        <template #icon>
+          <ph-arrow-square-out :size="20" />
+        </template>
+        <template #action>
+          <primary-button
+            size="small"
+            :href="tbDesktopCustomProtocolUrl"
+            class="button-link"
+          >
+            {{ t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButton') }}
+          </primary-button>
+        </template>
+      </action-card>
+    </template>
+    <template v-else>
+      <action-card
+        :title="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.autoConfigTitle')"
+        :description="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.autoConfigDescription')"
+      />
+    </template>
 
     <action-card
       :title="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.downloadTitle')"

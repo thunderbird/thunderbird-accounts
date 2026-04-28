@@ -97,11 +97,13 @@
             },
             "desktopPanel": {
               "connectTitle": "Connect Thunderbird Desktop",
-              "connectDescription": "Launch the configuration wizard to add Thundermail to desktop automatically.",
+              "connectDescription": "Add Thundermail to Thunderbird Desktop automatically.",
               "connectButton": "Connect now",
               "downloadTitle": "Download Thunderbird Desktop",
               "downloadDescription": "We recommend using the desktop application for the best experience.",
-              "downloadButton": "Download"
+              "downloadButton": "Download",
+              "autoConfigTitle": "Automatic Configuration",
+              "autoConfigDescription": "Add a new account easily in Thunderbird Desktop using your Thundermail email and password."
             },
             "mobilePanel": {
               "qrCodeTitle": "Scan QR Code",
