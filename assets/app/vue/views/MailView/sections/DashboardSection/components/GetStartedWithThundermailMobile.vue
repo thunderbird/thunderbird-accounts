@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhDownloadSimple } from '@phosphor-icons/vue';
+import { PhDownloadSimple, PhQrCode } from '@phosphor-icons/vue';
 import encodeQR from 'qr';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import {
@@ -12,6 +12,7 @@ import {
 } from 'thunderbird-account-qr-code';
 import { DOWNLOAD_THUNDERBIRD_MOBILE_URL } from '@/defines';
 import ActionCard from '@/components/ActionCard.vue';
+import DetailsSummary from '@/components/DetailsSummary.vue';
 
 const { t } = useI18n();
 
@@ -47,14 +48,30 @@ export default {
 <template>
   <div class="action-cards">
     <div class="qr-code-container">
-      <p class="qr-code-title">{{ t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeTitle') }}</p>
-      <p class="qr-code-description">{{ t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeDescription') }}</p>
-
-      <img
-        class="qr-code"
-        :src="`data:image/svg+xml,${qrCode}`"
-        :alt="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeAlt')"
-      />
+      <i18n-t
+        keypath="views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeDescription"
+        class="qr-code-description"
+        tag="p"
+      >
+        <template #thunderbirdForAndroid>
+          <strong>
+            {{ t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.thunderbirdForAndroid') }}
+          </strong>
+        </template>
+      </i18n-t>
+      <details-summary
+        :title="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeTitle')"
+        class="qr-code-details-summary"
+      >
+        <template #icon>
+          <ph-qr-code :size="20" />
+        </template>
+        <img
+          class="qr-code"
+          :src="`data:image/svg+xml,${qrCode}`"
+          :alt="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeAlt')"
+        />
+      </details-summary>
     </div>
 
     <action-card
@@ -89,21 +106,19 @@ export default {
   .download-button {
     height: 2rem;
   }
-  
+
   .qr-code-container {
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 0.5rem 0.5rem;
     border: 1px solid var(--colour-neutral-border);
     border-radius: 8px;
-  
-    .qr-code-title {
-      font-size: 0.875rem;
-      color: #000;
+
+    .qr-code-details-summary {
+      margin-block-end: 0;
     }
-  
+
     .qr-code-description {
       font-size: 0.75rem;
       color: var(--colour-ti-secondary);
