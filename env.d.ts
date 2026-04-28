@@ -41,7 +41,8 @@ declare global {
       serverMessages: ServerMessage[];
       // Special, only used for tbpro_500.html
       errorTitle?: string;
-      isErrorPage?: boolean
+      isErrorPage?: boolean,
+      features?: object;
     };
   }
 }

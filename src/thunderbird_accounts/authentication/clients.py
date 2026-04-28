@@ -305,8 +305,8 @@ class KeycloakClient:
             raise ImportUserError(
                 username=username,
                 error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}',
-                error_code=error_data.get('error'),
-                error_desc=error_data.get('error_description'),
+                error_code=error_data.get('error', f'status-{exc.response.status_code}'),
+                error_desc=error_data.get('error_description', error_data.get('errorMessage')),
             )
 
         # Request returns an empty body on a 201 success, so retrieve pkid from location.

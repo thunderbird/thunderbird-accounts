@@ -153,6 +153,7 @@ INSTALLED_APPS = [
     'thunderbird_accounts.subscription',
     'thunderbird_accounts.mail',
     'thunderbird_accounts.core',
+    'thunderbird_accounts.telemetry',
     'thunderbird_accounts.admin.AccountsAdminConfig',  # Instead of 'django.contrib.admin'
     # Django
     'django.contrib.auth',
@@ -260,6 +261,10 @@ REST_FRAMEWORK = {
         'mozilla_django_oidc.contrib.drf.OIDCAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    'DEFAULT_THROTTLE_RATES': {
+        'is_username_available': '30/minute',
+        'sign_up': '10/minute'
+    }
 }
 
 REDIS_URL = os.getenv('REDIS_URL')
@@ -383,6 +388,17 @@ STALWART_BASE_API_URL = os.getenv('STALWART_BASE_API_URL')
 STALWART_API_AUTH_STRING = os.getenv('STALWART_API_AUTH_STRING')
 STALWART_API_AUTH_METHOD = os.getenv('STALWART_API_AUTH_METHOD')
 STALWART_DKIM_ALGO = 'Ed25519'
+STALWART_WEBHOOK_SECRET = os.getenv('STALWART_WEBHOOK_SECRET')
+
+# Stalwart telemetry: map of incoming Stalwart event types to PostHog event names.
+STALWART_EVENT_MAP = {
+    'message-ingest.ham': 'thundermail.message-ingest.ham',
+    'message-ingest.spam': 'thundermail.message-ingest.spam',
+    'queue.queue-message-authenticated': 'thundermail.queue.queue-message-authenticated',
+}
+# Cache config for the Stalwart accountId/email -> hashed oidc_id lookup.
+STALWART_USER_CACHE_PREFIX = 'stalwart_uid:'
+STALWART_USER_CACHE_TTL = 3600
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
@@ -499,9 +515,18 @@ KEYCLOAK_SEEN_EVENTS_CACHE_KEY = 'keycloak_poll:seen_event_ids'
 KEYCLOAK_SEEN_EVENTS_CACHE_TTL = 3600
 KEYCLOAK_EVENTS_PAGE_SIZE = 500
 
+# Shared Celery task options for any task that submits to PostHog, so all tasks
+# have the same behaviour and error handling.
+POSTHOG_TASK_KWARGS = {
+    'bind': True,
+    'retry_backoff': True,
+    'retry_backoff_max': 300,
+    'max_retries': 6,
+}
+
 if POSTHOG_API_KEY:
     CELERY_BEAT_SCHEDULE['poll-keycloak-events'] = {
-        'task': 'thunderbird_accounts.authentication.tasks.poll_keycloak_events',
+        'task': 'thunderbird_accounts.telemetry.tasks.poll_keycloak_events',
         'schedule': KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS,
     }
 

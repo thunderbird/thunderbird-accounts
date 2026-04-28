@@ -12,6 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  id-token: write
   contents: write
 
 jobs:
@@ -75,8 +76,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: eu-central-1
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -201,8 +201,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: eu-central-1
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -358,7 +357,6 @@ jobs:
     env:
       ACCTS_OIDC_EMAIL: ${{ secrets.E2E_ACCTS_OIDC_EMAIL }}
       ACCTS_OIDC_PWORD: ${{ secrets.E2E_ACCTS_OIDC_PWORD }}
-      ACCTS_RECOVERY_EMAIL: ${{ secrets.E2E_ACCTS_RECOVERY_EMAIL }}
       PRIMARY_THUNDERMAIL_EMAIL: ${{ secrets.E2E_PRIMARY_THUNDERMAIL_EMAIL }}
     steps:
       - uses: actions/checkout@v4

@@ -3,7 +3,6 @@ import { DangerButton, PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
 import MessageBar from '@kc/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 
 const formAction = window._page.currentView?.formAction;
 const loginForm = useTemplateRef('login-form');
@@ -11,7 +10,6 @@ const cancelForm = useTemplateRef('cancel-form');
 
 const deleteCredentialTitle = window._page.currentView?.deleteCredentialTitle;
 const deleteCredentialMessage = window._page.currentView?.deleteCredentialMessage;
-const clientUrl = window._page.currentView?.clientUrl;
 
 const onSubmit = () => {
   loginForm?.value?.submit();
@@ -30,9 +28,6 @@ export default {
 
 <template>
   <message-bar/>
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
   <h2>{{ deleteCredentialTitle }}</h2>
   <cancel-form ref="cancel-form" :action="formAction" cancelId="kc-decline" cancelValue="$t('doCancel')"
                 cancelName="cancel-aia"/>

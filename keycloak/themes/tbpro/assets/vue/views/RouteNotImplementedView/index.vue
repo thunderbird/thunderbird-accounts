@@ -1,8 +1,5 @@
 <script setup>
 import MessageBar from '@kc/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
-
-const clientUrl = window._page.currentView?.clientUrl;
 
 console.error('Route not implemented', {
   pageId: window?._page?.pageId,
@@ -20,10 +17,6 @@ export default {
 
 <template>
   <message-bar />
-
-  <a :href="clientUrl" class="logo-link">
-    <img :src="ThunderbirdLogoLight" alt="Thunderbird Pro" class="logo" />
-  </a>
 
   <h1>{{ $t('routeNotImplementedTitle') }}</h1>
   <p>{{ $t('routeNotImplementedText1') }}</p>

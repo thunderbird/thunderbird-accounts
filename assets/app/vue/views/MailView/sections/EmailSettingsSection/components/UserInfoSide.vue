@@ -6,7 +6,6 @@ import {
   NoticeBarTypes,
   PrimaryButton,
   TextInput,
-  VisualDivider,
   LinkButton,
 } from '@thunderbirdops/services-ui';
 
@@ -102,10 +101,6 @@ const onCancelSetDisplayName = () => {
         <link-button @click="showDisplayNameForm = true">{{ t('views.mail.sections.emailSettings.change') }}</link-button>
       </template>
     </div>
-
-    <visual-divider />
-
-    
   </div>
 </template>
 

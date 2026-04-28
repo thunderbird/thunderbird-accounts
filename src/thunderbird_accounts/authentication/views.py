@@ -1,4 +1,3 @@
-import sentry_sdk
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import logout as django_logout
@@ -11,17 +10,12 @@ from django.urls import reverse
 from urllib.parse import quote
 from django.conf import settings
 from django.utils.decorators import method_decorator
-from django.utils.translation import ngettext, gettext_lazy as _
+from django.utils.translation import ngettext
 from django.views.decorators.cache import never_cache
-from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.views.generic import TemplateView
 
-from thunderbird_accounts.authentication.exceptions import (
-    InvalidDomainError,
-    ImportUserError,
-)
-from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction, is_email_in_allow_list
+from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction
 from thunderbird_accounts.core.utils import get_absolute_url
 
 
@@ -68,100 +62,6 @@ def oidc_logout_callback(request: HttpRequest):
 
     # Redirect to home (Vue app catch-all will render)
     return HttpResponseRedirect('/')
-
-
-@require_http_methods(['POST'])
-@sensitive_post_parameters('password', 'password-confirm')
-def sign_up(request: HttpRequest):
-    """POST endpoint for the Accounts hosted sign up form.
-    The frontend files technically live in Keycloak's vue app but are imported by Accounts so we can call this endpoint.
-    (See `https://pro-services-docs.thunderbird.net/en/latest/sign-up.html`_ for more details.)
-
-    We create the Keycloak user and attach its uuid to the local Account's user object.
-    We only create the local Accounts user object if the Keycloak user object was successfully created.
-    """
-    # This file is loaded before models are ready, so we import locally here...for now.
-    from thunderbird_accounts.authentication.clients import KeycloakClient
-    from thunderbird_accounts.authentication.models import AllowListEntry, User
-    from thunderbird_accounts.mail.utils import is_address_taken
-
-    data = request.POST
-    email = data.get('email')
-    timezone = data.get('zoneinfo', 'UTC')
-    locale = data.get('locale', 'en')
-
-    partial_username = data.get('partialUsername')
-    username = f'{partial_username}@{settings.PRIMARY_EMAIL_DOMAIN}'
-
-    generic_email_error = _('You cannot sign-up with that email address.')
-
-    request.session['form_data'] = {
-        'username': username,
-        'email': email,
-    }
-
-    if not email:
-        messages.error(request, generic_email_error)
-        return HttpResponseRedirect('/sign-up')
-
-    if not is_email_in_allow_list(email):
-        # Redirect the user to the tbpro waitlist
-        return HttpResponseRedirect(f'{settings.TB_PRO_WAIT_LIST_URL}?email={quote(email)}')
-
-    # Make sure there's no email alias with this address
-    if is_address_taken(username):
-        messages.error(request, generic_email_error)
-        return HttpResponseRedirect('/sign-up')
-
-    if any(
-        [
-            not data.get('password'),
-            not data.get('password-confirm'),
-            data.get('password') != data.get('password-confirm'),
-        ]
-    ):
-        messages.error(request, _("Your password doesn't match the confirm password field."))
-        return HttpResponseRedirect('/sign-up')
-
-    user = User(username=username, email=email, display_name=username, language=locale, timezone=timezone)
-
-    # TODO: Move this to a task!
-
-    # Create the user on keycloak's end
-    keycloak = KeycloakClient()
-    try:
-        keycloak_pkid = keycloak.import_user(
-            username,
-            email,
-            timezone,
-            password=data.get('password'),
-            send_action_email=KeycloakRequiredAction.VERIFY_EMAIL,
-            verified_email=False,
-        )
-
-        # Save the oidc id so it matches on login
-        user.oidc_id = keycloak_pkid
-        user.save()
-
-        # Tie the allow list entry with our new user
-        allow_list_entry = AllowListEntry.objects.get(email=email)
-        allow_list_entry.user = user
-        allow_list_entry.save()
-    except (ValueError, InvalidDomainError):
-        # Only username errors raise ValueErrors right now
-        messages.error(request, generic_email_error)
-        return HttpResponseRedirect('/sign-up')
-    except ImportUserError as ex:
-        sentry_sdk.capture_exception(ex)
-        messages.error(
-            request, ex.error_desc if ex.error_desc else _('There was an unknown error, please try again later.')
-        )
-        return HttpResponseRedirect('/sign-up')
-
-    # Clear form_data on success
-    request.session['form_data'] = {}
-
-    return HttpResponseRedirect('/sign-up/complete')
 
 
 @require_http_methods(['POST'])
