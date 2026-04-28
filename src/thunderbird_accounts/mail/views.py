@@ -308,12 +308,19 @@ def add_email_alias(request: HttpRequest):
     data = json.loads(request.body)
     email_alias = data.get('email-alias')
     domain = data.get('domain')
+    is_custom_domain = domain in request.user.domains.values_list('name', flat=True) and domain not in settings.ALLOWED_EMAIL_DOMAINS
+    is_catch_all = is_custom_domain and (email_alias == '*' or email_alias == '')
+
+    # We don't need to specify the asterisk for catch-all on stalwart's end.
+    if is_catch_all:
+        email_alias = ''
+
     full_email_alias = f'{email_alias}@{domain}'
 
-    if not email_alias or not domain:
+    if (not is_catch_all and not email_alias) or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)
 
-    if is_reserved(email_alias) or is_address_taken(full_email_alias):
+    if (not is_catch_all and is_reserved(email_alias)) or is_address_taken(full_email_alias):
         return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
 
     if (
