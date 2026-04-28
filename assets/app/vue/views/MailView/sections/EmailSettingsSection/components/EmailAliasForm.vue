@@ -21,7 +21,7 @@ const emit = defineEmits<{
 const allowedDomains = window._page.allowedDomains || [];
 
 const step = ref<EMAIL_ALIAS_STEP>(EMAIL_ALIAS_STEP.INITIAL);
-const emailAlias = ref(null);
+const emailAlias = ref<string>('');
 const selectedDomain = ref(props.allDomainOptions[0] ?? null);
 const formRef = useTemplateRef('formRef');
 const validationError = ref<string | null>(null);
@@ -79,7 +79,7 @@ const onSubmit = () => {
 
   if (!validationError.value && formRef.value.checkValidity()) {
     emit('add-alias', emailAlias.value, selectedDomain.value);
-    emailAlias.value = null;
+    emailAlias.value = '';
     selectedDomain.value = props.allDomainOptions[0] ?? null;
     validationError.value = null;
     step.value = EMAIL_ALIAS_STEP.INITIAL;
