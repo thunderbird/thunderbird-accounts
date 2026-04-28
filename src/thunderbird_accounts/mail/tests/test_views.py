@@ -31,6 +31,80 @@ class AddEmailAliasTestCase(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(json.loads(response.content.decode()), {'success': True})
 
+    def test_success_catch_all(self):
+        email_alias_url = reverse('add_email_alias')
+        domain = Domain.objects.create(
+            name='customdomain.com',
+            user=self.user,
+            status=Domain.DomainStatus.VERIFIED,
+        )
+
+        for alias in ['', '*']:
+            with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+                instance = Mock()
+                mock.save_email_addresses = instance
+                response = self.client.post(
+                    email_alias_url,
+                    data={'email-alias': alias, 'domain': domain.name},
+                    content_type='application/json',
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+            # Remove all emails so we can try the next alias
+            Email.objects.all().delete()
+
+    def test_failed_catch_all_in_use(self):
+        email_alias_url = reverse('add_email_alias')
+        domain = Domain.objects.create(
+            name='customdomain.com',
+            user=self.user,
+            status=Domain.DomainStatus.VERIFIED,
+        )
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': '*', 'domain': domain.name},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': '*', 'domain': domain.name},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(
+                json.loads(response.content.decode()),
+                {'success': False, 'error': _('You cannot use this email address.')},
+            )
+
+    def test_failed_catch_all_with_shared_domain(self):
+        email_alias_url = reverse('add_email_alias')
+
+        for alias in ['', '*']:
+            with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+                instance = Mock()
+                mock.save_email_addresses = instance
+                response = self.client.post(
+                    email_alias_url,
+                    data={'email-alias': '*', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+                    content_type='application/json',
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    json.loads(response.content.decode()),
+                    {'error': 'Email alias must be at least 3 characters long.', 'success': False},
+                )
+
+            # Remove all emails so we can try the next alias
+            Email.objects.all().delete()
+
     def test_reserved(self):
         email_alias_url = reverse('add_email_alias')
 
