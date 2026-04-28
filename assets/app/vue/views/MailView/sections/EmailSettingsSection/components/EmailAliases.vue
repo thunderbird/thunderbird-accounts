@@ -107,7 +107,8 @@ const onDeleteAliasError = (error: string) => {
           {{ t('views.mail.sections.emailSettings.catchAllUsed', {
             catchAllUsed: catchAlls.length, catchAllLimit: customDomains.length,
           }) }}
-          <aside aria-labelledby="catch-all-tooltip" class="info-tooltip-trigger" tabindex="0">
+          <aside aria-labelledby="catch-all-tooltip" class="info-tooltip-trigger" tabindex="0"
+            v-if="catchAlls.length >= customDomains.length">
             <ph-info size="13" />
             <tool-tip id="catch-all-tooltip" :alt="t('views.mail.sections.emailSettings.catchAllTooltip')">
               <i18n-t keypath="views.mail.sections.emailSettings.catchAllTooltip" tag="span">

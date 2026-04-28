@@ -162,7 +162,7 @@
           "emailAliasesDescription": "All emails will deliver mail to your primary email mailbox.",
           "emailAliasesDescriptionTwo": "{aliasUsed} of {aliasLimit} aliases used",
           "emailAliasesPrimaryChangeWarning": "Changing your primary email may affect app sign-ins.",
-          "catchAllTooltip": "Tool tip: All available domains already have a catch-all email. No additional catch-all aliases can be created. {supportUrl}",
+          "catchAllTooltip": "All available domains already have a catch-all email. No additional catch-all aliases can be created. {supportUrl}",
           "catchAllUsed": "{catchAllUsed} of {catchAllLimit} catch-all aliases used",
           "catchAll": "Catch All",
           "primary": "Primary",
