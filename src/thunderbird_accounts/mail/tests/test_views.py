@@ -1,3 +1,4 @@
+from thunderbird_accounts.subscription.models import Plan
 import json
 from unittest.mock import patch, Mock
 
@@ -13,7 +14,10 @@ from thunderbird_accounts.mail.models import Account, Domain, Email
 class AddEmailAliasTestCase(TestCase):
     def setUp(self):
         self.client = RequestClient()
-        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        self.plan = Plan.objects.create(name='Test Plan', mail_address_count=5)
+        self.user = User.objects.create(
+            username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234', plan=self.plan
+        )
         self.account = Account.objects.create(name=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', user=self.user)
         self.client.force_login(self.user)
 
@@ -104,6 +108,87 @@ class AddEmailAliasTestCase(TestCase):
 
             # Remove all emails so we can try the next alias
             Email.objects.all().delete()
+
+    def test_too_many_aliases(self):
+        email_alias_url = reverse('add_email_alias')
+
+        # Decrease the limit to 1 alias for shared domains
+        self.plan.mail_address_count = 1
+        self.plan.save()
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'buddy', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'buddy2', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(
+                json.loads(response.content.decode()), {'error': 'You cannot create anymore aliases.', 'success': False}
+            )
+
+    def test_custom_domains_dont_affect_limit(self):
+        email_alias_url = reverse('add_email_alias')
+
+        domain = Domain.objects.create(
+            name='customdomain.com',
+            user=self.user,
+            status=Domain.DomainStatus.VERIFIED,
+        )
+
+        # Decrease the limit to 1 alias for shared domains
+        self.plan.mail_address_count = 1
+        self.plan.save()
+
+        # Test the following new aliases:
+        # 1. buddy@customdomain.com (no limit)
+        # 2. buddy@example.com (hits the limit)
+        # 3. buddy2@customdomain.com (no limit, would error out if custom domains counted)
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'buddy', 'domain': domain.name},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'buddy', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'buddy2', 'domain': domain.name},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
 
     def test_reserved(self):
         email_alias_url = reverse('add_email_alias')

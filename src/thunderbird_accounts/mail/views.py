@@ -308,9 +308,9 @@ def add_email_alias(request: HttpRequest):
     data = json.loads(request.body)
     email_alias = data.get('email-alias')
     domain = data.get('domain')
+    is_shared_domain = domain in settings.ALLOWED_EMAIL_DOMAINS
     is_custom_domain = (
-        domain in request.user.domains.values_list('name', flat=True) 
-        and domain not in settings.ALLOWED_EMAIL_DOMAINS
+        domain in request.user.domains.values_list('name', flat=True) and not is_shared_domain
     )
     is_catch_all = is_custom_domain and (email_alias == '*' or email_alias == '')
 
@@ -346,6 +346,18 @@ def add_email_alias(request: HttpRequest):
         return JsonResponse(
             {'success': False, 'error': _('There was an error retrieving your mail account.')},
             status=404,
+        )
+
+    emails = account.email_set.filter(type=Email.EmailType.ALIAS.value).all()
+    shared_domain_aliases = list(
+        filter(None, [email.address.split('@')[1] in settings.ALLOWED_EMAIL_DOMAINS for email in emails])
+    )
+
+    # If it's a shared domain, add one to the count and see if we go over the plan's limit.
+    if is_shared_domain and len(shared_domain_aliases) + 1 > request.user.plan.mail_address_count:
+        return JsonResponse(
+            {'success': False, 'error': _('You cannot create anymore aliases.')},
+            status=400,
         )
 
     # Create the email alias record locally
