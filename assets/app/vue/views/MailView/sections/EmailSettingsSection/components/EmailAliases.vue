@@ -29,7 +29,7 @@ const emailAliases = ref<EmailAlias[]>(window._page?.emailAddresses?.map((email,
 })) || []);
 const isAddingEmailAlias = ref(false);
 const errorMessage = ref<string>(null);
-console.log(emailAliases.value);
+
 const allDomainOptions = computed(() => {
   // And the domains in the settings.ALLOWED_EMAIL_DOMAINS from the backend
   const allowedDomains = window._page.allowedDomains || [];
