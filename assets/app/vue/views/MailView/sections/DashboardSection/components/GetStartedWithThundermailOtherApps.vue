@@ -26,7 +26,7 @@ const { t } = useI18n();
         <ph-gear :size="20" />
       </template>
 
-      <server-settings-card is-manual-configuration-section />
+      <server-settings-card is-manual-configuration-section :show-footer=false />
     </action-card>
 
     <!-- Need Help? -->
