@@ -117,7 +117,7 @@ services:
       - "./keycloak/themes:/app/keycloak/themes:z"
 
   stalwart:
-    image: stalwartlabs/stalwart:v0.13
+    image: stalwartlabs/stalwart:v0.15.4
     #build:
     #  context: ../stalwart
     #  dockerfile: Dockerfile
