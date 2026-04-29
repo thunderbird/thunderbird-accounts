@@ -1,8 +1,9 @@
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
 
-from thunderbird_accounts.telemetry.client import _get_client, capture
+from thunderbird_accounts.telemetry.client import _get_client, capture, submit_event
 
 import thunderbird_accounts.telemetry.client as telemetry_module
 
@@ -66,3 +67,54 @@ class CapturePrivacyTestCase(TestCase):
         capture(event='accounts.activity', keycloak_user_id=None)
 
         mock_client.capture.assert_not_called()
+
+
+class SubmitEventTimestampTestCase(TestCase):
+    """submit_event must hand PostHog a real datetime; the SDK silently drops string timestamps."""
+
+    def setUp(self):
+        telemetry_module._make_client.cache_clear()
+
+    def tearDown(self):
+        telemetry_module._make_client.cache_clear()
+
+    @patch('thunderbird_accounts.telemetry.client.Posthog')
+    @override_settings(POSTHOG_API_KEY='phc_test', POSTHOG_HOST='https://ph.test', APP_ENV='test')
+    def test_string_timestamp_is_parsed(self, mock_posthog_class):
+        mock_client = MagicMock()
+        mock_posthog_class.return_value = mock_client
+
+        cases = [
+            ('2026-04-29T02:56:51Z', datetime(2026, 4, 29, 2, 56, 51, tzinfo=timezone.utc)),
+            ('2026-04-29T02:56:51+02:00', datetime(2026, 4, 29, 2, 56, 51, tzinfo=timezone(timedelta(hours=2)))),
+            ('2026-04-29T02:56:51-05:00', datetime(2026, 4, 29, 2, 56, 51, tzinfo=timezone(timedelta(hours=-5)))),
+            ('2026-04-29T02:56:51.123456Z', datetime(2026, 4, 29, 2, 56, 51, 123456, tzinfo=timezone.utc)),
+        ]
+        for ts_in, expected in cases:
+            with self.subTest(timestamp=ts_in):
+                mock_client.reset_mock()
+                submit_event(distinct_id='abc', event='thundermail.x', timestamp=ts_in)
+                call_kwargs = mock_client.capture.call_args.kwargs
+                self.assertIsInstance(call_kwargs['timestamp'], datetime)
+                self.assertEqual(call_kwargs['timestamp'], expected)
+
+    @patch('thunderbird_accounts.telemetry.client.Posthog')
+    @override_settings(POSTHOG_API_KEY='phc_test', POSTHOG_HOST='https://ph.test', APP_ENV='test')
+    def test_datetime_timestamp_passes_through(self, mock_posthog_class):
+        mock_client = MagicMock()
+        mock_posthog_class.return_value = mock_client
+
+        ts = datetime(2026, 4, 29, 2, 56, 51, tzinfo=timezone.utc)
+        submit_event(distinct_id='abc', event='thundermail.x', timestamp=ts)
+
+        self.assertIs(mock_client.capture.call_args.kwargs['timestamp'], ts)
+
+    @patch('thunderbird_accounts.telemetry.client.Posthog')
+    @override_settings(POSTHOG_API_KEY='phc_test', POSTHOG_HOST='https://ph.test', APP_ENV='test')
+    def test_none_timestamp_passes_through(self, mock_posthog_class):
+        mock_client = MagicMock()
+        mock_posthog_class.return_value = mock_client
+
+        submit_event(distinct_id='abc', event='thundermail.x')
+
+        self.assertIsNone(mock_client.capture.call_args.kwargs['timestamp'])
