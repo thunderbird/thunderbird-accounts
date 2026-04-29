@@ -15,7 +15,7 @@ import CsrfToken from '@/components/forms/CsrfToken.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { SignUpSteps, useSignUpFlowStore } from './stores/signUpFlowStore';
+import { SIGN_UP_STEPS, useSignUpFlowStore } from './stores/signUpFlowStore';
 import { storeToRefs } from 'pinia';
 import { PhX } from '@phosphor-icons/vue';
 
@@ -46,9 +46,9 @@ window._page.pageId = route.name.toString();
 
 // Map of enum steps and SFC
 const stepSFCMap = {
-  [SignUpSteps.USERNAME]: Step1Username,
-  [SignUpSteps.PASSWORD]: Step2Password,
-  [SignUpSteps.VERIFY]: Step3Verify,
+  [SIGN_UP_STEPS.USERNAME]: Step1Username,
+  [SIGN_UP_STEPS.PASSWORD]: Step2Password,
+  [SIGN_UP_STEPS.VERIFY]: Step3Verify,
 }
 </script>
 
