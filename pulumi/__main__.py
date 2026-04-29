@@ -4,7 +4,6 @@ import pulumi
 import pulumi_cloudflare as cloudflare
 import tb_pulumi
 import tb_pulumi.autoscale
-import tb_pulumi.ci
 import tb_pulumi.cloudwatch
 import tb_pulumi.ec2
 import tb_pulumi.elasticache
@@ -173,14 +172,6 @@ monitoring_opts = resources.get('tb:cloudwatch:CloudWatchMonitoringGroup', {}).g
 monitoring = tb_pulumi.cloudwatch.CloudWatchMonitoringGroup(
     name=f'{project.name_prefix}-monitoring', project=project, **monitoring_opts
 )
-
-auto_users_opts = resources.get('tb:ci:AwsAutomationUser', {})
-for user, user_opts in auto_users_opts.items():
-    tb_pulumi.ci.AwsAutomationUser(
-        f'{project.name_prefix}-{user}',
-        project=project,
-        **user_opts,
-    )
 
 sap = tb_pulumi.iam.StackAccessPolicies(
     f'{project.name_prefix}-sap',
