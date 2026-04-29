@@ -1,4 +1,4 @@
-import { FeatureFlag } from '@/types';
+import { FeatureFlag, FeatureFlagValue } from '@/types';
 
 // Check if we already have a local user preferred language
 // Otherwise just use the navigators language.
@@ -7,5 +7,6 @@ export const defaultLocale = () => {
   return user?.settings?.language ?? navigator.language.split('-')[0];
 };
 
-export const getFeatureFlag = (flag: FeatureFlag, expected: string): boolean =>
+export const isFeatureFlagEnabled = (flag: FeatureFlag, expected: FeatureFlagValue): boolean =>
   window.localStorage.getItem(flag) === expected;
+

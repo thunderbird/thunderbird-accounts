@@ -16,3 +16,8 @@ export enum FeatureFlag {
   SHOW_CONNECT_NOW = 'feature.show-connect-now',
   PHASE = 'feature.phase',
 }
+
+export enum FeatureFlagValue {
+  TRUE = 'true',
+  PHASE_TWO = '2',
+}

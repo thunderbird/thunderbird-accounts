@@ -11,14 +11,14 @@ import {
   AUTHENTICATION_TYPE,
 } from 'thunderbird-account-qr-code';
 import { DOWNLOAD_THUNDERBIRD_MOBILE_URL, IOS_SUPPORT_URL } from '@/defines';
-import { FeatureFlag } from '@/types';
-import { getFeatureFlag } from '@/utils';
+import { FeatureFlag, FeatureFlagValue } from '@/types';
+import { isFeatureFlagEnabled } from '@/utils';
 import ActionCard from '@/components/ActionCard.vue';
 import DetailsSummary from '@/components/DetailsSummary.vue';
 
 const { t } = useI18n();
 
-const phaseTwo = getFeatureFlag(FeatureFlag.PHASE, '2');
+const isPhaseTwo = isFeatureFlagEnabled(FeatureFlag.PHASE, FeatureFlagValue.PHASE_TWO);
 
 const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
 const connectionInfo = computed(() => window._page?.connectionInfo);
@@ -51,7 +51,7 @@ export default {
 
 <template>
   <div class="action-cards">
-    <template v-if="phaseTwo">
+    <template v-if="isPhaseTwo">
       <div class="qr-code-container">
         <i18n-t
           keypath="views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeDescription"
