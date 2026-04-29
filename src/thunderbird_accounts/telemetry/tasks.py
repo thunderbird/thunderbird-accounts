@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import sentry_sdk
@@ -89,14 +90,19 @@ def _process_stalwart_event(event):
     if 'size' in data:
         properties['size'] = data['size']
 
-    # Pass Stalwart's event id and createdAt so PostHog's (timestamp, distinct_id,
-    # event, uuid) dedup key is stable across Celery retries of this batch.
+    # Stalwart event ids are integer strings; PostHog rejects events whose `uuid`
+    # is not in UUID format with a 400 ("non-engage request missing event name
+    # attribute" -- see PostHog/posthog#35684). Derive a deterministic UUID5 so
+    # PostHog's (timestamp, distinct_id, event, uuid) dedup key is stable across
+    # Celery retries of this batch.
+    posthog_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, f'stalwart-event-{event_id}')) if event_id else None
+
     submit_event(
         distinct_id=distinct_id,
         event=posthog_event,
         properties=properties,
         service='thundermail',
-        uuid=event_id,
+        uuid=posthog_uuid,
         timestamp=event.get('createdAt'),
     )
     return True
