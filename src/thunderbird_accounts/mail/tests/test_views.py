@@ -6,6 +6,7 @@ from django.test import TestCase, Client as RequestClient, override_settings
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+from thunderbird_accounts.authentication.middleware import OIDC_REFRESH_TOKEN_KEY
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account, Domain, Email
 
@@ -493,3 +494,40 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         payload = json.loads(response.content.decode())
         self.assertFalse(payload['success'])
         self.assertEqual(payload['error'], _('An error has occurred while setting up the Appointment CalDAV.'))
+
+
+class DesktopConnectTokenTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        self.url = reverse('desktop_connect_token')
+
+    def test_unauthenticated_user_redirected(self):
+        response = self.client.post(self.url, content_type='application/json')
+        self.assertEqual(response.status_code, 302)
+
+    def test_returns_refresh_token(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session[OIDC_REFRESH_TOKEN_KEY] = 'test-refresh-token-abc'
+        session.save()
+
+        response = self.client.post(self.url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(response.content.decode())
+        self.assertTrue(payload['success'])
+        self.assertEqual(payload['token'], 'test-refresh-token-abc')
+
+    def test_missing_refresh_token_returns_401(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(self.url, content_type='application/json')
+        self.assertEqual(response.status_code, 401)
+        payload = json.loads(response.content.decode())
+        self.assertFalse(payload['success'])
+
+    def test_get_method_not_allowed(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)

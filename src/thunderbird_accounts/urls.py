@@ -49,6 +49,7 @@ urlpatterns = [
     path('custom-domains/dns-records', mail_views.get_dns_records, name='get_dns_records'),
     path('email-aliases/add', mail_views.add_email_alias, name='add_email_alias'),
     path('email-aliases/remove', mail_views.remove_email_alias, name='remove_email_alias'),
+    path('desktop-connect/token', mail_views.generate_desktop_connect_token, name='desktop_connect_token'),
     # Subscription
     path('subscription/paddle/complete/', subscription_views.paddle_transaction_complete, name='paddle_completed'),
     # CalDAV auto-setup for Appointment
