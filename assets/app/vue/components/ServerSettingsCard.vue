@@ -6,9 +6,13 @@ import { ToolTip } from '@thunderbirdops/services-ui';
 import ServerSettingsCardItem from '@/components/ServerSettingsCardItem.vue';
 import { WHAT_IS_IMAP_SUPPORT_URL, WHAT_IS_JMAP_SUPPORT_URL, WHAT_IS_SMTP_SUPPORT_URL } from '@/defines';
 
-defineProps<{
-  isManualConfigurationSection?: boolean;
-}>();
+withDefaults(defineProps<{
+  isManualConfigurationSection: boolean;
+  showFooter: boolean;
+}>(), {
+  isManualConfigurationSection: false,
+  showFooter: true,
+});
 
 const { t } = useI18n();
 
@@ -81,7 +85,7 @@ const incomingServerDetails = computed(() =>
           </div>
         </template>
   
-        <template #footer>
+        <template #footer v-if="showFooter">
           <template v-if="incomingServerSelectedTab === INCOMING_SERVER_TABS.IMAP">
             <div class="what-is-container">
               <ph-info size="24" weight="fill" />
@@ -129,7 +133,7 @@ const incomingServerDetails = computed(() =>
           </div>
         </template>
   
-        <template #footer>
+        <template #footer v-if="showFooter">
           <div class="what-is-container">
             <ph-info size="24" weight="fill" />
             <span>{{ t('views.mail.sections.dashboard.whatIsSmtp') }}</span>

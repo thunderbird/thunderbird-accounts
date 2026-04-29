@@ -97,24 +97,31 @@
             },
             "desktopPanel": {
               "connectTitle": "Connect Thunderbird Desktop",
-              "connectDescription": "Launch the configuration wizard to add Thundermail to desktop automatically.",
+              "connectDescription": "Add Thundermail to Thunderbird Desktop automatically.",
               "connectButton": "Connect now",
               "downloadTitle": "Download Thunderbird Desktop",
               "downloadDescription": "We recommend using the desktop application for the best experience.",
-              "downloadButton": "Download"
+              "downloadButton": "Download",
+              "autoConfigTitle": "Automatic Configuration",
+              "autoConfigDescription": "Add a new account easily in Thunderbird Desktop using your Thundermail email and password."
             },
             "mobilePanel": {
               "qrCodeTitle": "Scan QR Code",
-              "qrCodeDescription": "Go to Settings in Thunderbird for Android, add an account, and scan the QR code below.",
+              "qrCodeDescription": "In {thunderbirdForAndroid}, go to settings, add an account, and scan the QR code below.",
+              "thunderbirdForAndroid": "Thunderbird for Android",
               "qrCodeAlt": "A QR Code to be used with Thunderbird for Android account importing.",
               "downloadTitle": "Download Thunderbird for Android",
               "downloadDescription": "Install the mobile app on your phone or tablet.",
-              "downloadButton": "Download"
+              "downloadButton": "Download",
+              "autoConfigTitle": "Automatic Configuration",
+              "autoConfigDescription": "Add a new account in Thunderbird for Android using your Thundermail email and password.",
+              "iosTitle": "Need iOS Help?",
+              "iosDescription": "Read our step-by-step guide for connecting popular email applications.",
+              "iosSupportButtonLabel": "Visit Support Article"
             },
             "otherAppsPanel": {
               "title": "Automatic Configuration",
-              "descriptionOne": "Most modern email applications will detect your account settings automatically. Just enter your email and password.",
-              "descriptionTwo": "Some email apps may require an {appPassword} instead of your regular account sign-in.",
+              "description": "Most email apps will set up your account automatically with your email address and password. Some applications may require your {appPassword}.",
               "appPassword": "app password",
               "manualConfigurationTitle": "Manual Configuration",
               "needHelpTitle": "Need Help?",

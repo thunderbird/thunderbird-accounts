@@ -180,6 +180,15 @@ Ensure you have the requirements in docs installed and run the following command
 sphinx-build docs build
 ```
 
+## Feature Flags
+
+Feature flags are stored in `localStorage` and read at runtime to toggle UI behavior.
+
+| Key | Values | Description |
+| --- | ------ | ----------- |
+| `feature.show-connect-now` | `true` | Shows the "Connect Now" action card on the desktop panel, which launches Thunderbird Desktop via a custom protocol URL. |
+| `feature.phase` | `2` | Enables phase 2 UI: QR code setup flow on mobile and the "Connect Now" card on desktop, replacing the auto-config placeholders. |
+
 ## Running tests
 
 Make sure that the containers are already running.
