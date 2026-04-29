@@ -1,13 +1,22 @@
 import { useSessionStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
+import { captureError, captureStep } from '../api';
 
-export const enum SignUpSteps {
+export const enum SIGN_UP_STEPS {
   INVALID = 0,
   USERNAME = 10,
   PASSWORD = 20,
   VERIFY = 30,
-  DONE = 100,
+  DONE = 100, // Not currently used
+}
+
+export const SIGN_UP_STEPS_TO_STR = {
+  [SIGN_UP_STEPS.INVALID]: 'INVALID',
+  [SIGN_UP_STEPS.USERNAME]: 'USERNAME',
+  [SIGN_UP_STEPS.PASSWORD]: 'PASSWORD',
+  [SIGN_UP_STEPS.VERIFY]: 'VERIFY',
+  [SIGN_UP_STEPS.DONE]: 'DONE'
 }
  
 export const useSignUpFlowStore = defineStore('signUpFlow', () => {
@@ -20,7 +29,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
   const timezone = useSessionStorage(`${sessionStorageKeyPrefix}/timezone`, null);
   const lang = useSessionStorage(`${sessionStorageKeyPrefix}/lang`, null);
   // In-memory only!
-  const step = ref(SignUpSteps.USERNAME);
+  const step = ref(SIGN_UP_STEPS.USERNAME);
   const password = ref(null);
   const confirmPassword = ref(null);
 
@@ -71,8 +80,8 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
       if (!error) {
         return false;
       }
+      
       errorMessage.value = error['error'] ?? 'Unknown Error';
-
       const type: string = error['type'] ?? 'unknown-error';
       if (type === 'go-to-wait-list') {
         // Don't show this error, just redirect!
@@ -83,11 +92,11 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
 
       // What step are we moving the user back to?
       if (type.indexOf('invalidPassword') === 0) {
-        step.value = SignUpSteps.PASSWORD;
+        step.value = SIGN_UP_STEPS.PASSWORD;
       } else if (type === 'status-409') { // User already exists error (this comes from keycloak)
-        step.value = SignUpSteps.VERIFY;
+        step.value = SIGN_UP_STEPS.VERIFY;
       } else {
-        step.value = SignUpSteps.USERNAME;
+        step.value = SIGN_UP_STEPS.USERNAME;
       }
     } catch {
       errorMessage.value = 'Unknown error';
@@ -101,15 +110,15 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
   * Note: There's no previousStep because we intentionally do not have a back button.
   */
   const nextStep = () => {
-    let nextStepValue = SignUpSteps.INVALID;
+    let nextStepValue = SIGN_UP_STEPS.INVALID;
     switch (step.value) {
-      case SignUpSteps.USERNAME:
-        nextStepValue = SignUpSteps.PASSWORD;
+      case SIGN_UP_STEPS.USERNAME:
+        nextStepValue = SIGN_UP_STEPS.PASSWORD;
         break;
-      case SignUpSteps.PASSWORD:
-        nextStepValue = SignUpSteps.VERIFY;
+      case SIGN_UP_STEPS.PASSWORD:
+        nextStepValue = SIGN_UP_STEPS.VERIFY;
         break;
-      case SignUpSteps.VERIFY:
+      case SIGN_UP_STEPS.VERIFY:
         return;
     }
     step.value = nextStepValue;
@@ -129,7 +138,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
     lang.value = null;
     errorMessage.value = null;
     if (resetStep) {
-      step.value = SignUpSteps.USERNAME;
+      step.value = SIGN_UP_STEPS.USERNAME;
     }
   };
 
