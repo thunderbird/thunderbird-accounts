@@ -1,7 +1,7 @@
-name: nightly-tests-desktop
+name: e2e-desktop-nightly-chrome
 
 concurrency:
-  group: nightly-tests-desktop
+  group: e2e-desktop-nightly-chrome
   cancel-in-progress: true
 
 on:
@@ -15,8 +15,8 @@ permissions:
   contents: read    # This is required for actions/checkout
 
 jobs:
-  prod-sanity-browserstack:
-    name: nightly-tests-desktop-browserstack
+  desktop-nightly-chrome:
+    name: prod-desktop-nightly-chrome
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -45,15 +45,7 @@ jobs:
           username:  ${{ secrets.BROWSERSTACK_USERNAME }}
           access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
           project-name: 'Thunderbird Accounts'
-          build-name: 'TB Accounts Nightly Tests (Desktop): BUILD_INFO'
-
-      - name: Prod E2E Tests on Desktop Firefox
-        # don't send GHA failure email if any of the E2E tests fail, can be annoying (I check the jobs each day in BrowserStack)
-        continue-on-error: true
-        run: |
-          cd ./test/e2e
-          cp .env.prod.example .env
-          npm run prod-nightly-tests-browserstack-desktop-firefox
+          build-name: 'TB Accounts Nightly Tests (Desktop Chromium): BUILD_INFO'
 
       - name: Prod E2E Tests on Desktop Chromium
         # don't send GHA failure email if any of the E2E tests fail, can be annoying (I check the jobs each day in BrowserStack)
