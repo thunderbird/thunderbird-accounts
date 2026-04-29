@@ -202,6 +202,61 @@ class AddEmailAliasTestCase(TestCase):
             self.assertEqual(json.loads(response.content.decode()), {'success': True})
 
 
+class IsRecoveryEmailInUseTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.url = reverse('api_is_recovery_email_in_use')
+
+    def test_missing_recovery_email(self):
+        response = self.client.post(self.url, data={}, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_email_taken_by_user_email(self):
+        User.objects.create(
+            username=f'taken@{settings.PRIMARY_EMAIL_DOMAIN}',
+            email='taken@example.com',
+            oidc_id='1',
+        )
+        response = self.client.post(
+            self.url,
+            data={'recoveryEmail': 'taken@example.com'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_email_taken_by_username(self):
+        User.objects.create(
+            username=f'taken@{settings.PRIMARY_EMAIL_DOMAIN}',
+            oidc_id='2',
+        )
+        response = self.client.post(
+            self.url,
+            data={'recoveryEmail': f'taken@{settings.PRIMARY_EMAIL_DOMAIN}'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_email_taken_by_alias(self):
+        user = User.objects.create(username=f'alias@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='3')
+        account = Account.objects.create(name=f'alias@{settings.PRIMARY_EMAIL_DOMAIN}', user=user)
+        Email.objects.create(address='alias@custom.com', type=Email.EmailType.ALIAS, account=account)
+
+        response = self.client.post(
+            self.url,
+            data={'recoveryEmail': 'alias@custom.com'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_email_not_taken(self):
+        response = self.client.post(
+            self.url,
+            data={'recoveryEmail': 'fresh@example.com'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+
+
 class AppointmentCalDAVSetupTestCase(TestCase):
     def setUp(self):
         self.client = RequestClient()
