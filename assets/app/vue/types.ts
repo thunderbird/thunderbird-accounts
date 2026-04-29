@@ -5,7 +5,7 @@ export enum SERVER_MESSAGE_LEVEL {
   SUCCESS = 25,
   WARNING = 30,
   ERROR = 40,
-}
+};
 
 export type ServerMessage = {
   level: SERVER_MESSAGE_LEVEL;
@@ -15,9 +15,15 @@ export type ServerMessage = {
 export enum FeatureFlag {
   SHOW_CONNECT_NOW = 'feature.show-connect-now',
   PHASE = 'feature.phase',
-}
+};
 
 export enum FeatureFlagValue {
   TRUE = 'true',
   PHASE_TWO = '2',
-}
+};
+
+export enum TELEMETRY_EVENTS {
+  SIGN_UP_SUPPORT = 'accounts.sign-up.support', 
+  SIGN_UP_ERROR = 'accounts.sign-up.error',
+  SIGN_UP_STEP = 'accounts.sign-up.step',
+};
