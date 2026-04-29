@@ -66,9 +66,13 @@ const { t } = useI18n();
     color: var(--colour-ti-secondary);
   }
 
-  .need-help-button {
+  :deep(.need-help-button) {
     color: var(--colour-primary-pressed);
     padding-inline-end: 0;
+
+    span.text {
+      font-size: 0.75rem;
+    }
   }
 }
 </style>

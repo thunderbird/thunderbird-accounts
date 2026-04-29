@@ -114,7 +114,10 @@
               "downloadDescription": "Install the mobile app on your phone or tablet.",
               "downloadButton": "Download",
               "autoConfigTitle": "Automatic Configuration",
-              "autoConfigDescription": "Add a new account in Thunderbird for Android using your Thundermail email and password."
+              "autoConfigDescription": "Add a new account in Thunderbird for Android using your Thundermail email and password.",
+              "iosTitle": "Need iOS Help?",
+              "iosDescription": "Read our step-by-step guide for connecting popular email applications.",
+              "iosSupportButtonLabel": "Visit Support Article"
             },
             "otherAppsPanel": {
               "title": "Automatic Configuration",
