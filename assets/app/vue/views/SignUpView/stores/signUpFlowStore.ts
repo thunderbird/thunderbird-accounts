@@ -98,9 +98,14 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
       } else {
         step.value = SIGN_UP_STEPS.USERNAME;
       }
+
+      // Capture the step we send them back to
+      captureStep(step.value);
     } catch {
       errorMessage.value = 'Unknown error';
     }
+
+    captureError(errorMessage.value);
     return false;
   };
 
@@ -121,6 +126,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
       case SIGN_UP_STEPS.VERIFY:
         return;
     }
+    captureStep(nextStepValue);
     step.value = nextStepValue;
   }
 

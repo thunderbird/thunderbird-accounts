@@ -7,3 +7,4 @@ export const DOWNLOAD_THUNDERBIRD_DESKTOP_URL = 'https://www.thunderbird.net/thu
 export const DOWNLOAD_THUNDERBIRD_MOBILE_URL = 'https://play.google.com/store/apps/details?id=net.thunderbird.android&referrer=utm_campaign%3Dmain%26utm_medium%3Dtb_pro%26utm_source%3Dthundermail_dashboard%26utm_content%3Dmobile_download';
 export const IOS_SUPPORT_URL = 'https://support.tb.pro/hc/en-us/articles/51053665815827-Setting-Up-Thundermail-on-iOS';
 export const STATUS_PAGE_URL = 'https://status.tb.pro/';
+export const CAPTURE_TELEMETRY = true;
