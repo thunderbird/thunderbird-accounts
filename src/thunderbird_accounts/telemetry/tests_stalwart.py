@@ -3,6 +3,7 @@ import base64
 import hashlib
 import hmac
 import json
+import uuid
 from unittest.mock import patch
 
 from django.core.cache import cache
@@ -154,15 +155,30 @@ class ProcessStalwartEventTestCase(TestCase):
 
         self.mock_resolve.assert_called_once_with(account_id=None, email='owner@thundermail.test')
 
-    def test_forwards_stalwart_id_and_created_at_for_posthog_dedup(self):
-        """uuid + timestamp must flow through unchanged so PostHog can dedupe on Celery retries."""
+    def test_forwards_created_at_and_derived_uuid_for_posthog_dedup(self):
+        """Stalwart event id is hashed into a UUID5 (PostHog rejects integer-string uuids,
+        see PostHog/posthog#35684); same Stalwart id must always derive the same UUID."""
+        event_id = '304404571900346369'
         _process_stalwart_event({
-            'id': 'stalwart-evt-abc',
+            'id': event_id,
             'createdAt': '2024-01-01T12:34:56Z',
             'type': 'message-ingest.ham',
             'data': {'to': ['owner@thundermail.test']},
         })
 
         kwargs = self.mock_submit.call_args.kwargs
-        self.assertEqual(kwargs['uuid'], 'stalwart-evt-abc')
+        expected_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, f'stalwart-event-{event_id}'))
+        self.assertEqual(kwargs['uuid'], expected_uuid)
+        self.assertEqual(uuid.UUID(kwargs['uuid']).version, 5)
         self.assertEqual(kwargs['timestamp'], '2024-01-01T12:34:56Z')
+        self.assertEqual(kwargs['properties']['stalwart_event_id'], event_id)
+
+    def test_missing_event_id_passes_no_uuid(self):
+        """If Stalwart somehow omits the id, send the event without a uuid rather than break."""
+        _process_stalwart_event({
+            'createdAt': '2024-01-01T12:34:56Z',
+            'type': 'message-ingest.ham',
+            'data': {'to': ['owner@thundermail.test']},
+        })
+
+        self.assertIsNone(self.mock_submit.call_args.kwargs['uuid'])
