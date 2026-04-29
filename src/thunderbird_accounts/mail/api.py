@@ -11,10 +11,15 @@ from django.utils.translation import gettext_lazy as _
 
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.utils import is_address_taken
 
 
 class UsernameAvailableThrottle(UserRateThrottle):
     scope = 'is_username_available'
+
+
+class RecoveryEmailInUseThrottle(UserRateThrottle):
+    scope = 'is_recovery_email_in_use'
 
 
 @api_view(['POST'])
@@ -43,5 +48,19 @@ def is_username_available(request: Request):
     user = User.objects.filter(username=full_username).first()
     if user:
         raise ValidationError(_('This username is already taken. Try another one.'))
+
+    return Response(status=200)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([RecoveryEmailInUseThrottle])
+def is_recovery_email_in_use(request: Request):
+    recovery_email = request.data.get('recoveryEmail')
+    if not recovery_email:
+        raise ValidationError(_('You need to enter a recovery email.'))
+
+    if is_address_taken(recovery_email):
+        raise ValidationError(_('User exists with same email.'))
 
     return Response(status=200)

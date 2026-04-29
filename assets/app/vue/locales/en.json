@@ -305,7 +305,8 @@
             "subtitle": "Use an email address you already have access to. It must be different from your new Thundermail address.",
             "action": "Verify email",
             "verificationEmailPlaceholder": "yourname{'@'}example.com",
-            "verificationEmailHelp": "Thundermail will send a verification link to this address to confirm it belongs to you."
+            "verificationEmailHelp": "Thundermail will send a verification link to this address to confirm it belongs to you.",
+            "unknownError": "There was a problem with your verification email. Please try another one."
           },
           "step4": {
             "title": "Check your email",

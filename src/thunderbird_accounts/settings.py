@@ -263,6 +263,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'is_username_available': '30/minute',
+        'is_recovery_email_in_use': '30/minute',
         'sign_up': '10/minute'
     }
 }
