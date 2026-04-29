@@ -11,6 +11,7 @@ const { t } = useI18n();
 const props = defineProps<{
   allDomainOptions: string[];
   existingCatchAlls: string[];
+  showSharedDomains: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -30,7 +31,10 @@ const customDomainSelected = computed(() => !allowedDomains.includes(selectedDom
 const allDomainOptions = computed(() => props.allDomainOptions.map((domain) => ({
   label: domain,
   value: domain,
-})));
+})).filter(
+  (domain) => props.showSharedDomains && allowedDomains.includes(domain.value) 
+  || !allowedDomains.includes(domain.value)
+));
 
 /**
  * Returns the next to be filled in for name's help section.
@@ -88,6 +92,10 @@ const onSubmit = () => {
 
 // Validate on selected domain change as well
 watch(selectedDomain, () => {
+  // Retain behaviour of not testing empty strings on domain change for now.
+  if (emailAlias.value === '') {
+    return;
+  }
   validationError.value = validateEmailAlias(emailAlias.value);
 });
 </script>

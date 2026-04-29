@@ -103,7 +103,7 @@ const onDeleteAliasError = (error: string) => {
             aliasUsed: usedAliases, aliasLimit
           }) }}
         </p>
-        <span class="email-aliases-count-text">
+        <span class="email-aliases-count-text" v-if="customDomains.length > 0">
           {{ t('views.mail.sections.emailSettings.catchAllUsed', {
             catchAllUsed: catchAlls.length, catchAllLimit: customDomains.length,
           }) }}
@@ -165,8 +165,8 @@ const onDeleteAliasError = (error: string) => {
       </template>
     </notice-bar>
 
-    <email-alias-form v-if="emailAliases.length < aliasLimit" :all-domain-options="allDomainOptions"
-      :existing-catch-alls="catchAlls" @add-alias="onAddAlias" />
+    <email-alias-form v-if="usedAliases < aliasLimit || customDomains.length > 0" :all-domain-options="allDomainOptions"
+      :existing-catch-alls="catchAlls" :show-shared-domains="usedAliases < aliasLimit" @add-alias="onAddAlias" />
   </div>
 </template>
 
