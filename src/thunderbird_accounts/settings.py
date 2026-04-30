@@ -152,6 +152,7 @@ INSTALLED_APPS = [
     'thunderbird_accounts.authentication',
     'thunderbird_accounts.subscription',
     'thunderbird_accounts.mail',
+    'thunderbird_accounts.legal',
     'thunderbird_accounts.core',
     'thunderbird_accounts.telemetry',
     'thunderbird_accounts.admin.AccountsAdminConfig',  # Instead of 'django.contrib.admin'
@@ -407,6 +408,8 @@ LANGUAGE_CODE = 'en'
 
 # Default language in accounts (todo: merge with language_code)
 DEFAULT_LANGUAGE = 'en'
+
+SUPPORTED_LEGAL_LANGUAGES = ['en']
 
 TIME_ZONE = 'UTC'
 

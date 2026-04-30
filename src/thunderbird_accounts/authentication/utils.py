@@ -1,6 +1,8 @@
 import enum
+import logging
 from urllib.parse import quote, urljoin
 
+import sentry_sdk
 from django.conf import settings
 from django.urls import reverse
 
@@ -77,3 +79,38 @@ def create_aia_url(action: KeycloakRequiredAction):
         f'&kc_action={action.value}'
         f'&redirect_uri={redirect_uri}',
     )
+
+
+def delete_user_data(user) -> list[str]:
+    """Delete a user from Keycloak, Stalwart, and the local DB.
+
+    Returns a list of error messages (empty on full success).
+    Errors from external services are captured but do not prevent
+    the local DB deletion from proceeding.
+    """
+
+    from thunderbird_accounts.authentication.clients import KeycloakClient
+    from thunderbird_accounts.authentication.exceptions import DeleteUserError
+    from thunderbird_accounts.mail.clients import MailClient
+
+    errors = []
+
+    if user.oidc_id:
+        try:
+            KeycloakClient().delete_user(user.oidc_id)
+        except DeleteUserError as ex:
+            sentry_sdk.capture_exception(ex)
+            errors.append(f'Keycloak: {ex}')
+
+        if user.stalwart_primary_email:
+            try:
+                MailClient().delete_account(user.stalwart_primary_email)
+            except Exception as ex:
+                sentry_sdk.capture_exception(ex)
+                errors.append(f'Stalwart: {ex}')
+
+    if errors:
+        logging.error(f'Errors during user data deletion for {user.username}: {errors}')
+
+    user.delete()
+    return errors

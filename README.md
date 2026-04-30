@@ -159,6 +159,52 @@ Additionally, you can access a simple user management portal under the tbpro rea
 at [http://keycloak:8999/realms/tbpro/account](http://keycloak:8999/realms/tbpro/account). Since this within the tbpro
 realm you can login to any account you created for accounts including admin@example.org.
 
+## Legal Documents
+
+Legal documents (Terms of Service, Privacy Policy) are stored as markdown source files under
+`assets/legal/` and served to the frontend as pre-rendered HTML.
+
+### Directory structure
+
+```
+assets/legal/
+├── tos/
+│   └── v1.0/
+│       ├── en.md        # Markdown source (source of truth)
+│       └── en.html      # Pre-rendered HTML (served by the API)
+└── privacy/
+    └── v1.0/
+        ├── en.md
+        └── en.html
+```
+
+Each version directory can contain multiple locale files (e.g. `de.md`, `fr.md`). The API falls
+back to `en.html` when a requested locale is not available.
+
+### Adding a new document version
+
+1. Create a new versioned directory, e.g. `assets/legal/tos/v2.0/`
+2. Write the markdown source file, e.g. `en.md`
+3. Run the conversion command to generate the HTML:
+   ```bash
+   uv run python manage.py convert_legal_docs
+   ```
+4. Commit both the `.md` and `.html` files
+5. In Django admin, create or update the `LegalDocument` record -- set `content_path` (e.g.
+   `tos/v2.0`), `version`, and check `is_current`. Saving will automatically unset `is_current` on
+   the previous version of the same document type.
+6. If adding new locales, update the SUPPORTED_LEGAL_LANGUAGES value in settings.py
+
+### Regenerating HTML from markdown
+
+If you edit an existing markdown file, re-run the conversion command to update the HTML:
+
+```bash
+uv run python manage.py convert_legal_docs
+```
+
+This converts all `*.md` files under `assets/legal/` and writes a sibling `.html` for each.
+
 ## Creating additional apps
 
 Apps are feature of django we can use to create re-usable modules with. We mostly just use them to separate out and

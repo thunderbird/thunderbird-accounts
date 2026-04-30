@@ -1,4 +1,3 @@
-import sentry_sdk
 from django.contrib import messages, admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
@@ -10,10 +9,8 @@ from thunderbird_accounts.authentication.admin.actions import (
     admin_add_to_mailchimp_list,
 )
 from thunderbird_accounts.authentication.admin.forms import CustomUserChangeForm, CustomNewUserForm
-from thunderbird_accounts.authentication.clients import KeycloakClient
-from thunderbird_accounts.authentication.exceptions import DeleteUserError
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.authentication.utils import delete_user_data
 
 
 class CustomUserAdmin(UserAdmin):
@@ -112,50 +109,20 @@ class CustomUserAdmin(UserAdmin):
             self.delete_model(request, model)
 
     def delete_model(self, request, obj: User):
-        has_errors = False
-        if obj.oidc_id:
-            # Delete the user on keycloak's end
-            keycloak = KeycloakClient()
-            try:
-                keycloak.delete_user(obj.oidc_id)
-            except DeleteUserError as ex:
-                has_errors = True
-                sentry_sdk.capture_exception(ex)
+        errors = delete_user_data(obj)
+
+        if errors:
+            for error in errors:
                 messages.add_message(
                     request,
                     messages.ERROR,
-                    _(
-                        f'Could not delete {obj.email} from <b>Keycloak</b>. '
-                        f"You'll need to clean that up yourself. Error: {ex}"
-                    ),
+                    _(f"You'll need to clean this up yourself. Error: {error}"),
                 )
-
-            # Delete the stalwart email too!
-            if obj.stalwart_primary_email:
-                stalwart = MailClient()
-                try:
-                    stalwart.delete_account(obj.stalwart_primary_email)
-                except Exception as ex:
-                    has_errors = True
-                    sentry_sdk.capture_exception(ex)
-                    messages.add_message(
-                        request,
-                        messages.ERROR,
-                        _(
-                            f'Could not delete {obj.username} from <b>Stalwart</b>. '
-                            f"You'll need to clean that up yourself. Error: {ex}"
-                        ),
-                    )
-
-        if has_errors:
-            # This is the only place we can flash messages as we have access to request!
             messages.add_message(
                 request,
                 messages.WARNING,
                 _('One or more delete requests failed. Please review the error messages and clean up accordingly.'),
             )
-        # Finally delete the rest of the model
-        super().delete_model(request, obj)
 
 
 class AllowListEntryAdmin(admin.ModelAdmin):

@@ -24,6 +24,7 @@ from thunderbird_accounts.mail.exceptions import (
 from thunderbird_accounts.mail.utils import decode_app_password, filter_app_passwords
 
 from thunderbird_accounts.core.zendesk import ZendeskClient
+from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 
 
 def handle_500(request: HttpRequest, template_name=None):
@@ -56,6 +57,7 @@ def home(request: HttpRequest):
     email_addresses = []
     max_custom_domains = None
     max_email_aliases = None
+    needs_tos_acceptance = False
 
     # This state can only really happen when a user hits PermissionDenied immediately upon logging in.
     # They will be logged in via Keycloak and then a redirect loop will happen as we deny them permission,
@@ -112,6 +114,16 @@ def home(request: HttpRequest):
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))
 
+    # Check if the user needs to accept the latest legal documents
+    if request.user.is_authenticated:
+        legal_doc_count = LegalDocument.objects.filter(is_current=True).count()
+        accepted_current_doc_count = LegalDocument.objects.filter(
+            is_current=True,
+            responses__user=request.user,
+            responses__action=LegalDocumentResponse.Action.ACCEPTED,
+        ).count()
+        needs_tos_acceptance = legal_doc_count != accepted_current_doc_count
+
     form_data = request.session.get('form_data')
     if request.session.get('form_data'):
         # Clear form_data for any additional reloads
@@ -137,6 +149,7 @@ def home(request: HttpRequest):
             ],
             'form_data': form_data or None,
             'features': json.dumps(get_feature_flags()),
+            'needs_tos_acceptance': needs_tos_acceptance,
         },
     )
 
