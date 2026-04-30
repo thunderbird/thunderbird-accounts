@@ -145,7 +145,7 @@ test.describe('contact support form', {
     // we are already signed into TB Accounts; ensure the form shows as expected when signed in
     await contactPage.verifyFormDisplayed();
 
-    // since we're signed in, email field should be pre-filled with the user's recovery email
+    // since we're signed in, email field should be pre-filled with the user's primary email
     await expect(contactPage.emailInput).toHaveValue(PRIMARY_THUNDERMAIL_EMAIL);
   });
   

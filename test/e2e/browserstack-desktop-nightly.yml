@@ -49,6 +49,18 @@ platforms:
       use:
         storageState: 'test-results/.auth/user.json'
 
+  - os: OS X
+    osVersion: Sequoia
+    browserName: playwright-webkit
+    browserVersion: 18.5
+    playwrightConfigOptions:
+      name: Safari-OSX
+      setup: 
+      - name: 'setup_webkit'
+        testMatch: 'auth.desktop.setup.ts'
+      use:
+        storageState: 'test-results/.auth/user.json'
+
 # =======================
 # Parallels per Platform
 # =======================

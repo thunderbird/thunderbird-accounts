@@ -79,6 +79,17 @@ export default defineConfig({
        },
       dependencies: ['desktop-setup'],
     },
+
+    {
+      name: 'safari',
+      use: {
+        ...devices['Desktop Safari'],
+        screenshot: 'only-on-failure',
+        // Use prepared auth state
+        storageState: 'test-results/.auth/user.json',
+      },
+      dependencies: ['desktop-setup'],
+    },
   ],
 
   /* Run your local dev server before starting the tests */

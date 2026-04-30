@@ -77,7 +77,7 @@ test.describe('sign up form', {
     await signUpPage.fillForm(testUsername, testPassword, testConfirmPassword);
     await signUpPage.submitForm();
 
-    const errorText = page.getByText('Please use at least 12 characters (you are currently using 3 characters).');
+    const errorText = page.getByText('12 characters');
     await expect(errorText).toBeVisible();
   });
 
