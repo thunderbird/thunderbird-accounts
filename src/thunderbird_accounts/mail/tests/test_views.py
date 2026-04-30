@@ -1,3 +1,4 @@
+from django.utils.crypto import get_random_string
 from thunderbird_accounts.subscription.models import Plan
 import json
 from unittest.mock import patch, Mock
@@ -256,6 +257,36 @@ class AddEmailAliasTestCase(TestCase):
             json.loads(response.content.decode()),
             {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
         )
+
+    @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
+    def test_allowed_domains_alias_too_long(self):
+        """Test that email aliases shorter than 3 characters are rejected for ALLOWED_EMAIL_DOMAINS."""
+        email_alias_url = reverse('add_email_alias')
+
+        random_string = get_random_string(User.USERNAME_MAX_LENGTH)
+
+        response = self.client.post(
+            email_alias_url,
+            data={'email-alias': random_string, 'domain': 'example.org'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400, msg=response.content.decode())
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {'success': False, 'error': _('This email is not valid. Try another one.')},
+        )
+
+        response = self.client.post(
+            email_alias_url,
+            data={'email-alias': random_string, 'domain': 'example.org'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400, msg=response.content.decode())
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {'success': False, 'error': _('This email is not valid. Try another one.')},
+        )
+
 
     @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
     @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=3)

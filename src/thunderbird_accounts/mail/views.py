@@ -27,9 +27,9 @@ from thunderbird_accounts.mail.exceptions import (
     AccessTokenNotFound,
     AccountNotFoundError,
     DomainAlreadyExistsError,
-    DomainNotFoundError,
+    DomainNotFoundError, EmailNotValidError,
 )
-from thunderbird_accounts.mail.utils import filter_app_passwords, is_address_taken
+from thunderbird_accounts.mail.utils import filter_app_passwords, is_address_taken, validate_email
 
 from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail import utils
@@ -319,6 +319,12 @@ def add_email_alias(request: HttpRequest):
         email_alias = ''
 
     full_email_alias = f'{email_alias}@{domain}'
+
+    if not is_catch_all:
+        try:
+            validate_email(full_email_alias)
+        except EmailNotValidError as ex:
+            return JsonResponse({'success': False, 'error': ex.error_message}, status=400)
 
     if (not is_catch_all and not email_alias) or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)

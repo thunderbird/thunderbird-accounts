@@ -59,3 +59,16 @@ class DomainAlreadyExistsError(StalwartError):
 
     def __str__(self):
         return f'DomainAlreadyExistsError: {self.domain}'
+
+class EmailNotValidError(RuntimeError):
+    """Raises in utils.validate_email"""
+    email: str
+    error_message: str
+
+    def __init__(self, email, error_message, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.email = email
+        self.error_message = error_message
+
+    def __str__(self):
+        return f'EmailNotValidError: {self.email}, {self.error_message}'
