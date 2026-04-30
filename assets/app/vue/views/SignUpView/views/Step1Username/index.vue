@@ -6,8 +6,9 @@ import { onMounted, ref } from 'vue';
 import { useDebounceFn } from '@vueuse/core';
 import { isUsernameAvailable } from './api';
 import { storeToRefs } from 'pinia';
-import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
+import { useSignUpFlowStore, SIGN_UP_STEPS } from '../../stores/signUpFlowStore';
 import SignUpLayout from '../../components/SignUpLayout.vue';
+import { captureStep } from '../../api';
 
 const USERNAME_MIN_LENGTH = 3;
 const USERNAME_MAX_LENGTH = 150;
@@ -86,6 +87,9 @@ onMounted(() => {
     loading.value = true;
     usernameCheckDebounced();
   }
+
+  // Capture the very first step to PostHog
+  captureStep(SIGN_UP_STEPS.USERNAME);
 });
 
 </script>
