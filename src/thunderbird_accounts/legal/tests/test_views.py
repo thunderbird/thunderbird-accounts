@@ -289,7 +289,8 @@ class AcceptLegalDocsTestCase(LegalDocCleanSlateTestCase):
             2,
         )
 
-    def test_duplicate_decline_does_not_create_new_responses(self):
+    def test_decline_still_creates_duplicate_responses(self):
+        """Decline responses are always recorded for audit purposes."""
         oidc_force_login(self.client, self.user)
 
         # Give user an active subscription so decline doesn't delete user
@@ -315,7 +316,7 @@ class AcceptLegalDocsTestCase(LegalDocCleanSlateTestCase):
             LegalDocumentResponse.objects.filter(
                 user=self.user, action=LegalDocumentResponse.Action.DECLINED
             ).count(),
-            1,
+            2,
         )
 
     def test_rejects_non_post_methods(self):
