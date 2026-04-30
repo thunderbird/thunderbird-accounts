@@ -437,7 +437,8 @@
       "contactSupport": "Contact Support",
       "loading": "Loading...",
       "errorAccepting": "Failed to record acceptance. Please try again.",
-      "errorLoading": "Failed to load legal documents. Please try again later."
+      "errorLoading": "Failed to load legal documents. Please try again later.",
+      "errorDeclining": "Failed to record decline. Please try again."
     },
     "subscribe": {
       "lineItems": {
