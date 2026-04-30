@@ -29,7 +29,7 @@ class Command(BaseCommand):
         legal_app_path = apps.get_app_config("legal").path
 
         legal_dir_in = Path(settings.ASSETS_ROOT, 'legal')
-        legal_dir_out = Path(legal_app_path, 'templates')   
+        legal_dir_out = Path(legal_app_path, 'templates')  
 
         if not legal_dir_in.exists() or not legal_dir_out.exists():
             self.stderr.write(
@@ -49,6 +49,7 @@ class Command(BaseCommand):
             # Retrieve the last two folders (as of writing this it's 'privacy' -or- 'tos' and 'v1.0')
             type, version =  md_file.resolve().parent.parts[-2:]
             html_file = Path(legal_dir_out, type, version, f'{file_name}.html')
+            html_file.parent.mkdir(parents=True, exist_ok=True)
             md.reset()
             source = md_file.read_text(encoding='utf-8')
             html = md.convert(source)
