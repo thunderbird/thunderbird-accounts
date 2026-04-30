@@ -1,3 +1,5 @@
+from django.apps import apps
+from pathlib import Path
 import json
 from unittest.mock import patch
 
@@ -23,37 +25,38 @@ class LegalDocCleanSlateTestCase(TestCase):
 
 class ReadLegalContentTestCase(TestCase):
     def setUp(self):
-        self.content_dir = settings.ASSETS_ROOT / 'legal' / 'tos' / 'v2.0'
+        self.legal_app_path = apps.get_app_config("legal").path
+        self.version = 'v999.0'
+
+        self.content_dir = Path(self.legal_app_path, 'templates', 'tos', self.version).resolve()
         self.content_dir.mkdir(parents=True, exist_ok=True)
 
     def tearDown(self):
         import shutil
-
-        cleanup_dir = settings.ASSETS_ROOT / 'legal' / 'tos' / 'v2.0'
-        if cleanup_dir.exists():
-            shutil.rmtree(cleanup_dir)
+        if self.content_dir.exists():
+            shutil.rmtree(self.content_dir)
 
     @override_settings(SUPPORTED_LEGAL_LANGUAGES=['en', 'de'])
     def test_returns_localized_content_when_available(self):
         (self.content_dir / 'de.html').write_text('<h1>AGB</h1>', encoding='utf-8')
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
-        result = _read_legal_content('tos/v2.0', 'de')
+        result = _read_legal_content(f'tos/{self.version}', 'de')
         self.assertEqual(result, '<h1>AGB</h1>')
 
     def test_falls_back_to_default_for_unsupported_locale(self):
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
-        result = _read_legal_content('tos/v2.0', 'fr')
+        result = _read_legal_content(f'tos/{self.version}', 'not-a-language')
         self.assertEqual(result, '<h1>TOS</h1>')
 
     @override_settings(SUPPORTED_LEGAL_LANGUAGES=['en', 'de'])
     def test_falls_back_to_default_language_when_locale_file_missing(self):
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
-        result = _read_legal_content('tos/v2.0', 'de')
+        result = _read_legal_content(f'tos/{self.version}', 'de')
         self.assertEqual(result, '<h1>TOS</h1>')
 
     def test_rejects_path_traversal_in_locale(self):
         (self.content_dir / 'en.html').write_text('<h1>TOS</h1>', encoding='utf-8')
-        result = _read_legal_content('tos/v2.0', '../../etc/passwd')
+        result = _read_legal_content(f'tos/{self.version}', '../../etc/passwd')
         self.assertEqual(result, '<h1>TOS</h1>')
 
 
