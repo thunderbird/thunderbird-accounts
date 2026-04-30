@@ -108,7 +108,7 @@ def accept_legal_docs(request):
 def decline_legal_docs(request):
     _record_response(request, LegalDocumentResponse.Action.DECLINED)
 
-    if not request.user.has_active_subscription:
+    if not request.user.is_awaiting_payment_verification and not request.user.has_active_subscription:
         delete_user_data(request.user)
         django_logout(request)
         return JsonResponse({'redirect_url': '/'})
