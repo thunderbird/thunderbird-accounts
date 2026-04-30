@@ -121,7 +121,7 @@ def home(request: HttpRequest):
             is_current=True,
             responses__user=request.user,
             responses__action=LegalDocumentResponse.Action.ACCEPTED,
-        ).count()
+        ).distinct().count()
         needs_tos_acceptance = legal_doc_count != accepted_current_doc_count
 
     form_data = request.session.get('form_data')

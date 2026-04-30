@@ -49,14 +49,31 @@ def _read_legal_content(content_path: str, locale: str) -> str:
 
 
 def _record_response(request, action: str) -> JsonResponse:
-    """Record an accept or decline response for all current legal documents."""
+    """Record an accept or decline response for all current legal documents.
+
+    For acceptance, skips documents that the user has already accepted
+    but we still want to record the decline action as many times as they declined.
+    """
     data = json.loads(request.body)
     source_context = data.get('source_context', '')
 
     current_docs = LegalDocument.objects.filter(is_current=True)
 
+    if action == LegalDocumentResponse.Action.ACCEPTED:
+        already_accepted_ids = set(
+            LegalDocumentResponse.objects.filter(
+                user=request.user,
+                document__in=current_docs,
+                action=LegalDocumentResponse.Action.ACCEPTED,
+            ).values_list('document_id', flat=True)
+        )
+    else:
+        already_accepted_ids = set()
+
     created = []
     for doc in current_docs:
+        if doc.pk in already_accepted_ids:
+            continue
         response = LegalDocumentResponse.objects.create(
             user=request.user,
             document=doc,

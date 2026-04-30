@@ -610,6 +610,36 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context['needs_tos_acceptance'])
 
+    def test_needs_tos_acceptance_false_with_duplicate_acceptances(self):
+        """Duplicate acceptance responses should not cause the check to fail."""
+        tos = LegalDocument.objects.create(
+            document_type=LegalDocument.DocumentType.TOS,
+            version='2.0',
+            is_current=True,
+            content_path='tos/v2.0',
+        )
+        privacy = LegalDocument.objects.create(
+            document_type=LegalDocument.DocumentType.PRIVACY,
+            version='2.0',
+            is_current=True,
+            content_path='privacy/v2.0',
+        )
+
+        # Force duplicate responses
+        LegalDocumentResponse.objects.create(
+            user=self.user, document=tos, action=LegalDocumentResponse.Action.ACCEPTED,
+        )
+        LegalDocumentResponse.objects.create(
+            user=self.user, document=tos, action=LegalDocumentResponse.Action.ACCEPTED,
+        )
+        LegalDocumentResponse.objects.create(
+            user=self.user, document=privacy, action=LegalDocumentResponse.Action.ACCEPTED,
+        )
+
+        response = self._login_and_get_home()
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context['needs_tos_acceptance'])
+
     def test_needs_tos_acceptance_ignores_non_current_docs(self):
         LegalDocument.objects.create(
             document_type=LegalDocument.DocumentType.TOS,
