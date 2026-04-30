@@ -1,3 +1,7 @@
+import sentry_sdk
+from django.apps import apps
+from django.template import TemplateDoesNotExist
+from django.template.loader import get_template
 import json
 import logging
 from pathlib import Path
@@ -24,21 +28,24 @@ def _read_legal_content(content_path: str, locale: str) -> str:
     if locale not in settings.SUPPORTED_LEGAL_LANGUAGES:
         locale = settings.DEFAULT_LANGUAGE
 
-    base_path = Path(settings.ASSETS_ROOT, 'legal')
-    content_dir = Path(base_path, content_path)
-    default_file = content_dir / f'{settings.DEFAULT_LANGUAGE}.html'
+    legal_templates_path = Path(apps.get_app_config('legal').path, 'templates')
 
-    if not content_dir.resolve().is_relative_to(base_path):
+    doc_path = Path(legal_templates_path, content_path, f'{locale}.html').resolve()
+    default_path = Path(legal_templates_path, content_path, f'{settings.DEFAULT_LANGUAGE}.html').resolve()
+
+    if not doc_path.is_relative_to(legal_templates_path) or not default_path.is_relative_to(
+        legal_templates_path
+    ):
+        sentry_sdk.set_extra('doc_path', doc_path)
+        sentry_sdk.set_extra('default_path', default_path)
         logging.error('directory traversal attack!')
-        return default_file.read_text(encoding='utf-8')
+        return ''
 
-    content_file = content_dir / f'{locale}.html'
-
-    if not content_file.exists():
-        logging.error(f'Legal content file not found: {content_file}')
-        return default_file.read_text(encoding='utf-8')
-
-    return content_file.read_text(encoding='utf-8')
+    try:
+        return get_template(str(doc_path)).render()
+    except TemplateDoesNotExist as ex:
+        logging.error(f'Legal content file not found: {ex}. Looked for it in: {ex.tried}')
+        return get_template(str(default_path)).render()
 
 
 def _record_response(request, action: str) -> JsonResponse:
@@ -56,12 +63,14 @@ def _record_response(request, action: str) -> JsonResponse:
             action=action,
             source_context=source_context,
         )
-        created.append({
-            'document_type': doc.document_type,
-            'version': doc.version,
-            'action': response.action,
-            'responded_at': response.created_at.isoformat(),
-        })
+        created.append(
+            {
+                'document_type': doc.document_type,
+                'version': doc.version,
+                'action': response.action,
+                'responded_at': response.created_at.isoformat(),
+            }
+        )
 
     return JsonResponse({'responses': created})
 
@@ -86,13 +95,15 @@ def get_current_legal_docs(request):
 
     docs_data = []
     for doc in current_docs:
-        docs_data.append({
-            'uuid': str(doc.uuid),
-            'document_type': doc.document_type,
-            'version': doc.version,
-            'content': _read_legal_content(doc.content_path, locale),
-            'accepted': doc.uuid in accepted_doc_ids,
-        })
+        docs_data.append(
+            {
+                'uuid': str(doc.uuid),
+                'document_type': doc.document_type,
+                'version': doc.version,
+                'content': _read_legal_content(doc.content_path, locale),
+                'accepted': doc.uuid in accepted_doc_ids,
+            }
+        )
 
     return JsonResponse({'documents': docs_data})
 

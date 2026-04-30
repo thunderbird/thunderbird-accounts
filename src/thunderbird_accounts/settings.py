@@ -190,11 +190,21 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'thunderbird_accounts.urls'
 
+loaders = [
+    ("django.template.loaders.cached.Loader", [
+        "django.template.loaders.filesystem.Loader",
+        "django.template.loaders.app_directories.Loader",
+    ])
+]
+if IS_TEST:
+    loaders = [
+        "django.template.loaders.filesystem.Loader",
+        "django.template.loaders.app_directories.Loader",
+    ]
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [BASE_DIR.joinpath('templates')],
-        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -202,9 +212,11 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'loaders': loaders
         },
     },
 ]
+
 
 WSGI_APPLICATION = 'thunderbird_accounts.wsgi.application'
 
@@ -262,10 +274,7 @@ REST_FRAMEWORK = {
         'mozilla_django_oidc.contrib.drf.OIDCAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'is_username_available': '30/minute',
-        'sign_up': '10/minute'
-    }
+    'DEFAULT_THROTTLE_RATES': {'is_username_available': '30/minute', 'sign_up': '10/minute'},
 }
 
 REDIS_URL = os.getenv('REDIS_URL')

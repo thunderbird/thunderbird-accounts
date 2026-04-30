@@ -162,7 +162,7 @@ realm you can login to any account you created for accounts including admin@exam
 ## Legal Documents
 
 Legal documents (Terms of Service, Privacy Policy) are stored as markdown source files under
-`assets/legal/` and served to the frontend as pre-rendered HTML.
+`assets/legal/` and served to the frontend as pre-rendered HTML within `src/thunderbird_accounts/legal/templates/`.
 
 ### Directory structure
 
@@ -171,10 +171,16 @@ assets/legal/
 ├── tos/
 │   └── v1.0/
 │       ├── en.md        # Markdown source (source of truth)
-│       └── en.html      # Pre-rendered HTML (served by the API)
 └── privacy/
     └── v1.0/
         ├── en.md
+
+src/thunderbird_accounts/legal/templates/
+├── tos/
+│   └── v1.0/
+│       └── en.html      # Pre-rendered HTML (served by the API)
+└── privacy/
+    └── v1.0/
         └── en.html
 ```
 
