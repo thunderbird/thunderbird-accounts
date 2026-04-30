@@ -1,14 +1,42 @@
+from django.core.exceptions import ValidationError
+from django.core.validators import EmailValidator
+from thunderbird_accounts.mail.exceptions import EmailNotValidError
 import logging
 import uuid
 from typing import Optional
 from requests.exceptions import HTTPError
 from django.contrib.auth.hashers import make_password, identify_hasher
+from django.utils.translation import gettext_lazy as _
 import sentry_sdk
 
 from django.conf import settings
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.mail import tasks
+
+
+def validate_email(email: str, error_message: str | None = None) -> bool:
+    """Validates the email and local part against Django's built-in email validation."""
+    not_valid_err_msg = error_message or _('This email is not valid. Try another one.')
+
+    if '@' not in email:
+        raise EmailNotValidError(email, not_valid_err_msg)
+
+    local_part = email.split('@')[0]
+
+    # EmailValidator allows for up to 350 characters, but username is defined with max_length of 150.
+    if len(local_part) >= User.USERNAME_MAX_LENGTH:
+        raise EmailNotValidError(email, not_valid_err_msg)
+
+    email_validator = EmailValidator(not_valid_err_msg)
+    # So EmailValidator.__call__ will raise a ValidationError if it fails, but they're the wrong
+    # ValidationError...So catch this ValidationError so we can raise DRF's ValidationError.
+    try:
+        email_validator(email)
+    except ValidationError as ex:
+        raise EmailNotValidError(email, ex.message)
+
+    return True
 
 
 def save_app_password(label, password):

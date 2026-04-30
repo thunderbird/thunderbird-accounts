@@ -1,6 +1,6 @@
+from thunderbird_accounts.mail.exceptions import EmailNotValidError
+from thunderbird_accounts.mail.utils import validate_email
 from rest_framework.permissions import AllowAny
-from django.core.exceptions import ValidationError as DjValidationError
-from django.core.validators import EmailValidator
 from django.conf import settings
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
@@ -28,17 +28,10 @@ def is_username_available(request: Request):
     full_username = f'{username}@{settings.PRIMARY_EMAIL_DOMAIN}'
     username_not_valid_err = _('This username is not valid. Try another one.')
 
-    # EmailValidator allows for up to 350 characters, but username is defined with max_length of 150.
-    if len(username) > User.USERNAME_MAX_LENGTH:
-        raise ValidationError(username_not_valid_err)
-
-    email_validator = EmailValidator(username_not_valid_err)
-    # So EmailValidator.__call__ will raise a ValidationError if it fails, but they're the wrong
-    # ValidationError...So catch this ValidationError so we can raise DRF's ValidationError.
     try:
-        email_validator(full_username)
-    except DjValidationError as ex:
-        raise ValidationError(ex.message)
+        validate_email(full_username, username_not_valid_err)
+    except EmailNotValidError as ex:
+        raise ValidationError(ex.error_message)
 
     user = User.objects.filter(username=full_username).first()
     if user:
