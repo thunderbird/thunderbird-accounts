@@ -28,12 +28,13 @@ def _read_legal_content(content_path: str, locale: str) -> str:
     if locale not in settings.SUPPORTED_LEGAL_LANGUAGES:
         locale = settings.DEFAULT_LANGUAGE
 
-    legal_app_path = apps.get_app_config('legal').path
-    doc_path = Path(legal_app_path, 'templates', content_path, f'{locale}.html')
-    default_path = Path(legal_app_path, 'templates', content_path, f'{settings.DEFAULT_LANGUAGE}.html')
+    legal_templates_path = Path(apps.get_app_config('legal').path, 'templates')
 
-    if not doc_path.resolve().is_relative_to(settings.BASE_DIR) or not default_path.resolve().is_relative_to(
-        settings.BASE_DIR
+    doc_path = Path(legal_templates_path, content_path, f'{locale}.html').resolve()
+    default_path = Path(legal_templates_path, content_path, f'{settings.DEFAULT_LANGUAGE}.html').resolve()
+
+    if not doc_path.is_relative_to(legal_templates_path) or not default_path.is_relative_to(
+        legal_templates_path
     ):
         sentry_sdk.set_extra('doc_path', doc_path)
         sentry_sdk.set_extra('default_path', default_path)
