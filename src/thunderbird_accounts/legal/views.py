@@ -55,8 +55,18 @@ def _record_response(request, action: str) -> JsonResponse:
 
     current_docs = LegalDocument.objects.filter(is_current=True)
 
+    already_responded_ids = set(
+        LegalDocumentResponse.objects.filter(
+            user=request.user,
+            document__in=current_docs,
+            action=action,
+        ).values_list('document_id', flat=True)
+    )
+
     created = []
     for doc in current_docs:
+        if doc.pk in already_responded_ids:
+            continue
         response = LegalDocumentResponse.objects.create(
             user=request.user,
             document=doc,

@@ -254,6 +254,70 @@ class AcceptLegalDocsTestCase(LegalDocCleanSlateTestCase):
         resp = LegalDocumentResponse.objects.get(user=self.user)
         self.assertEqual(resp.source_context, '')
 
+    def test_duplicate_accept_does_not_create_new_responses(self):
+        oidc_force_login(self.client, self.user)
+
+        LegalDocument.objects.create(
+            document_type=LegalDocument.DocumentType.TOS,
+            version='2.0',
+            is_current=True,
+            content_path='tos/v2.0',
+        )
+        LegalDocument.objects.create(
+            document_type=LegalDocument.DocumentType.PRIVACY,
+            version='2.0',
+            is_current=True,
+            content_path='privacy/v2.0',
+        )
+
+        payload = json.dumps({'source_context': 'sign-up'})
+
+        response1 = self.client.post(self.url, data=payload, content_type='application/json')
+        self.assertEqual(response1.status_code, 200)
+        data1 = json.loads(response1.content)
+        self.assertEqual(len(data1['responses']), 2)
+
+        response2 = self.client.post(self.url, data=payload, content_type='application/json')
+        self.assertEqual(response2.status_code, 200)
+        data2 = json.loads(response2.content)
+        self.assertEqual(len(data2['responses']), 0)
+
+        self.assertEqual(
+            LegalDocumentResponse.objects.filter(
+                user=self.user, action=LegalDocumentResponse.Action.ACCEPTED
+            ).count(),
+            2,
+        )
+
+    def test_duplicate_decline_does_not_create_new_responses(self):
+        oidc_force_login(self.client, self.user)
+
+        # Give user an active subscription so decline doesn't delete user
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
+
+        LegalDocument.objects.create(
+            document_type=LegalDocument.DocumentType.TOS,
+            version='2.0',
+            is_current=True,
+            content_path='tos/v2.0',
+        )
+
+        payload = json.dumps({'source_context': 'dashboard'})
+        decline_url = self.url.replace('accept', 'decline')
+
+        response1 = self.client.post(decline_url, data=payload, content_type='application/json')
+        self.assertEqual(response1.status_code, 200)
+
+        response2 = self.client.post(decline_url, data=payload, content_type='application/json')
+        self.assertEqual(response2.status_code, 200)
+
+        self.assertEqual(
+            LegalDocumentResponse.objects.filter(
+                user=self.user, action=LegalDocumentResponse.Action.DECLINED
+            ).count(),
+            1,
+        )
+
     def test_rejects_non_post_methods(self):
         oidc_force_login(self.client, self.user)
         response = self.client.get(self.url)
