@@ -32,6 +32,6 @@ def capture_frontend_event(request: Request):
     if request.user.is_authenticated:
         capture(event, request.user.oidc_id, event_properties)
     else:
-        capture(event, str(f'unauthenticated-{uuid.uuid4().hex}'), request.session)
+        capture(event, str(f'unauthenticated-{uuid.uuid4().hex}'), event_properties)
 
     return Response(status=200)

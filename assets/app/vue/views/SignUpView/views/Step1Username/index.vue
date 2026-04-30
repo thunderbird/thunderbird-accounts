@@ -6,8 +6,9 @@ import { onMounted, ref } from 'vue';
 import { useDebounceFn } from '@vueuse/core';
 import { isUsernameAvailable } from './api';
 import { storeToRefs } from 'pinia';
-import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
+import { useSignUpFlowStore, SIGN_UP_STEPS } from '../../stores/signUpFlowStore';
 import SignUpLayout from '../../components/SignUpLayout.vue';
+import { captureStep } from '../../api';
 
 const { t } = useI18n();
 const tbProPrimaryDomain = `@${window._page.currentView?.tbProPrimaryDomain}`;
@@ -56,6 +57,9 @@ onMounted(() => {
   if (window._page.currentView?.attributes?.username) {
     username.value = window._page.currentView?.attributes?.username;
   }
+
+  // Capture the very first step to PostHog
+  captureStep(SIGN_UP_STEPS.USERNAME);
 });
 
 </script>
