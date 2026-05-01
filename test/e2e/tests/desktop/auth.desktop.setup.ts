@@ -2,7 +2,7 @@ import { test as setup } from '@playwright/test';
 
 import path from 'path';
 
-import { navigateToAccountsHubAndSignIn } from '../utils/utils';
+import { navigateToAccountsHubAndSignIn } from '../../utils/utils';
 
 
 const fs = require('fs');
