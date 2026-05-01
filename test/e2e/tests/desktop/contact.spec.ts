@@ -1,7 +1,7 @@
 import path from 'path';
 import { test, expect } from '@playwright/test';
-import { ContactPage } from '../pages/contact-page';
-import { ensureWeAreSignedIn } from '../utils/utils';
+import { ContactPage } from '../../pages/contact-page';
+import { ensureWeAreSignedIn } from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -11,7 +11,7 @@ import {
   TIMEOUT_2_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
-} from '../const/constants';
+} from '../../const/constants';
 
 let contactPage: ContactPage;
 
@@ -135,7 +135,7 @@ test.beforeEach(async ({ page }) => {
   await ensureWeAreSignedIn(page);
 });
 
-test.describe('contact support form', {
+test.describe('contact support form on desktop browser', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
 }, () => {
   test('contact form displayed correctly when signed in', async ({ page }) => {
@@ -278,7 +278,7 @@ test.describe('contact support form', {
     );
 
     // upload a test file
-    const testFilePath = path.join(__dirname, '../test-files/test-attachment.txt');
+    const testFilePath = path.join(__dirname, '../../test-files/test-attachment.txt');
     await contactPage.uploadFile(testFilePath);
 
     // submit the form
@@ -292,7 +292,7 @@ test.describe('contact support form', {
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     // Upload a test file
-    const testFilePath = path.join(__dirname, '../test-files/test-attachment.txt');
+    const testFilePath = path.join(__dirname, '../../test-files/test-attachment.txt');
     await contactPage.uploadFile(testFilePath);
 
     // Check that the file appears in the attachment list
