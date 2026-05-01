@@ -1,3 +1,4 @@
+from thunderbird_accounts.authentication.utils import is_email_reserved
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
 from thunderbird_accounts.mail.utils import validate_email
 from rest_framework.permissions import AllowAny
@@ -27,6 +28,10 @@ def is_username_available(request: Request):
 
     full_username = f'{username}@{settings.PRIMARY_EMAIL_DOMAIN}'
     username_not_valid_err = _('This username is not valid. Try another one.')
+
+    # Make sure they don't use a reserved word in their email
+    if is_email_reserved(full_username):
+        raise ValidationError(username_not_valid_err)
 
     try:
         validate_email(full_username, username_not_valid_err)

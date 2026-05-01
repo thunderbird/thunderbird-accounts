@@ -97,6 +97,28 @@ class SignUpTestcase(APITestCase):
         resp_data = response.json()
         self.assertEqual(resp_data.get('type'), 'username-in-use', msg=assert_fail_msg)
 
+    def test_user_using_reserved_emails(self, mock_import_user: MagicMock):
+        """Test that we check if a user exists before creating a user"""
+
+        # Set a return value for oidc_id
+        mock_import_user.return_value = 1
+
+        User(email=self.wait_list[0], username='hello@example.org').save()
+
+        # All examples from reserved.py
+        for local_part in ['thunderbird_admin', 'admin', 'postmaster', 'root']:
+            response = self.client.post(
+                '/api/v1/auth/sign-up/',
+                self.make_sign_up_data(email=self.wait_list[0], partialUsername='thunderbird_admin'),
+            )
+            assert_fail_msg = self.get_messages(response)
+
+            self.assertEqual(response.status_code, 400, msg=assert_fail_msg)
+
+            resp_data = response.json()
+            self.assertEqual(resp_data.get('type'), 'username-in-use', msg=assert_fail_msg)
+
+
     def test_alias_already_exists(self, mock_import_user: MagicMock):
         """Test that we check if a alias exists before creating a user"""
 

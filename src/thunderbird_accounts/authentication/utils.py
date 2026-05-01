@@ -65,6 +65,9 @@ def is_email_in_allow_list(email: str):
 
 
 def is_email_reserved(email: str):
+    # Retrieve just the local part if we passed an entire email
+    if '@' in email:
+        email = email.split('@')[0]
     return is_reserved(email)
 
 
