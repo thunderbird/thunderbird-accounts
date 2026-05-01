@@ -16,6 +16,8 @@ export const PRIMARY_THUNDERMAIL_EMAIL = String(process.env.PRIMARY_THUNDERMAIL_
 // playwright test tags
 export const PLAYWRIGHT_TAG_E2E_SUITE = '@e2e-suite';
 export const PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY = '@e2e-prod-desktop-nightly';
+export const PLAYWRIGHT_TAG_E2E_SUITE_MOBILE = '@e2e-mobile-suite';
+export const PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY = '@e2e-prod-mobile-nightly';
 
 // timeouts
 export const TIMEOUT_2_SECONDS = 2000;
