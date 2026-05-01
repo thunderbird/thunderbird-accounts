@@ -10,6 +10,7 @@ from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.celery.exceptions import TaskFailed
+from thunderbird_accounts.core.types import TaskReturnStatus
 
 
 def _stalwart_check_or_create_domain_entry(stalwart, domain):
@@ -69,7 +70,7 @@ def _base_email_address_to_stalwart_account(fn_name, username, emails):
     return {
         'username': username,
         'emails': emails,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
     }
 
 
@@ -149,7 +150,7 @@ def update_quota_on_stalwart_account(self, username: str, quota: Optional[int]):
     return {
         'username': username,
         'quota': quota,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
     }
 
 
@@ -273,5 +274,5 @@ def create_stalwart_account(
         'stalwart_pkid': pkid,
         'username': username,
         'email': email,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
     }

@@ -1,26 +1,26 @@
-from django.template.response import TemplateResponse
-from paddle_billing.Notifications.Entities.Shared.PaymentMethodType import PaymentMethodType
 import datetime
 import json
 import logging
-
 import sentry_sdk
+
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse, HttpRequest, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.core.signing import Signer
+from django.template.response import TemplateResponse
 
 from paddle_billing import Client
 from paddle_billing.Resources.CustomerPortalSessions.Operations import CreateCustomerPortalSession
+from paddle_billing.Notifications.Entities.Shared.PaymentMethodType import PaymentMethodType
 
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.request import Request
 
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
-from thunderbird_accounts.subscription import tasks, models
+from thunderbird_accounts.subscription import tasks
 from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price, Subscription, Transaction
 from thunderbird_accounts.core.exceptions import UnexpectedBehaviour
@@ -34,7 +34,7 @@ def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
     """Returns a boolean on whether the paddle webhook should be dispatched as a celery task or ignored."""
 
     # We only care about non-draft transactions
-    if event_type == 'transaction.created' and event_data.get('status') == models.Transaction.StatusValues.DRAFT:
+    if event_type == 'transaction.created' and event_data.get('status') == Transaction.StatusValues.DRAFT:
         return False
 
     return True
@@ -224,8 +224,9 @@ def handle_paddle_webhook(request: Request):
 
 
 @login_required
+@inject_paddle
 @require_http_methods(['POST'])
-def get_subscription_plan_info(request: Request):
+def get_subscription_plan_info(request: Request, paddle: Client):
     """Returns the user's current subscription information including plan details, pricing, and features."""
 
     # Check if user has an active subscription
@@ -233,7 +234,7 @@ def get_subscription_plan_info(request: Request):
         return JsonResponse({'success': False, 'error': 'No active subscription found'}, status=404)
 
     # Get the user's active subscription
-    subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
+    subscription: Subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
 
     if not subscription:
         return JsonResponse({'success': False, 'error': 'No active subscription found'}, status=404)
@@ -250,8 +251,8 @@ def get_subscription_plan_info(request: Request):
     if not plan:
         return JsonResponse({'success': False, 'error': 'Plan not found for user'}, status=500)
 
-    # Get price information
-    price = subscription_item.price
+    price = subscription.current_billing_period_discounted_amount
+    currency = subscription.current_billing_period_currency
 
     # Used quota comes from Stalwart and it is optional
     used_quota = None
@@ -268,9 +269,6 @@ def get_subscription_plan_info(request: Request):
     # Build the response
     subscription_info = {
         'name': plan.name,
-        'price': price.amount,
-        'currency': price.currency,
-        'period': price.billing_cycle_interval,
         'description': subscription_item.product.description or '',
         'features': {
             'mailStorage': quota,  # The mail storage quota source of truth is Stalwart
@@ -280,6 +278,11 @@ def get_subscription_plan_info(request: Request):
         },
         'autoRenewal': subscription.next_billed_at,
         'usedQuota': used_quota,
+        'price': price,
+        'currency': currency,
+        'period': subscription.subscriptionitem_set.first().price.billing_cycle_interval
+        if subscription.subscriptionitem_set.count() > 0
+        else 'year',
     }
 
     return JsonResponse({'success': True, 'subscription': subscription_info})
