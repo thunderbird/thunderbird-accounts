@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
@@ -27,6 +27,7 @@ const tosDoc = ref<LegalDocMeta | null>(null);
 const privacyDoc = ref<LegalDocMeta | null>(null);
 const tosContent = ref('');
 const privacyContent = ref('');
+const legalContentContainer = useTemplateRef<HTMLElement>('legalContentContainer');
 
 const renderedTosHtml = computed(() => tosContent.value);
 
@@ -35,6 +36,45 @@ const renderedPrivacyHtml = computed(() => privacyContent.value);
 const sourceContext = computed(() => {
   return (route.query.source as string) || 'accounts-dashboard';
 });
+
+/**
+ * Normal browser behavior scrolls the page and not the inner v-html rendered content
+ * So we need to intercept this and scroll to the inner anchor section instead.
+ */
+function handleLegalContentClick(event: MouseEvent) {
+  const clickedElement = event.target as HTMLElement | null;
+  const link = clickedElement?.closest('a');
+
+  if (!link) {
+    return;
+  }
+
+  const href = link.getAttribute('href');
+  if (!href?.startsWith('#') || href.length === 1) {
+    return;
+  }
+
+  const container = legalContentContainer.value;
+  if (!container) {
+    return;
+  }
+
+  const targetId = decodeURIComponent(href.slice(1));
+  const anchorTarget = container.querySelector(`#${CSS.escape(targetId)}`) as HTMLElement | null;
+  if (!anchorTarget) {
+    return;
+  }
+
+  event.preventDefault();
+
+  const containerRect = container.getBoundingClientRect();
+  const targetRect = anchorTarget.getBoundingClientRect();
+  const top = container.scrollTop + targetRect.top - containerRect.top - 8;
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  container.scrollTo({ top, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+  history.replaceState(null, '', `#${targetId}`);
+}
 
 async function handleAccept() {
   accepting.value = true;
@@ -119,7 +159,7 @@ export default {
     </div>
 
     <div class="content-container">
-      <div class="content legal-content">
+      <div ref="legalContentContainer" class="content legal-content" @click="handleLegalContentClick">
         <div
           v-if="tosSelectedTab === LEGAL_DOCUMENT_TYPES.TOS"
           v-html="renderedTosHtml"
