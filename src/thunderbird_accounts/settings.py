@@ -274,7 +274,11 @@ REST_FRAMEWORK = {
         'mozilla_django_oidc.contrib.drf.OIDCAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    'DEFAULT_THROTTLE_RATES': {'is_username_available': '30/minute', 'sign_up': '10/minute'},
+    'DEFAULT_THROTTLE_RATES': {
+        'is_username_available': '30/minute',
+        'sign_up': '10/minute',
+        'analytics': '1000/minute',  # Just in case
+    },
 }
 
 REDIS_URL = os.getenv('REDIS_URL')
@@ -409,6 +413,9 @@ STALWART_EVENT_MAP = {
 # Cache config for the Stalwart accountId/email -> hashed oidc_id lookup.
 STALWART_USER_CACHE_PREFIX = 'stalwart_uid:'
 STALWART_USER_CACHE_TTL = 3600
+
+# List of acceptable frontend events for the frontend telemetry route.
+FRONTEND_EVENTS = ['accounts.sign-up.support', 'accounts.sign-up.error', 'accounts.sign-up.step']
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
