@@ -1,5 +1,5 @@
 from django.contrib import messages
-from thunderbird_accounts.utils.types import TaskReturnStatus
+from thunderbird_accounts.core.types import TaskReturnStatus
 from urllib.parse import urljoin
 
 from django.conf import settings

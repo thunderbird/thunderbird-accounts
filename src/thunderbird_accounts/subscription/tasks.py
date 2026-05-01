@@ -614,7 +614,7 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
             )
     return {
         'user_uuid': user_uuid,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
     }
 
 @inject_paddle
