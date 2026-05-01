@@ -209,6 +209,7 @@ class AddEmailAliasTestCase(TestCase):
             )
 
     def test_reserved_with_custom_domain(self):
+        """Ensure that creating an email alias with a reserved word for a custom domain is ok."""
         email_alias_url = reverse('add_email_alias')
         domain = Domain.objects.create(
             name='customdomain.com',
