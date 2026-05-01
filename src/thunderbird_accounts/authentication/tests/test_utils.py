@@ -6,7 +6,7 @@ from thunderbird_accounts.authentication.reserved import is_reserved, servers, s
 
 class IsReservedUnitTests(TestCase):
     def test_brand_names(self):
-        for brand in ['thunderbird', 'mozilla', 'firefox', 'help', 'support', 'mzla']:
+        for brand in ['thunderbird', 'thundermail', 'tbpro', 'mozilla', 'firefox', 'help', 'support', 'mzla']:
             self.assertTrue(is_reserved(brand))
 
     def test_brand_plus_variants(self):

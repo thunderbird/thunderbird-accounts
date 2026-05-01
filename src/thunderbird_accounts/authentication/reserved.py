@@ -1,7 +1,7 @@
 import re
 
 # brand related names, and also help/support
-brands = '(thunderbird|thunderbirdpro|mzla|mozilla|firefox)?'
+brands = '(thunderbird|tbpro|thundermail|thunderbirdpro|mzla|mozilla|firefox)?'
 
 # Brand names plus common tokens
 names_with_brands = [
