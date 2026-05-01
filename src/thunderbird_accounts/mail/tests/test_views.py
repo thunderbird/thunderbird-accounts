@@ -208,6 +208,25 @@ class AddEmailAliasTestCase(TestCase):
                 {'success': False, 'error': _('You cannot use this email address.')},
             )
 
+    def test_reserved_with_custom_domain(self):
+        email_alias_url = reverse('add_email_alias')
+        domain = Domain.objects.create(
+            name='customdomain.com',
+            user=self.user,
+            status=Domain.DomainStatus.VERIFIED,
+        )
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'admin', 'domain': domain.name},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+
     def test_already_used_alias(self):
         """Ensure that creating an email alias that is already in-use will error out."""
         email_alias_url = reverse('add_email_alias')
