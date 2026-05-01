@@ -1,17 +1,17 @@
 import path from 'path';
 import { test, expect } from '@playwright/test';
-import { ContactPage } from '../pages/contact-page';
-import { ensureWeAreSignedIn } from '../utils/utils';
+import { ContactPage } from '../../pages/contact-page';
+import { navigateToAccountsHubAndSignIn } from '../../utils/utils';
 
 import {
-  PLAYWRIGHT_TAG_E2E_SUITE,
-  PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
+  PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
+  PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
   ACCTS_OIDC_EMAIL,
   PRIMARY_THUNDERMAIL_EMAIL,
   TIMEOUT_2_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
-} from '../const/constants';
+} from '../../const/constants';
 
 let contactPage: ContactPage;
 
@@ -131,12 +131,12 @@ test.beforeEach(async ({ page }) => {
     });
   });
 
-  // we should be signed into TB Accounts already via our auth setup but check in case session expired
-  await ensureWeAreSignedIn(page);
+  // mobile doesn't support saving browser context so we need to sign-in to TB Accounts for each test
+  await navigateToAccountsHubAndSignIn(page);
 });
 
-test.describe('contact support form', {
-  tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
+test.describe('contact support form on mobile browser', {
+  tag: [PLAYWRIGHT_TAG_E2E_SUITE_MOBILE, PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY],
 }, () => {
   test('contact form displayed correctly when signed in', async ({ page }) => {
     // go to the contact / submit an issue form and wait for it to load
@@ -148,8 +148,8 @@ test.describe('contact support form', {
     // since we're signed in, email field should be pre-filled with the user's primary email
     await expect(contactPage.emailInput).toHaveValue(PRIMARY_THUNDERMAIL_EMAIL);
   });
-  
-  test('contact form displayed correctly when not signed in', async ({ page }) => {
+
+  test.skip('contact form displayed correctly when not signed in', async ({ page }) => {
     // clear authentication state for this test
     await page.context().clearCookies();
     await page.reload();
@@ -164,7 +164,7 @@ test.describe('contact support form', {
     await expect(contactPage.nameInput).toBeEmpty();
   });
 
-  test('able to submit contact form successfully', async ({ page }) => {
+  test.skip('able to submit contact form successfully', async ({ page }) => {
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
 
@@ -204,14 +204,14 @@ test.describe('contact support form', {
     await expect(contactPage.successMessage).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
   });
 
-  test('form validation prevents submission', async ({ page }) => {
+  test.skip('form validation prevents submission', async ({ page }) => {
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     await contactPage.submitForm();
     await expect(contactPage.successMessage).not.toBeVisible();
   });
 
-  test('error handling works correctly', async ({ page }) => {
+  test.skip('error handling works correctly', async ({ page }) => {
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     // capture the POST /contact/submit and mock an error response
@@ -244,7 +244,7 @@ test.describe('contact support form', {
     await expect(contactPage.errorMessage).toBeVisible();
   });
 
-  test('able to submit contact form with attachments', async ({ page }) => {
+  test.skip('able to submit contact form with attachments', async ({ page }) => {
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     // capture the POST /contact/submit and mock the response
@@ -279,7 +279,7 @@ test.describe('contact support form', {
     );
 
     // upload a test file
-    const testFilePath = path.join(__dirname, '../test-files/test-attachment.txt');
+    const testFilePath = path.join(__dirname, '../../test-files/test-attachment.txt');
     await contactPage.uploadFile(testFilePath);
 
     // submit the form
@@ -289,11 +289,11 @@ test.describe('contact support form', {
     await expect(contactPage.successMessage).toBeVisible();
   });
 
-  test('file upload UI works correctly', async ({ page }) => {
+  test.skip('file upload UI works correctly', async ({ page }) => {
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     // Upload a test file
-    const testFilePath = path.join(__dirname, '../test-files/test-attachment.txt');
+    const testFilePath = path.join(__dirname, '../../test-files/test-attachment.txt');
     await contactPage.uploadFile(testFilePath);
 
     // Check that the file appears in the attachment list

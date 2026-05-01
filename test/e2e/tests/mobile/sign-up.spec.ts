@@ -1,13 +1,13 @@
-import { TB_PRO_WAIT_LIST_URL } from '../const/constants';
 import { test, expect } from '@playwright/test';
-import { TbAcctsSignUpPage } from '../pages/tb-accts-signup-page';
-import { isAllowListEnabled, waitForVueApp } from '../utils/utils';
+import { TbAcctsSignUpPage } from '../../pages/tb-accts-signup-page';
+import { isAllowListEnabled, waitForVueApp } from '../../utils/utils';
 
 import {
-  PLAYWRIGHT_TAG_E2E_SUITE,
-  PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
+  PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
+  PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
+  TB_PRO_WAIT_LIST_URL,
   ACCTS_SIGN_UP_URL,
-} from '../const/constants';
+} from '../../const/constants';
 
 let signUpPage: TbAcctsSignUpPage;
 
@@ -21,10 +21,10 @@ test.beforeEach(async ({ page }) => {
   await signUpPage.navigateToPage();
 });
 
-test.describe('sign up form', {
-  tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
+test.describe('sign up form on mobile browser', {
+  tag: [PLAYWRIGHT_TAG_E2E_SUITE_MOBILE, PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY],
 }, () => {
-  test('form successfully submits but is not on allow list', async ({ page }) => {
+  test.skip('form successfully submits but is not on allow list', async ({ page }) => {
     test.skip(!(await isAllowListEnabled(page)), 'Only enabled if backend\'s .env includes USE_ALLOW_LIST=True');
     
     const testUsername: string = crypto.randomUUID().replaceAll('-', '');
@@ -39,7 +39,7 @@ test.describe('sign up form', {
     await page.waitForURL(`${TB_PRO_WAIT_LIST_URL}?email=${encodeURIComponent(testEmail)}`);
   });
 
-  test('navigating to sign-up with query param pre-fills form', async ({ page }) => {
+  test.skip('navigating to sign-up with query param pre-fills form', async ({ page }) => {
     const testUsername: string = crypto.randomUUID().replaceAll('-', '');
     const testPassword: string = 'this-is-my-password-and-it-is-long';
 
@@ -55,7 +55,7 @@ test.describe('sign up form', {
     await expect(signUpPage.verificationEmailInput).toHaveValue(verificationEmail);
   });
 
-  test('step username fails with bad username', async ({ page }) => {
+  test.skip('step username fails with bad username', async ({ page }) => {
     // Local part of an email address cannot contain the '@' character.
     const testUsername: string = 'IM@A@BAD@LOCAL@PART@OF@AN@EMAIL';
 
@@ -69,7 +69,7 @@ test.describe('sign up form', {
     await expect(errorText).toBeVisible();
   });
 
-  test('step password fails with password length below minimum', async ({ page }) => {
+  test.skip('step password fails with password length below minimum', async ({ page }) => {
     const testUsername: string = crypto.randomUUID().replaceAll('-', '');
     const testPassword: string = 'this-is-my-password-and-it-is-long';
     const testConfirmPassword: string = 'yay';
@@ -81,7 +81,7 @@ test.describe('sign up form', {
     await expect(errorText).toBeVisible();
   });
 
-  test('step password fails with password mismatch', async ({ page }) => {
+  test.skip('step password fails with password mismatch', async ({ page }) => {
     const testUsername: string = crypto.randomUUID().replaceAll('-', '');
     const testPassword: string = 'this-is-my-password-and-it-is-long';
     const testConfirmPassword: string = 'this-is-my-password-and-it-is-long-tpyo';

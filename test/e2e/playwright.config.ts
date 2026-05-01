@@ -90,6 +90,16 @@ export default defineConfig({
       },
       dependencies: ['desktop-setup'],
     },
+  
+      /* Test against mobile viewports. */
+    {
+      name: 'Google-Pixel-7-View',
+      use: {
+        ...devices['Pixel 7'],
+        screenshot: 'only-on-failure',
+       },
+    },
+    // no dependency as mobile browsers don't support loading auth state so must sign-in for each test
   ],
 
   /* Run your local dev server before starting the tests */
