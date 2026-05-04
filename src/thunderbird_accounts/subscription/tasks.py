@@ -10,6 +10,7 @@ import hashlib
 from requests.exceptions import JSONDecodeError
 from celery import shared_task
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.signing import Signer, BadSignature
 
 from thunderbird_accounts.authentication.models import User
@@ -372,7 +373,7 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
         user.save()
 
     # Queue up the price update for now.
-    retrieve_and_update_localized_subscription_price.delay(subscription_uuid=paddle_id)
+    retrieve_and_update_localized_subscription_price.delay(subscription_uuid=str(subscription.uuid))
 
     return {
         'paddle_id': paddle_id,
@@ -624,7 +625,7 @@ def retrieve_and_update_localized_subscription_price(self, subscription_uuid, pa
 
     try:
         subscription: Subscription = Subscription.objects.get(pk=subscription_uuid)
-    except (Subscription.DoesNotExist, Subscription.MultipleObjectsReturned):
+    except (Subscription.DoesNotExist, Subscription.MultipleObjectsReturned, ValidationError):
         return {
             'subscription_uuid': subscription_uuid,
             'task_status': TaskReturnStatus.FAILED,
