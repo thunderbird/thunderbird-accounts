@@ -1000,7 +1000,9 @@ class AddSubscriberToMailchimpList(TestCase):
     def setUp(self):
         super().setUp()
 
-        self.test_user = User.objects.create_user('test@example.com', 'test@example.org', '1234')
+        self.test_user = User.objects.create_user(
+            'test@example.com', 'test@example.org', '1234', recovery_email='test@example.org'
+        )
         models.Subscription.objects.create(
             paddle_id='pad123',
             status=models.Subscription.StatusValues.ACTIVE.value,
@@ -1046,7 +1048,7 @@ class AddSubscriberToMailchimpList(TestCase):
         self.assertEqual(request_mock.call_count, 4)
 
         # Reverse order because of .pop()
-        email_addresses = [self.test_user.email, self.test_user.stalwart_primary_email]
+        email_addresses = [self.test_user.recovery_email, self.test_user.stalwart_primary_email]
         for i in range(0, 4, 2):
             get_req = request_mock.call_args_list[i]
             update_tag_req = request_mock.call_args_list[i + 1]
@@ -1096,7 +1098,7 @@ class AddSubscriberToMailchimpList(TestCase):
         self.assertEqual(request_mock.call_count, 4)
 
         # Reverse order because of .pop()
-        email_addresses = [self.test_user.email, self.test_user.stalwart_primary_email]
+        email_addresses = [self.test_user.recovery_email, self.test_user.stalwart_primary_email]
         tags = ['welcome', 'new_user']
         for i in range(0, 4, 2):
             get_req = request_mock.call_args_list[i]
