@@ -617,8 +617,8 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
         'task_status': TaskReturnStatus.SUCCESS,
     }
 
-@inject_paddle
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@inject_paddle
 def retrieve_and_update_localized_subscription_price(self, subscription_uuid, paddle: Client):
     """Since Stalwart only checks the db we have to manually propagate a plan change across the user's accounts."""
 
