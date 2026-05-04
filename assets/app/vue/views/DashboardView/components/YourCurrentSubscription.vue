@@ -164,7 +164,8 @@ h3 {
     .subscription-price-amount {
       position: relative;
       font-size: 2rem;
-      margin-inline-end: 0.375rem;    }
+      margin-inline-end: 0.375rem;
+    }
 
     .subscription-price-period {
       font-family: Inter;
