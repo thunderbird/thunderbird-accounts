@@ -1,5 +1,6 @@
 import type { ComposerNumberFormatting, ComposerTranslation, ComposerDateTimeFormatting } from 'vue-i18n';
 import type { SubscriptionData } from './types';
+import { i18n } from '@/composables/i18n';
 
 /**
  * Converts bytes to the most appropriate unit (KB, MB, or GB) with the unit label
@@ -59,10 +60,9 @@ export const formatSubscriptionData = (
     priceInDollars = priceInDollars / 12;
   }
 
-  // Format price without unnecessary decimals (9 instead of 9.00)
-  const formattedPrice = priceInDollars % 1 === 0 
-    ? priceInDollars.toFixed(0) 
-    : priceInDollars.toFixed(2);
+  // n is not doing a good job in letting us specify the actual currency...so use javascript
+  const intlN = new Intl.NumberFormat(i18n.locale.value, { style: "currency", currency: subscriptionData.currency, maximumFractionDigits: 0 });
+  const formattedPrice = intlN.format(priceInDollars);
 
   // Format autoRenewal date if it exists
   const formattedAutoRenewal = subscriptionData.autoRenewal 
@@ -72,7 +72,7 @@ export const formatSubscriptionData = (
   return {
     ...subscriptionData,
     price: formattedPrice,
-    period: t('views.dashboard.yourCurrentSubscription.monthly'),
+    period: 'views.dashboard.yourCurrentSubscription.monthly',
     autoRenewal: formattedAutoRenewal,
     features: {
       ...subscriptionData.features,

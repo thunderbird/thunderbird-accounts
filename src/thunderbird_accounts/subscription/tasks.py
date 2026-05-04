@@ -1,24 +1,30 @@
 import time
 import json
-from paddle_billing.Resources.Notifications.Operations.ListNotifications import ListNotifications
-from thunderbird_accounts.subscription.decorators import init_paddle
-from paddle_billing.Client import Client
-from thunderbird_accounts.celery.exceptions import TaskFailed
-import sentry_sdk
-from requests.exceptions import JSONDecodeError
 import base64
-from django.conf import settings
+import sentry_sdk
 import datetime
 import logging
 import requests
 import hashlib
 
+from requests.exceptions import JSONDecodeError
 from celery import shared_task
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.signing import Signer, BadSignature
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product, Plan
 from thunderbird_accounts.subscription.utils import activate_subscription_features
+from thunderbird_accounts.subscription.decorators import inject_paddle, init_paddle
+from thunderbird_accounts.core.types import TaskReturnStatus
+from thunderbird_accounts.celery.exceptions import TaskFailed
+
+try:
+    from paddle_billing import Client
+    from paddle_billing.Resources.Notifications.Operations.ListNotifications import ListNotifications
+except ImportError:
+    Client = None
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -177,7 +183,7 @@ def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datet
     return {
         'paddle_id': paddle_id,
         'occurred_at': occurred_at,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
         'model_uuid': transaction.uuid,
         'model_created': transaction_created,
     }
@@ -366,10 +372,13 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
         user.is_awaiting_payment_verification = False
         user.save()
 
+    # Queue up the price update for now.
+    retrieve_and_update_localized_subscription_price.delay(subscription_uuid=str(subscription.uuid))
+
     return {
         'paddle_id': paddle_id,
         'occurred_at': occurred_at,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
         'model_uuid': subscription.uuid,
         'model_created': subscription_created,
     }
@@ -434,7 +443,7 @@ def paddle_product_event(self, event_data: dict, occurred_at: datetime.datetime,
     return {
         'paddle_id': paddle_id,
         'occurred_at': occurred_at,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
         'model_uuid': product.uuid,
         'model_created': product_created,
     }
@@ -476,7 +485,7 @@ def update_thundermail_quota(self, plan_uuid):
 
     return {
         'plan_uuid': plan_uuid,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
         'updated': updated,
         'skipped': skipped,
     }
@@ -606,5 +615,86 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
             )
     return {
         'user_uuid': user_uuid,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
+    }
+
+@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@inject_paddle
+def retrieve_and_update_localized_subscription_price(self, subscription_uuid, paddle: Client):
+    """Since Stalwart only checks the db we have to manually propagate a plan change across the user's accounts."""
+
+    try:
+        subscription: Subscription = Subscription.objects.get(pk=subscription_uuid)
+    except (Subscription.DoesNotExist, Subscription.MultipleObjectsReturned, ValidationError):
+        return {
+            'subscription_uuid': subscription_uuid,
+            'task_status': TaskReturnStatus.FAILED,
+            'reason': "Could't find subscription object",
+        }
+
+    try:
+        # Retrieve information directly from Paddle right now
+        # We can't simply use a Paddle PricePreview as this is a transaction made at a certain point in time
+        # and thus taxes can be different, etc etc...
+        paddle_subscription = paddle.subscriptions.get(subscription.paddle_id)
+
+        paddle_address = paddle.addresses.get(
+            customer_id=paddle_subscription.customer_id, address_id=paddle_subscription.address_id
+        )
+        country_code = None
+        if paddle_address:
+            country_code = paddle_address.country_code
+
+        # Retrieve the discount information if available
+        paddle_discount_amount = None
+        paddle_discount_type = None
+        if paddle_subscription.discount:
+            paddle_discount = paddle.discounts.get(paddle_subscription.discount.id)
+            paddle_discount_amount = float(paddle_discount.amount) if paddle_discount else 0.0
+            paddle_discount_type = paddle_discount.type.value
+
+        for item in paddle_subscription.items:
+            paddle_product_id = item.product.id
+
+            amount = None
+            currency = None
+
+            # Find out unit price override (if any) and use the first one that comes up.
+            unit_price_overrides = list(
+                filter(lambda upo: country_code in upo.country_codes, item.price.unit_price_overrides)
+            )
+            if len(unit_price_overrides) > 0:
+                amount = unit_price_overrides[0].unit_price.amount
+                currency = unit_price_overrides[0].unit_price.currency_code
+
+            try:
+                subscription_item = SubscriptionItem.objects.get(
+                    paddle_product_id=paddle_product_id, subscription_id=subscription_uuid
+                )
+                subscription_item.price_override_amount = amount
+                subscription_item.price_override_currency = currency
+                subscription_item.save()
+            except (SubscriptionItem.DoesNotExist, SubscriptionItem.MultipleObjectsReturned):
+                logging.error(
+                    f'Could not retrieve subscription item for product_id: [{paddle_product_id}]',
+                )
+
+        if paddle_discount_amount:
+            subscription.discount_amount = paddle_discount_amount
+        if paddle_discount_type:
+            subscription.discount_type = paddle_discount_type
+        subscription.save()
+    except Exception as ex:
+        sentry_sdk.capture_exception(ex)
+        logging.exception(ex)
+
+        return {
+            'subscription_uuid': subscription_uuid,
+            'task_status': TaskReturnStatus.FAILED,
+            'reason': 'Failed to retrieve and store discount / localized prices.',
+        }
+
+    return {
+        'subscription_uuid': subscription_uuid,
+        'task_status': TaskReturnStatus.SUCCESS,
     }
