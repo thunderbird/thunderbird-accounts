@@ -40,7 +40,10 @@ def sign_up(request: Request):
     from thunderbird_accounts.mail.utils import is_address_taken
 
     data = request.data
+
+    # This email is the recovery / verification email address at this point
     email = data.get('email')
+
     timezone = data.get('zoneinfo', 'UTC')
     locale = data.get('locale', 'en')
 
@@ -73,7 +76,17 @@ def sign_up(request: Request):
             status=400,
         )
 
-    user = User(username=username, email=email, display_name=username, language=locale, timezone=timezone)
+    # Email gets updated in the middleware's update_user function
+    # So we also save it to the recovery_email field here
+    # src/thunderbird_accounts/authentication/middleware.py#L126
+    user = User(
+        username=username,
+        email=email,
+        recovery_email=email,
+        display_name=username,
+        language=locale,
+        timezone=timezone,
+    )
 
     # Create the user on keycloak's end
     keycloak = KeycloakClient()

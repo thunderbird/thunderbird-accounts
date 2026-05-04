@@ -542,7 +542,7 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
 
     # Loop through the thundermail and recovery email and attempt to update or add a new tag to the mailchimp entry.
     # It's a bit of a bit long and most of that is error catching.
-    for val in [(user.stalwart_primary_email, 'new_user'), (user.email, 'welcome')]:
+    for val in [(user.stalwart_primary_email, 'new_user'), (user.recovery_email, 'welcome')]:
         email, tag = val
         md5_hasher = hashlib.new('md5')
         md5_hasher.update(email.lower().encode())

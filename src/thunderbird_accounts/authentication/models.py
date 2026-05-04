@@ -13,6 +13,7 @@ class User(AbstractUser, BaseModel):
     """
     :param username: The thundermail address, aligns with keycloak's usage of username.
     :param oidc_id: The ID of the connected oidc account
+    :param recovery_email: The recovery email associated with this account
     :param last_used_email: The last used email associated with this account
     :param language: The user's preferred language to view the ui/system emails in
     :param display_name: Display name from oidc profile
@@ -36,6 +37,9 @@ class User(AbstractUser, BaseModel):
     )
 
     oidc_id = models.CharField(max_length=256, null=True, help_text=_("OIDC's UID field"))
+    recovery_email = models.CharField(
+        max_length=256, null=True, help_text=_('The recovery email associated with this account')
+    )
     last_used_email = models.CharField(max_length=256, null=True, help_text=_('The email previously used to login'))
     language = models.CharField(
         max_length=16,
