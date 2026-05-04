@@ -27,6 +27,7 @@ class CustomUserAdmin(UserAdmin):
         *UserAdmin.list_display,
         'is_test_account',
         'last_used_email',
+        'recovery_email',
         'created_at',
         'updated_at',
     )
