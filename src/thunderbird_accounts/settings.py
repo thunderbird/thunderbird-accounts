@@ -124,8 +124,6 @@ PADDLE_API_KEY: str = os.getenv('PADDLE_API_KEY')
 PADDLE_VENDOR_SITE: str = (
     'https://sandbox-vendors.paddle.com' if PADDLE_ENV == 'sandbox' else 'https://vendors.paddle.com'
 )
-PADDLE_DASH_PRICE_CACHE_KEY = 'paddle_sub_price_info'  # Prefix
-PADDLE_DASH_PRICE_CACHE_MAX_AGE_IN_SECONDS = 60 * 60  # One hour
 
 # Zendesk integration
 ZENDESK_SUBDOMAIN: str = os.getenv('ZENDESK_SUBDOMAIN')
