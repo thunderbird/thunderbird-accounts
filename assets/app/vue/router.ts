@@ -4,9 +4,7 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import DashboardView from '@/views/DashboardView/index.vue';
 import ManageMfaView from '@/views/ManageMfaView/index.vue';
 import PrivacyAndDataView from '@/views/PrivacyAndDataView.vue';
-import PrivacyView from '@/views/PrivacyView.vue';
 import SubscribeView from '@/views/SubscribeView/index.vue';
-import TermsView from '@/views/TermsView.vue';
 import TosPrivacyView from '@/views/TosPrivacyView/index.vue';
 
 // Thundermail Routes
@@ -86,23 +84,6 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     path: '/mail/security-settings',
     name: 'mail-security-settings',
     component: SecuritySettingsView,
-  },
-  // Footer links (shared between Accounts and Thundermail)
-  {
-    path: '/privacy',
-    name: 'privacy',
-    component: PrivacyView,
-    meta: {
-      isPublic: true,
-    },
-  },
-  {
-    path: '/terms',
-    name: 'terms',
-    component: TermsView,
-    meta: {
-      isPublic: true,
-    },
   },
   // Sign Up / Subscribe
   {
