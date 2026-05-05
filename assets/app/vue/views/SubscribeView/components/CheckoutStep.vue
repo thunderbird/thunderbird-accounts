@@ -115,14 +115,17 @@ const areWeDoneHere = async () => {
  * @param paddleItems
  * @param signedUserId
  */
-const openCheckout = (paddleItems: any, signedUserId: string) => {
-  paddle.Checkout.open({
+const openCheckout = (paddleItems: any, signedUserId: string, discountId: string | null) => {
+  const checkoutOptions: any = {
     items: paddleItems,
+    discountId,
     customData: {
       // This will tie the transaction and subscription to our user uuid
       signed_user_id: signedUserId,
     },
-  });
+  };
+
+  paddle.Checkout.open(checkoutOptions);
 };
 
 /**
@@ -214,6 +217,7 @@ const setupPaddle = async () => {
     paddle_plan_info: paddlePlanInfo,
     paddle_token: paddleToken,
     signed_user_id: signedUserId,
+    discount_id: discountId,
   } = await response.json();
 
   if (paddlePlanInfo.length === 0) {
@@ -250,7 +254,7 @@ const setupPaddle = async () => {
     }
     // Set the component-wide paddle object
     paddle = paddleInstance;
-    openCheckout(paddleItems, signedUserId);
+    openCheckout(paddleItems, signedUserId, discountId);
   });
 };
 

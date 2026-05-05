@@ -75,6 +75,11 @@ def bulk_import_allow_list(request: HttpRequest):
     from thunderbird_accounts.authentication.models import AllowListEntry
 
     entries: str = request.POST.get('bulk-entry', '')
+    discount_id: str | None = request.POST.get('discount-id', None)
+    if discount_id:
+        discount_id = discount_id.strip()
+    if not discount_id:
+        discount_id = None
     # Normalize new lines (I'm not sure if this is actually needed but best to be safe here.)
     entries = entries.replace('\r\n', '\n').replace('\r', '\n')
     # Now split on new line
@@ -105,7 +110,7 @@ def bulk_import_allow_list(request: HttpRequest):
         except AllowListEntry.DoesNotExist:
             # okie
             try:
-                AllowListEntry(email=entry, user=None).save()
+                AllowListEntry(email=entry, user=None, discount_id=discount_id).save()
                 add_amount += 1
             except Exception as ex:
                 errors.append(f'{entry} could not be created due to: {ex}.')

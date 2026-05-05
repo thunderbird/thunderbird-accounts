@@ -18,6 +18,7 @@ from paddle_billing.Notifications.Entities.Shared.PaymentMethodType import Payme
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.request import Request
 
+from thunderbird_accounts.authentication.models import AllowListEntry
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks
@@ -44,6 +45,14 @@ def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
 @require_http_methods(['POST'])
 def get_paddle_information(request: Request):
     signer = Signer()
+    discount_id = None
+
+    allow_list_entry = AllowListEntry.objects.filter(user=request.user).first()
+    if not allow_list_entry and request.user.recovery_email:
+        allow_list_entry = AllowListEntry.objects.filter(email=request.user.recovery_email).first()
+
+    if allow_list_entry:
+        discount_id = allow_list_entry.discount_id
 
     plan_info = []
     plans = Plan.objects.filter(visible_on_subscription_page=True).exclude(product_id__isnull=True).all()
@@ -58,6 +67,7 @@ def get_paddle_information(request: Request):
             'paddle_environment': settings.PADDLE_ENV,
             'paddle_plan_info': plan_info,
             'signed_user_id': signer.sign(request.user.uuid.hex),
+            'discount_id': discount_id,
         }
     )
 

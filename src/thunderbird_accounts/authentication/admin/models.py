@@ -132,6 +132,7 @@ class AllowListEntryAdmin(admin.ModelAdmin):
     list_filter = ['created_at', 'updated_at']
     list_display = (
         'email',
+        'discount_id',
         'user',
         'created_at',
         'updated_at',

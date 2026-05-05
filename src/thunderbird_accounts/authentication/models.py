@@ -109,6 +109,12 @@ class AllowListEntry(BaseModel):
     relationship. (Unless they're created by outside means.)"""
 
     email = models.EmailField(_('email address'), unique=True)
+    discount_id = models.CharField(
+        max_length=256,
+        null=True,
+        blank=True,
+        help_text=_('Optional Paddle discount id to apply during checkout.'),
+    )
     user = models.ForeignKey(
         User,
         null=True,
