@@ -8,6 +8,8 @@
         <label for="bulk-entry">Enter email addresses below. <strong>Each new line will be a separate entry</strong>, duplicates will be
           ignored and spaces will be removed.</label>
         <textarea id="bulk-entry" name="bulk-entry" rows="20"></textarea>
+        <label for="discount-id">Optional discount id (applies to all imported entries)</label>
+        <input id="discount-id" name="discount-id" type="text" />
         <button id="submit" class="addlink" type="submit">Import</button>
         {% csrf_token %}
       </form>
