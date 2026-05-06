@@ -81,12 +81,12 @@ export default {
       </template>
     </component>
     <section v-else>
-    <sign-up-layout step-id="step-check-your-mail" :title="$t('views.mail.views.signUp.step4.title')"
-      :subtitle="$t('views.mail.views.signUp.step4.subtitle')" :hide-actions="true" :submit-disabled="false">
-      <template v-slot:notice-bars>
-        <slot name="notice-bars" />
-      </template>
-    </sign-up-layout>
+      <sign-up-layout step-id="step-check-your-mail" :title="$t('views.mail.views.signUp.step4.title')"
+        :subtitle="$t('views.mail.views.signUp.step4.subtitle')" :hide-actions="true" :submit-disabled="false">
+        <template v-slot:notice-bars>
+          <slot name="notice-bars" />
+        </template>
+      </sign-up-layout>
     </section>
   </base-template>
 </template>

@@ -294,7 +294,9 @@
             "emailSuggestions": "Try one of these:",
             "usernamePlaceholder": "yourname",
             "usernameHelp": "This will become your email. e.g. yourname{domain}",
-            "unknownError": "There was a problem with your username. Please try another one."
+            "unknownError": "There was a problem with your username. Please try another one.",
+            "usernameTooShort": "Username must be at least {minLength} characters.",
+            "usernameTooLong": "Username must be no more than {maxLength} characters."
           },
           "step2": {
             "title": "Set a password",
