@@ -87,3 +87,16 @@ class ValidateEmailTestCase(TestCase):
         with self.assertRaises(EmailNotValidError) as ctx:
             validate_email(self._email(local_part), error_message=custom_msg)
         self.assertEqual(ctx.exception.error_message, custom_msg)
+
+    # ------------------------------------------------------------------
+    # min_length override
+    # ------------------------------------------------------------------
+
+    def test_min_length_override_allows_short_local_part(self):
+        """Callers can lower the minimum below USERNAME_MIN_LENGTH."""
+        self.assertTrue(validate_email(self._email('a'), min_length=1))
+
+    def test_min_length_override_still_rejects_below_override(self):
+        """The overridden minimum is still enforced."""
+        with self.assertRaises(EmailNotValidError):
+            validate_email(self._email(''), min_length=1)
