@@ -25,7 +25,8 @@ def validate_email(email: str, error_message: str | None = None) -> bool:
     local_part = email.split('@')[0]
 
     # EmailValidator allows for up to 350 characters, but username is defined with max_length of 150.
-    if len(local_part) >= User.USERNAME_MAX_LENGTH:
+    # We also need to validate the minimum length of the username.
+    if len(local_part) > User.USERNAME_MAX_LENGTH or len(local_part) < User.USERNAME_MIN_LENGTH:
         raise EmailNotValidError(email, not_valid_err_msg)
 
     email_validator = EmailValidator(not_valid_err_msg)
