@@ -61,7 +61,13 @@ export const formatSubscriptionData = (
   }
 
   // n is not doing a good job in letting us specify the actual currency...so use javascript
-  const intlN = new Intl.NumberFormat(i18n.locale.value, { style: "currency", currency: subscriptionData.currency, maximumFractionDigits: 0 });
+  const intlN = new Intl.NumberFormat(i18n.locale.value, {
+    style: "currency",
+    currency: subscriptionData.currency,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0
+  });
+
   const formattedPrice = intlN.format(priceInDollars);
 
   // Format autoRenewal date if it exists
