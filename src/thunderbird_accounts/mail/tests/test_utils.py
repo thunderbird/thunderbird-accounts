@@ -9,8 +9,7 @@ class ValidateEmailTestCase(TestCase):
     """Tests for validate_email, focused on the local-part length check.
 
     USERNAME_MIN_LENGTH = 3  →  local parts shorter than 3 chars are rejected
-    USERNAME_MAX_LENGTH = 150 →  local parts of 150 chars or more are rejected
-                                 (note: the guard uses >=, so 150 is invalid)
+    USERNAME_MAX_LENGTH = 150 →  local parts longer than 150 chars are rejected
     """
 
     DOMAIN = 'example.com'
