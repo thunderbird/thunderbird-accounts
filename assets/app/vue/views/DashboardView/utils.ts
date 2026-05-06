@@ -60,8 +60,16 @@ export const formatSubscriptionData = (
     priceInDollars = priceInDollars / 12;
   }
 
+  const fractionDigits = Number.isInteger(priceInDollars) ? 0 : 2;
+  
   // n is not doing a good job in letting us specify the actual currency...so use javascript
-  const intlN = new Intl.NumberFormat(i18n.locale.value, { style: "currency", currency: subscriptionData.currency, maximumFractionDigits: 0 });
+  const intlN = new Intl.NumberFormat(i18n.locale.value, {
+    style: "currency",
+    currency: subscriptionData.currency,
+    maximumFractionDigits: fractionDigits,
+    minimumFractionDigits: fractionDigits
+  });
+
   const formattedPrice = intlN.format(priceInDollars);
 
   // Format autoRenewal date if it exists
