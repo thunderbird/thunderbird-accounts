@@ -47,7 +47,7 @@ export const navigateToAccountsHubAndSignIn = async (page: Page) => {
     const tbAcctsSignInPage = new TBAcctsOIDCPage(page);
     const tbAcctsHubPage = new TBAcctsHubPage(page);
     
-    await page.goto(`${ACCTS_HUB_URL}`);
+    await page.goto(`${ACCTS_HUB_URL}`, { waitUntil: 'domcontentloaded' });
     //await page.waitForTimeout(TIMEOUT_5_SECONDS);
     await waitForVueApp(page);
     

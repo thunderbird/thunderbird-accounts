@@ -348,8 +348,10 @@ jobs:
         
   e2e-tests-browserstack-stage:
     name: e2e-tests-browserstack-stage
-    needs: accounts-deploy
-    if: '!cancelled()'
+    needs:
+      - accounts-deploy
+      - keycloak-deploy
+    if: always() && needs.accounts-deploy.result == 'success' && needs.keycloak-deploy.result != 'failure' && needs.keycloak-deploy.result != 'cancelled'
     runs-on: ubuntu-latest
     environment:
       name: staging
