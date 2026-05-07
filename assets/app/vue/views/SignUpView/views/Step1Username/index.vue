@@ -9,6 +9,9 @@ import { storeToRefs } from 'pinia';
 import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
 import SignUpLayout from '../../components/SignUpLayout.vue';
 
+const USERNAME_MIN_LENGTH = 3;
+const USERNAME_MAX_LENGTH = 150;
+
 const { t } = useI18n();
 const tbProPrimaryDomain = `@${window._page.currentView?.tbProPrimaryDomain}`;
 const loading = ref(false);
@@ -21,8 +24,27 @@ const usernameOk = ref(false);
 const usernameError = ref(null);
 
 const usernameCheckDebounced = useDebounceFn(async () => {
-  const { success, error } = await isUsernameAvailable(username.value);
   loading.value = false;
+
+  const value = username.value ?? '';
+
+  if (value.length < USERNAME_MIN_LENGTH) {
+    usernameOk.value = false;
+    usernameError.value = t('views.mail.views.signUp.step1.usernameTooShort', {
+      minLength: USERNAME_MIN_LENGTH
+    });
+    return;
+  }
+
+  if (value.length > USERNAME_MAX_LENGTH) {
+    usernameOk.value = false;
+    usernameError.value = t('views.mail.views.signUp.step1.usernameTooLong', {
+      maxLength: USERNAME_MAX_LENGTH
+    });
+    return;
+  }
+
+  const { success, error } = await isUsernameAvailable(value);
 
   if (success === true) {
     usernameOk.value = true;
@@ -56,6 +78,14 @@ onMounted(() => {
   if (window._page.currentView?.attributes?.username) {
     username.value = window._page.currentView?.attributes?.username;
   }
+
+  // Validate any pre-filled username (from query param or session storage) since
+  // programmatic assignment doesn't set the input's dirty flag and therefore
+  // skips the browser's built-in minlength/maxlength constraint checks.
+  if (username.value) {
+    loading.value = true;
+    usernameCheckDebounced();
+  }
 });
 
 </script>
@@ -78,6 +108,7 @@ export default {
       data-testid="username-input" 
       name="partialUsername" 
       required
+      minlength="3"
       maxlength="150"
       autocomplete="username" 
       @input="usernameCheckDebounced"

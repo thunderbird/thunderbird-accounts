@@ -15,17 +15,23 @@ from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.mail import tasks
 
 
-def validate_email(email: str, error_message: str | None = None) -> bool:
-    """Validates the email and local part against Django's built-in email validation."""
+def validate_email(email: str, error_message: str | None = None, min_length: int | None = None) -> bool:
+    """Validates the email and local part against Django's built-in email validation.
+
+    min_length overrides User.USERNAME_MIN_LENGTH when the caller has already
+    enforced its own domain-specific minimum (e.g. the add_email_alias view).
+    """
     not_valid_err_msg = error_message or _('This email is not valid. Try another one.')
 
     if '@' not in email:
         raise EmailNotValidError(email, not_valid_err_msg)
 
     local_part = email.split('@')[0]
+    effective_min = min_length if min_length is not None else User.USERNAME_MIN_LENGTH
 
     # EmailValidator allows for up to 350 characters, but username is defined with max_length of 150.
-    if len(local_part) >= User.USERNAME_MAX_LENGTH:
+    # We also need to validate the minimum length of the username.
+    if len(local_part) > User.USERNAME_MAX_LENGTH or len(local_part) < effective_min:
         raise EmailNotValidError(email, not_valid_err_msg)
 
     email_validator = EmailValidator(not_valid_err_msg)

@@ -1,6 +1,7 @@
 from functools import cached_property
 
 from django.conf import settings
+from django.core.validators import MinLengthValidator
 from django.db import models
 
 from django.contrib.auth.models import AbstractUser
@@ -20,6 +21,7 @@ class User(AbstractUser, BaseModel):
     :param avatar_url: Avatar URL from oidc profile
     :param timezone: The user's timezone
     """
+    USERNAME_MIN_LENGTH = 3
     USERNAME_MAX_LENGTH = 150
 
     class UserLanguageType(models.TextChoices):
@@ -30,7 +32,8 @@ class User(AbstractUser, BaseModel):
         _('username'),
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        help_text=_(f'Required. {USERNAME_MAX_LENGTH} characters or fewer.'),
+        help_text=_(f'Required. {USERNAME_MIN_LENGTH}–{USERNAME_MAX_LENGTH} characters.'),
+        validators=[MinLengthValidator(USERNAME_MIN_LENGTH)],
         error_messages={
             'unique': _('A user with that username already exists.'),
         },

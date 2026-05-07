@@ -320,9 +320,16 @@ def add_email_alias(request: HttpRequest):
 
     full_email_alias = f'{email_alias}@{domain}'
 
+    if domain in settings.ALLOWED_EMAIL_DOMAINS and len(email_alias) < settings.MIN_CUSTOM_DOMAIN_ALIAS_LENGTH:
+        return JsonResponse(
+            {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
+            status=400,
+        )
+
     if not is_catch_all:
+        # min_length=1 because the domain-specific minimum has already been checked above.
         try:
-            validate_email(full_email_alias)
+            validate_email(full_email_alias, min_length=1)
         except EmailNotValidError as ex:
             return JsonResponse({'success': False, 'error': ex.error_message}, status=400)
 
@@ -337,12 +344,6 @@ def add_email_alias(request: HttpRequest):
         and domain not in settings.ALLOWED_EMAIL_DOMAINS
     ):
         return JsonResponse({'success': False, 'error': _('Domain not found.')}, status=404)
-
-    if domain in settings.ALLOWED_EMAIL_DOMAINS and len(email_alias) < settings.MIN_CUSTOM_DOMAIN_ALIAS_LENGTH:
-        return JsonResponse(
-            {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
-            status=400,
-        )
 
     # Get the user's account
     try:

@@ -280,10 +280,10 @@ class AddEmailAliasTestCase(TestCase):
 
     @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
     def test_allowed_domains_alias_too_long(self):
-        """Test that email aliases shorter than 3 characters are rejected for ALLOWED_EMAIL_DOMAINS."""
+        """Test that email aliases longer than 150 characters are rejected for ALLOWED_EMAIL_DOMAINS."""
         email_alias_url = reverse('add_email_alias')
 
-        random_string = get_random_string(User.USERNAME_MAX_LENGTH)
+        random_string = get_random_string(User.USERNAME_MAX_LENGTH + 1)
 
         response = self.client.post(
             email_alias_url,
