@@ -19,8 +19,8 @@ from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
 
 from thunderbird_accounts.authentication.api import get_user_profile, sign_up
-from thunderbird_accounts.telemetry import views as telemetry_views
 from thunderbird_accounts.legal import views as legal_views
+from thunderbird_accounts.telemetry import views as telemetry_views, api as telemetry_api
 
 # Error handler overrides
 handler500 = 'thunderbird_accounts.core.views.handle_500'
@@ -75,6 +75,7 @@ urlpatterns = [
     path('api/v1/mail/is-username-available/', mail_api.is_username_available, name='api_is_username_available'),
     # Stalwart telemetry webhook
     path('api/v1/telemetry/stalwart/webhook/', telemetry_views.stalwart_webhook, name='stalwart_webhook'),
+    path('api/v1/telemetry/event', telemetry_api.capture_frontend_event, name='api_capture_frontend_event'),
     # Health check
     path('health', infra_views.health_check),
 ]
