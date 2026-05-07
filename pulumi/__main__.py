@@ -17,6 +17,16 @@ MSG_LB_MATCHING_CONTAINER = 'In this stack, container security groups must have 
 MSG_LB_MATCHING_CLUSTER = 'In this stack, Fargate clusters must have matching load balancer security groups.'
 MSG_CONTAINER_MATCHING_CLUSTER = 'In this stack, Fargate clusters must have matching container security groups.'
 
+
+def wait_for_ecs_service_steady_state(args):
+    if args.type_ != 'aws:ecs/service:Service':
+        return None
+
+    props = dict(args.props)
+    props['wait_for_steady_state'] = True
+    return pulumi.ResourceTransformationResult(props, args.opts)
+
+
 # Set up the project and convenient config access
 project = tb_pulumi.ThunderbirdPulumiProject()
 resources = project.config.get('resources')
@@ -113,7 +123,10 @@ for service, opts in resources['tb:fargate:FargateClusterWithLogging'].items():
         container_security_groups=[container_sgs[service].resources['sg'].id],
         load_balancer_security_groups=lb_sg_ids,
         desired_count=None if autoscaler_opts is not None else desired_count,
-        opts=pulumi.ResourceOptions(depends_on=depends_on),
+        opts=pulumi.ResourceOptions(
+            depends_on=depends_on,
+            transformations=[wait_for_ecs_service_steady_state],
+        ),
         **opts,
     )
     if autoscaler_opts is not None:

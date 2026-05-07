@@ -152,7 +152,6 @@ test.describe('contact support form', {
   test('contact form displayed correctly when not signed in', async ({ page }) => {
     // clear authentication state for this test
     await page.context().clearCookies();
-    await page.reload();
     await page.waitForTimeout(TIMEOUT_5_SECONDS);
     await contactPage.navigateToContactPage();
 

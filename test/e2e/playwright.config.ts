@@ -8,6 +8,13 @@ import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+const ciFirefoxLaunchOptions = process.env.CI ? {
+  firefoxUserPrefs: {
+    'network.dns.disableIPv6': true,
+    'network.dns.native-is-localhost': true,
+  },
+} : undefined;
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -52,7 +59,8 @@ export default defineConfig({
     { name: 'desktop-setup',
       testMatch: /.*\.desktop.setup\.ts/,
       use: {
-        ...devices['Desktop Chrome'],
+        ...devices['Desktop Firefox'],
+        launchOptions: ciFirefoxLaunchOptions,
         screenshot: 'only-on-failure',
        },
     },
@@ -73,6 +81,7 @@ export default defineConfig({
       name: 'firefox',
       use: {
         ...devices['Desktop Firefox'],
+        launchOptions: ciFirefoxLaunchOptions,
         screenshot: 'only-on-failure',
         // Use prepared auth state
         storageState: 'test-results/.auth/user.json',

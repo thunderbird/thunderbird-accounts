@@ -2,14 +2,16 @@
 name: validate
 
 concurrency:
-  group: validate
+  group: validate-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
-      - '**'
-      - '!main'
+      - main
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -25,6 +27,7 @@ jobs:
       IS_CI_AUTOMATION: "yes"
     outputs:
       src-changed: ${{ steps.check.outputs.src-changed }}
+      e2e-changed: ${{ steps.check.outputs.e2e-changed }}
       iac-changed: ${{ steps.check.outputs.iac-changed }}
     steps:
       - uses: actions/checkout@v4
@@ -51,6 +54,14 @@ jobs:
               - 'src/**'
               - 'uv.lock'
               - 'vite.config.mjs'
+            e2e-changed:
+              - '.github/workflows/validate.yml'
+              - '.env.example'
+              - 'config.toml.example'
+              - 'docker-compose.yml'
+              - 'Dockerfile.keycloak'
+              - 'keycloak/**'
+              - 'test/e2e/**'
             iac-changed:
               - 'pulumi/**'
   
@@ -107,8 +118,15 @@ jobs:
           src: "pulumi"
 
   run-e2e-tests-local:
-    needs: detect-changes
-    if: false
+    needs:
+      - detect-changes
+      - validate-accounts
+    if: >-
+      always() &&
+      (needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.e2e-changed == 'true') &&
+      needs.detect-changes.result == 'success' &&
+      needs.validate-accounts.result != 'failure' &&
+      needs.validate-accounts.result != 'cancelled'
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -129,19 +147,35 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up local environment
+        shell: bash
         run: |
           cp .env.example .env
           mkdir -p mail/etc && cp config.toml.example mail/etc/config.toml
-          echo -e "\nFXA_CLIENT_ID=$FXA_CLIENT_ID" >> .env
-          echo "FXA_SECRET=$FXA_SECRET" >> .env
-          echo "SECRET_KEY=$SECRET_KEY" >> .env
-          echo "LOGIN_CODE_SECRET=$LOGIN_CODE_SECRET" >> .env
-          echo "FXA_ENCRYPT_SECRET=$FXA_ENCRYPT_SECRET" >> .env
-          echo "PADDLE_TOKEN=$PADDLE_TOKEN" >> .env
-          echo "PADDLE_API_KEY=$PADDLE_API_KEY" >> .env
+          append_env_if_set() {
+            local key="$1"
+            local value="${!key}"
 
-      - name: Start appointment stack via docker
+            if [ -n "$value" ]; then
+              printf '%s=%s\n' "$key" "$value" >> .env
+            fi
+          }
+
+          echo >> .env
+          append_env_if_set FXA_CLIENT_ID
+          append_env_if_set FXA_SECRET
+          append_env_if_set SECRET_KEY
+          append_env_if_set LOGIN_CODE_SECRET
+          append_env_if_set FXA_ENCRYPT_SECRET
+          append_env_if_set PADDLE_TOKEN
+          append_env_if_set PADDLE_API_KEY
+
+      - name: Start accounts stack via docker
         run: docker compose up -d --build -V
+
+      - name: Wait for local services
+        run: |
+          curl --retry 30 --retry-all-errors --retry-delay 2 --fail http://localhost:8087/health
+          curl --retry 30 --retry-all-errors --retry-delay 2 --fail http://localhost:9000/health/ready
 
       - uses: actions/setup-node@v4
         with:
@@ -150,10 +184,10 @@ jobs:
           cache-dependency-path: 'test/e2e/package-lock.json'
 
       - name: Install E2E test dependencies
+        working-directory: test/e2e
         run: |
-          cd ./test/e2e
-          npm install
-          npx playwright install
+          npm ci
+          npx playwright install --with-deps firefox
 
       - name: Create test plans
         run: |
@@ -163,8 +197,8 @@ jobs:
 
       - name: Run E2E tests against local stack
         id: e2e
+        working-directory: test/e2e
         run: |
-          cd ./test/e2e
           cp .env.dev.example .env
           npm run e2e-test
 
