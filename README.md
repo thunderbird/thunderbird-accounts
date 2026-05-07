@@ -248,13 +248,13 @@ Make sure that the containers are already running.
 To run all tests:
 
 ```shell
-docker compose exec backend uv run python manage.py test
+docker compose exec accounts uv run python manage.py test thunderbird_accounts
 ```
 
 To run tests for a specific module:
 
 ```shell
-docker compose exec backend uv run manage.py test thunderbird_accounts.client.tests
+docker compose exec accounts uv run python manage.py test thunderbird_accounts.mail.tests
 ```
 
 ## Running the E2E tests
