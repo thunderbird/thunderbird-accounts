@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { StandardFooter } from '@thunderbirdops/services-ui';
+import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL } from '@/defines';
 
 const { t } = useI18n();
 
@@ -71,15 +72,15 @@ const logoSrc = computed(() => {
     </template>
 
     <template #privacyPolicy>
-      <router-link to="/privacy">
+      <a :href="PRIVACY_POLICY_URL" target="_blank">
         {{ t('footer.privacyPolicy') }}
-      </router-link>
+      </a>
     </template>
 
     <template #legal>
-      <router-link to="/terms">
+      <a :href="TERMS_OF_SERVICE_URL" target="_blank">
         {{ t('footer.legal') }}
-      </router-link>
+      </a>
     </template>
   </standard-footer>
 </template>
