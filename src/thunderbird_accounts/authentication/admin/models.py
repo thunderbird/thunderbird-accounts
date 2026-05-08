@@ -52,7 +52,7 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
         (_('Profile Info'), {'fields': ('display_name', 'avatar_url', 'timezone')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'email')}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name', 'recovery_email', 'email')}),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
         (_('Timestamps'), {'fields': ('created_at', 'updated_at')}),
         (
@@ -71,6 +71,7 @@ class CustomUserAdmin(UserAdmin):
     )
     readonly_fields = UserAdmin.readonly_fields + (
         'uuid',
+        'email',
         'display_name',
         'avatar_url',
         'created_at',
@@ -93,7 +94,7 @@ class CustomUserAdmin(UserAdmin):
             _('Required Fields'),
             {
                 'classes': ('wide',),
-                'fields': ('username', 'email', 'timezone'),
+                'fields': ('username', 'recovery_email', 'timezone'),
             },
         ),
         (
