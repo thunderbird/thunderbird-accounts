@@ -34,7 +34,7 @@ class CustomUserFormBase(forms.ModelForm):
             f'This must be unique!'
         ),
     )
-    email = forms.CharField(
+    recovery_email = forms.CharField(
         label=_('Recovery Email Address'),
         required=True,
         strip=False,
@@ -66,8 +66,8 @@ class CustomUserFormBase(forms.ModelForm):
         if not self.data.get('username', '').endswith(f'@{settings.PRIMARY_EMAIL_DOMAIN}'):
             self.add_error('username', _(f'Thundermail address must end with {settings.PRIMARY_EMAIL_DOMAIN}'))
 
-        if not self.data.get('email'):
-            self.add_error('email', _('A recovery email is required.'))
+        if not self.data.get('recovery_email'):
+            self.add_error('recovery_email', _('A recovery email is required.'))
 
         if not self.data.get('timezone'):
             self.add_error('timezone', _('A timezone (e.g. America/Vancouver or UTC) is required.'))
@@ -97,7 +97,7 @@ class CustomNewUserForm(CustomUserFormBase):
             name = f'{self.cleaned_data.get("first_name", "")} {self.cleaned_data.get("last_name", "")}'.strip()
             keycloak_pkid = keycloak.import_user(
                 self.cleaned_data.get('username'),
-                self.cleaned_data.get('email'),
+                self.cleaned_data.get('recovery_email'),
                 self.cleaned_data.get('timezone'),
                 name=name,
             )
@@ -119,6 +119,12 @@ class CustomNewUserForm(CustomUserFormBase):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.oidc_id = self.cleaned_data.get('oidc_id')
+        user.recovery_email = self.cleaned_data.get('recovery_email')
+
+        # The email field will be updated via the middleware's update_user function
+        # to be the @thundermail.com address but during the User creation we want to copy
+        # the recovery_email to the email field.
+        user.email = self.cleaned_data.get('recovery_email')
 
         # Actually save the user
         if commit:
@@ -151,7 +157,7 @@ class CustomUserChangeForm(CustomUserFormBase):
             keycloak.update_user(
                 self.cleaned_data.get('oidc_id'),
                 username=username,
-                email=self.cleaned_data.get('email'),
+                email=self.cleaned_data.get('recovery_email'),
                 enabled=self.cleaned_data.get('is_active'),
                 timezone=self.cleaned_data.get('timezone'),
                 locale=self.cleaned_data.get('language'),
