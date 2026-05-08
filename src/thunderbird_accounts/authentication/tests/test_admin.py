@@ -40,7 +40,7 @@ class AdminCreateUserTestCase(TestCase):
         # Bad username
         form_data = {
             'username': 'frog',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
         }
 
@@ -55,7 +55,7 @@ class AdminCreateUserTestCase(TestCase):
         # Bad username
         form_data = {
             'username': 'support@thundermail.com',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
         }
 
@@ -70,7 +70,7 @@ class AdminCreateUserTestCase(TestCase):
         # Bad email domain
         form_data = {
             'username': 'frog@badexample.com',
-            'email': 'frog@badexample.com',
+            'recovery_email': 'frog@badexample.com',
             'timezone': 'America/Toronto',
         }
 
@@ -84,7 +84,7 @@ class AdminCreateUserTestCase(TestCase):
         self.assertTrue(len(form.errors) > 0)
         self.assertIn('Thundermail address must end with', str(form.errors))
 
-        # No email
+        # No recovery email
         form_data = {
             'username': 'frog@example.com',
             'timezone': 'America/Toronto',
@@ -93,7 +93,7 @@ class AdminCreateUserTestCase(TestCase):
         form = self._build_form(form_data)
 
         self.assertTrue(len(form.errors) > 0)
-        self.assertIn('email', form.errors)
+        self.assertIn('recovery_email', form.errors)
 
         mock_requests.assert_not_called()
 
@@ -101,7 +101,7 @@ class AdminCreateUserTestCase(TestCase):
         # Bad username
         form_data = {
             'username': 'frog',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Victoria',
         }
 
@@ -115,7 +115,7 @@ class AdminCreateUserTestCase(TestCase):
     def test_success(self, mock_requests: MagicMock):
         form_data = {
             'username': f'frog@{self.subdomain}',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
         }
 
@@ -142,7 +142,7 @@ class AdminCreateUserTestCase(TestCase):
     def test_success_with_reserved_username(self, mock_requests: MagicMock):
         form_data = {
             'username': f'admin@{self.subdomain}',
-            'email': 'admin@example.com',
+            'recovery_email': 'admin@example.com',
             'timezone': 'America/Toronto',
         }
 
@@ -192,7 +192,7 @@ class AdminUpdateUserTestcase(TestCase):
     def test_failed_invalid_timezone(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': f'frog@{self.subdomain}',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Victoria',  # Bad timezone!
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -215,7 +215,7 @@ class AdminUpdateUserTestcase(TestCase):
     def test_failed_empty_username(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': '',
-            'email': self.user.email,
+            'recovery_email': self.user.email,
             'timezone': self.user.timezone,
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -238,7 +238,7 @@ class AdminUpdateUserTestcase(TestCase):
     def test_failed_empty_email(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': self.user.username,
-            'email': '',
+            'recovery_email': '',
             'timezone': self.user.timezone,
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -254,7 +254,7 @@ class AdminUpdateUserTestcase(TestCase):
             form.save(True)
 
         self.assertTrue(len(form.errors) > 0)
-        self.assertIn('email', form.errors)
+        self.assertIn('recovery_email', form.errors)
 
         self.assertEqual(mock_update_principal.call_count, 0)
 
@@ -270,7 +270,7 @@ class AdminUpdateUserTestcase(TestCase):
 
         form_data = {
             'username': f'frog@{self.subdomain}',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -309,7 +309,7 @@ class AdminUpdateUserTestcase(TestCase):
     def test_success_without_stalwart_account(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': f'frog@{self.subdomain}',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -354,7 +354,7 @@ class AdminUpdateUserTestcase(TestCase):
 
         form_data = {
             'username': f'internaltest@{self.subdomain}',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
