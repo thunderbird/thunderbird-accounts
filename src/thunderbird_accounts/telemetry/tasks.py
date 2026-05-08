@@ -137,6 +137,35 @@ def process_stalwart_events(self, events):
     return {'task_status': 'success', 'events_submitted': submitted, 'events_skipped': skipped}
 
 
+def _resolve_keycloak_subscription_statuses(user_ids):
+    """Map Keycloak user IDs to their current Paddle subscription status.
+
+    Prefer an active subscription if one exists; otherwise use the most recently
+    updated known subscription. Users with no local subscription row are marked
+    as ``none`` so incomplete sign-ups can be split from complete activity.
+    """
+    from thunderbird_accounts.subscription.models import Subscription
+
+    if not user_ids:
+        return {}
+
+    statuses = {user_id: settings.POSTHOG_NO_SUBSCRIPTION_STATUS for user_id in user_ids}
+    subscriptions = (
+        Subscription.objects.select_related('user')
+        .filter(user__oidc_id__in=user_ids)
+        .order_by('user__oidc_id', '-webhook_updated_at', '-created_at')
+    )
+    for subscription in subscriptions:
+        oidc_id = subscription.user.oidc_id
+        status = subscription.status or settings.POSTHOG_NO_SUBSCRIPTION_STATUS
+        if statuses[oidc_id] == Subscription.StatusValues.ACTIVE:
+            continue
+        if statuses[oidc_id] == settings.POSTHOG_NO_SUBSCRIPTION_STATUS or status == Subscription.StatusValues.ACTIVE:
+            statuses[oidc_id] = status
+
+    return statuses
+
+
 def _fetch_keycloak_events(client, date_from):
     """Fetch all events from Keycloak, paginating in configured page-size chunks.
 
@@ -197,6 +226,11 @@ def poll_keycloak_events(self):
         logger.info('No Keycloak events found in polling window')
         return {'task_status': 'success', 'events_submitted': 0, 'events_skipped': 0}
 
+    # Batch-resolve subscription status once per poll so every Keycloak activity
+    # event can be split by the Paddle status already stored in Accounts.
+    unique_user_ids = {e['userId'] for e in all_events if e.get('userId')}
+    subscription_statuses = _resolve_keycloak_subscription_statuses(unique_user_ids)
+
     try:
         submitted = 0
         skipped = 0
@@ -234,6 +268,7 @@ def poll_keycloak_events(self):
                     'keycloak_event_type': kc_type,
                     'keycloak_event_id': event_id,
                     'is_error': kc_type.endswith('_ERROR'),
+                    'subscription_status': subscription_statuses.get(user_id, settings.POSTHOG_NO_SUBSCRIPTION_STATUS),
                 },
             )
             submitted += 1
