@@ -1,42 +1,40 @@
 <script setup lang="ts">
 import { ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PrimaryButton, TextInput } from '@thunderbirdops/services-ui';
-import { PhKey, PhEnvelope } from '@phosphor-icons/vue';
+import { PrimaryButton } from '@thunderbirdops/services-ui';
+import { PhKey } from '@phosphor-icons/vue';
 import GenericModal from '@/components/GenericModal.vue';
-
-enum MODAL_STEPS {
-  SELECT = 'select',
-  CODE = 'code',
-}
 
 enum METHODS {
   AUTHENTICATOR_APP = 'authenticator-app',
-  RECOVERY_EMAIL_ADDRESS = 'recovery-email-address',
 }
 
 const { t } = useI18n();
 
-const step = ref<MODAL_STEPS>(MODAL_STEPS.SELECT);
-const method = ref<METHODS>();
-const code = ref('');
+const method = ref<METHODS>(METHODS.AUTHENTICATOR_APP);
+const errorMessage = ref('');
+const isLoading = ref(false);
 const genericModal = useTemplateRef<InstanceType<typeof GenericModal>>('genericModal');
 
-const goToCodeStep = () => {
-  if (!method.value) return;
-  step.value = MODAL_STEPS.CODE;
-};
+const props = defineProps<{
+  reauthUrl?: string;
+}>();
 
-const submitOneTimeCode = () => {
-  if (!code.value) return;
-  console.log('submitOneTimeCode', code.value);
+const goToCodeStep = async () => {
+  if (!method.value) return;
+
+  if (method.value === METHODS.AUTHENTICATOR_APP) {
+    const fallback = `/oidc/mfa-reauth/?next=${encodeURIComponent(window.location.pathname)}`;
+    window.location.assign(props.reauthUrl || fallback);
+    return;
+  }
 };
 
 defineExpose({
   open: () => {
-    step.value = MODAL_STEPS.SELECT;
-    method.value = undefined;
-    code.value = '';
+    method.value = METHODS.AUTHENTICATOR_APP;
+    errorMessage.value = '';
+    isLoading.value = false;
     genericModal.value.open();
   },
 });
@@ -47,84 +45,37 @@ defineExpose({
     ref="genericModal"
     :title="t('views.manageMfa.modals.verifyYourIdentity.title')"
   >
-    <template v-if="step === MODAL_STEPS.SELECT">
-      <p>{{ t('views.manageMfa.modals.verifyYourIdentity.description') }}</p>
+    <p>{{ t('views.manageMfa.modals.verifyYourIdentity.description') }}</p>
 
-      <div class="verify-your-identity-options">
-        <input
-          class="screen-reader-only"
-          type="radio"
-          name="verify-your-identity"
-          id="authenticator-app"
-          v-model="method"
-          value="authenticator-app"
-        />
-        <label class="verify-option" for="authenticator-app">
-          <span class="icon"><ph-key size="24" /></span>
-          <span class="content">
-            <span class="title">
-              {{ t('views.manageMfa.modals.verifyYourIdentity.authenticatorApp') }}
-            </span>
-            <span class="description">
-              {{ t('views.manageMfa.modals.verifyYourIdentity.authenticatorAppDescription') }}
-            </span>
+    <div class="verify-your-identity-options">
+      <input
+        class="screen-reader-only"
+        type="radio"
+        name="verify-your-identity"
+        id="authenticator-app"
+        v-model="method"
+        value="authenticator-app"
+      />
+      <label class="verify-option" for="authenticator-app">
+        <span class="icon"><ph-key size="24" /></span>
+        <span class="content">
+          <span class="title">
+            {{ t('views.manageMfa.modals.verifyYourIdentity.authenticatorApp') }}
           </span>
-        </label>
-
-        <input
-          class="screen-reader-only"
-          type="radio"
-          name="verify-your-identity"
-          id="recovery-email-address"
-          v-model="method"
-          value="recovery-email-address"
-        />
-        <label class="verify-option" for="recovery-email-address">
-          <span class="icon"><ph-envelope size="24" /></span>
-          <span class="content">
-            <span class="title">
-              {{ t('views.manageMfa.modals.verifyYourIdentity.recoveryEmailAddress') }}
-            </span>
-            <span class="description">
-              {{
-                t(
-                  'views.manageMfa.modals.verifyYourIdentity.recoveryEmailAddressDescription',
-                  { emailAddress: 'test@example.com' }
-                )
-              }}
-            </span>
+          <span class="description">
+            {{ t('views.manageMfa.modals.verifyYourIdentity.authenticatorAppDescription') }}
           </span>
-        </label>
-      </div>
+        </span>
+      </label>
+    </div>
 
-      <div class="verify-your-identity-options-actions">
-        <primary-button :disabled="!method" @click="goToCodeStep">
-          {{ t('views.manageMfa.modals.verifyYourIdentity.verify') }}
-        </primary-button>
-      </div>
-    </template>
+    <p class="error-message" v-if="errorMessage">{{ errorMessage }}</p>
 
-    <template v-else>
-      <div class="verify-your-identity-code-step">
-        <p v-if="method === METHODS.AUTHENTICATOR_APP">
-          {{ t('views.manageMfa.modals.verifyYourIdentity.authenticatorAppCodeDescription') }}
-        </p>
-
-        <p v-else>
-          {{ t('views.manageMfa.modals.verifyYourIdentity.recoveryEmailAddressCodeDescription') }}
-        </p>
-  
-        <text-input name="one-time-code" v-model="code" :required="true">
-          {{ t('views.manageMfa.modals.verifyYourIdentity.oneTimeCode') }}
-        </text-input>
-      </div>
-
-      <div class="verify-your-identity-options-actions">
-        <primary-button :disabled="!code || code.trim().length === 0" @click="submitOneTimeCode">
-          {{ t('views.manageMfa.modals.verifyYourIdentity.verify') }}
-        </primary-button>
-      </div>
-    </template>
+    <div class="verify-your-identity-options-actions">
+      <primary-button :disabled="isLoading || !method" @click="goToCodeStep">
+        {{ t('views.manageMfa.modals.verifyYourIdentity.verify') }}
+      </primary-button>
+    </div>
   </generic-modal>
 </template>
 
@@ -132,7 +83,7 @@ defineExpose({
 p {
   font-size: 1rem;
   line-height: 1.32;
-  color: #272727; /* TODO: not a variable in the Design System */
+  color: var(--colour-ti-base);
   margin-block-end: 1rem;
 }
 
@@ -142,7 +93,7 @@ p {
   width: 100%;
   gap: 1rem;
   margin-block-end: 1rem;
-  
+
   /* Focus ring when the hidden input is focused */
   .screen-reader-only:focus-visible + .verify-option {
     outline: 2px solid var(--colour-service-primary);
@@ -198,16 +149,13 @@ p {
   }
 }
 
-.verify-your-identity-code-step {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  margin-block-end: 1rem;
-}
-
 .verify-your-identity-options-actions {
   display: flex;
   width: 100%;
   justify-content: flex-end;
+}
+
+.error-message {
+  color: var(--colour-danger-default, #d32f2f);
 }
 </style>

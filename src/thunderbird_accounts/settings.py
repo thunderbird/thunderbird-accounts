@@ -274,7 +274,11 @@ REST_FRAMEWORK = {
         'mozilla_django_oidc.contrib.drf.OIDCAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    'DEFAULT_THROTTLE_RATES': {'is_username_available': '30/minute', 'sign_up': '10/minute'},
+    'DEFAULT_THROTTLE_RATES': {
+        'is_username_available': '30/minute',
+        'sign_up': '10/minute',
+        'totp_confirm': '10/minute',
+    },
 }
 
 REDIS_URL = os.getenv('REDIS_URL')
@@ -526,6 +530,21 @@ KEYCLOAK_EVENT_MAP = {
 KEYCLOAK_SEEN_EVENTS_CACHE_KEY = 'keycloak_poll:seen_event_ids'
 KEYCLOAK_SEEN_EVENTS_CACHE_TTL = 3600
 KEYCLOAK_EVENTS_PAGE_SIZE = 500
+
+MFA_TOTP_ISSUER = 'Thunderbird Accounts'
+MFA_TOTP_SECRET_LENGTH = 20
+MFA_TOTP_DIGITS = 6
+MFA_TOTP_PERIOD = 30
+MFA_TOTP_ALGORITHM = 'HmacSHA1'
+MFA_TOTP_ALGORITHM_KEY = 'SHA1'
+MFA_TOTP_LOOK_AHEAD_WINDOW = 1
+MFA_SETUP_CACHE_TTL = 600
+MFA_RECENT_AUTH_SECONDS = 600
+MFA_KEYCLOAK_ACR_VALUE = '2'
+MFA_DEFAULT_NEXT_PATH = '/manage-mfa'
+MFA_RECOVERY_CODE_COUNT = 12
+MFA_RECOVERY_CODE_LENGTH = 12
+MFA_RECOVERY_CODE_ALGORITHM = 'SHA-512'
 
 # Shared Celery task options for any task that submits to PostHog, so all tasks
 # have the same behaviour and error handling.

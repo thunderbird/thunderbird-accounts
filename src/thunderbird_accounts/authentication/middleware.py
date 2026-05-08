@@ -20,6 +20,10 @@ from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 from sentry_sdk import capture_exception
 
 from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
+from thunderbird_accounts.authentication.mfa import (
+    MFA_MANAGEMENT_AUTH_SESSION_KEY,
+    MFA_REAUTH_PENDING_SESSION_KEY,
+)
 
 from .models import User
 from .utils import is_email_in_allow_list
@@ -199,6 +203,11 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         if payload:
             # New for #498
             store_tokens(self.request, access_token, id_token, refresh_token)
+            if self.request.session.pop(MFA_REAUTH_PENDING_SESSION_KEY, False):
+                # Only grant MFA management auth if Keycloak actually satisfied
+                # the requested ACR (i.e. the user completed the OTP step-up).
+                if str(payload.get('acr', '')) == settings.MFA_KEYCLOAK_ACR_VALUE:
+                    self.request.session[MFA_MANAGEMENT_AUTH_SESSION_KEY] = int(time())
 
             try:
                 return self.get_or_create_user(access_token, id_token, payload)

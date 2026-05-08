@@ -7,6 +7,7 @@ from thunderbird_accounts.authentication.admin.actions import (
     admin_sync_plan_to_keycloak,
     admin_manual_activate_subscription_features,
     admin_add_to_mailchimp_list,
+    admin_reset_totp_credentials,
 )
 from thunderbird_accounts.authentication.admin.forms import CustomUserChangeForm, CustomNewUserForm
 from thunderbird_accounts.authentication.models import User
@@ -81,6 +82,7 @@ class CustomUserAdmin(UserAdmin):
         admin_sync_plan_to_keycloak,
         admin_manual_activate_subscription_features,
         admin_add_to_mailchimp_list,
+        admin_reset_totp_credentials,
     ]
     list_filter = ['is_staff', 'is_superuser', 'is_test_account', 'is_active', 'plan']
 

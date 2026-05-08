@@ -14,7 +14,9 @@ from django.utils.translation import ngettext
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 from django.views.generic import TemplateView
+from mozilla_django_oidc.views import OIDCAuthenticationRequestView
 
+from thunderbird_accounts.authentication.mfa import MFA_REAUTH_PENDING_SESSION_KEY
 from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction
 from thunderbird_accounts.core.utils import get_absolute_url
 
@@ -24,6 +26,18 @@ def start_reset_password_flow(request: HttpRequest):
     """Generates a url and redirects the user to an app initiated action that will start a flow to
     update their password."""
     return HttpResponseRedirect(create_aia_url(KeycloakRequiredAction.UPDATE_PASSWORD))
+
+
+@method_decorator(login_required, name='dispatch')
+class MfaReauthenticationRequestView(OIDCAuthenticationRequestView):
+    def get(self, request):
+        request.session[MFA_REAUTH_PENDING_SESSION_KEY] = True
+        return super().get(request)
+
+    def get_extra_params(self, request):
+        params = super().get_extra_params(request).copy()
+        params.update({'acr_values': settings.MFA_KEYCLOAK_ACR_VALUE})
+        return params
 
 
 def start_oidc_logout(request: HttpRequest):

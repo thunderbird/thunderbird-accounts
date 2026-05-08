@@ -20,6 +20,11 @@ from thunderbird_accounts.authentication.exceptions import (
     UpdateUserPlanInfoError,
     GetUserError,
 )
+from thunderbird_accounts.authentication.mfa import (
+    KEYCLOAK_OTP_CREDENTIAL_TYPE,
+    KEYCLOAK_RECOVERY_CODES_CREDENTIAL_TYPE,
+    hash_recovery_code,
+)
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.utils import KeycloakRequiredAction
 from thunderbird_accounts.mail.utils import is_allowed_domain
@@ -63,6 +68,7 @@ class KeycloakClient:
         json_data: Optional[dict] = None,
         data: Optional[dict | list | str] = None,
         params: Optional[dict] = None,
+        content_type: str = 'application/json',
     ) -> requests.Response:
         """Handles authenticated requests to the keycloak api
         Endpoint should not have a leading slash to prevent urljoin from trimming the base_url.
@@ -84,7 +90,7 @@ class KeycloakClient:
             data=data,
             headers={
                 'Accept': 'application/json',
-                'Content-Type': 'application/json',
+                'Content-Type': content_type,
                 'Authorization': f'Bearer {self.access_token}',
             },
         )
@@ -96,6 +102,123 @@ class KeycloakClient:
         endpoint = f'users/{oidc_id}/credentials'
         response = self.request(endpoint, RequestMethods.GET)
         return response.json()
+
+    def get_totp_credentials(self, oidc_id: str) -> list[dict]:
+        return [
+            credential
+            for credential in self.get_security_credentials(oidc_id)
+            if credential.get('type') == KEYCLOAK_OTP_CREDENTIAL_TYPE
+        ]
+
+    def delete_credential(self, oidc_id: str, credential_id: str) -> bool:
+        self.request(f'users/{oidc_id}/credentials/{credential_id}', RequestMethods.DELETE)
+        return True
+
+    def logout_user_sessions(self, oidc_id: str) -> bool:
+        self.request(f'users/{oidc_id}/logout', RequestMethods.POST)
+        return True
+
+    def create_totp_credential(self, oidc_id: str, secret: str, user_label: str) -> list[dict]:
+        user_data = self.get_user(oidc_id=oidc_id).json()
+        user_data['credentials'] = [
+            {
+                'type': KEYCLOAK_OTP_CREDENTIAL_TYPE,
+                'userLabel': user_label,
+                'credentialData': json.dumps(
+                    {
+                        'subType': 'totp',
+                        'digits': settings.MFA_TOTP_DIGITS,
+                        'counter': 0,
+                        'period': settings.MFA_TOTP_PERIOD,
+                        'algorithm': settings.MFA_TOTP_ALGORITHM,
+                    }
+                ),
+                'secretData': json.dumps({'value': secret}),
+            }
+        ]
+
+        self.request(f'users/{oidc_id}', RequestMethods.PUT, json_data=user_data)
+        return self.get_totp_credentials(oidc_id)
+
+    def replace_totp_credential(self, oidc_id: str, secret: str, user_label: str) -> list[dict]:
+        """Replace any existing TOTP credentials with a new one.
+
+        The new credential is created before the old ones are deleted so the
+        user is never temporarily without MFA. If a subsequent delete fails the
+        failure is reported to Sentry and we continue — the new credential
+        works for login, and an admin can run the "Force reset TOTP credentials"
+        action to clean up any orphans.
+        """
+        existing_credentials = self.get_totp_credentials(oidc_id)
+        self.create_totp_credential(oidc_id=oidc_id, secret=secret, user_label=user_label)
+
+        for credential in existing_credentials:
+            try:
+                self.delete_credential(oidc_id, credential['id'])
+            except RequestException as exc:
+                sentry_sdk.capture_exception(exc)
+
+        return self.get_totp_credentials(oidc_id)
+
+    def get_recovery_codes_credentials(self, oidc_id: str) -> list[dict]:
+        return [
+            credential
+            for credential in self.get_security_credentials(oidc_id)
+            if credential.get('type') == KEYCLOAK_RECOVERY_CODES_CREDENTIAL_TYPE
+        ]
+
+    def create_recovery_codes_credential(self, oidc_id: str, raw_codes: list[str], user_label: str) -> list[dict]:
+        """Write a recovery-authn-codes credential built from `raw_codes` to Keycloak.
+
+        The credential format mirrors Keycloak's RecoveryAuthnCodesCredentialModel: each
+        raw code is hashed with the algorithm declared in `credentialData`, and Keycloak's
+        verifier reads that algorithm from the credential at sign-in time. We never store
+        plaintext codes anywhere — callers are expected to surface them once to the user.
+        """
+        user_data = self.get_user(oidc_id=oidc_id).json()
+        user_data['credentials'] = [
+            {
+                'type': KEYCLOAK_RECOVERY_CODES_CREDENTIAL_TYPE,
+                'userLabel': user_label,
+                'credentialData': json.dumps(
+                    {
+                        'hashIterations': None,
+                        'algorithm': settings.MFA_RECOVERY_CODE_ALGORITHM,
+                        'remaining': len(raw_codes),
+                        'total': len(raw_codes),
+                    }
+                ),
+                'secretData': json.dumps(
+                    {
+                        'codes': [
+                            {'number': index + 1, 'encodedHashedValue': hash_recovery_code(raw_code)}
+                            for index, raw_code in enumerate(raw_codes)
+                        ],
+                    }
+                ),
+            }
+        ]
+
+        self.request(f'users/{oidc_id}', RequestMethods.PUT, json_data=user_data)
+        return self.get_recovery_codes_credentials(oidc_id)
+
+    def replace_recovery_codes_credential(self, oidc_id: str, raw_codes: list[str], user_label: str) -> list[dict]:
+        """Replace any existing recovery-codes credential with a freshly hashed one.
+
+        Mirrors `replace_totp_credential` semantics: write the new credential first,
+        then delete the old; tolerate per-credential delete failures so a network blip
+        on cleanup doesn't make the new credential look like a failed setup.
+        """
+        existing_credentials = self.get_recovery_codes_credentials(oidc_id)
+        self.create_recovery_codes_credential(oidc_id=oidc_id, raw_codes=raw_codes, user_label=user_label)
+
+        for credential in existing_credentials:
+            try:
+                self.delete_credential(oidc_id, credential['id'])
+            except RequestException as exc:
+                sentry_sdk.capture_exception(exc)
+
+        return self.get_recovery_codes_credentials(oidc_id)
 
     def _shared_clean(self, username):
         if '@' not in username:

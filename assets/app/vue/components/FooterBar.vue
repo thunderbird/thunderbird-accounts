@@ -10,6 +10,7 @@ const { t } = useI18n();
 const isAuthenticated = ref(window._page?.isAuthenticated);
 
 const navItemsAccounts = [
+  // TODO: Expose Manage MFA here after production validation is complete.
   // {
   //   route: '/manage-mfa',
   //   i18nKey: 'manageMfa',
