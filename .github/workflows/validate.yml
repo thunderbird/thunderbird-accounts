@@ -146,6 +146,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Resolve `keycloak` host alias to localhost
+        shell: bash
+        run: |
+          # The accounts container's OIDC config redirects users through
+          # `http://keycloak:8999/...`, which is also where Keycloak issues its
+          # SSO cookies. Both Firefox (during sign-in) and Node-side fetches in
+          # the e2e tests (admin API calls) need that hostname to resolve, so
+          # add the alias the README already documents for local dev.
+          echo '127.0.0.1 keycloak' | sudo tee -a /etc/hosts
+
       - name: Set up local environment
         shell: bash
         run: |
@@ -194,6 +204,15 @@ jobs:
           docker compose exec accounts ./manage.py create_plan_for_e2e_test Low ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_LO }}
           docker compose exec accounts ./manage.py create_plan_for_e2e_test Medium ${{ secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_MD }}
           docker compose exec accounts ./manage.py create_plan_for_e2e_test High ${{secrets.E2E_ACCTS_PADDLE_PRODUCT_ID_HI }}
+
+      - name: Give the e2e test account an active subscription
+        # The Vue router redirects authenticated users without an active
+        # subscription to /subscribe, which keeps the MFA tests from reaching
+        # /manage-mfa. The management command pre-creates the Django User row
+        # (mozilla-django-oidc only creates it on first sign-in) and attaches
+        # an ACTIVE Subscription so `User.has_active_subscription` is true.
+        run: |
+          docker compose exec accounts ./manage.py create_active_subscription_for_e2e_test admin@example.org
 
       - name: Run E2E tests against local stack
         id: e2e
