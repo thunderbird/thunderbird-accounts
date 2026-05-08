@@ -1,0 +1,36 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+  <p>
+    {% blocktranslate count counter=queryset|length %}
+      You are about to delete all Keycloak TOTP credentials for the selected user.
+    {% plural %}
+      You are about to delete all Keycloak TOTP credentials for the selected users.
+    {% endblocktranslate %}
+  </p>
+  <p>
+    {% translate "Users will be able to sign in without an authenticator app until they configure MFA again." %}
+  </p>
+
+  <h2>{% translate "Selected users" %}</h2>
+  <ul>
+    {% for user in queryset %}
+      <li>{{ user.username }}</li>
+    {% endfor %}
+  </ul>
+
+  <form method="post">
+    {% csrf_token %}
+    {% for user in queryset %}
+      <input type="hidden" name="{{ action_checkbox_name }}" value="{{ user.pk }}">
+    {% endfor %}
+    <input type="hidden" name="action" value="admin_reset_totp_credentials">
+    <input type="hidden" name="apply" value="1">
+    <input type="hidden" name="select_across" value="0">
+    <div>
+      <input type="submit" value="{% translate 'Yes, reset TOTP credentials' %}">
+      <a href="{% url opts|admin_urlname:'changelist' %}">{% translate "No, take me back" %}</a>
+    </div>
+  </form>
+{% endblock %}

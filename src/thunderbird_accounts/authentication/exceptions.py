@@ -120,6 +120,19 @@ class SendExecuteActionsEmailError(KeycloakError):
         return f'SendExecuteActionsEmailError: {self.error} for {self.action}. <keycloak-id:{self.oidc_id}>'
 
 
+class MfaCredentialError(KeycloakError):
+    """Raised when the keycloak-mfa-rest provider rejects a credential operation
+    with a client error (e.g. an invalid TOTP code). Carries the machine error
+    code returned by the provider so callers can map it to a user-facing message."""
+
+    def __init__(self, error_code, *args, **kwargs):
+        super().__init__(error_code, *args, **kwargs)
+        self.error_code = error_code
+
+    def __str__(self):
+        return f'MfaCredentialError: {self.error_code}'
+
+
 class AuthenticationUnavailable(RuntimeError):
     """Used in AccountsOIDCBackend to indicate we need to show a service unavailable page."""
 

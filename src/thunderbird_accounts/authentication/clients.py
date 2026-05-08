@@ -14,11 +14,16 @@ from django.conf import settings
 from thunderbird_accounts.authentication.exceptions import (
     InvalidDomainError,
     ImportUserError,
+    MfaCredentialError,
     SendExecuteActionsEmailError,
     UpdateUserError,
     DeleteUserError,
     UpdateUserPlanInfoError,
     GetUserError,
+)
+from thunderbird_accounts.authentication.mfa import (
+    KEYCLOAK_OTP_CREDENTIAL_TYPE,
+    KEYCLOAK_RECOVERY_CODES_CREDENTIAL_TYPE,
 )
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.utils import KeycloakRequiredAction
@@ -42,6 +47,7 @@ class KeycloakClient:
     def __init__(self):
         self.client_id = settings.KEYCLOAK_ADMIN_CLIENT_ID
         self.client_secret = settings.KEYCLOAK_ADMIN_CLIENT_SECRET
+        self.access_token = None
 
     def _get_access_token(self):
         response = requests.post(
@@ -63,18 +69,27 @@ class KeycloakClient:
         json_data: Optional[dict] = None,
         data: Optional[dict | list | str] = None,
         params: Optional[dict] = None,
+        content_type: str = 'application/json',
+        base_url: Optional[str] = None,
+        access_token: Optional[str] = None,
     ) -> requests.Response:
         """Handles authenticated requests to the keycloak api
         Endpoint should not have a leading slash to prevent urljoin from trimming the base_url.
+        Pass ``base_url`` to target a different host than the admin API (e.g. the
+        realm-path keycloak-mfa-rest provider); defaults to the admin API endpoint.
+        Pass ``access_token`` to authenticate as a specific principal (e.g. the end user's
+        forwarded OIDC token for the mfa-rest provider); defaults to the admin client token.
         :raises RequestException: On non-200 responses. You can access the response object from the exception."""
-        if not self.access_token:
-            self.access_token = self._get_access_token()
+        if access_token is None:
+            if not self.access_token:
+                self.access_token = self._get_access_token()
+            access_token = self.access_token
 
         # TODO: Consider raising a value error instead of fixing
         if endpoint[0] == '/':
             endpoint = endpoint[1:]
 
-        url = urljoin(settings.KEYCLOAK_API_ENDPOINT, endpoint)
+        url = urljoin(base_url or settings.KEYCLOAK_API_ENDPOINT, endpoint)
 
         response = requests.request(
             method=method.value,
@@ -84,8 +99,8 @@ class KeycloakClient:
             data=data,
             headers={
                 'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {self.access_token}',
+                'Content-Type': content_type,
+                'Authorization': f'Bearer {access_token}',
             },
         )
 
@@ -96,6 +111,100 @@ class KeycloakClient:
         endpoint = f'users/{oidc_id}/credentials'
         response = self.request(endpoint, RequestMethods.GET)
         return response.json()
+
+    def get_totp_credentials(self, oidc_id: str) -> list[dict]:
+        return [
+            credential
+            for credential in self.get_security_credentials(oidc_id)
+            if credential.get('type') == KEYCLOAK_OTP_CREDENTIAL_TYPE
+        ]
+
+    def delete_credential(self, oidc_id: str, credential_id: str) -> bool:
+        self.request(f'users/{oidc_id}/credentials/{credential_id}', RequestMethods.DELETE)
+        return True
+
+    def logout_user_sessions(self, oidc_id: str) -> bool:
+        self.request(f'users/{oidc_id}/logout', RequestMethods.POST)
+        return True
+
+    def _mfa_request(
+        self,
+        endpoint: str,
+        user_access_token: str,
+        method: RequestMethods = RequestMethods.GET,
+        json_data: Optional[dict] = None,
+    ) -> dict:
+        """Call the self-service keycloak-mfa-rest provider with the end user's forwarded
+        OIDC access token (the provider operates on that token's subject). Raises
+        :any:`MfaCredentialError` for 4xx client errors (e.g. an invalid TOTP code) and
+        re-raises other :any:`RequestException`\\ s as upstream failures."""
+        try:
+            response = self.request(
+                endpoint,
+                method,
+                json_data=json_data,
+                base_url=settings.KEYCLOAK_MFA_API_ENDPOINT,
+                access_token=user_access_token,
+            )
+        except RequestException as exc:
+            http_response = getattr(exc, 'response', None)
+            if http_response is not None and http_response.status_code == 400:
+                try:
+                    error_code = http_response.json().get('error')
+                except (ValueError, JSONDecodeError):
+                    error_code = None
+                raise MfaCredentialError(error_code or 'invalid_request') from exc
+            raise
+        return response.json()
+
+    def start_totp_setup(self, user_access_token: str) -> dict:
+        """Ask the provider to generate a TOTP secret + otpauth URI for the calling user.
+
+        Authenticated with the user's forwarded OIDC token; the provider operates on the
+        token subject. Nothing is written to Keycloak yet — the returned secret is
+        committed via :any:`register_totp_credential` once the user proves possession.
+        """
+        return self._mfa_request('totp/setup', user_access_token, RequestMethods.GET)
+
+    def register_totp_credential(self, user_access_token: str, secret: str, code: str, user_label: str) -> dict:
+        """Verify ``code`` against ``secret`` and register the TOTP credential for the
+        calling user via the provider, replacing any existing authenticator-app credential.
+
+        :raises MfaCredentialError: If the provider rejects the code as invalid."""
+        return self._mfa_request(
+            'totp/register',
+            user_access_token,
+            RequestMethods.POST,
+            json_data={
+                'secret': secret,
+                'code': code,
+                'deviceName': user_label,
+                'overwrite': True,
+            },
+        )
+
+    def get_recovery_codes_credentials(self, oidc_id: str) -> list[dict]:
+        return [
+            credential
+            for credential in self.get_security_credentials(oidc_id)
+            if credential.get('type') == KEYCLOAK_RECOVERY_CODES_CREDENTIAL_TYPE
+        ]
+
+    def regenerate_recovery_codes(self, user_access_token: str, user_label: Optional[str] = None) -> dict:
+        """Generate a fresh set of recovery codes for the calling user via the provider,
+        replacing any existing recovery-codes credential, and return the plaintext codes once.
+
+        Authenticated with the user's forwarded OIDC token (provider operates on the token
+        subject). Keycloak generates and hashes the codes; accounts never sees a stored hash.
+        The destructive "this resets your old codes" confirmation lives in the UI.
+        """
+        json_data = {'deviceName': user_label} if user_label else None
+        return self._mfa_request(
+            'recovery-codes/regenerate',
+            user_access_token,
+            RequestMethods.POST,
+            json_data=json_data,
+        )
 
     def _shared_clean(self, username):
         if '@' not in username:

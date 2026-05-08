@@ -1,69 +1,58 @@
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue';
+import { onMounted, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhCheckCircle } from '@phosphor-icons/vue';
-import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton } from '@thunderbirdops/services-ui';
+import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 
 // Modals
 import ManageAuthenticatorAppModal from './ManageAuthenticatorAppModal.vue';
+import ManageRecoveryCodesModal from './ManageRecoveryCodesModal.vue';
 import VerifyYourIdentityModal from './VerifyYourIdentityModal.vue';
-import ManageEmailRecoveryModal from './ManageEmailRecoveryModal.vue';
+import RemoveMfaMethodModal from './RemoveMfaMethodModal.vue';
+
+import { AUTHENTICATION_METHODS, useMfaMethods } from '../useMfaMethods';
 
 const { t } = useI18n();
 
-enum AUTHENTICATION_METHODS {
-  AUTHENTICATOR_APP = 'authenticatorApp',
-  RECOVERY_PHONE_NUMBER = 'recoveryPhoneNumber',
-  RECOVERY_EMAIL_ADDRESS = 'recoveryEmailAddress'
-}
-
-interface AuthenticationMethodData {
-  set: boolean;
-  setupDate?: string;
-  lastUsedDate?: string;
-  phoneNumber?: string;
-  emailAddress?: string;
-}
-
-const authenticationMethods: Record<AUTHENTICATION_METHODS, AuthenticationMethodData> = {
-  [AUTHENTICATION_METHODS.AUTHENTICATOR_APP]: {
-    set: true,
-    setupDate: '2025-01-13 09:32',
-    lastUsedDate: '2025-06-23 17:28'
-  },
-  [AUTHENTICATION_METHODS.RECOVERY_PHONE_NUMBER]: {
-    set: false,
-  },
-  [AUTHENTICATION_METHODS.RECOVERY_EMAIL_ADDRESS]: {
-    set: true,
-    setupDate: '2025-01-13 09:32',
-    lastUsedDate: '2025-06-23 17:28',
-    emailAddress: 'te***@domain.example'
-  }
-}
-
-const verifyYourIdentityModal = useTemplateRef<InstanceType<typeof VerifyYourIdentityModal>>('verifyYourIdentityModal');
 const manageAuthenticatorAppModal = useTemplateRef<InstanceType<typeof ManageAuthenticatorAppModal>>('manageAuthenticatorAppModal');
-const manageEmailRecoveryModal = useTemplateRef<InstanceType<typeof ManageEmailRecoveryModal>>('manageEmailRecoveryModal');
+const manageRecoveryCodesModal = useTemplateRef<InstanceType<typeof ManageRecoveryCodesModal>>('manageRecoveryCodesModal');
+const verifyYourIdentityModal = useTemplateRef<InstanceType<typeof VerifyYourIdentityModal>>('verifyYourIdentityModal');
+const removeMfaMethodModal = useTemplateRef<InstanceType<typeof RemoveMfaMethodModal>>('removeMfaMethodModal');
 
-const authenticationMethodEntries = computed(() => Object.entries(authenticationMethods));
+const {
+  authenticationMethodEntries,
+  isLoading,
+  errorMessage,
+  reauthenticationUrl,
+  isRemoving,
+  removeModalTitle,
+  removeModalDescription,
+  loadMfaMethods,
+  setRecoveryCodesCredentials,
+  handleAuthenticatorConfigured,
+  requestMfaVerification,
+  beginRemove,
+  confirmRemove,
+  cancelRemove,
+  clearPendingRemove,
+} = useMfaMethods({
+  openVerifyModal: () => verifyYourIdentityModal.value?.open(),
+  openRecoveryCodesModal: () => manageRecoveryCodesModal.value?.open(),
+  openRemoveModal: () => removeMfaMethodModal.value?.open(),
+  closeRemoveModal: () => removeMfaMethodModal.value?.close(),
+});
 
-const handleSetUp = (_method: string) => {
-  verifyYourIdentityModal.value.open();
-}
-
-const handleEdit = (method: string) => {
-  switch (method) {
-    case AUTHENTICATION_METHODS.AUTHENTICATOR_APP:
-      manageAuthenticatorAppModal.value.open();
-      break;
-    case AUTHENTICATION_METHODS.RECOVERY_EMAIL_ADDRESS:
-      manageEmailRecoveryModal.value.open();
-      break;
-    default:
-      break;
+// "Set up" and "Edit" open the same modal for a given method; editing recovery codes
+// re-enters the confirm-then-regenerate flow.
+const openMethodModal = (method: string) => {
+  if (method === AUTHENTICATION_METHODS.AUTHENTICATOR_APP) {
+    manageAuthenticatorAppModal.value.open();
+  } else if (method === AUTHENTICATION_METHODS.RECOVERY_CODES) {
+    manageRecoveryCodesModal.value.open();
   }
-}
+};
+
+onMounted(loadMfaMethods);
 </script>
 
 <template>
@@ -71,6 +60,9 @@ const handleEdit = (method: string) => {
     <header>{{ t('views.manageMfa.authenticationMethods') }}</header>
 
     <div class="authentication-methods-content">
+      <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">{{ errorMessage }}</notice-bar>
+      <p v-if="isLoading">{{ t('views.manageMfa.loading') }}</p>
+
       <template v-for="([method, methodData], index) in authenticationMethodEntries" :key="method">
         <div class="authentication-method">
           <div class="authentication-method-content">
@@ -87,28 +79,38 @@ const handleEdit = (method: string) => {
             </div>
   
             <p :class="{ 'block-margin': methodData.set }">
-              {{ t(`views.manageMfa.${method}.description.${methodData.set ? 'set' : 'notSet'}`,
-                { phoneNumber: methodData?.phoneNumber, emailAddress: methodData?.emailAddress }) }}
+              {{ t(`views.manageMfa.${method}.description.${methodData.set ? 'set' : 'notSet'}`) }}
             </p>
 
-            <template v-if="methodData.set">
+            <template v-if="methodData.set && (methodData.setupDate || methodData.lastUsedDate)">
               <p class="authentication-method-details">
-                {{ t('views.manageMfa.setupDate') }}: {{ methodData.setupDate }} | {{ t('views.manageMfa.lastUsedDate') }}: {{ methodData.lastUsedDate }}
+                <template v-if="methodData.setupDate">
+                  {{ t('views.manageMfa.setupDate') }}: {{ methodData.setupDate }}
+                </template>
+                <template v-if="methodData.lastUsedDate">
+                  | {{ t('views.manageMfa.lastUsedDate') }}: {{ methodData.lastUsedDate }}
+                </template>
+              </p>
+            </template>
+
+            <template v-if="method === AUTHENTICATION_METHODS.RECOVERY_CODES && methodData.set && typeof methodData.totalCodes === 'number'">
+              <p class="authentication-method-details">
+                {{ t('views.manageMfa.remainingCodes', { remaining: methodData.remainingCodes ?? 0, total: methodData.totalCodes }) }}
               </p>
             </template>
           </div>
 
           <div class="authentication-method-actions">
             <template v-if="methodData.set">
-              <primary-button variant="outline" size="small" @click="handleEdit(method)">
+              <primary-button :data-testid="`mfa-${method}-edit-button`" variant="outline" size="small" @click="openMethodModal(method)">
                 {{ t('views.manageMfa.actions.edit') }}
               </primary-button>
-              <link-button size="small">
+              <link-button :data-testid="`mfa-${method}-remove-button`" size="small" @click="beginRemove(method, methodData)">
                 {{ t('views.manageMfa.actions.remove') }}
               </link-button>
             </template>
             <template v-else>
-              <primary-button variant="outline" size="small" @click="handleSetUp(method)">
+              <primary-button :data-testid="`mfa-${method}-setup-button`" variant="outline" size="small" @click="openMethodModal(method)">
                 {{ t('views.manageMfa.actions.setUp') }}
               </primary-button>
             </template>
@@ -124,9 +126,29 @@ const handleEdit = (method: string) => {
   </div>
 
   <!-- Modals -->
-  <verify-your-identity-modal ref="verifyYourIdentityModal" />
-  <manage-authenticator-app-modal ref="manageAuthenticatorAppModal" />
-  <manage-email-recovery-modal ref="manageEmailRecoveryModal" />
+  <manage-authenticator-app-modal
+    ref="manageAuthenticatorAppModal"
+    @configured="handleAuthenticatorConfigured"
+    @reauth-required="requestMfaVerification"
+  />
+  <manage-recovery-codes-modal
+    ref="manageRecoveryCodesModal"
+    @configured="setRecoveryCodesCredentials"
+    @reauth-required="requestMfaVerification"
+  />
+  <verify-your-identity-modal
+    ref="verifyYourIdentityModal"
+    :reauth-url="reauthenticationUrl"
+  />
+  <remove-mfa-method-modal
+    ref="removeMfaMethodModal"
+    :title="removeModalTitle"
+    :description="removeModalDescription"
+    :is-removing="isRemoving"
+    @confirm="confirmRemove"
+    @cancel="cancelRemove"
+    @close="clearPendingRemove"
+  />
 </template>
 
 <style scoped>

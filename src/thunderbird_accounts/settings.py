@@ -286,6 +286,7 @@ REST_FRAMEWORK = {
         'check_email_is_on_allow_list': '10/minute',
         'analytics': '1000/minute',  # Just in case
         'support_customer_api': '100/day',
+        'totp_confirm': '10/minute',
     },
 }
 
@@ -398,6 +399,20 @@ if AUTH_SCHEME == 'oidc':
     KEYCLOAK_ADMIN_CLIENT_ID = os.getenv('KEYCLOAK_ADMIN_CLIENT_ID')
     KEYCLOAK_ADMIN_CLIENT_SECRET = os.getenv('KEYCLOAK_ADMIN_CLIENT_SECRET')
     KEYCLOAK_ADMIN_TOKEN_ENDPOINT = os.getenv('KEYCLOAK_ADMIN_URL_TOKEN')
+
+    # Base URL for the keycloak-mfa-rest provider, mounted on the realm path
+    # (/realms/{realm}/mfa/). Defaults to the admin API host with the admin path
+    # swapped for the realm path; override with KEYCLOAK_URL_MFA if they differ.
+    #
+    # The provider is self-service: accounts forwards the end user's OIDC access token
+    # (session 'oidc_access_token') as the bearer, and the provider operates on the token
+    # subject. The provider's authorized-clients allowlist is set (Keycloak-side) to this
+    # app's OIDC client (OIDC_RP_CLIENT_ID), since that's the user token's azp.
+    KEYCLOAK_MFA_API_ENDPOINT = os.getenv('KEYCLOAK_URL_MFA') or (
+        f'{KEYCLOAK_API_ENDPOINT.replace("/admin/realms/", "/realms/").rstrip("/")}/mfa/'
+        if KEYCLOAK_API_ENDPOINT
+        else None
+    )
 
     OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = os.getenv('OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS', 60 * 15)
 else:
@@ -565,6 +580,16 @@ KEYCLOAK_EVENT_MAP = {
 KEYCLOAK_SEEN_EVENTS_CACHE_KEY = 'keycloak_poll:seen_event_ids'
 KEYCLOAK_SEEN_EVENTS_CACHE_TTL = 3600
 KEYCLOAK_EVENTS_PAGE_SIZE = 500
+
+# TOTP secrets and recovery codes are generated, validated, and hashed entirely by
+# the keycloak-mfa-rest provider (Keycloak's own credential providers). Accounts only
+# orchestrates the flow, so the secret/digit/period/algorithm tunables live in Keycloak.
+MFA_TOTP_ISSUER = 'Thunderbird Accounts'
+# TTL for the transient pending-TOTP secret cached between setup and confirm.
+MFA_SETUP_CACHE_TTL = 600
+MFA_RECENT_AUTH_SECONDS = 600
+MFA_KEYCLOAK_ACR_VALUE = '2'
+MFA_DEFAULT_NEXT_PATH = '/manage-mfa'
 
 # Shared Celery task options for any task that submits to PostHog, so all tasks
 # have the same behaviour and error handling.

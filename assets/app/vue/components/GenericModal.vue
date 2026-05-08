@@ -27,6 +27,7 @@ defineExpose({
   open: () => {
     modal.value.showModal();
   },
+  close: handleClose,
 });
 </script>
 
