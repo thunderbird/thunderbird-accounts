@@ -235,10 +235,10 @@ class KeycloakClient:
         if update_attribute_data:
             update_data['attributes'] = update_attribute_data
 
-        # Merge the two dicts together, update data being above existing data
+        # Merge the two dicts together, update data taking precedence over existing data
         update_data = {
-            **update_data,
             **user_data,
+            **update_data,
         }
 
         try:
