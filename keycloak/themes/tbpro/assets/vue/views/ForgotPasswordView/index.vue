@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { TextInput, PrimaryButton, NoticeBar, NoticeBarTypes } from "@thunderbirdops/services-ui";
 import { ref, computed, useTemplateRef } from 'vue';
 import MessageBar from '@kc/vue/components/MessageBar.vue';
@@ -22,7 +22,7 @@ const usernameError = computed(() => {
 
 </script>
 
-<script>
+<script lang="ts">
 export default {
   name: 'ForgotPasswordView'
 };
@@ -33,11 +33,27 @@ export default {
   <message-bar v-else/>
 
   <h2>{{ $t('emailForgotTitle') }}</h2>
-  <form id="kc-reset-password-form" ref="reset-password-form" method="POST" :action="formAction"
-        @submit.prevent="onSubmit" @keyup.enter="onSubmit">
+  <form
+    v-if="formAction"
+    id="kc-reset-password-form"
+    ref="reset-password-form"
+    method="POST"
+    :action="formAction"
+    @submit.prevent="onSubmit" @keyup.enter="onSubmit"
+  >
     <div class="form-elements">
-      <text-input id="username" name="username" required autocomplete="username" autofocus v-model="usernameRef"
-                  :help="$t('emailInstruction')" :error="usernameError">{{ $t('email') }}
+      <text-input
+        data-testid="username-input"
+        id="username"
+        name="username"
+        required
+        autocomplete="username"
+        autofocus
+        v-model="usernameRef"
+        :help="$t('emailInstruction')"
+        :error="usernameError"
+      >
+        {{ $t('email') }}
       </text-input>
     </div>
     <div class="buttons">
