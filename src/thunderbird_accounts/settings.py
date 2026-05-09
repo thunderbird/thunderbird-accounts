@@ -511,6 +511,7 @@ KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS = int(os.getenv('KEYCLOAK_EVENT_POLL_INTERV
 
 POSTHOG_API_KEY = os.getenv('POSTHOG_API_KEY')
 POSTHOG_HOST = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com')
+POSTHOG_NO_SUBSCRIPTION_STATUS = 'none'
 
 KEYCLOAK_EVENT_MAP = {
     'LOGIN': 'accounts.login',
