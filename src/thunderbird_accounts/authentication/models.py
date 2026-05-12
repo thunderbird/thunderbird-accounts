@@ -137,3 +137,33 @@ class AllowListEntry(BaseModel):
         if self.user:
             return f'Allow List Entry [{self.uuid}] {self.email} - {self.user.username}'
         return f'Allow List Entry [{self.uuid}] {self.email} - <Unassociated>'
+
+class UsernameBlockListEntry(BaseModel):
+    """Username Block List Entry
+
+    This is a small model that holds full strings or partial string that 
+    will be checked against the username along-side the full reversed list.
+
+    These are unique to cut down on entries to check.
+    """
+
+    pattern = models.CharField(
+        _('pattern'),
+        unique=True,
+        help_text=_(
+            "A full or partial string using wildcard `*`."
+            '<br>'
+            '<b>Example:</b> <code>thunderbird</code> to block <code>thunderbird@example.com</code>,'
+            ' or <code>thunderbird*</code> to block usernames like <code>thunderbird-admin@example.com</code>'
+        ),
+    )
+
+    class Meta(BaseModel.Meta):
+        verbose_name_plural = 'Username block list entries'
+        indexes = [
+            *BaseModel.Meta.indexes,
+            models.Index(fields=['pattern']),
+        ]
+
+    def __str__(self):
+        return f'Blocked Username Entry [{self.uuid}] {self.pattern}'

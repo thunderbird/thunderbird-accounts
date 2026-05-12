@@ -163,3 +163,12 @@ class LogEntryAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('content_type')
+
+class UsernameBlockListEntryAdmin(admin.ModelAdmin):
+    search_fields = ('pattern',)
+    list_filter = ['created_at', 'updated_at']
+    list_display = (
+        'pattern',
+        'created_at',
+        'updated_at',
+    )

@@ -1,3 +1,4 @@
+from thunderbird_accounts.authentication.models import UsernameBlockListEntry
 
 from django.test import TestCase
 
@@ -92,4 +93,23 @@ class IsReservedUnitTests(TestCase):
     def test_partial_matches_should_pass(self):
         # Anchors ^...$ mean full-string match only
         for name in ['user123', 'myusernamex', 'rooted', 'teamwork', 'contacting']:
+            self.assertFalse(is_reserved(name))
+
+    def test_username_block_list_entries(self):
+        block_list_entries = ['skeletons', 'dog*', 'pizza']
+        for name in block_list_entries:
+            name = name.replace('*', '')
+            self.assertFalse(is_reserved(name))
+
+        for name in block_list_entries:
+            UsernameBlockListEntry.objects.create(pattern=name)
+
+        # Add some entries that will pass with the wildcard entry (dog)
+        block_list_entries += ['dog-dog', 'dog-skeleton']
+        # Add some entries that will fail the wildcard entry (dog)
+        not_reserved_entries = ['skeleton-dog', 'skeletons2']
+
+        for name in block_list_entries:
+            self.assertTrue(is_reserved(name))
+        for name in not_reserved_entries:
             self.assertFalse(is_reserved(name))
