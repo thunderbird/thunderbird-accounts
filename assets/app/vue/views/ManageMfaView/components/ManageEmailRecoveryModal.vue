@@ -70,7 +70,7 @@ defineExpose({
 p {
   font-size: 1rem;
   line-height: 1.23;
-  color: #272727; /* TODO: not a variable in the Design System */
+  color: var(--colour-ti-base);
 }
 
 .manage-email-recovery-content {

@@ -2,11 +2,13 @@ from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 from django.contrib.admin import AdminSite
-from django.http import HttpRequest
+from django.http import HttpRequest, QueryDict
 from django.test import TestCase
+from django.template.response import TemplateResponse
 
 from requests import Response
 
+from thunderbird_accounts.authentication.admin.actions import admin_reset_totp_credentials
 from thunderbird_accounts.authentication.admin import CustomUserAdmin
 from thunderbird_accounts.authentication.clients import RequestMethods
 from thunderbird_accounts.authentication.models import User
@@ -462,4 +464,87 @@ class AdminDeleteUserTestCase(TestCase):
         self.assertEqual(method, RequestMethods.DELETE)
 
         mock_delete_principal.assert_not_called()
+
+
+class AdminResetTotpCredentialsTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(
+            oidc_id=FAKE_OIDC_UUID,
+            username='test@example.com',
+            email='test@example.com',
+        )
+        self.unlinked_user = User.objects.create(
+            username='unlinked@example.com',
+            email='unlinked@example.com',
+        )
+
+    def _build_request(self, apply: bool = True):
+        request = HttpRequest()
+        request.method = 'POST'
+        request.POST = QueryDict('apply=1' if apply else '')
+        return request
+
+    def _build_modeladmin(self):
+        modeladmin = MagicMock()
+        modeladmin.model = User
+        modeladmin.admin_site.each_context.return_value = {}
+        return modeladmin
+
+    @patch('thunderbird_accounts.authentication.admin.actions.KeycloakClient')
+    def test_reset_totp_credentials_deletes_keycloak_otp_credentials(self, mock_keycloak_client: MagicMock):
+        keycloak = mock_keycloak_client.return_value
+        keycloak.get_totp_credentials.return_value = [
+            {'id': 'credential-1', 'type': 'otp'},
+            {'id': 'credential-2', 'type': 'otp'},
+        ]
+        modeladmin = self._build_modeladmin()
+        request = self._build_request()
+
+        admin_reset_totp_credentials(
+            modeladmin,
+            request,
+            User.objects.filter(pk=self.user.pk),
+        )
+
+        keycloak.get_totp_credentials.assert_called_once_with(FAKE_OIDC_UUID)
+        self.assertEqual(keycloak.delete_credential.call_count, 2)
+        keycloak.delete_credential.assert_any_call(FAKE_OIDC_UUID, 'credential-1')
+        keycloak.delete_credential.assert_any_call(FAKE_OIDC_UUID, 'credential-2')
+        modeladmin.message_user.assert_any_call(
+            request,
+            'Reset TOTP credentials for 1 user.',
+            25,
+        )
+
+    @patch('thunderbird_accounts.authentication.admin.actions.KeycloakClient')
+    def test_reset_totp_credentials_skips_users_without_keycloak_account(self, mock_keycloak_client: MagicMock):
+        modeladmin = self._build_modeladmin()
+        request = self._build_request()
+
+        admin_reset_totp_credentials(
+            modeladmin,
+            request,
+            User.objects.filter(pk=self.unlinked_user.pk),
+        )
+
+        mock_keycloak_client.return_value.get_totp_credentials.assert_not_called()
+        modeladmin.message_user.assert_called_once_with(
+            request,
+            'Skipped 1 user without a linked Keycloak account.',
+            30,
+        )
+
+    def test_reset_totp_credentials_requires_confirmation(self):
+        modeladmin = self._build_modeladmin()
+
+        response = admin_reset_totp_credentials(
+            modeladmin,
+            self._build_request(apply=False),
+            User.objects.filter(pk=self.user.pk),
+        )
+
+        self.assertIsInstance(response, TemplateResponse)
+        self.assertEqual(response.template_name, 'admin/authentication/user/reset_totp_confirmation.html')
+        response.render()
+        self.assertIn('Yes, reset TOTP credentials', response.content.decode())
 

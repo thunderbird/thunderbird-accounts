@@ -4,8 +4,12 @@ import logging
 
 from django.conf import settings
 from django.contrib import messages, admin
+from django.contrib.admin import helpers
+from django.template.response import TemplateResponse
 from django.utils.translation import gettext_lazy as _, ngettext
+from requests.exceptions import RequestException
 
+from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.exceptions import UpdateUserPlanInfoError
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail import utils as mail_utils
@@ -210,6 +214,84 @@ def admin_sync_plan_to_keycloak(modeladmin, request, queryset):
             _('Nothing to update!'),
             messages.INFO,
         )
+
+
+@admin.action(description=_('Force reset TOTP credentials in Keycloak'))
+def admin_reset_totp_credentials(modeladmin, request, queryset):
+    """Delete every Keycloak TOTP credential for the selected users.
+
+    First invocation (no `apply=1`) renders a confirmation page listing the affected
+    users; the form posts back here with `apply=1` to actually delete the credentials.
+    """
+    if request.POST.get('apply') != '1':
+        context = {
+            **modeladmin.admin_site.each_context(request),
+            'title': _('Force reset TOTP credentials'),
+            'queryset': queryset,
+            'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+            'opts': modeladmin.model._meta,
+        }
+        return TemplateResponse(request, 'admin/authentication/user/reset_totp_confirmation.html', context)
+
+    keycloak = KeycloakClient()
+    users_reset = credentials_deleted = no_totp = no_keycloak_account = errors = 0
+
+    for user in queryset:
+        if not user.oidc_id:
+            no_keycloak_account += 1
+            continue
+
+        try:
+            totp_credentials = keycloak.get_totp_credentials(user.oidc_id)
+            if not totp_credentials:
+                no_totp += 1
+                continue
+
+            for credential in totp_credentials:
+                keycloak.delete_credential(user.oidc_id, credential['id'])
+                credentials_deleted += 1
+            users_reset += 1
+        except (KeyError, RequestException) as ex:
+            logging.error(f'[admin_reset_totp_credentials] Could not reset TOTP for {user.username}: {ex}')
+            errors += 1
+
+    reports = [
+        (
+            users_reset,
+            'Reset TOTP credentials for %d user.',
+            'Reset TOTP credentials for %d users.',
+            messages.SUCCESS,
+        ),
+        (
+            credentials_deleted,
+            'Deleted %d Keycloak TOTP credential.',
+            'Deleted %d Keycloak TOTP credentials.',
+            messages.SUCCESS,
+        ),
+        (
+            no_totp,
+            'Skipped %d user without TOTP credentials.',
+            'Skipped %d users without TOTP credentials.',
+            messages.INFO,
+        ),
+        (
+            no_keycloak_account,
+            'Skipped %d user without a linked Keycloak account.',
+            'Skipped %d users without linked Keycloak accounts.',
+            messages.WARNING,
+        ),
+        (
+            errors,
+            'Failed to reset TOTP for %d user.',
+            'Failed to reset TOTP for %d users.',
+            messages.ERROR,
+        ),
+    ]
+    for count, singular, plural, level in reports:
+        if count:
+            modeladmin.message_user(request, ngettext(singular, plural, count) % count, level)
+    if not any(count for count, *_ in reports):
+        modeladmin.message_user(request, _('Nothing to reset!'), messages.INFO)
 
 
 @admin.action(description=_('Add to Mailchimp list'))

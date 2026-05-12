@@ -1675,8 +1675,15 @@
     }, {
       "authenticator" : "auth-otp-form",
       "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
+      "requirement" : "ALTERNATIVE",
       "priority" : 20,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticator" : "auth-recovery-authn-code-form",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 30,
       "autheticatorFlow" : false,
       "userSetupAllowed" : false
     } ]
@@ -1872,6 +1879,66 @@
       "userSetupAllowed" : false
     } ]
   }, {
+    "id" : "63c23d46-b7b2-4a06-a40c-868f31e9cb15",
+    "alias" : "MFA Management - First Factor",
+    "description" : "Username/password login for MFA management step-up",
+    "providerId" : "basic-flow",
+    "topLevel" : false,
+    "builtIn" : false,
+    "authenticationExecutions" : [ {
+      "authenticatorConfig" : "MFA management level 1",
+      "authenticator" : "conditional-level-of-authentication",
+      "authenticatorFlow" : false,
+      "requirement" : "REQUIRED",
+      "priority" : 10,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticator" : "auth-username-password-form",
+      "authenticatorFlow" : false,
+      "requirement" : "REQUIRED",
+      "priority" : 20,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticatorFlow" : true,
+      "requirement" : "CONDITIONAL",
+      "priority" : 30,
+      "autheticatorFlow" : true,
+      "flowAlias" : "Browser - Conditional OTP",
+      "userSetupAllowed" : false
+    } ]
+  }, {
+    "id" : "a6cd31f3-56fb-4b51-8b94-6166f6295154",
+    "alias" : "MFA Management - OTP Step-Up",
+    "description" : "Authenticator-app or recovery-code challenge for MFA management step-up",
+    "providerId" : "basic-flow",
+    "topLevel" : false,
+    "builtIn" : false,
+    "authenticationExecutions" : [ {
+      "authenticatorConfig" : "MFA management level 2",
+      "authenticator" : "conditional-level-of-authentication",
+      "authenticatorFlow" : false,
+      "requirement" : "REQUIRED",
+      "priority" : 10,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticator" : "auth-otp-form",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 20,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticator" : "auth-recovery-authn-code-form",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 30,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    } ]
+  }, {
     "id" : "a4c5304e-6f8a-4481-84a6-74ae058fa28e",
     "alias" : "browser",
     "description" : "Browser based authentication",
@@ -2032,18 +2099,18 @@
     "topLevel" : false,
     "builtIn" : true,
     "authenticationExecutions" : [ {
-      "authenticator" : "auth-username-password-form",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
+      "authenticatorFlow" : true,
+      "requirement" : "CONDITIONAL",
       "priority" : 10,
-      "autheticatorFlow" : false,
+      "autheticatorFlow" : true,
+      "flowAlias" : "MFA Management - First Factor",
       "userSetupAllowed" : false
     }, {
       "authenticatorFlow" : true,
       "requirement" : "CONDITIONAL",
       "priority" : 20,
       "autheticatorFlow" : true,
-      "flowAlias" : "Browser - Conditional OTP",
+      "flowAlias" : "MFA Management - OTP Step-Up",
       "userSetupAllowed" : false
     } ]
   }, {
@@ -2161,6 +2228,20 @@
     "alias" : "review profile config",
     "config" : {
       "update.profile.on.first.login" : "missing"
+    }
+  }, {
+    "id" : "608f2959-b4f8-4494-a626-2cb10c81ec8c",
+    "alias" : "MFA management level 1",
+    "config" : {
+      "loa-condition-level" : "1",
+      "loa-max-age" : "36000"
+    }
+  }, {
+    "id" : "2b1df37f-83ec-4ae0-b8ab-83f529f77bc0",
+    "alias" : "MFA management level 2",
+    "config" : {
+      "loa-condition-level" : "2",
+      "loa-max-age" : "0"
     }
   } ],
   "requiredActions" : [ {

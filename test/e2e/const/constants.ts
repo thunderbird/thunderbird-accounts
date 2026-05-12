@@ -7,11 +7,17 @@ export const ACCTS_CONTACT_URL = String(`${ACCTS_HUB_URL}/contact`);
 export const ACCTS_SIGN_UP_URL = String(`${ACCTS_HUB_URL}/sign-up`);
 export const ACCTS_SUBSCRIBE_URL = String(`${ACCTS_HUB_URL}/subscribe`);
 export const TB_PRO_WAIT_LIST_URL = String(process.env.TB_PRO_WAIT_LIST_URL);
+export const KEYCLOAK_REALM_URL = String(process.env.KEYCLOAK_REALM_URL ?? 'http://localhost:8999/realms/tbpro');
+export const KEYCLOAK_ADMIN_BASE_URL = String(process.env.KEYCLOAK_ADMIN_BASE_URL ?? new URL(KEYCLOAK_REALM_URL).origin);
+export const KEYCLOAK_ADMIN_CLIENT_ID = String(process.env.KEYCLOAK_ADMIN_CLIENT_ID ?? 'tb-accounts-admin');
+export const KEYCLOAK_ADMIN_CLIENT_SECRET = String(process.env.KEYCLOAK_ADMIN_CLIENT_SECRET);
 
 // sign-in credentials and corresponding info
 export const ACCTS_OIDC_EMAIL = String(process.env.ACCTS_OIDC_EMAIL);
 export const ACCTS_OIDC_PWORD = String(process.env.ACCTS_OIDC_PWORD);
 export const PRIMARY_THUNDERMAIL_EMAIL = String(process.env.PRIMARY_THUNDERMAIL_EMAIL);
+export const STALWART_OAUTH_CLIENT_ID = String(process.env.STALWART_OAUTH_CLIENT_ID ?? 'stalwart');
+export const STALWART_OAUTH_CLIENT_SECRET = String(process.env.STALWART_OAUTH_CLIENT_SECRET);
 
 // playwright test tags
 export const PLAYWRIGHT_TAG_E2E_SUITE = '@e2e-suite';

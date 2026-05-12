@@ -8,12 +8,15 @@ import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
-const ciFirefoxLaunchOptions = process.env.CI ? {
+const firefoxLaunchOptions = {
   firefoxUserPrefs: {
-    'network.dns.disableIPv6': true,
-    'network.dns.native-is-localhost': true,
+    // Disable Firefox's "insecure form submission" confirmation dialog. The
+    // local stack runs over plain HTTP, so otherwise every login form submit
+    // hangs waiting on a modal that Playwright can't reach.
+    'security.warn_submit_insecure': false,
+    'security.warn_submit_secure_to_insecure': false,
   },
-} : undefined;
+};
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -60,7 +63,7 @@ export default defineConfig({
       testMatch: /.*\.desktop.setup\.ts/,
       use: {
         ...devices['Desktop Firefox'],
-        launchOptions: ciFirefoxLaunchOptions,
+        launchOptions: firefoxLaunchOptions,
         screenshot: 'only-on-failure',
        },
     },
@@ -81,7 +84,7 @@ export default defineConfig({
       name: 'firefox',
       use: {
         ...devices['Desktop Firefox'],
-        launchOptions: ciFirefoxLaunchOptions,
+        launchOptions: firefoxLaunchOptions,
         screenshot: 'only-on-failure',
         // Use prepared auth state
         storageState: 'test-results/.auth/user.json',
