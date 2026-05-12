@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import unicodedata
+from fnmatch import fnmatch
 from functools import cache
 from pathlib import Path
 
@@ -136,8 +137,8 @@ def _affix_match(local_part: str) -> bool:
 
 
 @cache
-def is_reserved(test_string: str) -> bool:
-    """Checks the address or random string is a reserved name which should fail user or alias creation if so."""
+def _is_statically_reserved(test_string: str) -> bool:
+    """Checks the address or random string against the static reserved word lists and regexes."""
     local_part = _normalize_local_part(test_string)
 
     if local_part:
@@ -152,3 +153,24 @@ def is_reserved(test_string: str) -> bool:
 
     # thundermail brand / team combinatorial patterns (matched against raw input).
     return any(r.match(test_string) for r in regexes)
+
+
+def _is_in_username_block_list(test_string: str) -> bool:
+    """Checks the string against the admin-managed ``UsernameBlockListEntry`` patterns.
+
+    Entries are matched with :func:`fnmatch.fnmatch`, so ``*`` acts as a wildcard.
+    This is deliberately not cached: entries can be added or removed at runtime.
+    """
+    from thunderbird_accounts.authentication.models import UsernameBlockListEntry
+
+    # This most likely won't scale well in the future...
+    patterns = UsernameBlockListEntry.objects.values_list('pattern', flat=True)
+
+    # This is a filename search, but it's simpler than regex so hopefully it won't be a footgun. :)
+    # https://docs.python.org/3/library/fnmatch.html#fnmatch.fnmatch
+    return any(fnmatch(test_string, pattern) for pattern in patterns)
+
+
+def is_reserved(test_string: str) -> bool:
+    """Checks the address or random string is a reserved name which should fail user or alias creation if so."""
+    return _is_statically_reserved(test_string) or _is_in_username_block_list(test_string)

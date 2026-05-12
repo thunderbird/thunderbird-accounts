@@ -10,11 +10,13 @@ from thunderbird_accounts.authentication.admin.models import (
     AllowListEntryAdmin,
     LogEntryAdmin,
     PermissionAdmin,
+    UsernameBlockListEntryAdmin,
 )
-from thunderbird_accounts.authentication.models import User, AllowListEntry
+from thunderbird_accounts.authentication.models import User, AllowListEntry, UsernameBlockListEntry
 
 # Register the User admin here
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(AllowListEntry, AllowListEntryAdmin)
 admin.site.register(LogEntry, LogEntryAdmin)
 admin.site.register(Permission, PermissionAdmin)
+admin.site.register(UsernameBlockListEntry, UsernameBlockListEntryAdmin)
