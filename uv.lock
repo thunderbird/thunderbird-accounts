@@ -1641,7 +1641,7 @@ requires-dist = [
     { name = "celery-redbeat", specifier = ">=2.3.0" },
     { name = "coverage", marker = "extra == 'cli'" },
     { name = "cryptography", specifier = ">=46.0.3" },
-    { name = "django", specifier = ">=5.2.12" },
+    { name = "django", specifier = ">=5.2.14" },
     { name = "django-cors-headers", specifier = ">=4.9.0" },
     { name = "django-filter", specifier = ">=25.2" },
     { name = "django-stubs-ext", specifier = ">=5.2.8" },
