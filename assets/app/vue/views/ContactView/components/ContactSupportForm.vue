@@ -35,6 +35,7 @@ const errorText = ref(window._page.formError);
 const userEmailInAllowList = ref(true);
 const successText = ref('');
 const isSubmitting = ref(false);
+const tbProWaitListUrl = window._page?.tbProWaitListUrl;
 const form = ref({
   email: 'dasds@dadsa.com', // window._page?.userEmail || '',
   name: window._page?.userFullName || '',
@@ -247,7 +248,7 @@ onMounted(() => {
   <notice-bar :type="NoticeBarTypes.Warning" v-if="!userEmailInAllowList" class="notice">
     <i18n-t keypath="views.contact.emailNotOnAllowList" tag="span">
       <template #joinWaitlist>
-        <a href="https://thunderbird.com/waitlist" target="_blank">
+        <a :href="tbProWaitListUrl" target="_blank">
           {{ t('views.contact.joinWaitlist') }}
         </a>
       </template>

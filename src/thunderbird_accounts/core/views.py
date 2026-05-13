@@ -143,6 +143,7 @@ def home(request: HttpRequest):
             'max_email_aliases': max_email_aliases,
             'tb_pro_appointment_url': settings.TB_PRO_APPOINTMENT_URL,
             'tb_pro_send_url': settings.TB_PRO_SEND_URL,
+            'tb_pro_wait_list_url': settings.TB_PRO_WAIT_LIST_URL,
             'tb_pro_primary_domain': settings.PRIMARY_EMAIL_DOMAIN,
             'server_messages': [
                 {'level': message.level, 'message': str(message.message)} for message in get_messages(request)
