@@ -1,4 +1,4 @@
-from thunderbird_accounts.authentication.utils import is_email_reserved
+from thunderbird_accounts.authentication.utils import is_email_reserved, is_email_in_allow_list
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
 from thunderbird_accounts.mail.utils import validate_email
 from rest_framework.permissions import AllowAny
@@ -16,6 +16,10 @@ from thunderbird_accounts.authentication.models import User
 
 class UsernameAvailableThrottle(UserRateThrottle):
     scope = 'is_username_available'
+
+
+class CheckEmailIsOnAllowListThrottle(UserRateThrottle):
+    scope = 'check_email_is_on_allow_list'
 
 
 @api_view(['POST'])
@@ -43,3 +47,16 @@ def is_username_available(request: Request):
         raise ValidationError(_('This username is already taken. Try another one.'))
 
     return Response(status=200)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([CheckEmailIsOnAllowListThrottle])
+def check_email_is_on_allow_list(request: Request):
+    email = request.data.get('email')
+    if not email:
+        raise ValidationError(_('You need to enter an email address.'))
+
+    return Response({
+        'is_on_allow_list': is_email_in_allow_list(email),
+    }, status=200)

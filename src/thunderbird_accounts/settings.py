@@ -274,7 +274,11 @@ REST_FRAMEWORK = {
         'mozilla_django_oidc.contrib.drf.OIDCAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    'DEFAULT_THROTTLE_RATES': {'is_username_available': '30/minute', 'sign_up': '10/minute'},
+    'DEFAULT_THROTTLE_RATES': {
+        'is_username_available': '30/minute',
+        'sign_up': '10/minute',
+        'check_email_is_on_allow_list': '10/minute',
+    },
 }
 
 REDIS_URL = os.getenv('REDIS_URL')
