@@ -1,8 +1,9 @@
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
-
+from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.authentication.reserved import is_reserved, servers, support
+from thunderbird_accounts.authentication.utils import is_email_in_allow_list
 
 class IsReservedUnitTests(TestCase):
     def test_brand_names(self):
@@ -93,3 +94,48 @@ class IsReservedUnitTests(TestCase):
         # Anchors ^...$ mean full-string match only
         for name in ['user123', 'myusernamex', 'rooted', 'teamwork', 'contacting']:
             self.assertFalse(is_reserved(name))
+
+
+@override_settings(USE_ALLOW_LIST=True)
+class IsEmailInAllowListUnitTests(TestCase):
+    def test_returns_true_for_active_user_email(self):
+        User.objects.create(
+            username='active-user@example.com',
+            email='active-user@example.com',
+            recovery_email='recovery@example.com',
+            is_active=True,
+        )
+
+        self.assertTrue(is_email_in_allow_list('active-user@example.com'))
+
+    def test_returns_true_for_active_user_recovery_email(self):
+        User.objects.create(
+            username='active-recovery@example.com',
+            email='active-recovery@example.com',
+            recovery_email='active-recovery-contact@example.com',
+            is_active=True,
+        )
+
+        self.assertTrue(is_email_in_allow_list('active-recovery-contact@example.com'))
+
+    def test_returns_true_for_allow_list_entry(self):
+        AllowListEntry.objects.create(email='allow-listed@example.com')
+
+        self.assertTrue(is_email_in_allow_list('allow-listed@example.com'))
+
+    def test_returns_false_for_inactive_user_without_allow_list_entry(self):
+        User.objects.create(
+            username='inactive-user@example.com',
+            email='inactive-user@example.com',
+            recovery_email='inactive-recovery@example.com',
+            is_active=False,
+        )
+
+        self.assertFalse(is_email_in_allow_list('inactive-user@example.com'))
+
+    def test_returns_false_when_email_is_missing_from_user_and_allow_list(self):
+        self.assertFalse(is_email_in_allow_list('missing@example.com'))
+
+    @override_settings(USE_ALLOW_LIST=False)
+    def test_returns_true_when_allow_list_is_disabled(self):
+        self.assertTrue(is_email_in_allow_list('not-listed@example.com'))
