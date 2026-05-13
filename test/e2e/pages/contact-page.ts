@@ -16,6 +16,8 @@ export class ContactPage {
   readonly submitButton: Locator;
   readonly successMessage: Locator;
   readonly errorMessage: Locator;
+  readonly allowListWarning: Locator;
+  readonly joinWaitlistLink: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -32,6 +34,8 @@ export class ContactPage {
     this.submitButton = this.page.getByTestId('contact-submit-btn');
     this.successMessage = this.page.getByText('Your support request has been submitted successfully');
     this.errorMessage = this.page.getByText('Failed to submit contact form. Please try again.');
+    this.allowListWarning = this.page.getByText('No account found for this email address. Want access?');
+    this.joinWaitlistLink = this.page.getByRole('link', { name: 'Join the waitlist' });
   }
 
   async navigateToContactPage() {

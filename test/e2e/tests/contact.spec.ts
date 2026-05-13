@@ -8,6 +8,7 @@ import {
   PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
   ACCTS_OIDC_EMAIL,
   PRIMARY_THUNDERMAIL_EMAIL,
+  TB_PRO_WAIT_LIST_URL,
   TIMEOUT_2_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
@@ -208,6 +209,25 @@ test.describe('contact support form', {
     await contactPage.navigateToContactPage();
     await contactPage.submitForm();
     await expect(contactPage.successMessage).not.toBeVisible();
+  });
+
+  test('shows waitlist warning when email is not on allow list', async ({ page }) => {
+    await page.route('*/**/api/v1/contact/check-email-is-on-allow-list/', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ is_on_allow_list: false }),
+      });
+    });
+
+    await contactPage.navigateToContactPage();
+
+    // Trigger the debounced allow-list validation.
+    await contactPage.emailInput.fill('not-on-allow-list@example.com');
+
+    await expect(contactPage.allowListWarning).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await expect(contactPage.joinWaitlistLink).toHaveAttribute('href', TB_PRO_WAIT_LIST_URL);
+    await expect(contactPage.submitButton).toBeDisabled();
   });
 
   test('error handling works correctly', async ({ page }) => {

@@ -37,7 +37,7 @@ const successText = ref('');
 const isSubmitting = ref(false);
 const tbProWaitListUrl = window._page?.tbProWaitListUrl;
 const form = ref({
-  email: 'dasds@dadsa.com', // window._page?.userEmail || '',
+  email: window._page?.userEmail || '',
   name: window._page?.userFullName || '',
   attachments: [],
 });
