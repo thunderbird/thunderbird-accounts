@@ -53,6 +53,11 @@ def is_username_available(request: Request):
 @permission_classes([AllowAny])
 @throttle_classes([CheckEmailIsOnAllowListThrottle])
 def check_email_is_on_allow_list(request: Request):
+    if not settings.CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS:
+        return Response({
+            'is_on_allow_list': True,
+        }, status=200)
+
     email = request.data.get('email')
     if not email:
         raise ValidationError(_('You need to enter an email address.'))

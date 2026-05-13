@@ -589,3 +589,6 @@ VERIFY_PRIVATE_LINK_SSL = True if os.getenv('VERIFY_PRIVATE_LINK_SSL', 'true').l
 
 # For Appointment's CalDAV auto-setup
 APPOINTMENT_APP_PASSWORD_PREFIX: str = 'appointment-caldav-setup-'
+
+# For contact support form allow list-less users
+CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS = False
