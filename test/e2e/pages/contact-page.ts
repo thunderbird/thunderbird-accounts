@@ -34,7 +34,7 @@ export class ContactPage {
     this.submitButton = this.page.getByTestId('contact-submit-btn');
     this.successMessage = this.page.getByText('Your support request has been submitted successfully');
     this.errorMessage = this.page.getByText('Failed to submit contact form. Please try again.');
-    this.allowListWarning = this.page.getByText('No account found for this email address. Want access?');
+    this.allowListWarning = this.page.getByText("You don't have an account with us yet. Want to create one?");
     this.joinWaitlistLink = this.page.getByRole('link', { name: 'Join the waitlist' });
   }
 

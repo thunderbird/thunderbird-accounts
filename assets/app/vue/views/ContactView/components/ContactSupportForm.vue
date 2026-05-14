@@ -327,7 +327,7 @@ onMounted(() => {
       <primary-button
         @click.capture="handleSubmit"
         data-testid="contact-submit-btn"
-        :disabled="isSubmitting || !userEmailInAllowList"
+        :disabled="isSubmitting"
       >
         {{ isSubmitting ? t('views.contact.submitting') : t('views.contact.submit') }}
       </primary-button>

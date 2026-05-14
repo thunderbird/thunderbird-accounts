@@ -227,7 +227,7 @@ test.describe('contact support form', {
 
     await expect(contactPage.allowListWarning).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     await expect(contactPage.joinWaitlistLink).toHaveAttribute('href', TB_PRO_WAIT_LIST_URL);
-    await expect(contactPage.submitButton).toBeDisabled();
+    await expect(contactPage.submitButton).toBeEnabled();
   });
 
   test('error handling works correctly', async ({ page }) => {
