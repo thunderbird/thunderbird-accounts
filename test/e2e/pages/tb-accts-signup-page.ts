@@ -4,7 +4,7 @@ import { waitForVueApp } from '../utils/utils';
 
 export class TbAcctsSignUpPage {
   readonly page: Page;
-
+  readonly testPlatform: String;
   readonly stepId: Locator;
   readonly formTitle: Locator;
   readonly formSubtitle: Locator;
@@ -19,8 +19,9 @@ export class TbAcctsSignUpPage {
   readonly zoneInfoInput: Locator;
   readonly submitButton: Locator;
 
-  constructor(page: Page) {
+  constructor(page: Page, testPlatform: string = 'desktop') {
     this.page = page;
+    this.testPlatform = testPlatform;
     this.stepId = this.page.getByTestId('step-id');
     this.formTitle = this.page.getByTestId('title');
     this.formSubtitle = this.page.getByTestId('subtitle');
@@ -51,7 +52,11 @@ export class TbAcctsSignUpPage {
    * This relies on the locators being lazy loaded.
    */
   async fillForm(username: string, password?: string, passwordConfirm?: string, verificationEmail?: string) {
-    await expect(this.stepId).toHaveValue('step-username');
+    // locator.toHaveValue is not supported in iOS BrowserStack so must get value then verify it
+    //await expect(this.stepId).toHaveValue('step-username');
+    var stepValue = await this.stepId.inputValue();
+    expect(stepValue).toBe('step-username');
+
     await this.userNameInput?.fill(username);
     await this.submitForm();
 
@@ -59,7 +64,10 @@ export class TbAcctsSignUpPage {
       return;
     }
     
-    await expect(this.stepId).toHaveValue('step-password');
+    //await expect(this.stepId).toHaveValue('step-password');
+    stepValue = await this.stepId.inputValue();
+    expect(stepValue).toBe('step-password');
+
     await this.passwordInput?.fill(password);
     await this.passwordConfirmInput?.fill(passwordConfirm);
     await this.submitForm();
@@ -68,11 +76,19 @@ export class TbAcctsSignUpPage {
       return;
     }
 
-    await expect(this.stepId).toHaveValue('step-verify-email');
+    //await expect(this.stepId).toHaveValue('step-verify-email');
+    stepValue = await this.stepId.inputValue();
+    expect(stepValue).toBe('step-verify-email');
+
     await this.verificationEmailInput?.fill(verificationEmail);
   }
 
-  async submitForm() {
-    await this.submitButton.click();
+  async submitForm() { 
+    // when clicking on android it won't click it unless we force it; but force doesn't work on ios
+    if (this.testPlatform.includes('android')) { 
+      await this.submitButton.click({ force: true });
+    } else {
+      await this.submitButton.click();
+    }
   }
 }
