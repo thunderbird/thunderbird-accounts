@@ -223,16 +223,24 @@ class MailClient:
         return data.get('data')
 
     def create_dkim(self, domain):
-        data = {'id': None, 'algorithm': settings.STALWART_DKIM_ALGO, 'domain': domain, 'selector': None}
-        response = requests.post(
-            f'{self.api_url}/dkim',
-            json=data,
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-        data = response.json()
-        return data.get('data')
+        """Create a DKIM key in Stalwart for each algorithm in ``STALWART_DKIM_ALGOS``.
+
+        Stalwart stores one DKIM signature per (algorithm, domain) pair, so we
+        loop and POST one key per configured algorithm. Returns the response
+        ``data`` from the final create call (kept for backwards compatibility).
+        """
+        last_data = None
+        for algorithm in settings.STALWART_DKIM_ALGOS:
+            data = {'id': None, 'algorithm': algorithm, 'domain': domain, 'selector': None}
+            response = requests.post(
+                f'{self.api_url}/dkim',
+                json=data,
+                headers=self.authorized_headers,
+                verify=settings.VERIFY_PRIVATE_LINK_SSL,
+            )
+            response.raise_for_status()
+            last_data = response.json().get('data')
+        return last_data
 
     def delete_dkim(self, domain) -> Optional[requests.Response]:
         """

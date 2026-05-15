@@ -2,6 +2,7 @@ import json
 import requests
 import dns.resolver
 from unittest.mock import MagicMock, patch
+from django.conf import settings
 from django.test import SimpleTestCase, override_settings, TestCase
 from thunderbird_accounts.mail.clients import MailClient, DomainVerificationErrors
 
@@ -178,9 +179,13 @@ class TestMailClientCreateDkim(TestCase):
         response_data = self.mail_client.create_dkim(self.domain)
 
         self.assertIsNotNone(response_data)
-        requests_mock.assert_called_once()
-        call_args = requests_mock.call_args
-        self.assertEqual(self.domain, call_args[1].get('json', {}).get('domain'))
+        # One POST per configured DKIM algorithm (e.g. Ed25519 + Rsa).
+        expected_algos = list(settings.STALWART_DKIM_ALGOS)
+        self.assertEqual(requests_mock.call_count, len(expected_algos))
+        sent_algos = [call.kwargs.get('json', {}).get('algorithm') for call in requests_mock.call_args_list]
+        sent_domains = {call.kwargs.get('json', {}).get('domain') for call in requests_mock.call_args_list}
+        self.assertEqual(sent_algos, expected_algos)
+        self.assertEqual(sent_domains, {self.domain})
 
 
 class TestMailClientDeleteDkim(TestCase):

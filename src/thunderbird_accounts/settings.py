@@ -397,7 +397,10 @@ STALWART_BASE_JMAP_URL = os.getenv('STALWART_BASE_JMAP_URL')
 STALWART_BASE_API_URL = os.getenv('STALWART_BASE_API_URL')
 STALWART_API_AUTH_STRING = os.getenv('STALWART_API_AUTH_STRING')
 STALWART_API_AUTH_METHOD = os.getenv('STALWART_API_AUTH_METHOD')
-STALWART_DKIM_ALGO = 'Ed25519'
+# DKIM algorithms to generate for each custom domain. Stalwart supports one
+# DKIM key per algorithm per domain, so we create a key for each entry here so
+# that the resolver-side records (RSA + Ed25519) are both published to DNS.
+STALWART_DKIM_ALGOS = ['Ed25519', 'RSA']
 STALWART_WEBHOOK_SECRET = os.getenv('STALWART_WEBHOOK_SECRET')
 
 # Stalwart telemetry: map of incoming Stalwart event types to PostHog event names.
