@@ -473,6 +473,8 @@
       "requiredFieldsText": "Fields marked with an asterisk (*) are required.",
       "errorFetchingFields": "Failed to fetch ticket fields. Please reload the page and try again.",
       "errorSubmittingForm": "Failed to submit contact form. Please try again.",
+      "emailNotOnAllowList": "You don't have an account with us yet. Want to create one? {joinWaitlist}.",
+      "joinWaitlist": "Join the waitlist",
       "success": "Your support request has been submitted successfully",
       "emailAddressLabel": "Your email address",
       "nameLabel": "Preferred name",

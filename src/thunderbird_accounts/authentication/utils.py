@@ -4,6 +4,7 @@ from urllib.parse import quote, urljoin
 
 import sentry_sdk
 from django.conf import settings
+from django.db.models import Q
 from django.urls import reverse
 
 from thunderbird_accounts.core.utils import get_absolute_url
@@ -53,7 +54,12 @@ def is_email_in_allow_list(email: str):
         return True
 
     # Are they an existing active user?
-    user = User.objects.filter(email=email).filter(is_active=True).first()
+    # Matching by email which is the thundermail address or the recovery email
+    user = User.objects.filter(
+        Q(email=email) | Q(recovery_email=email),
+        is_active=True,
+    ).first()
+
     if not user:
         try:
             # Make sure they're on the allow list

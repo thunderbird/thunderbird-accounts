@@ -73,6 +73,11 @@ urlpatterns = [
         'api/v1/subscription/plan/info/', subscription_views.get_subscription_plan_info, name='subscription_plan_info'
     ),
     path('api/v1/mail/is-username-available/', mail_api.is_username_available, name='api_is_username_available'),
+    path(
+        'api/v1/contact/check-email-is-on-allow-list/',
+        mail_api.check_email_is_on_allow_list,
+        name='api_check_email_is_on_allow_list',
+    ),
     # Stalwart telemetry webhook
     path('api/v1/telemetry/stalwart/webhook/', telemetry_views.stalwart_webhook, name='stalwart_webhook'),
     # Health check
