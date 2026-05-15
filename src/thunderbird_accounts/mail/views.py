@@ -322,7 +322,11 @@ def add_email_alias(request: HttpRequest):
 
     if domain in settings.ALLOWED_EMAIL_DOMAINS and len(email_alias) < settings.MIN_CUSTOM_DOMAIN_ALIAS_LENGTH:
         return JsonResponse(
-            {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
+            {
+                'success': False,
+                'error': _('Email alias must be at least %(min_length)d characters long.')
+                % {'min_length': settings.MIN_CUSTOM_DOMAIN_ALIAS_LENGTH},
+            },
             status=400,
         )
 

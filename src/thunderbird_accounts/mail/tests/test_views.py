@@ -104,7 +104,12 @@ class AddEmailAliasTestCase(TestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(
                     json.loads(response.content.decode()),
-                    {'error': 'Email alias must be at least 3 characters long.', 'success': False},
+                    {
+                        'error': _(
+                            'Email alias must be at least %(min_length)d characters long.'
+                        ) % {'min_length': settings.MIN_CUSTOM_DOMAIN_ALIAS_LENGTH},
+                        'success': False,
+                    },
                 )
 
             # Remove all emails so we can try the next alias
@@ -381,7 +386,7 @@ class AddEmailAliasTestCase(TestCase):
             self.assertEqual(response.status_code, 400)
             self.assertEqual(
                 json.loads(response.content.decode()),
-                {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
+                {'success': False, 'error': _('Email alias must be at least 2 characters long.')},
             )
 
             # Test ALLOWED_EMAIL_DOMAINS: 2 characters should be accepted

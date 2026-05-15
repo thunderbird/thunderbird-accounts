@@ -471,7 +471,7 @@ ALLOWED_EMAIL_DOMAINS: list[str] = (
     else []
 )
 
-MIN_CUSTOM_DOMAIN_ALIAS_LENGTH = int(os.getenv('MIN_CUSTOM_DOMAIN_ALIAS_LENGTH', '3'))
+MIN_CUSTOM_DOMAIN_ALIAS_LENGTH = int(os.getenv('MIN_CUSTOM_DOMAIN_ALIAS_LENGTH', '2'))
 
 # The email domain that will be used for account creation and login
 PRIMARY_EMAIL_DOMAIN = (
