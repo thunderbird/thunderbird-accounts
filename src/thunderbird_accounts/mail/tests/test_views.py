@@ -105,7 +105,9 @@ class AddEmailAliasTestCase(TestCase):
                 self.assertEqual(
                     json.loads(response.content.decode()),
                     {
-                        'error': f'Email alias must be at least {settings.MIN_CUSTOM_DOMAIN_ALIAS_LENGTH} characters long.',
+                        'error': _(
+                            'Email alias must be at least %(min_length)d characters long.'
+                        ) % {'min_length': settings.MIN_CUSTOM_DOMAIN_ALIAS_LENGTH},
                         'success': False,
                     },
                 )
