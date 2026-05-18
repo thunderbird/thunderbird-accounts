@@ -36,6 +36,7 @@ declare global {
       maxEmailAliases?: number;
       tbProAppointmentUrl?: string;
       tbProSendUrl?: string;
+      tbProWaitListUrl?: string;
       tbProPrimaryDomain?: string;
       currentView?: Record<string, any>;
       serverMessages: ServerMessage[];
