@@ -1,4 +1,3 @@
-import { TB_PRO_WAIT_LIST_URL } from '../const/constants';
 import { test, expect } from '@playwright/test';
 import { TbAcctsSignUpPage } from '../pages/tb-accts-signup-page';
 import { isAllowListEnabled, waitForVueApp } from '../utils/utils';
@@ -7,6 +6,7 @@ import {
   PLAYWRIGHT_TAG_E2E_SUITE,
   PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
   ACCTS_SIGN_UP_URL,
+  TB_PRO_WAIT_LIST_URL,
 } from '../const/constants';
 
 let signUpPage: TbAcctsSignUpPage;
@@ -34,9 +34,14 @@ test.describe('sign up form', {
     await signUpPage.fillForm(testUsername, testPassword, testPassword, testEmail);
     await signUpPage.submitForm();
 
-    // new page!
+    // tb.pro may insert a locale prefix (e.g. /en-US/waitlist/) when redirecting.
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForURL(`${TB_PRO_WAIT_LIST_URL}?email=${encodeURIComponent(testEmail)}`);
+    const waitListOrigin = new URL(TB_PRO_WAIT_LIST_URL).origin;
+    await page.waitForURL(
+      url => url.origin === waitListOrigin
+        && url.pathname.endsWith('/waitlist/')
+        && url.searchParams.get('email') === testEmail,
+    );
   });
 
   test('navigating to sign-up with query param pre-fills form', async ({ page }) => {
