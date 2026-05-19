@@ -62,7 +62,11 @@ const nativeAttrsForField = (field: TicketField) => {
   }
 };
 
-const triggerFileSelect = () => {
+const triggerFileSelect = (event: PointerEvent) => {
+  // Do not target the fileInput if they've clicked on the fileInput.
+  if (event.target === fileInput.value) {
+    return;
+  }
   fileInput.value?.click();
 };
 
