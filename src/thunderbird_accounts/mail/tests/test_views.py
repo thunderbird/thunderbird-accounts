@@ -1,5 +1,5 @@
 from django.utils.crypto import get_random_string
-from thunderbird_accounts.subscription.models import Plan
+from thunderbird_accounts.subscription.models import Plan, Subscription
 import json
 from unittest.mock import patch, Mock
 
@@ -10,6 +10,105 @@ from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account, Domain, Email
+
+
+class AppPasswordApiTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        self.primary_email = f'test@{settings.PRIMARY_EMAIL_DOMAIN}'
+        self.account = Account.objects.create(name=self.primary_email, user=self.user)
+        Email.objects.create(address=self.primary_email, type=Email.EmailType.PRIMARY, account=self.account)
+        self.subscription = Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
+        self.client.force_login(self.user)
+        self.url = reverse('api_app_password_set')
+
+    @patch('thunderbird_accounts.mail.views.utils.save_app_password')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_success(self, mock_mail_client_cls, mock_save_app_password):
+        existing_app_password = f'$app${self.primary_email}$hashed-password'
+        new_hash = f'$app${self.primary_email}$new-hashed-password'
+
+        mock_instance = Mock()
+        mock_instance.get_account.return_value = {'secrets': [existing_app_password]}
+        mock_mail_client_cls.return_value = mock_instance
+        mock_save_app_password.return_value = new_hash
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'name': self.primary_email, 'password': 'new-password'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(json.loads(response.content.decode())['success'])
+        mock_instance.get_account.assert_called_once_with(self.primary_email)
+        mock_instance.delete_app_password.assert_called_once_with(self.primary_email, existing_app_password)
+        mock_save_app_password.assert_called_once_with(self.primary_email, 'new-password')
+        mock_instance.save_app_password.assert_called_once_with(self.primary_email, new_hash)
+
+    def test_name_and_password_are_required(self):
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'name': self.primary_email}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(json.loads(response.content.decode())['success'])
+
+    @patch('thunderbird_accounts.mail.views.utils.save_app_password')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_requires_active_subscription(self, mock_mail_client_cls, mock_save_app_password):
+        self.subscription.status = Subscription.StatusValues.CANCELED
+        self.subscription.save()
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'name': self.primary_email, 'password': 'new-password'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(json.loads(response.content.decode())['success'])
+        mock_mail_client_cls.assert_not_called()
+        mock_save_app_password.assert_not_called()
+
+
+class DisplayNameApiTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        self.primary_email = f'test@{settings.PRIMARY_EMAIL_DOMAIN}'
+        self.account = Account.objects.create(name=self.primary_email, user=self.user)
+        Email.objects.create(address=self.primary_email, type=Email.EmailType.PRIMARY, account=self.account)
+        self.client.force_login(self.user)
+        self.url = reverse('api_display_name_set')
+
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_success(self, mock_mail_client_cls):
+        mock_instance = Mock()
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'display-name': 'New Name'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(json.loads(response.content.decode())['success'])
+        mock_instance.update_individual.assert_called_once_with(self.primary_email, full_name='New Name')
+
+    def test_display_name_is_required(self):
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'display-name': ''}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(json.loads(response.content.decode())['success'])
 
 
 class AddEmailAliasTestCase(TestCase):
