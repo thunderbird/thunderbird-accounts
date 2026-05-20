@@ -36,6 +36,21 @@ class AddEmailAliasTestCase(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(json.loads(response.content.decode()), {'success': True})
 
+    def test_rejects_alias_with_plus_symbol(self):
+        email_alias_url = reverse('add_email_alias')
+
+        response = self.client.post(
+            email_alias_url,
+            data={'email-alias': 'buddy+tag', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {'success': False, 'error': _('The + symbol is not allowed.')},
+        )
+
     def test_success_catch_all(self):
         email_alias_url = reverse('add_email_alias')
         domain = Domain.objects.create(

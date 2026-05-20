@@ -5,6 +5,7 @@ import { TextInput, SelectInput, PrimaryButton, LinkButton } from '@thunderbirdo
 
 // Types
 import { EMAIL_ALIAS_STEP } from '../types';
+import { validateEmailAlias } from './emailAliasValidation';
 
 const { t } = useI18n();
 
@@ -48,38 +49,19 @@ const nameHelp = computed(() => {
   return t('views.mail.sections.emailSettings.nameHelp');
 });
 
-const validateEmailAlias = (value: string): string | null => {
-  const isSharedDomain = allowedDomains.includes(selectedDomain.value);
-  const isUsedCatchAll = props.existingCatchAlls.includes(`@${selectedDomain.value}`);
-
-  // If we're a shared domain or a domain that already has a catch all we'll want to error out on min length.
-  if ((isUsedCatchAll || isSharedDomain) && (!value || value.length < 3)) {
-    return t('views.mail.sections.emailSettings.nameValidationErrorMinLength');
-  }
-
-  // Catch-all domain for #446
-  if (!isUsedCatchAll && (!value || value === '*')) {
-    return null;
-  }
-
-  if (value.length > 40) {
-    return t('views.mail.sections.emailSettings.nameValidationErrorMaxLength');
-  }
-
-  const validPattern = /^[a-z0-9_]+$/;
-  if (!validPattern.test(value)) {
-    return t('views.mail.sections.emailSettings.nameValidationErrorPattern');
-  }
-
-  return null;
-};
-
 const onEmailAliasInput = () => {
-  validationError.value = validateEmailAlias(emailAlias.value);
+  const messageKey = validateEmailAlias({
+    value: emailAlias.value,
+    selectedDomain: selectedDomain.value,
+    allowedDomains,
+    existingCatchAlls: props.existingCatchAlls,
+  });
+
+  validationError.value = messageKey ? t(messageKey) : null;
 };
 
 const onSubmit = () => {
-  validationError.value = validateEmailAlias(emailAlias.value);
+  onEmailAliasInput();
 
   if (!validationError.value && formRef.value.checkValidity()) {
     emit('add-alias', emailAlias.value, selectedDomain.value);
@@ -96,7 +78,7 @@ watch(selectedDomain, () => {
   if (emailAlias.value === '') {
     return;
   }
-  validationError.value = validateEmailAlias(emailAlias.value);
+  onEmailAliasInput();
 });
 </script>
 
