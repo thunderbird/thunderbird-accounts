@@ -40,6 +40,12 @@ During development it's great to have these handy!
 
 Make sure you have [uv](https://github.com/astral-sh/uv) up and running.
 
+Add the following to `/etc/hosts`:
+
+```text
+127.0.0.1 keycloak
+127.0.0.1 stalwart
+```
 
 ## Getting Started
 
@@ -52,8 +58,9 @@ uv run bootstrap.py
 
 This will create a virtual environment if needed and sync the latest project dependencies to your local environment.
 
-The project comes with some optional dependencies such as cli tools, tools for building the docs, and tools for working
-with our Subscription app powered by Paddle.
+The command is safe to run again after future schema changes.
+
+The project comes with some optional dependencies such as cli tools, tools for building the docs, and tools for working with our Subscription app powered by Paddle.
 
 These can be installed be appending `--extra <optional dependency>` like so:
 
@@ -83,6 +90,9 @@ basic development config for keycloak, and a keycloak environment defined in doc
 stopping you from using a different OIDC provider. Please refer to the package documentation and your local `.env` file
 for settings you may need to change.
 
+For local Docker usage, keep the default `keycloak` hostname in `.env`. If your browser redirects to
+`http://keycloak:8999`, that is expected; check the `/etc/hosts` entry above if the page does not load.
+
 ## Running
 
 Once you have the project bootstrapped you'll want to actually run the project via docker:
@@ -93,10 +103,30 @@ docker compose up --build -V
 
 (Note: If you're not attached to the docker group you may need to add sudo before the above command.)
 
+### After making changes
+
+Most source files are mounted into the development containers:
+
+* Changes under `assets/` should hot-reload through the `vite-dev` service.
+* Changes under `src/thunderbird_accounts/` should restart the `accounts` service automatically through Uvicorn reload.
+* Changes to Django templates should also be picked up by the reload process.
+
+If a change does not appear to take effect, restart only the affected service:
+
+```bash
+docker compose restart accounts
+docker compose restart vite-dev
+```
+
+Rebuild only when changing image or dependency inputs such as `Dockerfile`, `pyproject.toml`, `uv.lock`, `package.json`, or `package-lock.json`:
+
+```bash
+docker compose up --build
+```
+
 The first boot may take a while as:
 
 * Keycloak imports realm / user information from `keycloak/data/import`
-* Accounts runs the required database migrations
 * Accounts pulls the latest Paddle product and subscription information (if you have the Paddle setup.)
 
 Please wait until the containers are fully booted before continuing.
@@ -119,6 +149,8 @@ From here you can create an email account.
 
 The default admin user is also setup you use Django's admin panel available
 at [http://localhost:8087/admin/](http://localhost:8087/admin/).
+
+You may also need create a subscription plan, which can be done at [http://localhost:8087/admin/subscription/plan/add/](http://localhost:8087/admin/subscription/plan/add/).
 
 ### Stalwart
 
