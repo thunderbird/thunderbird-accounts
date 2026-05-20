@@ -41,6 +41,12 @@ from thunderbird_accounts.mail import utils
 def app_password_set(request: HttpRequest):
     """Sets an app password for a remote Stalwart account"""
 
+    if not request.user.has_active_subscription:
+        return JsonResponse(
+            {'success': False, 'error': str(_('An active subscription is required to set an app password.'))},
+            status=403,
+        )
+
     try:
         data = json.loads(request.body)
         new_password = data.get('password')

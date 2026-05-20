@@ -13,6 +13,7 @@ import {
 } from '@thunderbirdops/services-ui';
 import { PhX, PhInfo } from '@phosphor-icons/vue';
 import { APP_PASSWORD_SUPPORT_URL } from '@/defines';
+import { setAppPassword } from '../api';
 
 const { t } = useI18n();
 
@@ -51,19 +52,7 @@ const onSetPasswordSubmit = async () => {
   const label = userEmail.value;
 
   try {
-    const response = await fetch('/app-passwords/set', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': window._page.csrfToken,
-      },
-      body: JSON.stringify({
-        name: label,
-        password: appPassword.value,
-      }),
-    });
-
-    const data = await response.json();
+    const data = await setAppPassword(label, appPassword.value);
 
     if (data.success) {
       // Reset form and close
@@ -143,7 +132,7 @@ const onCancelSetPassword = () => {
     </notice-bar>
 
     <template v-if="showPasswordForm">
-      <form ref="appPasswordFormRef" method="post" action="/app-passwords/set">
+      <form ref="appPasswordFormRef" @submit.prevent="onSetPasswordSubmit">
         <input type="hidden" name="name" :value="userEmail" />
 
         <text-input v-model="appPassword" name="password" type="password"
@@ -167,12 +156,12 @@ const onCancelSetPassword = () => {
         </notice-bar>
 
         <div class="set-password-buttons-container">
-          <primary-button @click="onSetPasswordSubmit" :disabled="isSubmitting" data-testid="app-passwords-add-btn">
+          <primary-button type="button" @click="onSetPasswordSubmit" :disabled="isSubmitting" data-testid="app-passwords-add-btn">
             {{
               isSubmitting ? t('views.mail.sections.emailSettings.saving') : t('views.mail.sections.emailSettings.save')
             }}
           </primary-button>
-          <link-button @click="onCancelSetPassword" :disabled="isSubmitting">{{
+          <link-button type="button" @click="onCancelSetPassword" :disabled="isSubmitting">{{
             t('views.mail.sections.emailSettings.cancel') }}
           </link-button>
         </div>

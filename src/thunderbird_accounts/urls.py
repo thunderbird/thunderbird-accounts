@@ -72,6 +72,8 @@ urlpatterns = [
     path(
         'api/v1/subscription/plan/info/', subscription_views.get_subscription_plan_info, name='subscription_plan_info'
     ),
+    path('api/v1/mail/app-passwords/set/', mail_views.app_password_set, name='api_app_password_set'),
+    path('api/v1/mail/display-name/set/', mail_views.display_name_set, name='api_display_name_set'),
     path('api/v1/mail/is-username-available/', mail_api.is_username_available, name='api_is_username_available'),
     path(
         'api/v1/contact/check-email-is-on-allow-list/',
