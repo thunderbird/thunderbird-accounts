@@ -44,6 +44,7 @@ Add the following to `/etc/hosts`:
 
 ```text
 127.0.0.1 keycloak
+127.0.0.1 stalwart
 ```
 
 ## Getting Started
