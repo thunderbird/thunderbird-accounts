@@ -58,12 +58,6 @@ uv run bootstrap.py
 
 This will create a virtual environment if needed and sync the latest project dependencies to your local environment.
 
-After the Docker containers are running for the first time, bootstrap the Django database schema:
-
-```bash
-docker compose exec accounts ./manage.py migrate
-```
-
 The command is safe to run again after future schema changes.
 
 The project comes with some optional dependencies such as cli tools, tools for building the docs, and tools for working with our Subscription app powered by Paddle.
