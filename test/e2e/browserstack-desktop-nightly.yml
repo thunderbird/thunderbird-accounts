@@ -37,14 +37,14 @@ platforms:
       use:
         storageState: 'test-results/.auth/user.json'
 
-  - os: OS X
-    osVersion: Sequoia
+  - os: Windows
+    osVersion: 11
     browserName: playwright-chromium
-    browserVersion: latest
+    browserVersion: 138.0
     playwrightConfigOptions:
-      name: Chromium-OSX
-      setup:
-      - name: 'setup_chrome_auth'
+      name: Chromium-Win11
+      setup: 
+      - name: 'setup_chromium'
         testMatch: 'auth.desktop.setup.ts'
       use:
         storageState: 'test-results/.auth/user.json'
