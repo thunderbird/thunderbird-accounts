@@ -13,6 +13,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from thunderbird_accounts.authentication import views as auth_views
 from thunderbird_accounts.core import views as core_views
+from thunderbird_accounts.core import zendesk_sidebar
 from thunderbird_accounts.infra import views as infra_views
 from thunderbird_accounts.mail import views as mail_views, api as mail_api
 from thunderbird_accounts.mail.views import jmap_test_page
@@ -39,6 +40,9 @@ urlpatterns = [
     ),
     path('admin/', admin.site.urls),
     # Django-specific routes (not handled by Vue)
+    path('zendesk/sidebar/', zendesk_sidebar.zendesk_sidebar, name='zendesk_sidebar'),
+    path('zendesk/sidebar/content/', zendesk_sidebar.zendesk_sidebar_content, name='zendesk_sidebar_content'),
+    path('zendesk/sidebar/connect/', zendesk_sidebar.zendesk_sidebar_connect, name='zendesk_sidebar_connect'),
     path('contact/fields', core_views.contact_fields, name='contact_fields'),
     # Post only
     path('contact/submit', core_views.contact_submit, name='contact_submit'),

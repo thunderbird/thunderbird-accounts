@@ -1,0 +1,115 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thunderbird Pro Customer</title>
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <link rel="stylesheet" href="{% static 'css/zendesk/sidebar.css' %}">
+  <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+</head>
+<body>
+<main class="shell">
+  <div id="status" class="message">Loading customer information...</div>
+  <iframe id="content-frame" name="content-frame" title="Thunderbird Pro customer information" hidden></iframe>
+  <form id="content-form" action="/zendesk/sidebar/content/" method="post" target="content-frame" hidden>
+    <input id="content-email" type="hidden" name="email">
+    <input id="content-via" type="hidden" name="via">
+    <input id="content-zendesk-token" type="hidden" name="zendesk_token">
+  </form>
+</main>
+
+{{ zendesk_token|json_script:"zendesk-token" }}
+<script>
+  const minimumFrameHeight = 700;
+  const zendeskToken = JSON.parse(document.getElementById('zendesk-token').textContent);
+  const statusElement = document.getElementById('status');
+  const contentFrame = document.getElementById('content-frame');
+  const contentForm = document.getElementById('content-form');
+  const contentEmailField = document.getElementById('content-email');
+  const contentViaField = document.getElementById('content-via');
+  const contentZendeskTokenField = document.getElementById('content-zendesk-token');
+  let zendeskClient = null;
+  let lastFrameHeight = minimumFrameHeight;
+
+  function resizeShell(height) {
+    const frameHeight = Math.max(minimumFrameHeight, Math.ceil(Number(height) || minimumFrameHeight));
+    lastFrameHeight = frameHeight;
+    contentFrame.style.height = `${frameHeight}px`;
+    if (zendeskClient) {
+      zendeskClient.invoke('resize', { height: `${frameHeight}px` }).catch((error) => {
+        console.error('Unable to resize Zendesk sidebar app.', error);
+      });
+    }
+  }
+
+  function resizeFromContentFrame() {
+    try {
+      const contentDocument = contentFrame.contentDocument || contentFrame.contentWindow?.document;
+      resizeShell(contentDocument?.documentElement?.scrollHeight || minimumFrameHeight);
+    } catch {
+      resizeShell(minimumFrameHeight);
+    }
+  }
+
+  function showMessage(message, isError = false) {
+    statusElement.textContent = message;
+    statusElement.className = `message${isError ? ' error' : ''}`;
+    statusElement.hidden = false;
+    contentFrame.hidden = true;
+    resizeShell(minimumFrameHeight);
+  }
+
+  function loadContent(email, viaChannel) {
+    const normalizedEmail = (email || '').trim();
+    if (!normalizedEmail) {
+      showMessage('No requester email is available.');
+      return;
+    }
+
+    contentEmailField.value = normalizedEmail;
+    contentViaField.value = viaChannel || 'web';
+    contentZendeskTokenField.value = zendeskToken;
+    contentFrame.hidden = false;
+    statusElement.hidden = true;
+    resizeShell(minimumFrameHeight);
+    contentForm.submit();
+  }
+
+  async function refreshFromZendesk(client) {
+    const data = await client.get(['ticket.requester.email', 'ticket.via.channel']);
+    loadContent(data['ticket.requester.email'], data['ticket.via.channel']);
+  }
+
+  async function loadFromZendesk() {
+    if (!window.ZAFClient) {
+      showMessage('Zendesk app context is unavailable.', true);
+      return;
+    }
+
+    zendeskClient = ZAFClient.init();
+    resizeShell(minimumFrameHeight);
+    zendeskClient.on('app.registered', () => resizeShell(lastFrameHeight));
+    zendeskClient.on('app.activated', () => resizeShell(lastFrameHeight));
+    await refreshFromZendesk(zendeskClient);
+    zendeskClient.on('ticket.requester.email.changed', () => refreshFromZendesk(zendeskClient));
+  }
+
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) {
+      return;
+    }
+
+    if (event.data?.type === 'zendesk-sidebar-height') {
+      resizeShell(event.data.height);
+    }
+  });
+  contentFrame.addEventListener('load', resizeFromContentFrame);
+
+  loadFromZendesk().catch((error) => {
+    showMessage(error.message || String(error), true);
+  });
+</script>
+</body>
+</html>

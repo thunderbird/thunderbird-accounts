@@ -130,6 +130,7 @@ PADDLE_VENDOR_SITE: str = (
 ZENDESK_SUBDOMAIN: str = os.getenv('ZENDESK_SUBDOMAIN')
 ZENDESK_USER_EMAIL: str = os.getenv('ZENDESK_USER_EMAIL')
 ZENDESK_API_TOKEN: str = os.getenv('ZENDESK_API_TOKEN')
+ZENDESK_APP_ID: str = os.getenv('ZENDESK_APP_ID')
 ZENDESK_FORM_ID: str = os.getenv('ZENDESK_FORM_ID')
 ZENDESK_FORM_BROWSER_FIELD_ID: str = os.getenv('ZENDESK_FORM_BROWSER_FIELD_ID')
 ZENDESK_FORM_OS_FIELD_ID: str = os.getenv('ZENDESK_FORM_OS_FIELD_ID')
@@ -140,7 +141,7 @@ ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if h
 CSRF_COOKIE_SECURE: bool = os.getenv('CSRF_SECURE') == 'True'
 CSRF_COOKIE_HTTPONLY: bool = os.getenv('CSRF_HTTPONLY') == 'True'
 if os.getenv('CSRF_TRUSTED_ORIGINS', ''):
-    CSRF_TRUSTED_ORIGINS = [host for host in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if host]
+    CSRF_TRUSTED_ORIGINS = [host.strip() for host in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if host.strip()]
 
 # For local docker usage
 if DEBUG:
@@ -183,6 +184,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'thunderbird_accounts.core.zendesk_sidebar.ZendeskSidebarFrameAncestorsMiddleware',
     #'mozilla_django_oidc.middleware.SessionRefresh',
     'thunderbird_accounts.authentication.middleware.OIDCRefreshSession',
     # This should be last

@@ -1,0 +1,31 @@
+{
+  "name": "Thunderbird Pro Customer",
+  "author": {
+    "name": "Thunderbird",
+    "email": "support@tb.pro"
+  },
+  "private": true,
+  "version": "1.0.0",
+  "frameworkVersion": "2.0",
+  "defaultLocale": "en",
+  "parameters": [
+    {
+      "name": "sidebar_url",
+      "type": "text",
+      "required": true,
+      "secure": false
+    }
+  ],
+  "location": {
+    "support": {
+      "ticket_sidebar": {
+        "url": "{{setting.sidebar_url}}",
+        "signed": true,
+        "flexible": true,
+        "size": {
+          "height": "700px"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,269 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thunderbird Pro Customer</title>
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <link rel="stylesheet" href="{% static 'css/zendesk/sidebar.css' %}">
+</head>
+<body>
+<main class="sidebar">
+{% if data.error and data.status.code == "ambiguous" %}
+  <p class="message error">{{ data.error }}</p>
+{% elif not data.found %}
+  {% if data.error %}
+    <p class="message">{{ data.error }}</p>
+  {% endif %}
+  {% if data.auth_url %}
+    {% if data.auth_method == "post" %}
+      <form action="{{ data.auth_url }}" method="post" target="_blank">
+        {% for name, value in data.auth_fields.items %}
+          <input type="hidden" name="{{ name }}" value="{{ value }}">
+        {% endfor %}
+        <button class="button-link" type="submit">{{ data.auth_label }}</button>
+      </form>
+    {% else %}
+      <p><a class="button-link" href="{{ data.auth_url }}" target="_blank" rel="noopener noreferrer">{{ data.auth_label }}</a></p>
+    {% endif %}
+  {% endif %}
+  <section class="section">
+    <div class="row">
+      <div class="label">Requester</div>
+      <div class="value">{{ data.requester_email|default:"Unavailable" }}</div>
+    </div>
+    <div class="badge-line">
+      <span class="badge warn">{{ data.status.label }}</span>
+      <span class="badge{% if data.verification.verified %} good{% else %} bad{% endif %}">{{ data.verification.label }}</span>
+    </div>
+  </section>
+{% else %}
+  <section class="section">
+    <div class="badge-line">
+      <span class="badge{% if data.status.code == 'user_paid' %} good{% elif data.status.code == 'user_unpaid' %} warn{% endif %}">
+        {{ data.status.label }}
+      </span>
+      <span class="badge{% if data.verification.verified %} good{% else %} bad{% endif %}">{{ data.verification.label }}</span>
+      {% if data.status.payment_verification_pending %}
+        <span class="badge warn">Payment verification pending</span>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Profile</h2>
+    <div class="row">
+      <div class="label">Primary email</div>
+      <div class="value">{{ data.profile.primary_email|default:"Unavailable" }}</div>
+    </div>
+    <div class="row">
+      <div class="label">Recovery email</div>
+      <div class="value">{{ data.profile.recovery_email|default:"Unavailable" }}</div>
+    </div>
+    <div class="row">
+      <div class="label">Display name</div>
+      <div class="value">{% if data.profile.display_name != None and data.profile.display_name != "" %}{{ data.profile.display_name }}{% else %}Unavailable{% endif %}</div>
+    </div>
+    <div class="row">
+      <div class="label">App password</div>
+      <div class="value">{% if data.profile.app_password_set %}Set{% else %}Not set{% endif %}</div>
+    </div>
+    <div class="row">
+      <div class="label">Aliases</div>
+      <div class="value">
+        <details>
+          <summary>{{ data.profile.aliases|length }} alias{{ data.profile.aliases|length|pluralize:"es" }}</summary>
+          {% if data.profile.aliases %}
+            <ul>
+              {% for alias in data.profile.aliases %}
+                <li>{{ alias }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            None
+          {% endif %}
+        </details>
+      </div>
+    </div>
+    <div class="row">
+      <div class="label">Catch-alls</div>
+      <div class="value">
+        <details>
+          <summary>{{ data.profile.catch_alls|length }} catch-all{{ data.profile.catch_alls|length|pluralize }}</summary>
+          {% if data.profile.catch_alls %}
+            <ul>
+              {% for catch_all in data.profile.catch_alls %}
+                <li>{{ catch_all }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            None
+          {% endif %}
+        </details>
+      </div>
+    </div>
+    <div class="row">
+      <div class="label">Custom Domains</div>
+      <div class="value">
+        <details>
+          <summary>{{ data.profile.custom_domains|length }} domain{{ data.profile.custom_domains|length|pluralize }} ({{ data.profile.custom_domain_counts.verified }} verified, {{ data.profile.custom_domain_counts.pending }} pending)</summary>
+          {% if data.profile.custom_domains %}
+            <ul>
+              {% for domain in data.profile.custom_domains %}
+                <li>
+                  <span
+                    {% if domain.status == "verified" %}
+                      title="Verified at: {% if domain.verified_at %}{{ domain.verified_at }}{% else %}never{% endif %}"
+                      data-domain-tooltip-prefix="Verified at:"
+                      data-domain-tooltip-date="{{ domain.verified_at|default:'' }}"
+                    {% elif domain.status == "pending" %}
+                      title="Last verification attempt: {% if domain.last_verification_attempt %}{{ domain.last_verification_attempt }}{% else %}never{% endif %}"
+                      data-domain-tooltip-prefix="Last verification attempt:"
+                      data-domain-tooltip-date="{{ domain.last_verification_attempt|default:'' }}"
+                    {% endif %}
+                  ><a href="https://mxtoolbox.com/emailhealth/{{ domain.name|urlencode }}" target="_blank" rel="noopener noreferrer">{{ domain.name }} ({{ domain.status }})</a></span>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            None
+          {% endif %}
+        </details>
+      </div>
+    </div>
+    <div class="row">
+      <div class="label">Mail Quota</div>
+      <div class="value">
+        {% if data.quota.available %}
+          {{ data.quota.used_display|default:"0 B" }} / {{ data.quota.limit_display }}
+        {% else %}
+          Unavailable
+        {% endif %}
+      </div>
+    </div>
+    <div class="row">
+      <div class="label">Terms accepted</div>
+      <div class="value">
+        {% if data.legal.terms.accepted %}
+          Yes, version {{ data.legal.terms.version }} at <span data-date="{{ data.legal.terms.accepted_at }}">{{ data.legal.terms.accepted_at }}</span>
+        {% else %}
+          No
+        {% endif %}
+      </div>
+    </div>
+    <div class="row">
+      <div class="label">Privacy accepted</div>
+      <div class="value">
+        {% if data.legal.privacy.accepted %}
+          Yes, version {{ data.legal.privacy.version }} at <span data-date="{{ data.legal.privacy.accepted_at }}">{{ data.legal.privacy.accepted_at }}</span>
+        {% else %}
+          No
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Subscription</h2>
+    <div class="row">
+      <div class="label">Plan</div>
+      <div class="value">{{ data.subscription.plan|default:"Unavailable" }}</div>
+    </div>
+    <div class="row">
+      <div class="label">Signup date</div>
+      <div class="value">{% if data.subscription.signup_date %}<span data-date="{{ data.subscription.signup_date }}">{{ data.subscription.signup_date }}</span>{% else %}Unavailable{% endif %}</div>
+    </div>
+    <div class="row">
+      <div class="label">Next renewal</div>
+      <div class="value">{% if data.subscription.next_renewal_date %}<span data-date="{{ data.subscription.next_renewal_date }}">{{ data.subscription.next_renewal_date }}</span>{% else %}Unavailable{% endif %}</div>
+    </div>
+    <div class="row">
+      <div class="label">Total spend</div>
+      <div class="value">
+        {% if data.subscription.total_spend %}
+          {% for item in data.subscription.total_spend %}
+            {{ item.amount }} {{ item.currency }}{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+        {% else %}
+          None
+        {% endif %}
+      </div>
+    </div>
+    <div class="row">
+      <div class="label">Discount</div>
+      <div class="value">
+        {% if data.subscription.discount %}
+          {{ data.subscription.discount.amount }} {{ data.subscription.discount.type }}
+        {% else %}
+          None
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Links</h2>
+    {% if data.links.user_admin %}
+      <div class="row"><div class="label">Django user</div><div class="value"><a href="{{ data.links.user_admin }}" target="_blank" rel="noopener noreferrer">Open user</a></div></div>
+    {% endif %}
+    {% if data.links.allow_list_admin %}
+      <div class="row"><div class="label">Allow list</div><div class="value"><a href="{{ data.links.allow_list_admin }}" target="_blank" rel="noopener noreferrer">Open allow-list entry</a></div></div>
+    {% endif %}
+    {% if data.links.subscription_admin %}
+      <div class="row"><div class="label">Subscription</div><div class="value"><a href="{{ data.links.subscription_admin }}" target="_blank" rel="noopener noreferrer">Open subscription</a></div></div>
+    {% endif %}
+    {% if data.links.paddle_subscription %}
+      <div class="row"><div class="label">Paddle sub</div><div class="value"><a href="{{ data.links.paddle_subscription }}" target="_blank" rel="noopener noreferrer">Open subscription</a></div></div>
+    {% endif %}
+    {% if data.links.paddle_customer %}
+      <div class="row"><div class="label">Paddle customer</div><div class="value"><a href="{{ data.links.paddle_customer }}" target="_blank" rel="noopener noreferrer">Open customer</a></div></div>
+    {% endif %}
+  </section>
+{% endif %}
+</main>
+<script>
+  function formatDateTime(value) {
+    if (!value) {
+      return 'Unavailable';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  }
+
+  function localizeRenderedDates() {
+    document.querySelectorAll('[data-date]').forEach((element) => {
+      element.textContent = formatDateTime(element.dataset.date);
+    });
+    document.querySelectorAll('[data-domain-tooltip-date]').forEach((element) => {
+      const dateLabel = element.dataset.domainTooltipDate
+        ? formatDateTime(element.dataset.domainTooltipDate)
+        : 'never';
+      element.title = `${element.dataset.domainTooltipPrefix} ${dateLabel}`;
+    });
+  }
+
+  function notifyHeight() {
+    window.parent.postMessage({
+      type: 'zendesk-sidebar-height',
+      height: document.documentElement.scrollHeight,
+    }, window.location.origin);
+  }
+
+  localizeRenderedDates();
+  notifyHeight();
+  window.addEventListener('load', notifyHeight);
+  document.querySelectorAll('details').forEach((element) => {
+    element.addEventListener('toggle', notifyHeight);
+  });
+</script>
+</body>
+</html>

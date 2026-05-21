@@ -250,6 +250,9 @@ class OIDCRefreshSession(SessionRefresh):
 
     def is_refreshable_url(self, request):
         """Is the session refreshable, and do we have a refresh token?"""
+        if request.path.startswith('/zendesk/sidebar/'):
+            return False
+
         is_refreshable = super().is_refreshable_url(request)
         return is_refreshable and request.session.get(OIDC_REFRESH_TOKEN_KEY)
 
