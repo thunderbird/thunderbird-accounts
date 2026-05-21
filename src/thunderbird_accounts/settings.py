@@ -284,6 +284,7 @@ REST_FRAMEWORK = {
         'can_i_sign_up': '10/minute', # Give them a few refreshes
         'check_email_is_on_allow_list': '10/minute',
         'analytics': '1000/minute',  # Just in case
+        'support_customer_api': '100/day',
     },
 }
 

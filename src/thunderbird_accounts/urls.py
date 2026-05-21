@@ -13,6 +13,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from thunderbird_accounts.authentication import views as auth_views
 from thunderbird_accounts.core import views as core_views
+from thunderbird_accounts.core import zendesk_sidebar
 from thunderbird_accounts.infra import views as infra_views
 from thunderbird_accounts.mail import views as mail_views, api as mail_api
 from thunderbird_accounts.mail.views import jmap_test_page
@@ -60,6 +61,11 @@ urlpatterns = [
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/auth/sign-up/', sign_up, name='api_sign_up'),
     path('api/v1/auth/can-i-sign-up/', can_i_sign_up, name='api_can_i_sign_up'),
+    path(
+        'api/v1/zendesk/sidebar/customer/',
+        zendesk_sidebar.zendesk_sidebar_customer_api,
+        name='api_zendesk_sidebar_customer',
+    ),
     path('api/v1/legal/current/', legal_views.get_current_legal_docs, name='legal_current'),
     path('api/v1/legal/accept/', legal_views.accept_legal_docs, name='legal_accept'),
     path('api/v1/legal/decline/', legal_views.decline_legal_docs, name='legal_decline'),
