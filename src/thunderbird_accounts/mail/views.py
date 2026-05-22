@@ -288,10 +288,12 @@ def remove_custom_domain(request: HttpRequest):
             if _domain.stalwart_id:
                 try:
                     stalwart_client.delete_domain(domain.name)
-                except DomainNotFoundError:
+                except DomainNotFoundError as ex:
                     # While it's not in Stalwart we seem to have a local reference,
                     # so try deleting dkim and then local ref
-                    pass
+
+                    # We'll also capture this exception to help debug #690
+                    sentry_sdk.capture_exception(ex)
                 stalwart_client.delete_dkim(domain.name)
                 break
 
