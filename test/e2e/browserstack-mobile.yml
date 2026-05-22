@@ -11,7 +11,7 @@
 # Set 'projectName' to the name of your project. Example, Marketing Website
 projectName: Thunderbird Accounts
 # Set `buildName` as the name of the job / testsuite being run
-buildName: TB Accounts E2E Tests
+buildName: TB Accounts E2E Tests (Mobile)
 # `buildIdentifier` is a unique id to differentiate every execution that gets appended to
 # buildName. Choose your buildIdentifier format from the available expressions:
 # ${BUILD_NUMBER} (Default): Generates an incremental counter with every execution
@@ -23,44 +23,26 @@ buildIdentifier: '${DATE_TIME}'
 # Platforms (Browsers / Devices to test)
 # =======================================
 # Platforms object contains all the browser / device combinations you want to test on.
-# Entire list available here -> (https://www.browserstack.com/list-of-browsers-and-platforms/automate)
+# For browser/os versions compatible with our playwright version see https://www.browserstack.com/docs/automate/playwright/browsers-and-os?fw-lang=nodejs
 platforms:
-  - os: OS X
-    osVersion: Sequoia
-    browserName: playwright-firefox
-    browserVersion: latest
+  - browserName: chrome
+    osVersion: 16.0
+    deviceName: Google Pixel 10
     playwrightConfigOptions:
-      name: Firefox-OSX
-      setup:
-      - name: 'setup_firefox_auth'
-        testMatch: 'auth.desktop.setup.ts'
-      use:
-        storageState: 'test-results/.auth/user.json'
+      name: android-chrome
+    chrome:
+      chromeOptions:
+        prefs:
+          credentials_enable_service: false
+        profile:
+          password_manager_enabled: false
 
-  - os: OS X
-    osVersion: Sequoia
-    browserName: playwright-chromium
-    browserVersion: latest
+  - browserName: safari
+    osVersion: 26
+    deviceName: iPhone 17
     playwrightConfigOptions:
-      name: Chromium-OSX
-      setup:
-      - name: 'setup_chrome_auth'
-        testMatch: 'auth.desktop.setup.ts'
-      use:
-        storageState: 'test-results/.auth/user.json'
-
-  - os: OS X
-    osVersion: Sequoia
-    browserName: playwright-webkit
-    browserVersion: 18.5
-    playwrightConfigOptions:
-      name: Safari-OSX
-      setup: 
-      - name: 'setup_webkit'
-        testMatch: 'auth.desktop.setup.ts'
-      use:
-        storageState: 'test-results/.auth/user.json'
-
+      name: ios-safari
+  
 # =======================
 # Parallels per Platform
 # =======================
@@ -92,8 +74,13 @@ debug: false # <boolean> # Set to true if you need screenshots for every seleniu
 networkLogs: false # <boolean> Set to true to enable HAR logs capturing; off as may contain sensitive info like login API requests
 consoleLogs: info # <string> Remote browser's console debug levels to be printed (`disable`, `errors`, `warnings`, `info`, or `verbose`)
 framework: playwright
-browserstack.playwrightVersion: 1.59.1 # must match our client playwright version in package.json; this is the latest supported in BrowserStack
-browserstack.playwrightLogs: false # disable playwright logs appearing on browserstack builds as may contain sensitive info like credentials
+idleTimeout: 500 # seeing if this helps rid BROWSERSTACK_IDLE_TIMEOUTs on ios
+# the e2e tests use the same node.js project so the playwright version dependecy must work on both desktop
+# and mobile browsers; and therefore must be the same in all of our browserstack-*.yml config files
+# for playwright ver we need one compatible with our desktop and mobile browsers, see:
+# https://www.browserstack.com/docs/automate/playwright/browsers-and-os?fw-lang=nodejs
+browserstack.playwrightVersion: 1.59.1 # must match ver in package.json
+browserstack.playwrightLogs: true # disable playwright logs appearing on browserstack builds as may contain sensitive info like credentials
 # CUSTOM_TAG_<INT>: # <string> (Default: parent folder name of the test file) Custom tag for your test suite
 browserstack.maskBasicAuth: true # mask username and passwords from browserstack session logs
 browserstack.maskCommands: sendType, sendPress, setHTTPCredentials, setStorageState, setWebAuthnCredentials # prevent sensitive info appearing in browserstack session logs

@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { TbAcctsSignUpPage } from '../pages/tb-accts-signup-page';
-import { isAllowListEnabled, waitForVueApp } from '../utils/utils';
+import { TbAcctsSignUpPage } from '../../pages/tb-accts-signup-page';
+import { isAllowListEnabled, waitForVueApp } from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
   PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
   ACCTS_SIGN_UP_URL,
   TB_PRO_WAIT_LIST_URL,
-} from '../const/constants';
+} from '../../const/constants';
 
 let signUpPage: TbAcctsSignUpPage;
 
@@ -21,7 +21,7 @@ test.beforeEach(async ({ page }) => {
   await signUpPage.navigateToPage();
 });
 
-test.describe('sign up form', {
+test.describe('sign up form on desktop browser', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
 }, () => {
   test('form successfully submits but is not on allow list', async ({ page }) => {
@@ -34,7 +34,7 @@ test.describe('sign up form', {
     await signUpPage.fillForm(testUsername, testPassword, testPassword, testEmail);
     await signUpPage.submitForm();
 
-    // tb.pro may insert a locale prefix (e.g. /en-US/waitlist/) when redirecting.
+    // tb.pro may insert a locale prefix (e.g. /en-US/waitlist/) when redirecting
     await page.waitForLoadState('domcontentloaded');
     const waitListOrigin = new URL(TB_PRO_WAIT_LIST_URL).origin;
     await page.waitForURL(
@@ -52,9 +52,7 @@ test.describe('sign up form', {
     await page.goto(`${ACCTS_SIGN_UP_URL}?email=${verificationEmail}`);
     await waitForVueApp(page);
 
-
     await signUpPage.fillForm(testUsername, testPassword, testPassword);
-    await signUpPage.submitForm();
 
     expect(signUpPage.verificationEmailInput).toBeTruthy();
     await expect(signUpPage.verificationEmailInput).toHaveValue(verificationEmail);
