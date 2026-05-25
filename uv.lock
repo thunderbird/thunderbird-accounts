@@ -1631,6 +1631,7 @@ subscription = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "coverage" },
     { name = "faker" },
     { name = "freezegun" },
 ]
@@ -1681,6 +1682,7 @@ provides-extras = ["cli", "docs", "subscription"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "coverage", specifier = ">=7.14.0" },
     { name = "faker", specifier = ">=33.1.0" },
     { name = "freezegun", specifier = ">=1.5.5" },
 ]

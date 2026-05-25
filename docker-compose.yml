@@ -57,6 +57,7 @@ services:
       - "./assets:/app/assets:z"
       - "./keycloak:/app/assets/keycloak:z"
       - "./templates:/app/templates:z"
+      - "./coverage:/app/coverage:z"
     depends_on:
       - postgres
       - redis

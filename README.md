@@ -280,14 +280,32 @@ Make sure that the containers are already running.
 To run all tests:
 
 ```shell
+./run-tests.sh thunderbird_accounts
+```
+
+this will execute the following command for you:
+
+```shell
 docker compose exec accounts uv run python manage.py test thunderbird_accounts
 ```
 
 To run tests for a specific module:
 
 ```shell
-docker compose exec accounts uv run python manage.py test thunderbird_accounts.mail.tests
+./run-tests.sh thunderbird_accounts.mail.tests
 ```
+
+Additionally, you can run tests with coverage to help you identify functions that aren't covered by functional or unit tests.
+
+To do so run the following command:
+
+```shell
+./runs-tests-and-generate-coverage.sh thunderbird_accounts
+```
+
+The data for coverage is stored in the `coverage` folder (which is volume mounted.) It generates a detailed html report and a text report to display in-console.
+
+The html report is stored in `coverage/htmlcov`.
 
 ## Running the E2E tests
 

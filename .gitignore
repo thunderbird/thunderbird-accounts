@@ -69,3 +69,5 @@ db.sqlite3
 build
 node_modules
 deploy-wait-list
+
+coverage/*

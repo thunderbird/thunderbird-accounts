@@ -150,6 +150,14 @@ pythonpath = "test"
 
 [dependency-groups]
 dev = [
+    "coverage>=7.14.0",
     "faker>=33.1.0",
     "freezegun>=1.5.5",
 ]
+
+[tool.coverage.run]
+data_file = "coverage/.coverage"
+source = ["thunderbird_accounts"]
+
+[tool.coverage.html]
+directory = "coverage/htmlcov"
