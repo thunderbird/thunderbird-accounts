@@ -13,6 +13,13 @@ export const ACCTS_OIDC_EMAIL = String(process.env.ACCTS_OIDC_EMAIL);
 export const ACCTS_OIDC_PWORD = String(process.env.ACCTS_OIDC_PWORD);
 export const PRIMARY_THUNDERMAIL_EMAIL = String(process.env.PRIMARY_THUNDERMAIL_EMAIL);
 
+// expected dashboard subscription details
+export const DASHBOARD_CURRENT_SUBSCRIPTION_PRICE = String(process.env.DASHBOARD_CURRENT_SUBSCRIPTION_PRICE);
+export const DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE = String(process.env.DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE);
+export const DASHBOARD_CURRENT_SUBSCRIPTION_SEND_STORAGE = String(process.env.DASHBOARD_CURRENT_SUBSCRIPTION_SEND_STORAGE);
+export const DASHBOARD_CURRENT_SUBSCRIPTION_EMAIL_ADDRESSES = String(process.env.DASHBOARD_CURRENT_SUBSCRIPTION_EMAIL_ADDRESSES);
+export const DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS = String(process.env.DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS);
+
 // playwright test tags
 export const PLAYWRIGHT_TAG_E2E_SUITE = '@e2e-suite';
 export const PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY = '@e2e-prod-desktop-nightly';
@@ -33,6 +40,7 @@ export const SMTP_PORT = Number(process.env.SMTP_PORT);
 export const IMAP_TLS = String(process.env.IMAP_TLS) ?? 'SSL/TLS';
 export const JMAP_TLS = String(process.env.JMAP_TLS) ?? 'SSL/TLS';
 export const SMTP_TLS = String(process.env.SMTP_TLS) ?? 'SSL/TLS';
+export const PADDLE_HOST = 'customer-portal.paddle.com';
 
 export const DEFAULT_LOCALE = 'en';
 export const DEFAULT_TIMEZONE = 'UTC';
