@@ -42,6 +42,8 @@
 .redis_celery_results_db: &VAR_REDIS_CELERY_RESULTS_DB {name: "REDIS_CELERY_RESULTS_DB", value: "6"}
 .redis_internal_db: &VAR_REDIS_INTERNAL_DB {name: "REDIS_INTERNAL_DB", value: "0"}
 .redis_shared_db: &VAR_REDIS_SHARED_DB {name: "REDIS_SHARED_DB", value: "10"}
+.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", value: "0.33"}
+.sentry_traces_sample_rate: &VAR_SENTRY_TRACES_SAMPLE_RATE {name: "SENTRY_TRACES_SAMPLE_RATE", value: "1.0"}
 .smtp_host: &VAR_SMTP_HOST {name: "SMTP_HOST", value: "mail.stage-thundermail.com"}
 .smtp_port: &VAR_SMTP_PORT {name: "SMTP_PORT", value: "465"}
 .smtp_tls: &VAR_SMTP_TLS {name: "SMTP_TLS", value: "True"}
@@ -380,6 +382,8 @@ resources:
                 - *VAR_REDIS_CELERY_RESULTS_DB
                 - *VAR_REDIS_INTERNAL_DB
                 - *VAR_REDIS_SHARED_DB
+                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+                - *VAR_SENTRY_TRACES_SAMPLE_RATE
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
@@ -453,6 +457,8 @@ resources:
                 - *VAR_REDIS_CELERY_RESULTS_DB
                 - *VAR_REDIS_INTERNAL_DB
                 - *VAR_REDIS_SHARED_DB
+                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+                - *VAR_SENTRY_TRACES_SAMPLE_RATE
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
@@ -870,6 +876,8 @@ resources:
                 value: '46642417675539'
               - name: VERIFY_PRIVATE_LINK_SSL
                 value: 'False'
+              - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+              - *VAR_SENTRY_TRACES_SAMPLE_RATE
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:
