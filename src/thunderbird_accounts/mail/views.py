@@ -35,6 +35,18 @@ from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail import utils
 
 
+def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: str):
+    sentry_sdk.set_context(
+        'domain',
+        {
+            'phase': phase,
+            'domain_name': domain.name,
+            'domain_status': domain.status,
+        },
+    )
+    sentry_sdk.capture_exception(exception)
+
+
 @login_required
 @require_http_methods(['POST'])
 @sensitive_post_parameters('password')
@@ -281,24 +293,29 @@ def remove_custom_domain(request: HttpRequest):
             )
 
     stalwart_client = MailClient()
+    cleanup_phase = 'load_local_domains'
     try:
         domains = request.user.domains.filter(name=domain_name).all()
         # There should only be one here, but just in case...
         for _domain in domains:
             if _domain.stalwart_id:
                 try:
+                    cleanup_phase = 'delete_stalwart_domain'
                     stalwart_client.delete_domain(domain.name)
-                except DomainNotFoundError:
+                except DomainNotFoundError as ex:
                     # While it's not in Stalwart we seem to have a local reference,
                     # so try deleting dkim and then local ref
-                    pass
+                    _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
+                cleanup_phase = 'delete_dkim'
                 stalwart_client.delete_dkim(domain.name)
                 break
 
+        cleanup_phase = 'delete_local_domain'
         domain.delete()
 
     except Exception as e:
         logging.error(f'Error removing custom domain: {e}')
+        _capture_domain_exception(e, domain, phase=cleanup_phase)
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while removing the custom domain. Please try again later.'},
             status=500,
