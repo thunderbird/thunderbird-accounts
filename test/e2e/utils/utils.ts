@@ -7,7 +7,6 @@ import path from 'path';
 import {
     ACCTS_TARGET_ENV,
     ACCTS_HUB_URL,
-    TIMEOUT_5_SECONDS,
     TIMEOUT_30_SECONDS,
 } from "../const/constants";
 
@@ -48,7 +47,6 @@ export const navigateToAccountsHubAndSignIn = async (page: Page) => {
     const tbAcctsHubPage = new TBAcctsHubPage(page);
     
     await page.goto(`${ACCTS_HUB_URL}`, { waitUntil: 'domcontentloaded' });
-    //await page.waitForTimeout(TIMEOUT_5_SECONDS);
     await waitForVueApp(page);
     
     // if we are already signed in then we can skip this
@@ -58,6 +56,14 @@ export const navigateToAccountsHubAndSignIn = async (page: Page) => {
 
 
     await waitForVueApp(page);
+
+    // if tests are running on a new local stack (or new account) the terms of service page might be
+    // displayed; if so we need to accept the terms of service and then continue
+    if (await tbAcctsHubPage.acceptTOSButton.isVisible()) {
+        console.log('accepting the TB Pro ToS');
+        await tbAcctsHubPage.acceptTOSButton.click();
+    }
+
     // Confirm the signed-in hub actually rendered by waiting for the banner's
     // UserAvatar (the stable signed-in signal after the nav overhaul in #695).
     await expect(tbAcctsHubPage.userAvatar).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
