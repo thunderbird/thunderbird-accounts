@@ -24,6 +24,9 @@ protocol = "http"
 bind = ["[::]:8080"]
 protocol = "http"
 
+[http.rate-limit]
+anonymous = "10000/1m"
+
 [storage]
 data = "rocksdb"
 fts = "rocksdb"
