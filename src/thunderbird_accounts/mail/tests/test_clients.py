@@ -418,3 +418,57 @@ class TestMailClientDeleteDkim(TestCase):
 
         with self.assertRaises(requests.RequestException):
             self.mail_client.delete_dkim(self.domain)
+
+
+@override_settings(
+    STALWART_BASE_API_URL='http://stalwart.test',
+    STALWART_API_AUTH_STRING='secret',
+    STALWART_API_AUTH_METHOD='bearer',
+    CONNECTION_INFO={'SMTP': {'HOST': 'mail.test.com'}},
+)
+class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
+    def setUp(self):
+        self.mail_client = MailClient()
+        self.domain = 'example.com'
+
+    @patch.object(MailClient, 'get_dns_records')
+    def test_build_expected_dns_records_includes_dkim(self, mock_get_dns_records):
+        mock_get_dns_records.return_value = [
+            {
+                'type': 'TXT',
+                'name': '202501e._domainkey.example.com.',
+                'content': 'v=DKIM1; k=rsa; p=abc123',
+                'priority': '-',
+            },
+            {'type': 'TXT', 'name': 'example.com.', 'content': 'unrelated', 'priority': '-'},
+        ]
+
+        records = self.mail_client.build_expected_dns_records(self.domain)
+
+        self.assertEqual(records[0], {'type': 'MX', 'name': '@', 'content': 'mail.test.com', 'priority': '10'})
+        dkim_records = [record for record in records if '_domainkey' in record['name']]
+        self.assertEqual(len(dkim_records), 1)
+        self.assertEqual(dkim_records[0]['name'], '202501e._domainkey.example.com.')
+
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch.object(MailClient, 'get_dns_records')
+    def test_get_expected_dns_records_with_status(self, mock_get_dns_records, mock_resolve):
+        mock_get_dns_records.return_value = []
+
+        mock_mx = MagicMock()
+        mock_mx.exchange.to_text.return_value = 'wrong.host.com.'
+        mock_mx.preference = 10
+
+        def resolve_side_effect(name, record_type):
+            if record_type == 'MX':
+                return [mock_mx]
+            raise dns.resolver.NoAnswer()
+
+        mock_resolve.side_effect = resolve_side_effect
+
+        records = self.mail_client.get_expected_dns_records_with_status(self.domain)
+
+        mx_record = next(record for record in records if record['type'] == 'MX')
+        self.assertEqual(mx_record['status'], 'conflict')
+        self.assertEqual(mx_record['existing_values'], ['10 wrong.host.com'])
+
