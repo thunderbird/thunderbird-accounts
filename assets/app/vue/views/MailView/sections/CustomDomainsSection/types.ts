@@ -10,11 +10,22 @@ export enum STEP {
   VERIFY_DOMAIN = 'verify',
 };
 
+export type DNSRecordStatus = 'match' | 'conflict' | 'missing' | 'unknown';
+
 export type DNSRecord = {
   type: string;
   name: string;
   content: string;
   priority?: string;
+  status?: DNSRecordStatus;
+  existing_values?: string[];
+};
+
+export type StaleDNSRecord = {
+  code: string;
+  type: string;
+  name: string;
+  existing_values: string[];
 };
 
 export type CustomDomain = {

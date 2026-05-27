@@ -5,7 +5,7 @@ import { PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbir
 import { PhX } from '@phosphor-icons/vue';
 
 // Types
-import { CustomDomain, DNSRecord, STEP, DOMAIN_STATUS } from '../types';
+import { CustomDomain, DNSRecord, StaleDNSRecord, STEP, DOMAIN_STATUS } from '../types';
 
 // API
 import { addCustomDomain, verifyDomain, getRemoteDNSRecords } from '../api';
@@ -37,6 +37,7 @@ const verificationCriticalErrors = ref<string[]>([]);
 const maxCustomDomains = window._page?.maxCustomDomains;
 
 const recordsInfo = ref<DNSRecord[]>([]);
+const staleDnsRecords = ref<StaleDNSRecord[]>([]);
 
 const handleDNSRecords = async (domainName: string) => {
   try {
@@ -93,6 +94,9 @@ const onVerifyDomain = async () => {
   try {
     const data = await verifyDomain(customDomain.value);
 
+    recordsInfo.value = data.dns_records ?? [];
+    staleDnsRecords.value = data.stale_dns_records ?? [];
+
     if (data.success) {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
       step.value = STEP.INITIAL;
@@ -131,6 +135,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
     customDomain.value = null;
     customDomainError.value = null;
     domainAlreadyConfigured.value = false;
+    staleDnsRecords.value = [];
   }
 }, { immediate: true });
 </script>
@@ -195,13 +200,41 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderValueData') }}</p>
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderPriority') }}</p>
       </div>
-      <div class="records-table-row" v-for="record in recordsInfo" :key="`${record.type}-${record.name}-${record.content}`">
+      <div
+        class="records-table-row"
+        :class="{ 'record-conflict': record.status === 'conflict' }"
+        v-for="record in recordsInfo"
+        :key="`${record.type}-${record.name}-${record.content}`"
+      >
         <p>{{ record.type }}</p>
         <p>{{ record.name }}</p>
         <p>{{ record.content }}</p>
         <p>{{ record.priority || '-' }}</p>
+        <span v-if="record.status === 'conflict'" class="record-conflict-warning">
+          {{ t('views.mail.sections.customDomains.recordConflictWarning') }}
+          <template v-if="record.existing_values?.length">
+            ({{ record.existing_values.join(', ') }})
+          </template>
+        </span>
       </div>
     </div>
+
+    <notice-bar
+      :type="NoticeBarTypes.Critical"
+      class="stale-dns-notice-bar"
+      v-if="staleDnsRecords.length > 0"
+    >
+      <strong>{{ t('views.mail.sections.customDomains.staleDnsRecordsTitle') }}</strong>
+      <ul class="stale-dns-list">
+        <li v-for="record in staleDnsRecords" :key="`${record.code}-${record.name}`">
+          <span class="stale-dns-warning">{{ t('views.mail.sections.customDomains.recordConflictWarning') }}</span>
+          {{ t('views.mail.sections.customDomains.staleDnsRecords', { type: record.type, name: record.name, existing_values: record.existing_values.join(', ') }) }}
+          <template v-if="record.existing_values?.length">
+            ({{ record.existing_values.join(', ') }})
+          </template>
+        </li>
+      </ul>
+    </notice-bar>
 
     <!-- TODO: Uncomment this once we have the task / job to automatically verify domains -->
     <!-- <notice-bar :type="NoticeBarTypes.Info" class="verify-step-notice-bar" v-if="showNoticeBar">
@@ -313,6 +346,7 @@ h3 {
 .records-table-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   min-width: max-content;
 
   p {
@@ -325,6 +359,34 @@ h3 {
 
   &:nth-child(odd) {
     background-color: var(--colour-neutral-lower);
+  }
+
+  &.record-conflict {
+    background-color: rgba(255, 193, 7, 0.12);
+  }
+
+  .record-conflict-warning {
+    flex-basis: 100%;
+    padding: 0 1rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--colour-ti-secondary);
+  }
+}
+
+.stale-dns-notice-bar {
+  margin-block-end: 1.5rem;
+
+  .stale-dns-list {
+    margin: 0.75rem 0 0;
+    padding-inline-start: 1.25rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .stale-dns-warning {
+    font-weight: 600;
+    margin-inline-end: 0.25rem;
   }
 }
 
