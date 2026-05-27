@@ -193,7 +193,7 @@ def get_dns_records(request: HttpRequest):
         # Backfill only missing DKIM selectors before returning DNS records.
         stalwart_client.ensure_dkim(domain.name)
         mail_tasks.publish_hosted_dkim_dns_records.delay(domain.name)
-        dns_records = stalwart_client.get_dns_records(domain.name)
+        dns_records = stalwart_client.build_expected_dns_records(domain.name)
         return JsonResponse(
             {
                 'success': True,
