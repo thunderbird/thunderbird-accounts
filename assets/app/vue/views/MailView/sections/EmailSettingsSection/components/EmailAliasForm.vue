@@ -33,18 +33,20 @@ const allDomainOptions = computed(() => props.allDomainOptions.map((domain) => (
   label: domain,
   value: domain,
 })).filter(
-  (domain) => props.showSharedDomains && allowedDomains.includes(domain.value) 
+  (domain) => props.showSharedDomains && allowedDomains.includes(domain.value)
   || !allowedDomains.includes(domain.value)
 ));
 
 /**
  * Returns the next to be filled in for name's help section.
- * 
+ *
  * If you're able to make a catch-all alias a second line will appear with information.
  */
 const nameHelp = computed(() => {
-  if (customDomainSelected.value && !props.existingCatchAlls.includes(`@${selectedDomain.value}`)) {
-    return `${t('views.mail.sections.emailSettings.nameHelp')}\n\n${t('views.mail.sections.emailSettings.nameCatchAllHelp')}`
+  const hasCatchAll = props.existingCatchAlls.some((catchAll) => catchAll.endsWith(`@${selectedDomain.value}`));
+
+  if (customDomainSelected.value && !hasCatchAll) {
+    return `${t('views.mail.sections.emailSettings.nameHelp')}\n\n${t('views.mail.sections.emailSettings.nameCatchAllHelp')}`;
   }
   return t('views.mail.sections.emailSettings.nameHelp');
 });
