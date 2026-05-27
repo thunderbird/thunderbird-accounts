@@ -666,6 +666,81 @@ class MailClient:
             if record.get('type') == 'TXT' and '_domainkey' in record.get('name', '')
         ]
 
+    def build_expected_dns_records(self, domain_name: str) -> list[dict]:
+        """Build the full list of DNS records the user must configure for a custom domain."""
+        from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
+
+        dns_hostname = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
+        dns_top_host = '.'.join(dns_hostname.split('.')[1:])
+
+        records = [
+            {'type': 'MX', 'name': '@', 'content': dns_hostname, 'priority': '10'},
+            {
+                'type': 'SRV',
+                'name': f'_jmap._tcp.{domain_name}.',
+                'content': f'1 443 {dns_hostname}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_caldavs._tcp.{domain_name}.',
+                'content': f'1 443 {dns_hostname}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_carddavs._tcp.{domain_name}.',
+                'content': f'1 443 {dns_hostname}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_imaps._tcp.{domain_name}.',
+                'content': f'1 993 {dns_hostname}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_submission._tcp.{domain_name}.',
+                'content': f'1 587 {dns_hostname}',
+                'priority': '0',
+            },
+            {
+                'type': 'TXT',
+                'name': domain_name,
+                'content': f'v=spf1 include:spf.{dns_top_host} -all',
+                'priority': '-',
+            },
+            {
+                'type': 'TXT',
+                'name': f'_mta-sts.{domain_name}.',
+                'content': 'v=STSv1; id=18139500144460329770',
+                'priority': '-',
+            },
+            {
+                'type': 'TXT',
+                'name': f'_smtp._tls.{domain_name}.',
+                'content': f'v=TLSRPTv1; rua=mailto:postmaster@{domain_name}',
+                'priority': '-',
+            },
+            {
+                'type': 'TXT',
+                'name': f'_dmarc.{domain_name}.',
+                'content': 'v=DMARC1; p=none;',
+                'priority': '-',
+            },
+        ]
+
+        records.extend(build_customer_dkim_cname_records(domain_name))
+        return records
+
+    def get_expected_dns_records_with_status(self, domain_name: str) -> list[dict]:
+        # Circular import, so we import here
+        from thunderbird_accounts.mail.utils import enrich_dns_records_with_status
+
+        expected_records = self.build_expected_dns_records(domain_name)
+        return enrich_dns_records_with_status(domain_name, expected_records)
+
     def verify_domain(self, domain_name: str):
         """Verify domain using dnspython.
 

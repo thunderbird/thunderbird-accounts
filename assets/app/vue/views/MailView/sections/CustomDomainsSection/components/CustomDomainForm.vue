@@ -11,7 +11,7 @@ import { CustomDomain, DNSRecord, STEP, DOMAIN_STATUS } from '../types';
 import { addCustomDomain, verifyDomain, getRemoteDNSRecords } from '../api';
 
 // Utils
-import { generateDNSRecords, extractDKIMRecords, deduplicateCriticalErrors } from '../utils';
+import { deduplicateCriticalErrors } from '../utils';
 
 const { t } = useI18n();
 
@@ -43,12 +43,7 @@ const handleDNSRecords = async (domainName: string) => {
     const remoteDNSRecords = await getRemoteDNSRecords(domainName);
 
     if (remoteDNSRecords.success) {
-      const dkimRecords = remoteDNSRecords.dkim_cname_records?.length
-        ? remoteDNSRecords.dkim_cname_records
-        : extractDKIMRecords(remoteDNSRecords.dns_records, domainName);
-      const dnsRecords = [...generateDNSRecords(domainName), ...dkimRecords];
-
-      recordsInfo.value = dnsRecords;
+      recordsInfo.value = remoteDNSRecords.dns_records;
       step.value = STEP.VERIFY_DOMAIN;
     } else {
       console.error(remoteDNSRecords.error);
