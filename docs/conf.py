@@ -1,5 +1,7 @@
 # Configuration file for the Sphinx documentation builder.
+import datetime
 import importlib
+from importlib import metadata
 import inspect
 import logging
 import os
@@ -13,12 +15,13 @@ print(f'Adding to path: {os.path.abspath("../src")}')  # noqa: T201
 
 # -- Project information
 
-project = 'Thunderbird Accounts'
-copyright = '2025, MZLA Technologies Corporation'
-author = 'Thunderbird Services'
+year = datetime.datetime.now().year
 
-release = '0.4'
-version = '0.4.0'
+project = 'Thunderbird Accounts'
+author = 'Thunderbird Services'
+copyright = f'{year}, MZLA Technologies Corporation'
+
+version = release = metadata.version('thunderbird_accounts')
 
 # -- General configuration
 
