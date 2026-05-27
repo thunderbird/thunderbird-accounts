@@ -43,6 +43,7 @@ templates_path = ['_templates']
 
 autosummary_generate = True
 
+autodoc_use_legacy_class_based = True
 autodoc_member_order = 'bysource'
 autodoc_default_options = {
     'members': True,

@@ -22,6 +22,7 @@ class UserCacheSerializer(serializers.ModelSerializer):
     """
     Version 1
     Formats a user model to the json format below:
+    
     .. code-block:: json
 
         {
@@ -41,6 +42,7 @@ class UserCacheSerializer(serializers.ModelSerializer):
             "updated_at": "2024-11-13T16:57:11.968Z",
             "access": ["apmt", "send", "assist"]
         }
+
     """
 
     # Schema version

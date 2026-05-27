@@ -1,10 +1,11 @@
 """
 Converts legal document markdown files to pre-rendered HTML.
 
-Walks assets/legal/ for all *.md files and writes a sibling .html file
+Walks assets/legal/ for all ``*.md`` files and writes a sibling .html file
 for each one. The generated HTML is body-fragment only (no <html>/<head>
 wrappers) so it can be served directly via the API and injected with v-html.
 """
+
 from django.apps import apps
 from pathlib import Path
 
