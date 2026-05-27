@@ -343,6 +343,12 @@ def add_email_alias(request: HttpRequest):
 
     full_email_alias = f'{email_alias}@{domain}'
 
+    if not is_catch_all and email_alias and '+' in email_alias:
+        return JsonResponse(
+            {'success': False, 'error': _('The + symbol is not allowed.')},
+            status=400,
+        )
+
     if domain in settings.ALLOWED_EMAIL_DOMAINS and len(email_alias) < settings.MIN_CUSTOM_DOMAIN_ALIAS_LENGTH:
         return JsonResponse(
             {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
