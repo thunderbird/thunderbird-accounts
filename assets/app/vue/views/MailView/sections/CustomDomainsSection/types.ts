@@ -10,7 +10,12 @@ export enum STEP {
   VERIFY_DOMAIN = 'verify',
 };
 
-export type DNSRecordStatus = 'match' | 'conflict' | 'missing' | 'unknown';
+export enum DNSRecordStatus {
+  MATCH = 'match',
+  CONFLICT = 'conflict',
+  MISSING = 'missing',
+  UNKNOWN = 'unknown',
+};
 
 export type DNSRecord = {
   type: string;

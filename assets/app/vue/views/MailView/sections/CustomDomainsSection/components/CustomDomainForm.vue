@@ -5,7 +5,7 @@ import { PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbir
 import { PhX } from '@phosphor-icons/vue';
 
 // Types
-import { CustomDomain, DNSRecord, StaleDNSRecord, STEP, DOMAIN_STATUS } from '../types';
+import { CustomDomain, DNSRecord, StaleDNSRecord, STEP, DOMAIN_STATUS, DNSRecordStatus } from '../types';
 
 // API
 import { addCustomDomain, verifyDomain, getRemoteDNSRecords } from '../api';
@@ -202,20 +202,29 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
       </div>
       <div
         class="records-table-row"
-        :class="{ 'record-conflict': record.status === 'conflict' }"
+        :class="{ 'record-conflict': record.status === DNSRecordStatus.CONFLICT }"
         v-for="record in recordsInfo"
         :key="`${record.type}-${record.name}-${record.content}`"
       >
-        <p>{{ record.type }}</p>
-        <p>{{ record.name }}</p>
-        <p>{{ record.content }}</p>
-        <p>{{ record.priority || '-' }}</p>
-        <span v-if="record.status === 'conflict'" class="record-conflict-warning">
-          {{ t('views.mail.sections.customDomains.recordConflictWarning') }}
-          <template v-if="record.existing_values?.length">
-            ({{ record.existing_values.join(', ') }})
-          </template>
-        </span>
+        <div class="records-table-row-cells">
+          <p>{{ record.type }}</p>
+          <p>{{ record.name }}</p>
+          <p>{{ record.content }}</p>
+          <p>{{ record.priority || '-' }}</p>
+        </div>
+
+        <div
+          v-if="record.status === DNSRecordStatus.CONFLICT"
+          class="record-conflict-notice"
+        >
+          <notice-bar :type="NoticeBarTypes.Warning">
+            <i18n-t keypath="views.mail.sections.customDomains.recordConflictWarning" tag="span">
+              <template #currentValue>
+                <strong>{{ record.existing_values?.join(', ') }}</strong>
+              </template>
+            </i18n-t>
+          </notice-bar>
+        </div>
       </div>
     </div>
 
@@ -345,8 +354,21 @@ h3 {
 
 .records-table-row {
   display: flex;
+  flex-direction: column;
+  min-width: max-content;
+
+  &:nth-child(odd) {
+    background-color: var(--colour-neutral-lower);
+  }
+
+  &.record-conflict {
+    background-color: rgba(255, 193, 7, 0.12);
+  }
+}
+
+.records-table-row-cells {
+  display: flex;
   align-items: center;
-  flex-wrap: wrap;
   min-width: max-content;
 
   p {
@@ -356,22 +378,10 @@ h3 {
     flex-shrink: 0;
     word-break: break-word;
   }
+}
 
-  &:nth-child(odd) {
-    background-color: var(--colour-neutral-lower);
-  }
-
-  &.record-conflict {
-    background-color: rgba(255, 193, 7, 0.12);
-  }
-
-  .record-conflict-warning {
-    flex-basis: 100%;
-    padding: 0 1rem 1rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--colour-ti-secondary);
-  }
+.record-conflict-notice {
+  padding: 0 1rem 1rem;
 }
 
 .stale-dns-notice-bar {
@@ -442,6 +452,10 @@ h3 {
   }
 
   .records-table-row {
+    min-width: auto;
+  }
+
+  .records-table-row-cells {
     min-width: auto;
 
     p {
