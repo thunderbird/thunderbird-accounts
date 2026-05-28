@@ -7,6 +7,7 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
 from thunderbird_accounts.mail.clients import DNSRecordStatus, StaleDNSRecordCode
 from thunderbird_accounts.mail.utils import (
+    check_cname_record_status,
     check_mx_record_status,
     check_srv_record_status,
     check_stale_dns_records,
@@ -184,6 +185,44 @@ class TestDNSRecordStatus(SimpleTestCase):
 
         self.assertEqual(status, DNSRecordStatus.MATCH)
         self.assertEqual(existing_values, [])
+
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_cname_match(self, mock_resolve):
+        mock_cname = MagicMock()
+        mock_cname.target.to_text.return_value = 'tm1.example.com.dkim.test.net.'
+        mock_resolve.return_value = [mock_cname]
+
+        status, existing_values = check_cname_record_status(
+            self.domain,
+            {
+                'type': 'CNAME',
+                'name': f'tm1._domainkey.{self.domain}.',
+                'content': 'tm1.example.com.dkim.test.net.',
+                'priority': '-',
+            },
+        )
+
+        self.assertEqual(status, DNSRecordStatus.MATCH)
+        self.assertEqual(existing_values, [])
+
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_cname_conflict(self, mock_resolve):
+        mock_cname = MagicMock()
+        mock_cname.target.to_text.return_value = 'wrong.example.net.'
+        mock_resolve.return_value = [mock_cname]
+
+        status, existing_values = check_cname_record_status(
+            self.domain,
+            {
+                'type': 'CNAME',
+                'name': f'tm1._domainkey.{self.domain}.',
+                'content': 'tm1.example.com.dkim.test.net.',
+                'priority': '-',
+            },
+        )
+
+        self.assertEqual(status, DNSRecordStatus.CONFLICT)
+        self.assertEqual(existing_values, ['wrong.example.net'])
 
     @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
     def test_spf_match(self, mock_resolve):

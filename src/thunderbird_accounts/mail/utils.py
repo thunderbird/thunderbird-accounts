@@ -103,6 +103,27 @@ def check_srv_record_status(domain_name: str, record: dict) -> tuple[DNSRecordSt
     return DNSRecordStatus.MISSING, []
 
 
+def check_cname_record_status(domain_name: str, record: dict) -> tuple[DNSRecordStatus, list[str]]:
+    query_name = normalize_dns_query_name(record['name'], domain_name)
+    expected_target = record['content'].rstrip('.').lower()
+
+    try:
+        answers = dns.resolver.resolve(query_name, 'CNAME')
+    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+        return DNSRecordStatus.MISSING, []
+    except Exception as e:
+        logging.warning(f'CNAME lookup failed for {query_name}: {e}')
+        return DNSRecordStatus.UNKNOWN, []
+
+    live_values = [rdata.target.to_text().rstrip('.') for rdata in answers]
+
+    if any(value.lower() == expected_target for value in live_values):
+        return DNSRecordStatus.MATCH, []
+    if live_values:
+        return DNSRecordStatus.CONFLICT, live_values
+    return DNSRecordStatus.MISSING, []
+
+
 def _compare_dkim_txt(expected_content: str, live_values: list[str]) -> tuple[DNSRecordStatus, list[str]]:
     expected_p = txt_tag_value(expected_content, 'p')
     dkim_values = [value for value in live_values if 'v=DKIM1' in value]
@@ -188,6 +209,8 @@ def check_dns_record_status(domain_name: str, record: dict) -> tuple[DNSRecordSt
         return check_mx_record_status(domain_name, record)
     if record_type == 'SRV':
         return check_srv_record_status(domain_name, record)
+    if record_type == 'CNAME':
+        return check_cname_record_status(domain_name, record)
     if record_type == 'TXT':
         return check_txt_record_status(domain_name, record)
     return DNSRecordStatus.UNKNOWN, []
