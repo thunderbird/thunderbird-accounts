@@ -35,8 +35,9 @@ dependencies = [
     "flower>=2.0.1",
     "celery-redbeat>=2.3.3",
     "posthog>=7.15.4",
+    "cloudflare>=5.2.0",
     # CVE pins
-    "idna>=3.15" # CVE-2026-45409 fix
+    "idna>=3.15", # CVE-2026-45409 fix
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"

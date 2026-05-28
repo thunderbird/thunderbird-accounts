@@ -223,16 +223,23 @@ class MailClient:
         return data.get('data')
 
     def create_dkim(self, domain):
-        data = {'id': None, 'algorithm': settings.STALWART_DKIM_ALGO, 'domain': domain, 'selector': None}
-        response = requests.post(
-            f'{self.api_url}/dkim',
-            json=data,
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-        data = response.json()
-        return data.get('data')
+        response_data = None
+        for algorithm in settings.STALWART_DKIM_ALGOS:
+            data = {
+                'id': None,
+                'algorithm': algorithm,
+                'domain': domain,
+                'selector': settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm),
+            }
+            response = requests.post(
+                f'{self.api_url}/dkim',
+                json=data,
+                headers=self.authorized_headers,
+                verify=settings.VERIFY_PRIVATE_LINK_SSL,
+            )
+            response.raise_for_status()
+            response_data = response.json().get('data')
+        return response_data
 
     def delete_dkim(self, domain) -> Optional[requests.Response]:
         """
@@ -494,6 +501,64 @@ class MailClient:
         self._raise_for_error(response)
         data = response.json()
         return data.get('data')
+
+    def make_jmap_admin_call(self, call: dict) -> dict:
+        response = requests.post(
+            f'{settings.STALWART_BASE_JMAP_URL}/api',
+            json=call,
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_dkim_signatures(self, domain_name: str) -> list[dict]:
+        domain = self.get_domain(domain_name)
+        domain_id = domain.get('id')
+        if not domain_id:
+            raise RuntimeError(f'Stalwart domain {domain_name} did not include an id')
+
+        response = self.make_jmap_admin_call(
+            {
+                'using': ['urn:ietf:params:jmap:core', 'urn:stalwart:jmap'],
+                'methodCalls': [
+                    [
+                        'x:DkimSignature/query',
+                        {'filter': {'domainId': domain_id}},
+                        'q',
+                    ],
+                    [
+                        'x:DkimSignature/get',
+                        {'#ids': {'resultOf': 'q', 'name': 'x:DkimSignature/query', 'path': '/ids'}},
+                        'g',
+                    ],
+                ],
+            }
+        )
+
+        for method_name, arguments, _call_id in response.get('methodResponses', []):
+            if method_name == 'x:DkimSignature/get':
+                return arguments.get('list', [])
+            if method_name == 'error':
+                raise RuntimeError(f'Stalwart JMAP error fetching DKIM signatures: {arguments}')
+
+        raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/get')
+
+    def get_dkim_dns_records(self, domain_name: str) -> list[dict]:
+        try:
+            from thunderbird_accounts.mail.dkim import dkim_signatures_to_dns_records
+
+            return dkim_signatures_to_dns_records(domain_name, self.get_dkim_signatures(domain_name))
+        except DomainNotFoundError:
+            logging.info(f'[MailClient.get_dkim_dns_records] {domain_name} is not a Stalwart domain yet')
+        except Exception as ex:
+            logging.warning(f'[MailClient.get_dkim_dns_records] Falling back to DNS records endpoint: {ex}')
+
+        return [
+            record
+            for record in self.get_dns_records(domain_name)
+            if record.get('type') == 'TXT' and '_domainkey' in record.get('name', '')
+        ]
 
     def verify_domain(self, domain_name: str):
         """Verify domain using dnspython.

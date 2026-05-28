@@ -167,6 +167,10 @@ class TestMailClientCreateDkim(TestCase):
         self.domain = 'example.com'
         self.expected_host = 'mail.test.com'
 
+    @override_settings(
+        STALWART_DKIM_ALGOS=['Ed25519', 'Rsa'],
+        STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'},
+    )
     @patch('requests.post')
     def test_success(self, requests_mock: MagicMock):
         success_response = requests.Response()
@@ -178,9 +182,14 @@ class TestMailClientCreateDkim(TestCase):
         response_data = self.mail_client.create_dkim(self.domain)
 
         self.assertIsNotNone(response_data)
-        requests_mock.assert_called_once()
-        call_args = requests_mock.call_args
-        self.assertEqual(self.domain, call_args[1].get('json', {}).get('domain'))
+        self.assertEqual(2, requests_mock.call_count)
+        self.assertEqual(
+            [
+                {'id': None, 'algorithm': 'Ed25519', 'domain': self.domain, 'selector': 'tm2'},
+                {'id': None, 'algorithm': 'Rsa', 'domain': self.domain, 'selector': 'tm1'},
+            ],
+            [call_args.kwargs['json'] for call_args in requests_mock.call_args_list],
+        )
 
 
 class TestMailClientDeleteDkim(TestCase):
