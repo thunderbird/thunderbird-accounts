@@ -220,7 +220,7 @@
           "verifyStepTwoTitle": "2. Remove old mail records",
           "verifyStepTwo": "Delete any existing MX, TXT and SRV records related to email. This ensures your domain is ready to route mail through Thundermail.",
           "verifyStepThreeTitle": "3. Add Thundermail DNS records",
-          "verifyStepThree": "Add the following MX, TXT, and SRV records to your domain’s DNS settings. Enter each record exactly as shown below.",
+          "verifyStepThree": "Add the following records to your domain’s DNS settings. Enter each record exactly as shown below.",
           "verifyStepNoteTip": "Tip:",
           "verifyStepNote": "{'If your registrar doesn’t allow \"@\" for the root domain, leave the Name/Host field empty.'}",
           "verifyStepButton": "Verify Domain",
