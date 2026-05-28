@@ -2,7 +2,7 @@ from thunderbird_accounts.celery.exceptions import TaskFailed
 from unittest.mock import patch, Mock
 
 from django.conf import settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail import tasks
@@ -59,6 +59,78 @@ class UpdateQuotaOnStalwartAccountTestCase(TaskTestCase):
 
             self.assertEqual(results['task_status'], 'success')
             self.assertEqual(results['quota'], 0)
+
+
+class PublishHostedDkimDNSRecordsTestCase(TaskTestCase):
+    @override_settings(
+        HOSTED_DKIM_CLOUDFLARE_ENABLED=False,
+        HOSTED_DKIM_DOMAIN='dkim.example.net',
+        HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'],
+    )
+    @patch('thunderbird_accounts.mail.tasks.CloudflareDNSClient')
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_logs_records_when_cloudflare_publication_disabled(self, mail_client_mock, cloudflare_client_mock):
+        dkim_records = [
+            {'type': 'TXT', 'name': 'tm1._domainkey.example.com.', 'content': 'v=DKIM1; p=rsa'},
+            {'type': 'TXT', 'name': 'tm2._domainkey.example.com.', 'content': 'v=DKIM1; p=ed25519'},
+        ]
+        mail_client_mock.return_value.get_dkim_dns_records.return_value = dkim_records
+
+        with self.assertLogs(level='INFO') as logs:
+            results = tasks.publish_hosted_dkim_dns_records.run(domain_name='example.com')
+
+        self.assertEqual(results['task_status'], 'success')
+        self.assertTrue(results['skipped'])
+        self.assertEqual(
+            [
+                {'type': 'TXT', 'name': 'tm1.example.com.dkim.example.net', 'content': 'v=DKIM1; p=rsa'},
+                {'type': 'TXT', 'name': 'tm2.example.com.dkim.example.net', 'content': 'v=DKIM1; p=ed25519'},
+            ],
+            results['records'],
+        )
+        cloudflare_client_mock.assert_not_called()
+        self.assertIn(
+            'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS update to set '
+            '"TXT tm1.example.com.dkim.example.net v=DKIM1; p=rsa"',
+            logs.output[0],
+        )
+        self.assertIn(
+            'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS update to set '
+            '"TXT tm2.example.com.dkim.example.net v=DKIM1; p=ed25519"',
+            logs.output[1],
+        )
+
+    @override_settings(
+        HOSTED_DKIM_CLOUDFLARE_ENABLED=True,
+        HOSTED_DKIM_CLOUDFLARE_ZONE_ID='zone-id',
+        HOSTED_DKIM_CLOUDFLARE_API_TOKEN='secret',
+    )
+    @patch('thunderbird_accounts.mail.tasks.publish_hosted_dkim_txt_records')
+    @patch('thunderbird_accounts.mail.tasks.CloudflareDNSClient')
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_publishes_stalwart_dkim_records(self, mail_client_mock, cloudflare_client_mock, publish_mock):
+        dkim_records = [
+            {'type': 'TXT', 'name': 'tm1._domainkey.example.com.', 'content': 'v=DKIM1; p=rsa'},
+            {'type': 'TXT', 'name': 'tm2._domainkey.example.com.', 'content': 'v=DKIM1; p=ed25519'},
+        ]
+        hosted_records = [
+            {'type': 'TXT', 'name': 'tm1.example.com.dkim.example.net', 'content': 'v=DKIM1; p=rsa'},
+            {'type': 'TXT', 'name': 'tm2.example.com.dkim.example.net', 'content': 'v=DKIM1; p=ed25519'},
+        ]
+        mail_client_mock.return_value.get_dkim_dns_records.return_value = dkim_records
+        publish_mock.return_value = hosted_records
+
+        results = tasks.publish_hosted_dkim_dns_records.run(domain_name='example.com')
+
+        mail_client_mock.return_value.get_dkim_dns_records.assert_called_once_with('example.com')
+        publish_mock.assert_called_once_with(
+            'example.com',
+            dkim_records,
+            dns_client=cloudflare_client_mock.return_value,
+        )
+        self.assertEqual(results['task_status'], 'success')
+        self.assertFalse(results['skipped'])
+        self.assertEqual(hosted_records, results['records'])
 
 
 class CreateStalwartAccountTestCase(TaskTestCase):

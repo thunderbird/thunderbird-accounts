@@ -4,13 +4,23 @@ from typing import Optional
 
 from celery import shared_task
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.dkim import (
+    CloudflareDNSClient,
+    build_hosted_dkim_txt_records,
+    publish_hosted_dkim_txt_records,
+)
 from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.core.types import TaskReturnStatus
+
+
+class HostedDkimPublishRetry(Exception):
+    pass
 
 
 def _stalwart_check_or_create_domain_entry(stalwart, domain):
@@ -150,6 +160,57 @@ def update_quota_on_stalwart_account(self, username: str, quota: Optional[int]):
     return {
         'username': username,
         'quota': quota,
+        'task_status': TaskReturnStatus.SUCCESS,
+    }
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(HostedDkimPublishRetry,),
+    retry_backoff=True,
+    retry_backoff_max=60 * 60,  # 1 hour
+    retry_jitter=True,
+    max_retries=24,
+)
+def publish_hosted_dkim_dns_records(self, domain_name: str):
+    try:
+        stalwart = MailClient()
+        dkim_dns_records = stalwart.get_dkim_dns_records(domain_name)
+
+        if settings.HOSTED_DKIM_CLOUDFLARE_ENABLED:
+            hosted_records = publish_hosted_dkim_txt_records(
+                domain_name,
+                dkim_dns_records,
+                dns_client=CloudflareDNSClient(),
+            )
+            expected_record_count = len(
+                {selector for selector in settings.STALWART_DKIM_ALGO_SELECTORS.values() if selector}
+            )
+            if len(hosted_records) < expected_record_count:
+                raise RuntimeError(
+                    f'Expected {expected_record_count} hosted DKIM records for {domain_name}, got {len(hosted_records)}'
+                )
+            skipped = False
+        # Building and logging the full records is still useful for development.
+        else:
+            hosted_records = build_hosted_dkim_txt_records(domain_name, dkim_dns_records)
+            for record in hosted_records:
+                logging.info(
+                    'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS update to set '
+                    f'"{record["type"]} {record["name"]} {record["content"]}"'
+                )
+            skipped = True
+    except ImproperlyConfigured as ex:
+        logging.error(f'[publish_hosted_dkim_dns_records] Hosted DKIM is misconfigured: {ex}')
+        raise TaskFailed(str(ex), {'domain_name': domain_name})
+    except Exception as ex:
+        logging.warning(f'[publish_hosted_dkim_dns_records] Error publishing hosted DKIM records: {ex}')
+        raise HostedDkimPublishRetry(str(ex)) from ex
+
+    return {
+        'domain_name': domain_name,
+        'records': hosted_records,
+        'skipped': skipped,
         'task_status': TaskReturnStatus.SUCCESS,
     }
 
