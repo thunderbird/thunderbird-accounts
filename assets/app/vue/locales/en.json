@@ -229,7 +229,7 @@
           "recordsTableHeaderNameHost": "{'Name/Host'}",
           "recordsTableHeaderValueData": "{'Value/Data'}",
           "recordsTableHeaderPriority": "Priority",
-          "recordConflictWarning": "Warning",
+          "recordConflictWarning": "Conflict detected. Replace {currentValue} with the value in this row.",
           "staleDnsRecordsTitle": "Remove these stale records",
           "staleDnsRecords": "Please remove the {type} record for {name} as it points to {existing_values}.",
           "verifyStepInfoTitle": "Automatic Verification Attempts",
