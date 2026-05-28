@@ -43,7 +43,9 @@ const handleDNSRecords = async (domainName: string) => {
     const remoteDNSRecords = await getRemoteDNSRecords(domainName);
 
     if (remoteDNSRecords.success) {
-      const dkimRecords = extractDKIMRecords(remoteDNSRecords.dns_records, domainName);
+      const dkimRecords = remoteDNSRecords.dkim_cname_records?.length
+        ? remoteDNSRecords.dkim_cname_records
+        : extractDKIMRecords(remoteDNSRecords.dns_records, domainName);
       const dnsRecords = [...generateDNSRecords(domainName), ...dkimRecords];
 
       recordsInfo.value = dnsRecords;

@@ -23,6 +23,7 @@ from django.views.generic import TemplateView
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
 from thunderbird_accounts.mail.exceptions import (
     AccessTokenNotFound,
     AccountNotFoundError,
@@ -32,6 +33,7 @@ from thunderbird_accounts.mail.exceptions import (
 from thunderbird_accounts.mail.utils import filter_app_passwords, is_address_taken, validate_email
 
 from thunderbird_accounts.mail.models import Account, Email, Domain
+from thunderbird_accounts.mail import tasks as mail_tasks
 from thunderbird_accounts.mail import utils
 
 
@@ -150,6 +152,7 @@ def create_custom_domain(request: HttpRequest):
         # we want this to happen before the local reference (Domain model) is created
         # so we're not missing any dkim records in the dns record list.
         stalwart_client.create_dkim(domain_name)
+        mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
 
         try:
             Domain.objects.create(name=domain_name, user=request.user, stalwart_id=None, stalwart_created_at=None)
@@ -187,8 +190,17 @@ def get_dns_records(request: HttpRequest):
 
     try:
         stalwart_client = MailClient()
+        # Harmless to retry and ensures existing domains pick up the managed DKIM selectors.
+        stalwart_client.create_dkim(domain.name)
+        mail_tasks.publish_hosted_dkim_dns_records.delay(domain.name)
         dns_records = stalwart_client.get_dns_records(domain.name)
-        return JsonResponse({'success': True, 'dns_records': dns_records})
+        return JsonResponse(
+            {
+                'success': True,
+                'dns_records': dns_records,
+                'dkim_cname_records': build_customer_dkim_cname_records(domain.name),
+            }
+        )
     except Exception as e:
         logging.error(f'Error getting DNS records: {e}')
         return JsonResponse(
@@ -233,6 +245,7 @@ def verify_custom_domain(request: HttpRequest):
             domain_id = stalwart_client.create_domain(domain_name)
             # Harmless to retry
             stalwart_client.create_dkim(domain_name)
+            mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
             now = datetime.datetime.now(datetime.UTC)
 
             domain.stalwart_id = domain_id

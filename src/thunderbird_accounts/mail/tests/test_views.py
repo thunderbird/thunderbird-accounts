@@ -111,6 +111,51 @@ class DisplayNameApiTestCase(TestCase):
         self.assertFalse(json.loads(response.content.decode())['success'])
 
 
+@override_settings(HOSTED_DKIM_DOMAIN='dkim.example.net', HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'])
+class CustomDomainDNSRecordsTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        self.domain = Domain.objects.create(name='example.com', user=self.user)
+        self.client.force_login(self.user)
+        self.url = reverse('get_dns_records')
+
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_returns_customer_dkim_cname_records(self, mock_mail_client_cls):
+        mock_instance = Mock()
+        mock_instance.get_dns_records.return_value = []
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.get(self.url, {'domain-name': self.domain.name})
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content.decode())
+        self.assertTrue(data['success'])
+        self.assertEqual(
+            [
+                {
+                    'type': 'CNAME',
+                    'name': 'tm1._domainkey.example.com.',
+                    'content': 'tm1.example.com.dkim.example.net.',
+                    'priority': '-',
+                },
+                {
+                    'type': 'CNAME',
+                    'name': 'tm2._domainkey.example.com.',
+                    'content': 'tm2.example.com.dkim.example.net.',
+                    'priority': '-',
+                },
+                {
+                    'type': 'CNAME',
+                    'name': 'tm3._domainkey.example.com.',
+                    'content': 'tm3.example.com.dkim.example.net.',
+                    'priority': '-',
+                },
+            ],
+            data['dkim_cname_records'],
+        )
+
+
 class AddEmailAliasTestCase(TestCase):
     def setUp(self):
         self.client = RequestClient()
