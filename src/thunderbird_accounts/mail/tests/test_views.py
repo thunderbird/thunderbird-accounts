@@ -4,12 +4,13 @@ import json
 from unittest.mock import patch, Mock
 
 from django.conf import settings
-from django.test import TestCase, Client as RequestClient, override_settings
+from django.test import TestCase, Client as RequestClient, override_settings, RequestFactory
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account, Domain, Email
+from thunderbird_accounts.mail.views import get_dns_records
 
 
 class AppPasswordApiTestCase(TestCase):
@@ -114,49 +115,54 @@ class DisplayNameApiTestCase(TestCase):
 @override_settings(HOSTED_DKIM_DOMAIN='dkim.example.net', HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'])
 class CustomDomainDNSRecordsTestCase(TestCase):
     def setUp(self):
-        self.client = RequestClient()
+        self.request_factory = RequestFactory()
         self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
         self.domain = Domain.objects.create(name='example.com', user=self.user)
-        self.client.force_login(self.user)
         self.url = reverse('get_dns_records')
 
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_returns_customer_dkim_cname_records(self, mock_mail_client_cls):
+    def test_returns_customer_dkim_cname_records(self, mock_mail_client_cls, mock_publish_hosted_dkim_dns_records):
+        dkim_records = [
+            {
+                'type': 'CNAME',
+                'name': 'tm1._domainkey.example.com.',
+                'content': 'tm1.example.com.dkim.example.net.',
+                'priority': '-',
+            },
+            {
+                'type': 'CNAME',
+                'name': 'tm2._domainkey.example.com.',
+                'content': 'tm2.example.com.dkim.example.net.',
+                'priority': '-',
+            },
+            {
+                'type': 'CNAME',
+                'name': 'tm3._domainkey.example.com.',
+                'content': 'tm3.example.com.dkim.example.net.',
+                'priority': '-',
+            },
+        ]
         mock_instance = Mock()
-        mock_instance.get_dns_records.return_value = []
-        mock_instance.build_expected_dns_records.return_value = []
+        mock_instance.build_expected_dns_records.return_value = [
+            {'type': 'MX', 'name': '@', 'content': 'mail.example.net', 'priority': '10'},
+            *dkim_records,
+        ]
         mock_mail_client_cls.return_value = mock_instance
 
-        response = self.client.get(self.url, {'domain-name': self.domain.name})
+        request = self.request_factory.get(self.url, {'domain-name': self.domain.name})
+        request.user = self.user
+
+        response = get_dns_records(request)
 
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.content.decode())
         self.assertTrue(data['success'])
+        self.assertEqual(mock_instance.build_expected_dns_records.return_value, data['dns_records'])
+        self.assertEqual(dkim_records, data['dkim_cname_records'])
         mock_instance.ensure_dkim.assert_called_once_with(self.domain.name)
         mock_instance.create_dkim.assert_not_called()
-        self.assertEqual(
-            [
-                {
-                    'type': 'CNAME',
-                    'name': 'tm1._domainkey.example.com.',
-                    'content': 'tm1.example.com.dkim.example.net.',
-                    'priority': '-',
-                },
-                {
-                    'type': 'CNAME',
-                    'name': 'tm2._domainkey.example.com.',
-                    'content': 'tm2.example.com.dkim.example.net.',
-                    'priority': '-',
-                },
-                {
-                    'type': 'CNAME',
-                    'name': 'tm3._domainkey.example.com.',
-                    'content': 'tm3.example.com.dkim.example.net.',
-                    'priority': '-',
-                },
-            ],
-            data['dkim_cname_records'],
-        )
+        mock_publish_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
 
 
 class VerifyCustomDomainTestCase(TestCase):

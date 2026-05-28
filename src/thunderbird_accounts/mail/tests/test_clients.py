@@ -425,36 +425,39 @@ class TestMailClientDeleteDkim(TestCase):
     STALWART_API_AUTH_STRING='secret',
     STALWART_API_AUTH_METHOD='bearer',
     CONNECTION_INFO={'SMTP': {'HOST': 'mail.test.com'}},
+    HOSTED_DKIM_DOMAIN='dkim.test.net',
+    HOSTED_DKIM_SELECTORS=['tm1', 'tm2'],
 )
 class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
     def setUp(self):
         self.mail_client = MailClient()
         self.domain = 'example.com'
 
-    @patch.object(MailClient, 'get_dns_records')
-    def test_build_expected_dns_records_includes_dkim(self, mock_get_dns_records):
-        mock_get_dns_records.return_value = [
-            {
-                'type': 'TXT',
-                'name': '202501e._domainkey.example.com.',
-                'content': 'v=DKIM1; k=rsa; p=abc123',
-                'priority': '-',
-            },
-            {'type': 'TXT', 'name': 'example.com.', 'content': 'unrelated', 'priority': '-'},
-        ]
-
+    def test_build_expected_dns_records_includes_dkim_cnames(self):
         records = self.mail_client.build_expected_dns_records(self.domain)
 
         self.assertEqual(records[0], {'type': 'MX', 'name': '@', 'content': 'mail.test.com', 'priority': '10'})
         dkim_records = [record for record in records if '_domainkey' in record['name']]
-        self.assertEqual(len(dkim_records), 1)
-        self.assertEqual(dkim_records[0]['name'], '202501e._domainkey.example.com.')
+        self.assertEqual(
+            dkim_records,
+            [
+                {
+                    'type': 'CNAME',
+                    'name': 'tm1._domainkey.example.com.',
+                    'content': 'tm1.example.com.dkim.test.net.',
+                    'priority': '-',
+                },
+                {
+                    'type': 'CNAME',
+                    'name': 'tm2._domainkey.example.com.',
+                    'content': 'tm2.example.com.dkim.test.net.',
+                    'priority': '-',
+                },
+            ],
+        )
 
     @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
-    @patch.object(MailClient, 'get_dns_records')
-    def test_get_expected_dns_records_with_status(self, mock_get_dns_records, mock_resolve):
-        mock_get_dns_records.return_value = []
-
+    def test_get_expected_dns_records_with_status(self, mock_resolve):
         mock_mx = MagicMock()
         mock_mx.exchange.to_text.return_value = 'wrong.host.com.'
         mock_mx.preference = 10
@@ -471,4 +474,3 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
         mx_record = next(record for record in records if record['type'] == 'MX')
         self.assertEqual(mx_record['status'], 'conflict')
         self.assertEqual(mx_record['existing_values'], ['10 wrong.host.com'])
-
