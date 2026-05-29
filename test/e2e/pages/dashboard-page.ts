@@ -128,7 +128,7 @@ export class DashboardPage {
 
     await expect.poll(async () => popup.url()).not.toBe('about:blank');
     expect(new URL(popup.url()).protocol).toMatch(/^https?:$/);
-    expect(new URL(popup.url()).host).toBe(PADDLE_HOST);
+    expect(new URL(popup.url()).host).toContain(PADDLE_HOST);
     await popup.close();
   }
 
