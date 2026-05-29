@@ -10,6 +10,11 @@ from django.core.exceptions import ImproperlyConfigured
 
 HOSTED_DKIM_RECORD_COMMENT = 'Managed by Thunderbird Accounts hosted DKIM'
 
+# Stalwart states used to track key rotations
+DKIM_SIGNATURE_STAGES = {'pending', 'active', 'retiring', 'retired'}
+# The stages that need to be sync'ed to DNS.
+DKIM_SIGNATURE_DNS_STAGES = {'pending', 'active', 'retiring'}
+
 
 def _normalize_domain(domain_name: str) -> str:
     return domain_name.strip().rstrip('.').lower()
@@ -115,7 +120,11 @@ def dkim_signatures_to_dns_records(domain_name: str, signatures: list[dict]) -> 
         if not selector:
             continue
 
-        if signature.get('stage', 'active') != 'active':
+        stage = signature.get('stage')
+        if stage not in DKIM_SIGNATURE_STAGES:
+            raise RuntimeError(f'DKIM signature {signature.get("id")} had unexpected stage {stage!r}')
+
+        if stage not in DKIM_SIGNATURE_DNS_STAGES:
             continue
 
         key_type, public_key_value = _dkim_key_type_and_public_key_value(signature)

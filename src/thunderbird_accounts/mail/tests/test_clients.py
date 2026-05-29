@@ -3,7 +3,7 @@ import requests
 import dns.resolver
 from unittest.mock import MagicMock, patch
 from django.test import SimpleTestCase, override_settings, TestCase
-from thunderbird_accounts.mail.clients import MailClient, DomainVerificationErrors
+from thunderbird_accounts.mail.clients import DkimSignatureStage, MailClient, DomainVerificationErrors
 from thunderbird_accounts.mail.exceptions import FailedToCreateDKIM
 
 
@@ -171,6 +171,7 @@ class TestMailClientCreateDkim(TestCase):
     @override_settings(
         STALWART_DKIM_ALGOS=['Ed25519', 'Rsa'],
         STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'},
+        STALWART_DKIM_STAGE_MANAGEMENT_ENABLED=True,
     )
     @patch('requests.post')
     def test_success(self, requests_mock: MagicMock):
@@ -186,8 +187,20 @@ class TestMailClientCreateDkim(TestCase):
         self.assertEqual(2, requests_mock.call_count)
         self.assertEqual(
             [
-                {'id': None, 'algorithm': 'Ed25519', 'domain': self.domain, 'selector': 'tm2'},
-                {'id': None, 'algorithm': 'Rsa', 'domain': self.domain, 'selector': 'tm1'},
+                {
+                    'id': None,
+                    'algorithm': 'Ed25519',
+                    'domain': self.domain,
+                    'selector': 'tm2',
+                    'stage': DkimSignatureStage.PENDING.value,
+                },
+                {
+                    'id': None,
+                    'algorithm': 'Rsa',
+                    'domain': self.domain,
+                    'selector': 'tm1',
+                    'stage': DkimSignatureStage.PENDING.value,
+                },
             ],
             [call_args.kwargs['json'] for call_args in requests_mock.call_args_list],
         )
@@ -210,6 +223,112 @@ class TestMailClientCreateDkim(TestCase):
         self.assertEqual('Ed25519', cm.exception.algorithm)
         self.assertEqual(self.domain, cm.exception.domain)
         self.assertIsInstance(cm.exception.__cause__, requests.RequestException)
+
+
+@override_settings(
+    STALWART_DKIM_ALGOS=['Ed25519', 'Rsa'],
+    STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'},
+)
+class TestMailClientEnsureDkim(TestCase):
+    def setUp(self):
+        self.mail_client = MailClient()
+        self.domain = 'example.com'
+
+    @patch.object(MailClient, 'create_dkim')
+    @patch.object(MailClient, 'get_dkim_dns_records')
+    def test_creates_only_missing_selectors(self, mock_get_dkim_dns_records, mock_create_dkim):
+        mock_get_dkim_dns_records.return_value = [
+            {'type': 'TXT', 'name': 'tm1._domainkey.example.com.', 'content': 'v=DKIM1; p=rsa'},
+        ]
+
+        self.mail_client.ensure_dkim(self.domain)
+
+        mock_create_dkim.assert_called_once_with(
+            self.domain,
+            stage=DkimSignatureStage.PENDING,
+            algorithms=['Ed25519'],
+        )
+
+    @patch.object(MailClient, 'create_dkim')
+    @patch.object(MailClient, 'get_dkim_dns_records')
+    def test_does_not_create_when_selectors_exist(self, mock_get_dkim_dns_records, mock_create_dkim):
+        mock_get_dkim_dns_records.return_value = [
+            {'type': 'TXT', 'name': 'tm1._domainkey.example.com.', 'content': 'v=DKIM1; p=rsa'},
+            {'type': 'TXT', 'name': 'tm2._domainkey.example.com.', 'content': 'v=DKIM1; p=ed25519'},
+        ]
+
+        self.mail_client.ensure_dkim(self.domain)
+
+        mock_create_dkim.assert_not_called()
+
+
+@override_settings(STALWART_DKIM_STAGE_MANAGEMENT_ENABLED=True)
+class TestMailClientActivatePendingDkim(TestCase):
+    def setUp(self):
+        self.mail_client = MailClient()
+        self.domain = 'example.com'
+
+    @patch.object(MailClient, 'make_jmap_admin_call')
+    @patch.object(MailClient, 'get_dkim_signatures')
+    def test_activates_pending_signatures(self, mock_get_dkim_signatures, mock_make_jmap_admin_call):
+        mock_get_dkim_signatures.return_value = [
+            {'id': 'sig-1', 'stage': 'pending'},
+            {'id': 'sig-2', 'stage': 'active'},
+            {'id': 'sig-3', 'stage': 'pending'},
+        ]
+        mock_make_jmap_admin_call.return_value = {
+            'methodResponses': [
+                [
+                    'x:DkimSignature/set',
+                    {'updated': {'sig-1': None, 'sig-3': None}},
+                    'u',
+                ]
+            ]
+        }
+
+        updated = self.mail_client.activate_pending_dkim_signatures(self.domain)
+
+        self.assertEqual(['sig-1', 'sig-3'], updated)
+        mock_get_dkim_signatures.assert_called_once_with(self.domain)
+        mock_make_jmap_admin_call.assert_called_once_with(
+            {
+                'using': ['urn:ietf:params:jmap:core', 'urn:stalwart:jmap'],
+                'methodCalls': [
+                    [
+                        'x:DkimSignature/set',
+                        {'update': {'sig-1': {'stage': 'active'}, 'sig-3': {'stage': 'active'}}},
+                        'u',
+                    ],
+                ],
+            }
+        )
+
+    @patch.object(MailClient, 'make_jmap_admin_call')
+    @patch.object(MailClient, 'get_dkim_signatures')
+    def test_no_pending_signatures_is_noop(self, mock_get_dkim_signatures, mock_make_jmap_admin_call):
+        mock_get_dkim_signatures.return_value = [{'id': 'sig-1', 'stage': 'active'}]
+
+        updated = self.mail_client.activate_pending_dkim_signatures(self.domain)
+
+        self.assertEqual([], updated)
+        mock_make_jmap_admin_call.assert_not_called()
+
+    @patch.object(MailClient, 'make_jmap_admin_call')
+    @patch.object(MailClient, 'get_dkim_signatures')
+    def test_raises_when_stalwart_does_not_update_signature(self, mock_get_dkim_signatures, mock_make_jmap_admin_call):
+        mock_get_dkim_signatures.return_value = [{'id': 'sig-1', 'stage': 'pending'}]
+        mock_make_jmap_admin_call.return_value = {
+            'methodResponses': [
+                [
+                    'x:DkimSignature/set',
+                    {'notUpdated': {'sig-1': {'type': 'invalidProperties'}}},
+                    'u',
+                ]
+            ]
+        }
+
+        with self.assertRaisesRegex(RuntimeError, 'failed to activate DKIM signatures'):
+            self.mail_client.activate_pending_dkim_signatures(self.domain)
 
 
 class TestMailClientDeleteDkim(TestCase):

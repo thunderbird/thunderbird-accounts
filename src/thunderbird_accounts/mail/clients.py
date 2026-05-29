@@ -40,6 +40,15 @@ class DomainVerificationErrors(StrEnum):
     DKIM_RECORD_NOT_FOUND = 'dkimRecordNotFound'
 
 
+class DkimSignatureStage(StrEnum):
+    """Stalwart DKIM signature rotation stages."""
+
+    PENDING = 'pending'
+    ACTIVE = 'active'
+    RETIRING = 'retiring'
+    RETIRED = 'retired'
+
+
 class MailClient:
     """A partial api client for Stalwart
     Docs: https://stalw.art/docs/api/management/endpoints
@@ -227,20 +236,24 @@ class MailClient:
 
         return data.get('data')
 
-    def create_dkim(self, domain):
+    def create_dkim(self, domain, stage: DkimSignatureStage = DkimSignatureStage.PENDING, algorithms=None):
         """
         Creates DKIM keys in Stalwart. Return list of response objects.
         Response objects may used for testing.
         Throws exception if request fails.
         """
         response_data = []
-        for algorithm in settings.STALWART_DKIM_ALGOS:
+        dkim_algorithms = settings.STALWART_DKIM_ALGOS if algorithms is None else algorithms
+        for algorithm in dkim_algorithms:
             data = {
                 'id': None,
                 'algorithm': algorithm,
                 'domain': domain,
                 'selector': settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm),
             }
+            if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+                data['stage'] = stage.value
+
             response = requests.post(
                 f'{self.api_url}/dkim',
                 json=data,
@@ -253,6 +266,85 @@ class MailClient:
                 raise FailedToCreateDKIM(algorithm, domain, str(exc)) from exc
             response_data.append(response.json().get('data'))
         return response_data
+
+    def get_dkim_selectors(self, domain_name: str) -> set[str]:
+        """Return DKIM selectors already present in Stalwart's DNS records."""
+        selectors = set()
+        domain_name = domain_name.rstrip('.').lower()
+        suffix = f'._domainkey.{domain_name}'
+
+        for record in self.get_dkim_dns_records(domain_name):
+            if record.get('type') != 'TXT':
+                continue
+
+            record_name = record.get('name', '').rstrip('.').lower()
+            if not record_name.endswith(suffix):
+                continue
+
+            selector = record_name[: -len(suffix)]
+            if selector:
+                selectors.add(selector)
+
+        return selectors
+
+    def ensure_dkim(self, domain_name: str, stage: DkimSignatureStage = DkimSignatureStage.PENDING) -> list[dict]:
+        """Create only the configured DKIM selectors that are missing."""
+        existing_selectors = self.get_dkim_selectors(domain_name)
+        missing_algorithms = [
+            algorithm
+            for algorithm in settings.STALWART_DKIM_ALGOS
+            if (settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm) or '').lower() not in existing_selectors
+        ]
+
+        if not missing_algorithms:
+            return []
+
+        return self.create_dkim(domain_name, stage=stage, algorithms=missing_algorithms)
+
+    def activate_pending_dkim_signatures(self, domain_name: str) -> list[str]:
+        """Activate pending DKIM signatures after their DNS records have been verified."""
+        if not settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+            return []
+
+        updates = {}
+        for signature in self.get_dkim_signatures(domain_name):
+            if signature.get('stage') != DkimSignatureStage.PENDING.value:
+                continue
+
+            signature_id = signature.get('id')
+            if not signature_id:
+                raise RuntimeError(f'Pending DKIM signature for {domain_name} did not include an id')
+
+            updates[signature_id] = {'stage': DkimSignatureStage.ACTIVE.value}
+
+        if not updates:
+            return []
+
+        response = self.make_jmap_admin_call(
+            {
+                'using': ['urn:ietf:params:jmap:core', 'urn:stalwart:jmap'],
+                'methodCalls': [
+                    [
+                        'x:DkimSignature/set',
+                        {'update': updates},
+                        'u',
+                    ],
+                ],
+            }
+        )
+
+        for method_name, arguments, _call_id in response.get('methodResponses', []):
+            if method_name == 'x:DkimSignature/set':
+                if arguments.get('notUpdated'):
+                    raise RuntimeError(f'Stalwart failed to activate DKIM signatures: {arguments["notUpdated"]}')
+
+                updated = arguments.get('updated') or {}
+                return list(updated.keys()) if isinstance(updated, dict) else updated
+
+            if method_name == 'error':
+                raise RuntimeError(f'Stalwart JMAP error activating DKIM signatures: {arguments}')
+
+        raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/set')
 
     def delete_dkim(self, domain) -> Optional[requests.Response]:
         """
@@ -558,14 +650,15 @@ class MailClient:
         raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/get')
 
     def get_dkim_dns_records(self, domain_name: str) -> list[dict]:
-        try:
-            from thunderbird_accounts.mail.dkim import dkim_signatures_to_dns_records
+        if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+            try:
+                from thunderbird_accounts.mail.dkim import dkim_signatures_to_dns_records
 
-            return dkim_signatures_to_dns_records(domain_name, self.get_dkim_signatures(domain_name))
-        except DomainNotFoundError:
-            logging.info(f'[MailClient.get_dkim_dns_records] {domain_name} is not a Stalwart domain yet')
-        except Exception as ex:
-            logging.warning(f'[MailClient.get_dkim_dns_records] Falling back to DNS records endpoint: {ex}')
+                return dkim_signatures_to_dns_records(domain_name, self.get_dkim_signatures(domain_name))
+            except DomainNotFoundError:
+                logging.info(f'[MailClient.get_dkim_dns_records] {domain_name} is not a Stalwart domain yet')
+            except Exception as ex:
+                logging.warning(f'[MailClient.get_dkim_dns_records] Falling back to DNS records endpoint: {ex}')
 
         return [
             record
