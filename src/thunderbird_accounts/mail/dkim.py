@@ -18,10 +18,9 @@ def _normalize_domain(domain_name: str) -> str:
 def _normalize_txt_content(content: str | None) -> str:
     if content is None:
         return ''
-    content = content.strip()
-    if len(content) >= 2 and content[0] == '"' and content[-1] == '"':
-        return content[1:-1]
-    return content
+
+    # Remove leading and trailing whitespace and quotes
+    return content.strip('" ')
 
 
 def _record_value(record: Any, field: str) -> Any:
