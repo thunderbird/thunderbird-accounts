@@ -124,6 +124,7 @@ class CustomDomainDNSRecordsTestCase(TestCase):
     def test_returns_customer_dkim_cname_records(self, mock_mail_client_cls):
         mock_instance = Mock()
         mock_instance.get_dns_records.return_value = []
+        mock_instance.build_expected_dns_records.return_value = []
         mock_mail_client_cls.return_value = mock_instance
 
         response = self.client.get(self.url, {'domain-name': self.domain.name})
@@ -167,11 +168,19 @@ class VerifyCustomDomainTestCase(TestCase):
         self.url = reverse('verify_custom_domain')
 
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_success_does_not_activate_pending_dkim_by_default(self, mock_mail_client_cls, mock_publish_hosted_dkim):
+    def test_success_does_not_activate_pending_dkim_by_default(
+        self,
+        mock_mail_client_cls,
+        mock_check_stale_dns_records,
+        mock_publish_hosted_dkim,
+    ):
         mock_instance = Mock()
         mock_instance.verify_domain.return_value = (True, [], [])
         mock_instance.create_domain.return_value = 'domain-id'
+        mock_instance.get_expected_dns_records_with_status.return_value = []
+        mock_check_stale_dns_records.return_value = []
         mock_mail_client_cls.return_value = mock_instance
 
         response = self.client.post(
@@ -184,6 +193,8 @@ class VerifyCustomDomainTestCase(TestCase):
         data = json.loads(response.content.decode())
         self.assertTrue(data['success'])
         mock_instance.verify_domain.assert_called_once_with(self.domain.name)
+        mock_instance.get_expected_dns_records_with_status.assert_called_once_with(self.domain.name)
+        mock_check_stale_dns_records.assert_called_once_with(self.domain.name)
         mock_instance.create_domain.assert_called_once_with(self.domain.name)
         mock_instance.ensure_dkim.assert_called_once_with(self.domain.name)
         mock_instance.create_dkim.assert_not_called()

@@ -609,5 +609,8 @@ VERIFY_PRIVATE_LINK_SSL = True if os.getenv('VERIFY_PRIVATE_LINK_SSL', 'true').l
 # For Appointment's CalDAV auto-setup
 APPOINTMENT_APP_PASSWORD_PREFIX: str = 'appointment-caldav-setup-'
 
+# Max seconds for each DNS lookup when checking stale records
+STALE_DNS_LOOKUP_LIFETIME: float = 2.0
+
 # For contact support form allow list-less users
 CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS = True

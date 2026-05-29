@@ -1,18 +1,319 @@
-from django.core.exceptions import ValidationError
-from django.core.validators import EmailValidator
-from thunderbird_accounts.mail.exceptions import EmailNotValidError
+import dns.rdatatype
+import dns.resolver
 import logging
 import uuid
+import sentry_sdk
 from typing import Optional
 from requests.exceptions import HTTPError
+from django.core.exceptions import ValidationError
+from django.core.validators import EmailValidator
 from django.contrib.auth.hashers import make_password, identify_hasher
 from django.utils.translation import gettext_lazy as _
-import sentry_sdk
-
 from django.conf import settings
+
+from thunderbird_accounts.mail.exceptions import EmailNotValidError
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account
+from thunderbird_accounts.mail.clients import DNSRecordStatus, StaleDNSRecordCode
 from thunderbird_accounts.mail import tasks
+
+
+def normalize_dns_query_name(name: str, domain_name: str) -> str:
+    if name == '@':
+        return domain_name
+    return name.rstrip('.')
+
+
+def txt_tag_value(content: str, tag: str) -> Optional[str]:
+    for part in content.split(';'):
+        part = part.strip()
+        if part.startswith(f'{tag}='):
+            return part[len(tag) + 1 :]
+    return None
+
+
+def normalize_txt_content(content: str) -> str:
+    return ' '.join(content.split())
+
+
+def check_mx_record_status(domain_name: str, record: dict) -> tuple[DNSRecordStatus, list[str]]:
+    expected_host = record['content'].rstrip('.').lower()
+    expected_priority = int(record.get('priority', '10'))
+
+    try:
+        answers = dns.resolver.resolve(domain_name, 'MX')
+    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+        return DNSRecordStatus.MISSING, []
+    except Exception as e:
+        logging.warning(f'MX lookup failed for {domain_name}: {e}')
+        return DNSRecordStatus.UNKNOWN, []
+
+    live_values = []
+    has_match = False
+
+    for rdata in answers:
+        exchange = rdata.exchange.to_text().rstrip('.')
+        preference = rdata.preference
+        live_values.append(f'{preference} {exchange}')
+        if exchange.lower() == expected_host and preference == expected_priority:
+            has_match = True
+
+    if has_match:
+        return DNSRecordStatus.MATCH, []
+    if live_values:
+        return DNSRecordStatus.CONFLICT, live_values
+    return DNSRecordStatus.MISSING, []
+
+
+def check_srv_record_status(domain_name: str, record: dict) -> tuple[DNSRecordStatus, list[str]]:
+    query_name = normalize_dns_query_name(record['name'], domain_name)
+    content_parts = record['content'].split()
+    expected_weight = int(content_parts[0])
+    expected_port = int(content_parts[1])
+    expected_target = content_parts[2].rstrip('.').lower()
+    expected_priority = int(record.get('priority', '0'))
+
+    try:
+        answers = dns.resolver.resolve(query_name, 'SRV')
+    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+        return DNSRecordStatus.MISSING, []
+    except Exception as e:
+        logging.warning(f'SRV lookup failed for {query_name}: {e}')
+        return DNSRecordStatus.UNKNOWN, []
+
+    live_values = []
+    has_match = False
+
+    for rdata in answers:
+        target = rdata.target.to_text().rstrip('.')
+        live_value = f'{rdata.priority} {rdata.weight} {rdata.port} {target}'
+        live_values.append(live_value)
+        if (
+            rdata.priority == expected_priority
+            and rdata.weight == expected_weight
+            and rdata.port == expected_port
+            and target.lower() == expected_target
+        ):
+            has_match = True
+
+    if has_match:
+        return DNSRecordStatus.MATCH, []
+    if live_values:
+        return DNSRecordStatus.CONFLICT, live_values
+    return DNSRecordStatus.MISSING, []
+
+
+def _compare_dkim_txt(expected_content: str, live_values: list[str]) -> tuple[DNSRecordStatus, list[str]]:
+    expected_p = txt_tag_value(expected_content, 'p')
+    dkim_values = [value for value in live_values if 'v=DKIM1' in value]
+
+    if not dkim_values:
+        return DNSRecordStatus.MISSING, []
+
+    if expected_p and any(txt_tag_value(value, 'p') == expected_p for value in dkim_values):
+        return DNSRecordStatus.MATCH, []
+
+    return DNSRecordStatus.CONFLICT, dkim_values
+
+
+def _compare_spf_txt(expected_content: str, live_values: list[str]) -> tuple[DNSRecordStatus, list[str]]:
+    spf_values = [value for value in live_values if value.startswith('v=spf1')]
+
+    if not spf_values:
+        return DNSRecordStatus.MISSING, []
+
+    expected_include = next(
+        (part.strip() for part in expected_content.split() if part.strip().startswith('include:')),
+        None,
+    )
+
+    for value in spf_values:
+        if expected_include and expected_include in value.split():
+            if len(spf_values) == 1:
+                return DNSRecordStatus.MATCH, []
+            conflicting = [candidate for candidate in spf_values if expected_include not in candidate.split()]
+            if conflicting:
+                return DNSRecordStatus.CONFLICT, spf_values
+            return DNSRecordStatus.MATCH, []
+
+    return DNSRecordStatus.CONFLICT, spf_values
+
+
+def _compare_semantic_txt(
+    expected_content: str, live_values: list[str], *, prefix: str
+) -> tuple[DNSRecordStatus, list[str]]:
+    relevant_values = [value for value in live_values if value.startswith(prefix)]
+
+    if not relevant_values:
+        return DNSRecordStatus.MISSING, []
+
+    normalized_expected = normalize_txt_content(expected_content)
+    if any(normalize_txt_content(value) == normalized_expected for value in relevant_values):
+        return DNSRecordStatus.MATCH, []
+
+    return DNSRecordStatus.CONFLICT, relevant_values
+
+
+def check_txt_record_status(domain_name: str, record: dict) -> tuple[DNSRecordStatus, list[str]]:
+    query_name = normalize_dns_query_name(record['name'], domain_name)
+    expected_content = record['content']
+
+    try:
+        answers = dns.resolver.resolve(query_name, 'TXT')
+    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+        return DNSRecordStatus.MISSING, []
+    except Exception as e:
+        logging.warning(f'TXT lookup failed for {query_name}: {e}')
+        return DNSRecordStatus.UNKNOWN, []
+
+    live_values = [b''.join(rdata.strings).decode('utf-8') for rdata in answers]
+
+    if '_domainkey' in query_name:
+        return _compare_dkim_txt(expected_content, live_values)
+    if expected_content.startswith('v=spf1'):
+        return _compare_spf_txt(expected_content, live_values)
+    if query_name.startswith('_dmarc.'):
+        return _compare_semantic_txt(expected_content, live_values, prefix='v=DMARC1')
+    if query_name.startswith('_mta-sts.'):
+        return _compare_semantic_txt(expected_content, live_values, prefix='v=STSv1')
+    if query_name.startswith('_smtp._tls.'):
+        return _compare_semantic_txt(expected_content, live_values, prefix='v=TLSRPTv1')
+
+    return DNSRecordStatus.UNKNOWN, []
+
+
+def check_dns_record_status(domain_name: str, record: dict) -> tuple[DNSRecordStatus, list[str]]:
+    record_type = record.get('type', '').upper()
+    if record_type == 'MX':
+        return check_mx_record_status(domain_name, record)
+    if record_type == 'SRV':
+        return check_srv_record_status(domain_name, record)
+    if record_type == 'TXT':
+        return check_txt_record_status(domain_name, record)
+    return DNSRecordStatus.UNKNOWN, []
+
+
+def enrich_dns_records_with_status(domain_name: str, expected_records: list[dict]) -> list[dict]:
+    enriched_records = []
+    for record in expected_records:
+        status, existing_values = check_dns_record_status(domain_name, record)
+        enriched = {**record, 'status': status.value}
+        if existing_values:
+            enriched['existing_values'] = existing_values
+        enriched_records.append(enriched)
+    return enriched_records
+
+
+def _stale_dns_resolve(resolver: dns.resolver.Resolver, name: str, rdtype: str):
+    """Thin wrapper so callers don't repeat the exception tuple."""
+    return resolver.resolve(name, rdtype)
+
+
+def _resolve_autodiscover_cname_targets(
+    resolver: dns.resolver.Resolver, name: str
+) -> list[str]:
+    """Return CNAME target hostnames, including when only exposed via an A lookup chain."""
+    try:
+        answers = _stale_dns_resolve(resolver, name, 'CNAME')
+        return [rdata.target.to_text().rstrip('.') for rdata in answers]
+    except (dns.resolver.NoAnswer, dns.resolver.NoNameservers):
+        pass
+    except dns.resolver.NXDOMAIN:
+        return []
+    except Exception as e:
+        logging.warning(f'CNAME lookup failed for {name}: {e}')
+        return []
+
+    try:
+        answer = _stale_dns_resolve(resolver, name, 'A')
+    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+        return []
+    except Exception as e:
+        logging.warning(f'A lookup failed for {name}: {e}')
+        return []
+
+    targets = []
+    for rrset in answer.response.answer:
+        if rrset.rdtype == dns.rdatatype.CNAME:
+            targets.extend(rdata.target.to_text().rstrip('.') for rdata in rrset)
+    return targets
+
+
+def _resolve_autodiscover_address_records(
+    resolver: dns.resolver.Resolver, name: str
+) -> list[str]:
+    """Return A/AAAA addresses when autodiscover resolves without an immediate CNAME."""
+    live_values = []
+    for rdtype in ('A', 'AAAA'):
+        try:
+            answers = _stale_dns_resolve(resolver, name, rdtype)
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+            continue
+        except Exception as e:
+            logging.warning(f'{rdtype} lookup failed for {name}: {e}')
+            return live_values
+
+        live_values.extend(rdata.to_text() for rdata in answers)
+    return live_values
+
+
+def check_stale_dns_records(domain_name: str) -> list[dict]:
+    """Detect DNS records that exist but should be deleted."""
+    stale_records = []
+
+    resolver = dns.resolver.Resolver()
+    resolver.lifetime = settings.STALE_DNS_LOOKUP_LIFETIME
+
+    # We currently don't show autodiscover records during custom domain setup
+    # so if they have it we should mark as stale / ask for removing it
+    # as it can trigger Office 365 / Exchange in Thunderbird Desktop
+    autodiscover_name = f'autodiscover.{domain_name}'
+    cname_targets = _resolve_autodiscover_cname_targets(resolver, autodiscover_name)
+    if cname_targets:
+        stale_records.append(
+            {
+                'code': StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value,
+                'type': 'CNAME',
+                'name': autodiscover_name,
+                'existing_values': cname_targets,
+            }
+        )
+    else:
+        address_records = _resolve_autodiscover_address_records(
+            resolver, autodiscover_name
+        )
+        if address_records:
+            stale_records.append(
+                {
+                    'code': StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value,
+                    'type': 'A',
+                    'name': autodiscover_name,
+                    'existing_values': address_records,
+                }
+            )
+
+    autodiscover_srv_name = f'_autodiscover._tcp.{domain_name}'
+    try:
+        answers = _stale_dns_resolve(resolver, autodiscover_srv_name, 'SRV')
+        live_values = [
+            f'{rdata.priority} {rdata.weight} {rdata.port} {rdata.target.to_text().rstrip(".")}'
+            for rdata in answers
+        ]
+        if live_values:
+            stale_records.append(
+                {
+                    'code': StaleDNSRecordCode.AUTODISCOVER_SRV_UNEXPECTED.value,
+                    'type': 'SRV',
+                    'name': autodiscover_srv_name,
+                    'existing_values': live_values,
+                }
+            )
+    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+        pass
+    except Exception as e:
+        logging.warning(f'SRV lookup failed for {autodiscover_srv_name}: {e}')
+
+    return stale_records
 
 
 def validate_email(email: str, error_message: str | None = None, min_length: int | None = None) -> bool:

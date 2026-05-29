@@ -49,6 +49,20 @@ class DkimSignatureStage(StrEnum):
     RETIRED = 'retired'
 
 
+class DNSRecordStatus(StrEnum):
+    MATCH = 'match'
+    CONFLICT = 'conflict'
+    MISSING = 'missing'
+    UNKNOWN = 'unknown'
+
+
+class StaleDNSRecordCode(StrEnum):
+    """Stale DNS records that should be removed to prevent issues with the Thundermail setup."""
+
+    AUTODISCOVER_CNAME_UNEXPECTED = 'autodiscoverCnameUnexpected'
+    AUTODISCOVER_SRV_UNEXPECTED = 'autodiscoverSrvUnexpected'
+
+
 class MailClient:
     """A partial api client for Stalwart
     Docs: https://stalw.art/docs/api/management/endpoints
@@ -784,7 +798,8 @@ class MailClient:
         try:
             txt_answers = dns.resolver.resolve(domain_name, 'TXT')
             has_spf = False
-            expected_spf_include = f'include:spf.{expected_host}'
+            dns_top_host = '.'.join(expected_host.split('.')[1:])
+            expected_spf_include = f'include:spf.{dns_top_host}'
 
             for rdata in txt_answers:
                 # rdata.strings is a list of bytes
