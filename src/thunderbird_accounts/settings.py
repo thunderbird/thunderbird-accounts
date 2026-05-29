@@ -407,6 +407,8 @@ STALWART_DKIM_ALGO_SELECTORS = {
     'Rsa': 'tm1',
     'Ed25519': 'tm2',
 }
+# Stalwart 0.15 does not expose the admin JMAP DKIM signature lifecycle API.
+STALWART_DKIM_STAGE_MANAGEMENT_ENABLED = os.getenv('STALWART_DKIM_STAGE_MANAGEMENT_ENABLED', '').lower() == 'true'
 STALWART_WEBHOOK_SECRET = os.getenv('STALWART_WEBHOOK_SECRET')
 
 HOSTED_DKIM_DOMAIN = os.getenv('HOSTED_DKIM_DOMAIN')

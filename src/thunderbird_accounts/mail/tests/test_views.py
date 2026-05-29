@@ -131,6 +131,8 @@ class CustomDomainDNSRecordsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.content.decode())
         self.assertTrue(data['success'])
+        mock_instance.ensure_dkim.assert_called_once_with(self.domain.name)
+        mock_instance.create_dkim.assert_not_called()
         self.assertEqual(
             [
                 {
@@ -155,6 +157,42 @@ class CustomDomainDNSRecordsTestCase(TestCase):
             data['dkim_cname_records'],
         )
 
+
+class VerifyCustomDomainTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        self.domain = Domain.objects.create(name='example.com', user=self.user)
+        self.client.force_login(self.user)
+        self.url = reverse('verify_custom_domain')
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_success_does_not_activate_pending_dkim_by_default(self, mock_mail_client_cls, mock_publish_hosted_dkim):
+        mock_instance = Mock()
+        mock_instance.verify_domain.return_value = (True, [], [])
+        mock_instance.create_domain.return_value = 'domain-id'
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content.decode())
+        self.assertTrue(data['success'])
+        mock_instance.verify_domain.assert_called_once_with(self.domain.name)
+        mock_instance.create_domain.assert_called_once_with(self.domain.name)
+        mock_instance.ensure_dkim.assert_called_once_with(self.domain.name)
+        mock_instance.create_dkim.assert_not_called()
+        mock_publish_hosted_dkim.assert_called_once_with(self.domain.name)
+        mock_instance.activate_pending_dkim_signatures.assert_not_called()
+
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.VERIFIED, self.domain.status)
+        self.assertEqual('domain-id', self.domain.stalwart_id)
 
 class AddEmailAliasTestCase(TestCase):
     def setUp(self):

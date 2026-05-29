@@ -190,8 +190,8 @@ def get_dns_records(request: HttpRequest):
 
     try:
         stalwart_client = MailClient()
-        # Harmless to retry and ensures existing domains pick up the managed DKIM selectors.
-        stalwart_client.create_dkim(domain.name)
+        # Backfill only missing DKIM selectors before returning DNS records.
+        stalwart_client.ensure_dkim(domain.name)
         mail_tasks.publish_hosted_dkim_dns_records.delay(domain.name)
         dns_records = stalwart_client.get_dns_records(domain.name)
         return JsonResponse(
@@ -243,9 +243,11 @@ def verify_custom_domain(request: HttpRequest):
 
             # Now attach the stalwart domain id to the user domain object
             domain_id = stalwart_client.create_domain(domain_name)
-            # Harmless to retry
-            stalwart_client.create_dkim(domain_name)
+            # Ensure missing DKIM selectors without replacing keys created at domain-add time.
+            stalwart_client.ensure_dkim(domain_name)
             mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
+            if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+                stalwart_client.activate_pending_dkim_signatures(domain_name)
             now = datetime.datetime.now(datetime.UTC)
 
             domain.stalwart_id = domain_id

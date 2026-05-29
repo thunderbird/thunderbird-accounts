@@ -19,6 +19,22 @@ def _cloudflare_page(records):
     return page
 
 
+def _ed25519_public_key():
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    public_key = private_key.public_key()
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode()
+    expected_public_key = base64.b64encode(
+        public_key.public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+    ).decode()
+    return public_pem, expected_public_key
+
+
 @override_settings(HOSTED_DKIM_DOMAIN='dkim.example.net', HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'])
 class HostedDkimRecordBuilderTestCase(SimpleTestCase):
     def test_builds_customer_cname_records_for_all_selectors(self):
@@ -68,18 +84,7 @@ class HostedDkimRecordBuilderTestCase(SimpleTestCase):
 
 class DkimSignatureConversionTestCase(SimpleTestCase):
     def test_converts_ed25519_jmap_signature_to_dns_record(self):
-        private_key = ed25519.Ed25519PrivateKey.generate()
-        public_key = private_key.public_key()
-        public_pem = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        ).decode()
-        expected_public_key = base64.b64encode(
-            public_key.public_bytes(
-                encoding=serialization.Encoding.Raw,
-                format=serialization.PublicFormat.Raw,
-            )
-        ).decode()
+        public_pem, expected_public_key = _ed25519_public_key()
 
         records = dkim_signatures_to_dns_records(
             'example.com',
@@ -127,19 +132,60 @@ class DkimSignatureConversionTestCase(SimpleTestCase):
             records,
         )
 
-    def test_skips_non_active_signatures(self):
-        private_key = ed25519.Ed25519PrivateKey.generate()
-        public_pem = private_key.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        ).decode()
+    def test_converts_pending_and_retiring_signatures_to_dns_records(self):
+        public_pem, expected_public_key = _ed25519_public_key()
 
         records = dkim_signatures_to_dns_records(
             'example.com',
-            [{'id': 'sig-1', 'selector': 'tm3', 'publicKey': public_pem, 'stage': 'revoked'}],
+            [
+                {'id': 'sig-1', 'selector': 'tm1', 'publicKey': public_pem, 'stage': 'pending'},
+                {'id': 'sig-2', 'selector': 'tm2', 'publicKey': public_pem, 'stage': 'retiring'},
+            ],
+        )
+
+        self.assertEqual(
+            [
+                {
+                    'type': 'TXT',
+                    'name': 'tm1._domainkey.example.com.',
+                    'content': f'v=DKIM1; k=ed25519; h=sha256; p={expected_public_key}',
+                },
+                {
+                    'type': 'TXT',
+                    'name': 'tm2._domainkey.example.com.',
+                    'content': f'v=DKIM1; k=ed25519; h=sha256; p={expected_public_key}',
+                },
+            ],
+            records,
+        )
+
+    def test_skips_retired_signatures(self):
+        public_pem, _expected_public_key = _ed25519_public_key()
+
+        records = dkim_signatures_to_dns_records(
+            'example.com',
+            [{'id': 'sig-1', 'selector': 'tm3', 'publicKey': public_pem, 'stage': 'retired'}],
         )
 
         self.assertEqual([], records)
+
+    def test_raises_for_missing_signature_stage(self):
+        public_pem, _expected_public_key = _ed25519_public_key()
+
+        with self.assertRaisesRegex(RuntimeError, "unexpected stage None"):
+            dkim_signatures_to_dns_records(
+                'example.com',
+                [{'id': 'sig-1', 'selector': 'tm3', 'publicKey': public_pem}],
+            )
+
+    def test_raises_for_unknown_signature_stage(self):
+        public_pem, _expected_public_key = _ed25519_public_key()
+
+        with self.assertRaisesRegex(RuntimeError, "unexpected stage 'revoked'"):
+            dkim_signatures_to_dns_records(
+                'example.com',
+                [{'id': 'sig-1', 'selector': 'tm3', 'publicKey': public_pem, 'stage': 'revoked'}],
+            )
 
 
 @override_settings(HOSTED_DKIM_CLOUDFLARE_ZONE_ID='zone-id', HOSTED_DKIM_CLOUDFLARE_TTL=1)
