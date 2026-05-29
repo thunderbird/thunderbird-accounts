@@ -4,6 +4,7 @@ import dns.resolver
 from unittest.mock import MagicMock, patch
 from django.test import SimpleTestCase, override_settings, TestCase
 from thunderbird_accounts.mail.clients import MailClient, DomainVerificationErrors
+from thunderbird_accounts.mail.exceptions import FailedToCreateDKIM
 
 
 @override_settings(
@@ -190,6 +191,25 @@ class TestMailClientCreateDkim(TestCase):
             ],
             [call_args.kwargs['json'] for call_args in requests_mock.call_args_list],
         )
+
+    @override_settings(
+        STALWART_DKIM_ALGOS=['Ed25519'],
+        STALWART_DKIM_ALGO_SELECTORS={'Ed25519': 'tm2'},
+    )
+    @patch('requests.post')
+    def test_failure_raises_failed_to_create_dkim(self, requests_mock: MagicMock):
+        failure_response = requests.Response()
+        failure_response.status_code = 500
+        failure_response.reason = 'Internal Server Error'
+
+        requests_mock.return_value = failure_response
+
+        with self.assertRaises(FailedToCreateDKIM) as cm:
+            self.mail_client.create_dkim(self.domain)
+
+        self.assertEqual('Ed25519', cm.exception.algorithm)
+        self.assertEqual(self.domain, cm.exception.domain)
+        self.assertIsInstance(cm.exception.__cause__, requests.RequestException)
 
 
 class TestMailClientDeleteDkim(TestCase):

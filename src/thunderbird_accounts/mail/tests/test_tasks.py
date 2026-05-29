@@ -6,7 +6,7 @@ from django.test import TestCase, override_settings
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail import tasks
-from thunderbird_accounts.mail.exceptions import AccountNotFoundError
+from thunderbird_accounts.mail.exceptions import AccountNotFoundError, HostedDkimPublishRetry
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.core.tests.utils import build_mail_get_account
 
@@ -131,6 +131,23 @@ class PublishHostedDkimDNSRecordsTestCase(TaskTestCase):
         self.assertEqual(results['task_status'], 'success')
         self.assertFalse(results['skipped'])
         self.assertEqual(hosted_records, results['records'])
+
+    @override_settings(HOSTED_DKIM_CLOUDFLARE_ENABLED=False)
+    @patch('thunderbird_accounts.mail.tasks.sentry_sdk.set_context')
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_retries_with_context_when_stalwart_fetch_fails(self, mail_client_mock, set_sentry_context_mock):
+        mail_client_mock.return_value.get_dkim_dns_records.side_effect = RuntimeError('Stalwart unavailable')
+
+        with self.assertRaises(HostedDkimPublishRetry) as cm:
+            tasks.publish_hosted_dkim_dns_records.run(domain_name='example.com')
+
+        self.assertEqual('example.com', cm.exception.domain)
+        self.assertEqual('fetch_stalwart_dkim_dns_records', cm.exception.phase)
+        self.assertEqual('Stalwart unavailable', cm.exception.reason)
+        self.assertEqual('example.com', cm.exception.context['domain'])
+        self.assertEqual('fetch_stalwart_dkim_dns_records', cm.exception.context['phase'])
+        self.assertEqual('RuntimeError', cm.exception.context['error_type'])
+        set_sentry_context_mock.assert_called_once_with('hosted_dkim_publish_retry', cm.exception.context)
 
 
 class CreateStalwartAccountTestCase(TaskTestCase):
