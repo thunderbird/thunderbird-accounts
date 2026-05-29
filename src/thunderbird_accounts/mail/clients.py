@@ -8,7 +8,12 @@ import requests
 from django.conf import settings
 from django.utils.crypto import get_random_string
 
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError, StalwartError
+from thunderbird_accounts.mail.exceptions import (
+    AccountNotFoundError,
+    DomainNotFoundError,
+    FailedToCreateDKIM,
+    StalwartError,
+)
 
 
 class StalwartErrors(StrEnum):
@@ -223,7 +228,12 @@ class MailClient:
         return data.get('data')
 
     def create_dkim(self, domain):
-        response_data = None
+        """
+        Creates DKIM keys in Stalwart. Return list of response objects.
+        Response objects may used for testing.
+        Throws exception if request fails.
+        """
+        response_data = []
         for algorithm in settings.STALWART_DKIM_ALGOS:
             data = {
                 'id': None,
@@ -237,8 +247,11 @@ class MailClient:
                 headers=self.authorized_headers,
                 verify=settings.VERIFY_PRIVATE_LINK_SSL,
             )
-            response.raise_for_status()
-            response_data = response.json().get('data')
+            try:
+                response.raise_for_status()
+            except requests.RequestException as exc:
+                raise FailedToCreateDKIM(algorithm, domain, str(exc)) from exc
+            response_data.append(response.json().get('data'))
         return response_data
 
     def delete_dkim(self, domain) -> Optional[requests.Response]:

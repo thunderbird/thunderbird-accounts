@@ -60,8 +60,45 @@ class DomainAlreadyExistsError(StalwartError):
     def __str__(self):
         return f'DomainAlreadyExistsError: {self.domain}'
 
+
+class FailedToCreateDKIM(StalwartError):
+    """Raise when Stalwart fails to create a DKIM key."""
+
+    algorithm: str
+    domain: str
+
+    def __init__(self, algorithm, domain, details=None, *args, **kwargs):
+        super().__init__(details, *args, **kwargs)
+        self.algorithm = algorithm
+        self.domain = domain
+
+    def __str__(self):
+        return f'FailedToCreateDKIM: {self.algorithm} for {self.domain}'
+
+
+class HostedDkimPublishRetry(Exception):
+    """Raise when hosted DKIM publication should be retried."""
+
+    domain: str
+    phase: str  # Phase of update where exception happened.
+    reason: str
+    context: dict
+
+    def __init__(self, domain: str, phase: str, reason: str = 'Unknown', error_type: str | None = None):
+        self.domain = domain
+        self.phase = phase
+        self.reason = reason or 'Unknown'
+        self.error_type = error_type
+        self.context = {key: getattr(self, key) for key in ('domain', 'phase', 'reason', 'error_type')}
+        super().__init__(self.context)
+
+    def __str__(self):
+        return f'HostedDkimPublishRetry: {self.phase} failed for {self.domain}: {self.reason}'
+
+
 class EmailNotValidError(RuntimeError):
     """Raises in utils.validate_email"""
+
     email: str
     error_message: str
 

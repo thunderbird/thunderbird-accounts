@@ -2,6 +2,7 @@ import datetime
 import logging
 from typing import Optional
 
+import sentry_sdk
 from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -13,14 +14,10 @@ from thunderbird_accounts.mail.dkim import (
     build_hosted_dkim_txt_records,
     publish_hosted_dkim_txt_records,
 )
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
+from thunderbird_accounts.mail.exceptions import AccountNotFoundError, DomainNotFoundError, HostedDkimPublishRetry
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.core.types import TaskReturnStatus
-
-
-class HostedDkimPublishRetry(Exception):
-    pass
 
 
 def _stalwart_check_or_create_domain_entry(stalwart, domain):
@@ -173,26 +170,41 @@ def update_quota_on_stalwart_account(self, username: str, quota: Optional[int]):
     max_retries=24,
 )
 def publish_hosted_dkim_dns_records(self, domain_name: str):
+    phase = 'initialize'
+    dkim_dns_records = []
+    hosted_records = []
+    expected_record_count = len(
+        {selector for selector in settings.STALWART_DKIM_ALGO_SELECTORS.values() if selector}
+    )
+
     try:
+        phase = 'fetch_stalwart_dkim_dns_records'
         stalwart = MailClient()
         dkim_dns_records = stalwart.get_dkim_dns_records(domain_name)
 
         if settings.HOSTED_DKIM_CLOUDFLARE_ENABLED:
+            phase = 'publish_cloudflare_txt_records'
             hosted_records = publish_hosted_dkim_txt_records(
                 domain_name,
                 dkim_dns_records,
                 dns_client=CloudflareDNSClient(),
             )
-            expected_record_count = len(
-                {selector for selector in settings.STALWART_DKIM_ALGO_SELECTORS.values() if selector}
-            )
+            phase = 'validate_hosted_record_count'
             if len(hosted_records) < expected_record_count:
-                raise RuntimeError(
-                    f'Expected {expected_record_count} hosted DKIM records for {domain_name}, got {len(hosted_records)}'
+                reason = (
+                    f'Expected {expected_record_count} hosted DKIM records for {domain_name}, '
+                    f'got {len(hosted_records)}'
+                )
+                raise HostedDkimPublishRetry(
+                    domain_name,
+                    phase,
+                    reason,
+                    error_type='HostedDkimRecordCountMismatch',
                 )
             skipped = False
         # Building and logging the full records is still useful for development.
         else:
+            phase = 'build_hosted_txt_records'
             hosted_records = build_hosted_dkim_txt_records(domain_name, dkim_dns_records)
             for record in hosted_records:
                 logging.info(
@@ -202,10 +214,21 @@ def publish_hosted_dkim_dns_records(self, domain_name: str):
             skipped = True
     except ImproperlyConfigured as ex:
         logging.error(f'[publish_hosted_dkim_dns_records] Hosted DKIM is misconfigured: {ex}')
-        raise TaskFailed(str(ex), {'domain_name': domain_name})
-    except Exception as ex:
+        raise TaskFailed(str(ex), {'domain': domain_name})
+    except HostedDkimPublishRetry as ex:
+        sentry_sdk.set_context('hosted_dkim_publish_retry', ex.context)
         logging.warning(f'[publish_hosted_dkim_dns_records] Error publishing hosted DKIM records: {ex}')
-        raise HostedDkimPublishRetry(str(ex)) from ex
+        raise
+    except Exception as ex:
+        retry_error = HostedDkimPublishRetry(
+            domain_name,
+            phase,
+            str(ex),
+            error_type=type(ex).__name__,
+        )
+        sentry_sdk.set_context('hosted_dkim_publish_retry', retry_error.context)
+        logging.warning(f'[publish_hosted_dkim_dns_records] Error publishing hosted DKIM records: {retry_error}')
+        raise retry_error from ex
 
     return {
         'domain_name': domain_name,
