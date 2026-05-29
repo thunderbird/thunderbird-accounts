@@ -8,7 +8,7 @@ export const enum SIGN_UP_STEPS {
   USERNAME = 10,
   PASSWORD = 20,
   VERIFY = 30,
-  DONE = 100, // Not currently used
+  DONE = 100,
 }
 
 export const SIGN_UP_STEPS_TO_STR = {
@@ -67,10 +67,17 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
   
     if (response.status === 200) {
       $reset(false);
+      // Capture the done step. 
+      // The user will never be in this step but it's a good indicator that they've succeeded.
+      captureStep(SIGN_UP_STEPS.DONE);
       return true;
     } else if (response.status === 429) { // Throttled by rate limiter
       errorMessage.value = (await response.json())?.detail ?? null;
       console.log(errorMessage.value);
+
+      // Capture this short circuit error
+      captureError(errorMessage.value);
+
       return false;
     }  
 
@@ -84,6 +91,9 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
       errorMessage.value = error['error'] ?? 'Unknown Error';
       const type: string = error['type'] ?? 'unknown-error';
       if (type === 'go-to-wait-list') {
+        // Make sure we capture this error before we blank it out
+        captureError(errorMessage.value);
+
         // Don't show this error, just redirect!
         errorMessage.value = null;
         window.location.href = error['href'];
