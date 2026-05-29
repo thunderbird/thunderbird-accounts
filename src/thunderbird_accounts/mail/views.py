@@ -30,7 +30,12 @@ from thunderbird_accounts.mail.exceptions import (
     DomainAlreadyExistsError,
     DomainNotFoundError, EmailNotValidError,
 )
-from thunderbird_accounts.mail.utils import filter_app_passwords, is_address_taken, validate_email
+from thunderbird_accounts.mail.utils import (
+    check_stale_dns_records,
+    filter_app_passwords,
+    is_address_taken,
+    validate_email,
+)
 
 from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail import tasks as mail_tasks
@@ -237,6 +242,16 @@ def verify_custom_domain(request: HttpRequest):
 
         domain.last_verification_attempt = now
 
+        dns_records = stalwart_client.get_expected_dns_records_with_status(domain.name)
+        stale_dns_records = check_stale_dns_records(domain.name)
+
+        response_data = {
+            'critical_errors': critical_errors,
+            'warnings': warnings,
+            'dns_records': dns_records,
+            'stale_dns_records': stale_dns_records,
+        }
+
         if is_verified:
             domain.status = Domain.DomainStatus.VERIFIED
             domain.verified_at = now
@@ -254,12 +269,12 @@ def verify_custom_domain(request: HttpRequest):
             domain.stalwart_created_at = now
             domain.save()
 
-            return JsonResponse({'success': True, 'critical_errors': critical_errors, 'warnings': warnings})
+            return JsonResponse({'success': True, **response_data})
         else:
             domain.status = Domain.DomainStatus.FAILED
             domain.save()
 
-            return JsonResponse({'success': False, 'critical_errors': critical_errors, 'warnings': warnings})
+            return JsonResponse({'success': False, **response_data})
     except Exception as e:
         domain.status = Domain.DomainStatus.FAILED
         domain.save()

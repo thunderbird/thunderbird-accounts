@@ -41,7 +41,7 @@ class TestMailClientVerifyDomain(SimpleTestCase):
             elif record_type == 'TXT':
                 mock_txt = MagicMock()
                 if domain == self.domain:  # SPF
-                    mock_txt.strings = [b'v=spf1 include:spf.mail.test.com -all']
+                    mock_txt.strings = [b'v=spf1 include:spf.test.com -all']
                 elif 'selector._domainkey' in domain:  # DKIM
                     mock_txt.strings = [b'v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA']
                 return [mock_txt]
@@ -117,7 +117,7 @@ class TestMailClientVerifyDomain(SimpleTestCase):
             if record_type == 'TXT':
                 if domain == self.domain:
                     mock_spf = MagicMock()
-                    mock_spf.strings = [b'v=spf1 include:spf.mail.test.com -all']
+                    mock_spf.strings = [b'v=spf1 include:spf.test.com -all']
                     return [mock_spf]
                 # DKIM mismatch
                 if 'selector._domainkey' in domain:
@@ -149,7 +149,7 @@ class TestMailClientVerifyDomain(SimpleTestCase):
             if record_type == 'TXT':
                 if domain == self.domain:
                     mock_spf = MagicMock()
-                    mock_spf.strings = [b'v=spf1 include:spf.mail.test.com -all']
+                    mock_spf.strings = [b'v=spf1 include:spf.test.com -all']
                     return [mock_spf]
             raise dns.resolver.NoAnswer()
 
