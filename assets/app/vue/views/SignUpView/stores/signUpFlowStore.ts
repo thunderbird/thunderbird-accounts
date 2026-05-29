@@ -8,7 +8,7 @@ export const enum SIGN_UP_STEPS {
   USERNAME = 10,
   PASSWORD = 20,
   VERIFY = 30,
-  DONE = 100, // Not currently used
+  DONE = 100,
 }
 
 export const SIGN_UP_STEPS_TO_STR = {
