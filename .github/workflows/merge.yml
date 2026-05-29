@@ -149,6 +149,24 @@ jobs:
           file: 'pyproject.toml'
           field: 'project.version'
 
+      # Publish the keycloak deployment artifact (when keycloak was rebuilt).
+      # Production keycloak is deployed manually from this artifact; see
+      # docs/keycloak/how-to-deploy-to-prod.rst. The inner file must be named
+      # deployment.json, and this must run BEFORE the accounts step below
+      # overwrites deployment.json with the accounts tag.
+      - name: Produce the keycloak deployment artifact
+        id: create-keycloak-artifact
+        if: env.BUILD_KEYCLOAK == 'true'
+        run: |
+          echo '{"ecr_tag": "${{ steps.build-keycloak.outputs.keycloak-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
+
+      - name: Archive the keycloak deployment artifact
+        if: env.BUILD_KEYCLOAK == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-keycloak
+          path: deployment.json
+
       # The deployment artifact + release tooling track the accounts image only,
       # so these steps only run when the accounts image was (re)built.
       - name: Produce an artifact containing the tag and version
