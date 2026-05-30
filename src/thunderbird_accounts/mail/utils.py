@@ -232,41 +232,55 @@ def _stale_dns_resolve(resolver: dns.resolver.Resolver, name: str, rdtype: str):
     return resolver.resolve(name, rdtype)
 
 
-def _resolve_autodiscover_cname_targets(
-    resolver: dns.resolver.Resolver, name: str
-) -> list[str]:
-    """Return CNAME target hostnames, including when only exposed via an A lookup chain."""
+def _unique_dns_values(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(values))
+
+
+def _cname_targets_from_rdata(records) -> list[str]:
+    return _unique_dns_values([rdata.target.to_text().rstrip('.') for rdata in records])
+
+
+def _cname_targets_from_response(answer) -> list[str]:
+    targets = []
+    for rrset in getattr(getattr(answer, 'response', None), 'answer', []):
+        if rrset.rdtype == dns.rdatatype.CNAME:
+            targets.extend(rdata.target.to_text().rstrip('.') for rdata in rrset)
+    return _unique_dns_values(targets)
+
+
+def _resolve_autodiscover_cname_targets(resolver: dns.resolver.Resolver, name: str) -> list[str]:
+    """Return CNAME targets, including chains visible only through address lookups."""
+    targets = []
     try:
-        answers = _stale_dns_resolve(resolver, name, 'CNAME')
-        return [rdata.target.to_text().rstrip('.') for rdata in answers]
+        targets.extend(_cname_targets_from_rdata(_stale_dns_resolve(resolver, name, 'CNAME')))
+        if targets:
+            return _unique_dns_values(targets)
     except (dns.resolver.NoAnswer, dns.resolver.NoNameservers):
         pass
     except dns.resolver.NXDOMAIN:
         return []
     except Exception as e:
         logging.warning(f'CNAME lookup failed for {name}: {e}')
-        return []
 
-    try:
-        answer = _stale_dns_resolve(resolver, name, 'A')
-    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-        return []
-    except Exception as e:
-        logging.warning(f'A lookup failed for {name}: {e}')
-        return []
+    for rdtype in ('A', 'AAAA'):
+        try:
+            answer = _stale_dns_resolve(resolver, name, rdtype)
+        except (dns.resolver.NoAnswer, dns.resolver.NoNameservers):
+            continue
+        except dns.resolver.NXDOMAIN:
+            return _unique_dns_values(targets)
+        except Exception as e:
+            logging.warning(f'{rdtype} lookup failed for {name}: {e}')
+            continue
 
-    targets = []
-    for rrset in answer.response.answer:
-        if rrset.rdtype == dns.rdatatype.CNAME:
-            targets.extend(rdata.target.to_text().rstrip('.') for rdata in rrset)
-    return targets
+        targets.extend(_cname_targets_from_response(answer))
+
+    return _unique_dns_values(targets)
 
 
-def _resolve_autodiscover_address_records(
-    resolver: dns.resolver.Resolver, name: str
-) -> list[str]:
-    """Return A/AAAA addresses when autodiscover resolves without an immediate CNAME."""
-    live_values = []
+def _resolve_autodiscover_address_records(resolver: dns.resolver.Resolver, name: str) -> dict[str, list[str]]:
+    """Return direct A/AAAA records for autodiscover, excluding CNAME target addresses."""
+    address_records = {}
     for rdtype in ('A', 'AAAA'):
         try:
             answers = _stale_dns_resolve(resolver, name, rdtype)
@@ -274,10 +288,16 @@ def _resolve_autodiscover_address_records(
             continue
         except Exception as e:
             logging.warning(f'{rdtype} lookup failed for {name}: {e}')
-            return live_values
+            continue
 
-        live_values.extend(rdata.to_text() for rdata in answers)
-    return live_values
+        if _cname_targets_from_response(answers):
+            continue
+
+        live_values = [rdata.to_text() for rdata in answers]
+        if live_values:
+            address_records[rdtype] = _unique_dns_values(live_values)
+
+    return address_records
 
 
 def check_stale_dns_records(domain_name: str) -> list[dict]:
@@ -302,14 +322,11 @@ def check_stale_dns_records(domain_name: str) -> list[dict]:
             }
         )
     else:
-        address_records = _resolve_autodiscover_address_records(
-            resolver, autodiscover_name
-        )
-        if address_records:
+        for record_type, address_records in _resolve_autodiscover_address_records(resolver, autodiscover_name).items():
             stale_records.append(
                 {
                     'code': StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value,
-                    'type': 'A',
+                    'type': record_type,
                     'name': autodiscover_name,
                     'existing_values': address_records,
                 }
