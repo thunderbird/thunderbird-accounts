@@ -724,7 +724,7 @@ class MailClient:
             },
             {
                 'type': 'TXT',
-                'name': domain_name,
+                'name': f'{normalized_domain}.',
                 'content': f'v=spf1 include:spf.{dns_top_host} -all',
                 'priority': '-',
             },
