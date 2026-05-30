@@ -232,8 +232,11 @@ def verify_custom_domain(request: HttpRequest):
     try:
         stalwart_client = MailClient()
 
+        dns_check = stalwart_client.check_domain_dns(domain.name)
         if settings.CUSTOM_DOMAINS_DO_VERIFY:
-            is_verified, critical_errors, warnings = stalwart_client.verify_domain(domain.name)
+            is_verified = dns_check['is_verified']
+            critical_errors = dns_check['critical_errors']
+            warnings = dns_check['warnings']
         else:
             is_verified = True
             critical_errors = []
@@ -241,7 +244,7 @@ def verify_custom_domain(request: HttpRequest):
 
         domain.last_verification_attempt = now
 
-        dns_records = stalwart_client.get_expected_dns_records_with_status(domain.name)
+        dns_records = dns_check['dns_records']
         stale_dns_records = check_stale_dns_records(domain.name)
 
         response_data = {

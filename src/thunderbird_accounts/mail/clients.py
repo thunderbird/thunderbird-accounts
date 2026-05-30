@@ -1,5 +1,4 @@
 import base64
-import dns.resolver
 import logging
 from enum import StrEnum
 from typing import Optional
@@ -30,7 +29,7 @@ class StalwartErrors(StrEnum):
 
 
 class DomainVerificationErrors(StrEnum):
-    """Domain verification error codes returned by verify_domain()"""
+    """Domain verification error codes returned by check_domain_dns()."""
 
     # Critical errors (fail verification)
     MX_LOOKUP_ERROR = 'mxLookupError'
@@ -751,138 +750,36 @@ class MailClient:
         records.extend(build_customer_dkim_cname_records(domain_name))
         return records
 
-    def get_expected_dns_records_with_status(self, domain_name: str) -> list[dict]:
+    def check_domain_dns(self, domain_name: str) -> dict:
+        """Check expected DNS records and return verification details for a custom domain."""
         # Circular import, so we import here
         from thunderbird_accounts.mail.utils import enrich_dns_records_with_status
 
         expected_records = self.build_expected_dns_records(domain_name)
-        return enrich_dns_records_with_status(domain_name, expected_records)
-
-    def verify_domain(self, domain_name: str):
-        """Verify domain using dnspython.
-
-        Checks:
-        1. MX Records exist and point to the correct host (Critical, fails verification)
-        2. SPF Record exists and includes the correct host (Warning if missing)
-        3. DKIM Record exists (Warning if missing)
-
-        Returns:
-            tuple: (is_verified, critical_errors, warnings)
-                - is_verified: True if verification completed successfully without critical errors
-                - critical_errors: List of errors (e.g., DomainVerificationErrors.MX_LOOKUP_ERROR)
-                - warnings: List of warnings (e.g., DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
-        """
+        dns_records = enrich_dns_records_with_status(domain_name, expected_records)
         critical_errors = []
         warnings = []
 
-        expected_host = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
-
-        # 1. Check MX Records
-        try:
-            mx_answers = dns.resolver.resolve(domain_name, 'MX')
-            has_correct_mx = False
-            for rdata in mx_answers:
-                exchange = rdata.exchange.to_text().rstrip('.')
-                if exchange == expected_host:
-                    has_correct_mx = True
-                    break
-
-            if not has_correct_mx:
-                logging.warning(f'MX records found for {domain_name} but none match {expected_host}')
-                critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
-
-        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-            critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
-        except Exception as e:
-            logging.error(f'MX lookup failed for {domain_name}: {e}')
+        mx_records = [record for record in dns_records if record.get('type') == 'MX']
+        if not any(record.get('status') == DNSRecordStatus.MATCH.value for record in mx_records):
             critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
 
-        # 2. Check SPF Record
-        try:
-            txt_answers = dns.resolver.resolve(domain_name, 'TXT')
-            has_spf = False
-            dns_top_host = '.'.join(expected_host.split('.')[1:])
-            expected_spf_include = f'include:spf.{dns_top_host}'
-
-            for rdata in txt_answers:
-                # rdata.strings is a list of bytes
-                txt_content = b''.join(rdata.strings).decode('utf-8')
-                if txt_content.startswith('v=spf1') and expected_spf_include in txt_content:
-                    has_spf = True
-                    break
-
-            if not has_spf:
-                warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
-        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-            warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
-        except Exception as e:
-            logging.warning(f'SPF lookup failed for {domain_name}: {e}')
+        spf_records = [
+            record
+            for record in dns_records
+            if record.get('type') == 'TXT' and record.get('content', '').startswith('v=spf1')
+        ]
+        if not any(record.get('status') == DNSRecordStatus.MATCH.value for record in spf_records):
             warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
 
-        # 3. Check DKIM Record
-        # We need to get the selector first from Stalwart
-        # Since we don't store the selector in our DB, we'll fetch DNS records
-        # from Stalwart which generates the expected records
-        try:
-            stalwart_dns_records = self.get_dns_records(domain_name)
-
-            dkim_record = next(
-                (r for r in stalwart_dns_records if r.get('type') == 'TXT' and '_domainkey' in r.get('name', '')), None
-            )
-
-            if dkim_record:
-                # name comes back like "selector._domainkey.domain.com."
-                # we need to query "selector._domainkey.domain.com"
-                dkim_host = dkim_record['name'].rstrip('.')
-
-                txt_answers = dns.resolver.resolve(dkim_host, 'TXT')
-                has_dkim = False
-                expected_p_value = None
-
-                # Extract p= value from expected dkim record
-                parts = [p.strip() for p in dkim_record.get('content', '').split(';')]
-                for part in parts:
-                    if part.startswith('p='):
-                        expected_p_value = part[2:]
-                        break
-
-                if not expected_p_value:
-                    logging.warning(f'Could not extract p value from expected DKIM record for {domain_name}')
-                    warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
-                else:
-                    # The value from stalwart might be split or formatted differently, so we mainly check
-                    # if a TXT record exists and if it looks like a DKIM record (v=DKIM1) and has matching p
-                    for rdata in txt_answers:
-                        txt_content = b''.join(rdata.strings).decode('utf-8')
-
-                        if 'v=DKIM1' not in txt_content:
-                            continue
-
-                        # Extract p= value from DNS record
-                        actual_p_value = None
-                        parts = [p.strip() for p in txt_content.split(';')]
-
-                        for part in parts:
-                            if part.startswith('p='):
-                                actual_p_value = part[2:]
-                                break
-
-                        if actual_p_value == expected_p_value:
-                            has_dkim = True
-                            break
-
-                    if not has_dkim:
-                        warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
-            else:
-                # If we can't get the expected DKIM record from Stalwart, we can't verify it
-                logging.warning(f'No DKIM record found in Stalwart for {domain_name}')
-                warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
-
-        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-            warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
-        except Exception as e:
-            logging.warning(f'DKIM lookup failed for {domain_name}: {e}')
+        dkim_records = [record for record in dns_records if '_domainkey' in record.get('name', '')]
+        if not dkim_records or any(record.get('status') != DNSRecordStatus.MATCH.value for record in dkim_records):
             warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
 
         is_verified = len(critical_errors) == 0
-        return is_verified, critical_errors, warnings
+        return {
+            'is_verified': is_verified,
+            'critical_errors': critical_errors,
+            'warnings': warnings,
+            'dns_records': dns_records,
+        }
