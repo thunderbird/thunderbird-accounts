@@ -31,6 +31,7 @@
 .keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth-stage.tb.pro/admin/realms/tbpro/"}
 .log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", value: "DEBUG"}
 .min_custom_domain_alias_length: &VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH {name: "MIN_CUSTOM_DOMAIN_ALIAS_LENGTH", value: "3"}
+.custom_domains_do_verify: &VAR_CUSTOM_DOMAINS_DO_VERIFY {name: "CUSTOM_DOMAINS_DO_VERIFY", value: "True"}
 .oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/auth"}
 .oidc_url_jwks: &VAR_OIDC_URL_JWKS {name: "OIDC_URL_JWKS", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"}
 .oidc_url_logout: &VAR_OIDC_URL_LOGOUT {name: "OIDC_URL_LOGOUT", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"}
@@ -371,6 +372,7 @@ resources:
                 - *VAR_KEYCLOAK_URL_API
                 - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                - *VAR_CUSTOM_DOMAINS_DO_VERIFY
                 - *VAR_OIDC_URL_AUTH
                 - *VAR_OIDC_URL_TOKEN
                 - *VAR_OIDC_URL_USER
@@ -446,6 +448,7 @@ resources:
                 - *VAR_KEYCLOAK_URL_API
                 - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                - *VAR_CUSTOM_DOMAINS_DO_VERIFY
                 - *VAR_OIDC_URL_AUTH
                 - *VAR_OIDC_URL_TOKEN
                 - *VAR_OIDC_URL_USER
@@ -793,6 +796,8 @@ resources:
                 value: 'stage-thundermail.com'
               - name: MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 value: '3'
+              - name: CUSTOM_DOMAINS_DO_VERIFY
+                value: 'True'
               - name: AUTH_SCHEME
                 value: 'oidc'
               - name: CSRF_HTTPONLY

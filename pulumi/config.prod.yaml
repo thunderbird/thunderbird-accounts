@@ -32,6 +32,7 @@
 .keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth.tb.pro/admin/realms/tbpro/"}
 .log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", value: "INFO"}
 .min_custom_domain_alias_length: &VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH {name: "MIN_CUSTOM_DOMAIN_ALIAS_LENGTH", value: "3"}
+.custom_domains_do_verify: &VAR_CUSTOM_DOMAINS_DO_VERIFY {name: "CUSTOM_DOMAINS_DO_VERIFY", value: "True"}
 .oidc_fallback_match_by_email: &VAR_OIDC_FALLBACK_MATCH_BY_EMAIL {name: "OIDC_FALLBACK_MATCH_BY_EMAIL", value: "True"}
 .oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth/"}
 .oidc_url_jwks: &VAR_OIDC_URL_JWKS {name: "OIDC_URL_JWKS", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs/"}
@@ -374,6 +375,7 @@ resources:
                 - *VAR_KEYCLOAK_URL_API
                 - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                - *VAR_CUSTOM_DOMAINS_DO_VERIFY
                 - *VAR_OIDC_FALLBACK_MATCH_BY_EMAIL
                 - *VAR_OIDC_URL_AUTH
                 - *VAR_OIDC_URL_TOKEN
@@ -451,6 +453,7 @@ resources:
                 - *VAR_KEYCLOAK_URL_API
                 - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                - *VAR_CUSTOM_DOMAINS_DO_VERIFY
                 - *VAR_OIDC_FALLBACK_MATCH_BY_EMAIL
                 - *VAR_OIDC_URL_AUTH
                 - *VAR_OIDC_URL_TOKEN
@@ -801,6 +804,8 @@ resources:
                 value: 'thundermail.com,tb.pro'
               - name: MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 value: '3'
+              - name: CUSTOM_DOMAINS_DO_VERIFY
+                value: 'True'
               - name: ALLOWED_HOSTS
                 value: 'accounts.tb.pro'
               - name: APP_ENV
