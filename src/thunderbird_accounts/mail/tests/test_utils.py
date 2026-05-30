@@ -365,6 +365,31 @@ class TestStaleDNSRecords(SimpleTestCase):
         self.assertEqual(len(stale_records), 1)
         self.assertEqual(stale_records[0]['existing_values'], ['autodiscover.gogo.com'])
 
+    def test_autodiscover_cname_via_aaaa_lookup_chain(self):
+        mock_cname = MagicMock()
+        mock_cname.target.to_text.return_value = 'autodiscover.example.net.'
+
+        mock_rrset = MagicMock()
+        mock_rrset.rdtype = dns.rdatatype.CNAME
+        mock_rrset.__iter__ = MagicMock(return_value=iter([mock_cname]))
+
+        mock_aaaa_answer = MagicMock()
+        mock_aaaa_answer.response.answer = [mock_rrset]
+
+        def resolve_side_effect(name, record_type):
+            if record_type in {'CNAME', 'A'}:
+                raise dns.resolver.NoAnswer()
+            if record_type == 'AAAA':
+                return mock_aaaa_answer
+            raise dns.resolver.NoAnswer()
+
+        with self._patch_resolver(resolve_side_effect):
+            stale_records = check_stale_dns_records(self.domain)
+
+        self.assertEqual(len(stale_records), 1)
+        self.assertEqual(stale_records[0]['type'], 'CNAME')
+        self.assertEqual(stale_records[0]['existing_values'], ['autodiscover.example.net'])
+
     def test_autodiscover_direct_a_record_stale(self):
         mock_a = MagicMock()
         mock_a.to_text.return_value = '203.0.113.10'
@@ -387,6 +412,36 @@ class TestStaleDNSRecords(SimpleTestCase):
         self.assertEqual(len(stale_records), 1)
         self.assertEqual(stale_records[0]['type'], 'A')
         self.assertEqual(stale_records[0]['existing_values'], ['203.0.113.10'])
+
+    def test_autodiscover_direct_a_and_aaaa_records_stale(self):
+        mock_a = MagicMock()
+        mock_a.to_text.return_value = '203.0.113.10'
+        mock_aaaa = MagicMock()
+        mock_aaaa.to_text.return_value = '2001:db8::10'
+
+        def make_answer(*records):
+            answer = MagicMock()
+            answer.response.answer = []
+            answer.__iter__ = MagicMock(return_value=iter(records))
+            return answer
+
+        def resolve_side_effect(name, record_type):
+            if record_type == 'CNAME':
+                raise dns.resolver.NoAnswer()
+            if record_type == 'A':
+                return make_answer(mock_a)
+            if record_type == 'AAAA':
+                return make_answer(mock_aaaa)
+            raise dns.resolver.NoAnswer()
+
+        with self._patch_resolver(resolve_side_effect):
+            stale_records = check_stale_dns_records(self.domain)
+
+        self.assertEqual(len(stale_records), 2)
+        self.assertEqual(stale_records[0]['type'], 'A')
+        self.assertEqual(stale_records[0]['existing_values'], ['203.0.113.10'])
+        self.assertEqual(stale_records[1]['type'], 'AAAA')
+        self.assertEqual(stale_records[1]['existing_values'], ['2001:db8::10'])
 
     def test_autodiscover_srv_stale(self):
         mock_srv = MagicMock()
