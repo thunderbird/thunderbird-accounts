@@ -173,6 +173,7 @@ class VerifyCustomDomainTestCase(TestCase):
         self.client.force_login(self.user)
         self.url = reverse('verify_custom_domain')
 
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
     @patch('thunderbird_accounts.mail.views.MailClient')
@@ -210,6 +211,7 @@ class VerifyCustomDomainTestCase(TestCase):
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.VERIFIED, self.domain.status)
         self.assertEqual('domain-id', self.domain.stalwart_id)
+
 
 class AddEmailAliasTestCase(TestCase):
     def setUp(self):

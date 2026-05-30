@@ -232,13 +232,12 @@ def verify_custom_domain(request: HttpRequest):
     try:
         stalwart_client = MailClient()
 
-        # For dev / localhost we can't verify domains, so we will always return success
-        if not settings.IS_DEV:
+        if settings.CUSTOM_DOMAINS_DO_VERIFY:
             is_verified, critical_errors, warnings = stalwart_client.verify_domain(domain.name)
         else:
             is_verified = True
             critical_errors = []
-            warnings = ['Dev mode activated. Automatically verified domain.']
+            warnings = ['Custom domain DNS verification disabled. Automatically verified domain.']
 
         domain.last_verification_attempt = now
 
