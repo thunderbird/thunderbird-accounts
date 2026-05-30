@@ -436,7 +436,7 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
     def test_build_expected_dns_records_includes_dkim_cnames(self):
         records = self.mail_client.build_expected_dns_records(self.domain)
 
-        self.assertEqual(records[0], {'type': 'MX', 'name': '@', 'content': 'mail.test.com', 'priority': '10'})
+        self.assertEqual(records[0], {'type': 'MX', 'name': '@', 'content': 'mail.test.com.', 'priority': '10'})
         dkim_records = [record for record in records if '_domainkey' in record['name']]
         self.assertEqual(
             dkim_records,
