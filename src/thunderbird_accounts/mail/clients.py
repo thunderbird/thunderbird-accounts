@@ -685,10 +685,13 @@ class MailClient:
         from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
 
         dns_hostname = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
+        dns_hostname_fqdn = f'{dns_hostname}.'
         dns_top_host = '.'.join(dns_hostname.split('.')[1:])
+        normalized_domain = domain_name.rstrip('.')
+        mx_name = '@' if len(normalized_domain.split('.')) == 2 else f'{normalized_domain}.'
 
         records = [
-            {'type': 'MX', 'name': '@', 'content': dns_hostname, 'priority': '10'},
+            {'type': 'MX', 'name': mx_name, 'content': dns_hostname_fqdn, 'priority': '10'},
             {
                 'type': 'SRV',
                 'name': f'_jmap._tcp.{domain_name}.',
