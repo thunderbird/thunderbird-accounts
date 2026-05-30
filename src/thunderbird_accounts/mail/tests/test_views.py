@@ -184,9 +184,13 @@ class VerifyCustomDomainTestCase(TestCase):
         mock_publish_hosted_dkim,
     ):
         mock_instance = Mock()
-        mock_instance.verify_domain.return_value = (True, [], [])
+        mock_instance.check_domain_dns.return_value = {
+            'is_verified': True,
+            'critical_errors': [],
+            'warnings': [],
+            'dns_records': [],
+        }
         mock_instance.create_domain.return_value = 'domain-id'
-        mock_instance.get_expected_dns_records_with_status.return_value = []
         mock_check_stale_dns_records.return_value = []
         mock_mail_client_cls.return_value = mock_instance
 
@@ -199,8 +203,7 @@ class VerifyCustomDomainTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.content.decode())
         self.assertTrue(data['success'])
-        mock_instance.verify_domain.assert_called_once_with(self.domain.name)
-        mock_instance.get_expected_dns_records_with_status.assert_called_once_with(self.domain.name)
+        mock_instance.check_domain_dns.assert_called_once_with(self.domain.name)
         mock_check_stale_dns_records.assert_called_once_with(self.domain.name)
         mock_instance.create_domain.assert_called_once_with(self.domain.name)
         mock_instance.ensure_dkim.assert_called_once_with(self.domain.name)

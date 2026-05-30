@@ -12,154 +12,130 @@ from thunderbird_accounts.mail.exceptions import FailedToCreateDKIM
     STALWART_API_AUTH_STRING='secret',
     STALWART_API_AUTH_METHOD='bearer',
     CONNECTION_INFO={'SMTP': {'HOST': 'mail.test.com'}},
+    HOSTED_DKIM_DOMAIN='dkim.test.net',
+    HOSTED_DKIM_SELECTORS=['tm1', 'tm2'],
 )
-class TestMailClientVerifyDomain(SimpleTestCase):
+class TestMailClientCheckDomainDNS(SimpleTestCase):
     def setUp(self):
         self.mail_client = MailClient()
         self.domain = 'example.com'
         self.expected_host = 'mail.test.com'
 
-    @patch('thunderbird_accounts.mail.clients.dns.resolver.resolve')
-    @patch.object(MailClient, 'get_dns_records')
-    def test_verify_domain_success(self, mock_get_dns_records, mock_resolve):
-        """Test successful verification of MX, SPF, and DKIM records."""
-        # Setup Stalwart DNS records for DKIM reference
-        mock_get_dns_records.return_value = [
-            {
-                'type': 'TXT',
-                'name': 'selector._domainkey.example.com.',
-                'content': 'v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA',
+    def _mx_record(self, host=None, preference=10):
+        mock_mx = MagicMock()
+        mock_mx.exchange.to_text.return_value = f'{host or self.expected_host}.'
+        mock_mx.preference = preference
+        return mock_mx
+
+    def _txt_record(self, content):
+        mock_txt = MagicMock()
+        mock_txt.strings = [content.encode('utf-8')]
+        return mock_txt
+
+    def _cname_record(self, target):
+        mock_cname = MagicMock()
+        mock_cname.target.to_text.return_value = target
+        return mock_cname
+
+    def _resolve_side_effect(
+        self,
+        *,
+        mx_host=None,
+        mx_exception=None,
+        spf_content='v=spf1 include:spf.test.com -all',
+        dkim_targets=None,
+    ):
+        if dkim_targets is None:
+            dkim_targets = {
+                'tm1': 'tm1.example.com.dkim.test.net.',
+                'tm2': 'tm2.example.com.dkim.test.net.',
             }
-        ]
 
-        # Mock DNS responses
-        def resolve_side_effect(domain, record_type):
+        def resolve_side_effect(name, record_type):
+            query_name = name.rstrip('.')
             if record_type == 'MX':
-                mock_mx = MagicMock()
-                mock_mx.exchange.to_text.return_value = f'{self.expected_host}.'
-                return [mock_mx]
-            elif record_type == 'TXT':
-                mock_txt = MagicMock()
-                if domain == self.domain:  # SPF
-                    mock_txt.strings = [b'v=spf1 include:spf.test.com -all']
-                elif 'selector._domainkey' in domain:  # DKIM
-                    mock_txt.strings = [b'v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA']
-                return [mock_txt]
+                if mx_exception:
+                    raise mx_exception
+                return [self._mx_record(mx_host)]
+            if record_type == 'TXT' and query_name == self.domain:
+                if spf_content is None:
+                    raise dns.resolver.NoAnswer()
+                return [self._txt_record(spf_content)]
+            if record_type == 'CNAME' and '._domainkey.' in query_name:
+                selector = query_name.split('._domainkey.')[0]
+                if selector not in dkim_targets:
+                    raise dns.resolver.NoAnswer()
+                return [self._cname_record(dkim_targets[selector])]
             raise dns.resolver.NoAnswer()
 
-        mock_resolve.side_effect = resolve_side_effect
+        return resolve_side_effect
 
-        is_verified, critical_errors, warnings = self.mail_client.verify_domain(self.domain)
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_check_domain_dns_success(self, mock_resolve):
+        mock_resolve.side_effect = self._resolve_side_effect()
 
-        self.assertTrue(is_verified)
-        self.assertEqual(critical_errors, [])
-        self.assertEqual(warnings, [])
+        result = self.mail_client.check_domain_dns(self.domain)
 
-    @patch('thunderbird_accounts.mail.clients.dns.resolver.resolve')
-    def test_verify_domain_mx_failure(self, mock_resolve):
-        """Test verification fails when MX record is missing or incorrect."""
-        # Case 1: MX record points to wrong host
-        mock_mx = MagicMock()
-        mock_mx.exchange.to_text.return_value = 'wrong.host.com.'
-        mock_resolve.return_value = [mock_mx]
+        self.assertTrue(result['is_verified'])
+        self.assertEqual(result['critical_errors'], [])
+        self.assertEqual(result['warnings'], [])
 
-        is_verified, critical_errors, warnings = self.mail_client.verify_domain(self.domain)
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_check_domain_dns_mx_failure(self, mock_resolve):
+        mock_resolve.side_effect = self._resolve_side_effect(mx_host='wrong.host.com')
 
-        self.assertFalse(is_verified)
-        self.assertIn(DomainVerificationErrors.MX_LOOKUP_ERROR, critical_errors)
+        result = self.mail_client.check_domain_dns(self.domain)
 
-        # Case 2: MX lookup raises exception
-        mock_resolve.side_effect = dns.resolver.NoAnswer()
-        is_verified, critical_errors, _warnings = self.mail_client.verify_domain(self.domain)
+        self.assertFalse(result['is_verified'])
+        self.assertIn(DomainVerificationErrors.MX_LOOKUP_ERROR, result['critical_errors'])
 
-        self.assertFalse(is_verified)
-        self.assertIn(DomainVerificationErrors.MX_LOOKUP_ERROR, critical_errors)
+        mx_record = next(record for record in result['dns_records'] if record['type'] == 'MX')
+        self.assertEqual(mx_record['status'], 'conflict')
+        self.assertEqual(mx_record['existing_values'], ['10 wrong.host.com'])
 
-    @patch('thunderbird_accounts.mail.clients.dns.resolver.resolve')
-    def test_verify_domain_spf_failure(self, mock_resolve):
-        """Test verification warns when SPF record is missing or incorrect."""
-        # Fix MX to pass first check
-        mock_mx = MagicMock()
-        mock_mx.exchange.to_text.return_value = f'{self.expected_host}.'
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_check_domain_dns_mx_lookup_failure(self, mock_resolve):
+        mock_resolve.side_effect = self._resolve_side_effect(mx_exception=dns.resolver.NoAnswer())
 
-        def resolve_side_effect(domain, record_type):
-            if record_type == 'MX':
-                return [mock_mx]
-            if record_type == 'TXT':
-                # SPF missing expected include
-                mock_txt = MagicMock()
-                mock_txt.strings = [b'v=spf1 include:other.com -all']
-                return [mock_txt]
-            raise dns.resolver.NoAnswer()
+        result = self.mail_client.check_domain_dns(self.domain)
 
-        mock_resolve.side_effect = resolve_side_effect
+        self.assertFalse(result['is_verified'])
+        self.assertIn(DomainVerificationErrors.MX_LOOKUP_ERROR, result['critical_errors'])
 
-        is_verified, critical_errors, warnings = self.mail_client.verify_domain(self.domain)
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_check_domain_dns_spf_failure(self, mock_resolve):
+        mock_resolve.side_effect = self._resolve_side_effect(spf_content='v=spf1 include:other.com -all')
 
-        self.assertTrue(is_verified)  # SPF failure is not critical
-        self.assertEqual(critical_errors, [])
-        self.assertIn(DomainVerificationErrors.SPF_RECORD_NOT_FOUND, warnings)
+        result = self.mail_client.check_domain_dns(self.domain)
 
-    @patch('thunderbird_accounts.mail.clients.dns.resolver.resolve')
-    @patch.object(MailClient, 'get_dns_records')
-    def test_verify_domain_dkim_failure(self, mock_get_dns_records, mock_resolve):
-        """Test verification warns when DKIM record is incorrect."""
-        mock_get_dns_records.return_value = [
-            {'type': 'TXT', 'name': 'selector._domainkey.example.com.', 'content': 'v=DKIM1; k=rsa; p=EXPECTED_KEY'}
-        ]
+        self.assertTrue(result['is_verified'])
+        self.assertEqual(result['critical_errors'], [])
+        self.assertIn(DomainVerificationErrors.SPF_RECORD_NOT_FOUND, result['warnings'])
 
-        mock_mx = MagicMock()
-        mock_mx.exchange.to_text.return_value = f'{self.expected_host}.'
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_check_domain_dns_dkim_failure(self, mock_resolve):
+        mock_resolve.side_effect = self._resolve_side_effect(
+            dkim_targets={
+                'tm1': 'wrong.example.net.',
+                'tm2': 'tm2.example.com.dkim.test.net.',
+            }
+        )
 
-        def resolve_side_effect(domain, record_type):
-            if record_type == 'MX':
-                return [mock_mx]
-            if record_type == 'TXT':
-                if domain == self.domain:
-                    mock_spf = MagicMock()
-                    mock_spf.strings = [b'v=spf1 include:spf.test.com -all']
-                    return [mock_spf]
-                # DKIM mismatch
-                if 'selector._domainkey' in domain:
-                    mock_dkim = MagicMock()
-                    mock_dkim.strings = [b'v=DKIM1; k=rsa; p=WRONG_KEY']
-                    return [mock_dkim]
-            raise dns.resolver.NoAnswer()
+        result = self.mail_client.check_domain_dns(self.domain)
 
-        mock_resolve.side_effect = resolve_side_effect
+        self.assertTrue(result['is_verified'])
+        self.assertEqual(result['critical_errors'], [])
+        self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, result['warnings'])
 
-        is_verified, critical_errors, warnings = self.mail_client.verify_domain(self.domain)
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_check_domain_dns_dkim_missing(self, mock_resolve):
+        mock_resolve.side_effect = self._resolve_side_effect(dkim_targets={})
 
-        self.assertTrue(is_verified)  # DKIM failure is not critical
-        self.assertEqual(critical_errors, [])
-        self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, warnings)
+        result = self.mail_client.check_domain_dns(self.domain)
 
-    @patch('thunderbird_accounts.mail.clients.dns.resolver.resolve')
-    @patch.object(MailClient, 'get_dns_records')
-    def test_verify_domain_dkim_missing_in_stalwart(self, mock_get_dns_records, mock_resolve):
-        """Test verification when Stalwart doesn't return expected DKIM record."""
-        mock_get_dns_records.return_value = []  # No DKIM record from Stalwart
-
-        mock_mx = MagicMock()
-        mock_mx.exchange.to_text.return_value = f'{self.expected_host}.'
-
-        def resolve_side_effect(domain, record_type):
-            if record_type == 'MX':
-                return [mock_mx]
-            if record_type == 'TXT':
-                if domain == self.domain:
-                    mock_spf = MagicMock()
-                    mock_spf.strings = [b'v=spf1 include:spf.test.com -all']
-                    return [mock_spf]
-            raise dns.resolver.NoAnswer()
-
-        mock_resolve.side_effect = resolve_side_effect
-
-        is_verified, critical_errors, warnings = self.mail_client.verify_domain(self.domain)
-
-        self.assertTrue(is_verified)
-        self.assertEqual(critical_errors, [])
-        self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, warnings)
+        self.assertTrue(result['is_verified'])
+        self.assertEqual(result['critical_errors'], [])
+        self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, result['warnings'])
 
 
 class TestMailClientCreateDkim(TestCase):
@@ -457,7 +433,7 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
         )
 
     @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
-    def test_get_expected_dns_records_with_status(self, mock_resolve):
+    def test_check_domain_dns_includes_dns_record_status(self, mock_resolve):
         mock_mx = MagicMock()
         mock_mx.exchange.to_text.return_value = 'wrong.host.com.'
         mock_mx.preference = 10
@@ -469,8 +445,8 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
 
         mock_resolve.side_effect = resolve_side_effect
 
-        records = self.mail_client.get_expected_dns_records_with_status(self.domain)
+        result = self.mail_client.check_domain_dns(self.domain)
 
-        mx_record = next(record for record in records if record['type'] == 'MX')
+        mx_record = next(record for record in result['dns_records'] if record['type'] == 'MX')
         self.assertEqual(mx_record['status'], 'conflict')
         self.assertEqual(mx_record['existing_values'], ['10 wrong.host.com'])
