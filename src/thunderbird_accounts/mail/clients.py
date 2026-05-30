@@ -536,19 +536,24 @@ class MailClient:
 
         # 2. Check SPF Record
         try:
-            txt_answers = dns.resolver.resolve(domain_name, 'TXT')
-            has_spf = False
-            expected_spf_include = f'include:spf.{expected_host}'
+            # Skip SPF check when expected host is not a fully-qualified domain
+            # (e.g. localhost, or None from missing .env config)
+            if not expected_host or '.' not in expected_host:
+                logging.info(f'Skipping SPF check: expected_host={expected_host!r} is not a FQDN')
+            else:
+                txt_answers = dns.resolver.resolve(domain_name, 'TXT')
+                has_spf = False
+                expected_spf_include = f'include:spf.{expected_host}'
 
-            for rdata in txt_answers:
-                # rdata.strings is a list of bytes
-                txt_content = b''.join(rdata.strings).decode('utf-8')
-                if txt_content.startswith('v=spf1') and expected_spf_include in txt_content:
-                    has_spf = True
-                    break
+                for rdata in txt_answers:
+                    # rdata.strings is a list of bytes
+                    txt_content = b''.join(rdata.strings).decode('utf-8')
+                    if txt_content.startswith('v=spf1') and expected_spf_include in txt_content:
+                        has_spf = True
+                        break
 
-            if not has_spf:
-                warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
+                if not has_spf:
+                    warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
         except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
             warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
         except Exception as e:
