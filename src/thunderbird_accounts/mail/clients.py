@@ -679,75 +679,75 @@ class MailClient:
             if record.get('type') == 'TXT' and '_domainkey' in record.get('name', '')
         ]
 
-    def build_expected_dns_records(self, domain_name: str) -> list[dict]:
-        """Build the full list of DNS records the user must configure for a custom domain."""
+    def build_expected_dns_records(self, cust_domain: str) -> list[dict]:
+        """Build the full list of DNS records the user must configure for a customer domain."""
         from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
 
-        dns_hostname = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
-        dns_hostname_fqdn = f'{dns_hostname}.'
-        dns_top_host = '.'.join(dns_hostname.split('.')[1:])
-        normalized_domain = domain_name.rstrip('.')
-        mx_name = '@' if len(normalized_domain.split('.')) == 2 else f'{normalized_domain}.'
+        target_domain = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
+        target_domain_fqdn = f'{target_domain}.'
+        target_top_domain = '.'.join(target_domain.split('.')[1:])
+        normalized_cust_domain = cust_domain.rstrip('.')
+        mx_name = '@' if len(normalized_cust_domain.split('.')) == 2 else f'{normalized_cust_domain}.'
 
         records = [
-            {'type': 'MX', 'name': mx_name, 'content': dns_hostname_fqdn, 'priority': '10'},
+            {'type': 'MX', 'name': mx_name, 'content': target_domain_fqdn, 'priority': '10'},
             {
                 'type': 'SRV',
-                'name': f'_jmap._tcp.{domain_name}.',
-                'content': f'1 443 {dns_hostname}',
+                'name': f'_jmap._tcp.{cust_domain}.',
+                'content': f'1 443 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
-                'name': f'_caldavs._tcp.{domain_name}.',
-                'content': f'1 443 {dns_hostname}',
+                'name': f'_caldavs._tcp.{cust_domain}.',
+                'content': f'1 443 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
-                'name': f'_carddavs._tcp.{domain_name}.',
-                'content': f'1 443 {dns_hostname}',
+                'name': f'_carddavs._tcp.{cust_domain}.',
+                'content': f'1 443 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
-                'name': f'_imaps._tcp.{domain_name}.',
-                'content': f'1 993 {dns_hostname}',
+                'name': f'_imaps._tcp.{cust_domain}.',
+                'content': f'1 993 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
-                'name': f'_submission._tcp.{domain_name}.',
-                'content': f'1 587 {dns_hostname}',
+                'name': f'_submission._tcp.{cust_domain}.',
+                'content': f'1 587 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'TXT',
-                'name': f'{normalized_domain}.',
-                'content': f'v=spf1 include:spf.{dns_top_host} -all',
+                'name': f'{normalized_cust_domain}.',
+                'content': f'v=spf1 include:spf.{target_top_domain} -all',
                 'priority': '-',
             },
             {
                 'type': 'TXT',
-                'name': f'_mta-sts.{domain_name}.',
+                'name': f'_mta-sts.{cust_domain}.',
                 'content': 'v=STSv1; id=18139500144460329770',
                 'priority': '-',
             },
             {
                 'type': 'TXT',
-                'name': f'_smtp._tls.{domain_name}.',
-                'content': f'v=TLSRPTv1; rua=mailto:postmaster@{domain_name}',
+                'name': f'_smtp._tls.{cust_domain}.',
+                'content': f'v=TLSRPTv1; rua=mailto:postmaster@{cust_domain}',
                 'priority': '-',
             },
             {
                 'type': 'TXT',
-                'name': f'_dmarc.{domain_name}.',
+                'name': f'_dmarc.{cust_domain}.',
                 'content': 'v=DMARC1; p=none;',
                 'priority': '-',
             },
         ]
 
-        records.extend(build_customer_dkim_cname_records(domain_name))
+        records.extend(build_customer_dkim_cname_records(cust_domain))
         return records
 
     def check_domain_dns(self, domain_name: str) -> dict:
