@@ -40,15 +40,17 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
     def _resolve_side_effect(
         self,
         *,
+        cust_domain=None,
         mx_host=None,
         mx_exception=None,
         spf_content='v=spf1 include:spf.test.com -all',
         dkim_targets=None,
     ):
+        cust_domain = cust_domain or self.domain
         if dkim_targets is None:
             dkim_targets = {
-                'tm1': 'tm1.example.com.dkim.test.net.',
-                'tm2': 'tm2.example.com.dkim.test.net.',
+                'tm1': f'tm1.{cust_domain}.dkim.test.net.',
+                'tm2': f'tm2.{cust_domain}.dkim.test.net.',
             }
 
         def resolve_side_effect(name, record_type):
@@ -57,7 +59,7 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
                 if mx_exception:
                     raise mx_exception
                 return [self._mx_record(mx_host)]
-            if record_type == 'TXT' and query_name == self.domain:
+            if record_type == 'TXT' and query_name == cust_domain:
                 if spf_content is None:
                     raise dns.resolver.NoAnswer()
                 return [self._txt_record(spf_content)]
@@ -136,6 +138,18 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         self.assertTrue(result['is_verified'])
         self.assertEqual(result['critical_errors'], [])
         self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, result['warnings'])
+
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_check_domain_dns_queries_subdomain_mx(self, mock_resolve):
+        cust_domain = 'tb.stosberg.com'
+        mock_resolve.side_effect = self._resolve_side_effect(cust_domain=cust_domain)
+
+        result = self.mail_client.check_domain_dns(cust_domain)
+
+        self.assertTrue(result['is_verified'])
+        dns_queries = [call_args.args for call_args in mock_resolve.call_args_list]
+        self.assertIn((cust_domain, 'MX'), dns_queries)
+        self.assertNotIn(('stosberg.com', 'MX'), dns_queries)
 
 
 class TestMailClientCreateDkim(TestCase):
@@ -430,6 +444,47 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
                     'priority': '-',
                 },
             ],
+        )
+
+    def test_build_expected_dns_records_uses_subdomain_mx_owner(self):
+        records = self.mail_client.build_expected_dns_records('tb.stosberg.com')
+
+        self.assertEqual(
+            records[0],
+            {'type': 'MX', 'name': 'tb.stosberg.com.', 'content': 'mail.test.com.', 'priority': '10'},
+        )
+        self.assertIn(
+            {
+                'type': 'SRV',
+                'name': '_jmap._tcp.tb.stosberg.com.',
+                'content': '1 443 mail.test.com',
+                'priority': '0',
+            },
+            records,
+        )
+        self.assertIn(
+            {
+                'type': 'TXT',
+                'name': 'tb.stosberg.com.',
+                'content': 'v=spf1 include:spf.test.com -all',
+                'priority': '-',
+            },
+            records,
+        )
+
+    def test_build_expected_dns_records_normalizes_customer_domain(self):
+        records = self.mail_client.build_expected_dns_records('tb.stosberg.com.')
+
+        self.assertEqual(records[1]['name'], '_jmap._tcp.tb.stosberg.com.')
+        self.assertNotIn('..', ''.join(record['name'] for record in records))
+        self.assertIn(
+            {
+                'type': 'TXT',
+                'name': '_smtp._tls.tb.stosberg.com.',
+                'content': 'v=TLSRPTv1; rua=mailto:postmaster@tb.stosberg.com',
+                'priority': '-',
+            },
+            records,
         )
 
     @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')

@@ -37,15 +37,16 @@ def normalize_txt_content(content: str) -> str:
 
 
 def check_mx_record_status(domain_name: str, record: dict) -> tuple[DNSRecordStatus, list[str]]:
+    query_name = normalize_dns_query_name(record['name'], domain_name)
     expected_host = record['content'].rstrip('.').lower()
     expected_priority = int(record.get('priority', '10'))
 
     try:
-        answers = dns.resolver.resolve(domain_name, 'MX')
+        answers = dns.resolver.resolve(query_name, 'MX')
     except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
         return DNSRecordStatus.MISSING, []
     except Exception as e:
-        logging.warning(f'MX lookup failed for {domain_name}: {e}')
+        logging.warning(f'MX lookup failed for {query_name}: {e}')
         return DNSRecordStatus.UNKNOWN, []
 
     live_values = []
