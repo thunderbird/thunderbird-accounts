@@ -160,6 +160,22 @@ class TestDNSRecordStatus(SimpleTestCase):
         self.assertEqual(existing_values, ['10 aspmx.l.google.com'])
 
     @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_mx_query_uses_record_name(self, mock_resolve):
+        mock_mx = MagicMock()
+        mock_mx.exchange.to_text.return_value = 'mail.test.com.'
+        mock_mx.preference = 10
+        mock_resolve.return_value = [mock_mx]
+
+        status, existing_values = check_mx_record_status(
+            'example.com',
+            {'type': 'MX', 'name': 'mail.example.com.', 'content': 'mail.test.com', 'priority': '10'},
+        )
+
+        mock_resolve.assert_called_once_with('mail.example.com', 'MX')
+        self.assertEqual(status, DNSRecordStatus.MATCH)
+        self.assertEqual(existing_values, [])
+
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
     def test_srv_match_with_extra_records(self, mock_resolve):
         mock_correct = MagicMock()
         mock_correct.priority = 0

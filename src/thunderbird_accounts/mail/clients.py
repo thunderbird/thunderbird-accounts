@@ -693,31 +693,31 @@ class MailClient:
             {'type': 'MX', 'name': mx_name, 'content': target_domain_fqdn, 'priority': '10'},
             {
                 'type': 'SRV',
-                'name': f'_jmap._tcp.{cust_domain}.',
+                'name': f'_jmap._tcp.{normalized_cust_domain}.',
                 'content': f'1 443 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
-                'name': f'_caldavs._tcp.{cust_domain}.',
+                'name': f'_caldavs._tcp.{normalized_cust_domain}.',
                 'content': f'1 443 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
-                'name': f'_carddavs._tcp.{cust_domain}.',
+                'name': f'_carddavs._tcp.{normalized_cust_domain}.',
                 'content': f'1 443 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
-                'name': f'_imaps._tcp.{cust_domain}.',
+                'name': f'_imaps._tcp.{normalized_cust_domain}.',
                 'content': f'1 993 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
-                'name': f'_submission._tcp.{cust_domain}.',
+                'name': f'_submission._tcp.{normalized_cust_domain}.',
                 'content': f'1 587 {target_domain}',
                 'priority': '0',
             },
@@ -729,25 +729,25 @@ class MailClient:
             },
             {
                 'type': 'TXT',
-                'name': f'_mta-sts.{cust_domain}.',
+                'name': f'_mta-sts.{normalized_cust_domain}.',
                 'content': 'v=STSv1; id=18139500144460329770',
                 'priority': '-',
             },
             {
                 'type': 'TXT',
-                'name': f'_smtp._tls.{cust_domain}.',
-                'content': f'v=TLSRPTv1; rua=mailto:postmaster@{cust_domain}',
+                'name': f'_smtp._tls.{normalized_cust_domain}.',
+                'content': f'v=TLSRPTv1; rua=mailto:postmaster@{normalized_cust_domain}',
                 'priority': '-',
             },
             {
                 'type': 'TXT',
-                'name': f'_dmarc.{cust_domain}.',
+                'name': f'_dmarc.{normalized_cust_domain}.',
                 'content': 'v=DMARC1; p=none;',
                 'priority': '-',
             },
         ]
 
-        records.extend(build_customer_dkim_cname_records(cust_domain))
+        records.extend(build_customer_dkim_cname_records(normalized_cust_domain))
         return records
 
     def check_domain_dns(self, domain_name: str) -> dict:
