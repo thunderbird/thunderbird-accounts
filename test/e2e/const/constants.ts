@@ -19,6 +19,7 @@ export const DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE = String(process.env.DA
 export const DASHBOARD_CURRENT_SUBSCRIPTION_SEND_STORAGE = String(process.env.DASHBOARD_CURRENT_SUBSCRIPTION_SEND_STORAGE);
 export const DASHBOARD_CURRENT_SUBSCRIPTION_EMAIL_ADDRESSES = String(process.env.DASHBOARD_CURRENT_SUBSCRIPTION_EMAIL_ADDRESSES);
 export const DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS = String(process.env.DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS);
+export const MAIL_SUBSCRIPTION_ERROR_TEXT = 'Failed to load subscription information';
 
 // playwright test tags
 export const PLAYWRIGHT_TAG_E2E_SUITE = '@e2e-suite';
@@ -27,6 +28,7 @@ export const PLAYWRIGHT_TAG_E2E_SUITE_MOBILE = '@e2e-mobile-suite';
 export const PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY = '@e2e-prod-mobile-nightly';
 
 // timeouts
+export const TIMEOUT_1_SECOND = 1000;
 export const TIMEOUT_2_SECONDS = 2000;
 export const TIMEOUT_5_SECONDS = 5000;
 export const TIMEOUT_10_SECONDS = 5000;
