@@ -207,24 +207,15 @@ def get_dns_records(request: HttpRequest):
 
     try:
         stalwart_client = MailClient()
-        # Backfill only missing DKIM selectors before returning DNS records.
-        stalwart_client.ensure_dkim(domain.name)
-        mail_tasks.publish_hosted_dkim_dns_records.delay(domain.name)
-        dns_check = stalwart_client.check_domain_dns(domain.name)
-        stale_dns_records = check_stale_dns_records(domain.name)
-        critical_errors = list(dns_check['critical_errors'])
-        stale_dns_critical_errors = _critical_errors_from_stale_dns_records(stale_dns_records)
-        for critical_error in stale_dns_critical_errors:
-            if critical_error not in critical_errors:
-                critical_errors.append(critical_error)
+        dns_records = stalwart_client.build_expected_dns_records(domain.name)
 
         return JsonResponse(
             {
                 'success': True,
-                'critical_errors': critical_errors,
-                'warnings': dns_check['warnings'],
-                'dns_records': dns_check['dns_records'],
-                'stale_dns_records': stale_dns_records,
+                'critical_errors': [],
+                'warnings': [],
+                'dns_records': dns_records,
+                'stale_dns_records': [],
                 'dkim_cname_records': build_customer_dkim_cname_records(domain.name),
             }
         )
