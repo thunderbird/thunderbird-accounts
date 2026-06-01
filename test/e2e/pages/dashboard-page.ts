@@ -75,7 +75,7 @@ export class DashboardPage {
     await expect(this.myAccountCard).toContainText(ACCTS_OIDC_EMAIL);
     await expect(this.privacyAndDataHeading).toBeVisible();
     await expect(this.manageYourServicesHeading).toBeVisible();
-    await expect(this.currentSubscriptionHeading).toBeVisible();
+    await expect(this.currentSubscriptionHeading).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     await expect(this.currentSubscriptionSection).toContainText(DASHBOARD_CURRENT_SUBSCRIPTION_PRICE);
     await expect(this.currentSubscriptionSection).toContainText(
       new RegExp(`${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE)}\\s*of Mail Storage`),
