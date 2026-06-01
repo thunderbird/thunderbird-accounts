@@ -124,7 +124,7 @@ class CustomDomainDNSRecordsTestCase(TestCase):
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_returns_customer_dkim_cname_records(
+    def test_returns_expected_dns_records_without_verification(
         self,
         mock_mail_client_cls,
         mock_check_stale_dns_records,
@@ -155,13 +155,8 @@ class CustomDomainDNSRecordsTestCase(TestCase):
             {'type': 'MX', 'name': '@', 'content': 'mail.example.net', 'priority': '10'},
             *dkim_records,
         ]
-        mock_instance.check_domain_dns.return_value = {
-            'critical_errors': [],
-            'warnings': [],
-            'dns_records': dns_records,
-        }
+        mock_instance.build_expected_dns_records.return_value = dns_records
         mock_mail_client_cls.return_value = mock_instance
-        mock_check_stale_dns_records.return_value = []
 
         request = self.request_factory.get(self.url, {'domain-name': self.domain.name})
         request.user = self.user
@@ -176,11 +171,12 @@ class CustomDomainDNSRecordsTestCase(TestCase):
         self.assertEqual([], data['critical_errors'])
         self.assertEqual([], data['warnings'])
         self.assertEqual([], data['stale_dns_records'])
-        mock_instance.ensure_dkim.assert_called_once_with(self.domain.name)
-        mock_instance.check_domain_dns.assert_called_once_with(self.domain.name)
+        mock_instance.build_expected_dns_records.assert_called_once_with(self.domain.name)
+        mock_instance.ensure_dkim.assert_not_called()
+        mock_instance.check_domain_dns.assert_not_called()
         mock_instance.create_dkim.assert_not_called()
-        mock_check_stale_dns_records.assert_called_once_with(self.domain.name)
-        mock_publish_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
+        mock_check_stale_dns_records.assert_not_called()
+        mock_publish_hosted_dkim_dns_records.assert_not_called()
 
 
 class VerifyCustomDomainTestCase(TestCase):

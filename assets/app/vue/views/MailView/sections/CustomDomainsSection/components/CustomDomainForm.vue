@@ -54,6 +54,7 @@ const staleDnsRecords = ref<StaleDNSRecord[]>([]);
 const criticalErrors = ref<string[]>([]);
 const validationWarnings = ref<string[]>([]);
 const showMissingIssues = ref(false);
+const verificationResultsByDomain = ref<Record<string, Omit<DomainVerificationResult, 'domainName'>>>({});
 
 const formatValidationError = (error: string): string => {
   const translationKey = `views.mail.sections.customDomains.verificationValidationErrors.${error}`;
@@ -93,7 +94,7 @@ const validationResult = (data?: {
 const applyVerificationResult = (
   domainName: string,
   result: Omit<DomainVerificationResult, 'domainName'>,
-  options: { showMissingIssues: boolean }
+  options: { showMissingIssues: boolean; cacheResult?: boolean }
 ) => {
   customDomain.value = domainName;
   recordsInfo.value = result.dnsRecords;
@@ -102,6 +103,13 @@ const applyVerificationResult = (
   validationWarnings.value = result.warnings;
   showMissingIssues.value = options.showMissingIssues;
   step.value = STEP.VERIFY_DOMAIN;
+
+  if (options.cacheResult) {
+    verificationResultsByDomain.value = {
+      ...verificationResultsByDomain.value,
+      [domainName]: result,
+    };
+  }
 };
 
 const issueSeverity = (issues: InlineIssue[]): InlineIssueSeverity | null => {
@@ -353,7 +361,10 @@ const onVerifyDomain = async () => {
   try {
     const data = await verifyDomain(customDomain.value);
 
-    applyVerificationResult(customDomain.value, validationResult(data), { showMissingIssues: true });
+    applyVerificationResult(customDomain.value, validationResult(data), {
+      showMissingIssues: true,
+      cacheResult: true,
+    });
 
     if (data.success) {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
@@ -372,11 +383,17 @@ const onVerifyDomain = async () => {
 
 const viewDnsRecords = async (domainName: string) => {
   customDomain.value = domainName;
+  const verificationResult = verificationResultsByDomain.value[domainName];
+  if (verificationResult) {
+    applyVerificationResult(domainName, verificationResult, { showMissingIssues: true });
+    return;
+  }
+
   await handleDNSRecords(domainName);
 };
 
 const showVerificationResult = (result: DomainVerificationResult) => {
-  applyVerificationResult(result.domainName, result, { showMissingIssues: true });
+  applyVerificationResult(result.domainName, result, { showMissingIssues: true, cacheResult: true });
 };
 
 defineExpose({
@@ -399,6 +416,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
     criticalErrors.value = [];
     validationWarnings.value = [];
     showMissingIssues.value = false;
+    delete verificationResultsByDomain.value[newLastDomainRemoved];
   }
 }, { immediate: true });
 </script>
