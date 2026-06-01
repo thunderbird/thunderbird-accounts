@@ -96,6 +96,29 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         self.assertEqual(mx_record['existing_values'], ['10 wrong.host.com'])
 
     @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_check_domain_dns_mx_same_priority_conflict(self, mock_resolve):
+        fallback_resolve = self._resolve_side_effect()
+
+        def resolve_side_effect(name, record_type):
+            if record_type == 'MX':
+                return [
+                    self._mx_record(),
+                    self._mx_record(host='aspmx.l.google.com'),
+                ]
+            return fallback_resolve(name, record_type)
+
+        mock_resolve.side_effect = resolve_side_effect
+
+        result = self.mail_client.check_domain_dns(self.domain)
+
+        self.assertFalse(result['is_verified'])
+        self.assertIn(DomainVerificationErrors.MX_LOOKUP_ERROR, result['critical_errors'])
+
+        mx_record = next(record for record in result['dns_records'] if record['type'] == 'MX')
+        self.assertEqual(mx_record['status'], 'conflict')
+        self.assertEqual(mx_record['existing_values'], ['10 aspmx.l.google.com'])
+
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
     def test_check_domain_dns_mx_lookup_failure(self, mock_resolve):
         mock_resolve.side_effect = self._resolve_side_effect(mx_exception=dns.resolver.NoAnswer())
 
@@ -148,8 +171,43 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
 
         self.assertTrue(result['is_verified'])
         dns_queries = [call_args.args for call_args in mock_resolve.call_args_list]
-        self.assertIn((cust_domain, 'MX'), dns_queries)
+        self.assertIn((f'{cust_domain}.', 'MX'), dns_queries)
+        self.assertIn((f'{cust_domain}.', 'TXT'), dns_queries)
         self.assertNotIn(('stosberg.com', 'MX'), dns_queries)
+        self.assertNotIn(('stosberg.com.', 'MX'), dns_queries)
+        self.assertNotIn(('stosberg.com', 'TXT'), dns_queries)
+        self.assertNotIn(('stosberg.com.', 'TXT'), dns_queries)
+
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_check_domain_dns_subdomain_spf_does_not_use_parent_txt(self, mock_resolve):
+        cust_domain = 'tb.stosberg.com'
+        parent_domain = 'stosberg.com'
+        fallback_resolve = self._resolve_side_effect(cust_domain=cust_domain)
+
+        def resolve_side_effect(name, record_type):
+            query_name = name.rstrip('.')
+            if record_type == 'TXT' and query_name == cust_domain:
+                raise dns.resolver.NoAnswer()
+            if record_type == 'TXT' and query_name == parent_domain:
+                return [self._txt_record('v=spf1 include:spf.test.com -all')]
+            return fallback_resolve(name, record_type)
+
+        mock_resolve.side_effect = resolve_side_effect
+
+        result = self.mail_client.check_domain_dns(cust_domain)
+
+        spf_record = next(
+            record
+            for record in result['dns_records']
+            if record['type'] == 'TXT' and record['content'].startswith('v=spf1')
+        )
+        dns_queries = [call_args.args for call_args in mock_resolve.call_args_list]
+
+        self.assertEqual(spf_record['name'], f'{cust_domain}.')
+        self.assertEqual(spf_record['status'], 'missing')
+        self.assertIn(DomainVerificationErrors.SPF_RECORD_NOT_FOUND, result['warnings'])
+        self.assertIn((f'{cust_domain}.', 'TXT'), dns_queries)
+        self.assertNotIn((f'{parent_domain}.', 'TXT'), dns_queries)
 
 
 class TestMailClientCreateDkim(TestCase):

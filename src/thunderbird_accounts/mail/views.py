@@ -22,7 +22,7 @@ from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
-from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.clients import DomainVerificationErrors, MailClient, StaleDNSRecordCode
 from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
 from thunderbird_accounts.mail.exceptions import (
     AccessTokenNotFound,
@@ -40,6 +40,18 @@ from thunderbird_accounts.mail.utils import (
 from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail import tasks as mail_tasks
 from thunderbird_accounts.mail import utils
+
+
+def _critical_errors_from_stale_dns_records(stale_dns_records: list[dict]) -> list[DomainVerificationErrors]:
+    stale_record_codes = {record.get('code') for record in stale_dns_records}
+    critical_errors = []
+
+    if StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value in stale_record_codes:
+        critical_errors.append(DomainVerificationErrors.AUTODISCOVER_RECORD_FOUND)
+    if StaleDNSRecordCode.AUTODISCOVER_SRV_UNEXPECTED.value in stale_record_codes:
+        critical_errors.append(DomainVerificationErrors.AUTODISCOVER_SRV_RECORD_FOUND)
+
+    return critical_errors
 
 
 def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: str):
@@ -198,11 +210,21 @@ def get_dns_records(request: HttpRequest):
         # Backfill only missing DKIM selectors before returning DNS records.
         stalwart_client.ensure_dkim(domain.name)
         mail_tasks.publish_hosted_dkim_dns_records.delay(domain.name)
-        dns_records = stalwart_client.build_expected_dns_records(domain.name)
+        dns_check = stalwart_client.check_domain_dns(domain.name)
+        stale_dns_records = check_stale_dns_records(domain.name)
+        critical_errors = list(dns_check['critical_errors'])
+        stale_dns_critical_errors = _critical_errors_from_stale_dns_records(stale_dns_records)
+        for critical_error in stale_dns_critical_errors:
+            if critical_error not in critical_errors:
+                critical_errors.append(critical_error)
+
         return JsonResponse(
             {
                 'success': True,
-                'dns_records': dns_records,
+                'critical_errors': critical_errors,
+                'warnings': dns_check['warnings'],
+                'dns_records': dns_check['dns_records'],
+                'stale_dns_records': stale_dns_records,
                 'dkim_cname_records': build_customer_dkim_cname_records(domain.name),
             }
         )
@@ -246,6 +268,13 @@ def verify_custom_domain(request: HttpRequest):
 
         dns_records = dns_check['dns_records']
         stale_dns_records = check_stale_dns_records(domain.name)
+        stale_dns_critical_errors = _critical_errors_from_stale_dns_records(stale_dns_records)
+        for critical_error in stale_dns_critical_errors:
+            if critical_error not in critical_errors:
+                critical_errors.append(critical_error)
+
+        if stale_dns_critical_errors:
+            is_verified = False
 
         response_data = {
             'critical_errors': critical_errors,

@@ -33,6 +33,8 @@ class DomainVerificationErrors(StrEnum):
 
     # Critical errors (fail verification)
     MX_LOOKUP_ERROR = 'mxLookupError'
+    AUTODISCOVER_RECORD_FOUND = 'autodiscoverRecordFound'
+    AUTODISCOVER_SRV_RECORD_FOUND = 'autodiscoverSrvRecordFound'
 
     # Warnings (do not fail verification)
     SPF_RECORD_NOT_FOUND = 'spfRecordNotFound'

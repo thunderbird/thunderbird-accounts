@@ -4,7 +4,8 @@ import { useI18n } from 'vue-i18n';
 import { PhGlobe, PhCheckCircle, PhX } from '@phosphor-icons/vue';
 import { BaseBadge, BaseBadgeTypes, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 // Types
-import { CustomDomain, DOMAIN_STATUS, STEP } from './types';
+import { DOMAIN_STATUS, STEP } from './types';
+import type { CustomDomain, DomainVerificationResult } from './types';
 
 // Shared components
 import CardContainer from '@/components/CardContainer.vue';
@@ -25,7 +26,6 @@ const customDomainsDescription = computed(() =>
 const lastDomainRemoved = ref<string>(null);
 const errorMessage = ref<string>(null);
 const customDomainFormRef = ref(null);
-const verificationCriticalErrors = ref<string[]>([]);
 const maxCustomDomains = window._page?.maxCustomDomains;
 
 const handleStepChange = (step: STEP) => {
@@ -62,8 +62,10 @@ const handleCustomDomainViewDnsRecords = (domainName: string) => {
   }
 };
 
-const handleCustomDomainVerificationCriticalErrors = (criticalErrors: string[]) => {
-  verificationCriticalErrors.value = criticalErrors;
+const handleCustomDomainVerificationResult = (result: DomainVerificationResult) => {
+  if (customDomainFormRef.value) {
+    customDomainFormRef.value.showVerificationResult(result);
+  }
 };
 </script>
 
@@ -113,7 +115,7 @@ export default {
             @custom-domain-verified="handleCustomDomainVerified"
             @custom-domain-error="handleCustomDomainError"
             @custom-domain-view-dns-records="handleCustomDomainViewDnsRecords"
-            @custom-domain-verification-critical-errors="handleCustomDomainVerificationCriticalErrors"
+            @custom-domain-verification-result="handleCustomDomainVerificationResult"
           />
         </div>
       </div>
@@ -123,19 +125,6 @@ export default {
 
         <template #cta>
           <button @click="errorMessage = null">
-            <ph-x size="24" />
-          </button>
-        </template>
-      </notice-bar>
-
-      <!-- Domain Verification Notice Bar -->
-      <notice-bar :type="NoticeBarTypes.Critical" class="verify-step-notice-bar" v-if="verificationCriticalErrors.length > 0">
-        <template v-for="criticalError in verificationCriticalErrors" :key="criticalError">
-          <p>{{ t(`views.mail.sections.customDomains.verificationCriticalErrors.${criticalError}`) }}</p>
-        </template>
-
-        <template #cta>
-          <button @click="verificationCriticalErrors = []">
             <ph-x size="24" />
           </button>
         </template>
