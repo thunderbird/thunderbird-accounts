@@ -5,12 +5,10 @@ import { PhDotsThreeVertical } from '@phosphor-icons/vue';
 
 // Types
 import { DOMAIN_STATUS } from '../types';
+import type { DNSRecord, DomainVerificationResult, StaleDNSRecord } from '../types';
 
 // API
 import { verifyDomain, removeCustomDomain } from '../api'
-
-// Utils
-import { deduplicateCriticalErrors } from '../utils';
 
 const props = defineProps<{
   domain: {
@@ -25,8 +23,7 @@ const emit = defineEmits<{
   'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }];
   'custom-domain-error': [error: string];
   'custom-domain-view-dns-records': [domainName: string];
-  'custom-domain-verification-warnings': [warnings: string[]];
-  'custom-domain-verification-critical-errors': [criticalErrors: string[]];
+  'custom-domain-verification-result': [result: DomainVerificationResult];
 }>();
 
 const showMenu = ref(false);
@@ -38,19 +35,34 @@ const toggleMenu = () => {
   showMenu.value = !showMenu.value;
 };
 
+const emitVerificationResult = (data: {
+  critical_errors?: string[];
+  warnings?: string[];
+  dns_records?: DNSRecord[];
+  stale_dns_records?: StaleDNSRecord[];
+}) => {
+  emit('custom-domain-verification-result', {
+    domainName: props.domain.name,
+    criticalErrors: data.critical_errors ?? [],
+    warnings: data.warnings ?? [],
+    dnsRecords: data.dns_records ?? [],
+    staleDnsRecords: data.stale_dns_records ?? [],
+  });
+};
+
 const handleRetry = async () => {
   try {
     const data = await verifyDomain(props.domain.name);
 
+    emitVerificationResult(data);
+
     if (data.success) {
       emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.VERIFIED });
     } else {
-      emit('custom-domain-verification-warnings', data.warnings);
-      emit('custom-domain-verification-critical-errors', deduplicateCriticalErrors(data.critical_errors || []));
       emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.FAILED });
     }
   } catch (error) {
-    emit('custom-domain-error', error);
+    emit('custom-domain-error', String(error));
   }
 
   showMenu.value = false;

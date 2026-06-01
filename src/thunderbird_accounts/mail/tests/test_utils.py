@@ -116,10 +116,13 @@ class ValidateEmailTestCase(TestCase):
 
 class TestNormalizeDNSQueryName(SimpleTestCase):
     def test_at_sign_returns_domain_name(self):
-        self.assertEqual(normalize_dns_query_name('@', 'example.com'), 'example.com')
+        self.assertEqual(normalize_dns_query_name('@', 'example.com'), 'example.com.')
 
-    def test_strips_trailing_dot(self):
-        self.assertEqual(normalize_dns_query_name('_dmarc.example.com.', 'example.com'), '_dmarc.example.com')
+    def test_preserves_trailing_dot(self):
+        self.assertEqual(normalize_dns_query_name('_dmarc.example.com.', 'example.com'), '_dmarc.example.com.')
+
+    def test_adds_trailing_dot(self):
+        self.assertEqual(normalize_dns_query_name('_dmarc.example.com', 'example.com'), '_dmarc.example.com.')
 
 
 class TestDNSRecordStatus(SimpleTestCase):
@@ -127,7 +130,7 @@ class TestDNSRecordStatus(SimpleTestCase):
         self.domain = 'example.com'
 
     @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
-    def test_mx_match_with_extra_records(self, mock_resolve):
+    def test_mx_match_with_extra_records_at_different_priority(self, mock_resolve):
         mock_correct = MagicMock()
         mock_correct.exchange.to_text.return_value = 'mail.test.com.'
         mock_correct.preference = 10
@@ -143,6 +146,24 @@ class TestDNSRecordStatus(SimpleTestCase):
 
         self.assertEqual(status, DNSRecordStatus.MATCH)
         self.assertEqual(existing_values, [])
+
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_mx_conflict_with_extra_record_at_same_priority(self, mock_resolve):
+        mock_correct = MagicMock()
+        mock_correct.exchange.to_text.return_value = 'mail.test.com.'
+        mock_correct.preference = 10
+        mock_extra = MagicMock()
+        mock_extra.exchange.to_text.return_value = 'aspmx.l.google.com.'
+        mock_extra.preference = 10
+        mock_resolve.return_value = [mock_extra, mock_correct]
+
+        status, existing_values = check_mx_record_status(
+            self.domain,
+            {'type': 'MX', 'name': '@', 'content': 'mail.test.com', 'priority': '10'},
+        )
+
+        self.assertEqual(status, DNSRecordStatus.CONFLICT)
+        self.assertEqual(existing_values, ['10 aspmx.l.google.com'])
 
     @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
     def test_mx_conflict(self, mock_resolve):
@@ -171,8 +192,21 @@ class TestDNSRecordStatus(SimpleTestCase):
             {'type': 'MX', 'name': 'mail.example.com.', 'content': 'mail.test.com', 'priority': '10'},
         )
 
-        mock_resolve.assert_called_once_with('mail.example.com', 'MX')
+        mock_resolve.assert_called_once_with('mail.example.com.', 'MX')
         self.assertEqual(status, DNSRecordStatus.MATCH)
+        self.assertEqual(existing_values, [])
+
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_txt_query_uses_absolute_record_name(self, mock_resolve):
+        mock_resolve.side_effect = dns.resolver.NoAnswer()
+
+        status, existing_values = check_txt_record_status(
+            'tb.stosberg.com',
+            {'type': 'TXT', 'name': 'tb.stosberg.com.', 'content': 'v=spf1 include:spf.test.com -all'},
+        )
+
+        mock_resolve.assert_called_once_with('tb.stosberg.com.', 'TXT')
+        self.assertEqual(status, DNSRecordStatus.MISSING)
         self.assertEqual(existing_values, [])
 
     @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
@@ -244,6 +278,25 @@ class TestDNSRecordStatus(SimpleTestCase):
     def test_spf_match(self, mock_resolve):
         mock_txt = MagicMock()
         mock_txt.strings = [b'v=spf1 include:spf.test.com -all']
+        mock_resolve.return_value = [mock_txt]
+
+        status, existing_values = check_txt_record_status(
+            self.domain,
+            {
+                'type': 'TXT',
+                'name': self.domain,
+                'content': 'v=spf1 include:spf.test.com -all',
+                'priority': '-',
+            },
+        )
+
+        self.assertEqual(status, DNSRecordStatus.MATCH)
+        self.assertEqual(existing_values, [])
+
+    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    def test_spf_match_when_record_contains_expected_include(self, mock_resolve):
+        mock_txt = MagicMock()
+        mock_txt.strings = [b'v=spf1 mx include:_spf.google.com include:spf.test.com ~all']
         mock_resolve.return_value = [mock_txt]
 
         status, existing_values = check_txt_record_status(

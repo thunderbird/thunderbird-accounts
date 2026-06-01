@@ -20,8 +20,8 @@ from thunderbird_accounts.mail import tasks
 
 def normalize_dns_query_name(name: str, domain_name: str) -> str:
     if name == '@':
-        return domain_name
-    return name.rstrip('.')
+        return f'{domain_name.rstrip(".")}.'
+    return name if name.endswith('.') else f'{name}.'
 
 
 def txt_tag_value(content: str, tag: str) -> Optional[str]:
@@ -44,6 +44,7 @@ def check_mx_record_status(domain_name: str, record: dict) -> tuple[DNSRecordSta
     try:
         answers = dns.resolver.resolve(query_name, 'MX')
     except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+        logging.debug(f'MX lookup failed for {query_name} resulted in NXDOMAIN')
         return DNSRecordStatus.MISSING, []
     except Exception as e:
         logging.warning(f'MX lookup failed for {query_name}: {e}')
@@ -51,17 +52,27 @@ def check_mx_record_status(domain_name: str, record: dict) -> tuple[DNSRecordSta
 
     live_values = []
     has_match = False
+    same_priority_conflicts = []
 
     for rdata in answers:
         exchange = rdata.exchange.to_text().rstrip('.')
         preference = rdata.preference
-        live_values.append(f'{preference} {exchange}')
+        live_value = f'{preference} {exchange}'
+        live_values.append(live_value)
         if exchange.lower() == expected_host and preference == expected_priority:
             has_match = True
+        elif preference == expected_priority:
+            same_priority_conflicts.append(live_value)
 
     if has_match:
+        if same_priority_conflicts:
+            logging.debug(
+                f'MX lookup for {query_name} resulted in same-priority conflict with {same_priority_conflicts}'
+            )
+            return DNSRecordStatus.CONFLICT, same_priority_conflicts
         return DNSRecordStatus.MATCH, []
     if live_values:
+        logging.debug(f'MX lookup for {query_name} resulted in conflict with {live_values}')
         return DNSRecordStatus.CONFLICT, live_values
     return DNSRecordStatus.MISSING, []
 
@@ -205,6 +216,7 @@ def check_txt_record_status(domain_name: str, record: dict) -> tuple[DNSRecordSt
 
 
 def check_dns_record_status(domain_name: str, record: dict) -> tuple[DNSRecordStatus, list[str]]:
+    """Check customer domain_name against record with expected values"""
     record_type = record.get('type', '').upper()
     if record_type == 'MX':
         return check_mx_record_status(domain_name, record)
@@ -225,6 +237,7 @@ def enrich_dns_records_with_status(domain_name: str, expected_records: list[dict
         if existing_values:
             enriched['existing_values'] = existing_values
         enriched_records.append(enriched)
+    logging.debug('Returning DNS records with status: %s', enriched_records)
     return enriched_records
 
 
@@ -301,7 +314,7 @@ def _resolve_autodiscover_address_records(resolver: dns.resolver.Resolver, name:
     return address_records
 
 
-def check_stale_dns_records(domain_name: str) -> list[dict]:
+def check_stale_dns_records(cust_domain: str) -> list[dict]:
     """Detect DNS records that exist but should be deleted."""
     stale_records = []
 
@@ -311,7 +324,7 @@ def check_stale_dns_records(domain_name: str) -> list[dict]:
     # We currently don't show autodiscover records during custom domain setup
     # so if they have it we should mark as stale / ask for removing it
     # as it can trigger Office 365 / Exchange in Thunderbird Desktop
-    autodiscover_name = f'autodiscover.{domain_name}'
+    autodiscover_name = f'autodiscover.{cust_domain}'
     cname_targets = _resolve_autodiscover_cname_targets(resolver, autodiscover_name)
     if cname_targets:
         stale_records.append(
@@ -333,7 +346,7 @@ def check_stale_dns_records(domain_name: str) -> list[dict]:
                 }
             )
 
-    autodiscover_srv_name = f'_autodiscover._tcp.{domain_name}'
+    autodiscover_srv_name = f'_autodiscover._tcp.{cust_domain}'
     try:
         answers = _stale_dns_resolve(resolver, autodiscover_srv_name, 'SRV')
         live_values = [
@@ -354,6 +367,7 @@ def check_stale_dns_records(domain_name: str) -> list[dict]:
     except Exception as e:
         logging.warning(f'SRV lookup failed for {autodiscover_srv_name}: {e}')
 
+    logging.debug("stale DNS records that should be deleted %s", stale_records)
     return stale_records
 
 

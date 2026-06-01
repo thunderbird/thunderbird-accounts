@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.clients import DomainVerificationErrors, StaleDNSRecordCode
 from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.mail.views import get_dns_records
 
@@ -121,8 +122,14 @@ class CustomDomainDNSRecordsTestCase(TestCase):
         self.url = reverse('get_dns_records')
 
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_returns_customer_dkim_cname_records(self, mock_mail_client_cls, mock_publish_hosted_dkim_dns_records):
+    def test_returns_customer_dkim_cname_records(
+        self,
+        mock_mail_client_cls,
+        mock_check_stale_dns_records,
+        mock_publish_hosted_dkim_dns_records,
+    ):
         dkim_records = [
             {
                 'type': 'CNAME',
@@ -144,11 +151,17 @@ class CustomDomainDNSRecordsTestCase(TestCase):
             },
         ]
         mock_instance = Mock()
-        mock_instance.build_expected_dns_records.return_value = [
+        dns_records = [
             {'type': 'MX', 'name': '@', 'content': 'mail.example.net', 'priority': '10'},
             *dkim_records,
         ]
+        mock_instance.check_domain_dns.return_value = {
+            'critical_errors': [],
+            'warnings': [],
+            'dns_records': dns_records,
+        }
         mock_mail_client_cls.return_value = mock_instance
+        mock_check_stale_dns_records.return_value = []
 
         request = self.request_factory.get(self.url, {'domain-name': self.domain.name})
         request.user = self.user
@@ -158,10 +171,15 @@ class CustomDomainDNSRecordsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.content.decode())
         self.assertTrue(data['success'])
-        self.assertEqual(mock_instance.build_expected_dns_records.return_value, data['dns_records'])
+        self.assertEqual(dns_records, data['dns_records'])
         self.assertEqual(dkim_records, data['dkim_cname_records'])
+        self.assertEqual([], data['critical_errors'])
+        self.assertEqual([], data['warnings'])
+        self.assertEqual([], data['stale_dns_records'])
         mock_instance.ensure_dkim.assert_called_once_with(self.domain.name)
+        mock_instance.check_domain_dns.assert_called_once_with(self.domain.name)
         mock_instance.create_dkim.assert_not_called()
+        mock_check_stale_dns_records.assert_called_once_with(self.domain.name)
         mock_publish_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
 
 
@@ -214,6 +232,96 @@ class VerifyCustomDomainTestCase(TestCase):
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.VERIFIED, self.domain.status)
         self.assertEqual('domain-id', self.domain.stalwart_id)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_autodiscover_record_is_critical_error(
+        self,
+        mock_mail_client_cls,
+        mock_check_stale_dns_records,
+        mock_publish_hosted_dkim,
+    ):
+        mock_instance = Mock()
+        mock_instance.check_domain_dns.return_value = {
+            'is_verified': True,
+            'critical_errors': [],
+            'warnings': [],
+            'dns_records': [],
+        }
+        mock_mail_client_cls.return_value = mock_instance
+        mock_check_stale_dns_records.return_value = [
+            {
+                'code': StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value,
+                'type': 'A',
+                'name': f'autodiscover.{self.domain.name}',
+                'existing_values': ['203.0.113.10'],
+            }
+        ]
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content.decode())
+        self.assertFalse(data['success'])
+        self.assertIn(DomainVerificationErrors.AUTODISCOVER_RECORD_FOUND.value, data['critical_errors'])
+        self.assertEqual(mock_check_stale_dns_records.return_value, data['stale_dns_records'])
+        mock_instance.create_domain.assert_not_called()
+        mock_instance.ensure_dkim.assert_not_called()
+        mock_publish_hosted_dkim.assert_not_called()
+
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_autodiscover_srv_record_is_critical_error(
+        self,
+        mock_mail_client_cls,
+        mock_check_stale_dns_records,
+        mock_publish_hosted_dkim,
+    ):
+        mock_instance = Mock()
+        mock_instance.check_domain_dns.return_value = {
+            'is_verified': True,
+            'critical_errors': [],
+            'warnings': [],
+            'dns_records': [],
+        }
+        mock_mail_client_cls.return_value = mock_instance
+        mock_check_stale_dns_records.return_value = [
+            {
+                'code': StaleDNSRecordCode.AUTODISCOVER_SRV_UNEXPECTED.value,
+                'type': 'SRV',
+                'name': f'_autodiscover._tcp.{self.domain.name}',
+                'existing_values': ['0 0 443 cpanelemaildiscovery.cpanel.net'],
+            }
+        ]
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content.decode())
+        self.assertFalse(data['success'])
+        self.assertIn(DomainVerificationErrors.AUTODISCOVER_SRV_RECORD_FOUND.value, data['critical_errors'])
+        self.assertEqual(mock_check_stale_dns_records.return_value, data['stale_dns_records'])
+        mock_instance.create_domain.assert_not_called()
+        mock_instance.ensure_dkim.assert_not_called()
+        mock_publish_hosted_dkim.assert_not_called()
+
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
 
 
 class AddEmailAliasTestCase(TestCase):

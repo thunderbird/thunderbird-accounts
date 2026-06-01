@@ -230,6 +230,9 @@
           "recordsTableHeaderValueData": "{'Value/Data'}",
           "recordsTableHeaderPriority": "Priority",
           "recordConflictWarning": "Conflict detected. Replace {currentValue} with the value in this row.",
+          "mxRecordConflictWarning": "Conflict detected. Remove conflicting MX records or change their priority.",
+          "spfRecordConflictWarning": "The SPF record must contain {includeValue}.",
+          "recordMissingWarning": "Record is missing.",
           "staleDnsRecordsTitle": "Remove these stale records",
           "staleDnsRecords": "Please remove the {type} record for {name} as it points to {existing_values}.",
           "verifyStepInfoTitle": "Automatic Verification Attempts",
@@ -241,11 +244,23 @@
           "domainAlreadyExists": "Domain already exists",
           "domainAlreadyConfigured": "This domain is already configured. Please {link} in case you believe this is a mistake.",
           "reachOutToSupport": "reach out to support",
+          "verificationValidationErrors": {
+            "mxLookupError": "Unable to find MX record pointing to Thundermail",
+            "ipLookupError": "Unable to resolve IP addresses",
+            "connectionError": "Failed to connect to MX server",
+            "readGreetingError": "We could not verify that the domain records connect to Thundermail",
+            "autodiscoverRecordFound": "The autodiscover DNS record must be removed.",
+            "autodiscoverSrvRecordFound": "The _autodiscover._tcp DNS record must be removed.",
+            "spfRecordNotFound": "SPF record was missing",
+            "dkimRecordNotFound": "DKIM record was missing"
+          },
           "verificationCriticalErrors": {
             "mxLookupError": "Unable to find mail servers for domain",
             "ipLookupError": "Unable to resolve IP addresses",
             "connectionError": "Failed to connect to mail server",
-            "readGreetingError": "We could not verify that the domain records connect to Thundermail"
+            "readGreetingError": "We could not verify that the domain records connect to Thundermail",
+            "autodiscoverRecordFound": "The autodiscover DNS record must be removed.",
+            "autodiscoverSrvRecordFound": "The _autodiscover._tcp DNS record must be removed."
           }
         },
         "securitySettings": {

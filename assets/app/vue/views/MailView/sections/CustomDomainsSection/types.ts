@@ -38,3 +38,11 @@ export type CustomDomain = {
   status: DOMAIN_STATUS;
   emailsCount?: number;
 };
+
+export type DomainVerificationResult = {
+  domainName: string;
+  dnsRecords: DNSRecord[];
+  staleDnsRecords: StaleDNSRecord[];
+  criticalErrors: string[];
+  warnings: string[];
+};
