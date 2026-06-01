@@ -4,11 +4,13 @@ import { useI18n } from 'vue-i18n';
 import { useDebounceFn } from '@vueuse/core';
 import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes, CheckboxInput, LoadingSkeleton } from '@thunderbirdops/services-ui';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
+import { COMMUNITY_SUPPORT_URL } from '@/defines';
 import NativeInputWrapper from './NativeInputWrapper.vue';
 import { isEmailInAllowList } from '../api';
 
 // Types
 import { ContactFieldsAPIResponse, TicketField } from '../types';
+
 
 // Zendesk Ticket Field <-> Vue Component mapping
 // https://developer.zendesk.com/api-reference/ticketing/tickets/ticket_fields/#create-ticket-field
@@ -250,10 +252,20 @@ onMounted(() => {
   <notice-bar :type="NoticeBarTypes.Critical" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
   <notice-bar :type="NoticeBarTypes.Success" v-if="successText" class="notice">{{ successText }}</notice-bar>
   <notice-bar :type="NoticeBarTypes.Warning" v-if="!userEmailInAllowList" class="notice">
-    <i18n-t keypath="views.contact.emailNotOnAllowList" tag="span">
+    <i18n-t keypath="views.contact.emailNotOnAllowList">
       <template #joinWaitlist>
-        <a :href="tbProWaitListUrl" target="_blank">
+        <a :href="tbProWaitListUrl" target="_blank" rel="noopener noreferrer">
           {{ t('views.contact.joinWaitlist') }}
+        </a>
+      </template>
+    </i18n-t>
+
+    <br />
+
+    <i18n-t keypath="views.contact.emailNotOnAllowListSupport" tag="span" class="second-line">
+      <template #communitySupportLink>
+        <a :href="COMMUNITY_SUPPORT_URL" target="_blank" rel="noopener noreferrer">
+          {{ t('views.contact.communitySupportLink') }}
         </a>
       </template>
     </i18n-t>
@@ -433,6 +445,11 @@ form {
 
   a {
     color: var(--colour-ti-highlight);
+  }
+
+  .second-line {
+    display: inline-block;
+    margin-block-start: 0.2rem;
   }
 }
 

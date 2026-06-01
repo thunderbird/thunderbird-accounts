@@ -9,4 +9,5 @@ export const IOS_SUPPORT_URL = 'https://support.tb.pro/hc/en-us/articles/5105366
 export const STATUS_PAGE_URL = 'https://status.tb.pro/';
 export const TERMS_OF_SERVICE_URL = 'https://tb.pro/terms/';
 export const PRIVACY_POLICY_URL = 'https://tb.pro/privacy/';
+export const COMMUNITY_SUPPORT_URL = 'https://support.mozilla.org/questions/thunderbird';
 export const CAPTURE_TELEMETRY = true;
