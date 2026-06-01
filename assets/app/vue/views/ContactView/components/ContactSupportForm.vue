@@ -254,7 +254,7 @@ onMounted(() => {
   <notice-bar :type="NoticeBarTypes.Warning" v-if="!userEmailInAllowList" class="notice">
     <i18n-t keypath="views.contact.emailNotOnAllowList">
       <template #joinWaitlist>
-        <a :href="tbProWaitListUrl" target="_blank">
+        <a :href="tbProWaitListUrl" target="_blank" rel="noopener noreferrer">
           {{ t('views.contact.joinWaitlist') }}
         </a>
       </template>
@@ -264,7 +264,7 @@ onMounted(() => {
 
     <i18n-t keypath="views.contact.emailNotOnAllowListSupport" tag="span" class="second-line">
       <template #communitySupportLink>
-        <a :href="COMMUNITY_SUPPORT_URL" target="_blank">
+        <a :href="COMMUNITY_SUPPORT_URL" target="_blank" rel="noopener noreferrer">
           {{ t('views.contact.communitySupportLink') }}
         </a>
       </template>
