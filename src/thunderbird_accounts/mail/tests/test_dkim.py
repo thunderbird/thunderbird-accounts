@@ -188,7 +188,6 @@ class DkimSignatureConversionTestCase(SimpleTestCase):
             )
 
 
-@override_settings(HOSTED_DKIM_CLOUDFLARE_ZONE_ID='zone-id', HOSTED_DKIM_CLOUDFLARE_TTL=1)
 class CloudflareDNSClientTestCase(SimpleTestCase):
     def test_creates_txt_record_when_missing(self):
         cloudflare_client = Mock()
