@@ -805,10 +805,6 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR
               - name: STALWART_WEBHOOK_SECRET
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-webhook-secret-t8yGzq
-              - name: HOSTED_DKIM_CLOUDFLARE_API_TOKEN
-                valueFrom: accounts/prod/hosted-dkim-cloudflare-api-token
-              - name: HOSTED_DKIM_CLOUDFLARE_ZONE_ID
-                valueFrom: accounts/prod/hosted-dkim-cloudflare-zone-id
               - name: MAILCHIMP_DC
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-dc-SyLAUO
               - name: MAILCHIMP_API_KEY
@@ -818,6 +814,9 @@ resources:
               - name: APPOINTMENT_CALDAV_SECRET
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/appointment-caldav-secret-eJOI7y
               - *SECRET_POSTHOG_API_KEY
+              - *SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN
+              - *SECRET_HOSTED_DKIM_CLOUDFLARE_ZONE_ID
+
             environment:
               - name: TIMES_I_NEED_TO_REDEPLOY_WITHOUT_CHANGING_IMAGE
                 value: '2'
