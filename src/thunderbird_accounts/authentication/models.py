@@ -1,13 +1,18 @@
 from functools import cached_property
 
 from django.conf import settings
-from django.core.validators import MinLengthValidator
+from django.core.validators import MinLengthValidator, RegexValidator
 from django.db import models
 
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.core.models import BaseModel
+
+DISCOUNT_ID_VALIDATOR = RegexValidator(
+    regex=r'^dsc_[a-z0-9]{26}$',
+    message=_('Enter a full Paddle discount id in the format dsc_ followed by 26 lowercase letters or numbers.'),
+)
 
 
 class User(AbstractUser, BaseModel):
@@ -117,6 +122,7 @@ class AllowListEntry(BaseModel):
         null=True,
         blank=True,
         help_text=_('Optional Paddle discount id to apply during checkout.'),
+        validators=[DISCOUNT_ID_VALIDATOR],
     )
     user = models.ForeignKey(
         User,

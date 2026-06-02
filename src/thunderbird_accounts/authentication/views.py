@@ -1,3 +1,6 @@
+import csv
+import re
+
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import logout as django_logout
@@ -17,6 +20,8 @@ from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction
 from thunderbird_accounts.core.utils import get_absolute_url
+
+DISCOUNT_ID_PATTERN = re.compile(r'^dsc_[a-z0-9]{26}$')
 
 
 @login_required
@@ -75,30 +80,37 @@ def bulk_import_allow_list(request: HttpRequest):
     from thunderbird_accounts.authentication.models import AllowListEntry
 
     entries: str = request.POST.get('bulk-entry', '')
-    discount_id: str | None = request.POST.get('discount-id', None)
-    if discount_id:
-        discount_id = discount_id.strip()
-    if not discount_id:
-        discount_id = None
     # Normalize new lines (I'm not sure if this is actually needed but best to be safe here.)
     entries = entries.replace('\r\n', '\n').replace('\r', '\n')
-    # Now split on new line
-    split_entries: list[str] = entries.split('\n')
 
     dupes = []
     errors = []
     add_amount = 0
 
-    for entry in split_entries:
-        # Remove spaces
-        entry = entry.strip()
-        if not entry:
+    for row in csv.reader(entries.splitlines()):
+        if not row or all(not column.strip() for column in row):
+            continue
+
+        entry = row[0].strip()
+        discount_id = row[1].strip() if len(row) > 1 else None
+        if not discount_id:
+            discount_id = None
+
+        if len(row) > 2 and any(column.strip() for column in row[2:]):
+            errors.append(f'{entry} has too many columns. Use email or email,discount_id.')
             continue
 
         try:
             validate_email(entry)
         except ValidationError:
             errors.append(f'{entry} is not a valid email address.')
+            continue
+
+        if discount_id and not DISCOUNT_ID_PATTERN.fullmatch(discount_id):
+            errors.append(
+                f'{discount_id} is not a valid discount id. '
+                'Use the full Paddle id in the format dsc_ followed by 26 lowercase letters or numbers.'
+            )
             continue
 
         try:
