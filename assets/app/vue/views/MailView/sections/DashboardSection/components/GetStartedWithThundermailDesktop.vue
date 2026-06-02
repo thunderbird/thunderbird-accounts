@@ -10,7 +10,6 @@ import { isFeatureFlagEnabled } from '@/utils';
 const { t } = useI18n();
 
 const showConnectNow = isFeatureFlagEnabled(FeatureFlag.SHOW_CONNECT_NOW, FeatureFlagValue.TRUE);
-const isPhaseTwo = isFeatureFlagEnabled(FeatureFlag.PHASE, FeatureFlagValue.PHASE_TWO);
 
 // TODO: Update this when the full URL is ready
 const tbDesktopCustomProtocolUrl = 'net.thunderbird://replay';
@@ -24,9 +23,8 @@ export default {
 
 <template>
   <div class="action-cards">
-    <template v-if="isPhaseTwo">
+    <template v-if="showConnectNow">
       <action-card
-        v-if="showConnectNow"
         :title="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectTitle')"
         :description="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectDescription')"
       >
