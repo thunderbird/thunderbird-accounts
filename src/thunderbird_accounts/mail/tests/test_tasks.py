@@ -1,5 +1,5 @@
 from thunderbird_accounts.celery.exceptions import TaskFailed
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, call
 
 from django.conf import settings
 from django.test import TestCase, override_settings
@@ -104,11 +104,12 @@ class PublishHostedDkimDNSRecordsTestCase(TaskTestCase):
         HOSTED_DKIM_CLOUDFLARE_ENABLED=True,
         HOSTED_DKIM_CLOUDFLARE_ZONE_ID='zone-id',
         HOSTED_DKIM_CLOUDFLARE_API_TOKEN='secret',
+        HOSTED_DKIM_DOMAIN='dkim.example.net',
+        HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'],
     )
-    @patch('thunderbird_accounts.mail.tasks.publish_hosted_dkim_txt_records')
     @patch('thunderbird_accounts.mail.tasks.CloudflareDNSClient')
     @patch('thunderbird_accounts.mail.tasks.MailClient')
-    def test_publishes_stalwart_dkim_records(self, mail_client_mock, cloudflare_client_mock, publish_mock):
+    def test_publishes_stalwart_dkim_records_to_hosted_domain(self, mail_client_mock, cloudflare_client_mock):
         dkim_records = [
             {'type': 'TXT', 'name': 'tm1._domainkey.example.com.', 'content': 'v=DKIM1; p=rsa'},
             {'type': 'TXT', 'name': 'tm2._domainkey.example.com.', 'content': 'v=DKIM1; p=ed25519'},
@@ -118,16 +119,21 @@ class PublishHostedDkimDNSRecordsTestCase(TaskTestCase):
             {'type': 'TXT', 'name': 'tm2.example.com.dkim.example.net', 'content': 'v=DKIM1; p=ed25519'},
         ]
         mail_client_mock.return_value.get_dkim_dns_records.return_value = dkim_records
-        publish_mock.return_value = hosted_records
 
         results = tasks.publish_hosted_dkim_dns_records.run(domain_name='example.com')
 
         mail_client_mock.return_value.get_dkim_dns_records.assert_called_once_with('example.com')
-        publish_mock.assert_called_once_with(
-            'example.com',
-            dkim_records,
-            dns_client=cloudflare_client_mock.return_value,
+        cloudflare_client_mock.return_value.upsert_txt_record.assert_has_calls(
+            [
+                call('tm1.example.com.dkim.example.net', 'v=DKIM1; p=rsa'),
+                call('tm2.example.com.dkim.example.net', 'v=DKIM1; p=ed25519'),
+            ]
         )
+        published_names = [
+            args[0] for args, _kwargs in cloudflare_client_mock.return_value.upsert_txt_record.call_args_list
+        ]
+        self.assertNotIn('tm1._domainkey.example.com.', published_names)
+        self.assertFalse(any('._domainkey.' in name for name in published_names))
         self.assertEqual(results['task_status'], 'success')
         self.assertFalse(results['skipped'])
         self.assertEqual(hosted_records, results['records'])

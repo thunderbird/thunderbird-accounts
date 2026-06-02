@@ -224,13 +224,10 @@ def dkim_signatures_to_dns_records(domain_name: str, signatures: list[dict]) -> 
     return records
 
 
-def publish_hosted_dkim_txt_records(
-    domain_name: str, dkim_dns_records: list[dict], dns_client=None
-) -> list[dict[str, str]]:
-    """Publishes dkim txt records
+def publish_hosted_dkim_txt_records(hosted_records: list[dict[str, str]], dns_client=None) -> list[dict[str, str]]:
+    """Publishes hosted DKIM TXT records.
     If dns_client is not specified it falls back on ``CloudflareDNSClient``"""
     dns_client = dns_client or CloudflareDNSClient()
-    hosted_records = build_hosted_dkim_txt_records(domain_name, dkim_dns_records)
 
     for record in hosted_records:
         dns_client.upsert_txt_record(record['name'], record['content'])
