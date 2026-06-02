@@ -271,7 +271,6 @@ Feature flags are stored in `localStorage` and read at runtime to toggle UI beha
 | Key | Values | Description |
 | --- | ------ | ----------- |
 | `feature.show-connect-now` | `true` | Shows the "Connect Now" action card on the desktop panel, which launches Thunderbird Desktop via a custom protocol URL. |
-| `feature.phase` | `2` | Enables phase 2 UI: QR code setup flow on mobile and the "Connect Now" card on desktop, replacing the auto-config placeholders. |
 
 ## Running tests
 
