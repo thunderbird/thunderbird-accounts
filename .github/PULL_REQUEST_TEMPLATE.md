@@ -36,6 +36,12 @@
   Using the "Closes #123" format will link pull request and issue.
 -->
 
+## QA Log
+
+<!--
+Bulleted list of any steps taken to validate correctness beyond automated tests.
+-->
+
 ## Screenshots
 
 <!--
