@@ -53,10 +53,16 @@ jobs:
               - 'pulumi/**'
               - '.github/**'
 
-  # When accounts changes are merged in, build and push a new Docker image
-  accounts-deploy:
+  # Build whichever image(s) changed and apply them to the stage stack in a
+  # SINGLE `pulumi up`. Pulumi takes a stack-wide lock per update, so running
+  # accounts and keycloak deploys as separate parallel jobs caused
+  # "[409] Conflict: Another update is currently in progress." See issue #884.
+  deploy:
     needs: detect-changes
-    if: needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true'
+    if: >-
+      needs.detect-changes.outputs.src-changed == 'true' ||
+      needs.detect-changes.outputs.keycloak-theme-changed == 'true' ||
+      needs.detect-changes.outputs.iac-changed == 'true'
     environment:
       name: staging
       deployment: true
@@ -64,7 +70,14 @@ jobs:
     env:
       IS_CI_AUTOMATION: "yes"
       PULUMI_DIR: "pulumi"
-      CELERY_WORKER_TAG: '-celery-worker'
+      # Whether the accounts image was (re)built this run; gates the
+      # accounts config update, its pulumi targets, and the release artifacts.
+      BUILD_ACCOUNTS: ${{ needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true' }}
+      # Whether the keycloak image was (re)built this run.
+      BUILD_KEYCLOAK: ${{ needs.detect-changes.outputs.keycloak-theme-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true' }}
+    outputs:
+      # Non-empty only when the accounts image was built; used to gate create-release.
+      accounts-image: ${{ steps.build-accounts.outputs.accounts-image }}
     steps:
       # Preparation for future steps
       - uses: actions/checkout@v4
@@ -105,139 +118,27 @@ jobs:
           curl -fsSL https://get.pulumi.com | sh
           pip install -Ur requirements.txt
 
-      # Produce a container image
+      # Produce the accounts container image (only when accounts/IaC changed)
       - name: Build, tag, and push accounts image to Amazon ECR
         id: build-accounts
+        if: env.BUILD_ACCOUNTS == 'true'
         env:
           ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:${{ github.sha }}"
         run: |
           # Build a docker container and push it to ECR so that it can be deployed to ECS.
-          docker build -t $ECR_TAG --platform="linux/amd64" .          
+          docker build -t $ECR_TAG --platform="linux/amd64" .
           docker push $ECR_TAG
           echo "accounts-image=$ECR_TAG" >> $GITHUB_OUTPUT
 
-      - name: Get version from pyproject.toml
-        id: read-version
-        uses: SebRollen/toml-action@v1.2.0
-        with:
-          file: 'pyproject.toml'
-          field: 'project.version'
-
-      - name: Produce an artifact containing the tag and version
-        id: create-artifact
-        run: |
-          echo '{"ecr_tag": "${{ steps.build-accounts.outputs.accounts-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
-
-      - name: Archive the deployment artifact
-        id: tag-archive
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment
-          path: deployment.json
-      
-      - name: Package Pulumi code
-        shell: bash
-        run: |
-          tar -cvjf pulumi.tbz pulumi/
-      
-      - name: Archive the Pulumi artifact
-        id: iac-archive
-        uses: actions/upload-artifact@v4
-        with:
-          name: pulumi
-          path: pulumi.tbz
-      
-      # Deploy to stage
-      - name: Deploy new image to stage
-        shell: bash
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-        run: |
-          # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
-          # to do with the GHA workflow "env" settings above.
-          export PATH="/home/runner/.pulumi/bin:$PATH"
-          export PULUMI_CONFIG_PASSPHRASE='${{ secrets.PULUMI_PASSPHRASE }}'
-
-          ECR_TAG=$(jq -r .ecr_tag < deployment.json)
-          cd $PULUMI_DIR
-
-          # Create a YAML config stump containing only the nested tree leading to the image tag update
-          cat << EOF > newimage.yaml
-          .accounts_image: &ACCOUNTS_IMAGE $ECR_TAG
-          EOF
-
-          # Use yq to merge the stump into the main config
-          yq -i '. *= load("newimage.yaml")' config.stage.yaml
-
-          source ./venv/bin/activate
-          pulumi login
-          pulumi stack select thunderbird/stage
-          pulumi up -y --diff \
-            --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-taskdef' \
-            --target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-celery-stage' \
-            --target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-flower-stage' \
-            --target-dependents
-
-  # When accounts changes are merged in, build and push a new Docker image
-  keycloak-deploy:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.keycloak-theme-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true'
-    environment:
-      name: staging
-      deployment: false
-    runs-on: ubuntu-latest
-    env:
-      IS_CI_AUTOMATION: "yes"
-      PULUMI_DIR: "pulumi"
-      KEYCLOAK_TAG: '-keycloak'
-    steps:
-      # Preparation for future steps
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: eu-central-1
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          mask-password: "true"
-
-      - name: Set up Python ${{ vars.PYTHON_VERSION}}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ vars.PYTHON_VERSION}}
-
-      - name: Set up virtual environment
-        shell: bash
-        run: |
-          python -m pip install virtualenv
-          cd $PULUMI_DIR
-          virtualenv ./venv
-
-      - name: Set up Pulumi environment
-        id: pulumi-env
-        shell: bash
-        run: |
-          cd $PULUMI_DIR
-          source ./venv/bin/activate
-          curl -fsSL https://get.pulumi.com | sh
-          pip install -Ur requirements.txt
-
-      # Produce a container image
-      - name: Build, tag, and push accounts image to Amazon ECR
+      # Produce the keycloak container image (only when keycloak/IaC changed)
+      - name: Build, tag, and push keycloak image to Amazon ECR
         id: build-keycloak
+        if: env.BUILD_KEYCLOAK == 'true'
         env:
           ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:keycloak-${{ github.sha }}"
         run: |
           # Build a docker container and push it to ECR so that it can be deployed to ECS.
-          docker build -f Dockerfile.keycloak -t $ECR_TAG --platform="linux/amd64" .          
+          docker build -f Dockerfile.keycloak -t $ECR_TAG --platform="linux/amd64" .
           docker push $ECR_TAG
           echo "keycloak-image=$ECR_TAG" >> $GITHUB_OUTPUT
 
@@ -248,63 +149,102 @@ jobs:
           file: 'pyproject.toml'
           field: 'project.version'
 
-      - name: Produce an artifact containing the tag and version
-        id: create-artifact
+      # Publish the keycloak deployment artifact (when keycloak was rebuilt).
+      # Production keycloak is deployed manually from this artifact; see
+      # docs/keycloak/how-to-deploy-to-prod.rst. The inner file must be named
+      # deployment.json, and this must run BEFORE the accounts step below
+      # overwrites deployment.json with the accounts tag.
+      - name: Produce the keycloak deployment artifact
+        id: create-keycloak-artifact
+        if: env.BUILD_KEYCLOAK == 'true'
         run: |
           echo '{"ecr_tag": "${{ steps.build-keycloak.outputs.keycloak-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
 
-      - name: Archive the deployment artifact
-        id: tag-archive
+      - name: Archive the keycloak deployment artifact
+        if: env.BUILD_KEYCLOAK == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: deployment-keycloak
           path: deployment.json
 
+      # The deployment artifact + release tooling track the accounts image only,
+      # so these steps only run when the accounts image was (re)built.
+      - name: Produce an artifact containing the tag and version
+        id: create-artifact
+        if: env.BUILD_ACCOUNTS == 'true'
+        run: |
+          echo '{"ecr_tag": "${{ steps.build-accounts.outputs.accounts-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
+
+      - name: Archive the deployment artifact
+        id: tag-archive
+        if: env.BUILD_ACCOUNTS == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment
+          path: deployment.json
+
       - name: Package Pulumi code
+        if: env.BUILD_ACCOUNTS == 'true'
         shell: bash
         run: |
           tar -cvjf pulumi.tbz pulumi/
 
       - name: Archive the Pulumi artifact
         id: iac-archive
+        if: env.BUILD_ACCOUNTS == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: pulumi-keycloak
+          name: pulumi
           path: pulumi.tbz
 
-      # Deploy to stage
-      - name: Deploy new image to stage
+      # Deploy to stage in a single Pulumi update so we only ever hold one
+      # stack lock at a time. The image config keys and the --target list are
+      # assembled dynamically from whichever image(s) were built above.
+      - name: Deploy new image(s) to stage
         shell: bash
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          ACCOUNTS_IMAGE: ${{ steps.build-accounts.outputs.accounts-image }}
+          KEYCLOAK_IMAGE: ${{ steps.build-keycloak.outputs.keycloak-image }}
         run: |
           # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
           # to do with the GHA workflow "env" settings above.
           export PATH="/home/runner/.pulumi/bin:$PATH"
           export PULUMI_CONFIG_PASSPHRASE='${{ secrets.PULUMI_PASSPHRASE }}'
 
-          ECR_TAG=$(jq -r .ecr_tag < deployment.json)
           cd $PULUMI_DIR
 
-          # Create a YAML config stump containing only the nested tree leading to the image tag update
-          cat << EOF > newimage.yaml
-          .keycloak_image: &KEYCLOAK_IMAGE $ECR_TAG
-          EOF
+          TARGETS=()
 
-          # Use yq to merge the stump into the main config
-          yq -i '. *= load("newimage.yaml")' config.stage.yaml
+          # Merge each rebuilt image tag into the stage config and queue its targets.
+          if [ -n "$ACCOUNTS_IMAGE" ]; then
+            echo ".accounts_image: &ACCOUNTS_IMAGE $ACCOUNTS_IMAGE" > accounts-image.yaml
+            yq -i '. *= load("accounts-image.yaml")' config.stage.yaml
+            TARGETS+=(--target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-taskdef')
+            TARGETS+=(--target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-celery-stage')
+            TARGETS+=(--target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-flower-stage')
+          fi
+
+          if [ -n "$KEYCLOAK_IMAGE" ]; then
+            echo ".keycloak_image: &KEYCLOAK_IMAGE $KEYCLOAK_IMAGE" > keycloak-image.yaml
+            yq -i '. *= load("keycloak-image.yaml")' config.stage.yaml
+            TARGETS+=(--target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-keycloak-taskdef')
+          fi
+
+          if [ ${#TARGETS[@]} -eq 0 ]; then
+            echo "No images were built; nothing to deploy."
+            exit 0
+          fi
 
           source ./venv/bin/activate
           pulumi login
           pulumi stack select thunderbird/stage
-          pulumi up -y --diff \
-            --target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-keycloak-taskdef' \
-            --target-dependents
-  
+          pulumi up -y --diff "${TARGETS[@]}" --target-dependents
 
   create-release:
-    needs: accounts-deploy
-    if: needs.accounts-deploy.result == 'success'
+    needs: deploy
+    # Releases track the accounts image, so only create one when accounts deployed.
+    if: needs.deploy.result == 'success' && needs.deploy.outputs.accounts-image != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -312,15 +252,15 @@ jobs:
       - name: Download deployment data
         uses: actions/download-artifact@v4
         with:
-            name: 
+            name:
               deployment  # Should pull "deployment.json"
-      
+
       - name: Download Pulumi package
         uses: actions/download-artifact@v4
         with:
-            name: 
+            name:
               pulumi  # Should pull "pulumi.tbz"
-      
+
       - name: Create release tag
         id: create-release-tag
         run: echo "tag_name=r-$(printf %04d $GITHUB_RUN_NUMBER)" >> $GITHUB_OUTPUT
@@ -330,7 +270,7 @@ jobs:
         with:
           body: |
             ## Info
-            
+
             Commit ${{ github.sha }} was deployed to `stage`. [See code diff](${{ github.event.compare }}).
 
             It was initialized by [${{ github.event.sender.login }}](${{ github.event.sender.html_url }}).
@@ -345,13 +285,12 @@ jobs:
             pulumi.tbz
           name: Release ${{ steps.create-release-tag.outputs.tag_name }}
           tag_name: ${{ steps.create-release-tag.outputs.tag_name }}
-        
+
   e2e-tests-browserstack-stage:
     name: e2e-tests-browserstack-stage
     needs:
-      - accounts-deploy
-      - keycloak-deploy
-    if: always() && needs.accounts-deploy.result == 'success' && needs.keycloak-deploy.result != 'failure' && needs.keycloak-deploy.result != 'cancelled'
+      - deploy
+    if: always() && needs.deploy.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: staging
