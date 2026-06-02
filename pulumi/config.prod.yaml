@@ -33,6 +33,11 @@
 .log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", value: "INFO"}
 .min_custom_domain_alias_length: &VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH {name: "MIN_CUSTOM_DOMAIN_ALIAS_LENGTH", value: "3"}
 .custom_domains_do_verify: &VAR_CUSTOM_DOMAINS_DO_VERIFY {name: "CUSTOM_DOMAINS_DO_VERIFY", value: "True"}
+.stalwart_dkim_stage_management_enabled: &VAR_STALWART_DKIM_STAGE_MANAGEMENT_ENABLED {name: "STALWART_DKIM_STAGE_MANAGEMENT_ENABLED", value: "False"}
+.hosted_dkim_domain: &VAR_HOSTED_DKIM_DOMAIN {name: "HOSTED_DKIM_DOMAIN", value: "dkim.thunderhosted.com"}
+.hosted_dkim_selectors: &VAR_HOSTED_DKIM_SELECTORS {name: "HOSTED_DKIM_SELECTORS", value: "tm1,tm2,tm3"}
+.hosted_dkim_cloudflare_enabled: &VAR_HOSTED_DKIM_CLOUDFLARE_ENABLED {name: "HOSTED_DKIM_CLOUDFLARE_ENABLED", value: "True"}
+.hosted_dkim_cloudflare_ttl: &VAR_HOSTED_DKIM_CLOUDFLARE_TTL {name: "HOSTED_DKIM_CLOUDFLARE_TTL", value: "3600"}
 .oidc_fallback_match_by_email: &VAR_OIDC_FALLBACK_MATCH_BY_EMAIL {name: "OIDC_FALLBACK_MATCH_BY_EMAIL", value: "True"}
 .oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth/"}
 .oidc_url_jwks: &VAR_OIDC_URL_JWKS {name: "OIDC_URL_JWKS", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs/"}
@@ -92,6 +97,8 @@
 .sentry_dsn: &SECRET_SENTRY_DSN {name: "SENTRY_DSN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV"}
 .stalwart_api_auth_method: &SECRET_STALWART_API_AUTH_METHOD {name: "STALWART_API_AUTH_METHOD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR"}
 .stalwart_api_auth_string: &SECRET_STALWART_API_AUTH_STRING {name: "STALWART_API_AUTH_STRING", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN"}
+.hosted_dkim_cloudflare_api_token: &SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN {name: "HOSTED_DKIM_CLOUDFLARE_API_TOKEN", valueFrom: "accounts/prod/hosted-dkim-cloudflare-api-token"}
+.hosted_dkim_cloudflare_zone_id: &SECRET_HOSTED_DKIM_CLOUDFLARE_ZONE_ID {name: "HOSTED_DKIM_CLOUDFLARE_ZONE_ID", valueFrom: "accounts/prod/hosted-dkim-cloudflare-zone-id"}
 # Shared HMAC secret that Stalwart uses to sign outgoing webhook payloads. Must match the
 # `webhook.posthog.signature-key` value configured in Stalwart's admin API on mailstrom-prod.
 .stalwart_webhook_secret: &SECRET_STALWART_WEBHOOK_SECRET {name: "STALWART_WEBHOOK_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-webhook-secret-t8yGzq"}
@@ -153,6 +160,8 @@
     - *SECRET_SENTRY_DSN
     - *SECRET_STALWART_API_AUTH_METHOD
     - *SECRET_STALWART_API_AUTH_STRING
+    - *SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN
+    - *SECRET_HOSTED_DKIM_CLOUDFLARE_ZONE_ID
     - *SECRET_ZENDESK_API_TOKEN
     - *SECRET_ZENDESK_SUBDOMAIN
     - *SECRET_ZENDESK_USER_EMAIL
@@ -305,6 +314,8 @@ resources:
         - oidc-sign-algo
         - stalwart-api-auth-method
         - stalwart-api-auth-key
+        - hosted-dkim-cloudflare-api-token
+        - hosted-dkim-cloudflare-zone-id
         - stalwart-webhook-secret
         - keycloak-admin-client-id
         - keycloak-admin-client-secret
@@ -395,6 +406,11 @@ resources:
                 - *VAR_SMTP_TLS
                 - *VAR_STALWART_BASE_API_URL
                 - *VAR_STALWART_BASE_JMAP_URL
+                - *VAR_STALWART_DKIM_STAGE_MANAGEMENT_ENABLED
+                - *VAR_HOSTED_DKIM_DOMAIN
+                - *VAR_HOSTED_DKIM_SELECTORS
+                - *VAR_HOSTED_DKIM_CLOUDFLARE_ENABLED
+                - *VAR_HOSTED_DKIM_CLOUDFLARE_TTL
                 - *VAR_SUPPORT_CONTACT
                 - *VAR_TB_PRO_APPOINTMENT_URL
                 - *VAR_TB_PRO_SEND_URL
@@ -473,6 +489,11 @@ resources:
                 - *VAR_SMTP_TLS
                 - *VAR_STALWART_BASE_API_URL
                 - *VAR_STALWART_BASE_JMAP_URL
+                - *VAR_STALWART_DKIM_STAGE_MANAGEMENT_ENABLED
+                - *VAR_HOSTED_DKIM_DOMAIN
+                - *VAR_HOSTED_DKIM_SELECTORS
+                - *VAR_HOSTED_DKIM_CLOUDFLARE_ENABLED
+                - *VAR_HOSTED_DKIM_CLOUDFLARE_TTL
                 - *VAR_SUPPORT_CONTACT
                 - *VAR_TB_PRO_APPOINTMENT_URL
                 - *VAR_TB_PRO_SEND_URL
@@ -784,6 +805,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR
               - name: STALWART_WEBHOOK_SECRET
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-webhook-secret-t8yGzq
+              - name: HOSTED_DKIM_CLOUDFLARE_API_TOKEN
+                valueFrom: accounts/prod/hosted-dkim-cloudflare-api-token
+              - name: HOSTED_DKIM_CLOUDFLARE_ZONE_ID
+                valueFrom: accounts/prod/hosted-dkim-cloudflare-zone-id
               - name: MAILCHIMP_DC
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-dc-SyLAUO
               - name: MAILCHIMP_API_KEY
@@ -876,6 +901,16 @@ resources:
                 value: 'https://mail.thundermail.com'
               - name: STALWART_BASE_API_URL
                 value: 'https://mailstrom-prod-management-i.thundermail.com:8080'
+              - name: STALWART_DKIM_STAGE_MANAGEMENT_ENABLED
+                value: 'False'
+              - name: HOSTED_DKIM_DOMAIN
+                value: 'dkim.thunderhosted.com'
+              - name: HOSTED_DKIM_SELECTORS
+                value: 'tm1,tm2,tm3'
+              - name: HOSTED_DKIM_CLOUDFLARE_ENABLED
+                value: 'True'
+              - name: HOSTED_DKIM_CLOUDFLARE_TTL
+                value: '3600'
               - name: TB_PRO_APPOINTMENT_URL
                 value: 'https://appointment.tb.pro/'
               - name: TB_PRO_SEND_URL
