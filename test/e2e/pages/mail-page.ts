@@ -142,6 +142,11 @@ export class MailPage {
     await expect(this.getStartedSection).toContainText('Download Thunderbird for Android');
     await expect(this.getStartedSection).toContainText('Need iOS Help?');
 
+    const scanQrCodeButton = this.getStartedSection.getByRole('button', { name: 'Scan QR Code' });
+    await expect(scanQrCodeButton).toBeVisible();
+    await scanQrCodeButton.click();
+    await expect(this.getStartedSection.getByRole('img', { name: /QR Code/i })).toBeVisible();
+
     const downloadLink = this.getStartedSection.getByRole('link', { name: 'Download' });
     await expect(downloadLink).toHaveAttribute('href', /play\.google\.com\/store\/apps\/details/);
     await expect(downloadLink).toHaveAttribute('target', '_blank');
