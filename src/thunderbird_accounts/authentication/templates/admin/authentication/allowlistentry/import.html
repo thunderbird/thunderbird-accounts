@@ -5,12 +5,15 @@
   <section>
       <h1>Allow List Entry Bulk Importer</h1>
       <form id="bulk-form" name="bulk-form" method="POST" action="{{ submit_url|safe }}">
-        <label for="bulk-entry">Enter email addresses below. <strong>Each new line will be a separate entry</strong>, duplicates will be
-          ignored and spaces will be removed.</label>
+        <label for="bulk-entry">
+          Enter allow list entries below. <strong>Each line is one CSV row</strong>. Use
+          <code>email@example.com</code> or <code>email@example.com,dsc_...</code>. Discount ids are optional, but
+          when supplied they must be full Paddle discount ids: <code>dsc_</code> followed by 26 lowercase letters or
+          numbers.
+          Duplicates will be ignored and spaces around values will be removed.
+        </label>
         <textarea id="bulk-entry" name="bulk-entry" rows="20"></textarea>
-        <label for="discount-id">Optional discount id (applies to all imported entries)</label>
-        <input id="discount-id" name="discount-id" type="text" />
-        <button id="submit" class="addlink" type="submit">Import</button>
+        <input id="submit" class="addlink" type="submit" value="Import" />
         {% csrf_token %}
       </form>
   </section>
@@ -22,6 +25,10 @@
     }
     #submit {
       max-width: 10rem;
+      padding-inline-start: 1.625rem;
+      background-image: url("{% static 'admin/img/tooltag-add.svg' %}");
+      background-position: 0.625rem center;
+      background-repeat: no-repeat;
     }
   </style>
 {% endblock content %}
