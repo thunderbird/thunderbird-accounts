@@ -797,10 +797,6 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc
               - name: STALWART_WEBHOOK_SECRET
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-webhook-secret-poF35r
-              - name: HOSTED_DKIM_CLOUDFLARE_API_TOKEN
-                valueFrom: accounts/stage/hosted-dkim-cloudflare-api-token
-              - name: HOSTED_DKIM_CLOUDFLARE_ZONE_ID
-                valueFrom: accounts/stage/hosted-dkim-cloudflare-zone-id
               - name: KEYCLOAK_ADMIN_CLIENT_ID
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-client-id-Qgsr8Y
               - name: KEYCLOAK_ADMIN_CLIENT_SECRET
