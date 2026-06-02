@@ -3,7 +3,7 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:dc8d8ea6e76d8c7f25b260e964bada9d38a38e4b
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:59fe695cef7f94721b34ab37cd00338890f79d6a
 
 # Update this value to update all containers based on this Keycloak image
 .keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-dc8d8ea6e76d8c7f25b260e964bada9d38a38e4b
@@ -92,8 +92,8 @@
 .sentry_dsn: &SECRET_SENTRY_DSN {name: "SENTRY_DSN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/sentry-dsn-rgui8C"}
 .stalwart_api_auth_method: &SECRET_STALWART_API_AUTH_METHOD {name: "STALWART_API_AUTH_METHOD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm"}
 .stalwart_api_auth_string: &SECRET_STALWART_API_AUTH_STRING {name: "STALWART_API_AUTH_STRING", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc"}
-.hosted_dkim_cloudflare_api_token: &SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN {name: "HOSTED_DKIM_CLOUDFLARE_API_TOKEN", valueFrom: "accounts/stage/hosted-dkim-cloudflare-api-token"}
-.hosted_dkim_cloudflare_zone_id: &SECRET_HOSTED_DKIM_CLOUDFLARE_ZONE_ID {name: "HOSTED_DKIM_CLOUDFLARE_ZONE_ID", valueFrom: "accounts/stage/hosted-dkim-cloudflare-zone-id"}
+.hosted_dkim_cloudflare_api_token: &SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN {name: "HOSTED_DKIM_CLOUDFLARE_API_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/hosted-dkim-cloudflare-api-token-2Lwjs0"}
+.hosted_dkim_cloudflare_zone_id: &SECRET_HOSTED_DKIM_CLOUDFLARE_ZONE_ID {name: "HOSTED_DKIM_CLOUDFLARE_ZONE_ID", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/hosted-dkim-cloudflare-zone-id-jWKJt6"}
 # Shared HMAC secret that Stalwart uses to sign outgoing webhook payloads. Must match the
 # `webhook.posthog.signature-key` value configured in Stalwart's admin API on mailstrom-stage.
 .stalwart_webhook_secret: &SECRET_STALWART_WEBHOOK_SECRET {name: "STALWART_WEBHOOK_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-webhook-secret-poF35r"}
