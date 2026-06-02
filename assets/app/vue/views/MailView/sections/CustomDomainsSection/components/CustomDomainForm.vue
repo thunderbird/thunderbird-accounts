@@ -42,7 +42,7 @@ const emit = defineEmits<{
 }>();
 
 const step = ref<STEP>(STEP.INITIAL);
-const customDomain = ref(null);
+const customDomain = ref<string | null>(null);
 const isAddingCustomDomain = ref(false);
 const isVerifyingDomain = ref(false);
 const customDomainError = ref<string>(null);
@@ -72,13 +72,36 @@ const isSpfRecord = (record: DNSRecord): boolean =>
 const spfIncludeValue = (record: DNSRecord): string =>
   record.content.split(/\s+/).find((part) => part.startsWith('include:')) ?? 'the expected include value';
 
-const isDkimRecord = (record: DNSRecord): boolean =>
-  record.type === 'CNAME' && record.name.includes('._domainkey.');
+const normalizeDomainName = (domainName?: string | null): string =>
+  (domainName ?? '').trim().replace(/\.$/, '').toLowerCase();
+
+const dkimRecordDomain = (record: DNSRecord): string | null => {
+  if (record.type !== 'CNAME') {
+    return null;
+  }
+
+  const normalizedName = normalizeDomainName(record.name);
+  const domainKeySegment = '._domainkey.';
+  const domainKeyIndex = normalizedName.indexOf(domainKeySegment);
+  if (domainKeyIndex <= 0) {
+    return null;
+  }
+
+  return normalizedName.slice(domainKeyIndex + domainKeySegment.length);
+};
+
+const isDkimRecordForCurrentDomain = (record: DNSRecord): boolean =>
+  dkimRecordDomain(record) === normalizeDomainName(customDomain.value);
 
 const missingOrConflicted = (record: DNSRecord): boolean =>
   record.status === DNSRecordStatus.MISSING || record.status === DNSRecordStatus.CONFLICT;
 
 const missingValidationKeys = new Set(['mxLookupError', 'spfRecordNotFound', 'dkimRecordNotFound']);
+
+const shouldAnchorDkimMissingIssue = (record: DNSRecord): boolean =>
+  showMissingIssues.value
+  && validationWarnings.value.includes('dkimRecordNotFound')
+  && isDkimRecordForCurrentDomain(record);
 
 const validationResult = (data?: {
   critical_errors?: string[];
@@ -131,7 +154,7 @@ const recordValidationKeys = (record: DNSRecord): string[] => {
   if (isSpfRecord(record)) {
     keys.push('spfRecordNotFound');
   }
-  if (isDkimRecord(record)) {
+  if (isDkimRecordForCurrentDomain(record)) {
     keys.push('dkimRecordNotFound');
   }
   return keys;
@@ -161,6 +184,14 @@ const recordStatusIssue = (record: DNSRecord): InlineIssue | null => {
       key: 'mxLookupError',
       severity: 'critical',
       text: formatValidationError('mxLookupError'),
+    };
+  }
+
+  if (record.status === DNSRecordStatus.UNKNOWN && shouldAnchorDkimMissingIssue(record)) {
+    return {
+      key: 'dkimRecordNotFound',
+      severity: 'warning',
+      text: t('views.mail.sections.customDomains.recordMissingWarning'),
     };
   }
 
