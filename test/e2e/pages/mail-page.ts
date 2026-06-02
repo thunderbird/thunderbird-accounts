@@ -9,7 +9,6 @@ import {
   IMAP_TLS,
   JMAP_PORT,
   JMAP_TLS,
-  MAIL_SUBSCRIPTION_ERROR_TEXT,
   PRIMARY_THUNDERMAIL_EMAIL,
   SMTP_PORT,
   SMTP_TLS,
@@ -50,7 +49,7 @@ export class MailPage {
     this.displayNameSection = this.emailSettingsSection.locator('.display-name-content');
     this.appPasswordSection = this.emailSettingsSection.locator('#app-password-container');
     this.emailAliasesSection = this.emailSettingsSection.locator('.email-aliases-content');
-    this.subscriptionErrorText = this.page.getByText(MAIL_SUBSCRIPTION_ERROR_TEXT);
+    this.subscriptionErrorText = this.page.getByText('Failed to load subscription information');
   }
 
   async navigateToMail() {
@@ -138,7 +137,7 @@ export class MailPage {
   private async verifyMobileSetupTab() {
     await this.getStartedSection.getByRole('tab', { name: 'Mobile' }).click();
     await expect(this.getStartedSection.getByRole('tab', { name: 'Mobile' })).toHaveAttribute('aria-selected', 'true');
-    await expect(this.getStartedSection).toContainText(/Scan QR Code|Automatic Configuration/);
+    await expect(this.getStartedSection).toContainText('Scan QR Code');
     await expect(this.getStartedSection).toContainText('Download Thunderbird for Android');
     await expect(this.getStartedSection).toContainText('Need iOS Help?');
 

@@ -19,7 +19,7 @@ test.describe('mail page components on desktop browser', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
 }, () => {
   test('all visible mail page components work as expected', async () => {
-    test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack until we automate subsrcibe step');
+    test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack until we automate subscribe step');
     await mailPage.navigateToMail();
     await mailPage.verifyWelcomeDashboardDisplayed();
     await mailPage.verifyGetStartedComponents();
