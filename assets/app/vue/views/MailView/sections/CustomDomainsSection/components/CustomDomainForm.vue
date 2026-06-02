@@ -27,6 +27,7 @@ type DnsTableRow = {
   issues: InlineIssue[];
   severity: InlineIssueSeverity | null;
   isStale: boolean;
+  isConflict: boolean;
 };
 
 const props = defineProps<{
@@ -206,8 +207,9 @@ const validationIssuesForRecord = (record: DNSRecord): InlineIssue[] =>
     }));
 
 const createDnsTableRow = (record: DNSRecord, index: number): DnsTableRow => {
-  const statusIssue = recordStatusIssue(record);
-  const validationIssues = statusIssue ? [] : validationIssuesForRecord(record);
+  const hasConflictRows = record.status === DNSRecordStatus.CONFLICT && (record.existing_values?.length ?? 0) > 0;
+  const statusIssue = hasConflictRows ? null : recordStatusIssue(record);
+  const validationIssues = statusIssue || hasConflictRows ? [] : validationIssuesForRecord(record);
   const issues = statusIssue ? [statusIssue, ...validationIssues] : validationIssues;
 
   return {
@@ -216,8 +218,64 @@ const createDnsTableRow = (record: DNSRecord, index: number): DnsTableRow => {
     issues,
     severity: issueSeverity(issues),
     isStale: false,
+    isConflict: false,
   };
 };
+
+const conflictSeverity = (record: DNSRecord): InlineIssueSeverity => (isMxRecord(record) ? 'critical' : 'warning');
+
+const createConflictingRecord = (record: DNSRecord, existingValue: string): DNSRecord => {
+  const valueParts = existingValue.trim().split(/\s+/);
+
+  if (record.type === 'MX' && valueParts.length > 1) {
+    return {
+      ...record,
+      content: valueParts.slice(1).join(' '),
+      priority: valueParts[0],
+      existing_values: [existingValue],
+    };
+  }
+
+  if (record.type === 'SRV' && valueParts.length > 3) {
+    return {
+      ...record,
+      content: valueParts.slice(1).join(' '),
+      priority: valueParts[0],
+      existing_values: [existingValue],
+    };
+  }
+
+  return {
+    ...record,
+    content: existingValue,
+    priority: '-',
+    existing_values: [existingValue],
+  };
+};
+
+const createConflictDnsTableRows = (record: DNSRecord, index: number): DnsTableRow[] => {
+  if (record.status !== DNSRecordStatus.CONFLICT || !record.existing_values?.length) {
+    return [];
+  }
+
+  const statusIssue = recordStatusIssue(record);
+  const validationIssues = statusIssue ? [] : validationIssuesForRecord(record);
+  const issues = statusIssue ? [statusIssue, ...validationIssues] : validationIssues;
+
+  return record.existing_values.map((existingValue, conflictIndex) => ({
+    key: `conflict-${record.type}-${record.name}-${existingValue}-${index}-${conflictIndex}`,
+    record: createConflictingRecord(record, existingValue),
+    issues: conflictIndex === 0 ? issues : [],
+    severity: conflictSeverity(record),
+    isStale: false,
+    isConflict: true,
+  }));
+};
+
+const createDnsTableRows = (record: DNSRecord, index: number): DnsTableRow[] => [
+  createDnsTableRow(record, index),
+  ...createConflictDnsTableRows(record, index),
+];
 
 const createStaleDnsTableRow = (record: StaleDNSRecord): DnsTableRow => {
   const isSrv = record.code === 'autodiscoverSrvUnexpected';
@@ -243,6 +301,7 @@ const createStaleDnsTableRow = (record: StaleDNSRecord): DnsTableRow => {
     issues,
     severity: 'critical',
     isStale: true,
+    isConflict: false,
   };
 };
 
@@ -259,7 +318,7 @@ const staleSrvRows = computed(() =>
 );
 
 const dnsTableRows = computed(() => {
-  const expectedRows = recordsInfo.value.map(createDnsTableRow);
+  const expectedRows = recordsInfo.value.flatMap(createDnsTableRows);
   const rows = [];
   let insertedAddressRows = false;
   let insertedSrvRows = false;
@@ -487,6 +546,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
           'record-critical': row.severity === 'critical',
           'record-warning': row.severity === 'warning',
           'record-stale': row.isStale,
+          'record-conflict': row.isConflict,
         }"
         v-for="row in dnsTableRows"
         :key="row.key"
@@ -646,6 +706,12 @@ h3 {
 
   &.record-stale {
     .records-table-row-cells p:first-child {
+      font-weight: 600;
+    }
+  }
+
+  &.record-conflict {
+    .records-table-row-cells p {
       font-weight: 600;
     }
   }
