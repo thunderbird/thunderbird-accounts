@@ -11,14 +11,10 @@ import {
   AUTHENTICATION_TYPE,
 } from 'thunderbird-account-qr-code';
 import { DOWNLOAD_THUNDERBIRD_MOBILE_URL, IOS_SUPPORT_URL } from '@/defines';
-import { FeatureFlag, FeatureFlagValue } from '@/types';
-import { isFeatureFlagEnabled } from '@/utils';
 import ActionCard from '@/components/ActionCard.vue';
 import DetailsSummary from '@/components/DetailsSummary.vue';
 
 const { t } = useI18n();
-
-const isPhaseTwo = isFeatureFlagEnabled(FeatureFlag.PHASE, FeatureFlagValue.PHASE_TWO);
 
 const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
 const connectionInfo = computed(() => window._page?.connectionInfo);
@@ -51,40 +47,32 @@ export default {
 
 <template>
   <div class="action-cards">
-    <template v-if="isPhaseTwo">
-      <div class="qr-code-container">
-        <i18n-t
-          keypath="views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeDescription"
-          class="qr-code-description"
-          tag="p"
-        >
-          <template #thunderbirdForAndroid>
-            <strong>
-              {{ t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.thunderbirdForAndroid') }}
-            </strong>
-          </template>
-        </i18n-t>
-        <details-summary
-          :title="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeTitle')"
-          class="qr-code-details-summary"
-        >
-          <template #icon>
-            <ph-qr-code :size="20" />
-          </template>
-          <img
-            class="qr-code"
-            :src="`data:image/svg+xml,${qrCode}`"
-            :alt="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeAlt')"
-          />
-        </details-summary>
-      </div>
-    </template>
-    <template v-else>
-      <action-card
-        :title="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.autoConfigTitle')"
-        :description="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.autoConfigDescription')"
-      />
-    </template>
+    <div class="qr-code-container">
+      <i18n-t
+        keypath="views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeDescription"
+        class="qr-code-description"
+        tag="p"
+      >
+        <template #thunderbirdForAndroid>
+          <strong>
+            {{ t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.thunderbirdForAndroid') }}
+          </strong>
+        </template>
+      </i18n-t>
+      <details-summary
+        :title="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeTitle')"
+        class="qr-code-details-summary"
+      >
+        <template #icon>
+          <ph-qr-code :size="20" />
+        </template>
+        <img
+          class="qr-code"
+          :src="`data:image/svg+xml,${qrCode}`"
+          :alt="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.qrCodeAlt')"
+        />
+      </details-summary>
+    </div>
 
     <action-card
       :title="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.downloadTitle')"
