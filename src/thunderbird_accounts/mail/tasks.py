@@ -182,11 +182,13 @@ def publish_hosted_dkim_dns_records(self, domain_name: str):
         stalwart = MailClient()
         dkim_dns_records = stalwart.get_dkim_dns_records(domain_name)
 
+        phase = 'build_hosted_txt_records'
+        hosted_records = build_hosted_dkim_txt_records(domain_name, dkim_dns_records)
+
         if settings.HOSTED_DKIM_CLOUDFLARE_ENABLED:
             phase = 'publish_cloudflare_txt_records'
             hosted_records = publish_hosted_dkim_txt_records(
-                domain_name,
-                dkim_dns_records,
+                hosted_records,
                 dns_client=CloudflareDNSClient(),
             )
             phase = 'validate_hosted_record_count'
@@ -204,8 +206,6 @@ def publish_hosted_dkim_dns_records(self, domain_name: str):
             skipped = False
         # Building and logging the full records is still useful for development.
         else:
-            phase = 'build_hosted_txt_records'
-            hosted_records = build_hosted_dkim_txt_records(domain_name, dkim_dns_records)
             for record in hosted_records:
                 logging.info(
                     'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS update to set '
