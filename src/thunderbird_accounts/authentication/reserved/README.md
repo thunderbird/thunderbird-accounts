@@ -1,0 +1,93 @@
+# Reserved local-part lists
+
+This package (`thunderbird_accounts.authentication.reserved`) blocks
+reserved/role-based local-parts during account and alias creation. It contains:
+
+- `generated-words.json` — generated reserved words (built from the projects in **Sources**); **do not edit by hand**,
+- `exact-words.json` / `affix-words.json` — hand-maintained tbpro additions,
+- `checker.py` — the matching logic, the `is_reserved()` entry point, and the brand/team regex patterns,
+- `update.py` — the maintenance script that regenerates `generated-words.json`,
+- `THIRD_PARTY_LICENSES` — the upstream copyright notices.
+
+## Sources
+
+### Forward Email — `reserved-email-addresses-list`
+
+- Repository: https://github.com/forwardemail/reserved-email-addresses-list
+- Version: `v2.0.16`
+- Branch/ref retrieved from: `master`
+- Retrieved: 2026-06-03
+- License: MIT (see `THIRD_PARTY_LICENSES`)
+
+### shouldbee — `reserved-usernames`
+
+- Repository: https://github.com/shouldbee/reserved-usernames
+- Branch/ref retrieved from: `master`
+- Retrieved: 2026-06-03
+- License: MIT (see `THIRD_PARTY_LICENSES`)
+
+### miketromba — `reserved-slugs`
+
+- Repository: https://github.com/miketromba/reserved-slugs
+- Branch/ref retrieved from: `main`
+- Retrieved: 2026-06-03
+- License: MIT (see `THIRD_PARTY_LICENSES`)
+- Note: only a subset of the project's categories is merged into
+  `generated-words.json` — the `country-codes`, `languages`, and `profanity`
+  categories are **excluded** (country codes and language names over-block
+  legitimate addresses; profanity is out of scope). The included categories are
+  configured at the top of `update.py`.
+
+## Word files
+
+All three files hold normalized, de-duplicated entries with two matching modes.
+`generated-words.json` keys them under `"exact"` and `"affix"`; the custom files
+are flat arrays (one per mode).
+
+| File | Edited by | Built from |
+| --- | --- | --- |
+| `generated-words.json` | `update.py` (do not hand-edit) | Forward Email + shouldbee + reserved-slugs |
+| `exact-words.json` | humans | tbpro exact words not in the public lists (e.g. mascot "birb" names) |
+| `affix-words.json` | humans | tbpro prefix/suffix words (e.g. `mzla-test`, `example`, `contact`) |
+
+In `generated-words.json` the `"exact"` and `"affix"` sections are disjoint (an
+affix entry already covers its own exact match). Entries include Unicode
+homograph variants (Cyrillic/Greek, e.g. `аdmin`, `αdmin`); input is
+NFKC-normalized and lowercased before lookup.
+
+Note: account local-parts are validated as ASCII-only upstream (Django's
+`EmailValidator`), so the non-ASCII homograph entries are defense-in-depth — they
+only take effect if that validation ever changes.
+
+## Matching policy (see `checker.py`)
+
+A local-part is reserved if any of these match:
+
+- **Exact** — equals an entry in `generated-words.json` `"exact"` or
+  `exact-words.json`.
+- **Affix** — equals, starts with, or ends with an entry in
+  `generated-words.json` `"affix"` or `affix-words.json`. The generated `"affix"`
+  section is Forward Email's admin + no-reply lists. This follows the affix
+  matching in Forward Email's npm usage example, which is broader than the policy
+  stated on their site (which only affix-matches `admin`, `administrator`,
+  `webmaster`, `hostmaster`, `postmaster`, and `ssl`). Because the admin list
+  contains short/common stems (e.g. `support`, `help`, `dev`, `noc`), affix
+  matching also blocks affixed everyday words (e.g. `supporter`, `helper`,
+  `  developer`). Stems that over-block (e.g. `mail`, `dev`, `pop`, `test`) are kept
+  reserved but demoted to exact-only via `AFFIX_DEMOTED_TO_EXACT` in `update.py`.
+- **Regex** — tbpro brand (`brand` × token, incl. `official`/`real`) and team
+  (`team`/`_team`) combinations in `checker.py`. These are combinatorial and do
+  not map cleanly to the word lists, so they are not moved into JSON.
+
+## Updating
+
+Run the updater script (re-downloads all sources and regenerates
+`generated-words.json`), then bump the "Retrieved" dates above and re-run the
+authentication tests:
+
+```bash
+uv run python src/thunderbird_accounts/authentication/reserved/update.py
+```
+
+The set of `reserved-slugs` categories to include/exclude is configured at the
+top of `update.py`.
