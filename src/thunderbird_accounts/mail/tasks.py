@@ -11,10 +11,17 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.dkim import (
     CloudflareDNSClient,
+    build_hosted_dkim_txt_record_names,
     build_hosted_dkim_txt_records,
+    delete_hosted_dkim_txt_records,
     publish_hosted_dkim_txt_records,
 )
-from thunderbird_accounts.mail.exceptions import AccountNotFoundError, DomainNotFoundError, HostedDkimPublishRetry
+from thunderbird_accounts.mail.exceptions import (
+    AccountNotFoundError,
+    DomainNotFoundError,
+    HostedDkimDeleteRetry,
+    HostedDkimPublishRetry,
+)
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.core.types import TaskReturnStatus
@@ -228,6 +235,62 @@ def publish_hosted_dkim_dns_records(self, domain_name: str):
         )
         sentry_sdk.set_context('hosted_dkim_publish_retry', retry_error.context)
         logging.warning(f'[publish_hosted_dkim_dns_records] Error publishing hosted DKIM records: {retry_error}')
+        raise retry_error from ex
+
+    return {
+        'domain_name': domain_name,
+        'records': hosted_records,
+        'skipped': skipped,
+        'task_status': TaskReturnStatus.SUCCESS,
+    }
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(HostedDkimDeleteRetry,),
+    retry_backoff=True,
+    retry_backoff_max=60 * 60,  # 1 hour
+    retry_jitter=True,
+    max_retries=24,
+)
+def delete_hosted_dkim_dns_records(self, domain_name: str):
+    phase = 'initialize'
+    hosted_records = []
+
+    try:
+        phase = 'build_hosted_txt_record_names'
+        hosted_records = [{'type': 'TXT', 'name': name} for name in build_hosted_dkim_txt_record_names(domain_name)]
+
+        if settings.HOSTED_DKIM_CLOUDFLARE_ENABLED:
+            phase = 'delete_cloudflare_txt_records'
+            hosted_records = delete_hosted_dkim_txt_records(
+                domain_name,
+                dns_client=CloudflareDNSClient(),
+            )
+            skipped = False
+        else:
+            for record in hosted_records:
+                logging.info(
+                    'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS delete for '
+                    f'"{record["type"]} {record["name"]}"'
+                )
+            skipped = True
+    except ImproperlyConfigured as ex:
+        logging.error(f'[delete_hosted_dkim_dns_records] Hosted DKIM is misconfigured: {ex}')
+        raise TaskFailed(str(ex), {'domain': domain_name})
+    except HostedDkimDeleteRetry as ex:
+        sentry_sdk.set_context('hosted_dkim_delete_retry', ex.context)
+        logging.warning(f'[delete_hosted_dkim_dns_records] Error deleting hosted DKIM records: {ex}')
+        raise
+    except Exception as ex:
+        retry_error = HostedDkimDeleteRetry(
+            domain_name,
+            phase,
+            str(ex),
+            error_type=type(ex).__name__,
+        )
+        sentry_sdk.set_context('hosted_dkim_delete_retry', retry_error.context)
+        logging.warning(f'[delete_hosted_dkim_dns_records] Error deleting hosted DKIM records: {retry_error}')
         raise retry_error from ex
 
     return {
