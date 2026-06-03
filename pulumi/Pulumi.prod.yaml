@@ -82,4 +82,4 @@ config:
   accounts:hosted-dkim-cloudflare-zone-id:
     secure: AAABANBKKCmFU9bVj65f5giqgQ95B+HTFfo4CJIWE6gjxwL6fhCmAJpsPQny7dtlWkD97CS4iUVhZxb3IYiplg==
   accounts:hosted-dkim-cloudflare-api-token:
-    secure: AAABAHpI/ed/wL0C7g9f9AL8qmeKyqK8ryeBsLSxMq5Mq/VUfVRPTrfFuFFOxmLcLKi7mR8b2nALjIznhtMNN9/ZePulKSQvCTh3zRQR6mVkb9f8Ig==
+    secure: AAABAMYcS63m9YrFGLN7OEqyawkd3nbImI4NuBZrbbijsMr2EAXV0eezUFY9FH/CnOpRRAjU25lCQxjtEEWwp0IHaf5GRV2Ea5+JzCN6/P2c/srrgA==

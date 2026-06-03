@@ -75,6 +75,6 @@ config:
   accounts:stalwart-webhook-secret:
     secure: AAABAE1N1CyUZ9eTZ+mr2lzvFJp3+i5mSKkK9jStUzamU+uwev45bZZfSh2EIJofNHj5Zyi1VOtqFnE6tmKMvlwLdaSvvV+Uje2eClEJ7KpT28IZA1Ad5GlR6r6BmZ8v
   accounts:hosted-dkim-cloudflare-api-token:
-    secure: AAABAG/M9PEQLSK5ybOaYspp1TEle7+cqNYuGTEBVmRzIqEHrkj4Znc0mUxEjAyuMVlOfDMVOENYqtFPzd7WlwT/aKqh3XkoU+OR72Z3dD9o/hKLLA==
+    secure: AAABAJ/Ditu8A0PWEq0lgffMUFRyUStPWn+43CPYOpTS/0oLKLYA1E9olA2e+o4NbMt3R1hnHoKePLHRoja11FHnt7Gf/vkl7CuzS6RCGNf4/VAzbw==
   accounts:hosted-dkim-cloudflare-zone-id:
     secure: AAABANUaXjYvUkpuCZjrCOWu+ZEAHpJjf85ASuKGaUVV7af7x70t8StIPvLD7KzieM2agKZwbAQ2SVA2UjpR1g==
