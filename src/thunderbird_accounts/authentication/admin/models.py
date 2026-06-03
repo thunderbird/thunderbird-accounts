@@ -15,22 +15,24 @@ from thunderbird_accounts.authentication.utils import delete_user_data
 
 class CustomUserAdmin(UserAdmin):
     @admin.display(description='Plan')
-    def shorten_plan(user: User) -> str | None:
+    def shorten_plan(self, user: User) -> str | None:
         if not user.plan:
             return None
         return user.plan.name
 
     list_display = (
-        'uuid',
-        'oidc_id',
-        shorten_plan,
-        *UserAdmin.list_display,
-        'is_test_account',
-        'last_used_email',
+        'username',
+        'first_name',
+        'last_name',
         'recovery_email',
+        'shorten_plan',
         'created_at',
-        'updated_at',
+        'last_login',
+        'is_staff',
+        'is_test_account',
+        'is_active',
     )
+    list_display_links = ('username',)
     fieldsets = (
         (None, {'fields': ('uuid', 'username')}),
         (
@@ -84,7 +86,14 @@ class CustomUserAdmin(UserAdmin):
         admin_add_to_mailchimp_list,
     ]
     search_fields = ('email', 'recovery_email', 'last_used_email', 'username')
-    list_filter = ['is_staff', 'is_superuser', 'is_test_account', 'is_active', 'plan']
+    list_filter = [
+        'is_staff',
+        'is_superuser',
+        'is_test_account',
+        'is_active',
+        'is_awaiting_payment_verification',
+        'plan',
+    ]
 
     form = CustomUserChangeForm
     add_form = CustomNewUserForm
