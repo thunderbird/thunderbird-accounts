@@ -179,16 +179,19 @@ class DeleteHostedDkimDNSRecordsTestCase(TaskTestCase):
         )
         cloudflare_client_mock.assert_not_called()
         self.assertIn(
+            '[delete_hosted_dkim_dns_records] '
             'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS delete for '
             '"TXT tm1.example.com.dkim.example.net"',
             logs.output[0],
         )
         self.assertIn(
+            '[delete_hosted_dkim_dns_records] '
             'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS delete for '
             '"TXT tm2.example.com.dkim.example.net"',
             logs.output[1],
         )
         self.assertIn(
+            '[delete_hosted_dkim_dns_records] '
             'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS delete for '
             '"TXT tm3.example.com.dkim.example.net"',
             logs.output[2],

@@ -271,6 +271,7 @@ def delete_hosted_dkim_dns_records(self, domain_name: str):
         else:
             for record in hosted_records:
                 logging.info(
+                    '[delete_hosted_dkim_dns_records] '
                     'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS delete for '
                     f'"{record["type"]} {record["name"]}"'
                 )
