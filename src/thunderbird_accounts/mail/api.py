@@ -11,7 +11,6 @@ from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
 
 
-from thunderbird_accounts.authentication.models import User
 
 
 class UsernameAvailableThrottle(UserRateThrottle):
