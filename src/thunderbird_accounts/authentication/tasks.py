@@ -111,7 +111,8 @@ def tag_abandoned_cart_in_mailchimp(self):
 def purge_incomplete_signups(self):
     """Delete abandoned sign-up users older than INCOMPLETE_SIGNUP_PURGE_HOURS.
 
-    Only targets users with no Subscription records (including lapsed/canceled).
+    Only targets users with no Subscription records (including lapsed/canceled) who are not
+    waiting on payment verification after checkout.
     """
     deleted = 0
     errors = 0
@@ -124,6 +125,14 @@ def purge_incomplete_signups(self):
                 if user.subscription_set.exists():
                     skipped += 1
                     logger.info('purge_incomplete_signups: skipped %s because a subscription exists', user.username)
+                    continue
+
+                if user.is_awaiting_payment_verification:
+                    skipped += 1
+                    logger.info(
+                        'purge_incomplete_signups: skipped %s because payment verification is pending',
+                        user.username,
+                    )
                     continue
 
                 purge_errors = delete_user_data(user)

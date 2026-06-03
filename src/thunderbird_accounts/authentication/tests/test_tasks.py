@@ -55,6 +55,11 @@ class GetStaleIncompleteSignupUsersTestCase(TestCase):
 
         self.assertIn(user, get_stale_incomplete_signup_users())
 
+    def test_excludes_stale_user_awaiting_payment_without_subscription(self):
+        user = self._create_user('stale-awaiting', is_awaiting_payment_verification=True)
+
+        self.assertNotIn(user, get_stale_incomplete_signup_users())
+
     def test_excludes_recent_user_without_subscription(self):
         user = self._create_user(
             'recent-no-sub',
@@ -253,3 +258,23 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
 
         mock_delete_user_data.assert_not_called()
         self.assertEqual(result['deleted'], 0)
+
+    def test_does_not_delete_user_awaiting_payment_verification(self, mock_delete_user_data):
+        self.user.is_awaiting_payment_verification = True
+        self.user.save()
+
+        result = purge_incomplete_signups.apply().get()
+
+        mock_delete_user_data.assert_not_called()
+        self.assertEqual(result['deleted'], 0)
+
+    def test_skips_user_if_awaiting_payment_after_initial_selection(self, mock_delete_user_data):
+        self.user.is_awaiting_payment_verification = True
+        self.user.save()
+        with patch('thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users') as mock_get_users:
+            mock_get_users.return_value.iterator.return_value = [self.user]
+
+            result = purge_incomplete_signups.apply().get()
+
+        mock_delete_user_data.assert_not_called()
+        self.assertEqual(result['skipped'], 1)
