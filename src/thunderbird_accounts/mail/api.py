@@ -1,6 +1,6 @@
 from thunderbird_accounts.authentication.utils import is_email_reserved, is_email_in_allow_list
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
-from thunderbird_accounts.mail.utils import validate_email
+from thunderbird_accounts.mail.utils import validate_email, is_address_taken
 from rest_framework.permissions import AllowAny
 from django.conf import settings
 from rest_framework.throttling import UserRateThrottle
@@ -42,8 +42,7 @@ def is_username_available(request: Request):
     except EmailNotValidError as ex:
         raise ValidationError(ex.error_message)
 
-    user = User.objects.filter(username=full_username).first()
-    if user:
+    if is_address_taken(full_username):
         raise ValidationError(_('This username is already taken. Try another one.'))
 
     return Response(status=200)
