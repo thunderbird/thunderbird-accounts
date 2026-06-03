@@ -100,6 +100,7 @@ def tag_abandoned_cart_in_mailchimp(self):
         'skipped': skipped,
     }
     logger.info('tag_abandoned_cart_in_mailchimp: %s', result)
+    return result
 
 
 @shared_task(bind=True)
