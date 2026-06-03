@@ -10,13 +10,14 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.models import Subscription
 from thunderbird_accounts.subscription.tasks import add_or_tag_mailchimp_member
+from thunderbird_accounts.authentication.utils import delete_user_data
 
 logger = logging.getLogger(__name__)
 
 
-def get_abandoned_cart_users_for_mailchimp_tag() -> QuerySet[User]:
-    """Incomplete sign-ups old enough to receive the abandoned_cart Mailchimp tag."""
-    cutoff = timezone.now() - timedelta(hours=settings.ABANDONED_CART_TAG_HOURS)
+def get_stale_incomplete_signup_users(cutoff_hours: int = settings.ABANDONED_CART_TAG_HOURS) -> QuerySet[User]:
+    """Incomplete sign-ups older than the cutoff hours."""
+    cutoff = timezone.now() - timedelta(hours=cutoff_hours)
     has_subscription = Subscription.objects.filter(user_id=OuterRef('pk'))
     return (
         User.objects.filter(
@@ -49,7 +50,7 @@ def tag_abandoned_cart_in_mailchimp(self):
     mailchimp_language_map = settings.ACCOUNTS_TO_MAILCHIMP_LANGUAGES
     mailchimp_tag = settings.ABANDONED_CART_MAILCHIMP_TAG
 
-    for user in get_abandoned_cart_users_for_mailchimp_tag().iterator():
+    for user in get_stale_incomplete_signup_users().iterator():
         try:
             if user.subscription_set.exists():
                 skipped += 1
@@ -99,4 +100,33 @@ def tag_abandoned_cart_in_mailchimp(self):
         'skipped': skipped,
     }
     logger.info('tag_abandoned_cart_in_mailchimp: %s', result)
+
+
+@shared_task(bind=True)
+def purge_incomplete_signups(self):
+    """Delete abandoned sign-up users older than INCOMPLETE_SIGNUP_PURGE_HOURS.
+
+    Only targets users with no Subscription records (including lapsed/canceled).
+    """
+    deleted = 0
+    errors = 0
+
+    for user in get_stale_incomplete_signup_users(cutoff_hours=settings.INCOMPLETE_SIGNUP_PURGE_HOURS).iterator():
+        purge_errors = delete_user_data(user)
+        if purge_errors:
+            errors += 1
+            logging.warning(
+                'purge_incomplete_signups: partial deletion for %s: %s',
+                user.username,
+                purge_errors,
+            )
+        else:
+            deleted += 1
+
+    result = {
+        'task_status': 'completed',
+        'deleted': deleted,
+        'errors': errors,
+    }
+    logging.info('purge_incomplete_signups: %s', result)
     return result

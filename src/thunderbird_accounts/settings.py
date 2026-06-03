@@ -536,6 +536,8 @@ CELERY_REDBEAT_LOCK_TIMEOUT = 330
 
 CELERY_BEAT_SCHEDULE = {}
 
+INCOMPLETE_SIGNUP_PURGE_HOURS = int(os.getenv('INCOMPLETE_SIGNUP_PURGE_HOURS', '72'))
+
 KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS = int(os.getenv('KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS', '900'))
 
 POSTHOG_API_KEY = os.getenv('POSTHOG_API_KEY')
@@ -571,6 +573,14 @@ if POSTHOG_API_KEY:
         'task': 'thunderbird_accounts.telemetry.tasks.poll_keycloak_events',
         'schedule': KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS,
     }
+
+CELERY_BEAT_SCHEDULE['purge-incomplete-signups'] = {
+    'task': 'thunderbird_accounts.authentication.tasks.purge_incomplete_signups',
+    'schedule': crontab(
+        hour=int(os.getenv('INCOMPLETE_SIGNUP_PURGE_CRON_HOUR', '3')),
+        minute=int(os.getenv('INCOMPLETE_SIGNUP_PURGE_CRON_MINUTE', '0')),
+    ),
+}
 
 # Some debug info for sentry
 sentry_sdk.set_context(
