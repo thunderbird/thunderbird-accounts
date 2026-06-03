@@ -28,7 +28,8 @@ from thunderbird_accounts.mail.exceptions import (
     AccessTokenNotFound,
     AccountNotFoundError,
     DomainAlreadyExistsError,
-    DomainNotFoundError, EmailNotValidError,
+    DomainNotFoundError,
+    EmailNotValidError,
 )
 from thunderbird_accounts.mail.utils import (
     check_stale_dns_records,
@@ -253,7 +254,7 @@ def verify_custom_domain(request: HttpRequest):
         else:
             is_verified = True
             critical_errors = []
-            warnings = ['Custom domain DNS verification disabled. Automatically verified domain.']
+            warnings = [_('Custom domain DNS verification disabled. Automatically verified domain.')]
 
         domain.last_verification_attempt = now
 
@@ -274,22 +275,38 @@ def verify_custom_domain(request: HttpRequest):
             'stale_dns_records': stale_dns_records,
         }
 
+        # If we're verified via dns check
         if is_verified:
-            domain.status = Domain.DomainStatus.VERIFIED
-            domain.verified_at = now
+            try:
+                stalwart_resp = stalwart_client.get_domain(domain_name)
+            except DomainNotFoundError:
+                stalwart_resp = None
 
-            # Now attach the stalwart domain id to the user domain object
-            domain_id = stalwart_client.create_domain(domain_name)
-            # Ensure missing DKIM selectors without replacing keys created at domain-add time.
-            stalwart_client.ensure_dkim(domain_name)
-            mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
-            if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
-                stalwart_client.activate_pending_dkim_signatures(domain_name)
-            now = datetime.datetime.now(datetime.UTC)
+            # Only roll through these steps if we're not already verified OR stalwart doesn't have our domain
+            if domain.status != Domain.DomainStatus.VERIFIED or not stalwart_resp:
+                domain.status = Domain.DomainStatus.VERIFIED
+                domain.verified_at = now
 
-            domain.stalwart_id = domain_id
-            domain.stalwart_created_at = now
-            domain.save()
+                # Fetch or create a domain on Stalwart's end, and retrieve the domain_id
+                if stalwart_resp:
+                    domain_id = stalwart_resp.get('id')
+                else:
+                    domain_id = stalwart_client.create_domain(domain_name)
+
+                # Ensure missing DKIM selectors without replacing keys created at domain-add time.
+                stalwart_client.ensure_dkim(domain_name)
+
+                mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
+                if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+                    stalwart_client.activate_pending_dkim_signatures(domain_name)
+
+                if domain_id:
+                    domain.stalwart_id = domain_id
+                else:
+                    logging.error(f'There was a problem saving the domain id for {domain.name} / {domain.uuid}')
+
+                domain.stalwart_created_at = datetime.datetime.now(datetime.UTC)
+                domain.save()
 
             return JsonResponse({'success': True, **response_data})
         else:
