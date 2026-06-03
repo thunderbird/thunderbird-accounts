@@ -276,7 +276,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'is_username_available': '30/minute',
-        'sign_up': '10/minute',
+        'sign_up': '15/minute',
         'check_email_is_on_allow_list': '10/minute',
         'analytics': '1000/minute',  # Just in case
     },

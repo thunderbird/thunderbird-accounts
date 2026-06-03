@@ -97,6 +97,28 @@ class SignUpTestcase(APITestCase):
         resp_data = response.json()
         self.assertEqual(resp_data.get('type'), 'username-in-use', msg=assert_fail_msg)
 
+    def test_user_alias_already_exists(self, mock_import_user: MagicMock):
+        """When signing up make sure we're not using a username on a shared domain"""
+
+        # Set a return value for oidc_id
+        mock_import_user.return_value = 1
+
+        username = f'hello@{settings.PRIMARY_EMAIL_DOMAIN}'
+        user = User.objects.create(email=self.wait_list[0], username=username)
+        account = Account.objects.create(name=user.username, user=user)
+        Email.objects.create(address=f'hello2@{settings.ALLOWED_EMAIL_DOMAINS[1]}', account=account)
+
+        response = self.client.post(
+            '/api/v1/auth/sign-up/',
+            self.make_sign_up_data(email=self.wait_list[0], partialUsername='hello2'),
+        )
+        assert_fail_msg = self.get_messages(response)
+
+        self.assertEqual(response.status_code, 400, msg=assert_fail_msg)
+
+        resp_data = response.json()
+        self.assertEqual(resp_data.get('type'), 'username-in-use', msg=assert_fail_msg)
+
     def test_user_using_reserved_emails(self, _mock_import_user: MagicMock):
         """Test to ensure that a user does not use a reserved username"""
         User(email=self.wait_list[0], username='hello@example.org').save()
