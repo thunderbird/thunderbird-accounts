@@ -77,6 +77,22 @@ def is_email_reserved(email: str):
     return is_reserved(email)
 
 
+def can_register_with_username(username: str):
+    """Can a user register with this username.
+    This checks primary username and any mirrored aliases for our allowed domains
+
+    This does not check is_email_reserved, as we generally use a different error for that check."""
+    from thunderbird_accounts.mail.utils import is_address_taken
+
+    username_checks = (
+        [is_address_taken(f'{username}@{alt_domain}') for alt_domain in settings.ALLOWED_EMAIL_DOMAINS]
+        if len(settings.ALLOWED_EMAIL_DOMAINS) > 0
+        else []
+    )
+
+    return not any(username_checks)
+
+
 def create_aia_url(action: KeycloakRequiredAction):
     """Create a url for a user to start a keycloak flow.
     These flows are defined as actions in KeycloakRequiredAction."""

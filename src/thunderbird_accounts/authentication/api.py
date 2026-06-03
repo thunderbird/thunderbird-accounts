@@ -4,7 +4,12 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny
 import sentry_sdk
 from thunderbird_accounts.authentication.exceptions import InvalidDomainError, ImportUserError
-from thunderbird_accounts.authentication.utils import is_email_in_allow_list, KeycloakRequiredAction, is_email_reserved
+from thunderbird_accounts.authentication.utils import (
+    is_email_in_allow_list,
+    KeycloakRequiredAction,
+    is_email_reserved,
+    can_register_with_username,
+)
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.exceptions import NotAuthenticated
 from rest_framework.request import Request
@@ -29,7 +34,7 @@ def get_user_profile(request: Request):
 @permission_classes([AllowAny])
 @throttle_classes([SignUpThrottle])
 def sign_up(request: Request):
-    """The api endpoint for signing up a new user. 
+    """The api endpoint for signing up a new user.
 
     We create the Keycloak user and attach its uuid to the local Account's user object.
     We only create the local Accounts user object if the Keycloak user object was successfully created.
@@ -37,7 +42,6 @@ def sign_up(request: Request):
     # This file is loaded before models are ready, so we import locally here...for now.
     from thunderbird_accounts.authentication.clients import KeycloakClient
     from thunderbird_accounts.authentication.models import AllowListEntry, User
-    from thunderbird_accounts.mail.utils import is_address_taken
 
     data = request.data
 
@@ -67,12 +71,12 @@ def sign_up(request: Request):
         )
 
     # Make sure there's no email alias with this address
-    if is_address_taken(username) or is_email_reserved(username):
+    if not can_register_with_username(partial_username) or is_email_reserved(username):
         return Response({'error': generic_email_error, 'type': 'username-in-use'}, status=400)
 
     if not data.get('password'):
         return Response(
-            {'error': _("You need to enter a password to sign-up."), 'type': 'password-is-empty'},
+            {'error': _('You need to enter a password to sign-up.'), 'type': 'password-is-empty'},
             status=400,
         )
 
