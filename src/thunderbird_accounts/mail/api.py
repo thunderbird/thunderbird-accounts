@@ -1,6 +1,10 @@
-from thunderbird_accounts.authentication.utils import is_email_reserved, is_email_in_allow_list
+from thunderbird_accounts.authentication.utils import (
+    is_email_reserved,
+    is_email_in_allow_list,
+    can_register_with_username,
+)
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
-from thunderbird_accounts.mail.utils import validate_email, is_address_taken
+from thunderbird_accounts.mail.utils import validate_email
 from rest_framework.permissions import AllowAny
 from django.conf import settings
 from rest_framework.throttling import UserRateThrottle
@@ -9,8 +13,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
-
-
 
 
 class UsernameAvailableThrottle(UserRateThrottle):
@@ -41,7 +43,7 @@ def is_username_available(request: Request):
     except EmailNotValidError as ex:
         raise ValidationError(ex.error_message)
 
-    if is_address_taken(full_username):
+    if not can_register_with_username(username):
         raise ValidationError(_('This username is already taken. Try another one.'))
 
     return Response(status=200)
@@ -52,14 +54,20 @@ def is_username_available(request: Request):
 @throttle_classes([CheckEmailIsOnAllowListThrottle])
 def check_email_is_on_allow_list(request: Request):
     if not settings.CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS:
-        return Response({
-            'is_on_allow_list': True,
-        }, status=200)
+        return Response(
+            {
+                'is_on_allow_list': True,
+            },
+            status=200,
+        )
 
     email = request.data.get('email')
     if not email:
         raise ValidationError(_('You need to enter an email address.'))
 
-    return Response({
-        'is_on_allow_list': is_email_in_allow_list(email),
-    }, status=200)
+    return Response(
+        {
+            'is_on_allow_list': is_email_in_allow_list(email),
+        },
+        status=200,
+    )
