@@ -1,5 +1,5 @@
 import base64
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519, rsa
@@ -8,7 +8,9 @@ from django.test import SimpleTestCase, override_settings
 from thunderbird_accounts.mail.dkim import (
     CloudflareDNSClient,
     build_customer_dkim_cname_records,
+    build_hosted_dkim_txt_record_names,
     build_hosted_dkim_txt_records,
+    delete_hosted_dkim_txt_records,
     dkim_signatures_to_dns_records,
 )
 
@@ -78,6 +80,52 @@ class HostedDkimRecordBuilderTestCase(SimpleTestCase):
 
         self.assertEqual(
             [{'type': 'TXT', 'name': 'tm1.example.com.dkim.example.net', 'content': 'v=DKIM1; k=rsa; p=example'}],
+            records,
+        )
+
+    def test_builds_hosted_txt_record_names_for_all_selectors(self):
+        records = build_hosted_dkim_txt_record_names('Example.COM.')
+
+        self.assertEqual(
+            [
+                'tm1.example.com.dkim.example.net',
+                'tm2.example.com.dkim.example.net',
+                'tm3.example.com.dkim.example.net',
+            ],
+            records,
+        )
+
+    def test_deletes_hosted_txt_records_for_all_selectors(self):
+        dns_client = Mock()
+        dns_client.delete_txt_records.side_effect = [['record-1'], [], ['record-3']]
+
+        records = delete_hosted_dkim_txt_records('Example.COM.', dns_client=dns_client)
+
+        dns_client.delete_txt_records.assert_has_calls(
+            [
+                call('tm1.example.com.dkim.example.net'),
+                call('tm2.example.com.dkim.example.net'),
+                call('tm3.example.com.dkim.example.net'),
+            ]
+        )
+        self.assertEqual(
+            [
+                {
+                    'type': 'TXT',
+                    'name': 'tm1.example.com.dkim.example.net',
+                    'deleted_record_ids': ['record-1'],
+                },
+                {
+                    'type': 'TXT',
+                    'name': 'tm2.example.com.dkim.example.net',
+                    'deleted_record_ids': [],
+                },
+                {
+                    'type': 'TXT',
+                    'name': 'tm3.example.com.dkim.example.net',
+                    'deleted_record_ids': ['record-3'],
+                },
+            ],
             records,
         )
 
@@ -188,6 +236,7 @@ class DkimSignatureConversionTestCase(SimpleTestCase):
             )
 
 
+@override_settings(HOSTED_DKIM_CLOUDFLARE_ZONE_ID='zone-id')
 class CloudflareDNSClientTestCase(SimpleTestCase):
     def test_creates_txt_record_when_missing(self):
         cloudflare_client = Mock()
@@ -235,3 +284,38 @@ class CloudflareDNSClientTestCase(SimpleTestCase):
 
         cloudflare_client.dns.records.update.assert_not_called()
         cloudflare_client.dns.records.create.assert_not_called()
+
+    def test_deletes_all_txt_records_for_name(self):
+        cloudflare_client = Mock()
+        cloudflare_client.dns.records.list.return_value = _cloudflare_page(
+            [
+                {'id': 'record-1', 'name': 'tm1.example.com.dkim.example.net', 'content': 'one'},
+                {'id': 'record-2', 'name': 'tm1.example.com.dkim.example.net', 'content': 'two'},
+            ]
+        )
+        dns_client = CloudflareDNSClient(api_token='secret', client=cloudflare_client)
+
+        deleted_record_ids = dns_client.delete_txt_records('tm1.example.com.dkim.example.net')
+
+        cloudflare_client.dns.records.list.assert_called_once_with(
+            zone_id='zone-id',
+            type='TXT',
+            name={'exact': 'tm1.example.com.dkim.example.net'},
+        )
+        cloudflare_client.dns.records.delete.assert_has_calls(
+            [
+                call('record-1', zone_id='zone-id'),
+                call('record-2', zone_id='zone-id'),
+            ]
+        )
+        self.assertEqual(['record-1', 'record-2'], deleted_record_ids)
+
+    def test_delete_txt_records_returns_empty_list_when_missing(self):
+        cloudflare_client = Mock()
+        cloudflare_client.dns.records.list.return_value = _cloudflare_page([])
+        dns_client = CloudflareDNSClient(api_token='secret', client=cloudflare_client)
+
+        deleted_record_ids = dns_client.delete_txt_records('tm1.example.com.dkim.example.net')
+
+        cloudflare_client.dns.records.delete.assert_not_called()
+        self.assertEqual([], deleted_record_ids)

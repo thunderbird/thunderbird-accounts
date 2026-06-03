@@ -96,6 +96,26 @@ class HostedDkimPublishRetry(Exception):
         return f'HostedDkimPublishRetry: {self.phase} failed for {self.domain}: {self.reason}'
 
 
+class HostedDkimDeleteRetry(Exception):
+    """Raise when hosted DKIM deletion should be retried."""
+
+    domain: str
+    phase: str  # Phase of delete where exception happened.
+    reason: str
+    context: dict
+
+    def __init__(self, domain: str, phase: str, reason: str = 'Unknown', error_type: str | None = None):
+        self.domain = domain
+        self.phase = phase
+        self.reason = reason or 'Unknown'
+        self.error_type = error_type
+        self.context = {key: getattr(self, key) for key in ('domain', 'phase', 'reason', 'error_type')}
+        super().__init__(self.context)
+
+    def __str__(self):
+        return f'HostedDkimDeleteRetry: {self.phase} failed for {self.domain}: {self.reason}'
+
+
 class EmailNotValidError(RuntimeError):
     """Raises in utils.validate_email"""
 

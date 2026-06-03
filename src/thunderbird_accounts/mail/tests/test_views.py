@@ -11,7 +11,7 @@ from django.utils.translation import gettext_lazy as _
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, StaleDNSRecordCode
 from thunderbird_accounts.mail.models import Account, Domain, Email
-from thunderbird_accounts.mail.views import get_dns_records
+from thunderbird_accounts.mail.views import get_dns_records, remove_custom_domain
 
 
 class AppPasswordApiTestCase(TestCase):
@@ -318,6 +318,87 @@ class VerifyCustomDomainTestCase(TestCase):
 
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
+
+
+class RemoveCustomDomainTestCase(TestCase):
+    def setUp(self):
+        self.request_factory = RequestFactory()
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        self.account = Account.objects.create(name=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', user=self.user)
+        self.domain = Domain.objects.create(
+            name='example.com',
+            user=self.user,
+            stalwart_id='domain-id',
+            status=Domain.DomainStatus.VERIFIED,
+        )
+        self.url = reverse('remove_custom_domain')
+
+    def _delete_domain(self):
+        request = self.request_factory.delete(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+        request.user = self.user
+        return remove_custom_domain(request)
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_success_deletes_stalwart_dkim_cloudflare_records_and_local_domain(
+        self,
+        mock_mail_client_cls,
+        mock_delete_hosted_dkim_dns_records,
+    ):
+        mock_instance = Mock()
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self._delete_domain()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content.decode()), {'success': True})
+        mock_instance.delete_domain.assert_called_once_with(self.domain.name)
+        mock_instance.delete_dkim.assert_called_once_with(self.domain.name)
+        mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
+        self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_pending_domain_still_deletes_dkim_and_cloudflare_records(
+        self,
+        mock_mail_client_cls,
+        mock_delete_hosted_dkim_dns_records,
+    ):
+        self.domain.stalwart_id = None
+        self.domain.status = Domain.DomainStatus.PENDING
+        self.domain.save()
+        mock_instance = Mock()
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self._delete_domain()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content.decode()), {'success': True})
+        mock_instance.delete_domain.assert_not_called()
+        mock_instance.delete_dkim.assert_called_once_with(self.domain.name)
+        mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
+        self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_domain_with_alias_cannot_be_removed(
+        self,
+        mock_mail_client_cls,
+        mock_delete_hosted_dkim_dns_records,
+    ):
+        Email.objects.create(address=f'alias@{self.domain.name}', type=Email.EmailType.ALIAS, account=self.account)
+
+        response = self._delete_domain()
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(json.loads(response.content.decode())['success'])
+        mock_mail_client_cls.assert_not_called()
+        mock_delete_hosted_dkim_dns_records.assert_not_called()
+        self.assertTrue(Domain.objects.filter(name=self.domain.name).exists())
 
 
 class AddEmailAliasTestCase(TestCase):

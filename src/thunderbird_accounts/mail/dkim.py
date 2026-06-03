@@ -72,6 +72,20 @@ class CloudflareDNSClient:
             comment=HOSTED_DKIM_RECORD_COMMENT,
         )
 
+    def delete_txt_records(self, name: str) -> list[str]:
+        records = self._list_txt_records(name)
+        deleted_record_ids = []
+
+        for record in records:
+            record_id = _record_value(record, 'id')
+            if not record_id:
+                continue
+
+            self.client.dns.records.delete(record_id, zone_id=self.zone_id)
+            deleted_record_ids.append(record_id)
+
+        return deleted_record_ids
+
 
 @cache
 def _normalize_domain(domain_name: str) -> str:
@@ -171,6 +185,19 @@ def build_customer_dkim_cname_records(domain_name: str, hosted_domain: str | Non
     ]
 
 
+def build_hosted_dkim_txt_record_names(domain_name: str, hosted_domain: str | None = None) -> list[str]:
+    """Builds hosted DKIM TXT record names for a given domain name.
+    If hosted domain is not specified it falls back on ``settings.HOSTED_DKIM_DOMAIN``"""
+    hosted_domain = hosted_domain or settings.HOSTED_DKIM_DOMAIN
+    if not hosted_domain:
+        return []
+
+    domain_name = _normalize_domain(domain_name)
+    return [
+        hosted_dkim_record_name(selector, domain_name, hosted_domain) for selector in settings.HOSTED_DKIM_SELECTORS
+    ]
+
+
 def build_hosted_dkim_txt_records(domain_name: str, dkim_dns_records: list[dict]) -> list[dict[str, str]]:
     """Builds dkim TXT dns records for a given domain name.
     If hosted domain is not specified it falls back on ``settings.HOSTED_DKIM_DOMAIN``"""
@@ -233,3 +260,21 @@ def publish_hosted_dkim_txt_records(hosted_records: list[dict[str, str]], dns_cl
         dns_client.upsert_txt_record(record['name'], record['content'])
 
     return hosted_records
+
+
+def delete_hosted_dkim_txt_records(domain_name: str, dns_client=None) -> list[dict[str, str | list[str]]]:
+    """Deletes hosted DKIM TXT records for a given domain name.
+    If dns_client is not specified it falls back on ``CloudflareDNSClient``"""
+    dns_client = dns_client or CloudflareDNSClient()
+
+    deleted_records = []
+    for name in build_hosted_dkim_txt_record_names(domain_name):
+        deleted_records.append(
+            {
+                'type': 'TXT',
+                'name': name,
+                'deleted_record_ids': dns_client.delete_txt_records(name),
+            }
+        )
+
+    return deleted_records

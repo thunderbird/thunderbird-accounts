@@ -353,14 +353,18 @@ def remove_custom_domain(request: HttpRequest):
             if _domain.stalwart_id:
                 try:
                     cleanup_phase = 'delete_stalwart_domain'
-                    stalwart_client.delete_domain(domain.name)
+                    stalwart_client.delete_domain(_domain.name)
                 except DomainNotFoundError as ex:
                     # While it's not in Stalwart we seem to have a local reference,
                     # so try deleting dkim and then local ref
                     _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
-                cleanup_phase = 'delete_dkim'
-                stalwart_client.delete_dkim(domain.name)
-                break
+
+            cleanup_phase = 'delete_dkim'
+            stalwart_client.delete_dkim(_domain.name)
+
+            cleanup_phase = 'delete_hosted_dkim_dns_records'
+            mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
+            break
 
         cleanup_phase = 'delete_local_domain'
         domain.delete()
