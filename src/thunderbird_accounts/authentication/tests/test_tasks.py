@@ -214,6 +214,37 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
         self.assertEqual(result['deleted'], 0)
         self.assertEqual(result['errors'], 1)
 
+    def test_skips_user_if_subscription_appears_after_initial_selection(self, mock_delete_user_data):
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
+        with patch('thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users') as mock_get_users:
+            mock_get_users.return_value.iterator.return_value = [self.user]
+
+            result = purge_incomplete_signups.apply().get()
+
+        mock_delete_user_data.assert_not_called()
+        self.assertEqual(result['deleted'], 0)
+        self.assertEqual(result['errors'], 0)
+        self.assertEqual(result['skipped'], 1)
+
+    def test_continues_after_unexpected_delete_exception(self, mock_delete_user_data):
+        second_user = User.objects.create(
+            username=f'purge-me-too@{self.subdomain}',
+            email='purge-me-too@example.com',
+            oidc_id='purge-oidc-2',
+        )
+        User.objects.filter(pk=second_user.pk).update(
+            created_at=timezone.now() - timedelta(hours=settings.INCOMPLETE_SIGNUP_PURGE_HOURS + 1)
+        )
+        mock_delete_user_data.side_effect = [RuntimeError('boom'), []]
+        with patch('thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users') as mock_get_users:
+            mock_get_users.return_value.iterator.return_value = [self.user, second_user]
+
+            result = purge_incomplete_signups.apply().get()
+
+        self.assertEqual(mock_delete_user_data.call_count, 2)
+        self.assertEqual(result['deleted'], 1)
+        self.assertEqual(result['errors'], 1)
+
     @override_settings(INCOMPLETE_SIGNUP_PURGE_HOURS=72)
     def test_skips_recent_users(self, mock_delete_user_data):
         User.objects.filter(pk=self.user.pk).update(created_at=timezone.now())

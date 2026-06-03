@@ -1,8 +1,10 @@
 import logging
 from datetime import timedelta
 
+import sentry_sdk
 from celery import shared_task
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Exists, OuterRef, QuerySet
 from django.utils import timezone
 
@@ -11,6 +13,8 @@ from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.models import Subscription
 from thunderbird_accounts.subscription.tasks import add_or_tag_mailchimp_member
 from thunderbird_accounts.authentication.utils import delete_user_data
+
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -111,12 +115,30 @@ def purge_incomplete_signups(self):
     """
     deleted = 0
     errors = 0
+    skipped = 0
 
     for user in get_stale_incomplete_signup_users(cutoff_hours=settings.INCOMPLETE_SIGNUP_PURGE_HOURS).iterator():
-        purge_errors = delete_user_data(user)
+        try:
+            with transaction.atomic():
+                user = User.objects.select_for_update().get(pk=user.pk)
+                if user.subscription_set.exists():
+                    skipped += 1
+                    logger.info('purge_incomplete_signups: skipped %s because a subscription exists', user.username)
+                    continue
+
+                purge_errors = delete_user_data(user)
+        except User.DoesNotExist:
+            skipped += 1
+            continue
+        except Exception as ex:
+            errors += 1
+            sentry_sdk.capture_exception(ex)
+            logger.exception('purge_incomplete_signups: failed to delete %s', user.username)
+            continue
+
         if purge_errors:
             errors += 1
-            logging.warning(
+            logger.warning(
                 'purge_incomplete_signups: partial deletion for %s: %s',
                 user.username,
                 purge_errors,
@@ -128,6 +150,7 @@ def purge_incomplete_signups(self):
         'task_status': 'completed',
         'deleted': deleted,
         'errors': errors,
+        'skipped': skipped,
     }
-    logging.info('purge_incomplete_signups: %s', result)
+    logger.info('purge_incomplete_signups: %s', result)
     return result
