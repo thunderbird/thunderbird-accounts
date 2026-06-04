@@ -261,6 +261,7 @@ class KeycloakClient:
         self,
         username,
         backup_email,
+        *,
         timezone,
         name: Optional[str] = None,
         password: Optional[str] = None,

@@ -33,7 +33,7 @@ class SignUpTestcase(APITestCase):
         """Factory for sign up data. Pass in kwargs to override any data you need."""
         return {
             'email': 'hello@example.com',
-            'timezone': 'UTC',
+            'zoneinfo': 'UTC',
             'locale': 'en',
             'partialUsername': 'hello',
             'password': '123',
@@ -51,6 +51,27 @@ class SignUpTestcase(APITestCase):
             self.make_sign_up_data(email=self.wait_list[0]),
         )
         assert_fail_msg = self.get_messages(response)
+
+        self.assertEqual(response.status_code, 200, msg=assert_fail_msg)
+        self.assertEqual(response.json(), {'success': True}, msg=assert_fail_msg)
+
+    def test_success_with_zoneinfo_null(self, mock_import_user: MagicMock):
+        """Test that an unauthenticated user can sign-up if they're in the allow list."""
+
+        # Set a return value for oidc_id
+        mock_import_user.return_value = 1
+
+        sign_up_data = self.make_sign_up_data(email=self.wait_list[0], zoneinfo='')
+
+        response = self.client.post(
+            '/api/v1/auth/sign-up/',
+            sign_up_data,
+        )
+        assert_fail_msg = self.get_messages(response)
+
+        # Make sure the default value overrides the one we used during signup
+        self.assertNotEqual(mock_import_user.call_args.kwargs['timezone'], sign_up_data.get('zoneinfo'))
+        self.assertEqual(mock_import_user.call_args.kwargs['timezone'], 'UTC')
 
         self.assertEqual(response.status_code, 200, msg=assert_fail_msg)
         self.assertEqual(response.json(), {'success': True}, msg=assert_fail_msg)

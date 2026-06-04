@@ -98,7 +98,7 @@ class CustomNewUserForm(CustomUserFormBase):
             keycloak_pkid = keycloak.import_user(
                 self.cleaned_data.get('username'),
                 self.cleaned_data.get('recovery_email'),
-                self.cleaned_data.get('timezone'),
+                timezone=self.cleaned_data.get('timezone'),
                 name=name,
             )
 
