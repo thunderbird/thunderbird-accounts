@@ -122,11 +122,12 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     in our db via webhooks.
     """
     user = request.user
-    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
-    payment_type = request.session.pop(SESSION_PADDLE_PAYMENT_TYPE)
+    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID, None)
+    payment_type = request.session.pop(SESSION_PADDLE_PAYMENT_TYPE, None)
     redirect_response = HttpResponseRedirect('/subscribe')
 
-    # Hmm this shouldn't happen...
+    # This can happen if their browser isn't storing our functional session cookie. 
+    # This will be a small UX pain, but it won't brick their payment progress.
     if not transaction_id or not payment_type:
         return redirect_response
 
