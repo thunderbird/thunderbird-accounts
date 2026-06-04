@@ -223,7 +223,7 @@ WSGI_APPLICATION = 'thunderbird_accounts.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 AVAILABLE_DATABASES = {
-    'dev': {
+    'main': {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.getenv('DATABASE_NAME'),
@@ -231,6 +231,7 @@ AVAILABLE_DATABASES = {
             'PASSWORD': os.getenv('DATABASE_PASSWORD'),
             'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
             'PORT': os.getenv('DATABASE_PORT', '5432'),
+            'DISABLE_SERVER_SIDE_CURSORS': True, # Disable server-side cursors due to db pooling issues
         },
     },
     'test': {
@@ -241,7 +242,7 @@ AVAILABLE_DATABASES = {
     },
 }
 
-DATABASES = AVAILABLE_DATABASES['test'] if IS_TEST else AVAILABLE_DATABASES['dev']
+DATABASES = AVAILABLE_DATABASES['test'] if IS_TEST else AVAILABLE_DATABASES['main']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
