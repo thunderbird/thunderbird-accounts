@@ -35,7 +35,7 @@ class AccountAdmin(admin.ModelAdmin):
     )
 
     def get_queryset(self, request):
-        return super().get_queryset(request).annotate(email_count=Count('email'))
+        return super().get_queryset(request).annotate(email_count=Count('email', distinct=True))
 
     @admin.display(description=_('Email Count'), ordering='email_count')
     def email_count(self, obj):
