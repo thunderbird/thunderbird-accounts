@@ -600,7 +600,7 @@ def is_address_taken(email_address: str) -> bool:
         return True
 
     # Make sure there's no email alias with this address
-    aliases = Email.objects.filter(address=email_address).exists()
+    aliases = Email.objects.filter(address__iexact=email_address).exists()
     if aliases:
         return True
 

@@ -149,6 +149,8 @@ def create_custom_domain(request: HttpRequest):
     if not domain_name:
         return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
 
+    domain_name = domain_name.lower()
+
     custom_domain_count = request.user.domains.count()
 
     if custom_domain_count >= request.user.plan.mail_domain_count:
@@ -236,6 +238,8 @@ def verify_custom_domain(request: HttpRequest):
     domain_name = data.get('domain-name')
     if not domain_name:
         return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
+
+    domain_name = domain_name.lower()
 
     domain = request.user.domains.get(name=domain_name)
     if not domain:
@@ -335,6 +339,7 @@ def remove_custom_domain(request: HttpRequest):
     if not domain_name:
         return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
 
+    domain_name = domain_name.lower()
     domain = request.user.domains.get(name=domain_name)
     if not domain:
         return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
@@ -364,7 +369,7 @@ def remove_custom_domain(request: HttpRequest):
     stalwart_client = MailClient()
     cleanup_phase = 'load_local_domains'
     try:
-        domains = request.user.domains.filter(name=domain_name).all()
+        domains = request.user.domains.filter(name__iexact=domain_name).all()
         # There should only be one here, but just in case...
         for _domain in domains:
             if _domain.stalwart_id:
@@ -413,6 +418,8 @@ def add_email_alias(request: HttpRequest):
     # We don't need to specify the asterisk for catch-all on stalwart's end.
     if is_catch_all:
         email_alias = ''
+
+    email_alias = email_alias.lower()
 
     full_email_alias = f'{email_alias}@{domain}'
 
@@ -518,6 +525,8 @@ def remove_email_alias(request: HttpRequest):
     if not email_alias:
         return JsonResponse({'success': False, 'error': _('Email alias is required.')}, status=400)
 
+    email_alias = email_alias.lower()
+
     # Get the account
     try:
         account = Account.objects.get(user=request.user)
@@ -530,7 +539,7 @@ def remove_email_alias(request: HttpRequest):
 
     # Get the local Email object
     try:
-        email_obj = Email.objects.get(address=email_alias, type=Email.EmailType.ALIAS, account=account)
+        email_obj = Email.objects.get(address__iexact=email_alias, type=Email.EmailType.ALIAS, account=account)
     except Email.DoesNotExist:
         logging.error(f'Email alias not found for user {request.user.uuid} and email {email_alias}')
         return JsonResponse(
