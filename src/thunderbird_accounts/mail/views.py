@@ -30,8 +30,8 @@ from thunderbird_accounts.mail.exceptions import (
     DomainAlreadyExistsError,
     DomainNotFoundError, EmailNotValidError,
 )
+from thunderbird_accounts.mail.dns import check_stale_dns_records
 from thunderbird_accounts.mail.utils import (
-    check_stale_dns_records,
     filter_app_passwords,
     is_address_taken,
     validate_email,
