@@ -231,7 +231,9 @@ AVAILABLE_DATABASES = {
             'PASSWORD': os.getenv('DATABASE_PASSWORD'),
             'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
             'PORT': os.getenv('DATABASE_PORT', '5432'),
+            # Neon recommends these settings (https://neon.com/docs/guides/django)
             'DISABLE_SERVER_SIDE_CURSORS': True, # Disable server-side cursors due to db pooling issues
+            'CONN_HEALTH_CHECKS': True, # Test db connection before re-use between requests
         },
     },
     'test': {
