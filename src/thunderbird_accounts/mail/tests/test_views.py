@@ -1,3 +1,5 @@
+import datetime
+from thunderbird_accounts.mail.exceptions import DomainNotFoundError
 from django.utils.crypto import get_random_string
 from thunderbird_accounts.subscription.models import Plan, Subscription
 import json
@@ -205,6 +207,9 @@ class VerifyCustomDomainTestCase(TestCase):
             'dns_records': [],
         }
         mock_instance.create_domain.return_value = 'domain-id'
+        mock_instance.get_domain.side_effect = DomainNotFoundError(
+            self.domain.name
+        )  # Make sure we don't actually have a domain here
         mock_check_stale_dns_records.return_value = []
         mock_mail_client_cls.return_value = mock_instance
 
@@ -220,6 +225,7 @@ class VerifyCustomDomainTestCase(TestCase):
         mock_instance.check_domain_dns.assert_called_once_with(self.domain.name)
         mock_check_stale_dns_records.assert_called_once_with(self.domain.name)
         mock_instance.create_domain.assert_called_once_with(self.domain.name)
+        mock_instance.get_domain.assert_called_once_with(self.domain.name)
         mock_instance.ensure_dkim.assert_called_once_with(self.domain.name)
         mock_instance.create_dkim.assert_not_called()
         mock_publish_hosted_dkim.assert_called_once_with(self.domain.name)
@@ -228,6 +234,161 @@ class VerifyCustomDomainTestCase(TestCase):
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.VERIFIED, self.domain.status)
         self.assertEqual('domain-id', self.domain.stalwart_id)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_reverification_of_ok_domain_is_success(
+        self,
+        mock_mail_client_cls,
+        mock_check_stale_dns_records,
+        mock_publish_hosted_dkim,
+    ):
+        stalwart_id = self.domain.stalwart_id
+        self.domain.stalwart_id = stalwart_id
+        self.domain.status = Domain.DomainStatus.VERIFIED
+        self.domain.stalwart_created_at = datetime.datetime.now(datetime.UTC)
+        self.domain.save()
+
+        mock_instance = Mock()
+        mock_instance.check_domain_dns.return_value = {
+            'is_verified': True,
+            'critical_errors': [],
+            'warnings': [],
+            'dns_records': [],
+        }
+        mock_instance.create_domain.return_value = None
+        mock_instance.get_domain.side_effect = {'id': stalwart_id}
+        mock_check_stale_dns_records.return_value = []
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        data = json.loads(response.content.decode())
+        self.assertTrue(data['success'])
+        mock_instance.check_domain_dns.assert_called_once_with(self.domain.name)
+        mock_check_stale_dns_records.assert_called_once_with(self.domain.name)
+        mock_instance.create_domain.assert_not_called()
+        mock_instance.get_domain.assert_called_once_with(self.domain.name)
+
+        mock_instance.ensure_dkim.assert_not_called()
+        mock_instance.create_dkim.assert_not_called()
+        mock_publish_hosted_dkim.assert_not_called()
+        mock_instance.activate_pending_dkim_signatures.assert_not_called()
+
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.VERIFIED, self.domain.status)
+        self.assertEqual(stalwart_id, self.domain.stalwart_id)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_reverification_of_bad_domain_is_success(
+        self,
+        mock_mail_client_cls,
+        mock_check_stale_dns_records,
+        mock_publish_hosted_dkim,
+    ):
+        """This test-case is a reverification of a VERIFIED domain that does not have a Stalwart entry"""
+        stalwart_id = self.domain.stalwart_id
+        self.domain.stalwart_id = stalwart_id
+        self.domain.status = Domain.DomainStatus.VERIFIED
+        self.domain.stalwart_created_at = datetime.datetime.now(datetime.UTC)
+        self.domain.save()
+
+        mock_instance = Mock()
+        mock_instance.check_domain_dns.return_value = {
+            'is_verified': True,
+            'critical_errors': [],
+            'warnings': [],
+            'dns_records': [],
+        }
+        mock_instance.create_domain.return_value = stalwart_id
+        mock_instance.get_domain.side_effect = DomainNotFoundError(self.domain.name)
+        mock_check_stale_dns_records.return_value = []
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        data = json.loads(response.content.decode())
+        self.assertTrue(data['success'])
+        mock_instance.check_domain_dns.assert_called_once_with(self.domain.name)
+        mock_check_stale_dns_records.assert_called_once_with(self.domain.name)
+        mock_instance.create_domain.assert_called_once_with(self.domain.name)
+        mock_instance.get_domain.assert_called_once_with(self.domain.name)
+
+        mock_instance.ensure_dkim.assert_called_once_with(self.domain.name)
+        mock_instance.create_dkim.assert_not_called()
+        mock_publish_hosted_dkim.assert_called_once_with(self.domain.name)
+        mock_instance.activate_pending_dkim_signatures.assert_not_called()
+
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.VERIFIED, self.domain.status)
+        self.assertEqual(stalwart_id, self.domain.stalwart_id)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_reverification_of_unverified_domain_is_success(
+        self,
+        mock_mail_client_cls,
+        mock_check_stale_dns_records,
+        mock_publish_hosted_dkim,
+    ):
+        """This test-case is a reverification of a VERIFIED domain that does not have a Stalwart entry"""
+        stalwart_id = self.domain.stalwart_id
+        self.domain.stalwart_id = stalwart_id
+        self.domain.status = Domain.DomainStatus.FAILED
+        self.domain.stalwart_created_at = datetime.datetime.now(datetime.UTC)
+        self.domain.save()
+
+        mock_instance = Mock()
+        mock_instance.check_domain_dns.return_value = {
+            'is_verified': True,
+            'critical_errors': [],
+            'warnings': [],
+            'dns_records': [],
+        }
+        mock_instance.create_domain.return_value = None
+        mock_instance.get_domain.return_value = {'id': stalwart_id}
+        mock_check_stale_dns_records.return_value = []
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        data = json.loads(response.content.decode())
+        self.assertTrue(data['success'])
+        mock_instance.check_domain_dns.assert_called_once_with(self.domain.name)
+        mock_check_stale_dns_records.assert_called_once_with(self.domain.name)
+        mock_instance.create_domain.assert_not_called()
+        mock_instance.get_domain.assert_called_once_with(self.domain.name)
+
+        mock_instance.ensure_dkim.assert_called_once_with(self.domain.name)
+        mock_instance.create_dkim.assert_not_called()
+        mock_publish_hosted_dkim.assert_called_once_with(self.domain.name)
+        mock_instance.activate_pending_dkim_signatures.assert_not_called()
+
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.VERIFIED, self.domain.status)
+        self.assertEqual(stalwart_id, self.domain.stalwart_id)
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
@@ -710,7 +871,6 @@ class AddEmailAliasTestCase(TestCase):
             json.loads(response.content.decode()),
             {'success': False, 'error': _('This email is not valid. Try another one.')},
         )
-
 
     @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
     @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=3)
