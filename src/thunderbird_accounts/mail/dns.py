@@ -139,6 +139,15 @@ def _compare_dkim_txt(expected_content: str, live_values: list[str]) -> tuple[DN
     return DNSRecordStatus.CONFLICT, dkim_values
 
 
+def _verify_dmarc(live_values: list[str]) -> tuple[DNSRecordStatus, list[str]]:
+    dmarc_values = [value for value in live_values if value.startswith('v=DMARC1')]
+
+    if not dmarc_values:
+        return DNSRecordStatus.MISSING, []
+
+    return DNSRecordStatus.MATCH, []
+
+
 def _compare_spf_txt(expected_content: str, live_values: list[str]) -> tuple[DNSRecordStatus, list[str]]:
     spf_values = [value for value in live_values if value.startswith('v=spf1')]
 
@@ -196,7 +205,7 @@ def check_txt_record_status(domain_name: str, record: dict) -> tuple[DNSRecordSt
     if expected_content.startswith('v=spf1'):
         return _compare_spf_txt(expected_content, live_values)
     if query_name.startswith('_dmarc.'):
-        return _compare_semantic_txt(expected_content, live_values, prefix='v=DMARC1')
+        return _verify_dmarc(live_values)
     if query_name.startswith('_mta-sts.'):
         return _compare_semantic_txt(expected_content, live_values, prefix='v=STSv1')
     if query_name.startswith('_smtp._tls.'):
