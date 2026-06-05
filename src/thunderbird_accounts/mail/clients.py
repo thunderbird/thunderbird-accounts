@@ -755,7 +755,7 @@ class MailClient:
     def check_domain_dns(self, domain_name: str) -> dict:
         """Check expected DNS records and return verification details for a custom domain."""
         # Circular import, so we import here
-        from thunderbird_accounts.mail.utils import enrich_dns_records_with_status
+        from thunderbird_accounts.mail.dns import enrich_dns_records_with_status
 
         expected_records = self.build_expected_dns_records(domain_name)
         dns_records = enrich_dns_records_with_status(domain_name, expected_records)

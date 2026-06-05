@@ -1,6 +1,6 @@
 import json
 import requests
-import dns.resolver
+import dns.resolver as dns_resolver
 from unittest.mock import MagicMock, patch
 from django.test import SimpleTestCase, override_settings, TestCase
 from thunderbird_accounts.mail.clients import DkimSignatureStage, MailClient, DomainVerificationErrors
@@ -61,18 +61,18 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
                 return [self._mx_record(mx_host)]
             if record_type == 'TXT' and query_name == cust_domain:
                 if spf_content is None:
-                    raise dns.resolver.NoAnswer()
+                    raise dns_resolver.NoAnswer()
                 return [self._txt_record(spf_content)]
             if record_type == 'CNAME' and '._domainkey.' in query_name:
                 selector = query_name.split('._domainkey.')[0]
                 if selector not in dkim_targets:
-                    raise dns.resolver.NoAnswer()
+                    raise dns_resolver.NoAnswer()
                 return [self._cname_record(dkim_targets[selector])]
-            raise dns.resolver.NoAnswer()
+            raise dns_resolver.NoAnswer()
 
         return resolve_side_effect
 
-    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_success(self, mock_resolve):
         mock_resolve.side_effect = self._resolve_side_effect()
 
@@ -82,7 +82,7 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         self.assertEqual(result['critical_errors'], [])
         self.assertEqual(result['warnings'], [])
 
-    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_mx_failure(self, mock_resolve):
         mock_resolve.side_effect = self._resolve_side_effect(mx_host='wrong.host.com')
 
@@ -95,7 +95,7 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         self.assertEqual(mx_record['status'], 'conflict')
         self.assertEqual(mx_record['existing_values'], ['10 wrong.host.com'])
 
-    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_mx_same_priority_conflict(self, mock_resolve):
         fallback_resolve = self._resolve_side_effect()
 
@@ -118,16 +118,16 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         self.assertEqual(mx_record['status'], 'conflict')
         self.assertEqual(mx_record['existing_values'], ['10 aspmx.l.google.com'])
 
-    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_mx_lookup_failure(self, mock_resolve):
-        mock_resolve.side_effect = self._resolve_side_effect(mx_exception=dns.resolver.NoAnswer())
+        mock_resolve.side_effect = self._resolve_side_effect(mx_exception=dns_resolver.NoAnswer())
 
         result = self.mail_client.check_domain_dns(self.domain)
 
         self.assertFalse(result['is_verified'])
         self.assertIn(DomainVerificationErrors.MX_LOOKUP_ERROR, result['critical_errors'])
 
-    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_spf_failure(self, mock_resolve):
         mock_resolve.side_effect = self._resolve_side_effect(spf_content='v=spf1 include:other.com -all')
 
@@ -137,7 +137,7 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         self.assertEqual(result['critical_errors'], [])
         self.assertIn(DomainVerificationErrors.SPF_RECORD_NOT_FOUND, result['warnings'])
 
-    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_dkim_failure(self, mock_resolve):
         mock_resolve.side_effect = self._resolve_side_effect(
             dkim_targets={
@@ -152,7 +152,7 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         self.assertEqual(result['critical_errors'], [])
         self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, result['warnings'])
 
-    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_dkim_missing(self, mock_resolve):
         mock_resolve.side_effect = self._resolve_side_effect(dkim_targets={})
 
@@ -162,7 +162,7 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         self.assertEqual(result['critical_errors'], [])
         self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, result['warnings'])
 
-    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_queries_subdomain_mx(self, mock_resolve):
         cust_domain = 'tb.stosberg.com'
         mock_resolve.side_effect = self._resolve_side_effect(cust_domain=cust_domain)
@@ -178,7 +178,7 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         self.assertNotIn(('stosberg.com', 'TXT'), dns_queries)
         self.assertNotIn(('stosberg.com.', 'TXT'), dns_queries)
 
-    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_subdomain_spf_does_not_use_parent_txt(self, mock_resolve):
         cust_domain = 'tb.stosberg.com'
         parent_domain = 'stosberg.com'
@@ -187,7 +187,7 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         def resolve_side_effect(name, record_type):
             query_name = name.rstrip('.')
             if record_type == 'TXT' and query_name == cust_domain:
-                raise dns.resolver.NoAnswer()
+                raise dns_resolver.NoAnswer()
             if record_type == 'TXT' and query_name == parent_domain:
                 return [self._txt_record('v=spf1 include:spf.test.com -all')]
             return fallback_resolve(name, record_type)
@@ -545,7 +545,7 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
             records,
         )
 
-    @patch('thunderbird_accounts.mail.utils.dns.resolver.resolve')
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_includes_dns_record_status(self, mock_resolve):
         mock_mx = MagicMock()
         mock_mx.exchange.to_text.return_value = 'wrong.host.com.'
@@ -554,7 +554,7 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
         def resolve_side_effect(name, record_type):
             if record_type == 'MX':
                 return [mock_mx]
-            raise dns.resolver.NoAnswer()
+            raise dns_resolver.NoAnswer()
 
         mock_resolve.side_effect = resolve_side_effect
 
