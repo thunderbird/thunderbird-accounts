@@ -41,6 +41,7 @@ declare global {
       currentView?: Record<string, any>;
       serverMessages: ServerMessage[];
       needsTosAcceptance?: boolean;
+      recoveryEmail?: string;
       // Special, only used for tbpro_500.html
       errorTitle?: string;
       isErrorPage?: boolean,

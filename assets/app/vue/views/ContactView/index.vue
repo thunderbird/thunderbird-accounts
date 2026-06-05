@@ -84,6 +84,7 @@ export default {
 @media (min-width: 768px) {
   .contact-view {
     gap: 4rem;
+    flex-wrap: nowrap;
   }
 }
 

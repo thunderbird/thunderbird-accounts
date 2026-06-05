@@ -58,6 +58,7 @@ def home(request: HttpRequest):
     max_custom_domains = None
     max_email_aliases = None
     needs_tos_acceptance = False
+    recovery_email = request.user.recovery_email if request.user.is_authenticated else None
 
     # This state can only really happen when a user hits PermissionDenied immediately upon logging in.
     # They will be logged in via Keycloak and then a redirect loop will happen as we deny them permission,
@@ -151,6 +152,7 @@ def home(request: HttpRequest):
             'form_data': form_data or None,
             'features': json.dumps(get_feature_flags()),
             'needs_tos_acceptance': needs_tos_acceptance,
+            'recovery_email': recovery_email,
         },
     )
 

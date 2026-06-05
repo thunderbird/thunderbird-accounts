@@ -24,6 +24,25 @@ export const showPageConsoleLog = async (page: Page) => {
     page.on('console', msg => console.log(`> ${msg.text()}`));
 
 }
+
+/**
+ * Override values on the server-rendered window._page object before the Vue app reads it.
+ */
+export const overridePageData = async (page: Page, overrides: Record<string, unknown>) => {
+    await page.addInitScript((pageOverrides) => {
+        let pageData: Record<string, unknown>;
+
+        Object.defineProperty(window, '_page', {
+            configurable: true,
+            get() {
+                return pageData;
+            },
+            set(value: Record<string, unknown>) {
+                pageData = { ...value, ...pageOverrides };
+            },
+        });
+    }, overrides);
+};
   
 /**
  * Similar to waitForLoadState but works with our vue applications.

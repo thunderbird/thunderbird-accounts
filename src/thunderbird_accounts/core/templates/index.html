@@ -47,6 +47,7 @@
     serverMessages: {{ server_messages|default:None|to_json|safe }},
     features: {{ features|safe|default:'{}' }},
     needsTosAcceptance: {{ needs_tos_acceptance|to_json|safe }},
+    recoveryEmail: {{ recovery_email|to_json|safe }},
     {% block extra_page_params %}{% endblock %}
   };
   csrfToken.remove();
