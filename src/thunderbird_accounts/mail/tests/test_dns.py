@@ -30,9 +30,9 @@ class TestNormalizeDNSQueryName(SimpleTestCase):
 class TestCompareSemanticTXT(SimpleTestCase):
     def test_missing_when_live_values_do_not_include_prefix(self):
         status, existing_values = _compare_semantic_txt(
-            'v=DMARC1; p=none;',
-            ['v=spf1 include:spf.test.com -all'],
-            prefix='v=DMARC1',
+            'v=STSv1; id=18139500144460329770',
+            ['BOOM'],
+            prefix='v=STSv1',
         )
 
         self.assertEqual(status, DNSRecordStatus.MISSING)
@@ -40,9 +40,9 @@ class TestCompareSemanticTXT(SimpleTestCase):
 
     def test_match_normalizes_whitespace(self):
         status, existing_values = _compare_semantic_txt(
-            'v=DMARC1; p=none;',
-            ['v=DMARC1;    p=none;'],
-            prefix='v=DMARC1',
+            'v=STSv1; id=18139500144460329770',
+            ['v=STSv1;    id=18139500144460329770'],
+            prefix='v=STSv1',
         )
 
         self.assertEqual(status, DNSRecordStatus.MATCH)
@@ -50,13 +50,13 @@ class TestCompareSemanticTXT(SimpleTestCase):
 
     def test_conflict_returns_only_relevant_values(self):
         status, existing_values = _compare_semantic_txt(
-            'v=DMARC1; p=none;',
-            ['v=spf1 include:spf.test.com -all', 'v=DMARC1; p=reject;'],
-            prefix='v=DMARC1',
+            'v=STSv1; id=18139500144460329770',
+            ['BOOM', 'v=STSv1; id=wrong'],
+            prefix='v=STSv1',
         )
 
         self.assertEqual(status, DNSRecordStatus.CONFLICT)
-        self.assertEqual(existing_values, ['v=DMARC1; p=reject;'])
+        self.assertEqual(existing_values, ['v=STSv1; id=wrong'])
 
 
 class TestDNSRecordStatus(SimpleTestCase):
@@ -244,6 +244,44 @@ class TestDNSRecordStatus(SimpleTestCase):
         )
 
         self.assertEqual(status, DNSRecordStatus.MATCH)
+        self.assertEqual(existing_values, [])
+
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
+    def test_dmarc_match_allows_any_record_starting_with_version(self, mock_resolve):
+        mock_txt = MagicMock()
+        mock_txt.strings = [b'v=DMARC1; p=reject; rua=mailto:dmarc@example.com']
+        mock_resolve.return_value = [mock_txt]
+
+        status, existing_values = check_txt_record_status(
+            self.domain,
+            {
+                'type': 'TXT',
+                'name': f'_dmarc.{self.domain}.',
+                'content': 'v=DMARC1; p=none;',
+                'priority': '-',
+            },
+        )
+
+        self.assertEqual(status, DNSRecordStatus.MATCH)
+        self.assertEqual(existing_values, [])
+
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
+    def test_dmarc_missing_without_version_prefix(self, mock_resolve):
+        mock_txt = MagicMock()
+        mock_txt.strings = [b'google-site-verification=example']
+        mock_resolve.return_value = [mock_txt]
+
+        status, existing_values = check_txt_record_status(
+            self.domain,
+            {
+                'type': 'TXT',
+                'name': f'_dmarc.{self.domain}.',
+                'content': 'v=DMARC1; p=none;',
+                'priority': '-',
+            },
+        )
+
+        self.assertEqual(status, DNSRecordStatus.MISSING)
         self.assertEqual(existing_values, [])
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
