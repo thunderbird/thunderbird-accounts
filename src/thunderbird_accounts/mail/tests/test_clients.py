@@ -148,9 +148,9 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
 
         result = self.mail_client.check_domain_dns(self.domain)
 
-        self.assertTrue(result['is_verified'])
-        self.assertEqual(result['critical_errors'], [])
-        self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, result['warnings'])
+        self.assertFalse(result['is_verified'])
+        self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, result['critical_errors'])
+        self.assertEqual(result['warnings'], [])
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_dkim_missing(self, mock_resolve):
@@ -158,9 +158,9 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
 
         result = self.mail_client.check_domain_dns(self.domain)
 
-        self.assertTrue(result['is_verified'])
-        self.assertEqual(result['critical_errors'], [])
-        self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, result['warnings'])
+        self.assertFalse(result['is_verified'])
+        self.assertIn(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND, result['critical_errors'])
+        self.assertEqual(result['warnings'], [])
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_queries_subdomain_mx(self, mock_resolve):

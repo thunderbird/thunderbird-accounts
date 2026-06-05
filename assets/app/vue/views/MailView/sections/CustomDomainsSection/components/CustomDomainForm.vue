@@ -98,9 +98,15 @@ const missingOrConflicted = (record: DNSRecord): boolean =>
 
 const missingValidationKeys = new Set(['mxLookupError', 'spfRecordNotFound', 'dkimRecordNotFound']);
 
+const hasValidationIssue = (key: string): boolean =>
+  criticalErrors.value.includes(key) || validationWarnings.value.includes(key);
+
+const validationSeverity = (key?: string | null): InlineIssueSeverity =>
+  key && criticalErrors.value.includes(key) ? 'critical' : 'warning';
+
 const shouldAnchorDkimMissingIssue = (record: DNSRecord): boolean =>
   showMissingIssues.value
-  && validationWarnings.value.includes('dkimRecordNotFound')
+  && hasValidationIssue('dkimRecordNotFound')
   && isDkimRecordForCurrentDomain(record);
 
 const validationResult = (data?: {
@@ -190,7 +196,7 @@ const recordStatusIssue = (record: DNSRecord): InlineIssue | null => {
   if (record.status === DNSRecordStatus.UNKNOWN && shouldAnchorDkimMissingIssue(record)) {
     return {
       key: 'dkimRecordNotFound',
-      severity: 'warning',
+      severity: validationSeverity('dkimRecordNotFound'),
       text: t('views.mail.sections.customDomains.recordMissingWarning'),
     };
   }
@@ -206,7 +212,7 @@ const recordStatusIssue = (record: DNSRecord): InlineIssue | null => {
   if (record.status === DNSRecordStatus.CONFLICT) {
     return {
       key: validationKey ?? `${record.type}-${record.name}-conflict`,
-      severity: 'warning',
+      severity: validationSeverity(validationKey),
       text: t('views.mail.sections.customDomains.recordConflictWarning', { currentValue: currentValue(record) }),
     };
   }
@@ -218,7 +224,7 @@ const recordStatusIssue = (record: DNSRecord): InlineIssue | null => {
 
     return {
       key: missingKey ?? `${record.type}-${record.name}-missing`,
-      severity: 'warning',
+      severity: validationSeverity(missingKey),
       text: t('views.mail.sections.customDomains.recordMissingWarning'),
     };
   }
@@ -253,7 +259,10 @@ const createDnsTableRow = (record: DNSRecord, index: number): DnsTableRow => {
   };
 };
 
-const conflictSeverity = (record: DNSRecord): InlineIssueSeverity => (isMxRecord(record) ? 'critical' : 'warning');
+const conflictSeverity = (record: DNSRecord): InlineIssueSeverity =>
+  isMxRecord(record) || recordValidationKeys(record).some((key) => criticalErrors.value.includes(key))
+    ? 'critical'
+    : 'warning';
 
 const createConflictingRecord = (record: DNSRecord, existingValue: string): DNSRecord => {
   const valueParts = existingValue.trim().split(/\s+/);
