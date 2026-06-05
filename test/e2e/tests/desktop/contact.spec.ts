@@ -1,14 +1,14 @@
 import path from 'path';
 import { test, expect } from '@playwright/test';
 import { ContactPage } from '../../pages/contact-page';
-import { ensureWeAreSignedIn } from '../../utils/utils';
+import { ensureWeAreSignedIn, overridePageData } from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
   PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
   ACCTS_OIDC_EMAIL,
+  ACCTS_OIDC_RECOVERY_EMAIL,
   PRIMARY_THUNDERMAIL_EMAIL,
-  TB_PRO_WAIT_LIST_URL,
   TIMEOUT_2_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
@@ -139,17 +139,21 @@ test.beforeEach(async ({ page }) => {
 test.describe('contact support form on desktop browser', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
 }, () => {
-  test('contact form displayed correctly when signed in', async ({ page }) => {
-    // go to the contact / submit an issue form and wait for it to load
+  test('contact form pre-fills primary thundermail email when signed in with active subscription', async () => {
     await contactPage.navigateToContactPage();
-
-    // we are already signed into TB Accounts; ensure the form shows as expected when signed in
     await contactPage.verifyFormDisplayed();
 
-    // since we're signed in, email field should be pre-filled with the user's primary email
     await expect(contactPage.emailInput).toHaveValue(PRIMARY_THUNDERMAIL_EMAIL);
   });
-  
+
+  test('contact form pre-fills recovery email when signed in without active subscription', async ({ page }) => {
+    await overridePageData(page, { hasActiveSubscription: false });
+    await contactPage.navigateToContactPage();
+    await contactPage.verifyFormDisplayed();
+
+    await expect(contactPage.emailInput).toHaveValue(ACCTS_OIDC_RECOVERY_EMAIL);
+  });
+
   test('contact form displayed correctly when not signed in', async ({ page }) => {
     // clear authentication state for this test
     await page.context().clearCookies();
@@ -204,7 +208,7 @@ test.describe('contact support form on desktop browser', {
     await expect(contactPage.successMessage).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
   });
 
-  test('form validation prevents submission', async ({ page }) => {
+  test('form validation prevents submission', async () => {
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     await contactPage.submitForm();

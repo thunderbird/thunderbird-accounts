@@ -1,17 +1,17 @@
 import path from 'path';
 import { test, expect } from '@playwright/test';
 import { ContactPage } from '../../pages/contact-page';
-import { navigateToAccountsHubAndSignIn } from '../../utils/utils';
+import { navigateToAccountsHubAndSignIn, overridePageData } from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
   PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
   ACCTS_OIDC_EMAIL,
+  ACCTS_OIDC_RECOVERY_EMAIL,
   PRIMARY_THUNDERMAIL_EMAIL,
   TIMEOUT_2_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
-  TB_PRO_WAIT_LIST_URL,
 } from '../../const/constants';
 
 let contactPage: ContactPage;
@@ -139,31 +139,32 @@ test.beforeEach(async ({ page }) => {
 test.describe('contact support form on mobile browser', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE_MOBILE, PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY],
 }, () => {
-  test('contact form displayed correctly when signed in', async ({ page }) => {
-    // go to the contact / submit an issue form and wait for it to load
+  test('contact form pre-fills primary thundermail email when signed in with active subscription', async () => {
     await contactPage.navigateToContactPage();
-
-    // we are already signed into TB Accounts; ensure the form shows as expected when signed in
     await contactPage.verifyFormDisplayed();
 
-    // since we're signed in, email field should be pre-filled with the user's primary email
     // locator.toHaveValue is not supported in iOS BrowserStack so must get value then verify it
-    //await expect(contactPage.emailInput).toHaveValue(PRIMARY_THUNDERMAIL_EMAIL);
     const emailValue = await contactPage.emailInput.inputValue();
     expect(emailValue).toBe(PRIMARY_THUNDERMAIL_EMAIL);
   });
 
+  test('contact form pre-fills recovery email when signed in without active subscription', async ({ page }) => {
+    await overridePageData(page, { hasActiveSubscription: false });
+    await contactPage.navigateToContactPage();
+    await contactPage.verifyFormDisplayed();
+
+    const emailValue = await contactPage.emailInput.inputValue();
+    expect(emailValue).toBe(ACCTS_OIDC_RECOVERY_EMAIL);
+  });
+
   test('contact form displayed correctly when not signed in', async ({ page }) => {
-    // clear authentication state for this test
     await page.context().clearCookies();
     await page.reload();
     await page.waitForTimeout(TIMEOUT_5_SECONDS);
     await contactPage.navigateToContactPage();
 
-    // check that the contact form is visible
     await contactPage.verifyFormDisplayed();
 
-    // not signed in, so check that email is not pre-filled
     await expect(contactPage.emailInput).toBeEmpty();
     await expect(contactPage.nameInput).toBeEmpty();
   });
@@ -208,7 +209,7 @@ test.describe('contact support form on mobile browser', {
     await expect(contactPage.successMessage).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
   });
 
-  test('form validation prevents submission', async ({ page }) => {
+  test('form validation prevents submission', async () => {
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     await contactPage.submitForm();
