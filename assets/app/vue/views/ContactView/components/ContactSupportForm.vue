@@ -39,7 +39,9 @@ const successText = ref('');
 const isSubmitting = ref(false);
 const tbProWaitListUrl = window._page?.tbProWaitListUrl;
 const form = ref({
-  email: window._page?.userEmail || '',
+  email: window._page?.hasActiveSubscription
+    ? window._page?.userEmail
+    : window._page?.recoveryEmail || '',
   name: window._page?.userFullName || '',
   attachments: [],
 });
