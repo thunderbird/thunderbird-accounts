@@ -48,8 +48,8 @@ def sign_up(request: Request):
     # This email is the recovery / verification email address at this point
     email = data.get('email')
 
-    timezone = data.get('zoneinfo', 'UTC')
-    locale = data.get('locale', 'en')
+    timezone = data.get('zoneinfo') or 'UTC'
+    locale = data.get('locale') or 'en'
 
     partial_username = data.get('partialUsername')
     username = f'{partial_username}@{settings.PRIMARY_EMAIL_DOMAIN}'
@@ -98,7 +98,7 @@ def sign_up(request: Request):
         keycloak_pkid = keycloak.import_user(
             username,
             email,
-            timezone,
+            timezone=timezone,
             password=data.get('password'),
             send_action_email=KeycloakRequiredAction.VERIFY_EMAIL,
             verified_email=False,
