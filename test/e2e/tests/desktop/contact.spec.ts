@@ -139,7 +139,14 @@ test.beforeEach(async ({ page }) => {
 test.describe('contact support form on desktop browser', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
 }, () => {
-  test('contact form pre-fills primary thundermail email when signed in with active subscription', async () => {
+  test('contact form pre-fills primary thundermail email when signed in with active subscription', async ({ page }) => {
+    const activeSubscriptionPageData = {
+      hasActiveSubscription: true,
+      userEmail: PRIMARY_THUNDERMAIL_EMAIL,
+      recoveryEmail: ACCTS_OIDC_RECOVERY_EMAIL,
+    };
+
+    await overridePageData(page, activeSubscriptionPageData);
     await contactPage.navigateToContactPage();
     await contactPage.verifyFormDisplayed();
 
@@ -147,7 +154,13 @@ test.describe('contact support form on desktop browser', {
   });
 
   test('contact form pre-fills recovery email when signed in without active subscription', async ({ page }) => {
-    await overridePageData(page, { hasActiveSubscription: false });
+    const inactiveSubscriptionPageData = {
+      hasActiveSubscription: false,
+      userEmail: PRIMARY_THUNDERMAIL_EMAIL,
+      recoveryEmail: ACCTS_OIDC_RECOVERY_EMAIL,
+    };
+
+    await overridePageData(page, inactiveSubscriptionPageData);
     await contactPage.navigateToContactPage();
     await contactPage.verifyFormDisplayed();
 
