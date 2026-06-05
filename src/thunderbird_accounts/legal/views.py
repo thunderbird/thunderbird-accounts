@@ -36,8 +36,13 @@ def _read_legal_content(content_path: str, locale: str) -> str:
     if not doc_path.is_relative_to(legal_templates_path) or not default_path.is_relative_to(
         legal_templates_path
     ):
-        sentry_sdk.set_extra('doc_path', doc_path)
-        sentry_sdk.set_extra('default_path', default_path)
+        sentry_sdk.set_context(
+            'legal_content_paths',
+            {
+                'doc_path': str(doc_path),
+                'default_path': str(default_path),
+            },
+        )
         logging.error('directory traversal attack!')
         return ''
 

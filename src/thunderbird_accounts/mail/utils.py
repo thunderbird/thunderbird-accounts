@@ -212,9 +212,8 @@ def fix_archives_folder(access_token, account: Account) -> bool:
         return True
     except (HTTPError, RuntimeError, KeyError) as ex:
         logging.error('fix_archive_folder failed!')
-        sentry_sdk.set_context('inbox_response', {'inbox':inboxes})
+        sentry_sdk.set_context('inbox_response', {'inboxes': inboxes})
         sentry_sdk.capture_exception(ex)
-
     return False
 
 

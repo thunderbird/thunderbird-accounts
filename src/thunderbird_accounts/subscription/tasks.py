@@ -578,8 +578,7 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
             except (JSONDecodeError, AttributeError):
                 error_details = {}
 
-            # Send some extra information to sentry
-            sentry_sdk.set_extra('tag_error_details', error_details)
+            sentry_sdk.set_context('mailchimp_tag_error', {'details': error_details})
 
         # Try to create the user with the tag we want
         try:
@@ -602,8 +601,7 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
             except (JSONDecodeError, AttributeError):
                 error_details = {}
 
-            # Send some extra information to sentry
-            sentry_sdk.set_extra('error_details', error_details)
+            sentry_sdk.set_context('mailchimp_error', {'details': error_details})
             sentry_sdk.capture_exception(ex)
 
             raise TaskFailed(

@@ -571,11 +571,16 @@ if POSTHOG_API_KEY:
     }
 
 # Some debug info for sentry
-sentry_sdk.set_extra('REDIS_URL', REDIS_URL)
-sentry_sdk.set_extra('CELERY_BROKER_URL', CELERY_BROKER_URL)
-sentry_sdk.set_extra('CELERY_RESULT_BACKEND', CELERY_RESULT_BACKEND)
-sentry_sdk.set_extra('CELERY_RESULT_EXPIRES', CELERY_RESULT_EXPIRES)
-sentry_sdk.set_extra('CELERY_TASK_ALWAYS_EAGER', CELERY_TASK_ALWAYS_EAGER)
+sentry_sdk.set_context(
+    'celery_settings',
+    {
+        'REDIS_URL': REDIS_URL,
+        'CELERY_BROKER_URL': CELERY_BROKER_URL,
+        'CELERY_RESULT_BACKEND': CELERY_RESULT_BACKEND,
+        'CELERY_RESULT_EXPIRES': CELERY_RESULT_EXPIRES,
+        'CELERY_TASK_ALWAYS_EAGER': CELERY_TASK_ALWAYS_EAGER,
+    },
+)
 
 # Cors
 CORS_PREFLIGHT_MAX_AGE = 0  # For debugging purposes
