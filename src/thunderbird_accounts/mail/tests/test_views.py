@@ -797,14 +797,34 @@ class AddEmailAliasTestCase(TestCase):
         """Ensure that creating an email alias that is already in-use will error out."""
         email_alias_url = reverse('add_email_alias')
 
-        Email(address=f'admin@{settings.PRIMARY_EMAIL_DOMAIN}').save()
+        Email(address=f'cool_dude_99@{settings.PRIMARY_EMAIL_DOMAIN}').save()
 
         with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
             instance = Mock()
             mock.save_email_addresses = instance
             response = self.client.post(
                 email_alias_url,
-                data={'email-alias': 'admin', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+                data={'email-alias': 'cool_dude_99', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(
+                json.loads(response.content.decode()),
+                {'success': False, 'error': _('You cannot use this email address.')},
+            )
+
+    def test_already_used_alias_case_sensitive(self):
+        """Ensure that creating an email alias with differing case that is already in-use will error out."""
+        email_alias_url = reverse('add_email_alias')
+
+        Email(address=f'cool_dude_00@{settings.PRIMARY_EMAIL_DOMAIN}').save()
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+            instance = Mock()
+            mock.save_email_addresses = instance
+            response = self.client.post(
+                email_alias_url,
+                data={'email-alias': 'COOL_dude_00', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 403)
