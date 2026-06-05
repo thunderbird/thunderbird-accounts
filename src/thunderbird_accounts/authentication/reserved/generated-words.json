@@ -1,5 +1,5 @@
 {
-	"_warning": "GENERATED FILE -- do not edit by hand. Regenerate with update.py. Add hand-maintained words to exact-words.json or affix-words.json instead.",
+	"_warning": "GENERATED FILE -- do not edit by hand. Regenerate with \"manage.py update_reserved_words\". Add hand-maintained words to exact-words.json or affix-words.json instead.",
 	"exact": [
 		"0",
 		"2fa",

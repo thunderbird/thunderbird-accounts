@@ -107,8 +107,35 @@ class IsReservedUnitTests(TestCase):
 
     def test_partial_matches_should_pass(self):
         # Full-string-only names that must not collide with the exact set, the
-        # admin-list affix set, or the brand regex layer.
-        for name in ['user123', 'myusernamex', 'teamwork']:
+        # admin-list affix set, or the brand regex layer. 'helloadminguy' and
+        # 'badminton' embed an affix term inside a single token, so they pass.
+        for name in ['user123', 'myusernamex', 'teamwork', 'helloadminguy', 'badminton']:
+            self.assertFalse(is_reserved(name), name)
+
+    def test_affix_matches_separator_delimited_tokens(self):
+        # An affix term that appears as a token delimited by any non-alphanumeric
+        # separator is reserved, even mid-string -- but not when embedded inside
+        # a token.
+        for name in [
+            '-admin-',
+            'company-admin-team',
+            'admin.billing',
+            'x_postmaster_y',
+            'foo.ssl.bar',
+            'foo+admin+bar',
+            'foo=postmaster=bar',
+            'foo%webmaster%bar',
+            'foo!admin!bar',
+            'foo/postmaster/bar',
+            "foo'ssl'bar",
+            'foo~hostmaster~bar',
+        ]:
+            self.assertTrue(is_reserved(name), name)
+        # Multi-separator terms still match by prefix/suffix on the whole string.
+        for name in ['no-reply', 'company-no-reply', 'mailer-daemon']:
+            self.assertTrue(is_reserved(name), name)
+        # Embedded in a single token (no separators) -> still allowed.
+        for name in ['helloadminguy', 'badminton']:
             self.assertFalse(is_reserved(name), name)
 
     def test_vendored_role_and_infra_addresses(self):

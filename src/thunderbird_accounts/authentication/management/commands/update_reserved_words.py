@@ -1,22 +1,16 @@
-#!/usr/bin/env python3
-"""Rebuild the reserved local-part lists from their upstream sources.
+"""Regenerate ``generated-words.json`` from the upstream reserved-word sources.
 
 Fetches the upstream projects, normalizes and de-duplicates their entries, and
-writes `generated-words.json` with two sections:
+writes ``generated-words.json`` (two disjoint sections, ``"exact"`` and
+``"affix"``) into the ``authentication.reserved`` package. Hand-maintained
+additions live in ``exact-words.json`` / ``affix-words.json``; license notices
+in ``THIRD_PARTY_LICENSES``.
 
-    "exact" -- reserved only when the local-part equals an entry
-    "affix" -- reserved when the local-part equals, starts with, or ends with an
-               entry
+Usage:
 
-The two sections are kept disjoint (an affix entry already covers its own exact
-match). This file is generated; do not edit it by hand -- add hand-maintained
-words to exact-words.json / affix-words.json instead. Run:
+.. code-block:: shell
 
-    uv run python src/thunderbird_accounts/authentication/reserved/update.py
-
-After running, bump the "Retrieved" dates in README.md and re-run the
-authentication tests. License notices live in THIRD_PARTY_LICENSES (maintained
-by hand); update it if an upstream copyright or license ever changes.
+    python manage.py update_reserved_words
 """
 
 import json
@@ -24,13 +18,14 @@ import unicodedata
 import urllib.request
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
+from django.apps import apps
+from django.core.management.base import BaseCommand
 
-# Generated file: a "_warning" note plus two keyed sections ("exact", "affix").
 GENERATED_WORDS_FILE = 'generated-words.json'
 GENERATED_WARNING = (
-    'GENERATED FILE -- do not edit by hand. Regenerate with update.py. '
-    'Add hand-maintained words to exact-words.json or affix-words.json instead.'
+    'GENERATED FILE -- do not edit by hand. Regenerate with '
+    '"manage.py update_reserved_words". Add hand-maintained words to '
+    'exact-words.json or affix-words.json instead.'
 )
 
 # Forward Email -- reserved-email-addresses-list (MIT)
@@ -120,13 +115,6 @@ def _fetch_lines(url: str) -> list[str]:
         return response.read().decode('utf-8').splitlines()
 
 
-def _write_words(exact: set[str], affix: set[str]) -> None:
-    payload = {'_warning': GENERATED_WARNING, 'exact': sorted(exact), 'affix': sorted(affix)}
-    with open(HERE / GENERATED_WORDS_FILE, 'w', encoding='utf-8') as fh:
-        json.dump(payload, fh, indent='\t', ensure_ascii=False)
-        fh.write('\n')
-
-
 def _reserved_slug_entries() -> set[str]:
     entries: set[str] = set()
     for category in RESERVED_SLUGS_CATEGORIES:
@@ -134,34 +122,41 @@ def _reserved_slug_entries() -> set[str]:
     return entries
 
 
-def main() -> None:
-    exact: set[str] = set()
-    for filename in FORWARD_EMAIL_EXACT_FILES:
-        exact.update(_fetch_json(f'{FORWARD_EMAIL_RAW}/{filename}'))
-    exact.update(_fetch_lines(f'{SHOULDBEE_RAW}/reserved-usernames.txt'))
-    exact.update(_reserved_slug_entries())
+class Command(BaseCommand):
+    help = 'Regenerate generated-words.json for the reserved-word checker from upstream sources.'
+    requires_system_checks = []
 
-    affix: set[str] = set()
-    for filename in FORWARD_EMAIL_AFFIX_FILES:
-        affix.update(_fetch_json(f'{FORWARD_EMAIL_RAW}/{filename}'))
+    def handle(self, *args, **options):
+        exact: set[str] = set()
+        for filename in FORWARD_EMAIL_EXACT_FILES:
+            exact.update(_fetch_json(f'{FORWARD_EMAIL_RAW}/{filename}'))
+        exact.update(_fetch_lines(f'{SHOULDBEE_RAW}/reserved-usernames.txt'))
+        exact.update(_reserved_slug_entries())
 
-    affix = {_normalize(name) for name in affix} - {''}
-    exact = {_normalize(name) for name in exact} - {''}
+        affix: set[str] = set()
+        for filename in FORWARD_EMAIL_AFFIX_FILES:
+            affix.update(_fetch_json(f'{FORWARD_EMAIL_RAW}/{filename}'))
 
-    # Demote over-broad affix stems (and their look-alike variants) to exact-only.
-    demoted_stems = [_normalize(name) for name in AFFIX_DEMOTED_TO_EXACT]
-    moved = {term for term in affix if any(_is_confusable(term, stem) for stem in demoted_stems)}
-    exact |= moved
-    affix -= moved
+        affix = {_normalize(name) for name in affix} - {''}
+        exact = {_normalize(name) for name in exact} - {''}
 
-    # An affix entry already matches its own exact form, so keep the sections disjoint.
-    exact -= affix
+        # Demote over-broad affix stems (and their look-alike variants) to exact-only.
+        demoted_stems = [_normalize(name) for name in AFFIX_DEMOTED_TO_EXACT]
+        moved = {term for term in affix if any(_is_confusable(term, stem) for stem in demoted_stems)}
+        exact |= moved
+        affix -= moved
 
-    _write_words(exact, affix)
-    print(f'{GENERATED_WORDS_FILE}: {len(exact)} exact + {len(affix)} affix entries')
-    print(f'(reserved-slugs excluded categories: {", ".join(RESERVED_SLUGS_EXCLUDED)})')
-    print('Done. Bump the README "Retrieved" dates and re-run the authentication tests.')
+        # An affix entry already matches its own exact form, so keep the sections disjoint.
+        exact -= affix
 
+        path = Path(apps.get_app_config('authentication').path) / 'reserved' / GENERATED_WORDS_FILE
+        payload = {'_warning': GENERATED_WARNING, 'exact': sorted(exact), 'affix': sorted(affix)}
+        with open(path, 'w', encoding='utf-8') as fh:
+            json.dump(payload, fh, indent='\t', ensure_ascii=False)
+            fh.write('\n')
 
-if __name__ == '__main__':
-    main()
+        self.stdout.write(
+            self.style.SUCCESS(f'{GENERATED_WORDS_FILE}: {len(exact)} exact + {len(affix)} affix entries')
+        )
+        self.stdout.write(f'(reserved-slugs excluded categories: {", ".join(RESERVED_SLUGS_EXCLUDED)})')
+        self.stdout.write('Bump the README "Retrieved" dates and re-run the authentication tests.')

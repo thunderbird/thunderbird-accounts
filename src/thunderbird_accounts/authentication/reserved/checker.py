@@ -1,10 +1,12 @@
 import json
+import logging
 import re
 import unicodedata
+from functools import cache
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# tbpro-specific combinatorial patterns (brands + teams), matched by regex.
+# thundermail-specific combinatorial patterns (brands + teams), matched by regex.
 #
 # These are brand x token and team x suffix combinations that do not map cleanly
 # to the exact/affix word lists, so they stay here. Plain reserved words live in
@@ -12,7 +14,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 # brand related names, and also help/support
-brands = '(thunderbird|tbpro|thundermail|thunderbirdpro|mzla|mozilla|firefox)?'
+brands = '(thunderbird|tbpro|thundermail|thunderbolt|thunderbirdpro|mzla|mozilla|firefox)?'
 
 # Brand names plus common tokens
 names_with_brands = [
@@ -59,9 +61,10 @@ regexes = [re.compile('^' + n) for n in reserved_names]
 
 # ---------------------------------------------------------------------------
 # Reserved-word lists (see README.md and THIRD_PARTY_LICENSES):
-#   * generated-words.json -- generated from upstream sources by update.py, with
-#     two disjoint sections, "exact" and "affix".
-#   * exact-words.json / affix-words.json -- hand-maintained tbpro additions.
+#   * generated-words.json -- produced from upstream sources by the
+#     `update_reserved_words` management command, with two disjoint sections,
+#     "exact" and "affix".
+#   * exact-words.json / affix-words.json -- hand-maintained thundermail additions.
 #
 # "exact" entries match only when the local-part equals an entry; "affix" entries
 # also match as a prefix or suffix (e.g. "admin-billing", "company-postmaster").
@@ -96,9 +99,14 @@ def _normalized(words) -> set[str]:
 
 
 def _load_words() -> tuple[frozenset[str], frozenset[str]]:
-    generated = _read_json(_GENERATED_WORDS_FILE)
-    exact = _normalized(generated['exact']) | _normalized(_read_json(_EXACT_WORDS_FILE))
-    affix = _normalized(generated['affix']) | _normalized(_read_json(_AFFIX_WORDS_FILE))
+    # Don't break the app if we fail to load these files.
+    try:
+        generated = _read_json(_GENERATED_WORDS_FILE)
+        exact = _normalized(generated['exact']) | _normalized(_read_json(_EXACT_WORDS_FILE))
+        affix = _normalized(generated['affix']) | _normalized(_read_json(_AFFIX_WORDS_FILE))
+    except (OSError, ValueError, KeyError) as exc:
+        logging.error(f'Failed to load reserved word lists: {exc}')
+        return frozenset(), frozenset()
     return frozenset(exact), frozenset(affix)
 
 
@@ -106,22 +114,41 @@ def _load_words() -> tuple[frozenset[str], frozenset[str]]:
 # AFFIX_RESERVED_LOCAL_PARTS is matched by exact comparison, prefix, or suffix.
 RESERVED_LOCAL_PARTS, AFFIX_RESERVED_LOCAL_PARTS = _load_words()
 
+# The local-part is split on any run of non-alphanumeric characters -- this
+# covers every separator RFC 5322 allows in a local-part (".", "-", "_", "+",
+# "=", "%", "!", etc.), so a reserved term cannot be sandwiched past the token
+# check with e.g. "foo+admin+bar". An affix term that appears as a delimited
+# token is caught (e.g. "-admin-", "company-admin-team") without matching a term
+# embedded inside a single token (e.g. "helloadminguy" stays allowed). The whole
+# local-part is also checked so multi-separator terms (e.g. "no-reply",
+# "mailer-daemon") still match by prefix/suffix.
+_AFFIX_SEPARATORS = re.compile(r'[^a-z0-9]+')
 
+
+def _affix_match(local_part: str) -> bool:
+    candidates = [token for token in _AFFIX_SEPARATORS.split(local_part) if token]
+    candidates.append(local_part)
+    return any(
+        candidate == term or candidate.startswith(term) or candidate.endswith(term)
+        for candidate in candidates
+        for term in AFFIX_RESERVED_LOCAL_PARTS
+    )
+
+
+@cache
 def is_reserved(test_string: str) -> bool:
     """Checks the address or random string is a reserved name which should fail user or alias creation if so."""
     local_part = _normalize_local_part(test_string)
 
     if local_part:
-        # Exact match against the exact word lists.
+        # Exact match against the exact word lists (whole local-part only).
         if local_part in RESERVED_LOCAL_PARTS:
             return True
 
-        # Exact / prefix / suffix match against the affix word lists.
-        if any(
-            local_part == term or local_part.startswith(term) or local_part.endswith(term)
-            for term in AFFIX_RESERVED_LOCAL_PARTS
-        ):
+        # Exact / prefix / suffix match against the affix word lists, per
+        # separator-delimited token and against the whole local-part.
+        if _affix_match(local_part):
             return True
 
-    # tbpro brand / team combinatorial patterns (matched against raw input).
+    # thundermail brand / team combinatorial patterns (matched against raw input).
     return any(r.match(test_string) for r in regexes)
