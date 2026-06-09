@@ -1,3 +1,4 @@
+from django.db import transaction as dj_transaction
 from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.utils import create_stalwart_account, update_quota_on_stalwart_account
@@ -33,12 +34,16 @@ def activate_subscription_features(user: User, plan: Plan):
     if not user.has_active_subscription:
         return
 
-    # Associate the plan id
+    # Associate the plan id and remove any payment verification flag
     # We technically have a link through user -> subscriptions -> subscription items -> product -> plan
     # but that's too long...
-    if user.plan_id != plan.uuid:
-        user.plan_id = plan.uuid
-        user.save()
+    # We also lock the user row for this update as it's pretty important
+    with dj_transaction.atomic():
+        locked_user = User.objects.select_for_update().get(pk=user.uuid)
+        if locked_user.plan_id != plan.uuid:
+            locked_user.plan_id = plan.uuid
+        locked_user.is_awaiting_payment_verification = False
+        locked_user.save()
 
     # TODO: Temporarily removed until https://github.com/thunderbird/thunderbird-accounts/issues/346 is ready
     # sync_plan_to_keycloak(user)
