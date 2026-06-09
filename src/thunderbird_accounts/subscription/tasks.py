@@ -313,6 +313,12 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             },
         )
 
+    # Log some problem cases that would be our fault. 
+    if len(subscription_items) == 0:
+        logging.error(f'Subscription contains no items. This user ({user.uuid}) will not have any features enabled!')
+    elif len(subscription_items) > 1:
+        logging.error('Subscription contains more than one item. This is not supported!')
+
     for item in subscription_items:
         # Note: These are reoccurring items only
         # Slurp up the subscription items, these are only created if all three items are new
@@ -353,8 +359,8 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             # Update quota
             plan = product_obj.plan
             if not plan:
-                logging.warning(f'Product {product.get("id")} has no plan attached!')
-            else:
+                logging.error(f'Product {product.get("id")} has no plan attached!')
+            elif status == Subscription.StatusValues.ACTIVE.value:
                 activate_subscription_features(user, plan)
 
         SubscriptionItem.objects.update_or_create(
@@ -366,11 +372,6 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             product_id=product_obj.uuid if product_obj else None,
             defaults={'quantity': quantity},
         )
-
-    # If the subscription updated or was created with active then clear any payment pending flags
-    if status == Subscription.StatusValues.ACTIVE.value:
-        user.is_awaiting_payment_verification = False
-        user.save()
 
     # Queue up the price update for now.
     retrieve_and_update_localized_subscription_price.delay(subscription_uuid=str(subscription.uuid))
@@ -617,6 +618,7 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
         'user_uuid': user_uuid,
         'task_status': TaskReturnStatus.SUCCESS,
     }
+
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
 @inject_paddle

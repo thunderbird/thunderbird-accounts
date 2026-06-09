@@ -112,7 +112,7 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     completed (noted as doneish.)
 
     There's some special logic for certain payment processors that open a pop-up window instead of
-    redirecting to another page or completeing on page. Those processors are defined in code, and
+    redirecting to another page or completing on page. Those processors are defined in code, and
     will redirect the pop-up window to a django template that _should_ immediately close the window.
     For those processors the doneish/redirect logic is handled in
     :any:`thunderbird_accounts.subscription.views.is_paddle_transaction_done`
@@ -121,12 +121,12 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     The front-end will handle if the check to see if the user's transaction and subscription has been pulled
     in our db via webhooks.
     """
-    user = request.user
+    user: User = request.user
     transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID, None)
     payment_type = request.session.pop(SESSION_PADDLE_PAYMENT_TYPE, None)
     redirect_response = HttpResponseRedirect('/subscribe')
 
-    # This can happen if their browser isn't storing our functional session cookie. 
+    # This can happen if their browser isn't storing our functional session cookie.
     # This will be a small UX pain, but it won't brick their payment progress.
     if not transaction_id or not payment_type:
         return redirect_response
@@ -135,11 +135,14 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     status = transaction.status.value
 
     if transaction and status in [Transaction.StatusValues.COMPLETED.value, Transaction.StatusValues.PAID.value]:
-        # Only set enable payment verification mode if they don't have an active subscription
+        # Only set enable payment verification mode if they don't have an 
+        # active subscription (no plan, no active subscription)
         # As the webhook could technically come in before or during this successUrl redirect...
-        if not user.has_active_subscription:
-            user.is_awaiting_payment_verification = True
-            user.save()
+        with dj_transaction.atomic():
+            user.refresh_from_db()
+            if not user.plan and not user.has_active_subscription:
+                user.is_awaiting_payment_verification = True
+                user.save()
 
         if settings.IS_DEV:
             tasks.dev_only_paddle_fake_webhook.delay(transaction_id=transaction_id, user_uuid=user.uuid.hex)
