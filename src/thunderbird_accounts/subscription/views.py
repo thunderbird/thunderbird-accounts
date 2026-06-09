@@ -3,6 +3,7 @@ import json
 import logging
 import sentry_sdk
 
+from django.db import transaction as dj_transaction
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse, HttpRequest, HttpResponseRedirect
@@ -18,7 +19,7 @@ from paddle_billing.Notifications.Entities.Shared.PaymentMethodType import Payme
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.request import Request
 
-from thunderbird_accounts.authentication.models import AllowListEntry
+from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks
@@ -139,10 +140,11 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
         # active subscription (no plan, no active subscription)
         # As the webhook could technically come in before or during this successUrl redirect...
         with dj_transaction.atomic():
-            user.refresh_from_db()
-            if not user.plan and not user.has_active_subscription:
-                user.is_awaiting_payment_verification = True
-                user.save()
+            # If it's already locked we skip this update
+            locked_user = User.objects.select_for_update(skip_locked=True).get(pk=user.uuid)
+            if locked_user and not locked_user.plan and not locked_user.has_active_subscription:
+                locked_user.is_awaiting_payment_verification = True
+                locked_user.save()
 
         if settings.IS_DEV:
             tasks.dev_only_paddle_fake_webhook.delay(transaction_id=transaction_id, user_uuid=user.uuid.hex)
