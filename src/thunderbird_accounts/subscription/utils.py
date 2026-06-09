@@ -45,6 +45,9 @@ def activate_subscription_features(user: User, plan: Plan):
         locked_user.is_awaiting_payment_verification = False
         locked_user.save()
 
+    # Pull the updated user data from the transaction above
+    user.refresh_from_db()
+
     # TODO: Temporarily removed until https://github.com/thunderbird/thunderbird-accounts/issues/346 is ready
     # sync_plan_to_keycloak(user)
 
