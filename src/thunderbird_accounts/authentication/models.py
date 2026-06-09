@@ -2,7 +2,7 @@ from functools import cached_property
 
 from django.conf import settings
 from django.core.validators import MinLengthValidator, RegexValidator
-from django.db import models
+from django.db import models, transaction
 
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
@@ -26,6 +26,7 @@ class User(AbstractUser, BaseModel):
     :param avatar_url: Avatar URL from oidc profile
     :param timezone: The user's timezone
     """
+
     USERNAME_MIN_LENGTH = 3
     USERNAME_MAX_LENGTH = 150
 
@@ -67,11 +68,7 @@ class User(AbstractUser, BaseModel):
 
     is_awaiting_payment_verification = models.BooleanField(
         default=False,
-        help_text=_(
-            "The user has paid and we're waiting on Paddle to verify the payment was successful."
-            '<br>'
-            '<b>Note:</b> Please do not override this unless authorized.'
-        ),
+        help_text=_('<b>Note:</b> This field has been replaced with UserFlags.payment_pending.'),
     )
     plan = models.ForeignKey('subscription.Plan', null=True, blank=True, on_delete=models.SET_NULL)
 
@@ -90,6 +87,8 @@ class User(AbstractUser, BaseModel):
     def get_short_name(self):
         return self.display_name
 
+
+
     @cached_property
     def has_active_subscription(self):
         from thunderbird_accounts.subscription.models import Subscription
@@ -104,6 +103,27 @@ class User(AbstractUser, BaseModel):
             email = account.email_set.filter(type=account.email_set.model.EmailType.PRIMARY).first()
             return email.address if email else None
         return None
+
+
+class UserFlag(BaseModel):
+    """A specialized model to mark different flags for a user. This is split off so we can take advantage of
+    db row locking without locking the actual user."""
+
+    class FlagValues(models.TextChoices):
+        PAYMENT_PENDING = 'payment_pending', _('Payment Pending')
+
+    flag = models.CharField(
+        max_length=32,
+        choices=FlagValues,
+        help_text=_('A given flag that will denote some application-specific behaviour.'),
+        db_index=True,
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        help_text=_('The user associated with this flag.'),
+    )
 
 
 class AllowListEntry(BaseModel):

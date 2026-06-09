@@ -9,9 +9,12 @@ from thunderbird_accounts.authentication.admin.actions import (
     admin_add_to_mailchimp_list,
 )
 from thunderbird_accounts.authentication.admin.forms import CustomUserChangeForm, CustomNewUserForm
-from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.models import User, UserFlag
 from thunderbird_accounts.authentication.utils import delete_user_data
 
+class UserFlagInline(admin.TabularInline):
+    model = UserFlag
+    extra = 0
 
 class CustomUserAdmin(UserAdmin):
     @admin.display(description='Plan')
@@ -19,6 +22,8 @@ class CustomUserAdmin(UserAdmin):
         if not user.plan:
             return None
         return user.plan.name
+
+    inlines = (UserFlagInline,)
 
     list_display = (
         'username',
@@ -91,7 +96,6 @@ class CustomUserAdmin(UserAdmin):
         'is_superuser',
         'is_test_account',
         'is_active',
-        'is_awaiting_payment_verification',
         'plan',
     ]
 
