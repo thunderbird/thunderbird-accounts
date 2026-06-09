@@ -178,6 +178,13 @@ resources:
         - ecr.dkr
         - logs
         - secretsmanager
+      peering_accepters:
+        mzla-tb-dev:
+          vpc_peering_connection_id: pcx-082cfb5b1ba0feede
+          accepter:
+            allow_remote_vpc_dns_resolution: True
+          auto_accept: True
+
       peering_connections:
         mailstrom-stage:
           peered_cidrs:
@@ -189,6 +196,10 @@ resources:
             allow_remote_vpc_dns_resolution: True
           requester:
             allow_remote_vpc_dns_resolution: True
+
+      additional_routes:
+        - destination_cidr_block: 10.120.0.0/16  # mzla-tb-dev
+          vpc_peering_connection_id: pcx-082cfb5b1ba0feede
 
   # The __main.py__ here is very specific in the following way:
   # For each ECS cluster you eventually define, you **must** have one entry by the same exact name in the
