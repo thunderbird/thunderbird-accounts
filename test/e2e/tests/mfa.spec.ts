@@ -355,9 +355,46 @@ const getStalwartAccessTokenViaSso = async (page: Page) => {
   }
 };
 
+const signInWithPassword = async (page: Page) => {
+  await page.context().clearCookies();
+  await page.goto(ACCTS_HUB_URL);
+  await page.getByTestId('username-input').fill(ACCTS_OIDC_EMAIL);
+  await page.getByTestId('password-input').fill(ACCTS_OIDC_PWORD);
+  await page.getByTestId('submit-btn').click();
+};
+
+// Sets up an authenticator app via the management UI and returns the TOTP secret.
+// Leaves the auto-chained recovery-codes modal open on its confirmation step.
+const setUpAuthenticatorApp = async (page: Page) => {
+  await page.getByRole('button', { name: 'Set up' }).first().click();
+  await page.getByRole('button', { name: 'Enter code manually' }).click();
+  const manualSecret = await page.getByTestId('totp-manual-secret').innerText();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByTestId('totp-code-input').fill(makeTotpCode(manualSecret));
+  await page.getByRole('button', { name: 'Continue' }).click();
+  return manualSecret;
+};
+
+// The recovery-code login page prompts for a specific 1-indexed code number; enter the
+// matching captured code and submit.
+const submitRequestedRecoveryCode = async (page: Page, codes: string[]) => {
+  const input = page.getByTestId('recovery-code-input');
+  await expect(input).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+  const promptText = await page.locator('#kc-recovery-code-login-form').innerText();
+  const requestedNumber = Number(promptText.match(/#\s*(\d+)/)?.[1] ?? '1');
+  await input.fill(codes[requestedNumber - 1]);
+  await page.getByTestId('submit-btn').click();
+};
+
 test.describe('multi-factor authentication', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE],
 }, () => {
+  // Always leave the account credential-clean, even if a test fails partway through
+  // enrolment — otherwise leftover MFA blocks the password-only sign-in in setup.
+  test.afterEach(async () => {
+    await removeExistingMfaCredentials();
+  });
+
   test('authenticator app setup enables Keycloak login challenge and Stalwart OAuth mail auth', async ({ page }) => {
     await ensureWeAreSignedIn(page);
     await acceptLegalPoliciesIfRequired(page);
@@ -462,5 +499,72 @@ test.describe('multi-factor authentication', {
     await page.locator('dialog').getByRole('button', { name: 'Remove' }).click();
     await expect(recoveryRow.getByRole('button', { name: 'Set up' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     expect(await getRecoveryCodesCredentialMetadata()).toEqual([]);
+  });
+
+  test('recovery code signs in when it is the only second factor', async ({ page }) => {
+    await ensureWeAreSignedIn(page);
+    await acceptLegalPoliciesIfRequired(page);
+    await page.goto(`${ACCTS_HUB_URL}/manage-mfa`);
+    await waitForVueApp(page);
+    await removeExistingMfaCredentials();
+    await page.reload();
+    await waitForVueApp(page);
+
+    // Enrol recovery codes only (no authenticator), capturing the plaintext set.
+    const recoveryRow = page.locator('.authentication-method').filter({ hasText: 'Recovery codes' });
+    await recoveryRow.getByRole('button', { name: 'Set up' }).click();
+    const codes = await captureRecoveryCodesAndConfirm(page);
+    expect(codes).toHaveLength(12);
+
+    // Sign in fresh: with only recovery codes enrolled, Keycloak goes straight to the
+    // recovery-code step, which the custom theme must render (not "Route Not Implemented").
+    await signInWithPassword(page);
+    await expect(page.getByRole('heading', { name: 'Login with a recovery authentication code' })).toBeVisible({
+      timeout: TIMEOUT_30_SECONDS,
+    });
+    await submitRequestedRecoveryCode(page, codes);
+    await waitForVueApp(page);
+
+    // Signed in: the management page renders with recovery codes configured.
+    await page.goto(`${ACCTS_HUB_URL}/manage-mfa`);
+    await waitForVueApp(page);
+    await expect(recoveryRow.getByRole('button', { name: 'Edit' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+
+    await removeExistingMfaCredentials();
+  });
+
+  test('"try another way" lists the authenticator first and signs in via a recovery code', async ({ page }) => {
+    await ensureWeAreSignedIn(page);
+    await acceptLegalPoliciesIfRequired(page);
+    await page.goto(`${ACCTS_HUB_URL}/manage-mfa`);
+    await waitForVueApp(page);
+    await removeExistingMfaCredentials();
+    await page.reload();
+    await waitForVueApp(page);
+
+    // Enrol both factors: authenticator (auto-chains the recovery-codes modal) + recovery codes.
+    await setUpAuthenticatorApp(page);
+    const codes = await captureRecoveryCodesAndConfirm(page);
+    expect(codes).toHaveLength(12);
+
+    // Sign in fresh; the default second-factor page offers "Try another way".
+    await signInWithPassword(page);
+    await page.getByTestId('try-another-way-btn').click();
+
+    // The selector must render both methods with the authenticator app listed first.
+    await expect(page.locator('.select-auth-item__title')).toHaveText(
+      ['Authenticator App', 'Recovery Code'],
+      { timeout: TIMEOUT_30_SECONDS },
+    );
+
+    // Choosing recovery codes routes to the recovery-code page and signs in.
+    await page.getByRole('button', { name: /Recovery Code/ }).click();
+    await submitRequestedRecoveryCode(page, codes);
+
+    // Signed in: the accounts hub banner avatar is the stable post-login signal.
+    await waitForVueApp(page);
+    await expect(page.getByRole('banner').locator('.avatar')).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+
+    await removeExistingMfaCredentials();
   });
 });
