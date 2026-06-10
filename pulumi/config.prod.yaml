@@ -187,6 +187,14 @@ resources:
         - ecr.dkr
         - logs
         - secretsmanager
+
+      peering_accepters:
+        mzla-tb-prod:
+          vpc_peering_connection_id: pcx-03ce1cff6e3eab734
+          accepter:
+            allow_remote_vpc_dns_resolution: True
+          auto_accept: True
+
       peering_connections:
         mailstrom-prod:
           peered_cidrs:

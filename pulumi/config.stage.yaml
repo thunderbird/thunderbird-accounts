@@ -178,6 +178,7 @@ resources:
         - ecr.dkr
         - logs
         - secretsmanager
+
       peering_accepters:
         mzla-tb-dev:
           vpc_peering_connection_id: pcx-082cfb5b1ba0feede
