@@ -54,24 +54,21 @@ def tag_abandoned_cart_in_mailchimp(self):
             if user.subscription_set.exists():
                 skipped += 1
                 logger.info(
-                    'tag_abandoned_cart_in_mailchimp: skipped %s because a subscription exists',
-                    user.username,
+                    f'tag_abandoned_cart_in_mailchimp: skipped {user.uuid} because a subscription exists',
                 )
                 continue
 
             if user.is_awaiting_payment_verification:
                 skipped += 1
                 logger.info(
-                    'tag_abandoned_cart_in_mailchimp: skipped %s because payment verification is pending',
-                    user.username,
+                    f'tag_abandoned_cart_in_mailchimp: skipped {user.uuid} because payment verification is pending',
                 )
                 continue
 
             if not user.recovery_email:
                 skipped += 1
                 logger.info(
-                    'tag_abandoned_cart_in_mailchimp: skipped %s because recovery_email is blank',
-                    user.username,
+                    f'tag_abandoned_cart_in_mailchimp: skipped {user.uuid} because recovery_email is blank',
                 )
                 continue
 
@@ -85,14 +82,12 @@ def tag_abandoned_cart_in_mailchimp(self):
         except TaskFailed as ex:
             errors += 1
             logger.warning(
-                'tag_abandoned_cart_in_mailchimp: mailchimp error for %s: %s',
-                user.username,
-                ex.reason,
+                f'tag_abandoned_cart_in_mailchimp: mailchimp error for {user.uuid}: {ex.reason}',
             )
             continue
         except Exception as ex:
             errors += 1
-            logger.exception('tag_abandoned_cart_in_mailchimp: failed to tag %s: %s', user.username, ex.reason)
+            logger.exception(f'tag_abandoned_cart_in_mailchimp: failed to tag {user.uuid}: {ex.reason}')
             continue
         else:
             tagged += 1

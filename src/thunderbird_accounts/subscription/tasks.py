@@ -497,7 +497,7 @@ def _mailchimp_basic_auth() -> str:
 
 
 def _mailchimp_api_query(
-    method: str, api_endpoint: str, basic_auth: str, _json: dict | None = None
+    method: str, api_endpoint: str, basic_auth: str, data: dict | None = None
 ) -> requests.Response:
     """Small method to query mailchimp's api"""
     api_url = f'https://{settings.MAILCHIMP_DC}.api.mailchimp.com/3.0/lists/{settings.MAILCHIMP_LIST_ID}'
@@ -505,7 +505,7 @@ def _mailchimp_api_query(
         method=method.upper(),
         url=f'{api_url}{api_endpoint}',
         headers={'Authorization': f'Basic {basic_auth}'},
-        json=_json,
+        json=data,
     )
     response.raise_for_status()
     return response
@@ -540,7 +540,7 @@ def add_or_tag_mailchimp_member(
             'post',
             f'/members/{hashed_email}/tags',
             basic_auth,
-            _json={'tags': [{'name': tag, 'status': 'active'}]},
+            data={'tags': [{'name': tag, 'status': 'active'}]},
         )
         return
 
@@ -555,7 +555,7 @@ def add_or_tag_mailchimp_member(
             error_details = {}
 
         # Send some extra information to sentry
-        sentry_sdk.set_extra('tag_error_details', error_details)
+        sentry_sdk.set_context('tag_error_details', error_details)
 
     # Try to create the user with the tag we want
     try:
@@ -563,7 +563,7 @@ def add_or_tag_mailchimp_member(
             'post',
             '/members',
             basic_auth,
-            _json={
+            data={
                 'email_address': email,
                 'status': 'subscribed',
                 'email_type': 'html',
@@ -579,7 +579,7 @@ def add_or_tag_mailchimp_member(
             error_details = {}
 
         # Send some extra information to sentry
-        sentry_sdk.set_extra('error_details', error_details)
+        sentry_sdk.set_context('error_details', error_details)
         sentry_sdk.capture_exception(ex)
 
         raise TaskFailed(
