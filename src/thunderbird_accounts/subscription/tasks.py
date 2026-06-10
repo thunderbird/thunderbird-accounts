@@ -555,7 +555,7 @@ def add_or_tag_mailchimp_member(
             error_details = {}
 
         # Send some extra information to sentry
-        sentry_sdk.set_context('tag_error_details', error_details)
+        sentry_sdk.set_context('mailchimp_tag_error', error_details)
 
     # Try to create the user with the tag we want
     try:
@@ -579,7 +579,7 @@ def add_or_tag_mailchimp_member(
             error_details = {}
 
         # Send some extra information to sentry
-        sentry_sdk.set_context('error_details', error_details)
+        sentry_sdk.set_context('mailchimp_error', error_details)
         sentry_sdk.capture_exception(ex)
 
         raise TaskFailed(
