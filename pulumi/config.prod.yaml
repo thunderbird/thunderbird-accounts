@@ -3,10 +3,10 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.7.3
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.13.4
 
 # Update this value to update all containers based on this Keycloak image
-.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-45961da09b140c985513951fdc9f7f007f92d9ea
+.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-ebbd8893be8a27dc4faf75b891d925b32b11ff39
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
@@ -205,6 +205,10 @@ resources:
             allow_remote_vpc_dns_resolution: True
           requester:
             allow_remote_vpc_dns_resolution: True
+
+      additional_routes:
+        - destination_cidr_block: 10.130.0.0/16  # mzla-tb-prod
+          vpc_peering_connection_id: pcx-03ce1cff6e3eab734
 
   # The __main.py__ here is very specific in the following way:
   # For each ECS cluster you eventually define, you **must** have one entry by the same exact name in the
