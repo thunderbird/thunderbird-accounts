@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 from importlib.metadata import version
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.types import Event, Hint
@@ -604,6 +605,15 @@ MAILCHIMP_DC = os.getenv('MAILCHIMP_DC')
 MAILCHIMP_API_KEY = os.getenv('MAILCHIMP_API_KEY')
 MAILCHIMP_LIST_ID = os.getenv('MAILCHIMP_LIST_ID')
 USE_MAILCHIMP = bool(MAILCHIMP_API_KEY)  # If we don't have an api key disable mailchimp
+
+ABANDONED_CART_TAG_HOURS = int(os.getenv('ABANDONED_CART_TAG_HOURS', '1'))
+ABANDONED_CART_MAILCHIMP_TAG = os.getenv('ABANDONED_CART_MAILCHIMP_TAG', 'abandoned_cart')
+
+if USE_MAILCHIMP:
+    CELERY_BEAT_SCHEDULE['tag-abandoned-cart-mailchimp'] = {
+        'task': 'thunderbird_accounts.authentication.tasks.tag_abandoned_cart_in_mailchimp',
+        'schedule': crontab(minute=0),
+    }
 
 # While they currently line up, we need to ensure that is consistent.
 # https://mailchimp.com/help/view-and-edit-contact-languages/#Language_codes

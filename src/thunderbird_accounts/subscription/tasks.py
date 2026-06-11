@@ -492,14 +492,112 @@ def update_thundermail_quota(self, plan_uuid):
     }
 
 
+def _mailchimp_basic_auth() -> str:
+    return base64.b64encode(f'this_does_not_support_bearer_auth:{settings.MAILCHIMP_API_KEY}'.encode()).decode()
+
+
+def _mailchimp_api_query(
+    method: str, api_endpoint: str, basic_auth: str, data: dict | None = None
+) -> requests.Response:
+    """Small method to query mailchimp's api"""
+    api_url = f'https://{settings.MAILCHIMP_DC}.api.mailchimp.com/3.0/lists/{settings.MAILCHIMP_LIST_ID}'
+    response: requests.Response = requests.request(
+        method=method.upper(),
+        url=f'{api_url}{api_endpoint}',
+        headers={'Authorization': f'Basic {basic_auth}'},
+        json=data,
+    )
+    response.raise_for_status()
+    return response
+
+
+def add_or_tag_mailchimp_member(
+    email: str,
+    tag: str,
+    *,
+    language: str,
+    error_context: dict | None = None,
+) -> None:
+    """Add a list member or apply a tag if they are already subscribed."""
+    basic_auth = _mailchimp_basic_auth()
+    md5_hasher = hashlib.new('md5')
+    md5_hasher.update(email.lower().encode())
+    hashed_email = md5_hasher.hexdigest()
+
+    # Check if the user is on the list, and if they are then update their tags array with our new one.
+    try:
+        response = _mailchimp_api_query('get', f'/members/{hashed_email}', basic_auth)
+        response.raise_for_status()
+
+        data = response.json() or {}
+        tags = {t.get('name'): True for t in data.get('tags', [])}
+
+        # They're already in the mailing list with the assigned tag, so don't do anything.
+        if tags.get(tag):
+            return
+
+        _mailchimp_api_query(
+            'post',
+            f'/members/{hashed_email}/tags',
+            basic_auth,
+            data={'tags': [{'name': tag, 'status': 'active'}]},
+        )
+        return
+
+    except requests.exceptions.RequestException as ex:
+        # Something error error'd out, we won't capture this just yet but we should add the context
+        # in case the next request fails.
+
+        # Error details reference: https://mailchimp.com/developer/marketing/docs/errors/#error-glossary
+        try:
+            error_details = ex.response.json()
+        except (JSONDecodeError, AttributeError):
+            error_details = {}
+
+        # Send some extra information to sentry
+        sentry_sdk.set_context('mailchimp_tag_error', error_details)
+
+    # Try to create the user with the tag we want
+    try:
+        _mailchimp_api_query(
+            'post',
+            '/members',
+            basic_auth,
+            data={
+                'email_address': email,
+                'status': 'subscribed',
+                'email_type': 'html',
+                'language': language,
+                'tags': [tag],
+            },
+        )
+    except requests.exceptions.RequestException as ex:
+        # Error details reference: https://mailchimp.com/developer/marketing/docs/errors/#error-glossary
+        try:
+            error_details = ex.response.json()
+        except (JSONDecodeError, AttributeError):
+            error_details = {}
+
+        # Send some extra information to sentry
+        sentry_sdk.set_context('mailchimp_error', error_details)
+        sentry_sdk.capture_exception(ex)
+
+        raise TaskFailed(
+            'mailchimp error',
+            {
+                **(error_context or {}),
+                'error_msg_title': error_details.get('title', 'N/A'),
+                'error_status_code': ex.response.status_code if ex.response else None,
+            },
+        )
+
+
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
 def add_subscriber_to_mailchimp_list(self, user_uuid):
     """Adds a user's thundermail address to the primary tbpro mailing list.
     This mailing list contains automations to trigger welcome emails and such."""
     try:
-        basic_auth = base64.b64encode(
-            f'this_does_not_support_bearer_auth:{settings.MAILCHIMP_API_KEY}'.encode()
-        ).decode()
+        _mailchimp_basic_auth()
     except (UnicodeEncodeError, UnicodeDecodeError) as ex:
         logging.error(f'Could not send request to mailchimp due to error: {ex}')
         raise TaskFailed(
@@ -508,18 +606,6 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
                 'user_uuid': user_uuid,
             },
         )
-
-    def mailchimp_api_query(method: str, api_endpoint: str, _json: dict | None = None) -> requests.Response:
-        """Small method to query mailchimp's api"""
-        api_url = f'https://{settings.MAILCHIMP_DC}.api.mailchimp.com/3.0/lists/{settings.MAILCHIMP_LIST_ID}'
-        response: requests.Response = requests.request(
-            method=method.upper(),
-            url=f'{api_url}{api_endpoint}',
-            headers={'Authorization': f'Basic {basic_auth}'},
-            json=_json,
-        )
-        response.raise_for_status()
-        return response
 
     try:
         user: User = User.objects.get(pk=user_uuid)
@@ -541,77 +627,12 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
             },
         )
 
-    # Loop through the thundermail and recovery email and attempt to update or add a new tag to the mailchimp entry.
-    # It's a bit of a bit long and most of that is error catching.
-    for val in [(user.stalwart_primary_email, 'new_user'), (user.recovery_email, 'welcome')]:
-        email, tag = val
-        md5_hasher = hashlib.new('md5')
-        md5_hasher.update(email.lower().encode())
-        hashed_email = md5_hasher.hexdigest()
+    language = settings.ACCOUNTS_TO_MAILCHIMP_LANGUAGES.get(user.language) or settings.DEFAULT_LANGUAGE
+    error_context = {'user_uuid': user_uuid}
 
-        # Check if the user is on the list, and if they are then update their tags array with our new one.
-        try:
-            response = mailchimp_api_query('get', f'/members/{hashed_email}')
-            response.raise_for_status()
+    for email, tag in [(user.stalwart_primary_email, 'new_user'), (user.recovery_email, 'welcome')]:
+        add_or_tag_mailchimp_member(email, tag, language=language, error_context=error_context)
 
-            data = response.json() or {}
-            tags = {t.get('name'): True for t in data.get('tags', [])}
-
-            # They're already in the mailing list with the assigned tag, so don't do anything.
-            if tags.get(tag):
-                continue
-
-            response = mailchimp_api_query(
-                'post', f'/members/{hashed_email}/tags', _json={'tags': [{'name': tag, 'status': 'active'}]}
-            )
-
-            # Update tag has no response, so if we haven't ran into an exception continue along to the next email/tag.
-            continue
-
-        except requests.exceptions.RequestException as ex:
-            # Something error error'd out, we won't capture this just yet but we should add the context
-            # in case the next request fails.
-
-            # Error details reference: https://mailchimp.com/developer/marketing/docs/errors/#error-glossary
-            try:
-                error_details = ex.response.json()
-            except (JSONDecodeError, AttributeError):
-                error_details = {}
-
-            sentry_sdk.set_context('mailchimp_tag_error', {'details': error_details})
-
-        # Try to create the user with the tag we want
-        try:
-            response = mailchimp_api_query(
-                'post',
-                '/members',
-                _json={
-                    'email_address': email,
-                    'status': 'subscribed',
-                    'email_type': 'html',
-                    'language': settings.ACCOUNTS_TO_MAILCHIMP_LANGUAGES.get(user.language)
-                    or settings.DEFAULT_LANGUAGE,
-                    'tags': [tag],  # Tagged for automation purposes
-                },
-            )
-        except requests.exceptions.RequestException as ex:
-            # Error details reference: https://mailchimp.com/developer/marketing/docs/errors/#error-glossary
-            try:
-                error_details = ex.response.json()
-            except (JSONDecodeError, AttributeError):
-                error_details = {}
-
-            sentry_sdk.set_context('mailchimp_error', {'details': error_details})
-            sentry_sdk.capture_exception(ex)
-
-            raise TaskFailed(
-                'mailchimp error',
-                {
-                    'user_uuid': user_uuid,
-                    'error_msg_title': error_details.get('title', 'N/A'),
-                    'error_status_code': ex.response.status_code if ex.response else None,
-                },
-            )
     return {
         'user_uuid': user_uuid,
         'task_status': TaskReturnStatus.SUCCESS,
