@@ -715,8 +715,7 @@ class AdminStalwartList(TemplateView):
         context = super().get_context_data(**kwargs)
 
         stalwart = MailClient()
-        response = stalwart._list_principals()
-        data = response.json().get('data', {}).get('items', [])
+        data = stalwart.list_principals()
 
         context.update(
             {
