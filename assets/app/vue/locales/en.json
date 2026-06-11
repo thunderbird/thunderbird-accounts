@@ -236,6 +236,7 @@
           "recordConflictWarning": "Conflict detected. Replace {currentValue} with the value in the row above.",
           "mxRecordConflictWarning": "This record conflicts. Remove conflicting MX records or change the priority.",
           "spfRecordConflictWarning": "This record conflicts. The current SPF record does not contain {includeValue}.",
+          "spfRecordIncludeValue": "the expected include value",
           "recordMissingWarning": "Record is missing.",
           "staleDnsRecordsTitle": "Remove these stale records",
           "staleDnsRecords": "Please remove the {type} record for {name} as it points to {existing_values}.",
