@@ -680,10 +680,6 @@ h3 {
     margin-inline-start: 1rem;
     margin-block-end: 1.5rem;
     font-size: 0.875rem;
-
-    &:not(:first-of-type) {
-      margin-inline-start: 1.25rem;
-    }
   }
 
   .verify-step-note {
@@ -694,12 +690,15 @@ h3 {
 }
 
 .records-table-wrapper {
+  --records-grid-columns: minmax(80px, 0.7fr) minmax(160px, 1.4fr) minmax(220px, 2.4fr) minmax(100px, 0.7fr);
+
   overflow-x: auto;
   margin-block-end: 1.5rem;
 }
 
 .records-table-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--records-grid-columns);
   align-items: center;
   border-block-end: 1px solid var(--colour-neutral-border);
   min-width: max-content;
@@ -707,8 +706,6 @@ h3 {
   p {
     padding: 1rem;
     text-transform: uppercase;
-    width: 150px;
-    flex-shrink: 0;
     font-weight: 600;
     font-size: 0.8125rem;
     letter-spacing: 0.39px;
@@ -749,15 +746,14 @@ h3 {
 }
 
 .records-table-row-cells {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--records-grid-columns);
   align-items: center;
   min-width: max-content;
 
   p {
     padding: 1rem;
     font-size: 0.75rem;
-    width: 150px;
-    flex-shrink: 0;
     word-break: break-word;
   }
 }
@@ -842,11 +838,6 @@ h3 {
 
   .records-table-header {
     min-width: auto;
-
-    p {
-      width: 25%;
-      flex: 1;
-    }
   }
 
   .records-table-row {
@@ -855,11 +846,6 @@ h3 {
 
   .records-table-row-cells {
     min-width: auto;
-
-    p {
-      width: 25%;
-      flex: 1;
-    }
   }
 }
 </style>
