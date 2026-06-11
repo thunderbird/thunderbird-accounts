@@ -1,6 +1,8 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
+import freezegun
 from django.conf import settings
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -13,7 +15,10 @@ from thunderbird_accounts.authentication.tasks import (
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.models import Subscription
 
+FROZEN_NOW = datetime(2024, 6, 15, 12, 0, 0, tzinfo=ZoneInfo('UTC'))
 
+
+@freezegun.freeze_time(FROZEN_NOW)
 class GetAbandonedCartUsersForMailchimpTagTestCase(TestCase):
     def setUp(self):
         self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
@@ -75,7 +80,18 @@ class GetAbandonedCartUsersForMailchimpTagTestCase(TestCase):
 
         self.assertNotIn(user, get_abandoned_cart_users_for_mailchimp_tag())
 
+    @override_settings(ABANDONED_CART_TAG_HOURS=1)
+    def test_includes_eligible_user_across_dst_spring_forward(self):
+        # US Eastern clocks spring forward 2024-03-10 02:00 -> 03:00; cutoff uses UTC elapsed time.
+        dst_now = datetime(2024, 3, 10, 7, 30, 0, tzinfo=ZoneInfo('UTC'))
+        eligible_created_at = dst_now - timedelta(hours=2)
+        with freezegun.freeze_time(dst_now):
+            user = self._create_user('dst-eligible', created_at=eligible_created_at)
 
+            self.assertIn(user, get_abandoned_cart_users_for_mailchimp_tag())
+
+
+@freezegun.freeze_time(FROZEN_NOW)
 @patch('thunderbird_accounts.authentication.tasks.add_or_tag_mailchimp_member')
 class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
     def setUp(self):
