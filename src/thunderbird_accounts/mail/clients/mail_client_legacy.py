@@ -1,3 +1,8 @@
+from thunderbird_accounts.mail.clients.mail_client_interface import (
+    MailClientInterface,
+    DkimSignatureStage,
+    DNSRecordStatus,
+)
 import base64
 import logging
 from enum import StrEnum
@@ -40,23 +45,6 @@ class DomainVerificationErrors(StrEnum):
     SPF_RECORD_NOT_FOUND = 'spfRecordNotFound'
     DKIM_RECORD_NOT_FOUND = 'dkimRecordNotFound'
 
-
-class DkimSignatureStage(StrEnum):
-    """Stalwart DKIM signature rotation stages."""
-
-    PENDING = 'pending'
-    ACTIVE = 'active'
-    RETIRING = 'retiring'
-    RETIRED = 'retired'
-
-
-class DNSRecordStatus(StrEnum):
-    MATCH = 'match'
-    CONFLICT = 'conflict'
-    MISSING = 'missing'
-    UNKNOWN = 'unknown'
-
-
 class StaleDNSRecordCode(StrEnum):
     """Stale DNS records that should be removed to prevent issues with the Thundermail setup."""
 
@@ -64,7 +52,7 @@ class StaleDNSRecordCode(StrEnum):
     AUTODISCOVER_SRV_UNEXPECTED = 'autodiscoverSrvUnexpected'
 
 
-class MailClient:
+class MailClientLegacy(MailClientInterface):
     """A partial api client for Stalwart
     Docs: https://stalw.art/docs/api/management/endpoints
     Code: https://github.com/stalwartlabs/stalwart/tree/main/crates/http/src/management
