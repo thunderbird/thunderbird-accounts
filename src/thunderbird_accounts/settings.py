@@ -185,6 +185,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'waffle.middleware.WaffleMiddleware',
     #'mozilla_django_oidc.middleware.SessionRefresh',
     'thunderbird_accounts.authentication.middleware.OIDCRefreshSession',
     'waffle.middleware.WaffleMiddleware',
