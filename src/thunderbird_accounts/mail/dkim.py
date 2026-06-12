@@ -2,6 +2,7 @@ import sentry_sdk
 from cryptography.exceptions import UnsupportedAlgorithm
 from functools import cache
 import base64
+import time
 from typing import Any
 
 from cloudflare import Cloudflare
@@ -251,13 +252,19 @@ def dkim_signatures_to_dns_records(domain_name: str, signatures: list[dict]) -> 
     return records
 
 
-def publish_hosted_dkim_txt_records(hosted_records: list[dict[str, str]], dns_client=None) -> list[dict[str, str]]:
+def publish_hosted_dkim_txt_records(
+    hosted_records: list[dict[str, str]],
+    dns_client=None,
+    throttle_seconds: float = 0.0,
+) -> list[dict[str, str]]:
     """Publishes hosted DKIM TXT records.
     If dns_client is not specified it falls back on ``CloudflareDNSClient``"""
     dns_client = dns_client or CloudflareDNSClient()
 
     for record in hosted_records:
         dns_client.upsert_txt_record(record['name'], record['content'])
+        if throttle_seconds > 0:
+            time.sleep(throttle_seconds)
 
     return hosted_records
 

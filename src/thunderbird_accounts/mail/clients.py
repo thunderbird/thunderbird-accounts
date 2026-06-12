@@ -329,7 +329,7 @@ class MailClient:
         missing_algorithms = [
             algorithm
             for algorithm in settings.STALWART_DKIM_ALGOS
-            if (settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm) or '').lower() not in existing_selectors
+            if settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm) not in existing_selectors
         ]
 
         if not missing_algorithms:

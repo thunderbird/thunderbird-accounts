@@ -103,6 +103,11 @@ if settings.DEBUG:
 
 urlpatterns += [
     path(
+        'mail/admin/hosted-dkim-migration/',
+        mail_views.admin_hosted_dkim_migration,
+        name='admin_hosted_dkim_migration',
+    ),
+    path(
         'mail/admin/stalwart/',
         mail_views.AdminStalwartList.as_view(),
         name='admin_stalwart_list',

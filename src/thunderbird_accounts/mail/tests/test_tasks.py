@@ -7,7 +7,8 @@ from django.test import TestCase, override_settings
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail import tasks
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError, HostedDkimDeleteRetry, HostedDkimPublishRetry
-from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.mail.models import Account, Domain, Email
+from thunderbird_accounts.subscription.models import Subscription
 from thunderbird_accounts.core.tests.utils import build_mail_get_account
 
 
@@ -154,6 +155,220 @@ class PublishHostedDkimDNSRecordsTestCase(TaskTestCase):
         self.assertEqual('fetch_stalwart_dkim_dns_records', cm.exception.context['phase'])
         self.assertEqual('RuntimeError', cm.exception.context['error_type'])
         set_sentry_context_mock.assert_called_once_with('hosted_dkim_publish_retry', cm.exception.context)
+
+    @override_settings(
+        HOSTED_DKIM_CLOUDFLARE_ENABLED=False,
+        HOSTED_DKIM_DOMAIN='dkim.example.net',
+        STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'},
+    )
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_retries_when_stalwart_dkim_records_do_not_include_configured_selectors(self, mail_client_mock):
+        mail_client_mock.return_value.get_dkim_dns_records.return_value = [
+            {'type': 'TXT', 'name': '202606r._domainkey.example.com.', 'content': 'v=DKIM1; p=rsa'},
+            {'type': 'TXT', 'name': '202606e._domainkey.example.com.', 'content': 'v=DKIM1; p=ed25519'},
+        ]
+
+        with self.assertLogs(level='ERROR') as logs:
+            with self.assertRaises(HostedDkimPublishRetry) as cm:
+                tasks.publish_hosted_dkim_dns_records.run(domain_name='example.com')
+
+        self.assertEqual('validate_hosted_txt_records', cm.exception.phase)
+        self.assertEqual('HostedDkimRecordMissing', cm.exception.error_type)
+        self.assertIn("selectors ['tm1', 'tm2'] are missing", cm.exception.reason)
+        self.assertIn('202606r._domainkey.example.com.', cm.exception.reason)
+        self.assertIn(
+            '[sync_hosted_dkim_dns_records] Expected hosted DKIM TXT records for selectors',
+            '\n'.join(logs.output),
+        )
+
+
+class MigrateLegacyHostedDkimDomainsTestCase(TaskTestCase):
+    @override_settings(STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'})
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_dry_run_logs_domains_without_tm_selectors_before_mutating(self, mail_client_mock):
+        user = User.objects.create(
+            oidc_id='oidc-1',
+            username='owner@example.org',
+            email='account@example.org',
+            recovery_email='owner@example.org',
+        )
+        Domain.objects.create(name='legacy.com', user=user)
+        Subscription.objects.create(user=user, status=Subscription.StatusValues.CANCELED)
+
+        stalwart = mail_client_mock.return_value
+        stalwart.list_domains.return_value = [
+            {'type': 'domain', 'name': 'legacy.com'},
+            {'type': 'domain', 'name': 'current.com'},
+        ]
+        stalwart.get_dkim_selectors.side_effect = lambda domain_name: {
+            'current.com': {'tm1', 'tm2'},
+            'legacy.com': {'oldselector'},
+        }[domain_name]
+
+        with self.assertLogs(level='INFO') as logs:
+            results = tasks.migrate_legacy_hosted_dkim_domains()
+
+        self.assertEqual(results['task_status'], 'success')
+        self.assertTrue(results['dry_run'])
+        self.assertEqual(results['domains_without_tm_selectors'], ['legacy.com'])
+        self.assertEqual(results['domains_missing_tm_selectors'], [])
+        self.assertEqual(
+            results['domains_without_tm_selector_details'],
+            [
+                {
+                    'domain_name': 'legacy.com',
+                    'owner_email': 'owner@example.org',
+                    'active_customer': 'false',
+                    'subscription_statuses': ['canceled'],
+                    'existing_selectors': ['oldselector'],
+                    'missing_selectors': ['tm1', 'tm2'],
+                }
+            ],
+        )
+        self.assertEqual(results['domains_missing_tm_selector_details'], [])
+        self.assertEqual(results['updated_domains'], [])
+        stalwart.ensure_dkim.assert_not_called()
+        self.assertIn(
+            '[migrate_legacy_hosted_dkim_domains] '
+            'found domain without any `tm` selectors: legacy.com '
+            "owner_email=owner@example.org active_customer=false subscription_statuses=['canceled']",
+            '\n'.join(logs.output),
+        )
+
+    @override_settings(STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'})
+    @patch('thunderbird_accounts.mail.tasks._sync_hosted_dkim_dns_records')
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_updates_domains_missing_configured_selectors_when_not_dry_run(
+        self,
+        mail_client_mock,
+        sync_hosted_dkim_dns_records_mock,
+    ):
+        stalwart = mail_client_mock.return_value
+        stalwart.get_dkim_selectors.side_effect = [
+            {'tm1', 'tm2'},
+            {'oldselector'},
+            {'tm1'},
+            {'oldselector', 'tm1', 'tm2'},
+            {'tm1', 'tm2'},
+        ]
+        stalwart.ensure_dkim.return_value = [{'id': 'sig-1'}]
+        sync_hosted_dkim_dns_records_mock.return_value = {
+            'records': [{'type': 'TXT', 'name': 'tm1.legacy.com.dkim.example.net', 'content': 'v=DKIM1; p=key'}],
+            'skipped': True,
+        }
+
+        results = tasks.migrate_legacy_hosted_dkim_domains(
+            domain_names=['current.com', 'legacy.com', 'partial.com'],
+            dry_run=False,
+        )
+
+        self.assertEqual(results['task_status'], 'success')
+        self.assertFalse(results['dry_run'])
+        self.assertEqual(results['domains_without_tm_selectors'], ['legacy.com'])
+        self.assertEqual(results['domains_missing_tm_selectors'], ['partial.com'])
+        stalwart.ensure_dkim.assert_has_calls([call('legacy.com'), call('partial.com')])
+        sync_hosted_dkim_dns_records_mock.assert_has_calls(
+            [
+                call('legacy.com', stalwart=stalwart, cloudflare_throttle_seconds=1.0),
+                call('partial.com', stalwart=stalwart, cloudflare_throttle_seconds=1.0),
+            ]
+        )
+        self.assertEqual(
+            ['legacy.com', 'partial.com'],
+            [domain['domain_name'] for domain in results['updated_domains']],
+        )
+        self.assertEqual(
+            ['oldselector', 'tm1', 'tm2'],
+            results['updated_domains'][0]['post_create_selectors'],
+        )
+
+    @override_settings(STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'})
+    @patch('thunderbird_accounts.mail.tasks._sync_hosted_dkim_dns_records')
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_raises_when_ensure_dkim_does_not_create_configured_selectors(
+        self,
+        mail_client_mock,
+        sync_hosted_dkim_dns_records_mock,
+    ):
+        stalwart = mail_client_mock.return_value
+        stalwart.get_dkim_selectors.side_effect = [
+            {'202606e', '202606r'},
+            {'202606e', '202606r'},
+        ]
+        stalwart.ensure_dkim.return_value = [None, None]
+
+        with self.assertLogs(level='ERROR') as logs:
+            with self.assertRaises(HostedDkimPublishRetry) as cm:
+                tasks.migrate_legacy_hosted_dkim_domains(
+                    domain_names=['no-tm-selectors.com'],
+                    dry_run=False,
+                )
+
+        self.assertEqual('validate_stalwart_dkim_selectors', cm.exception.phase)
+        self.assertEqual('HostedDkimSelectorMissing', cm.exception.error_type)
+        self.assertIn("selectors ['tm1', 'tm2'] are still missing", cm.exception.reason)
+        self.assertIn("Existing selectors: ['202606e', '202606r']", cm.exception.reason)
+        stalwart.ensure_dkim.assert_called_once_with('no-tm-selectors.com')
+        sync_hosted_dkim_dns_records_mock.assert_not_called()
+        self.assertIn(
+            '[migrate_legacy_hosted_dkim_domains] Expected Stalwart DKIM selectors',
+            '\n'.join(logs.output),
+        )
+
+    @override_settings(STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'})
+    @patch('thunderbird_accounts.mail.tasks._sync_hosted_dkim_dns_records')
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_noops_when_all_configured_selectors_exist(
+        self,
+        mail_client_mock,
+        sync_hosted_dkim_dns_records_mock,
+    ):
+        stalwart = mail_client_mock.return_value
+        stalwart.get_dkim_selectors.return_value = {'tm1', 'tm2'}
+
+        results = tasks.migrate_legacy_hosted_dkim_domains(domain_names=['current.com'], dry_run=False)
+
+        self.assertEqual(results['task_status'], 'success')
+        self.assertEqual(results['domains_without_tm_selectors'], [])
+        self.assertEqual(results['domains_missing_tm_selectors'], [])
+        self.assertEqual(results['updated_domains'], [])
+        stalwart.ensure_dkim.assert_not_called()
+        sync_hosted_dkim_dns_records_mock.assert_not_called()
+
+    @override_settings(STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'})
+    @patch('thunderbird_accounts.mail.tasks._sync_hosted_dkim_dns_records')
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_force_sync_updates_explicit_domains_even_when_selectors_exist(
+        self,
+        mail_client_mock,
+        sync_hosted_dkim_dns_records_mock,
+    ):
+        stalwart = mail_client_mock.return_value
+        stalwart.get_dkim_selectors.side_effect = [
+            {'tm1', 'tm2'},
+            {'tm1', 'tm2'},
+        ]
+        sync_hosted_dkim_dns_records_mock.return_value = {
+            'records': [{'type': 'TXT', 'name': 'tm1.current.com.dkim.example.net', 'content': 'v=DKIM1; p=key'}],
+            'skipped': False,
+        }
+
+        results = tasks.migrate_legacy_hosted_dkim_domains(
+            domain_names=['current.com'],
+            dry_run=False,
+            force_sync=True,
+        )
+
+        self.assertEqual(results['task_status'], 'success')
+        self.assertEqual(results['domains_without_tm_selectors'], [])
+        self.assertEqual(results['domains_missing_tm_selectors'], [])
+        self.assertEqual(['current.com'], [domain['domain_name'] for domain in results['updated_domains']])
+        stalwart.ensure_dkim.assert_called_once_with('current.com')
+        sync_hosted_dkim_dns_records_mock.assert_called_once_with(
+            'current.com',
+            stalwart=stalwart,
+            cloudflare_throttle_seconds=1.0,
+        )
 
 
 class DeleteHostedDkimDNSRecordsTestCase(TaskTestCase):
