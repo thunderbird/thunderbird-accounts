@@ -228,6 +228,7 @@ watch(
     :dns-table-rows="dnsTableRows"
     :unanchored-validation-issues="unanchoredValidationIssues"
     :is-verifying-domain="isVerifyingDomain"
+    :show-record-status="showMissingIssues"
     @verify="onVerifyDomain"
   />
 </template>

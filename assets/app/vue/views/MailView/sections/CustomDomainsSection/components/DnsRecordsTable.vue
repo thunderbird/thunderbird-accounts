@@ -17,6 +17,7 @@ import { hasCopyableValue } from '../utils';
 defineProps<{
   rows: DecoratedDnsTableRow[];
   unanchoredValidationIssues: InlineIssue[];
+  showRecordStatus?: boolean;
 }>();
 
 const { t } = useI18n();
@@ -39,10 +40,10 @@ const copyCellValue = async (cellKey: string, value: string) => {
 </script>
 
 <template>
-  <div class="records-table-wrapper">
+  <div class="records-table-wrapper" :class="{ 'records-table-wrapper-with-status': showRecordStatus }">
     <div class="records-table">
       <div class="records-table-header">
-        <p class="records-cell-status" aria-hidden="true"></p>
+        <p v-if="showRecordStatus" class="records-cell-status" aria-hidden="true"></p>
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderType') }}</p>
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderNameHost') }}</p>
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderValueData') }}</p>
@@ -59,7 +60,7 @@ const copyCellValue = async (cellKey: string, value: string) => {
         v-for="row in rows"
         :key="row.key"
       >
-        <div class="records-cell records-cell-status">
+        <div v-if="showRecordStatus" class="records-cell records-cell-status">
           <ph-check-circle
             v-if="row.status === 'success'"
             size="16"
@@ -109,22 +110,22 @@ const copyCellValue = async (cellKey: string, value: string) => {
             :aria-label="t('views.mail.sections.customDomains.copyValue')"
             @click="copyCellValue(`${row.key}-priority`, row.record.priority || '')"
           >
-            <ph-check v-if="copiedCellKey === `${row.key}-priority`" size="14" />
-            <ph-copy-simple v-else size="14" />
+            <ph-check v-if="copiedCellKey === `${row.key}-priority`" size="16" />
+            <ph-copy-simple v-else size="16" />
           </button>
         </div>
 
         <div class="records-cell records-cell-action">
-          <span v-if="row.action" class="action-badge" :class="`action-badge-${row.action}`">
-            {{ t(`views.mail.sections.customDomains.recordAction.${row.action}`) }}
-          </span>
-          <ph-info
-            v-if="row.issues.length > 0"
-            size="18"
-            class="action-info-icon"
-            :class="`action-info-icon-${row.severity}`"
-            :title="row.issues.map((issue) => issue.text).join('\n')"
-          />
+          <template v-if="row.action">
+            <span class="action-badge">
+              {{ t(`views.mail.sections.customDomains.recordAction.${row.action}`) }}
+            </span>
+            <ph-info
+              size="16"
+              class="action-info-icon"
+              :title="row.issues.map((issue) => issue.text).join('\n')"
+            />
+          </template>
         </div>
       </div>
 
@@ -146,10 +147,14 @@ const copyCellValue = async (cellKey: string, value: string) => {
 
 <style scoped>
 .records-table-wrapper {
-  --records-grid-columns: 3rem max-content minmax(150px, 1fr) minmax(200px, 1fr) max-content max-content;
+  --records-grid-columns: max-content minmax(150px, 1fr) minmax(200px, 1fr) max-content max-content;
 
   overflow-x: auto;
   margin-block-end: 1.5rem;
+
+  &.records-table-wrapper-with-status {
+    --records-grid-columns: 3rem max-content minmax(150px, 1fr) minmax(200px, 1fr) max-content max-content;
+  }
 }
 
 .records-table {
@@ -247,7 +252,7 @@ const copyCellValue = async (cellKey: string, value: string) => {
 .records-cell-action {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 0.5rem;
 }
 
@@ -258,35 +263,16 @@ const copyCellValue = async (cellKey: string, value: string) => {
   border: 1px solid currentColor;
   border-radius: 300px;
   font-size: 0.6875rem;
+  margin: 0 auto;
+  color: var(--colour-ti-warning);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.39px;
   white-space: nowrap;
 }
 
-.action-badge-add {
-  color: var(--colour-ti-success);
-}
-
-.action-badge-edit {
-  color: var(--colour-ti-warning);
-}
-
-.action-badge-remove {
-  color: var(--colour-danger-default);
-}
-
 .action-info-icon {
   flex: 0 0 auto;
-  color: var(--colour-ti-secondary);
-  cursor: help;
-}
-
-.action-info-icon-critical {
-  color: var(--colour-danger-default);
-}
-
-.action-info-icon-warning {
   color: var(--colour-ti-warning);
 }
 

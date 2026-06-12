@@ -9,6 +9,7 @@ defineProps<{
   dnsTableRows: DecoratedDnsTableRow[];
   unanchoredValidationIssues: InlineIssue[];
   isVerifyingDomain: boolean;
+  showRecordStatus: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -33,7 +34,11 @@ const { t } = useI18n();
     </p>
   </div>
 
-  <dns-records-table :rows="dnsTableRows" :unanchored-validation-issues="unanchoredValidationIssues" />
+  <dns-records-table
+    :rows="dnsTableRows"
+    :unanchored-validation-issues="unanchoredValidationIssues"
+    :show-record-status="showRecordStatus"
+  />
 
   <!-- TODO: Uncomment this once we have the task / job to automatically verify domains -->
   <!-- <notice-bar :type="NoticeBarTypes.Info" class="verify-step-notice-bar" v-if="showNoticeBar">
