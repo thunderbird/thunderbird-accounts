@@ -17,6 +17,7 @@
 </head>
 <body>
 {% csrf_token %}
+<script src="{% url 'wafflejs' %}"></script>
 <script>
   {% get_form_error_message as form_error %}
 

@@ -80,6 +80,8 @@ urlpatterns = [
         mail_api.check_email_is_on_allow_list,
         name='api_check_email_is_on_allow_list',
     ),
+    # Waffle
+    re_path(r'^', include('waffle.urls')),
     # Stalwart telemetry webhook
     path('api/v1/telemetry/stalwart/webhook/', telemetry_views.stalwart_webhook, name='stalwart_webhook'),
     path('api/v1/telemetry/event', telemetry_api.capture_frontend_event, name='api_capture_frontend_event'),

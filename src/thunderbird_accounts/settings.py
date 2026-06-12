@@ -170,6 +170,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_vite',
     'corsheaders',
+    'waffle',
 ]
 
 MIDDLEWARE = [
@@ -183,6 +184,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'waffle.middleware.WaffleMiddleware',
     #'mozilla_django_oidc.middleware.SessionRefresh',
     'thunderbird_accounts.authentication.middleware.OIDCRefreshSession',
     # This should be last
