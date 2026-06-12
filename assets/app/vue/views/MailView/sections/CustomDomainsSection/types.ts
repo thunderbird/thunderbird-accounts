@@ -72,3 +72,8 @@ export type DecoratedDnsTableRow = DnsTableRow & {
   action: RowAction | null;
   status: RowStatus;
 };
+
+export enum RecordTab {
+  CONFLICTING = 'conflicting',
+  ALL = 'all',
+}

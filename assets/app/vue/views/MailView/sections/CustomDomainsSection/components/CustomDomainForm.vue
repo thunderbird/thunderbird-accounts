@@ -225,6 +225,7 @@ watch(
 
   <custom-domain-verify-step
     v-else-if="step === STEP.VERIFY_DOMAIN"
+    :domain-name="customDomain"
     :dns-table-rows="dnsTableRows"
     :unanchored-validation-issues="unanchoredValidationIssues"
     :is-verifying-domain="isVerifyingDomain"

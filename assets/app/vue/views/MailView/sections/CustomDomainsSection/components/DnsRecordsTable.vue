@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   PhCheck,
@@ -11,19 +11,34 @@ import {
   PhWarningOctagon,
 } from '@phosphor-icons/vue';
 
-import type { DecoratedDnsTableRow, InlineIssue } from '../types';
+import { DecoratedDnsTableRow, InlineIssue, RecordTab } from '../types';
 import { hasCopyableValue } from '../utils';
 
-defineProps<{
+const props = defineProps<{
   rows: DecoratedDnsTableRow[];
   unanchoredValidationIssues: InlineIssue[];
   showRecordStatus?: boolean;
+  activeTab?: RecordTab;
 }>();
 
 const { t } = useI18n();
 
 const copiedCellKey = ref<string | null>(null);
 let copiedResetTimer: ReturnType<typeof setTimeout> | undefined;
+
+const filteredRows = computed(() => {
+  if (props.showRecordStatus) {
+    return props.rows.filter((row) => {
+      if (props.activeTab === RecordTab.CONFLICTING) {
+        return row.status === 'warning' || row.status === 'critical';
+      }
+
+      return true;
+    });
+  }
+
+  return props.rows;
+});
 
 const copyCellValue = async (cellKey: string, value: string) => {
   try {
@@ -52,12 +67,8 @@ const copyCellValue = async (cellKey: string, value: string) => {
       </div>
       <div
         class="records-table-row"
-        :class="{
-          'record-warning': row.severity === 'warning',
-          'record-stale': row.isStale,
-          'record-conflict': row.isConflict,
-        }"
-        v-for="row in rows"
+        :class="{ 'record-warning': row.status === 'warning' || row.status === 'critical' }"
+        v-for="row in filteredRows"
         :key="row.key"
       >
         <div v-if="showRecordStatus" class="records-cell records-cell-status">

@@ -200,6 +200,10 @@
         },
         "customDomains": {
           "customDomains": "Custom Domains",
+          "domains": "Domains",
+          "ownerDNSRecords": "{domainName} DNS records",
+          "conflictingRecords": "Conflicting records",
+          "allRecords": "All records",
           "customDomainsDescriptionInitial": "Use your own domain to create personalized email addresses.",
           "customDomainsDescriptionAdd": "Adding a domain you own to your account allows you to create aliases using your custom domains.",
           "domainsAdded": "{domainCount} / {domainLimit} domains added",
