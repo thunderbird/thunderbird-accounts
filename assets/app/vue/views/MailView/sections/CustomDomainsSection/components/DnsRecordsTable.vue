@@ -5,7 +5,6 @@ import {
   PhCheck,
   PhCheckCircle,
   PhCopySimple,
-  PhInfo,
   PhWarning,
   PhWarningCircle,
   PhWarningOctagon,
@@ -13,6 +12,7 @@ import {
 
 import { DecoratedDnsTableRow, InlineIssue, RecordTab } from '../types';
 import { hasCopyableValue } from '../utils';
+import RecordActionInfoTooltip from './RecordActionInfoTooltip.vue';
 
 const props = defineProps<{
   rows: DecoratedDnsTableRow[];
@@ -131,10 +131,9 @@ const copyCellValue = async (cellKey: string, value: string) => {
             <span class="action-badge">
               {{ t(`views.mail.sections.customDomains.recordAction.${row.action}`) }}
             </span>
-            <ph-info
-              size="16"
-              class="action-info-icon"
-              :title="row.issues.map((issue) => issue.text).join('\n')"
+            <record-action-info-tooltip
+              :record-type="row.record.type"
+              :action="row.action"
             />
           </template>
         </div>
@@ -280,11 +279,6 @@ const copyCellValue = async (cellKey: string, value: string) => {
   text-transform: uppercase;
   letter-spacing: 0.39px;
   white-space: nowrap;
-}
-
-.action-info-icon {
-  flex: 0 0 auto;
-  color: var(--colour-ti-warning);
 }
 
 .records-table-footer {
