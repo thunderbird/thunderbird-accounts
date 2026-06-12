@@ -19,6 +19,7 @@ const props = defineProps<{
   unanchoredValidationIssues: InlineIssue[];
   showRecordStatus?: boolean;
   activeTab?: RecordTab;
+  hasConflictingRecords?: boolean;
 }>();
 
 const { t } = useI18n();
@@ -27,7 +28,7 @@ const copiedCellKey = ref<string | null>(null);
 let copiedResetTimer: ReturnType<typeof setTimeout> | undefined;
 
 const filteredRows = computed(() => {
-  if (props.showRecordStatus) {
+  if (props.showRecordStatus && props.hasConflictingRecords) {
     return props.rows.filter((row) => {
       if (props.activeTab === RecordTab.CONFLICTING) {
         return row.status === 'warning' || row.status === 'critical';
@@ -49,6 +50,7 @@ const copyCellValue = async (cellKey: string, value: string) => {
       copiedCellKey.value = null;
     }, 1500);
   } catch (error) {
+    // TODO: Change this when we decide where to show the error
     console.error(error);
   }
 };

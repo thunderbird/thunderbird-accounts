@@ -70,6 +70,7 @@ const onTabSelected = (tab: RecordTab) => {
     :unanchored-validation-issues="unanchoredValidationIssues"
     :show-record-status="showRecordStatus"
     :active-tab="activeTab"
+    :has-conflicting-records="hasConflictingRecords"
   />
 
   <!-- TODO: Uncomment this once we have the task / job to automatically verify domains -->
