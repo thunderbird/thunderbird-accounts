@@ -13,6 +13,7 @@ from thunderbird_accounts.mail.dns import (
     check_txt_record_status,
     enrich_dns_records_with_status,
     normalize_dns_query_name,
+    txt_tag_value,
 )
 
 
@@ -25,6 +26,20 @@ class TestNormalizeDNSQueryName(SimpleTestCase):
 
     def test_adds_trailing_dot(self):
         self.assertEqual(normalize_dns_query_name('_dmarc.example.com', 'example.com'), '_dmarc.example.com.')
+
+
+class TestTXTTagValue(SimpleTestCase):
+    def test_returns_tag_value_with_optional_whitespace(self):
+        self.assertEqual(txt_tag_value('v=DKIM1; k = rsa; p = expectedkey', 'p'), 'expectedkey')
+
+    def test_returns_none_for_malformed_tag_list(self):
+        self.assertIsNone(txt_tag_value('v=DKIM1; p=expectedkey; broken', 'p'))
+
+    def test_returns_none_for_tag_list_with_newline(self):
+        self.assertIsNone(txt_tag_value('v=DKIM1;\n p=expectedkey', 'p'))
+
+    def test_returns_none_for_duplicate_tag(self):
+        self.assertIsNone(txt_tag_value('v=DKIM1; p=expectedkey; p=otherkey', 'p'))
 
 
 class TestCompareSemanticTXT(SimpleTestCase):
@@ -62,6 +77,19 @@ class TestCompareSemanticTXT(SimpleTestCase):
 class TestDNSRecordStatus(SimpleTestCase):
     def setUp(self):
         self.domain = 'example.com'
+
+    def _txt_record(self, value):
+        mock_txt = MagicMock()
+        mock_txt.strings = [value.encode()]
+        return mock_txt
+
+    def _dmarc_record(self):
+        return {
+            'type': 'TXT',
+            'name': f'_dmarc.{self.domain}.',
+            'content': 'v=DMARC1; p=none;',
+            'priority': '-',
+        }
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_mx_match_with_extra_records_at_different_priority(self, mock_resolve):
@@ -247,39 +275,43 @@ class TestDNSRecordStatus(SimpleTestCase):
         self.assertEqual(existing_values, [])
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
-    def test_dmarc_match_allows_any_record_starting_with_version(self, mock_resolve):
-        mock_txt = MagicMock()
-        mock_txt.strings = [b'v=DMARC1; p=reject; rua=mailto:dmarc@example.com']
-        mock_resolve.return_value = [mock_txt]
+    def test_dmarc_match_accepts_valid_tag_value_record(self, mock_resolve):
+        mock_resolve.return_value = [self._txt_record(' v = DMARC1 ; p = reject ; rua = mailto:dmarc@example.com ')]
 
-        status, existing_values = check_txt_record_status(
-            self.domain,
-            {
-                'type': 'TXT',
-                'name': f'_dmarc.{self.domain}.',
-                'content': 'v=DMARC1; p=none;',
-                'priority': '-',
-            },
-        )
+        status, existing_values = check_txt_record_status(self.domain, self._dmarc_record())
 
         self.assertEqual(status, DNSRecordStatus.MATCH)
         self.assertEqual(existing_values, [])
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
-    def test_dmarc_missing_without_version_prefix(self, mock_resolve):
-        mock_txt = MagicMock()
-        mock_txt.strings = [b'google-site-verification=example']
-        mock_resolve.return_value = [mock_txt]
+    def test_dmarc_conflict_for_invalid_required_tags(self, mock_resolve):
+        for value in [
+            'v=DMARC1; rua=mailto:dmarc@example.com',
+            'v=DMARC1; p=monitor',
+            'p=none; v=DMARC1',
+        ]:
+            with self.subTest(value=value):
+                mock_resolve.return_value = [self._txt_record(value)]
 
-        status, existing_values = check_txt_record_status(
-            self.domain,
-            {
-                'type': 'TXT',
-                'name': f'_dmarc.{self.domain}.',
-                'content': 'v=DMARC1; p=none;',
-                'priority': '-',
-            },
-        )
+                status, existing_values = check_txt_record_status(self.domain, self._dmarc_record())
+
+                self.assertEqual(status, DNSRecordStatus.CONFLICT)
+                self.assertEqual(existing_values, [value])
+
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
+    def test_dmarc_conflict_when_tag_value_record_is_malformed(self, mock_resolve):
+        mock_resolve.return_value = [self._txt_record('v=DMARC1; p=none; rua')]
+
+        status, existing_values = check_txt_record_status(self.domain, self._dmarc_record())
+
+        self.assertEqual(status, DNSRecordStatus.CONFLICT)
+        self.assertEqual(existing_values, ['v=DMARC1; p=none; rua'])
+
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
+    def test_dmarc_missing_without_dmarc_record(self, mock_resolve):
+        mock_resolve.return_value = [self._txt_record('google-site-verification=example')]
+
+        status, existing_values = check_txt_record_status(self.domain, self._dmarc_record())
 
         self.assertEqual(status, DNSRecordStatus.MISSING)
         self.assertEqual(existing_values, [])
@@ -304,6 +336,23 @@ class TestDNSRecordStatus(SimpleTestCase):
 
         self.assertEqual(status, DNSRecordStatus.MATCH)
         self.assertEqual(existing_values, [])
+
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
+    def test_dkim_conflict_when_matching_record_has_duplicate_tag(self, mock_resolve):
+        mock_resolve.return_value = [self._txt_record('v=DKIM1; k=rsa; p=expectedkey; p=otherkey')]
+
+        status, existing_values = check_txt_record_status(
+            self.domain,
+            {
+                'type': 'TXT',
+                'name': f'selector._domainkey.{self.domain}.',
+                'content': 'v=DKIM1; k=rsa; p=expectedkey',
+                'priority': '-',
+            },
+        )
+
+        self.assertEqual(status, DNSRecordStatus.CONFLICT)
+        self.assertEqual(existing_values, ['v=DKIM1; k=rsa; p=expectedkey; p=otherkey'])
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_enrich_dns_records_with_status(self, mock_resolve):

@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Optional
 
 import dns.rdatatype as dns_rdatatype
@@ -6,6 +7,13 @@ import dns.resolver as dns_resolver
 from django.conf import settings
 
 from thunderbird_accounts.mail.clients import DNSRecordStatus, StaleDNSRecordCode
+
+TXT_TAG_SPEC_RE = re.compile(
+    r'[ \t]*(?P<tag>[A-Za-z][A-Za-z0-9_]*)[ \t]*=[ \t]*'
+    r'(?P<value>(?:[!-:<-~]+(?:[ \t]+[!-:<-~]+)*)?)[ \t]*'
+)
+DMARC_VERSION_TAG_RE = re.compile(r'^[ \t]*v[ \t]*=')
+VALID_DMARC_POLICIES = {'none', 'quarantine', 'reject'}
 
 
 def normalize_dns_query_name(name: str, domain_name: str) -> str:
@@ -15,11 +23,10 @@ def normalize_dns_query_name(name: str, domain_name: str) -> str:
 
 
 def txt_tag_value(content: str, tag: str) -> Optional[str]:
-    for part in content.split(';'):
-        part = part.strip()
-        if part.startswith(f'{tag}='):
-            return part[len(tag) + 1 :]
-    return None
+    tags = _parse_txt_tag_value_list(content)
+    if tags is None:
+        return None
+    return dict(tags).get(tag)
 
 
 def normalize_txt_content(content: str) -> str:
@@ -139,13 +146,56 @@ def _compare_dkim_txt(expected_content: str, live_values: list[str]) -> tuple[DN
     return DNSRecordStatus.CONFLICT, dkim_values
 
 
+def _parse_txt_tag_value_list(content: str) -> Optional[list[tuple[str, str]]]:
+    parts = content.strip().split(';')
+    # Remove empty segments.
+    if parts and not parts[-1].strip():
+        parts.pop()
+    if not parts:
+        return None
+
+    tags = []
+    seen_tags = set()
+    for part in parts:
+        match = TXT_TAG_SPEC_RE.fullmatch(part)
+        if not match:
+            return None
+
+        tag = match.group('tag')
+        if tag in seen_tags:
+            return None
+
+        seen_tags.add(tag)
+        tags.append((tag, match.group('value')))
+
+    return tags
+
+
+def _is_valid_dmarc_record(tags: list[tuple[str, str]]) -> bool:
+    tag_values = dict(tags)
+    return tags[0] == ('v', 'DMARC1') and tag_values.get('p') in VALID_DMARC_POLICIES
+
+
+def _is_dmarc_record_candidate(content: str, tags: Optional[list[tuple[str, str]]]) -> bool:
+    if tags is None:
+        return bool(DMARC_VERSION_TAG_RE.match(content))
+    tag_values = dict(tags)
+    return 'v' in tag_values or 'p' in tag_values
+
+
 def _verify_dmarc(live_values: list[str]) -> tuple[DNSRecordStatus, list[str]]:
-    dmarc_values = [value for value in live_values if value.startswith('v=DMARC1')]
+    invalid_dmarc_values = []
+    for value in live_values:
+        tags = _parse_txt_tag_value_list(value)
+        if tags and _is_valid_dmarc_record(tags):
+            return DNSRecordStatus.MATCH, []
+        if _is_dmarc_record_candidate(value, tags):
+            invalid_dmarc_values.append(value)
 
-    if not dmarc_values:
-        return DNSRecordStatus.MISSING, []
+    if invalid_dmarc_values:
+        return DNSRecordStatus.CONFLICT, invalid_dmarc_values
 
-    return DNSRecordStatus.MATCH, []
+    return DNSRecordStatus.MISSING, []
 
 
 def _compare_spf_txt(expected_content: str, live_values: list[str]) -> tuple[DNSRecordStatus, list[str]]:
