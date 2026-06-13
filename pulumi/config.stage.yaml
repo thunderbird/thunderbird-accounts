@@ -433,6 +433,12 @@ resources:
                   value: "no"
                 - name: POSTHOG_HOST
                   value: "https://us.i.posthog.com"
+                - name: INCOMPLETE_SIGNUP_PURGE_HOURS
+                  value: "168"
+                - name: INCOMPLETE_SIGNUP_PURGE_CRON_HOUR
+                  value: "3"
+                - name: INCOMPLETE_SIGNUP_PURGE_CRON_MINUTE
+                  value: "0"
 
         flower-stage:
           <<: *ACCOUNTS_TASK_DEFINITION
