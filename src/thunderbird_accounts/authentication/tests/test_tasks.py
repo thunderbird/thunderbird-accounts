@@ -48,17 +48,26 @@ class GetStaleIncompleteSignupUsersTestCase(TestCase):
     def test_includes_eligible_user_without_subscription(self):
         user = self._create_user('abandoned-no-sub', created_at=self.eligible_created_at)
 
-        self.assertIn(user, get_stale_incomplete_signup_users())
+        self.assertIn(
+            user,
+            get_stale_incomplete_signup_users(settings.ABANDONED_CART_TAG_HOURS),
+        )
 
     def test_includes_stale_user_without_subscription(self):
         user = self._create_user('stale-no-sub')
 
-        self.assertIn(user, get_stale_incomplete_signup_users())
+        self.assertIn(
+            user,
+            get_stale_incomplete_signup_users(settings.INCOMPLETE_SIGNUP_PURGE_HOURS),
+        )
 
     def test_excludes_stale_user_awaiting_payment_without_subscription(self):
         user = self._create_user('stale-awaiting', is_awaiting_payment_verification=True)
 
-        self.assertNotIn(user, get_stale_incomplete_signup_users())
+        self.assertNotIn(
+            user,
+            get_stale_incomplete_signup_users(settings.INCOMPLETE_SIGNUP_PURGE_HOURS),
+        )
 
     def test_excludes_recent_user_without_subscription(self):
         user = self._create_user(
@@ -66,34 +75,52 @@ class GetStaleIncompleteSignupUsersTestCase(TestCase):
             created_at=timezone.now() - timedelta(minutes=30),
         )
 
-        self.assertNotIn(user, get_stale_incomplete_signup_users())
+        self.assertNotIn(
+            user,
+            get_stale_incomplete_signup_users(settings.ABANDONED_CART_TAG_HOURS),
+        )
 
     def test_excludes_user_awaiting_payment_without_subscription(self):
         user = self._create_user('awaiting-payment', is_awaiting_payment_verification=True)
 
-        self.assertNotIn(user, get_stale_incomplete_signup_users())
+        self.assertNotIn(
+            user,
+            get_stale_incomplete_signup_users(settings.INCOMPLETE_SIGNUP_PURGE_HOURS),
+        )
 
     def test_excludes_user_with_canceled_subscription(self):
         user = self._create_user('canceled-sub')
         Subscription.objects.create(user=user, status=Subscription.StatusValues.CANCELED)
 
-        self.assertNotIn(user, get_stale_incomplete_signup_users())
+        self.assertNotIn(
+            user,
+            get_stale_incomplete_signup_users(settings.INCOMPLETE_SIGNUP_PURGE_HOURS),
+        )
 
     def test_excludes_user_with_active_subscription(self):
         user = self._create_user('active-sub')
         Subscription.objects.create(user=user, status=Subscription.StatusValues.ACTIVE)
 
-        self.assertNotIn(user, get_stale_incomplete_signup_users())
+        self.assertNotIn(
+            user,
+            get_stale_incomplete_signup_users(settings.INCOMPLETE_SIGNUP_PURGE_HOURS),
+        )
 
     def test_excludes_test_account(self):
         user = self._create_user('test-account', is_test_account=True)
 
-        self.assertNotIn(user, get_stale_incomplete_signup_users())
+        self.assertNotIn(
+            user,
+            get_stale_incomplete_signup_users(settings.INCOMPLETE_SIGNUP_PURGE_HOURS),
+        )
 
     def test_excludes_staff_user(self):
         user = self._create_user('staff-user', is_staff=True)
 
-        self.assertNotIn(user, get_stale_incomplete_signup_users())
+        self.assertNotIn(
+            user,
+            get_stale_incomplete_signup_users(settings.INCOMPLETE_SIGNUP_PURGE_HOURS),
+        )
 
     @override_settings(ABANDONED_CART_TAG_HOURS=1)
     def test_includes_eligible_user_across_dst_spring_forward(self):
@@ -103,7 +130,10 @@ class GetStaleIncompleteSignupUsersTestCase(TestCase):
         with freezegun.freeze_time(dst_now):
             user = self._create_user('dst-eligible', created_at=eligible_created_at)
 
-            self.assertIn(user, get_stale_incomplete_signup_users())
+            self.assertIn(
+                user,
+                get_stale_incomplete_signup_users(settings.ABANDONED_CART_TAG_HOURS),
+            )
 
 
 @freezegun.freeze_time(FROZEN_NOW)
