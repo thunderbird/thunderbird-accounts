@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 logger = logging.getLogger(__name__)
 
 
-def get_stale_incomplete_signup_users(cutoff_hours: int = settings.ABANDONED_CART_TAG_HOURS) -> QuerySet[User]:
+def get_stale_incomplete_signup_users(cutoff_hours: int) -> QuerySet[User]:
     """Incomplete sign-ups older than the cutoff hours."""
     cutoff = timezone.now() - timedelta(hours=cutoff_hours)
     has_subscription = Subscription.objects.filter(user_id=OuterRef('pk'))
@@ -54,7 +54,7 @@ def tag_abandoned_cart_in_mailchimp(self):
     mailchimp_language_map = settings.ACCOUNTS_TO_MAILCHIMP_LANGUAGES
     mailchimp_tag = settings.ABANDONED_CART_MAILCHIMP_TAG
 
-    for user in get_stale_incomplete_signup_users().iterator():
+    for user in get_stale_incomplete_signup_users(cutoff_hours=settings.ABANDONED_CART_TAG_HOURS).iterator():
         try:
             if user.subscription_set.exists():
                 skipped += 1
@@ -122,6 +122,9 @@ def purge_incomplete_signups(self):
         try:
             with transaction.atomic():
                 user = User.objects.select_for_update().get(pk=user.pk)
+
+                # Now that we have a locked fresh copy of the user, we can safely check for subscriptions
+                # and payment verification so we avoid race conditions
                 if user.subscription_set.exists():
                     skipped += 1
                     logger.info('purge_incomplete_signups: skipped %s because a subscription exists', user.username)
