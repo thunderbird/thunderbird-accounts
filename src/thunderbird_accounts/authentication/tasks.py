@@ -16,8 +16,6 @@ from thunderbird_accounts.authentication.utils import delete_user_data
 
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
 
 def get_stale_incomplete_signup_users(cutoff_hours: int) -> QuerySet[User]:
     """Incomplete sign-ups older than the cutoff hours."""
