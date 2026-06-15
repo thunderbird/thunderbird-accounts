@@ -64,11 +64,6 @@ export const hasValidationIssue = (
   validationWarnings: string[]
 ): boolean => criticalErrors.includes(key) || validationWarnings.includes(key);
 
-export const validationSeverity = (
-  key: string | null | undefined,
-  criticalErrors: string[]
-): InlineIssueSeverity => (key && criticalErrors.includes(key) ? 'critical' : 'warning');
-
 export const shouldAnchorDkimMissingIssue = (
   record: DNSRecord,
   customDomain: string,
@@ -80,15 +75,7 @@ export const shouldAnchorDkimMissingIssue = (
   hasValidationIssue('dkimRecordNotFound', criticalErrors, validationWarnings) &&
   isDkimRecordForCurrentDomain(record, customDomain);
 
-export const conflictSeverity = (
-  record: DNSRecord,
-  customDomain: string,
-  criticalErrors: string[]
-): InlineIssueSeverity =>
-  isMxRecord(record) ||
-  recordValidationKeys(record, customDomain).some((key) => criticalErrors.includes(key))
-    ? 'critical'
-    : 'warning';
+const UI_ISSUE_SEVERITY: InlineIssueSeverity = 'warning';
 
 export type DnsTableI18n = {
   t: (key: string, params?: Record<string, unknown>) => string;
@@ -119,15 +106,8 @@ export const validationResultFromApi = (data?: {
   staleDnsRecords: data?.stale_dns_records ?? [],
 });
 
-export const issueSeverity = (issues: InlineIssue[]): InlineIssueSeverity | null => {
-  if (issues.some((issue) => issue.severity === 'critical')) {
-    return 'critical';
-  }
-  if (issues.length > 0) {
-    return 'warning';
-  }
-  return null;
-};
+export const issueSeverity = (issues: InlineIssue[]): InlineIssueSeverity | null =>
+  issues.length > 0 ? UI_ISSUE_SEVERITY : null;
 
 export const recordStatusIssue = (
   record: DNSRecord,
@@ -145,7 +125,7 @@ export const recordStatusIssue = (
   if (isMxRecord(record) && record.status === DNSRecordStatus.CONFLICT) {
     return {
       key: 'mxLookupError',
-      severity: 'critical',
+      severity: UI_ISSUE_SEVERITY,
       text: t('views.mail.sections.customDomains.mxRecordConflictWarning'),
     };
   }
@@ -157,7 +137,7 @@ export const recordStatusIssue = (
 
     return {
       key: 'mxLookupError',
-      severity: 'critical',
+      severity: UI_ISSUE_SEVERITY,
       text: formatValidationError('mxLookupError', i18n),
     };
   }
@@ -168,7 +148,7 @@ export const recordStatusIssue = (
   ) {
     return {
       key: 'dkimRecordNotFound',
-      severity: validationSeverity('dkimRecordNotFound', criticalErrors),
+      severity: UI_ISSUE_SEVERITY,
       text: t('views.mail.sections.customDomains.recordMissingWarning'),
     };
   }
@@ -180,7 +160,7 @@ export const recordStatusIssue = (
 
     return {
       key: 'spfRecordNotFound',
-      severity: 'warning',
+      severity: UI_ISSUE_SEVERITY,
       text: t('views.mail.sections.customDomains.spfRecordConflictWarning', { includeValue }),
     };
   }
@@ -188,7 +168,7 @@ export const recordStatusIssue = (
   if (record.status === DNSRecordStatus.CONFLICT) {
     return {
       key: validationKey ?? `${record.type}-${record.name}-conflict`,
-      severity: validationSeverity(validationKey, criticalErrors),
+      severity: UI_ISSUE_SEVERITY,
       text: t('views.mail.sections.customDomains.recordConflictWarning', {
         currentValue: record.existing_values?.join(', ') || '-',
       }),
@@ -202,7 +182,7 @@ export const recordStatusIssue = (
 
     return {
       key: missingKey ?? `${record.type}-${record.name}-missing`,
-      severity: validationSeverity(missingKey, criticalErrors),
+      severity: UI_ISSUE_SEVERITY,
       text: t('views.mail.sections.customDomains.recordMissingWarning'),
     };
   }
@@ -223,7 +203,7 @@ export const validationIssuesForRecord = (
     .filter((key) => key === 'mxLookupError' || missingOrConflicted(record))
     .map((key) => ({
       key,
-      severity: criticalErrors.includes(key) ? ('critical' as const) : ('warning' as const),
+      severity: UI_ISSUE_SEVERITY,
       text: formatValidationError(key, i18n),
     }));
 };
@@ -296,7 +276,7 @@ export const createConflictDnsTableRows = (
     key: `conflict-${record.type}-${record.name}-${existingValue}-${index}-${conflictIndex}`,
     record: createConflictingRecord(record, existingValue),
     issues: conflictIndex === 0 ? issues : [],
-    severity: conflictSeverity(record, state.customDomain, state.criticalErrors),
+    severity: UI_ISSUE_SEVERITY,
     isStale: false,
     isConflict: true,
   }));
@@ -321,7 +301,7 @@ export const createStaleDnsTableRow = (
   const issues = [
     {
       key: validationKey,
-      severity: 'critical' as const,
+      severity: UI_ISSUE_SEVERITY,
       text: formatValidationError(validationKey, i18n),
     },
   ];
@@ -337,7 +317,7 @@ export const createStaleDnsTableRow = (
       existing_values: record.existing_values,
     },
     issues,
-    severity: 'critical',
+    severity: UI_ISSUE_SEVERITY,
     isStale: true,
     isConflict: false,
   };
@@ -361,7 +341,7 @@ export const rowAction = (row: DnsTableRow): RowAction | null => {
 };
 
 export const rowStatus = (row: DnsTableRow, action: RowAction | null): RowStatus => {
-  if (row.severity === 'warning' || action) {
+  if (row.severity || action) {
     return 'warning';
   }
   return 'success';
@@ -427,7 +407,7 @@ export const buildUnanchoredValidationIssues = (
     .filter((key) => showMissingIssues || !MISSING_VALIDATION_KEYS.has(key))
     .map((key) => ({
       key,
-      severity: 'critical' as const,
+      severity: UI_ISSUE_SEVERITY,
       text: formatValidationError(key, i18n),
     })),
   ...validationWarnings
@@ -435,7 +415,7 @@ export const buildUnanchoredValidationIssues = (
     .filter((key) => showMissingIssues || !MISSING_VALIDATION_KEYS.has(key))
     .map((key) => ({
       key,
-      severity: 'warning' as const,
+      severity: UI_ISSUE_SEVERITY,
       text: formatValidationError(key, i18n),
     })),
 ];

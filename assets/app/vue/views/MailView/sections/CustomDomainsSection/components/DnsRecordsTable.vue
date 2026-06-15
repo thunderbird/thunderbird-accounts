@@ -7,7 +7,6 @@ import {
   PhCopySimple,
   PhWarning,
   PhWarningCircle,
-  PhWarningOctagon,
 } from '@phosphor-icons/vue';
 
 import { DecoratedDnsTableRow, InlineIssue, RecordTab } from '../types';
@@ -145,11 +144,9 @@ const copyCellValue = async (cellKey: string, value: string) => {
         <p
           v-for="issue in unanchoredValidationIssues"
           :key="issue.key"
-          class="inline-issue"
-          :class="`inline-issue-${issue.severity}`"
+          class="inline-issue inline-issue-warning"
         >
-          <ph-warning-octagon v-if="issue.severity === 'critical'" size="18" weight="fill" aria-hidden="true" />
-          <ph-warning-circle v-else size="18" weight="fill" aria-hidden="true" />
+          <ph-warning-circle size="18" weight="fill" aria-hidden="true" />
           <span>{{ issue.text }}</span>
         </p>
       </div>
