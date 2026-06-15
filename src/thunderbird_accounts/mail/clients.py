@@ -33,12 +33,12 @@ class DomainVerificationErrors(StrEnum):
 
     # Critical errors (fail verification)
     MX_LOOKUP_ERROR = 'mxLookupError'
+    DKIM_RECORD_NOT_FOUND = 'dkimRecordNotFound'
     AUTODISCOVER_RECORD_FOUND = 'autodiscoverRecordFound'
     AUTODISCOVER_SRV_RECORD_FOUND = 'autodiscoverSrvRecordFound'
 
     # Warnings (do not fail verification)
     SPF_RECORD_NOT_FOUND = 'spfRecordNotFound'
-    DKIM_RECORD_NOT_FOUND = 'dkimRecordNotFound'
 
 
 class DkimSignatureStage(StrEnum):
@@ -776,7 +776,7 @@ class MailClient:
 
         dkim_records = [record for record in dns_records if '_domainkey' in record.get('name', '')]
         if not dkim_records or any(record.get('status') != DNSRecordStatus.MATCH.value for record in dkim_records):
-            warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
+            critical_errors.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
 
         is_verified = len(critical_errors) == 0
         return {
