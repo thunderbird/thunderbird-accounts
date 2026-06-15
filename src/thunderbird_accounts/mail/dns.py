@@ -6,6 +6,7 @@ import dns.rdatatype as dns_rdatatype
 import dns.resolver as dns_resolver
 from django.conf import settings
 
+from thunderbird_accounts.mail.autodiscover_probe import exchange_autodiscover_endpoint_exists
 from thunderbird_accounts.mail.clients import DNSRecordStatus, StaleDNSRecordCode
 
 TXT_TAG_SPEC_RE = re.compile(
@@ -370,12 +371,11 @@ def check_stale_dns_records(cust_domain: str) -> list[dict]:
     resolver = dns_resolver.Resolver()
     resolver.lifetime = settings.STALE_DNS_LOOKUP_LIFETIME
 
-    # We currently don't show autodiscover records during custom domain setup
-    # so if they have it we should mark as stale / ask for removing it
-    # as it can trigger Office 365 / Exchange in Thunderbird Desktop
+    # We currently don't show autodiscover records during custom domain setup, so if they point at
+    # a real Exchange Autodiscover endpoint we should mark them stale and ask for removal.
     autodiscover_name = f'autodiscover.{cust_domain}'
     cname_targets = _resolve_autodiscover_cname_targets(resolver, autodiscover_name)
-    if cname_targets:
+    if cname_targets and exchange_autodiscover_endpoint_exists(autodiscover_name, cust_domain):
         stale_records.append(
             {
                 'code': StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value,
@@ -385,29 +385,37 @@ def check_stale_dns_records(cust_domain: str) -> list[dict]:
             }
         )
     else:
-        for record_type, address_records in _resolve_autodiscover_address_records(resolver, autodiscover_name).items():
-            stale_records.append(
-                {
-                    'code': StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value,
-                    'type': record_type,
-                    'name': autodiscover_name,
-                    'existing_values': address_records,
-                }
-            )
+        address_record_sets = _resolve_autodiscover_address_records(resolver, autodiscover_name)
+        if address_record_sets and exchange_autodiscover_endpoint_exists(autodiscover_name, cust_domain):
+            for record_type, address_records in address_record_sets.items():
+                stale_records.append(
+                    {
+                        'code': StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value,
+                        'type': record_type,
+                        'name': autodiscover_name,
+                        'existing_values': address_records,
+                    }
+                )
 
     autodiscover_srv_name = f'_autodiscover._tcp.{cust_domain}'
     try:
         answers = _stale_dns_resolve(resolver, autodiscover_srv_name, 'SRV')
-        live_values = [
-            f'{rdata.priority} {rdata.weight} {rdata.port} {rdata.target.to_text().rstrip(".")}' for rdata in answers
+        srv_records = [
+            {
+                'value': f'{rdata.priority} {rdata.weight} {rdata.port} {rdata.target.to_text().rstrip(".")}',
+                'target': rdata.target.to_text().rstrip('.'),
+            }
+            for rdata in answers
         ]
-        if live_values:
+        if srv_records and any(
+            exchange_autodiscover_endpoint_exists(record['target'], cust_domain) for record in srv_records
+        ):
             stale_records.append(
                 {
                     'code': StaleDNSRecordCode.AUTODISCOVER_SRV_UNEXPECTED.value,
                     'type': 'SRV',
                     'name': autodiscover_srv_name,
-                    'existing_values': live_values,
+                    'existing_values': [record['value'] for record in srv_records],
                 }
             )
     except (dns_resolver.NoAnswer, dns_resolver.NXDOMAIN, dns_resolver.NoNameservers):

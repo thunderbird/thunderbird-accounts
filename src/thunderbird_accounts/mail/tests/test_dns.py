@@ -397,6 +397,10 @@ class TestStaleDNSRecords(SimpleTestCase):
             return_value=mock_resolver,
         )
 
+    def _patch_autodiscover_probe(self, return_value):
+        """Patch the Exchange Autodiscover HTTP probe result."""
+        return patch('thunderbird_accounts.mail.dns.exchange_autodiscover_endpoint_exists', return_value=return_value)
+
     def test_autodiscover_cname_stale(self):
         mock_cname = MagicMock()
         mock_cname.target.to_text.return_value = 'autodiscover.outlook.com.'
@@ -406,7 +410,7 @@ class TestStaleDNSRecords(SimpleTestCase):
                 return [mock_cname]
             raise dns_resolver.NoAnswer()
 
-        with self._patch_resolver(resolve_side_effect):
+        with self._patch_resolver(resolve_side_effect), self._patch_autodiscover_probe(True):
             stale_records = check_stale_dns_records(self.domain)
 
         self.assertEqual(len(stale_records), 1)
@@ -414,22 +418,6 @@ class TestStaleDNSRecords(SimpleTestCase):
         self.assertEqual(stale_records[0]['type'], 'CNAME')
         self.assertEqual(stale_records[0]['name'], f'autodiscover.{self.domain}')
         self.assertEqual(stale_records[0]['existing_values'], ['autodiscover.outlook.com'])
-
-    def test_autodiscover_cname_stale_even_if_pointing_to_our_host(self):
-        """Any autodiscover CNAME is stale - we don't use autodiscover at all."""
-        mock_cname = MagicMock()
-        mock_cname.target.to_text.return_value = 'mail.thundermail.com.'
-
-        def resolve_side_effect(name, record_type):
-            if record_type == 'CNAME':
-                return [mock_cname]
-            raise dns_resolver.NoAnswer()
-
-        with self._patch_resolver(resolve_side_effect):
-            stale_records = check_stale_dns_records(self.domain)
-
-        self.assertEqual(len(stale_records), 1)
-        self.assertEqual(stale_records[0]['code'], StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value)
 
     def test_autodiscover_cname_via_a_lookup_chain(self):
         mock_cname = MagicMock()
@@ -449,7 +437,7 @@ class TestStaleDNSRecords(SimpleTestCase):
                 return mock_a_answer
             raise dns_resolver.NoAnswer()
 
-        with self._patch_resolver(resolve_side_effect):
+        with self._patch_resolver(resolve_side_effect), self._patch_autodiscover_probe(True):
             stale_records = check_stale_dns_records(self.domain)
 
         self.assertEqual(len(stale_records), 1)
@@ -473,7 +461,7 @@ class TestStaleDNSRecords(SimpleTestCase):
                 return mock_aaaa_answer
             raise dns_resolver.NoAnswer()
 
-        with self._patch_resolver(resolve_side_effect):
+        with self._patch_resolver(resolve_side_effect), self._patch_autodiscover_probe(True):
             stale_records = check_stale_dns_records(self.domain)
 
         self.assertEqual(len(stale_records), 1)
@@ -496,12 +484,32 @@ class TestStaleDNSRecords(SimpleTestCase):
                 raise dns_resolver.NoAnswer()
             raise dns_resolver.NoAnswer()
 
-        with self._patch_resolver(resolve_side_effect):
+        with self._patch_resolver(resolve_side_effect), self._patch_autodiscover_probe(True):
             stale_records = check_stale_dns_records(self.domain)
 
         self.assertEqual(len(stale_records), 1)
         self.assertEqual(stale_records[0]['type'], 'A')
         self.assertEqual(stale_records[0]['existing_values'], ['203.0.113.10'])
+
+    def test_autodiscover_direct_a_record_not_stale_when_probe_is_negative(self):
+        mock_a = MagicMock()
+        mock_a.to_text.return_value = '203.0.113.10'
+
+        def resolve_side_effect(name, record_type):
+            if record_type == 'CNAME':
+                raise dns_resolver.NoAnswer()
+            if record_type == 'A':
+                mock_a_answer = MagicMock()
+                mock_a_answer.response.answer = []
+                mock_a_answer.__iter__ = MagicMock(return_value=iter([mock_a]))
+                return mock_a_answer
+            raise dns_resolver.NoAnswer()
+
+        with self._patch_resolver(resolve_side_effect), self._patch_autodiscover_probe(False) as mock_probe:
+            stale_records = check_stale_dns_records(self.domain)
+
+        self.assertEqual(stale_records, [])
+        mock_probe.assert_called_once_with(f'autodiscover.{self.domain}', self.domain)
 
     def test_autodiscover_direct_a_and_aaaa_records_stale(self):
         mock_a = MagicMock()
@@ -524,7 +532,7 @@ class TestStaleDNSRecords(SimpleTestCase):
                 return make_answer(mock_aaaa)
             raise dns_resolver.NoAnswer()
 
-        with self._patch_resolver(resolve_side_effect):
+        with self._patch_resolver(resolve_side_effect), self._patch_autodiscover_probe(True):
             stale_records = check_stale_dns_records(self.domain)
 
         self.assertEqual(len(stale_records), 2)
@@ -547,7 +555,7 @@ class TestStaleDNSRecords(SimpleTestCase):
                 return [mock_srv]
             raise dns_resolver.NoAnswer()
 
-        with self._patch_resolver(resolve_side_effect):
+        with self._patch_resolver(resolve_side_effect), self._patch_autodiscover_probe(True):
             stale_records = check_stale_dns_records(self.domain)
 
         self.assertEqual(len(stale_records), 1)
@@ -555,13 +563,12 @@ class TestStaleDNSRecords(SimpleTestCase):
         self.assertEqual(stale_records[0]['name'], f'_autodiscover._tcp.{self.domain}')
         self.assertEqual(stale_records[0]['existing_values'], ['0 0 443 cpanelemaildiscovery.cpanel.net'])
 
-    def test_autodiscover_srv_stale_even_if_pointing_to_our_host(self):
-        """Any autodiscover SRV is stale - we don't use autodiscover at all."""
+    def test_autodiscover_srv_not_stale_when_probe_is_negative(self):
         mock_srv = MagicMock()
         mock_srv.priority = 0
         mock_srv.weight = 1
         mock_srv.port = 443
-        mock_srv.target.to_text.return_value = 'mail.thundermail.com.'
+        mock_srv.target.to_text.return_value = 'cpanelemaildiscovery.cpanel.net.'
 
         def resolve_side_effect(name, record_type):
             if record_type == 'CNAME':
@@ -570,11 +577,11 @@ class TestStaleDNSRecords(SimpleTestCase):
                 return [mock_srv]
             raise dns_resolver.NoAnswer()
 
-        with self._patch_resolver(resolve_side_effect):
+        with self._patch_resolver(resolve_side_effect), self._patch_autodiscover_probe(False) as mock_probe:
             stale_records = check_stale_dns_records(self.domain)
 
-        self.assertEqual(len(stale_records), 1)
-        self.assertEqual(stale_records[0]['code'], StaleDNSRecordCode.AUTODISCOVER_SRV_UNEXPECTED.value)
+        self.assertEqual(stale_records, [])
+        mock_probe.assert_called_once_with('cpanelemaildiscovery.cpanel.net', self.domain)
 
     def test_no_stale_records_when_missing(self):
         with self._patch_resolver(lambda name, rdtype: (_ for _ in ()).throw(dns_resolver.NoAnswer())):
