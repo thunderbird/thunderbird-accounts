@@ -58,15 +58,37 @@ export const MISSING_VALIDATION_KEYS = new Set(['mxLookupError', 'spfRecordNotFo
 export const missingOrConflicted = (record: DNSRecord): boolean =>
   record.status === DNSRecordStatus.MISSING || record.status === DNSRecordStatus.CONFLICT;
 
+export const hasValidationIssue = (
+  key: string,
+  criticalErrors: string[],
+  validationWarnings: string[]
+): boolean => criticalErrors.includes(key) || validationWarnings.includes(key);
+
+export const validationSeverity = (
+  key: string | null | undefined,
+  criticalErrors: string[]
+): InlineIssueSeverity => (key && criticalErrors.includes(key) ? 'critical' : 'warning');
+
 export const shouldAnchorDkimMissingIssue = (
   record: DNSRecord,
   customDomain: string,
   showMissingIssues: boolean,
+  criticalErrors: string[],
   validationWarnings: string[]
 ): boolean =>
   showMissingIssues &&
-  validationWarnings.includes('dkimRecordNotFound') &&
+  hasValidationIssue('dkimRecordNotFound', criticalErrors, validationWarnings) &&
   isDkimRecordForCurrentDomain(record, customDomain);
+
+export const conflictSeverity = (
+  record: DNSRecord,
+  customDomain: string,
+  criticalErrors: string[]
+): InlineIssueSeverity =>
+  isMxRecord(record) ||
+  recordValidationKeys(record, customDomain).some((key) => criticalErrors.includes(key))
+    ? 'critical'
+    : 'warning';
 
 export type DnsTableI18n = {
   t: (key: string, params?: Record<string, unknown>) => string;
@@ -142,11 +164,11 @@ export const recordStatusIssue = (
 
   if (
     record.status === DNSRecordStatus.UNKNOWN &&
-    shouldAnchorDkimMissingIssue(record, customDomain, showMissingIssues, validationWarnings)
+    shouldAnchorDkimMissingIssue(record, customDomain, showMissingIssues, criticalErrors, validationWarnings)
   ) {
     return {
       key: 'dkimRecordNotFound',
-      severity: 'warning',
+      severity: validationSeverity('dkimRecordNotFound', criticalErrors),
       text: t('views.mail.sections.customDomains.recordMissingWarning'),
     };
   }
@@ -166,7 +188,7 @@ export const recordStatusIssue = (
   if (record.status === DNSRecordStatus.CONFLICT) {
     return {
       key: validationKey ?? `${record.type}-${record.name}-conflict`,
-      severity: 'warning',
+      severity: validationSeverity(validationKey, criticalErrors),
       text: t('views.mail.sections.customDomains.recordConflictWarning', {
         currentValue: record.existing_values?.join(', ') || '-',
       }),
@@ -180,7 +202,7 @@ export const recordStatusIssue = (
 
     return {
       key: missingKey ?? `${record.type}-${record.name}-missing`,
-      severity: 'warning',
+      severity: validationSeverity(missingKey, criticalErrors),
       text: t('views.mail.sections.customDomains.recordMissingWarning'),
     };
   }
@@ -274,7 +296,7 @@ export const createConflictDnsTableRows = (
     key: `conflict-${record.type}-${record.name}-${existingValue}-${index}-${conflictIndex}`,
     record: createConflictingRecord(record, existingValue),
     issues: conflictIndex === 0 ? issues : [],
-    severity: 'warning',
+    severity: conflictSeverity(record, state.customDomain, state.criticalErrors),
     isStale: false,
     isConflict: true,
   }));
