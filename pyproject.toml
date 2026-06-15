@@ -24,6 +24,7 @@ dependencies = [
     "servestatic>=4.3.0",
     "sentry-sdk[django]>=2.60.0",
     "requests>=2.34.2",
+    "requests-toolbelt>=0.7.0",
     "celery[redis]>=5.6.3",
     "django-cors-headers>=4.9.0",
     "mozilla-django-oidc>=5.0.2",
