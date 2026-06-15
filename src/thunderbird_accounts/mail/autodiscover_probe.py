@@ -23,6 +23,7 @@ AUTODISCOVER_PROBE_HEADERS = {
     'Content-Type': 'text/xml; charset=utf-8',
 }
 AUTODISCOVER_EXCHANGE_HEADER_NAMES = {
+    'x-aspnet-version',
     'x-beserver',
     'x-calculatedbetarget',
     'x-diaginfo',
