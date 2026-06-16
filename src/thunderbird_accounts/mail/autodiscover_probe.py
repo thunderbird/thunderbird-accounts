@@ -135,7 +135,18 @@ def _looks_like_exchange(response: requests.Response, body: bytes) -> bool:
 
 
 def exchange_autodiscover_endpoint_exists(hostname: str, domain_name: str) -> bool:
-    """Probe a host for a functional Exchange Autodiscover endpoint."""
+    """
+    Probe a host to see if it looks like an Exchange Autodiscover endpoint.
+
+    Resolve the DNS name to confirm it's public IP, not private.
+    To avoid a race condition with resolving the domain a second time,
+    we re-use the IP in the connection string and send the DNS name in the host header.
+
+    After allowing AUTODISCOVER_PROBE_MAX_REDIRECTS, we check the headers for an
+    Exchange-like header.
+
+    Finally, we'll check to see if the response body looks like Exchange.
+    """
     body = _autodiscover_probe_body(domain_name).encode()
     session = requests.Session()
     session.trust_env = False
