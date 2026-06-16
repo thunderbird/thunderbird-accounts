@@ -11,12 +11,20 @@ from requests.exceptions import RequestException
 from rest_framework.test import APIClient
 
 from thunderbird_accounts.authentication.clients import KeycloakClient, RequestMethods
-from thunderbird_accounts.authentication.exceptions import MfaCredentialError
+from thunderbird_accounts.authentication.exceptions import (
+    MfaCredentialError,
+    MfaSessionExpiredError,
+    MfaStepUpRequiredError,
+)
 from thunderbird_accounts.authentication.mfa import (
     make_pending_totp_cache_key,
     MFA_MANAGEMENT_AUTH_SESSION_KEY,
+    MFA_REST_ERROR_ALREADY_CONFIGURED,
+    MFA_REST_ERROR_STEP_UP_REQUIRED,
+    MFA_REST_ERROR_TOTP_NOT_CONFIGURED,
 )
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.views import MfaReauthenticationRequestView
 
 
 def _provider_setup_response() -> dict:
@@ -242,6 +250,51 @@ class MfaApiTestCase(TestCase):
         self.assertIsNotNone(cache.get(make_pending_totp_cache_key(self.user.pk)))
 
     @patch('thunderbird_accounts.authentication.api.KeycloakClient')
+    def test_confirm_totp_setup_maps_session_expired_to_relogin(self, mock_keycloak_client: Mock):
+        # The forwarded access token can expire while the user lingers on the code step;
+        # surface a re-login prompt (401) instead of a generic 502.
+        cache.set(make_pending_totp_cache_key(self.user.pk), {'secret': 'rawsecretvalue123456'})
+        mock_keycloak_client.return_value.register_totp_credential.side_effect = MfaSessionExpiredError()
+
+        response = self.client.post(
+            reverse('api_confirm_totp_setup'),
+            data={'code': '123456'},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 401)
+        # Pending secret is preserved so the user can retry after signing in again.
+        self.assertIsNotNone(cache.get(make_pending_totp_cache_key(self.user.pk)))
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakClient')
+    def test_start_totp_setup_maps_session_expired_to_relogin(self, mock_keycloak_client: Mock):
+        mock_keycloak_client.return_value.get_totp_credentials.return_value = []
+        mock_keycloak_client.return_value.start_totp_setup.side_effect = MfaSessionExpiredError()
+
+        response = self.client.post(reverse('api_start_totp_setup'))
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIsNone(cache.get(make_pending_totp_cache_key(self.user.pk)))
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakClient')
+    def test_confirm_totp_setup_maps_already_configured_to_conflict(self, mock_keycloak_client: Mock):
+        cache.set(make_pending_totp_cache_key(self.user.pk), {'secret': 'rawsecretvalue123456'})
+        mock_keycloak_client.return_value.register_totp_credential.side_effect = MfaCredentialError(
+            MFA_REST_ERROR_ALREADY_CONFIGURED
+        )
+
+        response = self.client.post(
+            reverse('api_confirm_totp_setup'),
+            data={'code': '123456'},
+            content_type='application/json',
+        )
+
+        # Registration is enrollment-only on the provider; the user must remove the
+        # existing authenticator first.
+        self.assertEqual(response.status_code, 409)
+        self.assertIn('already set up', response.json()['error'])
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakClient')
     def test_confirm_totp_setup_rejects_when_setup_expired(self, mock_keycloak_client: Mock):
         response = self.client.post(
             reverse('api_confirm_totp_setup'),
@@ -255,11 +308,45 @@ class MfaApiTestCase(TestCase):
     @patch('thunderbird_accounts.authentication.api.KeycloakClient')
     def test_remove_totp_credential_checks_credential_belongs_to_user(self, mock_keycloak_client: Mock):
         mock_keycloak_client.return_value.get_totp_credentials.return_value = [{'id': 'credential-id', 'type': 'otp'}]
+        mock_keycloak_client.return_value.get_recovery_codes_credentials.return_value = []
 
         response = self.client.delete(reverse('api_remove_totp_credential', args=['credential-id']))
 
         self.assertEqual(response.status_code, 200)
         mock_keycloak_client.return_value.delete_credential.assert_called_once_with('keycloak-user-id', 'credential-id')
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakClient')
+    def test_remove_last_totp_credential_cascades_recovery_codes(self, mock_keycloak_client: Mock):
+        # Recovery codes are a backup for the authenticator: removing the last
+        # authenticator must remove them too, or the account is left codes-only and
+        # quietly loses MFA entirely once the codes run out.
+        mock_keycloak_client.return_value.get_totp_credentials.return_value = [{'id': 'credential-id', 'type': 'otp'}]
+        mock_keycloak_client.return_value.get_recovery_codes_credentials.return_value = [
+            {'id': 'recovery-cred-id', 'type': 'recovery-authn-codes'}
+        ]
+
+        response = self.client.delete(reverse('api_remove_totp_credential', args=['credential-id']))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['recoveryCodesRemoved'])
+        mock_keycloak_client.return_value.delete_credential.assert_any_call('keycloak-user-id', 'credential-id')
+        mock_keycloak_client.return_value.delete_credential.assert_any_call('keycloak-user-id', 'recovery-cred-id')
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakClient')
+    def test_remove_totp_credential_keeps_recovery_codes_when_other_authenticators_remain(
+        self, mock_keycloak_client: Mock
+    ):
+        mock_keycloak_client.return_value.get_totp_credentials.return_value = [
+            {'id': 'credential-id', 'type': 'otp'},
+            {'id': 'other-credential-id', 'type': 'otp'},
+        ]
+
+        response = self.client.delete(reverse('api_remove_totp_credential', args=['credential-id']))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['recoveryCodesRemoved'])
+        mock_keycloak_client.return_value.delete_credential.assert_called_once_with('keycloak-user-id', 'credential-id')
+        mock_keycloak_client.return_value.get_recovery_codes_credentials.assert_not_called()
 
     @patch('thunderbird_accounts.authentication.api.KeycloakClient')
     def test_remove_totp_credential_requires_recent_keycloak_auth(self, mock_keycloak_client: Mock):
@@ -340,6 +427,39 @@ class MfaApiTestCase(TestCase):
         mock_keycloak_client.return_value.regenerate_recovery_codes.assert_not_called()
 
     @patch('thunderbird_accounts.authentication.api.KeycloakClient')
+    def test_regenerate_recovery_codes_maps_totp_not_configured_to_conflict(self, mock_keycloak_client: Mock):
+        # The provider rejects codes-only (re)generation: recovery codes are a backup
+        # for the authenticator app, never a standalone factor.
+        mock_keycloak_client.return_value.regenerate_recovery_codes.side_effect = MfaCredentialError(
+            MFA_REST_ERROR_TOTP_NOT_CONFIGURED
+        )
+
+        response = self.client.post(reverse('api_regenerate_recovery_codes'))
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn('authenticator app', response.json()['error'])
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakClient')
+    def test_regenerate_recovery_codes_maps_session_expired_to_relogin(self, mock_keycloak_client: Mock):
+        # A stale forwarded token on regenerate should prompt re-login (401), not 502.
+        mock_keycloak_client.return_value.regenerate_recovery_codes.side_effect = MfaSessionExpiredError()
+
+        response = self.client.post(reverse('api_regenerate_recovery_codes'))
+
+        self.assertEqual(response.status_code, 401)
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakClient')
+    def test_regenerate_recovery_codes_maps_provider_step_up_to_reauth(self, mock_keycloak_client: Mock):
+        # Backstop: the session pre-check passed (recent management auth) but the provider
+        # rejected the forwarded token's claims — respond with the step-up redirect.
+        mock_keycloak_client.return_value.regenerate_recovery_codes.side_effect = MfaStepUpRequiredError()
+
+        response = self.client.post(reverse('api_regenerate_recovery_codes'))
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['reauthUrl'], '/oidc/mfa-reauth/?next=%2Fmanage-mfa')
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakClient')
     def test_remove_recovery_codes_credential_checks_credential_belongs_to_user(self, mock_keycloak_client: Mock):
         mock_keycloak_client.return_value.get_recovery_codes_credentials.return_value = [
             {'id': 'recovery-cred-id', 'type': 'recovery-authn-codes'}
@@ -397,9 +517,10 @@ class KeycloakClientMfaTestCase(TestCase):
         self.assertEqual(method, RequestMethods.POST)
         self.assertEqual(mock_request.call_args.kwargs['base_url'], settings.KEYCLOAK_MFA_API_ENDPOINT)
         self.assertEqual(mock_request.call_args.kwargs['access_token'], self.USER_TOKEN)
+        # Enrollment-only: there is no overwrite flag in the provider contract.
         self.assertEqual(
             mock_request.call_args.kwargs['json_data'],
-            {'secret': 'rawsecret', 'code': '123456', 'deviceName': 'Authenticator app', 'overwrite': True},
+            {'secret': 'rawsecret', 'code': '123456', 'deviceName': 'Authenticator app'},
         )
 
     def test_register_totp_credential_raises_mfa_error_on_client_error(self):
@@ -413,6 +534,41 @@ class KeycloakClientMfaTestCase(TestCase):
                 client.register_totp_credential(self.USER_TOKEN, 'rawsecret', '000000', 'Authenticator app')
 
         self.assertEqual(ctx.exception.error_code, 'invalid_code')
+
+    def test_register_totp_credential_raises_mfa_error_when_already_configured(self):
+        client = KeycloakClient()
+        failing_response = RequestsResponse()
+        failing_response.status_code = 409
+        failing_response._content = json.dumps({'error': MFA_REST_ERROR_ALREADY_CONFIGURED}).encode()
+
+        with patch.object(client, 'request', side_effect=RequestException(response=failing_response)):
+            with self.assertRaises(MfaCredentialError) as ctx:
+                client.register_totp_credential(self.USER_TOKEN, 'rawsecret', '123456', 'Authenticator app')
+
+        self.assertEqual(ctx.exception.error_code, MFA_REST_ERROR_ALREADY_CONFIGURED)
+
+    def test_regenerate_recovery_codes_raises_step_up_required(self):
+        client = KeycloakClient()
+        failing_response = RequestsResponse()
+        failing_response.status_code = 401
+        failing_response._content = json.dumps({'error': MFA_REST_ERROR_STEP_UP_REQUIRED}).encode()
+
+        with patch.object(client, 'request', side_effect=RequestException(response=failing_response)):
+            with self.assertRaises(MfaStepUpRequiredError):
+                client.regenerate_recovery_codes(self.USER_TOKEN)
+
+    def test_mfa_request_raises_session_expired_on_plain_unauthorized(self):
+        # A 401 without the step_up_required marker is a plain auth failure (the forwarded
+        # access token is missing/expired) — distinct from a step-up demand, and surfaced
+        # as a re-login prompt rather than a generic upstream failure.
+        client = KeycloakClient()
+        failing_response = RequestsResponse()
+        failing_response.status_code = 401
+        failing_response._content = b''
+
+        with patch.object(client, 'request', side_effect=RequestException(response=failing_response)):
+            with self.assertRaises(MfaSessionExpiredError):
+                client.regenerate_recovery_codes(self.USER_TOKEN)
 
     def test_register_totp_credential_reraises_upstream_errors(self):
         client = KeycloakClient()
@@ -437,3 +593,13 @@ class KeycloakClientMfaTestCase(TestCase):
         self.assertEqual(mock_request.call_args.kwargs['access_token'], self.USER_TOKEN)
         self.assertEqual(mock_request.call_args.kwargs['json_data'], {'deviceName': 'Recovery codes'})
         self.assertEqual(result['codes'], ['AAAA', 'BBBB'])
+
+
+class MfaReauthenticationRequestViewTestCase(TestCase):
+    def test_step_up_redirect_requests_acr_and_fresh_authentication(self):
+        params = MfaReauthenticationRequestView().get_extra_params(None)
+
+        self.assertEqual(params['acr_values'], settings.MFA_KEYCLOAK_ACR_VALUE)
+        # max_age=0 forces Keycloak to actively re-authenticate so the new token carries a
+        # fresh auth_time — required by the keycloak-mfa-rest step-up check.
+        self.assertEqual(params['max_age'], '0')

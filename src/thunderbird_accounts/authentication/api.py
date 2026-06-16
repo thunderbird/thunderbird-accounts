@@ -12,9 +12,17 @@ import sentry_sdk
 from requests.exceptions import RequestException
 
 from thunderbird_accounts.authentication.clients import KeycloakClient
-from thunderbird_accounts.authentication.exceptions import InvalidDomainError, ImportUserError, MfaCredentialError
+from thunderbird_accounts.authentication.exceptions import (
+    InvalidDomainError,
+    ImportUserError,
+    MfaCredentialError,
+    MfaSessionExpiredError,
+    MfaStepUpRequiredError,
+)
 from thunderbird_accounts.authentication.mfa import (
     MFA_MANAGEMENT_AUTH_SESSION_KEY,
+    MFA_REST_ERROR_ALREADY_CONFIGURED,
+    MFA_REST_ERROR_TOTP_NOT_CONFIGURED,
     has_recent_mfa_management_auth,
     make_pending_totp_cache_key,
 )
@@ -242,6 +250,8 @@ def start_totp_setup(request: Request):
 
     try:
         setup = KeycloakClient().start_totp_setup(user_access_token)
+    except MfaSessionExpiredError:
+        return mfa_session_expired_response()
     except RequestException as exc:
         sentry_sdk.capture_exception(exc)
         return Response({'success': False, 'error': _('Could not start authenticator app setup.')}, status=502)
@@ -295,13 +305,27 @@ def confirm_totp_setup(request: Request):
     try:
         # The provider validates the code against the secret and registers the
         # credential in one call; an invalid code raises MfaCredentialError.
+        # Registration is enrollment-only: the provider rejects it when an
+        # authenticator app already exists (re-enrollment is remove, then set up).
         KeycloakClient().register_totp_credential(
             user_access_token=user_access_token,
             secret=pending_setup['secret'],
             code=code,
             user_label=str(user_label),
         )
-    except MfaCredentialError:
+    except MfaStepUpRequiredError:
+        return make_mfa_reauthentication_response(request)
+    except MfaSessionExpiredError:
+        return mfa_session_expired_response()
+    except MfaCredentialError as exc:
+        if exc.error_code == MFA_REST_ERROR_ALREADY_CONFIGURED:
+            return Response(
+                {
+                    'success': False,
+                    'error': _('An authenticator app is already set up. Remove it before setting up a new one.'),
+                },
+                status=409,
+            )
         return Response({'success': False, 'error': _('The one-time code is invalid.')}, status=400)
     except RequestException as exc:
         sentry_sdk.capture_exception(exc)
@@ -330,6 +354,11 @@ def confirm_totp_setup(request: Request):
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def remove_totp_credential(request: Request, credential_id: str):
+    """Remove an authenticator-app credential. When it was the last one, any
+    recovery-codes credential is removed along with it: recovery codes are strictly a
+    backup for the authenticator, and an account whose only second factor is recovery
+    codes ends up unprotected once the codes run out (Keycloak silently deletes the
+    credential when the last code is spent)."""
     if not request.user.oidc_id:
         return Response({'success': False, 'error': _('This account is not connected to Keycloak.')}, status=400)
 
@@ -337,16 +366,22 @@ def remove_totp_credential(request: Request, credential_id: str):
         return reauthentication_response
 
     try:
-        totp_credentials = KeycloakClient().get_totp_credentials(request.user.oidc_id)
+        keycloak = KeycloakClient()
+        totp_credentials = keycloak.get_totp_credentials(request.user.oidc_id)
         if credential_id not in [credential.get('id') for credential in totp_credentials]:
             return Response({'success': False, 'error': _('Authenticator app not found.')}, status=404)
 
-        KeycloakClient().delete_credential(request.user.oidc_id, credential_id)
+        keycloak.delete_credential(request.user.oidc_id, credential_id)
+
+        last_authenticator_removed = len(totp_credentials) == 1
+        if last_authenticator_removed:
+            for recovery_credential in keycloak.get_recovery_codes_credentials(request.user.oidc_id):
+                keycloak.delete_credential(request.user.oidc_id, recovery_credential['id'])
     except RequestException as exc:
         sentry_sdk.capture_exception(exc)
         return Response({'success': False, 'error': _('Could not remove the authenticator app.')}, status=502)
 
-    return Response({'success': True})
+    return Response({'success': True, 'recoveryCodesRemoved': last_authenticator_removed})
 
 
 @api_view(['POST'])
@@ -373,6 +408,22 @@ def regenerate_recovery_codes(request: Request):
     user_label = request.data.get('label') or _('Recovery codes')
     try:
         result = KeycloakClient().regenerate_recovery_codes(user_access_token, user_label=str(user_label))
+    except MfaStepUpRequiredError:
+        # Backstop for the pre-check above: the provider verifies the token's own
+        # acr/auth_time claims, so if the two disagree the user is sent through the
+        # step-up redirect rather than getting an opaque failure.
+        return make_mfa_reauthentication_response(request)
+    except MfaSessionExpiredError:
+        return mfa_session_expired_response()
+    except MfaCredentialError as exc:
+        if exc.error_code == MFA_REST_ERROR_TOTP_NOT_CONFIGURED:
+            # Recovery codes are a backup for the authenticator app, never a standalone
+            # factor — the provider rejects (re)generation without a TOTP credential.
+            return Response(
+                {'success': False, 'error': _('Set up an authenticator app before generating recovery codes.')},
+                status=409,
+            )
+        return Response({'success': False, 'error': _('Could not save your recovery codes.')}, status=400)
     except RequestException as exc:
         sentry_sdk.capture_exception(exc)
         return Response({'success': False, 'error': _('Could not save your recovery codes.')}, status=502)

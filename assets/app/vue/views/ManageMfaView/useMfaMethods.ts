@@ -142,7 +142,12 @@ export function useMfaMethods(options: MfaMethodsOptions) {
   const removeHandlers = {
     [AUTHENTICATION_METHODS.AUTHENTICATOR_APP]: {
       api: removeTotpCredential,
-      resetCredentials: () => setAuthenticatorCredentials([]),
+      // Removing the (only) authenticator also removes recovery codes on the backend —
+      // codes are strictly a backup for the authenticator — so reset both rows.
+      resetCredentials: () => {
+        setAuthenticatorCredentials([]);
+        setRecoveryCodesCredentials([]);
+      },
       errorKey: 'views.manageMfa.errors.remove',
       titleKey: 'views.manageMfa.confirmRemoveAuthenticatorApp',
       descriptionKey: 'views.manageMfa.confirmRemoveAuthenticatorAppDescription',

@@ -363,16 +363,54 @@ const signInWithPassword = async (page: Page) => {
   await page.getByTestId('submit-btn').click();
 };
 
-// Sets up an authenticator app via the management UI and returns the TOTP secret.
-// Leaves the auto-chained recovery-codes modal open on its confirmation step.
+// Sets up an authenticator app via the management UI and returns the TOTP secret plus
+// the code used to confirm enrollment (so later OTP prompts can avoid reusing it — see
+// freshTotpCode). Leaves the auto-chained recovery-codes modal open on its confirmation step.
 const setUpAuthenticatorApp = async (page: Page) => {
   await page.getByRole('button', { name: 'Set up' }).first().click();
   await page.getByRole('button', { name: 'Enter code manually' }).click();
   const manualSecret = await page.getByTestId('totp-manual-secret').innerText();
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByTestId('totp-code-input').fill(makeTotpCode(manualSecret));
+  const enrollmentCode = makeTotpCode(manualSecret);
+  await page.getByTestId('totp-code-input').fill(enrollmentCode);
   await page.getByRole('button', { name: 'Continue' }).click();
-  return manualSecret;
+  return { manualSecret, enrollmentCode };
+};
+
+// Keycloak's OTP policy rejects code reuse (otpPolicyCodeReusable: false), so when two
+// OTP prompts happen within one TOTP period we must wait for the next period before
+// generating another code.
+const freshTotpCode = async (page: Page, manualSecret: string, lastUsedCode: string) => {
+  let code = makeTotpCode(manualSecret);
+  if (code === lastUsedCode) {
+    const msUntilNextPeriod = (TOTP_PERIOD_SECONDS - (Math.floor(Date.now() / 1000) % TOTP_PERIOD_SECONDS)) * 1000;
+    await page.waitForTimeout(msUntilNextPeriod + 500);
+    code = makeTotpCode(manualSecret);
+  }
+  return code;
+};
+
+// Submit the OTP challenge on Keycloak's themed login and wait until the flow actually
+// navigates back to the accounts origin. The themed page is a Vue app, so a too-eager
+// fill/click can race its hydration or an auth-session-triggered reload and silently do
+// nothing — when that happens we are still on Keycloak and retry with a fresh code.
+const completeOtpChallenge = async (page: Page, manualSecret: string, lastUsedCode: string) => {
+  const otpInput = page.getByTestId('otp-input');
+  let code = await freshTotpCode(page, manualSecret, lastUsedCode);
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await expect(otpInput).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await otpInput.fill(code);
+    await page.getByTestId('submit-btn').click();
+    try {
+      await page.waitForURL((url) => !url.pathname.startsWith('/realms/'), { timeout: 10_000 });
+      return code;
+    } catch {
+      // Still on Keycloak — the submit was swallowed or the code was rejected.
+      code = await freshTotpCode(page, manualSecret, code);
+    }
+  }
+  throw new Error('Keycloak did not accept the OTP challenge after 3 attempts.');
 };
 
 // The recovery-code login page prompts for a specific 1-indexed code number; enter the
@@ -417,7 +455,8 @@ test.describe('multi-factor authentication', {
     await page.getByRole('button', { name: 'Enter code manually' }).click();
     const manualSecret = await page.getByTestId('totp-manual-secret').innerText();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.getByTestId('totp-code-input').fill(makeTotpCode(manualSecret));
+    const enrollmentCode = makeTotpCode(manualSecret);
+    await page.getByTestId('totp-code-input').fill(enrollmentCode);
     await page.getByRole('button', { name: 'Continue' }).click();
     // The recovery-codes modal auto-opens after a successful TOTP confirm.
     // This test isn't about recovery codes, so dismiss it to land on the management page.
@@ -430,9 +469,7 @@ test.describe('multi-factor authentication', {
     await page.getByTestId('password-input').fill(ACCTS_OIDC_PWORD);
     await page.getByTestId('submit-btn').click();
 
-    await expect(page.getByTestId('otp-input')).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-    await page.getByTestId('otp-input').fill(makeTotpCode(manualSecret));
-    await page.getByTestId('submit-btn').click();
+    await completeOtpChallenge(page, manualSecret, enrollmentCode);
     await waitForVueApp(page);
 
     // The accounts login above established a Keycloak SSO session at acr=2.
@@ -501,7 +538,10 @@ test.describe('multi-factor authentication', {
     expect(await getRecoveryCodesCredentialMetadata()).toEqual([]);
   });
 
-  test('recovery code signs in when it is the only second factor', async ({ page }) => {
+  // Recovery codes must never be the only registered second factor: Keycloak silently
+  // deletes the credential once the last code is spent at login, so a codes-only account
+  // is a few logins away from having no MFA at all.
+  test('recovery codes require an authenticator app and are removed along with it', async ({ page }) => {
     await ensureWeAreSignedIn(page);
     await acceptLegalPoliciesIfRequired(page);
     await page.goto(`${ACCTS_HUB_URL}/manage-mfa`);
@@ -510,25 +550,90 @@ test.describe('multi-factor authentication', {
     await page.reload();
     await waitForVueApp(page);
 
-    // Enrol recovery codes only (no authenticator), capturing the plaintext set.
     const recoveryRow = page.locator('.authentication-method').filter({ hasText: 'Recovery codes' });
-    await recoveryRow.getByRole('button', { name: 'Set up' }).click();
+
+    // With no authenticator enrolled, recovery codes cannot be set up.
+    await expect(page.getByTestId('mfa-recoveryCodes-setup-button')).toBeDisabled();
+    await expect(recoveryRow).toContainText('Set up an authenticator app first');
+
+    // Enrol the authenticator; the chained recovery-codes modal commits a set of codes.
+    await setUpAuthenticatorApp(page);
     const codes = await captureRecoveryCodesAndConfirm(page);
     expect(codes).toHaveLength(12);
+    await expect(recoveryRow.getByRole('button', { name: 'Edit' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
 
-    // Sign in fresh: with only recovery codes enrolled, Keycloak goes straight to the
-    // recovery-code step, which the custom theme must render (not "Route Not Implemented").
-    await signInWithPassword(page);
-    await expect(page.getByRole('heading', { name: 'Login with a recovery authentication code' })).toBeVisible({
+    // Removing the authenticator cascades: the recovery codes are deleted with it...
+    await page.getByTestId('mfa-authenticatorApp-remove-button').click();
+    await page.locator('dialog').getByRole('button', { name: 'Remove' }).click();
+    await expect(page.getByTestId('mfa-authenticatorApp-setup-button')).toBeVisible({
       timeout: TIMEOUT_30_SECONDS,
     });
-    await submitRequestedRecoveryCode(page, codes);
-    await waitForVueApp(page);
+    await expect(page.getByTestId('mfa-recoveryCodes-setup-button')).toBeDisabled();
 
-    // Signed in: the management page renders with recovery codes configured.
+    // ...and in Keycloak no MFA credential of either type remains.
+    const { credentials } = await fetchKeycloakCredentials();
+    expect(credentials.filter((item: { type?: string }) => MFA_CREDENTIAL_TYPES.includes(item.type ?? ''))).toEqual([]);
+  });
+
+  test('regenerating recovery codes after a fresh sign-in requires identity verification', async ({ page }) => {
+    await ensureWeAreSignedIn(page);
+    await acceptLegalPoliciesIfRequired(page);
     await page.goto(`${ACCTS_HUB_URL}/manage-mfa`);
     await waitForVueApp(page);
-    await expect(recoveryRow.getByRole('button', { name: 'Edit' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await removeExistingMfaCredentials();
+    await page.reload();
+    await waitForVueApp(page);
+
+    // Enrol the authenticator app; the auto-chained recovery-codes generation is NOT
+    // step-up gated (registering the TOTP just proved a live OTP code), so it commits
+    // without an extra prompt.
+    const { manualSecret, enrollmentCode } = await setUpAuthenticatorApp(page);
+    const initialCodes = await captureRecoveryCodesAndConfirm(page);
+    expect(initialCodes).toHaveLength(12);
+    const initialCredential = await getRecoveryCodesCredentialMetadata();
+    expect(initialCredential).toHaveLength(1);
+
+    // Sign in fresh (password + OTP). A normal login does not seed the MFA-management
+    // window, so the next management action must demand a step-up verification.
+    await signInWithPassword(page);
+    const signInCode = await completeOtpChallenge(page, manualSecret, enrollmentCode);
+    await waitForVueApp(page);
+
+    // Loading the management page already requires recent MFA auth → verify modal.
+    await page.goto(`${ACCTS_HUB_URL}/manage-mfa`);
+    await waitForVueApp(page);
+    await expect(page.getByRole('heading', { name: 'Verify your identity' })).toBeVisible({
+      timeout: TIMEOUT_30_SECONDS,
+    });
+
+    await page.getByRole('button', { name: 'Verify', exact: true }).click();
+
+    // The step-up redirect carries acr_values=2 and max_age=0, forcing an active
+    // re-authentication that refreshes the token's auth_time — which the
+    // keycloak-mfa-rest token-claims gate checks alongside acr. Depending on how much
+    // of the SSO session Keycloak can reuse, the re-auth page either asks for the
+    // credentials again or jumps straight to the OTP challenge; handle both.
+    const otpInput = page.getByTestId('otp-input');
+    const usernameInput = page.getByTestId('username-input');
+    await expect(otpInput.or(usernameInput).first()).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    if (await usernameInput.isVisible()) {
+      await usernameInput.fill(ACCTS_OIDC_EMAIL);
+      await page.getByTestId('password-input').fill(ACCTS_OIDC_PWORD);
+      await page.getByTestId('submit-btn').click();
+    }
+    await completeOtpChallenge(page, manualSecret, signInCode);
+    await waitForVueApp(page);
+
+    // Back on the management page with a stepped-up session: regenerating succeeds
+    // against both the accounts pre-check and the provider's step-up gate.
+    const recoveryRow = page.locator('.authentication-method').filter({ hasText: 'Recovery codes' });
+    await recoveryRow.getByRole('button', { name: 'Edit' }).click();
+    const replacedCodes = await captureRecoveryCodesAndConfirm(page);
+    expect(replacedCodes).toHaveLength(12);
+    expect(replacedCodes).not.toEqual(initialCodes);
+    const replacedCredential = await getRecoveryCodesCredentialMetadata();
+    expect(replacedCredential).toHaveLength(1);
+    expect(replacedCredential[0].id).not.toBe(initialCredential[0].id);
 
     await removeExistingMfaCredentials();
   });

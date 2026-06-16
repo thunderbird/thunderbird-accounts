@@ -15,6 +15,12 @@ const firefoxLaunchOptions = {
     // hangs waiting on a modal that Playwright can't reach.
     'security.warn_submit_insecure': false,
     'security.warn_submit_secure_to_insecure': false,
+    // Disable HTTPS-First upgrades: the local stack is plain HTTP, and when
+    // another local service occupies :443 (e.g. Stalwart) the silent upgrade
+    // lands on its self-signed cert and Firefox shows a security interstitial
+    // instead of falling back to http.
+    'dom.security.https_first': false,
+    'dom.security.https_first_schemeless': false,
   },
 };
 

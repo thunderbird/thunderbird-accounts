@@ -15,6 +15,8 @@ from thunderbird_accounts.authentication.exceptions import (
     InvalidDomainError,
     ImportUserError,
     MfaCredentialError,
+    MfaSessionExpiredError,
+    MfaStepUpRequiredError,
     SendExecuteActionsEmailError,
     UpdateUserError,
     DeleteUserError,
@@ -24,6 +26,7 @@ from thunderbird_accounts.authentication.exceptions import (
 from thunderbird_accounts.authentication.mfa import (
     KEYCLOAK_OTP_CREDENTIAL_TYPE,
     KEYCLOAK_RECOVERY_CODES_CREDENTIAL_TYPE,
+    MFA_REST_ERROR_STEP_UP_REQUIRED,
 )
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.utils import KeycloakRequiredAction
@@ -136,8 +139,11 @@ class KeycloakClient:
     ) -> dict:
         """Call the self-service keycloak-mfa-rest provider with the end user's forwarded
         OIDC access token (the provider operates on that token's subject). Raises
-        :any:`MfaCredentialError` for 4xx client errors (e.g. an invalid TOTP code) and
-        re-raises other :any:`RequestException`\\ s as upstream failures."""
+        :any:`MfaStepUpRequiredError` when the provider demands a recent second-factor
+        authentication (401 ``step_up_required``), :any:`MfaSessionExpiredError` on a plain
+        401 (the forwarded access token is missing/expired), :any:`MfaCredentialError` for
+        other client errors (e.g. an invalid TOTP code, or 409 ``mfa_already_configured``),
+        and re-raises other :any:`RequestException`\\ s as upstream failures."""
         try:
             response = self.request(
                 endpoint,
@@ -148,12 +154,20 @@ class KeycloakClient:
             )
         except RequestException as exc:
             http_response = getattr(exc, 'response', None)
-            if http_response is not None and http_response.status_code == 400:
+            if http_response is not None:
                 try:
                     error_code = http_response.json().get('error')
                 except (ValueError, JSONDecodeError):
                     error_code = None
-                raise MfaCredentialError(error_code or 'invalid_request') from exc
+                if http_response.status_code == 401:
+                    # A step-up demand carries a marker; a bare 401 means the forwarded
+                    # user token is missing/expired (its short lifetime can lapse while the
+                    # user lingers in the setup flow) — surface that as a re-login prompt.
+                    if error_code == MFA_REST_ERROR_STEP_UP_REQUIRED:
+                        raise MfaStepUpRequiredError() from exc
+                    raise MfaSessionExpiredError() from exc
+                if http_response.status_code in (400, 409):
+                    raise MfaCredentialError(error_code or 'invalid_request') from exc
             raise
         return response.json()
 
@@ -168,9 +182,12 @@ class KeycloakClient:
 
     def register_totp_credential(self, user_access_token: str, secret: str, code: str, user_label: str) -> dict:
         """Verify ``code`` against ``secret`` and register the TOTP credential for the
-        calling user via the provider, replacing any existing authenticator-app credential.
+        calling user via the provider. Enrollment-only: the provider rejects the request
+        when an authenticator-app credential already exists (re-enrollment is remove,
+        then a fresh setup).
 
-        :raises MfaCredentialError: If the provider rejects the code as invalid."""
+        :raises MfaCredentialError: If the provider rejects the code as invalid, or an
+            authenticator app is already configured (``mfa_already_configured``)."""
         return self._mfa_request(
             'totp/register',
             user_access_token,
@@ -179,7 +196,6 @@ class KeycloakClient:
                 'secret': secret,
                 'code': code,
                 'deviceName': user_label,
-                'overwrite': True,
             },
         )
 
@@ -197,7 +213,9 @@ class KeycloakClient:
         Authenticated with the user's forwarded OIDC token (provider operates on the token
         subject). Keycloak generates and hashes the codes; accounts never sees a stored hash.
         The destructive "this resets your old codes" confirmation lives in the UI.
-        """
+
+        :raises MfaStepUpRequiredError: If the provider requires a recent second-factor
+            authentication (the token's acr/auth_time claims are missing or stale)."""
         json_data = {'deviceName': user_label} if user_label else None
         return self._mfa_request(
             'recovery-codes/regenerate',

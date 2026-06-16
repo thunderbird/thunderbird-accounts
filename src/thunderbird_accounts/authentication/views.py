@@ -48,7 +48,12 @@ class MfaReauthenticationRequestView(OIDCAuthenticationRequestView):
 
     def get_extra_params(self, request):
         params = super().get_extra_params(request).copy()
-        params.update({'acr_values': settings.MFA_KEYCLOAK_ACR_VALUE})
+        # max_age=0 forces Keycloak to actively re-authenticate (refreshing the token's
+        # auth_time claim) instead of satisfying acr_values from a stale SSO session.
+        # The keycloak-mfa-rest provider checks acr *and* auth_time freshness on the
+        # forwarded token, so without this a stale-but-stepped-up session would loop:
+        # Keycloak bounces straight back, the provider still rejects, and we redirect again.
+        params.update({'acr_values': settings.MFA_KEYCLOAK_ACR_VALUE, 'max_age': '0'})
         return params
 
 

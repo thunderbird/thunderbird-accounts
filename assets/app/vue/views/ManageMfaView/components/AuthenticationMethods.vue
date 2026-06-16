@@ -20,6 +20,7 @@ const verifyYourIdentityModal = useTemplateRef<InstanceType<typeof VerifyYourIde
 const removeMfaMethodModal = useTemplateRef<InstanceType<typeof RemoveMfaMethodModal>>('removeMfaMethodModal');
 
 const {
+  authenticationMethods,
   authenticationMethodEntries,
   isLoading,
   errorMessage,
@@ -52,6 +53,26 @@ const openMethodModal = (method: string) => {
   }
 };
 
+// The authenticator app cannot be edited in place: registration is enrollment-only on
+// the Keycloak side (replacing an authenticator with a bearer token alone is the
+// "someone else's bike lock" attack). Re-enrollment is Remove, then Set up. Recovery
+// codes keep Edit since regenerating them is the whole operation (step-up gated).
+const isEditable = (method: string) => method !== AUTHENTICATION_METHODS.AUTHENTICATOR_APP;
+
+// Recovery codes are strictly a backup for the authenticator app, never a standalone
+// factor (Keycloak deletes the credential once the last code is spent, leaving the
+// account unprotected) — so they can't be set up until an authenticator exists.
+const isSetupDisabled = (method: string) =>
+  method === AUTHENTICATION_METHODS.RECOVERY_CODES
+  && !authenticationMethods.value[AUTHENTICATION_METHODS.AUTHENTICATOR_APP].set;
+
+const methodDescription = (method: string, isSet: boolean) => {
+  if (!isSet && isSetupDisabled(method)) {
+    return t('views.manageMfa.recoveryCodes.requiresAuthenticator');
+  }
+  return t(`views.manageMfa.${method}.description.${isSet ? 'set' : 'notSet'}`);
+};
+
 onMounted(loadMfaMethods);
 </script>
 
@@ -79,7 +100,7 @@ onMounted(loadMfaMethods);
             </div>
   
             <p :class="{ 'block-margin': methodData.set }">
-              {{ t(`views.manageMfa.${method}.description.${methodData.set ? 'set' : 'notSet'}`) }}
+              {{ methodDescription(method, methodData.set) }}
             </p>
 
             <template v-if="methodData.set && (methodData.setupDate || methodData.lastUsedDate)">
@@ -102,7 +123,7 @@ onMounted(loadMfaMethods);
 
           <div class="authentication-method-actions">
             <template v-if="methodData.set">
-              <primary-button :data-testid="`mfa-${method}-edit-button`" variant="outline" size="small" @click="openMethodModal(method)">
+              <primary-button v-if="isEditable(method)" :data-testid="`mfa-${method}-edit-button`" variant="outline" size="small" @click="openMethodModal(method)">
                 {{ t('views.manageMfa.actions.edit') }}
               </primary-button>
               <link-button :data-testid="`mfa-${method}-remove-button`" size="small" @click="beginRemove(method, methodData)">
@@ -110,7 +131,7 @@ onMounted(loadMfaMethods);
               </link-button>
             </template>
             <template v-else>
-              <primary-button :data-testid="`mfa-${method}-setup-button`" variant="outline" size="small" @click="openMethodModal(method)">
+              <primary-button :data-testid="`mfa-${method}-setup-button`" variant="outline" size="small" :disabled="isSetupDisabled(method)" @click="openMethodModal(method)">
                 {{ t('views.manageMfa.actions.setUp') }}
               </primary-button>
             </template>
