@@ -15,7 +15,8 @@ from requests_toolbelt.adapters import host_header_ssl
 
 AUTODISCOVER_PROBE_PATH = '/autodiscover/autodiscover.xml'
 AUTODISCOVER_PROBE_MAX_REDIRECTS = 3
-AUTODISCOVER_PROBE_MAX_BYTES = 65536
+# To avoid downloading huge bodies, only search the first 64 bytes.
+AUTODISCOVER_PROBE_MAX_BYTES = 64 * 1024
 # Short time-outs should be sufficient for legit servers and is better UX.
 AUTODISCOVER_PROBE_TIMEOUT = (0.75, 1.0)
 AUTODISCOVER_PROBE_HEADERS = {
@@ -157,7 +158,7 @@ def exchange_autodiscover_endpoint_exists(hostname: str, domain_name: str) -> bo
                         headers=headers,
                         timeout=AUTODISCOVER_PROBE_TIMEOUT,
                         allow_redirects=False,
-                        stream=True,
+                        stream=True, # enable us to only download the first few bytes
                     )
                     break
                 except requests.RequestException as e:
