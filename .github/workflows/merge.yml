@@ -130,16 +130,26 @@ jobs:
           docker push $ECR_TAG
           echo "accounts-image=$ECR_TAG" >> $GITHUB_OUTPUT
 
-      # Produce the keycloak container image (only when keycloak/IaC changed)
+      # Produce the keycloak container image (only when keycloak/IaC changed).
+      # Built multi-arch: linux/amd64 for ECS Fargate (current) and linux/arm64
+      # for the Thunderbird Pro EKS clusters (Graviton). The same keycloak-<sha>
+      # tag is a manifest list, so each runtime pulls its matching variant.
+      - name: Set up QEMU
+        if: env.BUILD_KEYCLOAK == 'true'
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        if: env.BUILD_KEYCLOAK == 'true'
+        uses: docker/setup-buildx-action@v3
       - name: Build, tag, and push keycloak image to Amazon ECR
         id: build-keycloak
         if: env.BUILD_KEYCLOAK == 'true'
         env:
           ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:keycloak-${{ github.sha }}"
         run: |
-          # Build a docker container and push it to ECR so that it can be deployed to ECS.
-          docker build -f Dockerfile.keycloak -t $ECR_TAG --platform="linux/amd64" .
-          docker push $ECR_TAG
+          # Build a multi-arch image (amd64 for ECS, arm64 for EKS) and push the
+          # manifest list to ECR. buildx --push publishes directly (no docker push).
+          docker buildx build -f Dockerfile.keycloak -t $ECR_TAG \
+            --platform linux/amd64,linux/arm64 --push .
           echo "keycloak-image=$ECR_TAG" >> $GITHUB_OUTPUT
 
       - name: Get version from pyproject.toml
