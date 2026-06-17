@@ -46,6 +46,38 @@ class HomeViewRedirectTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'index.html')
 
+    @patch('thunderbird_accounts.authentication.middleware.gethostbyname', return_value='127.0.0.1')
+    def test_sign_up_redirects_existing_user_to_login_hint(self, _mock_dns):
+        """An existing user visiting /sign-up?email=<recovery> is redirected to Keycloak with login_hint."""
+        User.objects.create(
+            username=f'existing@{settings.PRIMARY_EMAIL_DOMAIN}',
+            email='existing-recovery@example.com',
+            recovery_email='existing-recovery@example.com',
+            oidc_id='existing-oidc',
+        )
+
+        response = self.client.get('/sign-up', {'email': 'existing-recovery@example.com'})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login_hint=', response.url)
+        self.assertIn('existing-recovery%40example.com', response.url)
+
+    @patch('thunderbird_accounts.authentication.middleware.gethostbyname', return_value='127.0.0.1')
+    def test_sign_up_no_redirect_for_unknown_email(self, _mock_dns):
+        """An unknown email on /sign-up should render the sign-up page normally."""
+        response = self.client.get('/sign-up', {'email': 'nobody@example.com'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'index.html')
+
+    @patch('thunderbird_accounts.authentication.middleware.gethostbyname', return_value='127.0.0.1')
+    def test_sign_up_no_redirect_without_email_param(self, _mock_dns):
+        """Visiting /sign-up without an email param should render normally."""
+        response = self.client.get('/sign-up')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'index.html')
+
     def test_authenticated_user_can_access_home(self):
         """Test that authenticated users can access home without redirect."""
         self.client.force_login(self.user)
