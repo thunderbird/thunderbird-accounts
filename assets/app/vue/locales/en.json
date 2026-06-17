@@ -24,6 +24,14 @@
     "userMenu": {
       "support": "Support",
       "logout": "Logout"
+    },
+    "planCard": {
+      "features": {
+        "mailStorage": "{size} of Mail Storage",
+        "inboxesAndAddresses": "{inboxes} Inbox, {addresses} Email addresses",
+        "customDomains": "{count} Custom Domains",
+        "sendStorage": "{size} of Send Storage"
+      }
     }
   },
   "views": {

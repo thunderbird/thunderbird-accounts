@@ -1,19 +1,50 @@
+<script setup lang="ts">
+import { TBPRO_DEFAULT_PLAN } from '@/defines';
+</script>
+
 <template>
   <div class="plan-card">
     <div class="left">
-      <h3>Early Bird Plan</h3>
-      <p>Our initial offering, ideal for most users</p>
+      <h3>{{ TBPRO_DEFAULT_PLAN.name }}</h3>
+      <p>{{ TBPRO_DEFAULT_PLAN.description }}</p>
       <h4>
-        <span class="price">$6</span>
-        <span>per month<br>paid annually</span>
+        <span class="price">${{ TBPRO_DEFAULT_PLAN.price }}</span>
+        <span v-html="TBPRO_DEFAULT_PLAN.period" />
       </h4>
     </div>
 
     <ul>
-      <li><strong>30 GB</strong> of Mail Storage</li>
-      <li><strong>1</strong> Inbox, <strong>15</strong> Email addresses</li>
-      <li><strong>3</strong> Custom Domains</li>
-      <li><strong>60 GB</strong> of Send Storage</li>
+      <li>
+        <i18n-t keypath="components.planCard.features.mailStorage">
+          <template #size>
+            <strong>{{ TBPRO_DEFAULT_PLAN.mail_storage }} GB</strong>
+          </template>
+        </i18n-t>
+      </li>
+      <li>
+        <i18n-t keypath="components.planCard.features.inboxesAndAddresses">
+          <template #inboxes>
+            <strong>{{ TBPRO_DEFAULT_PLAN.num_inboxes }}</strong>
+          </template>
+          <template #addresses>
+            <strong>{{ TBPRO_DEFAULT_PLAN.num_email_addresses }}</strong>
+          </template>
+        </i18n-t>
+      </li>
+      <li>
+        <i18n-t keypath="components.planCard.features.customDomains">
+          <template #count>
+            <strong>{{ TBPRO_DEFAULT_PLAN.num_domains }}</strong>
+          </template>
+        </i18n-t>
+      </li>
+      <li>
+        <i18n-t keypath="components.planCard.features.sendStorage">
+          <template #size>
+            <strong>{{ TBPRO_DEFAULT_PLAN.send_storage }} GB</strong>
+          </template>
+        </i18n-t>
+      </li>
     </ul>
   </div>
 </template>

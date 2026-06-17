@@ -12,3 +12,17 @@ export const PRIVACY_POLICY_URL = 'https://tb.pro/privacy/';
 export const COMMUNITY_SUPPORT_URL = 'https://support.mozilla.org/questions/thunderbird';
 export const NOT_INTERESTED_SURVEY_LINK = 'https://www.surveymonkey.com/r/HYYMDB6';
 export const CAPTURE_TELEMETRY = true;
+
+// TODO: Fetch the active plan from the backend / Paddle (?)
+export const TBPRO_DEFAULT_PLAN = {
+  'name': 'Early Bird Plan',
+  'description': 'Our initial offering, ideal for most users',
+  'price': '6',
+  'period': 'per month,<br>paid annually',
+  'cta_label': 'Join Waitlist',
+  'mail_storage': '30', // GB
+  'send_storage': '60', // GB
+  'num_domains': '3',
+  'num_inboxes': '1',
+  'num_email_addresses': '15',
+}
