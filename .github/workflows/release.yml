@@ -45,6 +45,26 @@ jobs:
         with:
           mask-password: "true"
 
+      # Fail fast with a clear message if the v<version> tag already exists in ECR.
+      # ECR has tag immutability on this repo, so the later docker push would fail
+      # with an opaque "tag invalid" error. This happens when a draft release is
+      # published whose deployment.json was generated before pyproject.toml was
+      # bumped — the draft carries the previous version and collides with the
+      # already-published tag.
+      - name: Check version tag is not already published
+        run: |
+          SEMVER="v${{ steps.deployment-data.outputs.semver }}"
+          SOURCE_TAG="${{ steps.deployment-data.outputs.ecr-tag }}"
+          REPO=$(echo "$SOURCE_TAG" | cut -d/ -f2- | cut -d: -f1)
+          if aws ecr describe-images --repository-name "$REPO" \
+               --image-ids imageTag="$SEMVER" \
+               --region eu-central-1 >/dev/null 2>&1; then
+            echo "::error::Tag $SEMVER already exists in ECR repository $REPO and the repo has tag immutability enabled."
+            echo "::error::This draft was almost certainly built before pyproject.toml was bumped to $SEMVER."
+            echo "::error::Publish the newer draft built from the version-bump commit (its deployment.json will carry the new version) instead of this one."
+            exit 1
+          fi
+
       - name: Retag docker image
         id: retag-image
         run: |
