@@ -77,6 +77,13 @@ def is_email_reserved(email: str):
     return is_reserved(email)
 
 
+def get_user_by_contact_email(email: str):
+    """Return a user whose recovery email or account email matches the given address."""
+    from thunderbird_accounts.authentication.models import User
+
+    return User.objects.filter(Q(email__iexact=email) | Q(recovery_email__iexact=email)).first()
+
+
 def can_register_with_username(username: str):
     """Can a user register with this username.
     This checks primary username and any mirrored aliases for our allowed domains
@@ -102,6 +109,18 @@ def create_aia_url(action: KeycloakRequiredAction):
         f'?response_type=code'
         f'&client_id={settings.OIDC_RP_CLIENT_ID}'
         f'&kc_action={action.value}'
+        f'&redirect_uri={redirect_uri}',
+    )
+
+
+def create_login_hint_url(login_hint: str):
+    """Create an authorization URL that prefills the username on Keycloak's login page."""
+    redirect_uri = quote(get_absolute_url(reverse('login')))
+    return urljoin(
+        settings.KEYCLOAK_AIA_ENDPOINT,
+        f'?response_type=code'
+        f'&client_id={settings.OIDC_RP_CLIENT_ID}'
+        f'&login_hint={quote(login_hint)}'
         f'&redirect_uri={redirect_uri}',
     )
 
