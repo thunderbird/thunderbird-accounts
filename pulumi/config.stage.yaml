@@ -434,7 +434,7 @@ resources:
                 - name: POSTHOG_HOST
                   value: "https://us.i.posthog.com"
                 - name: INCOMPLETE_SIGNUP_PURGE_HOURS
-                  value: "168"
+                  value: "120"
                 - name: INCOMPLETE_SIGNUP_PURGE_CRON_HOUR
                   value: "3"
                 - name: INCOMPLETE_SIGNUP_PURGE_CRON_MINUTE

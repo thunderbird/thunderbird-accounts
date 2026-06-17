@@ -442,7 +442,7 @@ resources:
                 - name: ABANDONED_CART_MAILCHIMP_TAG
                   value: "abandoned_cart"
                 - name: INCOMPLETE_SIGNUP_PURGE_HOURS
-                  value: "168"
+                  value: "120"
                 - name: INCOMPLETE_SIGNUP_PURGE_CRON_HOUR
                   value: "3"
                 - name: INCOMPLETE_SIGNUP_PURGE_CRON_MINUTE

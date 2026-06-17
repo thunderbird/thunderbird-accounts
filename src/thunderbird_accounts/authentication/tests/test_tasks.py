@@ -280,7 +280,7 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
         self.assertEqual(result['deleted'], 1)
         self.assertEqual(result['errors'], 1)
 
-    @override_settings(INCOMPLETE_SIGNUP_PURGE_HOURS=72)
+    @override_settings(INCOMPLETE_SIGNUP_PURGE_HOURS=120)
     def test_skips_recent_users(self, mock_delete_user_data):
         User.objects.filter(pk=self.user.pk).update(created_at=timezone.now())
 
