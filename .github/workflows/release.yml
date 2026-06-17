@@ -74,11 +74,29 @@ jobs:
         shell: bash
         run: |
           tar -xvf pulumi.tbz
-      
+
       - name: Set up Python ${{ vars.PYTHON_VERSION}}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ vars.PYTHON_VERSION}}
+
+      # Build the Pulumi venv on THIS runner. Older pulumi.tbz artifacts shipped
+      # a venv built on the stage runner, whose bin/python was an absolute
+      # symlink into /opt/hostedtoolcache/Python/<patch>/... — that path doesn't
+      # exist on the prod runner whenever the cached patch version differs, and
+      # pulumi blows up trying to call venv/bin/python. We now exclude the venv
+      # from the artifact (see merge.yml) and rebuild here. The `rm -rf venv`
+      # handles already-published drafts whose artifact still contains the
+      # stage-runner venv.
+      - name: Rebuild Pulumi venv on prod runner
+        shell: bash
+        run: |
+          cd pulumi
+          rm -rf venv
+          python -m pip install virtualenv
+          virtualenv ./venv
+          source ./venv/bin/activate
+          pip install -Ur requirements.txt
 
       - name: Install Pulumi
         shell: bash

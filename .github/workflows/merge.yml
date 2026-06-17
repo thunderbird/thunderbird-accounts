@@ -197,7 +197,12 @@ jobs:
         if: env.BUILD_ACCOUNTS == 'true'
         shell: bash
         run: |
-          tar -cvjf pulumi.tbz pulumi/
+          # Exclude the venv: it was built on THIS runner with bin/python as an
+          # absolute symlink into /opt/hostedtoolcache/Python/<patch>/..., so it
+          # isn't portable to the prod runner (different cached patch version =>
+          # dangling symlink => pulumi fails on venv/bin/python). release.yml
+          # rebuilds the venv from requirements.txt on the prod runner.
+          tar --exclude='pulumi/venv' -cvjf pulumi.tbz pulumi/
 
       - name: Archive the Pulumi artifact
         id: iac-archive
