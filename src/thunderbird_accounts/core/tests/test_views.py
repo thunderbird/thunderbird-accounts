@@ -63,6 +63,23 @@ class HomeViewRedirectTestCase(TestCase):
         self.assertIn('existing-recovery%40example.com', response.url)
 
     @patch('thunderbird_accounts.authentication.middleware.gethostbyname', return_value='127.0.0.1')
+    def test_sign_up_redirects_existing_user_without_recovery_email(self, _mock_dns):
+        """An existing user without recovery_email is redirected using the email query param."""
+        contact_email = 'contact-only@example.com'
+        User.objects.create(
+            username=f'existing@{settings.PRIMARY_EMAIL_DOMAIN}',
+            email=contact_email,
+            recovery_email=None,
+            oidc_id='existing-oidc',
+        )
+
+        response = self.client.get('/sign-up', {'email': contact_email})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login_hint=', response.url)
+        self.assertIn('contact-only%40example.com', response.url)
+
+    @patch('thunderbird_accounts.authentication.middleware.gethostbyname', return_value='127.0.0.1')
     def test_sign_up_no_redirect_for_unknown_email(self, _mock_dns):
         """An unknown email on /sign-up should render the sign-up page normally."""
         response = self.client.get('/sign-up', {'email': 'nobody@example.com'})

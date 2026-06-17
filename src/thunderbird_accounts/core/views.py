@@ -75,7 +75,8 @@ def home(request: HttpRequest):
         if email:
             existing_user = get_user_by_contact_email(email)
             if existing_user:
-                return HttpResponseRedirect(create_login_hint_url(existing_user.recovery_email))
+                login_hint = existing_user.recovery_email or email
+                return HttpResponseRedirect(create_login_hint_url(login_hint))
 
     if request.user.is_authenticated and request.user.has_active_subscription:
         try:
