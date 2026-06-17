@@ -297,6 +297,7 @@
         },
         "signUp": {
           "continue": "Continue",
+          "back": "Back",
           "fields": {
             "username": "Username",
             "password": "Password",
@@ -312,7 +313,14 @@
             "usernameHelp": "This will become your email. e.g. yourname{domain}",
             "unknownError": "There was a problem with your username. Please try another one.",
             "usernameTooShort": "Username must be at least {minLength} characters.",
-            "usernameTooLong": "Username must be no more than {maxLength} characters."
+            "usernameTooLong": "Username must be no more than {maxLength} characters.",
+            "action": "Next"
+          },
+          "stepConfirmPlan": {
+            "title": "Confirm plan",
+            "subtitle": "One year of early access. Secure payment is available after account setup.",
+            "action": "Set up account",
+            "notInterested": "Not interested"
           },
           "step2": {
             "title": "Set a password",
