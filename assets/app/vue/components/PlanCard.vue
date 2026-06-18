@@ -1,27 +1,36 @@
 <script setup lang="ts">
-// TODO: Fetch the active plan from the backend / Paddle (?)
+import { LoadingSkeleton } from '@thunderbirdops/services-ui';
+
+defineProps<{
+  name: string;
+  description: string;
+  price: string;
+  priceLoading: boolean;
+}>();
+
 const TBPRO_DEFAULT_PLAN = {
-  'name': 'Early Bird Plan',
-  'description': 'Our initial offering, ideal for most users',
-  'price': '6',
-  'period': 'per month,<br>paid annually',
-  'cta_label': 'Join Waitlist',
-  'mail_storage': '30', // GB
-  'send_storage': '60', // GB
-  'num_domains': '3',
-  'num_inboxes': '1',
-  'num_email_addresses': '15',
-}
+  mail_storage: '30', // GB
+  send_storage: '60', // GB
+  num_domains: '3',
+  num_inboxes: '1',
+  num_email_addresses: '15',
+};
 </script>
 
 <template>
   <div class="plan-card">
     <div class="left">
-      <h3>{{ TBPRO_DEFAULT_PLAN.name }}</h3>
-      <p>{{ TBPRO_DEFAULT_PLAN.description }}</p>
+      <h3>{{ name }}</h3>
+      <p>{{ description }}</p>
       <h4>
-        <span class="price">${{ TBPRO_DEFAULT_PLAN.price }}</span>
-        <span v-html="TBPRO_DEFAULT_PLAN.period" />
+        <loading-skeleton :is-loading="priceLoading">
+          <span class="price">{{ price }}</span>
+        </loading-skeleton>
+        <i18n-t keypath="views.dashboard.yourCurrentSubscription.monthly" tag="span">
+          <template #newLine>
+            <br />
+          </template>
+        </i18n-t>
       </h4>
     </div>
 

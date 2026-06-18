@@ -328,7 +328,9 @@
             "title": "Confirm plan",
             "subtitle": "One year of early access. Secure payment is available after account setup.",
             "action": "Set up account",
-            "notInterested": "Not interested"
+            "notInterested": "Not interested",
+            "planInfoError": "Plan info or paddle token is missing.",
+            "paddleError": "Failed to retrieve price information. Error: {error}"
           },
           "step2": {
             "title": "Set a password",

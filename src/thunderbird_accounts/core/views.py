@@ -1,4 +1,5 @@
 from thunderbird_accounts.core.utils import get_feature_flags
+from thunderbird_accounts.subscription.utils import get_visible_plan_info
 from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
 from gettext import gettext
 import sys
@@ -164,6 +165,9 @@ def home(request: HttpRequest):
             'features': json.dumps(get_feature_flags()),
             'needs_tos_acceptance': needs_tos_acceptance,
             'recovery_email': recovery_email,
+            'plan_info': get_visible_plan_info(),
+            'paddle_token': settings.PADDLE_TOKEN,
+            'paddle_environment': settings.PADDLE_ENV,
         },
     )
 
