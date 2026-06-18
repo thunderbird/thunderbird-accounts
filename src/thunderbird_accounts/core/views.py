@@ -26,7 +26,6 @@ from thunderbird_accounts.mail.utils import decode_app_password, filter_app_pass
 
 from thunderbird_accounts.core.zendesk import ZendeskClient
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
-from thunderbird_accounts.authentication.utils import create_login_hint_url, get_user_by_contact_email
 
 
 def handle_500(request: HttpRequest, template_name=None):
