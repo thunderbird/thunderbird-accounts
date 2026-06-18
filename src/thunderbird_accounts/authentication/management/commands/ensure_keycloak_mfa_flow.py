@@ -74,6 +74,11 @@ class Command(BaseCommand):
         self.realm_url = settings.KEYCLOAK_API_ENDPOINT.rstrip('/')
         try:
             self.token = self._token_with_retry()
+            if self._already_configured():
+                logging.info(
+                    'ensure_keycloak_mfa_flow: realm browser flow already performs MFA step-up; nothing to do.'
+                )
+                return
             self._ensure_flow()
             self._ensure_acr_loa_map()
             self._ensure_browser_flow_bound()
@@ -109,6 +114,23 @@ class Command(BaseCommand):
         if response.content and response.headers.get('content-type', '').startswith('application/json'):
             return response.json()
         return None
+
+    def _already_configured(self) -> bool:
+        """True if the realm's bound browser flow already performs LoA step-up.
+
+        Realms bootstrapped from the realm import already carry a step-up flow (with
+        its own authenticator layout, e.g. recovery codes offered at the first OTP
+        step), so we must not override it. Only realms missing it — existing
+        stage/prod realms created before MFA — get the flow built and bound.
+        """
+        realm = self._req('GET', '')
+        bound_alias = realm.get('browserFlow')
+        if not bound_alias:
+            return False
+        executions = self._req('GET', f'authentication/flows/{quote(bound_alias)}/executions')
+        return any(
+            execution.get('providerId') == 'conditional-level-of-authentication' for execution in executions
+        )
 
     def _ensure_flow(self):
         flows = self._req('GET', 'authentication/flows')
