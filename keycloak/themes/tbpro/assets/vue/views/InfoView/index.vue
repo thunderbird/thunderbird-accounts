@@ -9,6 +9,7 @@ const messageHeader = window._page.currentView?.messageHeader;
 const actionUrl = window._page.currentView?.actionUrl;
 const actionText = window._page.currentView?.actionText;
 const requiredActions = window._page.currentView?.requiredActions ?? {};
+const isAccountUpdated = window._page.currentView?.isAccountUpdated ?? false;
 
 const isSingleAction = computed(() => Object.keys(requiredActions).length === 1);
 const isVerifyEmailAction = computed(() => isSingleAction.value && Object.keys(requiredActions)[0] === 'VERIFY_EMAIL');
@@ -26,6 +27,9 @@ export default {
       <template v-if="isVerifyEmailAction">
         {{ $t('infoVerifyEmailTitle') }}
       </template>
+      <template v-else-if="isAccountUpdated">
+        {{ $t('infoAccountUpdatedTitle') }}
+      </template>
       <template v-else-if="messageHeader">
         {{ messageHeader }}
       </template>
@@ -34,6 +38,7 @@ export default {
       </template>
     </h1>
     <p class="text" v-if="isVerifyEmailAction">{{ $t('infoVerifyEmailText') }}</p>
+    <p class="text" v-else-if="isAccountUpdated">{{ $t('infoAccountUpdatedText') }}</p>
     <message-bar v-if="messageHeader && messageHeader !== message?.summary" />
   </header>
   <main>
@@ -45,7 +50,7 @@ export default {
         <template #iconRight>
           <ph-arrow-right size="20" />
         </template>
-        {{ isVerifyEmailAction ? $t('infoVerifyEmailAction') : actionText }}
+        {{ isVerifyEmailAction ? $t('infoVerifyEmailAction') : isAccountUpdated ? $t('infoAccountUpdatedAction') : actionText }}
       </brand-button>
     </template>
   </main>
@@ -73,7 +78,7 @@ header {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin: 0 0 3rem 0;
+  margin: 0 0 2rem 0;
 
   .title {
     font-size: 2.25rem;
