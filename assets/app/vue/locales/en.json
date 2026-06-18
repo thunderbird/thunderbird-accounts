@@ -463,7 +463,6 @@
           "oneTimeCode": "One-time code",
           "authenticatorAppCodeDescription": "Enter the code from your authenticator app:",
           "signOutFromOtherDevices": "Sign out from other devices",
-          "didntGetCode": "Didn't get the code?",
           "error": "Could not complete authenticator app setup."
         },
         "manageEmailRecovery": {

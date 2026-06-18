@@ -139,11 +139,6 @@ defineExpose({
       </div>
 
       <div class="code-actions">
-        <div class="left-actions">
-          <link-button>
-            {{ t('views.manageMfa.modals.manageAuthenticatorApp.didntGetCode') }}
-          </link-button>
-        </div>
         <primary-button data-testid="totp-submit-code" :disabled="isLoading || !code || code.trim().length === 0" @click="submitOneTimeCode">
           {{ t('views.manageMfa.modals.manageAuthenticatorApp.continue') }}
         </primary-button>
@@ -250,15 +245,6 @@ p {
   display: flex;
   width: 100%;
   align-items: center;
-  justify-content: space-between;
-
-  .left-actions {
-    display: flex;
-    align-items: center;
-
-    button {
-      padding: 0;
-    }
-  }
+  justify-content: flex-end;
 }
 </style>
