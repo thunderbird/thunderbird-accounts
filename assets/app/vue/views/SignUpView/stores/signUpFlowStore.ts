@@ -129,6 +129,9 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
   const nextStep = () => {
     let nextStepValue = SIGN_UP_STEPS.INVALID;
     switch (step.value) {
+      case SIGN_UP_STEPS.CONFIRM_PLAN:
+        nextStepValue = SIGN_UP_STEPS.USERNAME;
+        break;
       case SIGN_UP_STEPS.USERNAME:
         nextStepValue = SIGN_UP_STEPS.PASSWORD;
         break;

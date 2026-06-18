@@ -44,6 +44,11 @@ test.describe('sign up form on desktop browser', {
     );
   });
 
+  test('sign-up flow starts on confirm plan step', async () => {
+    await expect(signUpPage.stepId).toHaveValue('step-confirm-plan');
+    await expect(signUpPage.formTitle).toHaveText('Confirm plan');
+  });
+
   test('navigating to sign-up with query param pre-fills form', async ({ page }) => {
     const testUsername: string = crypto.randomUUID().replaceAll('-', '');
     const testPassword: string = 'this-is-my-password-and-it-is-long';
@@ -62,10 +67,11 @@ test.describe('sign up form on desktop browser', {
     // Local part of an email address cannot contain the '@' character.
     const testUsername: string = 'IM@A@BAD@LOCAL@PART@OF@AN@EMAIL';
 
+    await signUpPage.confirmPlan();
     await signUpPage.userNameInput?.fill(testUsername);
     await signUpPage.submitForm();
 
-    // Make sure we're still on the first step
+    // Make sure we're still on the username step
     await expect(signUpPage.stepId).toHaveValue('step-username');
 
     const errorText = page.getByText('This username is not valid. Try another one.');

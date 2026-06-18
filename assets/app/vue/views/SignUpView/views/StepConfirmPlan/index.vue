@@ -2,10 +2,18 @@
 import { NOT_INTERESTED_SURVEY_LINK } from '@/defines';
 import PlanCard from '@/components/PlanCard.vue';
 import SignUpLayout from '../../components/SignUpLayout.vue';
+import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
+
+const signUpFlowStore = useSignUpFlowStore();
+const { nextStep } = signUpFlowStore;
 
 const onNotInterested = () => {
   window.location.href = NOT_INTERESTED_SURVEY_LINK;
 };
+
+const onSubmit = () => {
+  nextStep();
+}
 </script>
 
 <script lang="ts">
@@ -24,6 +32,7 @@ export default {
     :show-alternative-action="true"
     :alternative-action-title="$t('views.mail.views.signUp.stepConfirmPlan.notInterested')"
     @alternative-action="onNotInterested"
+    @submit="onSubmit"
   >
     <template v-slot:notice-bars>
       <slot name="notice-bars" />
