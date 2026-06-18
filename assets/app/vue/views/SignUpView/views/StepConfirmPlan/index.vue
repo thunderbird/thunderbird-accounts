@@ -29,7 +29,15 @@ export default {
       <slot name="notice-bars" />
     </template>
     <template v-slot:form-elements>
-      <plan-card />
+      <div class="plan-card-container">
+        <plan-card />
+      </div>
     </template>
   </sign-up-layout>
 </template>
+
+<style scoped>
+.plan-card-container {
+  margin-block-end: 1rem;
+}
+</style>

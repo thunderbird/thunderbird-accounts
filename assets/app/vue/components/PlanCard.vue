@@ -1,5 +1,17 @@
 <script setup lang="ts">
-import { TBPRO_DEFAULT_PLAN } from '@/defines';
+// TODO: Fetch the active plan from the backend / Paddle (?)
+const TBPRO_DEFAULT_PLAN = {
+  'name': 'Early Bird Plan',
+  'description': 'Our initial offering, ideal for most users',
+  'price': '6',
+  'period': 'per month,<br>paid annually',
+  'cta_label': 'Join Waitlist',
+  'mail_storage': '30', // GB
+  'send_storage': '60', // GB
+  'num_domains': '3',
+  'num_inboxes': '1',
+  'num_email_addresses': '15',
+}
 </script>
 
 <template>
