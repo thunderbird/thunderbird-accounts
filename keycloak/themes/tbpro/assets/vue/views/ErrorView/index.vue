@@ -1,11 +1,13 @@
-<script setup>
+<script setup lang="ts">
 import MessageBar from '@kc/vue/components/MessageBar.vue';
+import { BrandButton } from '@thunderbirdops/services-ui';
+import { PhArrowLeft } from '@phosphor-icons/vue';
 
 const actionUrl = window._page.currentView?.actionUrl;
 const actionText = window._page.currentView?.actionText;
 </script>
 
-<script>
+<script lang="ts">
 export default {
   name: 'ErrorView'
 };
@@ -16,7 +18,13 @@ export default {
 
   <h2>{{ $t('errorTitle') }}</h2>
   <template v-if="actionUrl">
-    <a :href="actionUrl" data-testid="action-url">{{ actionText }}</a>
+    <div class="button-container">
+      <brand-button :href="actionUrl" data-testid="action-url">{{ actionText }}
+        <template #iconLeft>
+          <ph-arrow-left size="20" />
+        </template>
+      </brand-button>
+    </div>
   </template>
 </template>
 
@@ -36,6 +44,10 @@ h2 {
   line-height: 1.1;
   color: var(--colour-primary-default);
   margin: 0 0 1.5rem 0;
+}
+
+.button-container {
+  width: fit-content;
 }
 
 .logo-link {
