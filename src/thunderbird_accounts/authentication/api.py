@@ -1,4 +1,4 @@
-from urllib.parse import quote
+from urllib.parse import quote, unquote_plus
 from django.conf import settings
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny
@@ -9,6 +9,7 @@ from thunderbird_accounts.authentication.utils import (
     KeycloakRequiredAction,
     is_email_reserved,
     can_register_with_username,
+    get_user_by_contact_email,
 )
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.exceptions import NotAuthenticated
@@ -22,8 +23,10 @@ from thunderbird_accounts.authentication.serializers import UserProfileSerialize
 class SignUpThrottle(UserRateThrottle):
     scope = 'sign_up'
 
+
 class CanISignUpThrottle(UserRateThrottle):
     scope = 'can_i_sign_up'
+
 
 @api_view(['POST'])
 def get_user_profile(request: Request):
@@ -39,9 +42,13 @@ def can_i_sign_up(request: Request):
     """Can a user sign up?
     If their email is on the allowed list and they're not logged in already, then yes they can!"""
     email = request.data.get('email')
+
     allowed = False
     if email and not request.user.is_authenticated:
-        allowed = is_email_in_allow_list(email)
+        # Remove uri encoding
+        email = unquote_plus(email)
+        # If they're in the allow-list and are not already a user
+        allowed = is_email_in_allow_list(email) and not get_user_by_contact_email(email)
 
     return Response({'allowed': allowed})
 

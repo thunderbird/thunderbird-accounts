@@ -1,3 +1,4 @@
+from django.urls import reverse
 from json import JSONDecodeError
 from unittest.mock import MagicMock, patch
 
@@ -157,7 +158,6 @@ class SignUpTestcase(APITestCase):
             resp_data = response.json()
             self.assertEqual(resp_data.get('type'), 'username-in-use', msg=assert_fail_msg)
 
-
     def test_alias_already_exists(self, mock_import_user: MagicMock):
         """Test that we check if a alias exists before creating a user"""
 
@@ -214,3 +214,52 @@ class SignUpTestcase(APITestCase):
         resp_data = response.json()
         self.assertEqual(resp_data.get('type'), mock_test_type, msg=assert_fail_msg)
         self.assertEqual(resp_data.get('error'), mock_test_error, msg=assert_fail_msg)
+
+
+@override_settings(USE_ALLOW_LIST=True)
+class CanISignUpTestcase(APITestCase):
+    def setUp(self):
+        self.client = RequestClient()
+
+        self.wait_list = [
+            '348b8787-ddf0-4ab9-931e-db388f8770c0@example.com',
+            '153ff958-dabb-4afc-94ab-3b1b3b5ff051@example.com',
+        ]
+        self.existing_user = User.objects.create(
+            recovery_email='e9fc8f36-8d9c-4e8c-9af2-2a7e2901b036@example.com',
+            email='e9fc8f36-8d9c-4e8c-9af2-2a7e2901b036@example.org',
+            username='e9fc8f36-8d9c-4e8c-9af2-2a7e2901b036@example.org',
+        )
+        for entry in self.wait_list:
+            AllowListEntry.objects.create(email=entry)
+        self.url = reverse('api_can_i_sign_up')
+
+    def test_success(self):
+        for email in self.wait_list:
+            response = self.client.post(self.url, {'email': email})
+            self.assertEqual(200, response.status_code)
+
+            resp_data = response.json()
+            self.assertTrue(resp_data.get('allowed'))
+
+    def test_not_on_allowed_list(self):
+        not_in_allowed_list = '45f46943-85ab-47fe-b5c0-56edd82e12fe@example.com'
+        user_that_should_not_exist = User.objects.filter(recovery_email=not_in_allowed_list).first()
+        self.assertIsNone(user_that_should_not_exist)
+
+        response = self.client.post(self.url, {'email': not_in_allowed_list})
+
+        self.assertEqual(200, response.status_code)
+
+        resp_data = response.json()
+        self.assertFalse(resp_data.get('allowed'))
+
+    def test_user_already_exists(self):
+        self.assertIsNotNone(self.existing_user)
+
+        response = self.client.post(self.url, {'email': self.existing_user.recovery_email})
+
+        self.assertEqual(200, response.status_code)
+
+        resp_data = response.json()
+        self.assertFalse(resp_data.get('allowed'))
