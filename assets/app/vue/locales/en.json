@@ -336,7 +336,8 @@
             "passwordHelp": "Use a strong password you haven’t used elsewhere.",
             "confirmPasswordHelp": "Re-enter your password to confirm.",
             "yourNameHelp": "Set the name people will see when you send emails.",
-            "confirmPasswordDoesNotMatchError": "Password and confirm password must match."
+            "confirmPasswordDoesNotMatchError": "Password and confirm password must match.",
+            "action": "Next"
           },
           "step3": {
             "title": "Add a verification email",

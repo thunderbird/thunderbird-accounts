@@ -1,7 +1,8 @@
-<script setup>
+<script setup lang="ts">
 import MessageBar from '@kc/vue/components/MessageBar.vue';
-import { PrimaryButton } from '@thunderbirdops/services-ui';
-import { computed, onMounted } from 'vue';
+import { BrandButton } from '@thunderbirdops/services-ui';
+import { PhArrowRight } from '@phosphor-icons/vue';
+import { computed } from 'vue';
 
 const message = window._page.message;
 const messageHeader = window._page.currentView?.messageHeader;
@@ -13,7 +14,7 @@ const isSingleAction = computed(() => Object.keys(requiredActions).length === 1)
 const isVerifyEmailAction = computed(() => isSingleAction.value && Object.keys(requiredActions)[0] === 'VERIFY_EMAIL');
 </script>
 
-<script>
+<script lang="ts">
 export default {
   name: 'InfoView'
 };
@@ -40,8 +41,12 @@ export default {
       <li v-for="action in requiredActions" v-bind:key="action">{{ action }}</li>
     </ul>
     <template v-if="actionUrl">
-      <primary-button class="perform-action" :href="actionUrl" data-testid="action-url">{{ actionText
-        }}</primary-button>
+      <brand-button class="perform-action" :href="actionUrl" data-testid="action-url">
+        <template #iconRight>
+          <ph-arrow-right size="20" />
+        </template>
+        {{ isVerifyEmailAction ? $t('infoVerifyEmailAction') : actionText }}
+      </brand-button>
     </template>
   </main>
 </template>

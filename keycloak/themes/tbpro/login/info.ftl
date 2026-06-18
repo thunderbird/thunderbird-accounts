@@ -37,6 +37,7 @@
         infoRedirectText: '${kcSanitize(msg("infoRedirectText"))?no_esc}',
         infoVerifyEmailTitle: '${kcSanitize(msg("infoVerifyEmailTitle"))?no_esc}',
         infoVerifyEmailText:'${kcSanitize(msg("infoVerifyEmailText"))?no_esc}',
+        infoVerifyEmailAction: '${kcSanitize(msg("infoVerifyEmailAction"))?no_esc}',
       };
     </script>
     </#if>

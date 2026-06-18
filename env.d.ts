@@ -46,6 +46,10 @@ declare global {
       errorTitle?: string;
       isErrorPage?: boolean,
       features?: object;
+      message?: {
+        type: string;
+        summary: string;
+      };
     };
   }
 }
