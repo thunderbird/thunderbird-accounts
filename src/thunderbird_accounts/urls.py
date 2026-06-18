@@ -18,7 +18,7 @@ from thunderbird_accounts.mail import views as mail_views, api as mail_api
 from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
 
-from thunderbird_accounts.authentication.api import get_user_profile, sign_up
+from thunderbird_accounts.authentication.api import get_user_profile, sign_up, can_i_sign_up
 from thunderbird_accounts.legal import views as legal_views
 from thunderbird_accounts.telemetry import views as telemetry_views, api as telemetry_api
 
@@ -59,6 +59,7 @@ urlpatterns = [
     path('api/v1/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/auth/sign-up/', sign_up, name='api_sign_up'),
+    path('api/v1/auth/can-i-sign-up/', can_i_sign_up, name='api_can_i_sign_up'),
     path('api/v1/legal/current/', legal_views.get_current_legal_docs, name='legal_current'),
     path('api/v1/legal/accept/', legal_views.accept_legal_docs, name='legal_accept'),
     path('api/v1/legal/decline/', legal_views.decline_legal_docs, name='legal_decline'),

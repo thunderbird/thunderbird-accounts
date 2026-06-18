@@ -69,16 +69,6 @@ def home(request: HttpRequest):
     if request.session.get('oidc_access_token') and not request.user.is_authenticated:
         return HttpResponseRedirect(reverse('logout'))
 
-    # abandoned_cart tagged users have a subscribe CTA button that points to /sign-up?email=email
-    # however, we should instead redirect them to login if they already have an account with that email
-    if not request.user.is_authenticated and request.path == '/sign-up':
-        email = request.GET.get('email')
-        if email:
-            existing_user = get_user_by_contact_email(email)
-            if existing_user:
-                login_hint = existing_user.recovery_email or email
-                return HttpResponseRedirect(create_login_hint_url(login_hint))
-
     if request.user.is_authenticated and request.user.has_active_subscription:
         try:
             account = request.user.account_set.first()

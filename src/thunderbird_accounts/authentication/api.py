@@ -22,12 +22,28 @@ from thunderbird_accounts.authentication.serializers import UserProfileSerialize
 class SignUpThrottle(UserRateThrottle):
     scope = 'sign_up'
 
+class CanISignUpThrottle(UserRateThrottle):
+    scope = 'can_i_sign_up'
 
 @api_view(['POST'])
 def get_user_profile(request: Request):
     if not request.user:
         raise NotAuthenticated()
     return Response(UserProfileSerializer(request.user).data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([CanISignUpThrottle])
+def can_i_sign_up(request: Request):
+    """Can a user sign up?
+    If their email is on the allowed list and they're not logged in already, then yes they can!"""
+    email = request.data.get('email')
+    allowed = False
+    if email and not request.user.is_authenticated:
+        allowed = is_email_in_allow_list(email)
+
+    return Response({'allowed': allowed})
 
 
 @api_view(['POST'])

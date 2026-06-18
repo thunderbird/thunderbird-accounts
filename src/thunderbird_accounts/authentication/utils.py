@@ -45,7 +45,7 @@ class KeycloakRequiredAction(enum.StrEnum):
     WEBAUTHN_REGISTER_PASSWORDLESS = 'webauthn-register-passwordless'
 
 
-def is_email_in_allow_list(email: str):
+def is_email_in_allow_list(email: str) -> bool:
     """If USE_ALLOW_LIST is enabled check the email for an existing User or an AllowListEntry."""
     from thunderbird_accounts.authentication.models import AllowListEntry, User
 

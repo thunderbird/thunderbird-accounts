@@ -53,6 +53,8 @@
         goToRegisterAction: '${msg("goToRegisterAction")}',
         needHelp: '${msg("needHelp")}',
         needHelpAction: '${msg("needHelpAction")}',
+        inviteOnly: '${msg("inviteOnly")}',
+        inviteOnlyAction: '${msg("inviteOnlyAction")}',
       };
     </script>
     </#if>

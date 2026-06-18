@@ -17,6 +17,7 @@ import SignUpView from '@/views/SignUpView/index.vue';
 
 // Special Error Route
 import ErrorView from '@/views/ErrorView/index.vue';
+import { TBPRO_WAIT_LIST } from './defines';
 
 // If the page template is marked as error page, only show the error page.
 const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
@@ -43,7 +44,44 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     meta: {
       isPublic: true,
       useAppTemplate: false,
-    }
+    },
+    beforeEnter: (async (to, from) => {
+      /* This is a bit too long but we cannot use beforeEnter in-component. :( */
+      let failQueryParam = '';
+
+      if (to.query?.email) {
+        // Encode the email if it needs to be encoded
+        const email = encodeURIComponent(to.query.email as string);
+
+        try {
+          const response = await fetch('/api/v1/auth/can-i-sign-up/', {
+            method: 'POST',
+            body: JSON.stringify({
+              email,
+            }),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': window._page?.csrfToken,
+            },
+          });
+
+          const data = await response.json();
+          if (data?.allowed) {
+            return true; // continue along with the request
+          } else if (data?.detail) { // rate limited
+            throw new Error(data?.detail);
+          }
+
+          failQueryParam = `?email=${email}`;
+        } catch (e) {
+          console.error("Failed to fetch allowed status for the sign up page. Error: ", e);
+        }
+      }
+
+      // Fail state, send them to the wait list.
+      window.location.href = `${TBPRO_WAIT_LIST}${failQueryParam}`;
+      return false;
+    }),
   },
   {
     path: '/sign-up/complete', // This is the "Check your email" page after sign-up.

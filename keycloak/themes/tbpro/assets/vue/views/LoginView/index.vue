@@ -4,6 +4,7 @@ import { TextInput, BrandButton, CheckboxInput, NoticeBar, NoticeBarTypes } from
 import { PhArrowRight } from '@phosphor-icons/vue';
 import MessageBar from '@kc/vue/components/MessageBar.vue';
 import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
+import { TBPRO_WAIT_LIST } from '@kc/defines';
 
 
 const firstError = window._page.currentView?.firstError;
@@ -14,6 +15,7 @@ const registerUrl = window._page.currentView?.registerUrl;
 const supportUrl = window._page.currentView?.supportUrl;
 const clientUrl = window._page.currentView?.clientUrl;
 const loginForm = useTemplateRef('login-form');
+const message = window._page?.message;
 
 const onSubmit = () => {
   if (loginForm.value.checkValidity()) {
@@ -45,7 +47,13 @@ export default {
 
 <template>
   <notice-bar :type="NoticeBarTypes.Critical" v-if="firstError">{{ firstError }}</notice-bar>
-  <message-bar v-else/>
+  <message-bar v-else-if="message?.type"/>
+  <notice-bar :type="NoticeBarTypes.Info" v-else>
+    <i18n-t keypath="inviteOnly" tag="span">
+      <a :href="TBPRO_WAIT_LIST" data-testid="go-to-invite-only-url" target="_blank">{{ $t('inviteOnlyAction') }}</a>
+    </i18n-t>
+  </notice-bar>
+
   
   <h2 data-testid="header-text">{{ $t('loginAccountTitle') }}</h2>
   <form id="kc-form-login" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
@@ -103,13 +111,13 @@ export default {
     </div>
   </form>
   <div class="footer-link-container">
+    <!--
     <template v-if="registerUrl">
       <i18n-t keypath="goToRegister" tag="span">
         <a :href="registerUrl" data-testid="go-to-register-url">{{ $t('goToRegisterAction') }}</a>
       </i18n-t>
-
-      •
     </template>
+    -->
     <i18n-t keypath="needHelp" tag="span">
       <a :href="supportUrl" data-testid="go-to-support-url">{{ $t('needHelpAction') }}</a>
     </i18n-t>
@@ -166,7 +174,7 @@ form {
   display: flex;
   gap: 0.425rem;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-end;
   font-size: 0.75rem;
   color: var(--colour-ti-secondary);
 
