@@ -28,7 +28,7 @@ platforms:
   - os: OS X
     osVersion: Sequoia
     browserName: playwright-firefox
-    browserVersion: latest
+    browserVersion: 139.0
     playwrightConfigOptions:
       name: Firefox-OSX
       setup:
