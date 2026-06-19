@@ -1,4 +1,5 @@
-from urllib.parse import quote
+from enum import StrEnum
+from urllib.parse import quote, unquote_plus
 from django.conf import settings
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny
@@ -9,6 +10,7 @@ from thunderbird_accounts.authentication.utils import (
     KeycloakRequiredAction,
     is_email_reserved,
     can_register_with_username,
+    get_user_by_contact_email,
 )
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.exceptions import NotAuthenticated
@@ -23,11 +25,44 @@ class SignUpThrottle(UserRateThrottle):
     scope = 'sign_up'
 
 
+class CanISignUpThrottle(UserRateThrottle):
+    scope = 'can_i_sign_up'
+
+class CanISignUpResponses(StrEnum):
+    WAIT_LIST = 'wait-list'
+    LOGIN = 'login'
+    SIGN_UP = 'sign-up'
+
 @api_view(['POST'])
 def get_user_profile(request: Request):
     if not request.user:
         raise NotAuthenticated()
     return Response(UserProfileSerializer(request.user).data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([CanISignUpThrottle])
+def can_i_sign_up(request: Request):
+    """This is a temporary fix until we switch off Mailchimp automated emails..."""
+    email = request.data.get('email')
+
+    go_to = CanISignUpResponses.WAIT_LIST
+    if email and not request.user.is_authenticated:
+        # Remove uri encoding
+        email = unquote_plus(email)
+
+        has_an_account = get_user_by_contact_email(email)
+        is_in_allow_list = is_email_in_allow_list(email)
+
+        # Decide where the user should be sent
+        if has_an_account:
+            go_to = CanISignUpResponses.LOGIN
+        elif is_in_allow_list:
+            go_to = CanISignUpResponses.SIGN_UP
+
+
+    return Response({'go_to': go_to})
 
 
 @api_view(['POST'])

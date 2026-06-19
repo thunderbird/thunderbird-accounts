@@ -26,7 +26,6 @@ from thunderbird_accounts.mail.utils import decode_app_password, filter_app_pass
 
 from thunderbird_accounts.core.zendesk import ZendeskClient
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
-from thunderbird_accounts.authentication.utils import create_login_hint_url, get_user_by_contact_email
 
 
 def handle_500(request: HttpRequest, template_name=None):
@@ -68,16 +67,6 @@ def home(request: HttpRequest):
     # use these conditions to ship the user to logout and thus "fixing" the redirect loop.
     if request.session.get('oidc_access_token') and not request.user.is_authenticated:
         return HttpResponseRedirect(reverse('logout'))
-
-    # abandoned_cart tagged users have a subscribe CTA button that points to /sign-up?email=email
-    # however, we should instead redirect them to login if they already have an account with that email
-    if not request.user.is_authenticated and request.path == '/sign-up':
-        email = request.GET.get('email')
-        if email:
-            existing_user = get_user_by_contact_email(email)
-            if existing_user:
-                login_hint = existing_user.recovery_email or email
-                return HttpResponseRedirect(create_login_hint_url(login_hint))
 
     if request.user.is_authenticated and request.user.has_active_subscription:
         try:
@@ -122,7 +111,16 @@ def home(request: HttpRequest):
             max_email_aliases = request.user.plan.mail_address_count
     elif not request.user.is_authenticated:  # Only if the user is not authenticated
         # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
-        public_routes = ['/privacy', '/terms', '/contact', '/sign-up', '/sign-up/complete', '/logout', '/error']
+        public_routes = [
+            '/privacy',
+            '/terms',
+            '/contact',
+            '/sign-up',
+            '/sign-up/complete',
+            '/logout',
+            '/error',
+            '/chill',
+        ]
 
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))
@@ -130,11 +128,15 @@ def home(request: HttpRequest):
     # Check if the user needs to accept the latest legal documents
     if request.user.is_authenticated:
         legal_doc_count = LegalDocument.objects.filter(is_current=True).count()
-        accepted_current_doc_count = LegalDocument.objects.filter(
-            is_current=True,
-            responses__user=request.user,
-            responses__action=LegalDocumentResponse.Action.ACCEPTED,
-        ).distinct().count()
+        accepted_current_doc_count = (
+            LegalDocument.objects.filter(
+                is_current=True,
+                responses__user=request.user,
+                responses__action=LegalDocumentResponse.Action.ACCEPTED,
+            )
+            .distinct()
+            .count()
+        )
         needs_tos_acceptance = legal_doc_count != accepted_current_doc_count
 
     form_data = request.session.get('form_data')

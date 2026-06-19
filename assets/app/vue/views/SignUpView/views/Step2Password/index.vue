@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n';
 
 import { TextInput } from '@thunderbirdops/services-ui';
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
 import SignUpLayout from '../../components/SignUpLayout.vue';
@@ -13,7 +13,7 @@ const loading = ref(false);
 const signUpFlowStore = useSignUpFlowStore();
 
 const { fullUsername, password, confirmPassword, name } = storeToRefs(signUpFlowStore);
-const { nextStep } = signUpFlowStore;
+const { nextStep, submit } = signUpFlowStore;
 const confirmPasswordError = ref(null);
 
 const onSubmit = async () => {
@@ -26,7 +26,14 @@ const onSubmit = async () => {
     return;
   }
 
-  nextStep();
+  const response = await submit();
+  if (response === true) {
+    await nextStep();
+    window.location.href = '/sign-up/complete';
+  } else {
+    await nextTick();
+    loading.value = false;
+  }
 };
 </script>
 

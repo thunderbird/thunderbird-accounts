@@ -14,18 +14,19 @@ import SignUpLayout from './components/SignUpLayout.vue';
 // Import our i18n composable
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
-import { useRoute } from 'vue-router';
+import { onBeforeRouteUpdate, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { SIGN_UP_STEPS, useSignUpFlowStore } from './stores/signUpFlowStore';
 import { storeToRefs } from 'pinia';
 import { PhX } from '@phosphor-icons/vue';
+import { onMounted } from 'vue';
 
 const { t } = useI18n();
 const route = useRoute();
 const signUpFlowStore = useSignUpFlowStore();
 const isSignUpComplete = route.name === 'sign-up-complete';
 
-const { lang, timezone, step, errorMessage } = storeToRefs(signUpFlowStore);
+const { lang, timezone, step, verificationEmail, errorMessage } = storeToRefs(signUpFlowStore);
 
 // We only support english right now :(
 lang.value = 'en';
@@ -50,8 +51,11 @@ const stepSFCMap = {
   [SIGN_UP_STEPS.USERNAME]: Step1Username,
   [SIGN_UP_STEPS.CONFIRM_PLAN]: StepConfirmPlan,
   [SIGN_UP_STEPS.PASSWORD]: Step2Password,
-  [SIGN_UP_STEPS.VERIFY]: Step3Verify,
 }
+
+onMounted(() => {
+  verificationEmail.value = route.query?.email as string ?? null;
+})
 </script>
 
 <script lang="ts">

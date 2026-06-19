@@ -75,8 +75,9 @@
     },
     "error": {
       "dismiss": "Dismiss message.",
-      "fallbackError": "Unknown Error",
+      "fallbackError": "Unknown Error.",
       "notFoundError": "Sorry this page doesn't exist.",
+      "rateLimitError": "Your request was temporarily paused.",
       "notFoundMessage": {
         "textAuth": "Please {link} to go back to your dashboard.",
         "textNoAuth": "Please {link} to login.",
@@ -85,6 +86,10 @@
       "serverErrorMessage": {
         "text": "Please visit our {link} for more information.",
         "link": "status page"
+      },
+      "rateLimitMessage": {
+        "text": "Please wait a minute, and then click {link} to try again.",
+        "link": "here"
       }
     },
     "mail": {
