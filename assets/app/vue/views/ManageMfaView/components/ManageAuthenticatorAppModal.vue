@@ -125,11 +125,9 @@ defineExpose({
           {{ t('views.manageMfa.modals.manageAuthenticatorApp.authenticatorAppCodeDescription') }}
         </p>
 
-        <text-input data-testid="totp-code-input" class="code-input" name="one-time-code" v-model="code" :required="true">
+        <text-input data-testid="totp-code-input" class="code-input" name="one-time-code" v-model="code" :required="true" :error="errorMessage">
           {{ t('views.manageMfa.modals.manageAuthenticatorApp.oneTimeCode') }}
         </text-input>
-
-        <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">{{ errorMessage }}</notice-bar>
 
         <checkbox-input
           :name="t('views.manageMfa.modals.manageAuthenticatorApp.signOutFromOtherDevices')"
