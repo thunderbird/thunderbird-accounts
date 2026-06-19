@@ -1034,6 +1034,8 @@ class AddSubscriberToMailchimpList(TestCase):
             # Recovery Email
             get_member_response,
             create_member_response,
+            # Remove abandoned_cart from recovery email (GET 404 → no-op)
+            get_member_response,
         ]
 
         task_results: dict | None = tasks.add_subscriber_to_mailchimp_list.delay(str(self.test_user.uuid)).get(
@@ -1044,8 +1046,8 @@ class AddSubscriberToMailchimpList(TestCase):
         self.assertEqual(task_results.get('task_status'), 'success')
         self.assertEqual(task_results.get('user_uuid'), str(self.test_user.uuid))
 
-        # We call it 4 times (2 for both emails)
-        self.assertEqual(request_mock.call_count, 4)
+        # 4 calls for add/create both emails + 1 GET to attempt abandoned_cart removal
+        self.assertEqual(request_mock.call_count, 5)
 
         # Reverse order because of .pop()
         email_addresses = [self.test_user.recovery_email, self.test_user.stalwart_primary_email]
@@ -1077,6 +1079,10 @@ class AddSubscriberToMailchimpList(TestCase):
         update_member_tag = requests.Response()
         update_member_tag.status_code = 200
 
+        get_member_no_tags_response = requests.Response()
+        get_member_no_tags_response.status_code = 200
+        get_member_no_tags_response._content = b'{}'
+
         request_mock.side_effect = [
             # Thundermail
             get_member_response,
@@ -1084,6 +1090,8 @@ class AddSubscriberToMailchimpList(TestCase):
             # Recovery Email
             get_member_response,
             update_member_tag,
+            # Remove abandoned_cart from recovery email (GET 200, no tags → no-op)
+            get_member_no_tags_response,
         ]
 
         task_results: dict | None = tasks.add_subscriber_to_mailchimp_list.delay(str(self.test_user.uuid)).get(
@@ -1094,8 +1102,8 @@ class AddSubscriberToMailchimpList(TestCase):
         self.assertEqual(task_results.get('task_status'), 'success')
         self.assertEqual(task_results.get('user_uuid'), str(self.test_user.uuid))
 
-        # We call it 4 times (2 for both emails)
-        self.assertEqual(request_mock.call_count, 4)
+        # 4 calls to update tags on both emails + 1 GET to attempt abandoned_cart removal
+        self.assertEqual(request_mock.call_count, 5)
 
         # Reverse order because of .pop()
         email_addresses = [self.test_user.recovery_email, self.test_user.stalwart_primary_email]
@@ -1164,3 +1172,133 @@ class AddSubscriberToMailchimpList(TestCase):
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('user_uuid'), str(self.test_user.uuid))
         self.assertEqual(ex.exception.reason, 'mailchimp error')
+
+    @patch('requests.request')
+    def test_abandoned_cart_tag_removed_on_subscribe(self, request_mock: MagicMock):
+        """Ensure that the abandoned_cart tag is removed from recovery_email when a user subscribes."""
+        abandoned_cart_tag = settings.ABANDONED_CART_MAILCHIMP_TAG
+
+        get_member_response = requests.Response()
+        get_member_response.status_code = 200
+        get_member_response._content = json.dumps(
+            {'tags': [{'name': abandoned_cart_tag, 'id': 1}]}
+        ).encode()
+
+        add_tag_response = requests.Response()
+        add_tag_response.status_code = 200
+
+        remove_tag_response = requests.Response()
+        remove_tag_response.status_code = 204
+
+        request_mock.side_effect = [
+            # stalwart email: member exists with abandoned_cart tag, add new_user
+            get_member_response,
+            add_tag_response,
+            # recovery email: member exists with abandoned_cart tag, add welcome
+            get_member_response,
+            add_tag_response,
+            # remove abandoned_cart from recovery email: GET member, then POST inactive
+            get_member_response,
+            remove_tag_response,
+        ]
+
+        task_results = tasks.add_subscriber_to_mailchimp_list.delay(str(self.test_user.uuid)).get(timeout=10)
+
+        self.assertIsNotNone(task_results)
+        self.assertEqual(task_results.get('task_status'), 'success')
+        self.assertEqual(request_mock.call_count, 6)
+
+        md5_hasher = hashlib.new('md5')
+        md5_hasher.update(self.test_user.recovery_email.lower().encode())
+        hashed_recovery_email = md5_hasher.hexdigest()
+
+        remove_tag_request = request_mock.call_args_list[5]
+        self.assertIn(hashed_recovery_email, remove_tag_request[1]['url'])
+        self.assertIn('/tags', remove_tag_request[1]['url'])
+        self.assertEqual(
+            [{'name': abandoned_cart_tag, 'status': 'inactive'}],
+            remove_tag_request[1]['json']['tags'],
+        )
+
+
+class RemoveTagFromMailchimpMemberTestCase(TestCase):
+    """Unit tests for the remove_tag_from_mailchimp_member helper."""
+
+    email = 'user@example.com'
+    tag = 'abandoned_cart'
+
+    def _hashed_email(self, email: str) -> str:
+        md5_hasher = hashlib.new('md5')
+        md5_hasher.update(email.lower().encode())
+        return md5_hasher.hexdigest()
+
+    @patch('requests.request')
+    def test_member_not_found_is_noop(self, request_mock: MagicMock):
+        """If the member does not exist in Mailchimp, return silently without POSTing."""
+        not_found_response = requests.Response()
+        not_found_response.status_code = 404
+
+        request_mock.return_value = not_found_response
+
+        tasks.remove_tag_from_mailchimp_member(self.email, self.tag)
+
+        # Only the GET should have been made
+        self.assertEqual(request_mock.call_count, 1)
+        self.assertIn('GET', request_mock.call_args[1]['method'])
+
+    @patch('requests.request')
+    def test_tag_absent_is_noop(self, request_mock: MagicMock):
+        """If the member exists but does not have the tag, return silently without POSTing."""
+        get_response = requests.Response()
+        get_response.status_code = 200
+        get_response._content = json.dumps({'tags': [{'name': 'some_other_tag', 'id': 2}]}).encode()
+
+        request_mock.return_value = get_response
+
+        tasks.remove_tag_from_mailchimp_member(self.email, self.tag)
+
+        self.assertEqual(request_mock.call_count, 1)
+
+    @patch('requests.request')
+    def test_tag_present_sends_inactive_post(self, request_mock: MagicMock):
+        """If the member has the tag, POST with status: inactive to remove it."""
+        get_response = requests.Response()
+        get_response.status_code = 200
+        get_response._content = json.dumps({'tags': [{'name': self.tag, 'id': 1}]}).encode()
+
+        post_response = requests.Response()
+        post_response.status_code = 204
+
+        request_mock.side_effect = [get_response, post_response]
+
+        tasks.remove_tag_from_mailchimp_member(self.email, self.tag)
+
+        self.assertEqual(request_mock.call_count, 2)
+
+        hashed = self._hashed_email(self.email)
+        remove_req = request_mock.call_args_list[1]
+        self.assertIn(hashed, remove_req[1]['url'])
+        self.assertIn('/tags', remove_req[1]['url'])
+        self.assertEqual(
+            [{'name': self.tag, 'status': 'inactive'}],
+            remove_req[1]['json']['tags'],
+        )
+
+    @patch('sentry_sdk.capture_exception')
+    @patch('requests.request')
+    def test_post_failure_does_not_raise(self, request_mock: MagicMock, capture_exception_mock: MagicMock):
+        """If the POST to remove the tag fails, log the error but do not raise an exception."""
+        get_response = requests.Response()
+        get_response.status_code = 200
+        get_response._content = json.dumps({'tags': [{'name': self.tag, 'id': 1}]}).encode()
+
+        post_error_response = requests.Response()
+        post_error_response.status_code = 500
+
+        request_mock.side_effect = [get_response, post_error_response]
+
+        # Must not raise
+        tasks.remove_tag_from_mailchimp_member(self.email, self.tag, error_context={'user_uuid': 'test-uuid'})
+
+        self.assertEqual(request_mock.call_count, 2)
+        capture_exception_mock.assert_called_once()

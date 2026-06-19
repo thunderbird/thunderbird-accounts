@@ -592,6 +592,53 @@ def add_or_tag_mailchimp_member(
         )
 
 
+def remove_tag_from_mailchimp_member(
+    email: str,
+    tag: str,
+    *,
+    error_context: dict | None = None,
+) -> None:
+    """Remove a tag from an existing Mailchimp list member.
+
+    Best-effort: silently returns if the member does not exist or the tag is not
+    present. Errors during the remove request are logged and captured in Sentry
+    but never raised so that callers are not blocked by cleanup failures.
+    """
+    basic_auth = _mailchimp_basic_auth()
+    md5_hasher = hashlib.new('md5')
+    md5_hasher.update(email.lower().encode())
+    hashed_email = md5_hasher.hexdigest()
+
+    try:
+        response = _mailchimp_api_query('get', f'/members/{hashed_email}', basic_auth)
+        data = response.json() or {}
+        tags = {t.get('name'): True for t in data.get('tags', [])}
+
+        if not tags.get(tag):
+            return
+
+    except requests.exceptions.RequestException:
+        # Member does not exist or GET failed — nothing to remove.
+        return
+
+    try:
+        _mailchimp_api_query(
+            'post',
+            f'/members/{hashed_email}/tags',
+            basic_auth,
+            data={'tags': [{'name': tag, 'status': 'inactive'}]},
+        )
+    except requests.exceptions.RequestException as ex:
+        try:
+            error_details = ex.response.json()
+        except (JSONDecodeError, AttributeError):
+            error_details = {}
+
+        sentry_sdk.set_context('mailchimp_remove_tag_error', {**(error_context or {}), **error_details})
+        sentry_sdk.capture_exception(ex)
+        logging.warning(f'remove_tag_from_mailchimp_member: failed to remove tag "{tag}" from {email}: {ex}')
+
+
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
 def add_subscriber_to_mailchimp_list(self, user_uuid):
     """Adds a user's thundermail address to the primary tbpro mailing list.
@@ -632,6 +679,13 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
 
     for email, tag in [(user.stalwart_primary_email, 'new_user'), (user.recovery_email, 'welcome')]:
         add_or_tag_mailchimp_member(email, tag, language=language, error_context=error_context)
+
+    if user.recovery_email:
+        remove_tag_from_mailchimp_member(
+            user.recovery_email,
+            settings.ABANDONED_CART_MAILCHIMP_TAG,
+            error_context=error_context,
+        )
 
     return {
         'user_uuid': user_uuid,
