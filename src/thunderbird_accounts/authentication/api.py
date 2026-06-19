@@ -1,3 +1,4 @@
+from enum import StrEnum
 from urllib.parse import quote, unquote_plus
 from django.conf import settings
 from rest_framework.throttling import UserRateThrottle
@@ -27,6 +28,10 @@ class SignUpThrottle(UserRateThrottle):
 class CanISignUpThrottle(UserRateThrottle):
     scope = 'can_i_sign_up'
 
+class CanISignUpResponses(StrEnum):
+    WAIT_LIST = 'wait-list'
+    LOGIN = 'login'
+    SIGN_UP = 'sign-up'
 
 @api_view(['POST'])
 def get_user_profile(request: Request):
@@ -39,18 +44,25 @@ def get_user_profile(request: Request):
 @permission_classes([AllowAny])
 @throttle_classes([CanISignUpThrottle])
 def can_i_sign_up(request: Request):
-    """Can a user sign up?
-    If their email is on the allowed list and they're not logged in already, then yes they can!"""
+    """This is a temporary fix until we switch off Mailchimp automated emails..."""
     email = request.data.get('email')
 
-    allowed = False
+    go_to = CanISignUpResponses.WAIT_LIST
     if email and not request.user.is_authenticated:
         # Remove uri encoding
         email = unquote_plus(email)
-        # If they're in the allow-list and are not already a user
-        allowed = is_email_in_allow_list(email) and not get_user_by_contact_email(email)
 
-    return Response({'allowed': allowed})
+        has_an_account = get_user_by_contact_email(email)
+        is_in_allow_list = is_email_in_allow_list(email)
+
+        # Decide where the user should be sent
+        if has_an_account:
+            go_to = CanISignUpResponses.LOGIN
+        elif is_in_allow_list:
+            go_to = CanISignUpResponses.SIGN_UP
+
+
+    return Response({'go_to': go_to})
 
 
 @api_view(['POST'])

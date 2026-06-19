@@ -1,3 +1,4 @@
+from thunderbird_accounts.authentication.api import CanISignUpResponses
 from django.urls import reverse
 from json import JSONDecodeError
 from unittest.mock import MagicMock, patch
@@ -240,7 +241,7 @@ class CanISignUpTestcase(APITestCase):
             self.assertEqual(200, response.status_code)
 
             resp_data = response.json()
-            self.assertTrue(resp_data.get('allowed'))
+            self.assertEqual(CanISignUpResponses.SIGN_UP, resp_data.get('go_to'))
 
     def test_not_on_allowed_list(self):
         not_in_allowed_list = '45f46943-85ab-47fe-b5c0-56edd82e12fe@example.com'
@@ -252,7 +253,7 @@ class CanISignUpTestcase(APITestCase):
         self.assertEqual(200, response.status_code)
 
         resp_data = response.json()
-        self.assertFalse(resp_data.get('allowed'))
+        self.assertEqual(CanISignUpResponses.WAIT_LIST, resp_data.get('go_to'))
 
     def test_user_already_exists(self):
         self.assertIsNotNone(self.existing_user)
@@ -262,4 +263,4 @@ class CanISignUpTestcase(APITestCase):
         self.assertEqual(200, response.status_code)
 
         resp_data = response.json()
-        self.assertFalse(resp_data.get('allowed'))
+        self.assertEqual(CanISignUpResponses.LOGIN, resp_data.get('go_to'))
