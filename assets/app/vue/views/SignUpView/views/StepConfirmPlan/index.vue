@@ -121,11 +121,9 @@ export default {
     @submit="onSubmit"
   >
     <template v-slot:notice-bars>
-      <slot name="notice-bars">
-        <notice-bar :type="NoticeBarTypes.Critical" v-if="priceError">
-          {{ priceError }}
-        </notice-bar>
-      </slot>
+      <notice-bar :type="NoticeBarTypes.Critical" v-if="priceError">
+        {{ priceError }}
+      </notice-bar>
     </template>
     <template v-slot:form-elements>
       <div class="plan-card-container">
