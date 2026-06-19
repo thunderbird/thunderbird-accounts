@@ -49,9 +49,6 @@ def can_i_sign_up(request: Request):
 
     go_to = CanISignUpResponses.WAIT_LIST
     if email and not request.user.is_authenticated:
-        # Remove uri encoding
-        email = unquote_plus(email)
-
         has_an_account = get_user_by_contact_email(email)
         is_in_allow_list = is_email_in_allow_list(email)
 

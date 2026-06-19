@@ -54,7 +54,10 @@ const stepSFCMap = {
 }
 
 onMounted(() => {
-  verificationEmail.value = route.query?.email as string ?? null;
+  if (route.query?.email) {
+    // Attempt to repair non-uri encoded emails
+    verificationEmail.value = (route.query?.email as string).replaceAll(' ', '+')
+  }
 })
 </script>
 

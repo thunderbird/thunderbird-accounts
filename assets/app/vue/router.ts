@@ -51,8 +51,8 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
       let failQueryParam = '';
 
       if (to.query?.email) {
-        // Encode the email if it needs to be encoded
-        const email = encodeURIComponent(to.query.email as string);
+        // Attempt to repair non-uri encoded emails
+        const email = (to.query.email as string).replaceAll(' ', '+');
 
         try {
           const response = await fetch('/api/v1/auth/can-i-sign-up/', {

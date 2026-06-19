@@ -225,6 +225,7 @@ class CanISignUpTestcase(APITestCase):
         self.wait_list = [
             '348b8787-ddf0-4ab9-931e-db388f8770c0@example.com',
             '153ff958-dabb-4afc-94ab-3b1b3b5ff051@example.com',
+            '23fd4ed0-85d9-462f-b9cb+82a72f51c477@example.com' # Subaddressing test
         ]
         self.existing_user = User.objects.create(
             recovery_email='e9fc8f36-8d9c-4e8c-9af2-2a7e2901b036@example.com',
@@ -241,7 +242,11 @@ class CanISignUpTestcase(APITestCase):
             self.assertEqual(200, response.status_code)
 
             resp_data = response.json()
-            self.assertEqual(CanISignUpResponses.SIGN_UP, resp_data.get('go_to'))
+            self.assertEqual(
+                CanISignUpResponses.SIGN_UP,
+                resp_data.get('go_to'),
+                f'{email} could not reach sign-up despite being on the wait list.',
+            )
 
     def test_not_on_allowed_list(self):
         not_in_allowed_list = '45f46943-85ab-47fe-b5c0-56edd82e12fe@example.com'
