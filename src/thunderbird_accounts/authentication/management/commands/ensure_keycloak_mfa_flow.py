@@ -48,11 +48,14 @@ _DESIRED_REQUIREMENTS = [
     ('auth-recovery-authn-code-form', 2, 'ALTERNATIVE'),
 ]
 
-# loa-max-age mirrors the realm import: L1 reusable within the SSO window, L2 always fresh.
-_LOA_CONFIGS = [
-    ('mfa step-up level 1', {'loa-condition-level': '1', 'loa-max-age': '36000'}),
-    ('mfa step-up level 2', {'loa-condition-level': '2', 'loa-max-age': '0'}),
-]
+# Level 2 (the OTP step-up) keeps loa-max-age=0 so Keycloak re-challenges the second
+# factor on every step-up, refreshing the token's auth_time for the keycloak-mfa-rest
+# freshness gate. Level 1's max-age is derived per-realm (see _loa_configs): it must
+# match the SSO session lifespan, not a fixed value.
+_LEVEL_2_LOA_CONFIG = ('mfa step-up level 2', {'loa-condition-level': '2', 'loa-max-age': '0'})
+
+# Fallback L1 window when the realm doesn't report an SSO max lifespan (mirrors the import).
+_DEFAULT_L1_MAX_AGE = 36000
 
 
 class Command(BaseCommand):
@@ -206,8 +209,24 @@ class Command(BaseCommand):
             else:
                 raise RuntimeError(f'could not place execution {name} at level {level}')
 
-        for execution_id, (alias, config) in zip(loa_execution_ids, _LOA_CONFIGS):
+        for execution_id, (alias, config) in zip(loa_execution_ids, self._loa_configs()):
             self._req('POST', f'authentication/executions/{execution_id}/config', {'alias': alias, 'config': config})
+
+    def _loa_configs(self):
+        """LoA condition configs, with the L1 window tied to this realm's session lifespan.
+
+        The first factor must stay valid for the entire SSO session: if its window is
+        shorter than ssoSessionMaxLifespan, a step-up to acr=2 on a still-valid session
+        re-prompts username/password once the window lapses (the bug that bit the
+        stage-seeded preview, whose 72h sessions outlived the import's fixed 10h window).
+        Pinning L1 to ssoSessionMaxLifespan means it expires exactly when the session does.
+        """
+        realm = self._req('GET', '')
+        session_max = realm.get('ssoSessionMaxLifespan') or _DEFAULT_L1_MAX_AGE
+        return [
+            ('mfa step-up level 1', {'loa-condition-level': '1', 'loa-max-age': str(session_max)}),
+            _LEVEL_2_LOA_CONFIG,
+        ]
 
     def _ensure_acr_loa_map(self):
         realm = self._req('GET', '')
