@@ -22,9 +22,16 @@ declare global {
       formError?: string | null;
       formData?: object | string | null; // Should be object | null, but template rendering can be tricky...
       csrfToken?: string;
+      // Paddle info for the checkout step
       paddleToken?: string;
       paddleEnvironment?: string;
       paddlePlanInfo?: string[];
+      // planInfo for the confirm plan step
+      planInfo?: {
+        name: string;
+        description: string;
+        prices: string[];
+      };
       successRedirect?: string;
       signedUserId?: string;
       appPasswords?: string[];
@@ -46,6 +53,10 @@ declare global {
       errorTitle?: string;
       isErrorPage?: boolean,
       features?: object;
+      message?: {
+        type: string;
+        summary: string;
+      };
     };
   }
 }

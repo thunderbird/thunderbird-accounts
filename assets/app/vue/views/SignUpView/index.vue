@@ -6,6 +6,7 @@ import '@kc/css/main.css';
 import BaseTemplate from '@kc/vue/BaseTemplate.vue';
 
 import Step1Username from './views/Step1Username/index.vue';
+import StepConfirmPlan from './views/StepConfirmPlan/index.vue';
 import Step2Password from './views/Step2Password/index.vue';
 import Step3Verify from './views/Step3Verify/index.vue';
 import SignUpLayout from './components/SignUpLayout.vue';
@@ -47,6 +48,7 @@ window._page.pageId = route.name.toString();
 // Map of enum steps and SFC
 const stepSFCMap = {
   [SIGN_UP_STEPS.USERNAME]: Step1Username,
+  [SIGN_UP_STEPS.CONFIRM_PLAN]: StepConfirmPlan,
   [SIGN_UP_STEPS.PASSWORD]: Step2Password,
   [SIGN_UP_STEPS.VERIFY]: Step3Verify,
 }

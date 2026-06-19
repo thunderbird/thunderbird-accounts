@@ -24,6 +24,14 @@
     "userMenu": {
       "support": "Support",
       "logout": "Logout"
+    },
+    "planCard": {
+      "features": {
+        "mailStorage": "{size} of Mail Storage",
+        "inboxesAndAddresses": "{inboxes} Inbox, {addresses} Email addresses",
+        "customDomains": "{count} Custom Domains",
+        "sendStorage": "{size} of Send Storage"
+      }
     }
   },
   "views": {
@@ -297,6 +305,7 @@
         },
         "signUp": {
           "continue": "Continue",
+          "back": "Back",
           "fields": {
             "username": "Username",
             "password": "Password",
@@ -312,7 +321,16 @@
             "usernameHelp": "This will become your email. e.g. yourname{domain}",
             "unknownError": "There was a problem with your username. Please try another one.",
             "usernameTooShort": "Username must be at least {minLength} characters.",
-            "usernameTooLong": "Username must be no more than {maxLength} characters."
+            "usernameTooLong": "Username must be no more than {maxLength} characters.",
+            "action": "Next"
+          },
+          "stepConfirmPlan": {
+            "title": "Confirm plan",
+            "subtitle": "One year of early access. Secure payment is available after account setup.",
+            "action": "Set up account",
+            "notInterested": "Not interested",
+            "planInfoError": "Plan info or paddle token is missing.",
+            "paddleError": "Failed to retrieve price information. Error: {error}"
           },
           "step2": {
             "title": "Set a password",
@@ -320,7 +338,8 @@
             "passwordHelp": "Use a strong password you haven’t used elsewhere.",
             "confirmPasswordHelp": "Re-enter your password to confirm.",
             "yourNameHelp": "Set the name people will see when you send emails.",
-            "confirmPasswordDoesNotMatchError": "Password and confirm password must match."
+            "confirmPasswordDoesNotMatchError": "Password and confirm password must match.",
+            "action": "Next"
           },
           "step3": {
             "title": "Add a verification email",
@@ -331,7 +350,7 @@
           },
           "step4": {
             "title": "Check your email",
-            "subtitle": "In a few moments you should receive an email with instructions on how to activate your account."
+            "subtitle": "Check your email for instructions to activate your account. If you don’t see it soon, check your spam or junk folder."
           }
         }
       },

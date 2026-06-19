@@ -1,10 +1,10 @@
 import { type Page, type Locator, expect } from '@playwright/test';
-import { ACCTS_SIGN_UP_URL, DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '../const/constants';
+import { ACCTS_SIGN_UP_URL } from '../const/constants';
 import { waitForVueApp } from '../utils/utils';
 
 export class TbAcctsSignUpPage {
   readonly page: Page;
-  readonly testPlatform: String;
+  readonly testPlatform: string;
   readonly stepId: Locator;
   readonly formTitle: Locator;
   readonly formSubtitle: Locator;
@@ -43,6 +43,21 @@ export class TbAcctsSignUpPage {
   }
   
   /**
+   * Advances from the confirm plan step to the username step.
+   */
+  async confirmPlan() {
+    await expect.poll(async () => {
+      return await this.stepId.inputValue();
+    }).toBe('step-confirm-plan');
+
+    await this.submitForm();
+
+    await expect.poll(async () => {
+      return await this.stepId.inputValue();
+    }).toBe('step-username');
+  }
+
+  /**
    * Fills the form out with the given values.
    * 
    * The form will only be filled out if the steps values are filled out.
@@ -52,9 +67,7 @@ export class TbAcctsSignUpPage {
    * This relies on the locators being lazy loaded.
    */
   async fillForm(username: string, password?: string, passwordConfirm?: string, verificationEmail?: string) {
-    // locator.toHaveValue is not supported in iOS BrowserStack so must get value then verify it
-    var stepValue = await this.stepId.inputValue();
-    expect(stepValue).toBe('step-username');
+    await this.confirmPlan();
 
     await this.userNameInput?.fill(username);
     await this.submitForm();

@@ -44,6 +44,16 @@ test.describe('sign up form on mobile browser', {
     );
   });
 
+  test('sign-up flow starts on confirm plan step', async () => {
+    await expect.poll(async () => {
+      return await signUpPage.stepId.inputValue();
+    }).toBe('step-confirm-plan');
+
+    await expect.poll(async () => {
+      return await signUpPage.formTitle.textContent();
+    }).toBe('Confirm plan');
+  });
+
   test('navigating to sign-up with query param pre-fills form', async ({ page }) => {
     const testUsername: string = crypto.randomUUID().replaceAll('-', '');
     const testPassword: string = 'this-is-my-password-and-it-is-long';
@@ -65,10 +75,11 @@ test.describe('sign up form on mobile browser', {
     // Local part of an email address cannot contain the '@' character.
     const testUsername: string = 'IM@A@BAD@LOCAL@PART@OF@AN@EMAIL';
 
+    await signUpPage.confirmPlan();
     await signUpPage.userNameInput?.fill(testUsername);
     await signUpPage.submitForm();
 
-    // Make sure we're still on the first step
+    // Make sure we're still on the username step
     // locator.toHaveValue is not supported in iOS BrowserStack so must get value then verify it
     await expect.poll(async () => {
       return await signUpPage.stepId.inputValue();

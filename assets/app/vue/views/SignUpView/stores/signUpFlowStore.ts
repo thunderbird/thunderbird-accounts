@@ -5,6 +5,7 @@ import { captureError, captureStep } from '../api';
 
 export const enum SIGN_UP_STEPS {
   INVALID = 0,
+  CONFIRM_PLAN = 5,
   USERNAME = 10,
   PASSWORD = 20,
   VERIFY = 30,
@@ -14,6 +15,7 @@ export const enum SIGN_UP_STEPS {
 export const SIGN_UP_STEPS_TO_STR = {
   [SIGN_UP_STEPS.INVALID]: 'INVALID',
   [SIGN_UP_STEPS.USERNAME]: 'USERNAME',
+  [SIGN_UP_STEPS.CONFIRM_PLAN]: 'CONFIRM_PLAN',
   [SIGN_UP_STEPS.PASSWORD]: 'PASSWORD',
   [SIGN_UP_STEPS.VERIFY]: 'VERIFY',
   [SIGN_UP_STEPS.DONE]: 'DONE'
@@ -29,7 +31,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
   const timezone = useSessionStorage(`${sessionStorageKeyPrefix}/timezone`, null);
   const lang = useSessionStorage(`${sessionStorageKeyPrefix}/lang`, null);
   // In-memory only!
-  const step = ref(SIGN_UP_STEPS.USERNAME);
+  const step = ref(SIGN_UP_STEPS.CONFIRM_PLAN);
   const password = ref(null);
   const confirmPassword = ref(null);
 
@@ -127,6 +129,9 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
   const nextStep = () => {
     let nextStepValue = SIGN_UP_STEPS.INVALID;
     switch (step.value) {
+      case SIGN_UP_STEPS.CONFIRM_PLAN:
+        nextStepValue = SIGN_UP_STEPS.USERNAME;
+        break;
       case SIGN_UP_STEPS.USERNAME:
         nextStepValue = SIGN_UP_STEPS.PASSWORD;
         break;

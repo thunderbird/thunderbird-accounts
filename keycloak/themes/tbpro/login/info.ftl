@@ -23,6 +23,7 @@
         // <#else>
         messageHeader: null,
         // </#if>
+        isAccountUpdated: ${(message?has_content && (message.summary == msg("accountUpdatedMessage")))?c},
         requiredActions: {
             //<#if requiredActions??><#list requiredActions>
               //<#items as reqActionItem>
@@ -37,6 +38,10 @@
         infoRedirectText: '${kcSanitize(msg("infoRedirectText"))?no_esc}',
         infoVerifyEmailTitle: '${kcSanitize(msg("infoVerifyEmailTitle"))?no_esc}',
         infoVerifyEmailText:'${kcSanitize(msg("infoVerifyEmailText"))?no_esc}',
+        infoVerifyEmailAction: '${kcSanitize(msg("infoVerifyEmailAction"))?no_esc}',
+        infoAccountUpdatedTitle: '${kcSanitize(msg("infoAccountUpdatedTitle"))?no_esc}',
+        infoAccountUpdatedText: '${kcSanitize(msg("infoAccountUpdatedText"))?no_esc}',
+        infoAccountUpdatedAction: '${kcSanitize(msg("infoAccountUpdatedAction"))?no_esc}',
       };
     </script>
     </#if>

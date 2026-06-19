@@ -2,7 +2,23 @@ from django.db import transaction as dj_transaction
 from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.utils import create_stalwart_account, update_quota_on_stalwart_account
-from thunderbird_accounts.subscription.models import Plan
+from thunderbird_accounts.subscription.models import Plan, Price
+
+
+def get_visible_plan_info() -> dict | None:
+    """Return the first subscription-page plan with active prices for frontend display."""
+    plan = Plan.objects.filter(visible_on_subscription_page=True).exclude(product_id__isnull=True).first()
+
+    if not plan:
+        return None
+
+    prices = plan.product.price_set.filter(status=Price.StatusValues.ACTIVE).all()
+
+    return {
+        'name': plan.name,
+        'description': plan.product.description or '',
+        'prices': [price.paddle_id for price in prices],
+    }
 
 
 def sync_plan_to_keycloak(user: User):

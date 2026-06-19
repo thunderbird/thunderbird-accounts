@@ -48,6 +48,9 @@
     features: {{ features|safe|default:'{}' }},
     needsTosAcceptance: {{ needs_tos_acceptance|to_json|safe }},
     recoveryEmail: {{ recovery_email|to_json|safe }},
+    planInfo: {{ plan_info|to_json|safe|default:'null' }},
+    paddleToken: {{ paddle_token|to_json|safe|default:'null' }},
+    paddleEnvironment: {{ paddle_environment|to_json|safe|default:'null' }},
     {% block extra_page_params %}{% endblock %}
   };
   csrfToken.remove();
