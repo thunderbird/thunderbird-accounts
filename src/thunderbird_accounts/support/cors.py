@@ -4,7 +4,7 @@ from django.urls import Resolver404, resolve
 from corsheaders.signals import check_request_enabled
 
 
-def cors_allow_zendesk_sidebar(sender, request, **kwargs):
+def cors_allow_support_customer(sender, request, **kwargs):
     if not settings.ZENDESK_SUBDOMAIN:
         return False
 
@@ -17,11 +17,11 @@ def cors_allow_zendesk_sidebar(sender, request, **kwargs):
     except Resolver404:
         return False
 
-    return match.url_name == 'api_zendesk_sidebar_customer'
+    return match.url_name == 'api_support_customer'
 
 
 def register_cors_handlers():
     check_request_enabled.connect(
-        cors_allow_zendesk_sidebar,
-        dispatch_uid='thunderbird_accounts.core.cors_allow_zendesk_sidebar',
+        cors_allow_support_customer,
+        dispatch_uid='thunderbird_accounts.support.cors_allow_support_customer',
     )

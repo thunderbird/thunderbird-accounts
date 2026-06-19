@@ -13,11 +13,12 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from thunderbird_accounts.authentication import views as auth_views
 from thunderbird_accounts.core import views as core_views
-from thunderbird_accounts.core import zendesk_sidebar
 from thunderbird_accounts.infra import views as infra_views
 from thunderbird_accounts.mail import views as mail_views, api as mail_api
 from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
+from thunderbird_accounts.support import views as support_views
+from thunderbird_accounts.support.customer import support_customer_api
 
 from thunderbird_accounts.authentication.api import get_user_profile, sign_up, can_i_sign_up
 from thunderbird_accounts.legal import views as legal_views
@@ -40,9 +41,9 @@ urlpatterns = [
     ),
     path('admin/', admin.site.urls),
     # Django-specific routes (not handled by Vue)
-    path('contact/fields', core_views.contact_fields, name='contact_fields'),
+    path('contact/fields', support_views.contact_fields, name='contact_fields'),
     # Post only
-    path('contact/submit', core_views.contact_submit, name='contact_submit'),
+    path('contact/submit', support_views.contact_submit, name='contact_submit'),
     path('app-passwords/set', mail_views.app_password_set, name='app_password_set'),
     path('display-name/set', mail_views.display_name_set, name='display_name_set'),
     path('custom-domains/add', mail_views.create_custom_domain, name='add_custom_domain'),
@@ -61,11 +62,7 @@ urlpatterns = [
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/auth/sign-up/', sign_up, name='api_sign_up'),
     path('api/v1/auth/can-i-sign-up/', can_i_sign_up, name='api_can_i_sign_up'),
-    path(
-        'api/v1/zendesk/sidebar/customer/',
-        zendesk_sidebar.zendesk_sidebar_customer_api,
-        name='api_zendesk_sidebar_customer',
-    ),
+    path('api/v1/support/customer/', support_customer_api, name='api_support_customer'),
     path('api/v1/legal/current/', legal_views.get_current_legal_docs, name='legal_current'),
     path('api/v1/legal/accept/', legal_views.accept_legal_docs, name='legal_accept'),
     path('api/v1/legal/decline/', legal_views.decline_legal_docs, name='legal_decline'),

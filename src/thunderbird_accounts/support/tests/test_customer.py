@@ -12,7 +12,7 @@ from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.subscription.models import Plan, Subscription, Transaction
-from thunderbird_accounts.core.zendesk_sidebar import get_customer_sidebar_data, zendesk_sidebar_customer_api
+from thunderbird_accounts.support.customer import get_customer_support_data, support_customer_api
 
 SUPPORT_CUSTOMER_VIEW_PERMISSIONS = [
     'authentication.view_user',
@@ -108,7 +108,7 @@ class SupportCustomerLookupTestCase(TestCase):
 
         self.assertIsNone(payload['subscription'])
 
-    @patch('thunderbird_accounts.core.zendesk_sidebar.MailClient')
+    @patch('thunderbird_accounts.support.customer.MailClient')
     @override_settings(PADDLE_VENDOR_SITE='https://vendors.paddle.com', PUBLIC_BASE_URL='https://accounts.example.test')
     def test_paid_user_aggregates_profile_subscription_quota_and_links(self, mock_mail_client_cls):
         mock_mail_client = Mock()
@@ -340,7 +340,7 @@ class SupportCustomerLookupTestCase(TestCase):
         )
         force_authenticate(request, user=viewer)
 
-        response = zendesk_sidebar_customer_api(request)
+        response = support_customer_api(request)
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.data['found'])
@@ -364,7 +364,7 @@ class SupportCustomerLookupTestCase(TestCase):
         )
         force_authenticate(request, user=viewer)
 
-        response = zendesk_sidebar_customer_api(request)
+        response = support_customer_api(request)
 
         self.assertEqual(response.status_code, 403)
 
@@ -384,7 +384,7 @@ class SupportCustomerLookupTestCase(TestCase):
         )
         force_authenticate(request, user=viewer)
 
-        response = zendesk_sidebar_customer_api(request)
+        response = support_customer_api(request)
 
         self.assertEqual(response.status_code, 403)
 
