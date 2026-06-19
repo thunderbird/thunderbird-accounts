@@ -137,7 +137,7 @@ class GetStaleIncompleteSignupUsersTestCase(TestCase):
 
 
 @freezegun.freeze_time(FROZEN_NOW)
-@patch('thunderbird_accounts.authentication.tasks.add_or_tag_mailchimp_member')
+@patch('thunderbird_accounts.authentication.tasks.MailchimpClient')
 class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
     def setUp(self):
         self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
@@ -150,10 +150,10 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
         )
         User.objects.filter(pk=self.user.pk).update(created_at=eligible_created_at)
 
-    def test_tags_eligible_users(self, mock_add_or_tag):
+    def test_tags_eligible_users(self, mock_client_cls):
         result = tag_abandoned_cart_in_mailchimp.apply().get()
 
-        mock_add_or_tag.assert_called_once_with(
+        mock_client_cls.return_value.add_or_tag_member.assert_called_once_with(
             'abandoned@example.com',
             settings.ABANDONED_CART_MAILCHIMP_TAG,
             language='en',
@@ -163,7 +163,7 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
         self.assertEqual(result['errors'], 0)
         self.assertEqual(result['skipped'], 0)
 
-    def test_skips_user_without_recovery_email(self, mock_add_or_tag):
+    def test_skips_user_without_recovery_email(self, mock_client_cls):
         User.objects.filter(pk=self.user.pk).update(recovery_email=None)
         self.user.refresh_from_db()
         with patch(
@@ -173,11 +173,11 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
 
             result = tag_abandoned_cart_in_mailchimp.apply().get()
 
-        mock_add_or_tag.assert_not_called()
+        mock_client_cls.return_value.add_or_tag_member.assert_not_called()
         self.assertEqual(result['tagged'], 0)
         self.assertEqual(result['skipped'], 1)
 
-    def test_counts_mailchimp_errors_and_continues(self, mock_add_or_tag):
+    def test_counts_mailchimp_errors_and_continues(self, mock_client_cls):
         second_user = User.objects.create(
             username=f'abandoned-too@{self.subdomain}',
             email='abandoned-too@example.com',
@@ -187,18 +187,18 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
         User.objects.filter(pk=second_user.pk).update(
             created_at=timezone.now() - timedelta(hours=settings.ABANDONED_CART_TAG_HOURS + 1)
         )
-        mock_add_or_tag.side_effect = [
+        mock_client_cls.return_value.add_or_tag_member.side_effect = [
             TaskFailed('mailchimp error', {'user_uuid': str(self.user.uuid)}),
             None,
         ]
 
         result = tag_abandoned_cart_in_mailchimp.apply().get()
 
-        self.assertEqual(mock_add_or_tag.call_count, 2)
+        self.assertEqual(mock_client_cls.return_value.add_or_tag_member.call_count, 2)
         self.assertEqual(result['tagged'], 1)
         self.assertEqual(result['errors'], 1)
 
-    def test_skips_user_if_subscription_appears_after_initial_selection(self, mock_add_or_tag):
+    def test_skips_user_if_subscription_appears_after_initial_selection(self, mock_client_cls):
         Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
         with patch(
             'thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users'
@@ -207,15 +207,15 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
 
             result = tag_abandoned_cart_in_mailchimp.apply().get()
 
-        mock_add_or_tag.assert_not_called()
+        mock_client_cls.return_value.add_or_tag_member.assert_not_called()
         self.assertEqual(result['tagged'], 0)
         self.assertEqual(result['skipped'], 1)
 
     @override_settings(USE_MAILCHIMP=False)
-    def test_no_ops_when_mailchimp_disabled(self, mock_add_or_tag):
+    def test_no_ops_when_mailchimp_disabled(self, mock_client_cls):
         result = tag_abandoned_cart_in_mailchimp.apply().get()
 
-        mock_add_or_tag.assert_not_called()
+        mock_client_cls.return_value.add_or_tag_member.assert_not_called()
         self.assertEqual(result['task_status'], 'skipped')
         self.assertEqual(result['tagged'], 0)
 

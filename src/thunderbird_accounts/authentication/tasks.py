@@ -9,10 +9,10 @@ from django.db.models import Exists, OuterRef, QuerySet
 from django.utils import timezone
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.celery.exceptions import TaskFailed
-from thunderbird_accounts.subscription.models import Subscription
-from thunderbird_accounts.subscription.tasks import add_or_tag_mailchimp_member
 from thunderbird_accounts.authentication.utils import delete_user_data
+from thunderbird_accounts.celery.exceptions import TaskFailed
+from thunderbird_accounts.subscription.mailchimp import MailchimpClient
+from thunderbird_accounts.subscription.models import Subscription
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,7 @@ def tag_abandoned_cart_in_mailchimp(self):
     language_fallback = settings.DEFAULT_LANGUAGE
     mailchimp_language_map = settings.ACCOUNTS_TO_MAILCHIMP_LANGUAGES
     mailchimp_tag = settings.ABANDONED_CART_MAILCHIMP_TAG
+    client = MailchimpClient()
 
     for user in get_stale_incomplete_signup_users(cutoff_hours=settings.ABANDONED_CART_TAG_HOURS).iterator():
         try:
@@ -76,7 +77,7 @@ def tag_abandoned_cart_in_mailchimp(self):
                 continue
 
             language = mailchimp_language_map.get(user.language) or language_fallback
-            add_or_tag_mailchimp_member(
+            client.add_or_tag_member(
                 user.recovery_email,
                 mailchimp_tag,
                 language=language,

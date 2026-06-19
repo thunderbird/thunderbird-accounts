@@ -14,6 +14,7 @@ from rest_framework.test import APIClient, APITestCase as DRF_APITestCase
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription import tasks, models
+from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.mail import models as mail_models
 from thunderbird_accounts.core.exceptions import UnexpectedBehaviour
 from thunderbird_accounts.core.tests.utils import (
@@ -1222,7 +1223,7 @@ class AddSubscriberToMailchimpList(TestCase):
 
 
 class RemoveTagFromMailchimpMemberTestCase(TestCase):
-    """Unit tests for the remove_tag_from_mailchimp_member helper."""
+    """Unit tests for MailchimpClient.remove_tag_from_member."""
 
     email = 'user@example.com'
     tag = 'abandoned_cart'
@@ -1240,7 +1241,7 @@ class RemoveTagFromMailchimpMemberTestCase(TestCase):
 
         request_mock.return_value = not_found_response
 
-        tasks.remove_tag_from_mailchimp_member(self.email, self.tag)
+        MailchimpClient().remove_tag_from_member(self.email, self.tag)
 
         # Only the GET should have been made
         self.assertEqual(request_mock.call_count, 1)
@@ -1255,7 +1256,7 @@ class RemoveTagFromMailchimpMemberTestCase(TestCase):
 
         request_mock.return_value = get_response
 
-        tasks.remove_tag_from_mailchimp_member(self.email, self.tag)
+        MailchimpClient().remove_tag_from_member(self.email, self.tag)
 
         self.assertEqual(request_mock.call_count, 1)
 
@@ -1271,7 +1272,7 @@ class RemoveTagFromMailchimpMemberTestCase(TestCase):
 
         request_mock.side_effect = [get_response, post_response]
 
-        tasks.remove_tag_from_mailchimp_member(self.email, self.tag)
+        MailchimpClient().remove_tag_from_member(self.email, self.tag)
 
         self.assertEqual(request_mock.call_count, 2)
 
@@ -1298,7 +1299,7 @@ class RemoveTagFromMailchimpMemberTestCase(TestCase):
         request_mock.side_effect = [get_response, post_error_response]
 
         # Must not raise
-        tasks.remove_tag_from_mailchimp_member(self.email, self.tag, error_context={'user_uuid': 'test-uuid'})
+        MailchimpClient().remove_tag_from_member(self.email, self.tag, error_context={'user_uuid': 'test-uuid'})
 
         self.assertEqual(request_mock.call_count, 2)
         capture_exception_mock.assert_called_once()
