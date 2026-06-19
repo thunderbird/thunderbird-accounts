@@ -1,5 +1,5 @@
 from enum import StrEnum
-from urllib.parse import quote, unquote_plus
+from urllib.parse import quote
 from django.conf import settings
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny
@@ -49,9 +49,6 @@ def can_i_sign_up(request: Request):
 
     go_to = CanISignUpResponses.WAIT_LIST
     if email and not request.user.is_authenticated:
-        # Remove uri encoding
-        email = unquote_plus(email)
-
         has_an_account = get_user_by_contact_email(email)
         is_in_allow_list = is_email_in_allow_list(email)
 
