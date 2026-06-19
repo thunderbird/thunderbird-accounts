@@ -511,19 +511,19 @@ test.describe('multi-factor authentication', {
     await recoveryRow.getByRole('button', { name: 'Set up' }).click();
     const firstSetCodes = await captureRecoveryCodesAndConfirm(page);
     expect(firstSetCodes).toHaveLength(12);
-    await expect(recoveryRow.getByRole('button', { name: 'Edit' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await expect(recoveryRow.getByRole('button', { name: 'Regenerate' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     const credentialAfterFirstSetup = await getRecoveryCodesCredentialMetadata();
     expect(credentialAfterFirstSetup).toHaveLength(1);
 
-    // Edit + cancel on the confirmation step: nothing is regenerated, so the committed
+    // Regenerate + cancel on the confirmation step: nothing is regenerated, so the committed
     // credential (id/createdDate) must be unchanged.
-    await recoveryRow.getByRole('button', { name: 'Edit' }).click();
+    await recoveryRow.getByRole('button', { name: 'Regenerate' }).click();
     await expectRecoveryCodesDialogVisible(page);
     await dismissRecoveryCodesDialog(page);
     expect(await getRecoveryCodesCredentialMetadata()).toEqual(credentialAfterFirstSetup);
 
-    // Edit + confirm: continuing rotates the codes and replaces the credential.
-    await recoveryRow.getByRole('button', { name: 'Edit' }).click();
+    // Regenerate + confirm: continuing rotates the codes and replaces the credential.
+    await recoveryRow.getByRole('button', { name: 'Regenerate' }).click();
     const replacedCodes = await captureRecoveryCodesAndConfirm(page);
     expect(replacedCodes).toHaveLength(12);
     expect(replacedCodes).not.toEqual(firstSetCodes);
@@ -560,7 +560,7 @@ test.describe('multi-factor authentication', {
     await setUpAuthenticatorApp(page);
     const codes = await captureRecoveryCodesAndConfirm(page);
     expect(codes).toHaveLength(12);
-    await expect(recoveryRow.getByRole('button', { name: 'Edit' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await expect(recoveryRow.getByRole('button', { name: 'Regenerate' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
 
     // Removing the authenticator cascades: the recovery codes are deleted with it...
     await page.getByTestId('mfa-authenticatorApp-remove-button').click();
@@ -608,11 +608,12 @@ test.describe('multi-factor authentication', {
 
     await page.getByRole('button', { name: 'Verify', exact: true }).click();
 
-    // The step-up redirect carries acr_values=2 and max_age=0, forcing an active
-    // re-authentication that refreshes the token's auth_time — which the
-    // keycloak-mfa-rest token-claims gate checks alongside acr. Depending on how much
-    // of the SSO session Keycloak can reuse, the re-auth page either asks for the
-    // credentials again or jumps straight to the OTP challenge; handle both.
+    // The step-up redirect carries acr_values=2 (no max_age, so we don't force a full
+    // first-factor re-auth). The realm's L2 conditional-LoA re-challenges the OTP and
+    // refreshes the token's auth_time — which the keycloak-mfa-rest token-claims gate
+    // checks alongside acr. This normally jumps straight to the OTP challenge, but
+    // depending on how much of the SSO session Keycloak reuses it may re-ask for the
+    // credentials first; handle both.
     const otpInput = page.getByTestId('otp-input');
     const usernameInput = page.getByTestId('username-input');
     await expect(otpInput.or(usernameInput).first()).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
@@ -627,7 +628,7 @@ test.describe('multi-factor authentication', {
     // Back on the management page with a stepped-up session: regenerating succeeds
     // against both the accounts pre-check and the provider's step-up gate.
     const recoveryRow = page.locator('.authentication-method').filter({ hasText: 'Recovery codes' });
-    await recoveryRow.getByRole('button', { name: 'Edit' }).click();
+    await recoveryRow.getByRole('button', { name: 'Regenerate' }).click();
     const replacedCodes = await captureRecoveryCodesAndConfirm(page);
     expect(replacedCodes).toHaveLength(12);
     expect(replacedCodes).not.toEqual(initialCodes);
