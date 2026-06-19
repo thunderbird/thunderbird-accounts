@@ -287,6 +287,7 @@ REST_FRAMEWORK = {
         'analytics': '1000/minute',  # Just in case
         'support_customer_api': '100/day',
         'totp_confirm': '10/minute',
+        'recovery_codes_regenerate': '10/minute',
     },
 }
 

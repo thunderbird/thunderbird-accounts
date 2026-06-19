@@ -296,6 +296,11 @@ def admin_reset_totp_credentials(modeladmin, request, queryset):
 
     First invocation (no `apply=1`) renders a confirmation page listing the affected
     users; the form posts back here with `apply=1` to actually delete the credentials.
+
+    Recovery codes are deleted alongside the authenticator: they are strictly a backup
+    for the authenticator app, so leaving them behind would strand the user on a
+    codes-only second factor that Keycloak burns down to nothing as codes are spent.
+    This mirrors the self-service removal cascade in ``remove_totp_credential``.
     """
     if request.POST.get('apply') != '1':
         context = {
@@ -308,7 +313,7 @@ def admin_reset_totp_credentials(modeladmin, request, queryset):
         return TemplateResponse(request, 'admin/authentication/user/reset_totp_confirmation.html', context)
 
     keycloak = KeycloakClient()
-    users_reset = credentials_deleted = no_totp = no_keycloak_account = errors = 0
+    users_reset = credentials_deleted = recovery_codes_deleted = no_totp = no_keycloak_account = errors = 0
 
     for user in queryset:
         if not user.oidc_id:
@@ -324,6 +329,11 @@ def admin_reset_totp_credentials(modeladmin, request, queryset):
             for credential in totp_credentials:
                 keycloak.delete_credential(user.oidc_id, credential['id'])
                 credentials_deleted += 1
+
+            # Cascade to recovery codes — they are a backup for the authenticator only.
+            for recovery_credential in keycloak.get_recovery_codes_credentials(user.oidc_id):
+                keycloak.delete_credential(user.oidc_id, recovery_credential['id'])
+                recovery_codes_deleted += 1
             users_reset += 1
         except (KeyError, RequestException) as ex:
             logging.error(f'[admin_reset_totp_credentials] Could not reset TOTP for {user.username}: {ex}')
@@ -340,6 +350,12 @@ def admin_reset_totp_credentials(modeladmin, request, queryset):
             credentials_deleted,
             'Deleted %d Keycloak TOTP credential.',
             'Deleted %d Keycloak TOTP credentials.',
+            messages.SUCCESS,
+        ),
+        (
+            recovery_codes_deleted,
+            'Deleted %d Keycloak recovery-codes credential.',
+            'Deleted %d Keycloak recovery-codes credentials.',
             messages.SUCCESS,
         ),
         (

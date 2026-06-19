@@ -570,6 +570,7 @@ class AdminResetTotpCredentialsTestCase(TestCase):
             {'id': 'credential-1', 'type': 'otp'},
             {'id': 'credential-2', 'type': 'otp'},
         ]
+        keycloak.get_recovery_codes_credentials.return_value = []
         modeladmin = self._build_modeladmin()
         request = self._build_request()
 
@@ -586,6 +587,31 @@ class AdminResetTotpCredentialsTestCase(TestCase):
         modeladmin.message_user.assert_any_call(
             request,
             'Reset TOTP credentials for 1 user.',
+            25,
+        )
+
+    @patch('thunderbird_accounts.authentication.admin.actions.KeycloakClient')
+    def test_reset_totp_credentials_cascades_recovery_codes(self, mock_keycloak_client: MagicMock):
+        keycloak = mock_keycloak_client.return_value
+        keycloak.get_totp_credentials.return_value = [{'id': 'credential-1', 'type': 'otp'}]
+        keycloak.get_recovery_codes_credentials.return_value = [
+            {'id': 'recovery-1', 'type': 'recovery-authn-codes'},
+        ]
+        modeladmin = self._build_modeladmin()
+        request = self._build_request()
+
+        admin_reset_totp_credentials(
+            modeladmin,
+            request,
+            User.objects.filter(pk=self.user.pk),
+        )
+
+        keycloak.get_recovery_codes_credentials.assert_called_once_with(FAKE_OIDC_UUID)
+        keycloak.delete_credential.assert_any_call(FAKE_OIDC_UUID, 'credential-1')
+        keycloak.delete_credential.assert_any_call(FAKE_OIDC_UUID, 'recovery-1')
+        modeladmin.message_user.assert_any_call(
+            request,
+            'Deleted 1 Keycloak recovery-codes credential.',
             25,
         )
 
