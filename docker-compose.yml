@@ -125,17 +125,19 @@ services:
     volumes:
       - "./mail:/opt/stalwart:z"
     ports:
-      - "443:443"
-      - "8080:8080"
-      - "8081:8081"
-      - "25:25"
-      - "587:587"
-      - "465:465"
-      - "143:143"
-      - "993:993"
-      - "4190:4190"
-      - "110:110"
-      - "995:995"
+      # Don't have Stalwart listen on 443, because it conflicts with Tailscale Funnel
+      - "127.0.0.1:8443:443"
+      # For better security, Stalwart should listen only loopback IPs, not externally.
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:25:25"
+      - "127.0.0.1:587:587"
+      - "127.0.0.1:465:465"
+      - "127.0.0.1:143:143"
+      - "127.0.0.1:993:993"
+      - "127.0.0.1:4190:4190"
+      - "127.0.0.1:110:110"
+      - "127.0.0.1:995:995"
     environment:
       <<: *env
       ADMIN_SECRET: "{plain}accounts"

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thunderbird Pro Customer</title>
+  <title>Thundermail Customer</title>
   <link rel="stylesheet" href="{% static 'css/main.css' %}">
   <link rel="stylesheet" href="{% static 'css/zendesk/sidebar.css' %}">
   <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
@@ -12,24 +12,15 @@
 <body>
 <main class="shell">
   <div id="status" class="message">Loading customer information...</div>
-  <iframe id="content-frame" name="content-frame" title="Thunderbird Pro customer information" hidden></iframe>
-  <form id="content-form" action="/zendesk/sidebar/content/" method="post" target="content-frame" hidden>
-    <input id="content-email" type="hidden" name="email">
-    <input id="content-via" type="hidden" name="via">
-    <input id="content-zendesk-token" type="hidden" name="zendesk_token">
-  </form>
+  <iframe id="content-frame" name="content-frame" title="Thundermail customer information" hidden></iframe>
 </main>
 
-{{ zendesk_token|json_script:"zendesk-token" }}
+{{ content_url|json_script:"content-url" }}
 <script>
   const minimumFrameHeight = 700;
-  const zendeskToken = JSON.parse(document.getElementById('zendesk-token').textContent);
+  const contentUrl = JSON.parse(document.getElementById('content-url').textContent);
   const statusElement = document.getElementById('status');
   const contentFrame = document.getElementById('content-frame');
-  const contentForm = document.getElementById('content-form');
-  const contentEmailField = document.getElementById('content-email');
-  const contentViaField = document.getElementById('content-via');
-  const contentZendeskTokenField = document.getElementById('content-zendesk-token');
   let zendeskClient = null;
   let lastFrameHeight = minimumFrameHeight;
 
@@ -61,25 +52,54 @@
     resizeShell(minimumFrameHeight);
   }
 
-  function loadContent(email, viaChannel) {
+  function renderContent(response) {
+    const html = typeof response === 'string' ? response : response?.responseText;
+    if (!html) {
+      showMessage('No sidebar content was returned.', true);
+      return;
+    }
+
+    contentFrame.hidden = false;
+    statusElement.hidden = true;
+    contentFrame.srcdoc = html;
+    resizeShell(minimumFrameHeight);
+  }
+
+  async function loadContent(email, viaChannel) {
     const normalizedEmail = (email || '').trim();
     if (!normalizedEmail) {
       showMessage('No requester email is available.');
       return;
     }
 
-    contentEmailField.value = normalizedEmail;
-    contentViaField.value = viaChannel || 'web';
-    contentZendeskTokenField.value = zendeskToken;
-    contentFrame.hidden = false;
-    statusElement.hidden = true;
     resizeShell(minimumFrameHeight);
-    contentForm.submit();
+    try {
+      const response = await zendeskClient.request({
+        url: contentUrl,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+          email: normalizedEmail,
+          via: viaChannel || 'web',
+        }),
+        headers: {
+          Authorization: '{% verbatim %}Bearer {{setting.token}}{% endverbatim %}',
+        },
+        secure: true,
+      });
+      renderContent(response);
+    } catch (error) {
+      if (error?.responseText) {
+        renderContent(error.responseText);
+        return;
+      }
+      showMessage(error.message || `Unable to load customer information (${error.status || 'unknown error'}).`, true);
+    }
   }
 
   async function refreshFromZendesk(client) {
     const data = await client.get(['ticket.requester.email', 'ticket.via.channel']);
-    loadContent(data['ticket.requester.email'], data['ticket.via.channel']);
+    await loadContent(data['ticket.requester.email'], data['ticket.via.channel']);
   }
 
   async function loadFromZendesk() {
@@ -97,7 +117,7 @@
   }
 
   window.addEventListener('message', (event) => {
-    if (event.origin !== window.location.origin) {
+    if (event.source !== contentFrame.contentWindow && event.origin !== window.location.origin) {
       return;
     }
 

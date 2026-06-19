@@ -1,13 +1,12 @@
+import json
 import logging
 from collections import defaultdict
 from datetime import datetime
+from functools import cache
 from urllib.parse import urljoin
 
 import jwt
-import requests
 from django.conf import settings
-from django.contrib.auth.views import redirect_to_login
-from django.core.cache import cache
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
 from django.template.response import TemplateResponse
@@ -17,16 +16,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_http_methods
 
 from thunderbird_accounts.authentication.models import AllowListEntry, User
-from thunderbird_accounts.core.models import ZendeskAgentConnection
+from thunderbird_accounts.core.utils import get_absolute_url
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.models import Email
 from thunderbird_accounts.mail.utils import filter_app_passwords
 from thunderbird_accounts.subscription.models import Subscription, Transaction
 
-PUBLIC_KEY_CACHE_KEY = 'zendesk_sidebar_public_key'
-PUBLIC_KEY_CACHE_SECONDS = 60 * 60 * 24
-ZENDESK_CONNECT_TOKEN_SESSION_KEY = 'zendesk_sidebar_connect_token'
 SIDEBAR_VIEW_PERMISSIONS = [
     'authentication.view_user',
     'authentication.view_allowlistentry',
@@ -409,14 +405,14 @@ def zendesk_sidebar(request: HttpRequest):
         logging.warning('Invalid Zendesk signed request token: %s', exc)
         return HttpResponseForbidden('Invalid Zendesk signed request token.')
 
-    return _set_zendesk_frame_ancestors(_render_sidebar(request, token))
+    return _set_zendesk_frame_ancestors(_render_sidebar(request))
 
 
 @csrf_exempt
 @xframe_options_exempt
 @require_http_methods(['GET', 'POST'])
 def zendesk_sidebar_content(request: HttpRequest):
-    request_data = request.POST if request.method == 'POST' else request.GET
+    request_data = _get_request_data(request)
     has_session_access = request.user.is_authenticated and can_view_zendesk_sidebar(request.user)
 
     if request.user.is_authenticated and not has_session_access:
@@ -428,9 +424,8 @@ def zendesk_sidebar_content(request: HttpRequest):
         return response
 
     if not has_session_access:
-        zendesk_token = request_data.get('zendesk_token')
-        zendesk_access = _get_zendesk_sidebar_access(zendesk_token)
-        if zendesk_access['user'] and zendesk_access['has_access']:
+        oauth_access = _get_zendesk_oauth_access(request)
+        if oauth_access['user'] and oauth_access['has_access']:
             return _render_sidebar_content(
                 request,
                 get_customer_sidebar_data(
@@ -439,37 +434,9 @@ def zendesk_sidebar_content(request: HttpRequest):
                 ),
             )
 
-        if zendesk_access['user'] and not zendesk_access['has_access']:
-            response = _render_sidebar_content(
-                request,
-                _build_sidebar_message('Missing required Django permissions for the Zendesk sidebar.'),
-            )
-            response.status_code = 403
-            return response
-
-        if zendesk_access['identity']:
-            response = _render_sidebar_content(
-                request,
-                _build_sidebar_message(
-                    'Connect your Zendesk account to Thunderbird Pro to use this sidebar.',
-                    auth_url=reverse('zendesk_sidebar_connect'),
-                    auth_label='Connect Thunderbird Pro',
-                    auth_method='post',
-                    auth_fields={'zendesk_token': zendesk_token},
-                ),
-            )
-            response.status_code = 401
-            return response
-
-        response = _render_sidebar_content(
-            request,
-            _build_sidebar_message(
-                'Sign in to Django in a new tab, then reload Zendesk.',
-                auth_url=settings.LOGIN_URL,
-                auth_label='Sign in to Django',
-            ),
-        )
-        response.status_code = 401
+        message = oauth_access['error'] or 'Authorize Thundermail in the Zendesk app settings, then reload Zendesk.'
+        response = _render_sidebar_content(request, _build_sidebar_message(message))
+        response.status_code = 403 if oauth_access['user'] else 401
         return response
 
     return _render_sidebar_content(
@@ -478,41 +445,6 @@ def zendesk_sidebar_content(request: HttpRequest):
             request_data.get('email'),
             request_data.get('via'),
         ),
-    )
-
-
-@csrf_exempt
-@xframe_options_exempt
-@require_http_methods(['GET', 'POST'])
-def zendesk_sidebar_connect(request: HttpRequest):
-    token = request.POST.get('zendesk_token') or request.session.get(ZENDESK_CONNECT_TOKEN_SESSION_KEY)
-    identity = _get_zendesk_agent_identity_from_token(token)
-    if not identity:
-        return HttpResponseForbidden('Invalid Zendesk signed request token.')
-
-    if not request.user.is_authenticated:
-        request.session[ZENDESK_CONNECT_TOKEN_SESSION_KEY] = token
-        return redirect_to_login(reverse('zendesk_sidebar_connect'), settings.LOGIN_URL)
-
-    if not can_view_zendesk_sidebar(request.user):
-        return HttpResponseForbidden('Missing required Django permissions for the Zendesk sidebar.')
-
-    ZendeskAgentConnection.objects.update_or_create(
-        zendesk_subdomain=identity['subdomain'],
-        zendesk_user_id=identity['user_id'],
-        defaults={
-            'zendesk_user_email': identity['email'],
-            'user': request.user,
-        },
-    )
-    request.session.pop(ZENDESK_CONNECT_TOKEN_SESSION_KEY, None)
-
-    return _set_zendesk_frame_ancestors(
-        TemplateResponse(
-            request,
-            'zendesk/sidebar_connected.html',
-            {'identity': identity},
-        )
     )
 
 
@@ -546,13 +478,16 @@ def _render_sidebar_content(request: HttpRequest, data: dict) -> TemplateRespons
     return _set_zendesk_frame_ancestors(response)
 
 
-def _render_sidebar(request: HttpRequest, token: str):
-    return TemplateResponse(request, 'zendesk/sidebar.html', {'zendesk_token': token})
+def _render_sidebar(request: HttpRequest):
+    return TemplateResponse(
+        request,
+        'zendesk/sidebar.html',
+        {'content_url': get_absolute_url(reverse('zendesk_sidebar_content'))},
+    )
 
 
 def _set_zendesk_frame_ancestors(response: HttpResponse) -> HttpResponse:
     ancestors = ["'self'"]
-    ancestors.append(f'https://mozilla.kewis.ch')
     ancestors.extend(getattr(settings, 'CSRF_TRUSTED_ORIGINS', []))
     if settings.ZENDESK_SUBDOMAIN:
         ancestors.append(f'https://{settings.ZENDESK_SUBDOMAIN}.zendesk.com')
@@ -568,111 +503,103 @@ def _set_zendesk_frame_ancestors(response: HttpResponse) -> HttpResponse:
     return response
 
 
-def _get_zendesk_sidebar_access(token: str | None) -> dict:
-    identity = _get_zendesk_agent_identity_from_token(token)
-    if not identity:
-        return {'identity': None, 'user': None, 'has_access': False}
+def _get_request_data(request: HttpRequest) -> dict:
+    if request.method == 'GET':
+        return request.GET
 
-    connection = (
-        ZendeskAgentConnection.objects.select_related('user')
-        .filter(
-            zendesk_subdomain=identity['subdomain'],
-            zendesk_user_id=identity['user_id'],
-        )
-        .first()
-    )
-    user = connection.user if connection else None
-    return {
-        'identity': identity,
-        'user': user,
-        'has_access': bool(user and can_view_zendesk_sidebar(user)),
-    }
+    content_type = request.headers.get('Content-Type', '')
+    if content_type.startswith('application/json'):
+        try:
+            return json.loads(request.body.decode() or '{}')
+        except json.JSONDecodeError:
+            return {}
+
+    return request.POST
 
 
-def _get_zendesk_agent_identity_from_token(token: str | None) -> dict | None:
+def _get_zendesk_oauth_access(request: HttpRequest) -> dict:
+    token = _get_bearer_token(request)
     if not token:
-        return None
+        return {'claims': None, 'user': None, 'has_access': False, 'error': None}
 
     try:
-        claims = _validate_zendesk_signed_token(token)
-    except Exception as exc:
-        logging.warning('Invalid Zendesk sidebar connection token: %s', exc)
-        return None
+        claims = _validate_zendesk_oauth_token(token)
+    except (jwt.PyJWTError, ValueError) as exc:
+        logging.warning('Invalid Zendesk sidebar OAuth token: %s', exc)
+        return {'claims': None, 'user': None, 'has_access': False, 'error': None}
 
-    return _extract_zendesk_agent_identity(claims)
+    sub = claims.get('sub')
+    if not sub:
+        return {'claims': claims, 'user': None, 'has_access': False, 'error': None}
 
+    user = User.objects.filter(oidc_id=sub).first()
+    if not user:
+        email = claims.get('email') or 'this Keycloak user'
+        return {
+            'claims': claims,
+            'user': None,
+            'has_access': False,
+            'error': f'No Thundermail staff account is linked to {email}.',
+        }
 
-def _extract_zendesk_agent_identity(claims: dict) -> dict | None:
-    subdomain = _extract_zendesk_subdomain(claims)
-    user_id = _first_claim_value(
-        claims,
-        [
-            ('sub',),
-            ('user_id',),
-            ('zendesk_user_id',),
-            ('context', 'user_id'),
-            ('context', 'user', 'id'),
-            ('context', 'currentUser', 'id'),
-            ('context', 'current_user', 'id'),
-        ],
-    )
-    email = _first_claim_value(
-        claims,
-        [
-            ('email',),
-            ('user_email',),
-            ('zendesk_user_email',),
-            ('context', 'user_email'),
-            ('context', 'user', 'email'),
-            ('context', 'currentUser', 'email'),
-            ('context', 'current_user', 'email'),
-        ],
-    )
-
-    if not subdomain or not user_id:
-        return None
-
+    has_access = can_view_zendesk_sidebar(user)
     return {
-        'subdomain': str(subdomain),
-        'user_id': str(user_id),
-        'email': str(email or ''),
+        'claims': claims,
+        'user': user,
+        'has_access': has_access,
+        'error': None if has_access else 'Missing required Django permissions for the Zendesk sidebar.',
     }
 
 
-def _extract_zendesk_subdomain(claims: dict) -> str | None:
-    configured_subdomain = getattr(settings, 'ZENDESK_SUBDOMAIN', None)
-    if configured_subdomain:
-        return configured_subdomain
-
-    issuer = str(claims.get('iss') or '').removeprefix('https://')
-    if issuer.endswith('.zendesk.com'):
-        return issuer.removesuffix('.zendesk.com')
-    return None
+def _get_bearer_token(request: HttpRequest) -> str | None:
+    authorization = request.headers.get('Authorization', '')
+    if not authorization.lower().startswith('bearer '):
+        return None
+    return authorization[7:].strip() or None
 
 
-def _first_claim_value(claims: dict, paths: list[tuple[str, ...]]):
-    for path in paths:
-        value = claims
-        for key in path:
-            if not isinstance(value, dict) or key not in value:
-                value = None
-                break
-            value = value[key]
-        if value not in [None, '']:
-            return value
-    return None
+def _validate_zendesk_oauth_token(token: str) -> dict:
+    issuer = _required_setting('ZENDESK_OAUTH_ISSUER')
+    audience = _required_setting('ZENDESK_OAUTH_AUDIENCE')
+    client_id = _required_setting('ZENDESK_OAUTH_CLIENT_ID')
+    claims = jwt.decode(
+        token,
+        _get_zendesk_oauth_signing_key(token),
+        algorithms=['RS256'],
+        audience=audience,
+        issuer=issuer,
+        options={'require': ['exp', 'iat', 'sub']},
+    )
+
+    if claims.get('azp') != client_id:
+        raise jwt.InvalidTokenError('Unexpected OAuth authorized party.')
+
+    return claims
+
+
+def _get_zendesk_oauth_signing_key(token: str):
+    jwks_endpoint = _required_setting('ZENDESK_OAUTH_JWKS_ENDPOINT')
+    return _get_jwks_client(jwks_endpoint).get_signing_key_from_jwt(token).key
+
+
+@cache
+def _get_jwks_client(jwks_endpoint: str) -> jwt.PyJWKClient:
+    return jwt.PyJWKClient(jwks_endpoint)
 
 
 def _validate_zendesk_signed_token(token: str) -> dict:
-    public_key = _get_zendesk_public_key()
+    zendesk_subdomain = _required_setting('ZENDESK_SUBDOMAIN')
+    public_key = _required_setting('ZENDESK_APP_PUBLIC_KEY').replace('\\n', '\n')
+    audience = _required_setting('ZENDESK_APP_AUDIENCE')
     claims = jwt.decode(
         token,
         public_key,
         algorithms=['RS256'],
-        options={'verify_aud': False},
+        audience=audience,
+        options={'require': ['exp', 'iat']},
     )
 
-    expected_issuer = f'{settings.ZENDESK_SUBDOMAIN}.zendesk.com'
+    expected_issuer = f'{zendesk_subdomain}.zendesk.com'
     issuer = claims.get('iss', '')
     if expected_issuer and issuer not in [expected_issuer, f'https://{expected_issuer}']:
         raise ValueError('Unexpected Zendesk issuer.')
@@ -684,20 +611,8 @@ def _validate_zendesk_signed_token(token: str) -> dict:
     return claims
 
 
-def _get_zendesk_public_key() -> str:
-    public_key = cache.get(PUBLIC_KEY_CACHE_KEY)
-    if public_key:
-        return public_key
-
-    if not settings.ZENDESK_SUBDOMAIN or not settings.ZENDESK_APP_ID:
-        raise ValueError('Zendesk subdomain and app id are required for signed sidebar validation.')
-
-    response = requests.get(
-        f'https://{settings.ZENDESK_SUBDOMAIN}.zendesk.com/api/v2/apps/{settings.ZENDESK_APP_ID}/public_key.pem',
-        auth=(f'{settings.ZENDESK_USER_EMAIL}/token', settings.ZENDESK_API_TOKEN),
-        timeout=10,
-    )
-    response.raise_for_status()
-    public_key = response.text
-    cache.set(PUBLIC_KEY_CACHE_KEY, public_key, PUBLIC_KEY_CACHE_SECONDS)
-    return public_key
+def _required_setting(name: str) -> str:
+    value = getattr(settings, name, None)
+    if not value:
+        raise ValueError(f'{name} is required for Zendesk sidebar authentication.')
+    return value

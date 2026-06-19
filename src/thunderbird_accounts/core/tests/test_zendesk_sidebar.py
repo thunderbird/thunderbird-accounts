@@ -1,6 +1,8 @@
+import json
 from datetime import timezone as datetime_timezone
 from unittest.mock import Mock, patch
 
+import jwt
 from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.http import HttpResponse
@@ -9,8 +11,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from thunderbird_accounts.authentication.models import AllowListEntry, User
-from thunderbird_accounts.core.models import ZendeskAgentConnection
-from thunderbird_accounts.core.zendesk_sidebar import _set_zendesk_frame_ancestors, get_customer_sidebar_data
+from thunderbird_accounts.core.zendesk_sidebar import (
+    _set_zendesk_frame_ancestors,
+    _validate_zendesk_oauth_token,
+    _validate_zendesk_signed_token,
+    get_customer_sidebar_data,
+)
+from thunderbird_accounts.core.utils import get_absolute_url
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.subscription.models import Plan, Subscription, Transaction
@@ -196,7 +203,10 @@ class ZendeskCustomerSidebarLookupTestCase(TestCase):
         self.assertEqual(payload['subscription']['plan'], 'Thundermail Plus')
         self.assertEqual(payload['subscription']['discount'], {'amount': '25', 'type': 'percentage'})
         self.assertEqual(payload['subscription']['total_spend'], [{'currency': 'USD', 'amount': '27.00'}])
-        self.assertEqual(payload['links']['subscription_admin'], reverse('admin:subscription_subscription_change', args=[subscription.pk]))
+        self.assertEqual(
+            payload['links']['subscription_admin'],
+            reverse('admin:subscription_subscription_change', args=[subscription.pk]),
+        )
         self.assertEqual(payload['links']['paddle_subscription'], 'https://vendors.paddle.com/subscriptions-v2/sub_123')
         self.assertEqual(payload['links']['paddle_customer'], 'https://vendors.paddle.com/customers-v2/ctm_123')
         mock_mail_client.get_account.assert_called_once_with(user.username)
@@ -345,8 +355,11 @@ class ZendeskCustomerSidebarViewTestCase(TestCase):
         response = self.client.get(reverse('zendesk_sidebar_content'), {'email': 'requester@example.com'})
 
         self.assertEqual(response.status_code, 401)
-        self.assertContains(response, 'Sign in to Django in a new tab, then reload Zendesk.', status_code=401)
-        self.assertContains(response, settings.LOGIN_URL, status_code=401)
+        self.assertContains(
+            response,
+            'Authorize Thundermail in the Zendesk app settings, then reload Zendesk.',
+            status_code=401,
+        )
 
     @override_settings(DEBUG=True)
     def test_content_route_rejects_staff_without_required_permissions(self):
@@ -397,12 +410,18 @@ class ZendeskCustomerSidebarViewTestCase(TestCase):
         self.assertContains(response, 'ticket.requester.email')
         self.assertContains(response, 'app.registered')
         self.assertContains(response, 'app.activated')
-        self.assertContains(response, '/zendesk/sidebar/content/')
-        self.assertContains(response, 'method="post"', html=False)
-        self.assertContains(response, 'target="content-frame"', html=False)
-        self.assertContains(response, 'contentForm.submit()')
+        self.assertContains(response, get_absolute_url(reverse('zendesk_sidebar_content')))
+        self.assertContains(response, 'zendeskClient.request')
+        self.assertContains(response, 'secure: true')
+        self.assertContains(
+            response,
+            "Authorization: 'Bearer {{setting.token}}'",
+            html=False,
+        )
+        self.assertNotContains(response, 'oauthTokenPlaceholder')
         self.assertContains(response, '<iframe id="content-frame"', html=False)
-        self.assertNotContains(response, 'searchParams.set(\'zendesk_token\'')
+        self.assertNotContains(response, 'zendesk_token')
+        self.assertNotContains(response, 'contentForm.submit()')
         self.assertNotContains(response, 'Primary email')
 
     @patch('thunderbird_accounts.core.zendesk_sidebar._validate_zendesk_signed_token')
@@ -415,118 +434,177 @@ class ZendeskCustomerSidebarViewTestCase(TestCase):
         mock_validate_token.assert_called_once_with('signed-token')
         self.assertContains(response, 'zaf_sdk.min.js')
 
-    @patch('thunderbird_accounts.core.zendesk_sidebar._validate_zendesk_signed_token')
-    def test_content_route_accepts_linked_zendesk_agent_without_django_session(self, mock_validate_token):
+    @patch('thunderbird_accounts.core.zendesk_sidebar._validate_zendesk_oauth_token')
+    def test_content_route_accepts_zendesk_oauth_staff_user_without_django_session(self, mock_validate_token):
+        self.admin_user.oidc_id = 'keycloak-user-123'
+        self.admin_user.save()
         mock_validate_token.return_value = {
-            'sub': 'zendesk-agent-123',
+            'sub': 'keycloak-user-123',
             'email': 'agent@example.com',
-            'iss': 'example.zendesk.com',
-            'context': {'product': 'support', 'location': 'ticket_sidebar'},
+            'azp': 'zendesk-sidebar-stage',
         }
-        ZendeskAgentConnection.objects.create(
-            zendesk_subdomain='example',
-            zendesk_user_id='zendesk-agent-123',
-            zendesk_user_email='agent@example.com',
-            user=self.admin_user,
-        )
         User.objects.create(
-            username=f'linked@{settings.PRIMARY_EMAIL_DOMAIN}',
-            email='linked-requester@example.com',
+            username=f'oauth@{settings.PRIMARY_EMAIL_DOMAIN}',
+            email='oauth-requester@example.com',
             display_name='Linked Requester',
         )
         self.client.logout()
 
         response = self.client.post(
             reverse('zendesk_sidebar_content'),
-            {
-                'email': 'linked-requester@example.com',
+            json.dumps({
+                'email': 'oauth-requester@example.com',
                 'via': 'api',
-                'zendesk_token': 'signed-token',
-            },
+            }),
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Bearer oauth-token',
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Linked Requester')
-        mock_validate_token.assert_called_once_with('signed-token')
+        mock_validate_token.assert_called_once_with('oauth-token')
 
-    @patch('thunderbird_accounts.core.zendesk_sidebar._validate_zendesk_signed_token')
-    def test_content_route_shows_connect_link_for_unlinked_zendesk_agent(self, mock_validate_token):
+    @patch('thunderbird_accounts.core.zendesk_sidebar._validate_zendesk_oauth_token')
+    def test_content_route_rejects_valid_oauth_user_without_local_account(self, mock_validate_token):
         mock_validate_token.return_value = {
-            'sub': 'zendesk-agent-123',
+            'sub': 'keycloak-missing-user',
             'email': 'agent@example.com',
-            'iss': 'example.zendesk.com',
-            'context': {'product': 'support', 'location': 'ticket_sidebar'},
+            'azp': 'zendesk-sidebar-stage',
         }
         self.client.logout()
 
         response = self.client.post(
             reverse('zendesk_sidebar_content'),
-            {
-                'email': 'requester@example.com',
-                'via': 'api',
-                'zendesk_token': 'signed-token',
-            },
+            {'email': 'requester@example.com', 'via': 'api'},
+            HTTP_AUTHORIZATION='Bearer oauth-token',
         )
 
         self.assertEqual(response.status_code, 401)
-        self.assertContains(response, 'Connect Thunderbird Pro', status_code=401)
-        self.assertContains(response, reverse('zendesk_sidebar_connect'), status_code=401)
-        self.assertContains(response, 'method="post"', status_code=401, html=False)
-        self.assertContains(response, 'name="zendesk_token" value="signed-token"', status_code=401, html=False)
-        self.assertNotContains(response, 'zendesk_token=signed-token', status_code=401)
+        self.assertContains(response, 'No Thundermail staff account is linked to agent@example.com.', status_code=401)
 
-    @override_settings(ZENDESK_SUBDOMAIN='example')
-    @patch('thunderbird_accounts.core.zendesk_sidebar._validate_zendesk_signed_token')
-    def test_connect_route_links_signed_zendesk_agent_to_current_staff_user(self, mock_validate_token):
+    @patch('thunderbird_accounts.core.zendesk_sidebar._validate_zendesk_oauth_token')
+    def test_content_route_rejects_oauth_staff_without_sidebar_permissions(self, mock_validate_token):
+        staff_user = User.objects.create_user(
+            username='staff-oauth@example.com',
+            email='staff-oauth@example.com',
+            oidc_id='keycloak-staff-without-perms',
+            is_staff=True,
+        )
         mock_validate_token.return_value = {
-            'sub': 'zendesk-agent-123',
-            'email': 'agent@example.com',
-            'iss': 'example.zendesk.com',
-            'context': {'product': 'support', 'location': 'ticket_sidebar'},
-        }
-
-        response = self.client.post(reverse('zendesk_sidebar_connect'), {'zendesk_token': 'signed-token'})
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Zendesk account connected.')
-        connection = ZendeskAgentConnection.objects.get(zendesk_subdomain='example', zendesk_user_id='zendesk-agent-123')
-        self.assertEqual(connection.user, self.admin_user)
-        self.assertEqual(connection.zendesk_user_email, 'agent@example.com')
-
-    @patch('thunderbird_accounts.core.zendesk_sidebar._validate_zendesk_signed_token')
-    def test_connect_route_stores_token_in_session_before_login_redirect(self, mock_validate_token):
-        mock_validate_token.return_value = {
-            'sub': 'zendesk-agent-123',
-            'email': 'agent@example.com',
-            'iss': 'example.zendesk.com',
-            'context': {'product': 'support', 'location': 'ticket_sidebar'},
+            'sub': 'keycloak-staff-without-perms',
+            'email': staff_user.email,
+            'azp': 'zendesk-sidebar-stage',
         }
         self.client.logout()
 
-        response = self.client.post(reverse('zendesk_sidebar_connect'), {'zendesk_token': 'signed-token'})
-
-        self.assertEqual(response.status_code, 302)
-        self.assertNotIn('zendesk_token', response.headers['Location'])
-        self.assertEqual(self.client.session['zendesk_sidebar_connect_token'], 'signed-token')
-
-    @patch('thunderbird_accounts.core.zendesk_sidebar._validate_zendesk_signed_token')
-    def test_connect_route_rejects_staff_without_sidebar_permissions(self, mock_validate_token):
-        staff_user = User.objects.create_user(
-            username='staff-connect@example.com',
-            email='staff-connect@example.com',
-            is_staff=True,
+        response = self.client.post(
+            reverse('zendesk_sidebar_content'),
+            {'email': 'requester@example.com', 'via': 'api'},
+            HTTP_AUTHORIZATION='Bearer oauth-token',
         )
-        self.client.force_login(staff_user)
-        mock_validate_token.return_value = {
-            'sub': 'zendesk-agent-123',
-            'email': 'agent@example.com',
+
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, 'Missing required Django permissions for the Zendesk sidebar.', status_code=403)
+
+    def test_content_route_rejects_post_without_oauth_token(self):
+        self.client.logout()
+
+        response = self.client.post(reverse('zendesk_sidebar_content'), {'email': 'requester@example.com'})
+
+        self.assertEqual(response.status_code, 401)
+        self.assertContains(
+            response,
+            'Authorize Thundermail in the Zendesk app settings, then reload Zendesk.',
+            status_code=401,
+        )
+
+    @override_settings(
+        ZENDESK_APP_PUBLIC_KEY='zendesk-public-key',
+        ZENDESK_APP_AUDIENCE='https://example.zendesk.com/api/v2/apps/installations/123.json',
+        ZENDESK_SUBDOMAIN='example',
+    )
+    @patch('thunderbird_accounts.core.zendesk_sidebar.jwt.decode')
+    def test_signed_zendesk_token_validation_requires_audience(self, mock_decode):
+        mock_decode.return_value = {
+            'iss': 'example.zendesk.com',
             'context': {'product': 'support', 'location': 'ticket_sidebar'},
         }
 
-        response = self.client.post(reverse('zendesk_sidebar_connect'), {'zendesk_token': 'signed-token'})
+        claims = _validate_zendesk_signed_token('signed-token')
 
-        self.assertEqual(response.status_code, 403)
-        self.assertFalse(ZendeskAgentConnection.objects.exists())
+        self.assertEqual(claims, mock_decode.return_value)
+        mock_decode.assert_called_once_with(
+            'signed-token',
+            'zendesk-public-key',
+            algorithms=['RS256'],
+            audience='https://example.zendesk.com/api/v2/apps/installations/123.json',
+            options={'require': ['exp', 'iat']},
+        )
+
+    @override_settings(
+        ZENDESK_APP_PUBLIC_KEY='zendesk-public-key',
+        ZENDESK_APP_AUDIENCE='https://example.zendesk.com/api/v2/apps/installations/123.json',
+        ZENDESK_SUBDOMAIN='example',
+    )
+    @patch('thunderbird_accounts.core.zendesk_sidebar.jwt.decode')
+    def test_signed_zendesk_token_validation_rejects_wrong_context(self, mock_decode):
+        mock_decode.return_value = {
+            'iss': 'example.zendesk.com',
+            'context': {'product': 'support', 'location': 'user_sidebar'},
+        }
+
+        with self.assertRaises(ValueError):
+            _validate_zendesk_signed_token('signed-token')
+
+    @override_settings(
+        ZENDESK_OAUTH_ISSUER='https://auth-stage.tb.pro/realms/tbpro',
+        ZENDESK_OAUTH_AUDIENCE='zendesk-sidebar-stage',
+        ZENDESK_OAUTH_CLIENT_ID='zendesk-sidebar-stage',
+        ZENDESK_OAUTH_JWKS_ENDPOINT='https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs',
+    )
+    @patch('thunderbird_accounts.core.zendesk_sidebar._get_zendesk_oauth_signing_key')
+    @patch('thunderbird_accounts.core.zendesk_sidebar.jwt.decode')
+    def test_oauth_token_validation_requires_keycloak_issuer_audience_and_client(
+        self,
+        mock_decode,
+        mock_get_signing_key,
+    ):
+        mock_get_signing_key.return_value = 'keycloak-signing-key'
+        mock_decode.return_value = {
+            'sub': 'keycloak-user-123',
+            'azp': 'zendesk-sidebar-stage',
+        }
+
+        claims = _validate_zendesk_oauth_token('oauth-token')
+
+        self.assertEqual(claims, mock_decode.return_value)
+        mock_get_signing_key.assert_called_once_with('oauth-token')
+        mock_decode.assert_called_once_with(
+            'oauth-token',
+            'keycloak-signing-key',
+            algorithms=['RS256'],
+            audience='zendesk-sidebar-stage',
+            issuer='https://auth-stage.tb.pro/realms/tbpro',
+            options={'require': ['exp', 'iat', 'sub']},
+        )
+
+    @override_settings(
+        ZENDESK_OAUTH_ISSUER='https://auth-stage.tb.pro/realms/tbpro',
+        ZENDESK_OAUTH_AUDIENCE='zendesk-sidebar-stage',
+        ZENDESK_OAUTH_CLIENT_ID='zendesk-sidebar-stage',
+        ZENDESK_OAUTH_JWKS_ENDPOINT='https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs',
+    )
+    @patch('thunderbird_accounts.core.zendesk_sidebar._get_zendesk_oauth_signing_key')
+    @patch('thunderbird_accounts.core.zendesk_sidebar.jwt.decode')
+    def test_oauth_token_validation_rejects_unexpected_client(self, mock_decode, mock_get_signing_key):
+        mock_get_signing_key.return_value = 'keycloak-signing-key'
+        mock_decode.return_value = {
+            'sub': 'keycloak-user-123',
+            'azp': 'other-client',
+        }
+
+        with self.assertRaises(jwt.InvalidTokenError):
+            _validate_zendesk_oauth_token('oauth-token')
 
     @override_settings(
         CSRF_TRUSTED_ORIGINS=['https://autoconfig.example', 'https://support.example'],
@@ -548,7 +626,7 @@ class ZendeskCustomerSidebarViewTestCase(TestCase):
 
     @override_settings(ZENDESK_SUBDOMAIN='example')
     def test_zendesk_sidebar_middleware_adds_frame_ancestors_to_sidebar_prefix_responses(self):
-        response = self.client.get('/zendesk/sidebar/content')
+        response = self.client.get('/zendesk/sidebar/content/')
 
         self.assertIn("frame-ancestors 'self'", response.headers['Content-Security-Policy'])
         self.assertIn('https://example.zendesk.com', response.headers['Content-Security-Policy'])
@@ -647,7 +725,6 @@ class ZendeskCustomerSidebarViewTestCase(TestCase):
         account = Account.objects.create(name=user.username, user=user)
         Email.objects.create(address=user.username, type=Email.EmailType.PRIMARY, account=account)
         verified_at = timezone.datetime(2026, 5, 1, 9, 30, tzinfo=datetime_timezone.utc)
-        last_verification_attempt = timezone.datetime(2026, 5, 2, 10, 45, tzinfo=datetime_timezone.utc)
         Domain.objects.create(
             name='alpha.example',
             status=Domain.DomainStatus.VERIFIED,

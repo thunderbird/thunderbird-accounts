@@ -43,6 +43,10 @@
 .oidc_url_logout: &VAR_OIDC_URL_LOGOUT {name: "OIDC_URL_LOGOUT", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"}
 .oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token"}
 .oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"}
+.zendesk_oauth_audience: &VAR_ZENDESK_OAUTH_AUDIENCE {name: "ZENDESK_OAUTH_AUDIENCE", value: "zendesk-sidebar-stage"}
+.zendesk_oauth_client_id: &VAR_ZENDESK_OAUTH_CLIENT_ID {name: "ZENDESK_OAUTH_CLIENT_ID", value: "zendesk-sidebar-stage"}
+.zendesk_oauth_issuer: &VAR_ZENDESK_OAUTH_ISSUER {name: "ZENDESK_OAUTH_ISSUER", value: "https://auth-stage.tb.pro/realms/tbpro"}
+.zendesk_oauth_jwks_endpoint: &VAR_ZENDESK_OAUTH_JWKS_ENDPOINT {name: "ZENDESK_OAUTH_JWKS_ENDPOINT", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"}
 .paddle_env: &VAR_PADDLE_ENV {name: "PADDLE_ENV", value: "sandbox"}
 .public_base_url: &VAR_PUBLIC_BASE_URL {name: "PUBLIC_BASE_URL", value: "https://accounts-stage.tb.pro"}
 .redis_celery_db: &VAR_REDIS_CELERY_DB {name: "REDIS_CELERY_DB", value: "5"}
@@ -427,6 +431,10 @@ resources:
                 - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
+                - *VAR_ZENDESK_OAUTH_AUDIENCE
+                - *VAR_ZENDESK_OAUTH_CLIENT_ID
+                - *VAR_ZENDESK_OAUTH_ISSUER
+                - *VAR_ZENDESK_OAUTH_JWKS_ENDPOINT
                 - name: TBA_CELERY
                   value: "yes"
                 - name: TBA_FLOWER
@@ -509,6 +517,10 @@ resources:
                 - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
+                - *VAR_ZENDESK_OAUTH_AUDIENCE
+                - *VAR_ZENDESK_OAUTH_CLIENT_ID
+                - *VAR_ZENDESK_OAUTH_ISSUER
+                - *VAR_ZENDESK_OAUTH_JWKS_ENDPOINT
                 - name: TBA_CELERY
                   value: "no"
                 - name: TBA_FLOWER
@@ -926,6 +938,10 @@ resources:
                 value: '46642389601427'
               - name: ZENDESK_FORM_OS_FIELD_ID
                 value: '46642417675539'
+              - *VAR_ZENDESK_OAUTH_AUDIENCE
+              - *VAR_ZENDESK_OAUTH_CLIENT_ID
+              - *VAR_ZENDESK_OAUTH_ISSUER
+              - *VAR_ZENDESK_OAUTH_JWKS_ENDPOINT
               - name: VERIFY_PRIVATE_LINK_SSL
                 value: 'False'
               - *VAR_SENTRY_PROFILE_SAMPLE_RATE

@@ -42,7 +42,6 @@ urlpatterns = [
     # Django-specific routes (not handled by Vue)
     path('zendesk/sidebar/', zendesk_sidebar.zendesk_sidebar, name='zendesk_sidebar'),
     path('zendesk/sidebar/content/', zendesk_sidebar.zendesk_sidebar_content, name='zendesk_sidebar_content'),
-    path('zendesk/sidebar/connect/', zendesk_sidebar.zendesk_sidebar_connect, name='zendesk_sidebar_connect'),
     path('contact/fields', core_views.contact_fields, name='contact_fields'),
     # Post only
     path('contact/submit', core_views.contact_submit, name='contact_submit'),

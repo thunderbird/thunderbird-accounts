@@ -1,5 +1,5 @@
 {
-  "name": "Thunderbird Pro Customer",
+  "name": "Thundermail Customer",
   "author": {
     "name": "Thunderbird",
     "email": "support@tb.pro"
@@ -8,14 +8,34 @@
   "version": "1.0.0",
   "frameworkVersion": "2.0",
   "defaultLocale": "en",
+  "domainWhitelist": [
+    "{{setting.api_host}}"
+  ],
   "parameters": [
     {
       "name": "sidebar_url",
       "type": "text",
       "required": true,
       "secure": false
+    },
+    {
+      "name": "api_host",
+      "type": "text",
+      "required": true,
+      "secure": false
+    },
+    {
+      "name": "token",
+      "type": "oauth"
     }
   ],
+  "oauth": {
+    "client_id": "FOUND_IN_KEYCLOAK",
+    "client_secret": "FOUND_IN_KEYCLOAK",
+    "authorize_uri": "https://auth-stage.tb.pro/realms/tbpro-dev/protocol/openid-connect/auth",
+    "access_token_uri": "https://auth-stage.tb.pro/realms/tbpro-dev/protocol/openid-connect/token",
+    "scope": "openid email profile"
+  },
   "location": {
     "support": {
       "ticket_sidebar": {

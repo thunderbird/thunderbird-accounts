@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thunderbird Pro Customer</title>
+  <title>Thundermail Customer</title>
   <link rel="stylesheet" href="{% static 'css/main.css' %}">
   <link rel="stylesheet" href="{% static 'css/zendesk/sidebar.css' %}">
 </head>
@@ -255,7 +255,7 @@
     window.parent.postMessage({
       type: 'zendesk-sidebar-height',
       height: document.documentElement.scrollHeight,
-    }, window.location.origin);
+    }, '*');
   }
 
   localizeRenderedDates();

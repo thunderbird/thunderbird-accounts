@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "Thunderbird Pro Customer",
-    "short_description": "Shows Thunderbird Pro customer details for the ticket requester.",
-    "long_description": "Shows Thunderbird Pro customer details for the ticket requester."
+    "name": "Thundermail Customer",
+    "short_description": "Shows Thundermail customer details for the ticket requester.",
+    "long_description": "Shows Thundermail customer details for the ticket requester."
   }
 }
