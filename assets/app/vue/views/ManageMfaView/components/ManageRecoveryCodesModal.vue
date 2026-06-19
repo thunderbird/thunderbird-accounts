@@ -44,6 +44,10 @@ const generate = async () => {
   codes.value = response.codes;
   step.value = MODAL_STEPS.CODES;
   emit('configured', response.credentials);
+
+  // Push the codes to the user immediately so they aren't lost if the modal is
+  // dismissed; the manual download button below stays as a fallback/re-download.
+  downloadCodes();
 };
 
 const copyCodes = async () => {

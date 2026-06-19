@@ -405,6 +405,7 @@
       },
       "actions": {
         "edit": "Edit",
+        "regenerate": "Regenerate",
         "remove": "Remove",
         "setUp": "Set up",
         "cancel": "Cancel"

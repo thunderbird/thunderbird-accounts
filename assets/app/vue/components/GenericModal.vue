@@ -13,12 +13,6 @@ const handleClose = () => {
   emit('close');
 }
 
-const handleBackdropClick = (event: MouseEvent) => {
-  if (event.target === modal.value) {
-    handleClose();
-  }
-}
-
 const emit = defineEmits<{
   (e: 'close'): void;
 }>();
@@ -32,7 +26,7 @@ defineExpose({
 </script>
 
 <template>
-  <dialog ref="modal" @click="handleBackdropClick">
+  <dialog ref="modal">
     <button class="close-button" @click="handleClose">
       <ph-x size="24" />
     </button>
@@ -78,6 +72,9 @@ dialog {
     border-radius: 999px;
     padding: 0.5rem;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     &:hover {
       background-color: rgba(0, 0, 0, 0.1);

@@ -596,10 +596,11 @@ class KeycloakClientMfaTestCase(TestCase):
 
 
 class MfaReauthenticationRequestViewTestCase(TestCase):
-    def test_step_up_redirect_requests_acr_and_fresh_authentication(self):
+    def test_step_up_redirect_requests_acr_only(self):
         params = MfaReauthenticationRequestView().get_extra_params(None)
 
         self.assertEqual(params['acr_values'], settings.MFA_KEYCLOAK_ACR_VALUE)
-        # max_age=0 forces Keycloak to actively re-authenticate so the new token carries a
-        # fresh auth_time — required by the keycloak-mfa-rest step-up check.
-        self.assertEqual(params['max_age'], '0')
+        # We must NOT send max_age: it would force a full re-authentication (first factor +
+        # OTP). Freshness comes from the realm's L2 conditional-LoA (loa-max-age=0), which
+        # re-challenges the OTP each step-up without re-prompting username/password.
+        self.assertNotIn('max_age', params)

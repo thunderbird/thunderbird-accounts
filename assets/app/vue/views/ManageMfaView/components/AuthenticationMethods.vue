@@ -59,6 +59,13 @@ const openMethodModal = (method: string) => {
 // codes keep Edit since regenerating them is the whole operation (step-up gated).
 const isEditable = (method: string) => method !== AUTHENTICATION_METHODS.AUTHENTICATOR_APP;
 
+// Recovery codes don't get "edited" — the action regenerates them — so label it
+// accordingly. Other editable methods keep the generic "Edit".
+const editLabel = (method: string) =>
+  method === AUTHENTICATION_METHODS.RECOVERY_CODES
+    ? t('views.manageMfa.actions.regenerate')
+    : t('views.manageMfa.actions.edit');
+
 // Recovery codes are strictly a backup for the authenticator app, never a standalone
 // factor (Keycloak deletes the credential once the last code is spent, leaving the
 // account unprotected) — so they can't be set up until an authenticator exists.
@@ -123,12 +130,22 @@ onMounted(loadMfaMethods);
 
           <div class="authentication-method-actions">
             <template v-if="methodData.set">
-              <primary-button v-if="isEditable(method)" :data-testid="`mfa-${method}-edit-button`" variant="outline" size="small" @click="openMethodModal(method)">
-                {{ t('views.manageMfa.actions.edit') }}
-              </primary-button>
-              <link-button :data-testid="`mfa-${method}-remove-button`" size="small" @click="beginRemove(method, methodData)">
+              <!-- When a method has an Edit action, Remove sits beneath it as a subtle
+                   underlined link (matches the designs). When there's no Edit (e.g. the
+                   authenticator app, which is enrollment-only), a lone underlined link
+                   looks out of place, so Remove takes the same outline-button style Edit
+                   would have used. -->
+              <template v-if="isEditable(method)">
+                <primary-button :data-testid="`mfa-${method}-edit-button`" variant="outline" size="small" @click="openMethodModal(method)">
+                  {{ editLabel(method) }}
+                </primary-button>
+                <link-button :data-testid="`mfa-${method}-remove-button`" size="small" @click="beginRemove(method, methodData)">
+                  {{ t('views.manageMfa.actions.remove') }}
+                </link-button>
+              </template>
+              <primary-button v-else :data-testid="`mfa-${method}-remove-button`" variant="outline" size="small" @click="beginRemove(method, methodData)">
                 {{ t('views.manageMfa.actions.remove') }}
-              </link-button>
+              </primary-button>
             </template>
             <template v-else>
               <primary-button :data-testid="`mfa-${method}-setup-button`" variant="outline" size="small" :disabled="isSetupDisabled(method)" @click="openMethodModal(method)">
@@ -193,7 +210,11 @@ onMounted(loadMfaMethods);
 
     .authentication-method {
       display: grid;
-      grid-template-columns: auto 15%;
+      /* Each method row is its own grid, so the actions column needs a shared fixed width
+         (rather than auto) for the buttons to line up across rows. It's sized to fit the
+         longest label ("Regenerate"); the content column takes the rest and may shrink
+         (minmax 0) so it never pushes the buttons out. */
+      grid-template-columns: minmax(0, 1fr) 6.5rem;
       column-gap: 2.5rem;
       color: var(--colour-ti-secondary);
 
@@ -231,8 +252,20 @@ onMounted(loadMfaMethods);
         flex-direction: column;
         gap: 0.5rem;
 
+        button {
+          /* Keep labels on a single line so they don't wrap inside the fixed-width column. */
+          white-space: nowrap;
+        }
+
         button.link {
           color: var(--colour-ti-secondary);
+          /* The "small" button variant locks every button to a fixed 2rem height and
+             vertically centers its label, which leaves the underlined Remove floating
+             well below the Edit button. Collapse the link button to its own text height
+             so Remove sits snugly beneath Edit. */
+          height: auto;
+          min-height: 0;
+          padding-block: 0;
         }
       }
 

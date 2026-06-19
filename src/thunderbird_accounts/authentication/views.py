@@ -48,12 +48,14 @@ class MfaReauthenticationRequestView(OIDCAuthenticationRequestView):
 
     def get_extra_params(self, request):
         params = super().get_extra_params(request).copy()
-        # max_age=0 forces Keycloak to actively re-authenticate (refreshing the token's
-        # auth_time claim) instead of satisfying acr_values from a stale SSO session.
-        # The keycloak-mfa-rest provider checks acr *and* auth_time freshness on the
-        # forwarded token, so without this a stale-but-stepped-up session would loop:
-        # Keycloak bounces straight back, the provider still rejects, and we redirect again.
-        params.update({'acr_values': settings.MFA_KEYCLOAK_ACR_VALUE, 'max_age': '0'})
+        # Request the step-up LoA only. We deliberately do NOT send max_age=0: that forces a
+        # full re-authentication (username + password *and* OTP), even though the user already
+        # has a valid session — exactly the "re-enter your password to verify identity" wart.
+        # Freshness is instead guaranteed by the realm's L2 conditional-LoA, whose loa-max-age
+        # is 0: it re-challenges the OTP on every step-up (updating the token's auth_time) while
+        # the L1 factor is satisfied from the existing session. So the provider's acr + auth_time
+        # check is met without re-prompting the first factor.
+        params.update({'acr_values': settings.MFA_KEYCLOAK_ACR_VALUE})
         return params
 
 
