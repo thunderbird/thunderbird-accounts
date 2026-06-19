@@ -333,13 +333,13 @@ class SupportCustomerThrottle(UserRateThrottle):
 @authentication_classes([OIDCAuthentication])
 @permission_classes([IsAuthenticated])
 @throttle_classes([SupportCustomerThrottle])
-def zendesk_sidebar_customer_api(request: Request):
+def support_customer_api(request: Request):
     """Authenticated API endpoint for support customer lookups."""
     if not request.user.is_active or not request.user.is_staff:
         return Response({'detail': 'You do not have permission to view support customer data.'}, status=403)
 
     return Response(
-        get_customer_sidebar_data(
+        get_customer_support_data(
             request.data.get('email'),
             request.user,
         )

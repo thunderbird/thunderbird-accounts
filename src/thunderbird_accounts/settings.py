@@ -154,6 +154,7 @@ INSTALLED_APPS = [
     'thunderbird_accounts.subscription',
     'thunderbird_accounts.mail',
     'thunderbird_accounts.legal',
+    'thunderbird_accounts.support',
     'thunderbird_accounts.core',
     'thunderbird_accounts.telemetry',
     'thunderbird_accounts.admin.AccountsAdminConfig',  # Instead of 'django.contrib.admin'
