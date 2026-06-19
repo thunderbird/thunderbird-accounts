@@ -67,7 +67,6 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
           });
 
           const data = await response.json();
-          console.log("Guard response:", data);
           if (data?.go_to === CAN_I_SIGN_UP_RESPONSES.SIGN_UP) { // continue along with the request
             return true; 
           } else if (data?.go_to === CAN_I_SIGN_UP_RESPONSES.LOGIN) { // Ship to login, we don't use login hints here!
