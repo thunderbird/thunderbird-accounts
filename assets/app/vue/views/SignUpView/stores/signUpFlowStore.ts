@@ -33,7 +33,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
   const password = ref(null);
   const confirmPassword = ref(null);
 
-  const errorMessage = ref<string|null>(null);
+  const errorMessage = ref<string | null>(null);
 
   const fullUsername = computed(() => `${username.value}@${window._page.currentView?.tbProPrimaryDomain}`)
 
@@ -104,7 +104,7 @@ export const useSignUpFlowStore = defineStore('signUpFlow', () => {
       if (type.indexOf('invalidPassword') === 0) {
         step.value = SIGN_UP_STEPS.PASSWORD;
       } else if (type === 'status-409') { // User already exists error (this comes from keycloak)
-        step.value = SIGN_UP_STEPS.USERNAME;
+        step.value = SIGN_UP_STEPS.USERNAME; // This shouldn't actually happen, it's a system error as there's a user in keycloak that's not in accounts.
       } else {
         step.value = SIGN_UP_STEPS.USERNAME;
       }
