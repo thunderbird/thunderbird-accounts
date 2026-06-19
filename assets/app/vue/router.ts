@@ -18,6 +18,7 @@ import SignUpView from '@/views/SignUpView/index.vue';
 // Special Error Route
 import ErrorView from '@/views/ErrorView/index.vue';
 import { TBPRO_WAIT_LIST } from './defines';
+import { CAN_I_SIGN_UP_RESPONSES } from './types';
 
 // If the page template is marked as error page, only show the error page.
 const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
@@ -66,10 +67,19 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
           });
 
           const data = await response.json();
-          if (data?.allowed) {
-            return true; // continue along with the request
+          console.log("Guard response:", data);
+          if (data?.go_to === CAN_I_SIGN_UP_RESPONSES.SIGN_UP) { // continue along with the request
+            return true; 
+          } else if (data?.go_to === CAN_I_SIGN_UP_RESPONSES.LOGIN) { // Ship to login, we don't use login hints here!
+            window.location.href = '/';
+            return false;
           } else if (data?.detail) { // rate limited
-            throw new Error(data?.detail);
+
+            // A small hack
+            console.error("Sign-up rate limit reached:", data?.detail);
+            window._page.errorTitle = data?.detail;
+            window.history.pushState(to.fullPath, '', window.location.href);
+            return { name: 'rate-limit', replace: false };
           }
 
           failQueryParam = `?email=${email}`;
@@ -137,6 +147,19 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     meta: {
       isPublic: true,
     },
+  },
+  // Rate-limit page
+  {
+    path: '/chill', 
+    name: 'rate-limit',
+    component: ErrorView,
+    props: {
+      isRateLimit: true,
+    },
+    meta: {
+      isPublic: true,
+      useAppTemplate: false,
+    }
   },
   // Fallback 404 page
   {

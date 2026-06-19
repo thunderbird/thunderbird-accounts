@@ -25,3 +25,10 @@ export enum TELEMETRY_EVENTS {
   SIGN_UP_ERROR = 'accounts.sign-up.error',
   SIGN_UP_STEP = 'accounts.sign-up.step',
 };
+
+// Linked with thunderbird_accounts.authentication.api.CanISignUpResponses
+export enum CAN_I_SIGN_UP_RESPONSES { 
+  WAIT_LIST = 'wait-list',
+  LOGIN = 'login',
+  SIGN_UP = 'sign-up'
+};

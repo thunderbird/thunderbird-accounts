@@ -111,7 +111,16 @@ def home(request: HttpRequest):
             max_email_aliases = request.user.plan.mail_address_count
     elif not request.user.is_authenticated:  # Only if the user is not authenticated
         # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
-        public_routes = ['/privacy', '/terms', '/contact', '/sign-up', '/sign-up/complete', '/logout', '/error']
+        public_routes = [
+            '/privacy',
+            '/terms',
+            '/contact',
+            '/sign-up',
+            '/sign-up/complete',
+            '/logout',
+            '/error',
+            '/chill',
+        ]
 
         if request.path not in public_routes:
             return HttpResponseRedirect(reverse('login'))
@@ -119,11 +128,15 @@ def home(request: HttpRequest):
     # Check if the user needs to accept the latest legal documents
     if request.user.is_authenticated:
         legal_doc_count = LegalDocument.objects.filter(is_current=True).count()
-        accepted_current_doc_count = LegalDocument.objects.filter(
-            is_current=True,
-            responses__user=request.user,
-            responses__action=LegalDocumentResponse.Action.ACCEPTED,
-        ).distinct().count()
+        accepted_current_doc_count = (
+            LegalDocument.objects.filter(
+                is_current=True,
+                responses__user=request.user,
+                responses__action=LegalDocumentResponse.Action.ACCEPTED,
+            )
+            .distinct()
+            .count()
+        )
         needs_tos_acceptance = legal_doc_count != accepted_current_doc_count
 
     form_data = request.session.get('form_data')
