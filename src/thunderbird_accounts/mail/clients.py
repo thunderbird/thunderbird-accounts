@@ -94,30 +94,51 @@ class MailClient:
             details_and_reason = ': '.join([data.get('details'), data.get('reason')])
             raise StalwartError(details_and_reason)
 
-    def _list_principals(self, page=1, limit=100, type: Optional[str] = None) -> requests.Response:
-        """Returns a response for a principal object from Stalwart
+    def list_principals(self, principal_types: Optional[str] = None, limit: int = 100) -> list[dict]:
+        """Return all Stalwart principal objects, following the paginated API.
 
-        Docs: https://stalw.art/docs/api/management/endpoints/#list-principals
-
-        Important: Don't use this directly!
+        Docs: https://stalw.art/docs/0.15/api/management/endpoints/#list-principals
         """
-        params = {'page': page, 'limit': limit}
-        if type:
-            params['type'] = type
+        items = []
+        page = 1
 
-        response = requests.get(
-            f'{self.api_url}/principal',
-            params=params,
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-        self._raise_for_error(response)
+        while True:
+            params = {'page': page, 'limit': limit}
+            if principal_types:
+                params['types'] = principal_types
 
-        # Reduce log spam
-        # logging.info(f'[MailClient._list_principals()]: {response.json()}')
+            response = requests.get(
+                f'{self.api_url}/principal',
+                params=params,
+                headers=self.authorized_headers,
+                verify=settings.VERIFY_PRIVATE_LINK_SSL,
+            )
+            response.raise_for_status()
+            self._raise_for_error(response)
 
-        return response
+            data = response.json().get('data') or {}
+            page_items = data.get('items') or []
+            items.extend(page_items)
+
+            total = data.get('total')
+            if total is not None and len(items) >= total:
+                break
+            if not page_items:
+                break
+            if total is None and len(page_items) < limit:
+                break
+
+            page += 1
+
+        return items
+
+    def list_domains(self, limit: int = 100) -> list[dict]:
+        """Return all domain principals from Stalwart."""
+        return [
+            principal
+            for principal in self.list_principals(principal_types='domain', limit=limit)
+            if principal.get('type') == 'domain'
+        ]
 
     def _get_principal(self, principal_id: str) -> requests.Response:
         """Returns a response for a principal object from Stalwart
@@ -308,7 +329,7 @@ class MailClient:
         missing_algorithms = [
             algorithm
             for algorithm in settings.STALWART_DKIM_ALGOS
-            if (settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm) or '').lower() not in existing_selectors
+            if settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm) not in existing_selectors
         ]
 
         if not missing_algorithms:

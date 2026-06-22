@@ -10,8 +10,8 @@ from django.conf import settings
 from django.contrib import messages
 from django.db import IntegrityError
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, JsonResponse
+from django.contrib.auth.decorators import login_required, permission_required
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
@@ -30,6 +30,7 @@ from thunderbird_accounts.mail.exceptions import (
     DomainAlreadyExistsError,
     DomainNotFoundError,
     EmailNotValidError,
+    HostedDkimPublishRetry,
 )
 from thunderbird_accounts.mail.dns import check_stale_dns_records
 from thunderbird_accounts.mail.utils import (
@@ -65,6 +66,198 @@ def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: st
         },
     )
     sentry_sdk.capture_exception(exception)
+
+
+def _format_hosted_dkim_migration_domain_line(prefix: str, domain_name: str, details: dict | None) -> str:
+    if not details:
+        return f'{prefix}: {domain_name}'
+
+    return (
+        f'{prefix}: {domain_name} '
+        f'owner_email={details.get("owner_email", "unknown")} '
+        f'active_customer={details.get("active_customer", "unknown")} '
+        f'subscription_statuses={details.get("subscription_statuses", [])} '
+        f'existing_selectors={details.get("existing_selectors", [])} '
+        f'missing_selectors={details.get("missing_selectors", [])}'
+    )
+
+
+def _format_hosted_dkim_migration_result(result: dict) -> str:
+    dry_run = result.get('dry_run', True)
+    domains_without_tm_selectors = result.get('domains_without_tm_selectors', [])
+    domains_missing_tm_selectors = result.get('domains_missing_tm_selectors', [])
+    domains_without_tm_selector_details = {
+        details.get('domain_name'): details for details in result.get('domains_without_tm_selector_details', [])
+    }
+    domains_missing_tm_selector_details = {
+        details.get('domain_name'): details for details in result.get('domains_missing_tm_selector_details', [])
+    }
+    updated_domains = result.get('updated_domains', [])
+
+    lines = [
+        'Legacy hosted DKIM migration',
+        f'mode: {"dry-run" if dry_run else "execute"}',
+        f'task_status: {result.get("task_status")}',
+        f'domains_without_any_tm_selectors: {len(domains_without_tm_selectors)}',
+        f'domains_missing_configured_tm_selectors: {len(domains_missing_tm_selectors)}',
+        f'updated_domains: {len(updated_domains)}',
+        '',
+    ]
+
+    if dry_run:
+        lines.append('No changes were made.')
+    else:
+        lines.append('Changes were attempted for discovered candidate domains.')
+
+    lines.extend(['', 'Domains without any configured tm selectors:'])
+    if domains_without_tm_selectors:
+        for domain_name in domains_without_tm_selectors:
+            lines.append(
+                _format_hosted_dkim_migration_domain_line(
+                    'found domain without any `tm` selectors',
+                    domain_name,
+                    domains_without_tm_selector_details.get(domain_name),
+                )
+            )
+    else:
+        lines.append('none')
+
+    lines.extend(['', 'Domains missing one or more configured tm selectors:'])
+    if domains_missing_tm_selectors:
+        for domain_name in domains_missing_tm_selectors:
+            lines.append(
+                _format_hosted_dkim_migration_domain_line(
+                    'found domain missing configured `tm` selectors',
+                    domain_name,
+                    domains_missing_tm_selector_details.get(domain_name),
+                )
+            )
+    else:
+        lines.append('none')
+
+    lines.extend(['', 'Updated domains:'])
+    if updated_domains:
+        for updated_domain in updated_domains:
+            records = updated_domain.get('records', [])
+            created_signatures = updated_domain.get('created_signatures', [])
+            lines.append(
+                f'updated hosted DKIM records for {updated_domain.get("domain_name")} '
+                f'created_signatures={len(created_signatures)} records={len(records)} '
+                f'skipped={updated_domain.get("skipped")} '
+                f'post_create_selectors={updated_domain.get("post_create_selectors", [])}'
+            )
+            for record in records:
+                lines.append(f'{record.get("type")} {record.get("name")} {record.get("content", "")}'.rstrip())
+    else:
+        lines.append('none')
+
+    return '\n'.join(lines) + '\n'
+
+
+def _hosted_dkim_migration_candidate_domains(result: dict) -> list[str]:
+    return result.get('domains_without_tm_selectors', []) + result.get('domains_missing_tm_selectors', [])
+
+
+def _format_hosted_dkim_migration_queued_result(result: dict, task_id: str | None) -> str:
+    domains_to_update = _hosted_dkim_migration_candidate_domains(result)
+
+    lines = [
+        'Legacy hosted DKIM migration',
+        'mode: queued execute',
+        'task_status: queued',
+        f'task_id: {task_id}',
+        f'domains_without_any_tm_selectors: {len(result.get("domains_without_tm_selectors", []))}',
+        f'domains_missing_configured_tm_selectors: {len(result.get("domains_missing_tm_selectors", []))}',
+        f'queued_domains: {len(domains_to_update)}',
+        '',
+        'Execution has been queued in Celery. Watch the Celery logs for per-domain results.',
+        '',
+        'Queued domains:',
+    ]
+    if domains_to_update:
+        lines.extend(domains_to_update)
+    else:
+        lines.append('none')
+
+    return '\n'.join(lines) + '\n'
+
+
+def _format_hosted_dkim_migration_not_queued_result(result: dict) -> str:
+    lines = [
+        'Legacy hosted DKIM migration',
+        'mode: execute',
+        'task_status: not_queued',
+        'queued_domains: 0',
+        '',
+        'No candidate domains were found, so no Celery task was queued.',
+        '',
+    ]
+    lines.append(_format_hosted_dkim_migration_result(result).rstrip())
+    return '\n'.join(lines) + '\n'
+
+
+@never_cache
+@staff_member_required
+@permission_required('mail.change_domain', raise_exception=True)
+@require_http_methods(['GET', 'POST'])
+def admin_hosted_dkim_migration(request: HttpRequest):
+    mode = 'dry-run' if request.method == 'GET' else 'execute'
+
+    try:
+        logging.info(f'[admin_hosted_dkim_migration] starting hosted DKIM migration mode={mode}')
+        result = mail_tasks.migrate_legacy_hosted_dkim_domains(dry_run=True)
+        if request.method == 'POST':
+            domains_to_update = _hosted_dkim_migration_candidate_domains(result)
+            if not domains_to_update:
+                logging.info('[admin_hosted_dkim_migration] no candidate domains found; not queueing migration task')
+                return HttpResponse(
+                    _format_hosted_dkim_migration_not_queued_result(result),
+                    content_type='text/plain; charset=utf-8',
+                )
+
+            async_result = mail_tasks.migrate_legacy_hosted_dkim_domains_task.delay(
+                domain_names=domains_to_update,
+                dry_run=False,
+                force_sync=True,
+            )
+            logging.info(
+                '[admin_hosted_dkim_migration] queued hosted DKIM migration '
+                f'task_id={async_result.id} domains_to_update={len(domains_to_update)}'
+            )
+            return HttpResponse(
+                _format_hosted_dkim_migration_queued_result(result, async_result.id),
+                status=202,
+                content_type='text/plain; charset=utf-8',
+            )
+    except HostedDkimPublishRetry as ex:
+        logging.exception(f'[admin_hosted_dkim_migration] hosted DKIM migration failed mode={mode}')
+        return HttpResponse(
+            '\n'.join(
+                [
+                    'Legacy hosted DKIM migration failed',
+                    f'mode: {mode}',
+                    f'domain: {ex.domain}',
+                    f'phase: {ex.phase}',
+                    f'error_type: {ex.error_type}',
+                    f'reason: {ex.reason}',
+                    '',
+                ]
+            ),
+            status=500,
+            content_type='text/plain; charset=utf-8',
+        )
+    except Exception as ex:
+        logging.exception(f'[admin_hosted_dkim_migration] hosted DKIM migration failed mode={mode}')
+        return HttpResponse(
+            f'Legacy hosted DKIM migration failed\nmode: {mode}\nerror: {ex}\n',
+            status=500,
+            content_type='text/plain; charset=utf-8',
+        )
+
+    return HttpResponse(
+        _format_hosted_dkim_migration_result(result),
+        content_type='text/plain; charset=utf-8',
+    )
 
 
 @login_required
@@ -715,8 +908,7 @@ class AdminStalwartList(TemplateView):
         context = super().get_context_data(**kwargs)
 
         stalwart = MailClient()
-        response = stalwart._list_principals()
-        data = response.json().get('data', {}).get('items', [])
+        data = stalwart.list_principals()
 
         context.update(
             {

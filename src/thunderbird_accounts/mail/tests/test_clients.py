@@ -274,6 +274,78 @@ class TestMailClientCreateDkim(TestCase):
 
 
 @override_settings(
+    STALWART_BASE_API_URL='http://stalwart.test',
+    STALWART_API_AUTH_STRING='secret',
+    STALWART_API_AUTH_METHOD='bearer',
+)
+class TestMailClientListPrincipals(SimpleTestCase):
+    def setUp(self):
+        self.mail_client = MailClient()
+
+    def _response(self, payload):
+        response = requests.Response()
+        response.status_code = 200
+        response._content = json.dumps(payload).encode()
+        return response
+
+    @patch('requests.get')
+    def test_list_principals_pages_through_stalwart_principals(self, requests_get_mock: MagicMock):
+        requests_get_mock.side_effect = [
+            self._response(
+                {
+                    'data': {
+                        'items': [
+                            {'type': 'domain', 'name': 'example.com'},
+                            {'type': 'domain', 'name': 'example.net'},
+                        ],
+                        'total': 3,
+                    }
+                }
+            ),
+            self._response(
+                {
+                    'data': {
+                        'items': [
+                            {'type': 'domain', 'name': 'example.org'},
+                        ],
+                        'total': 3,
+                    }
+                }
+            ),
+        ]
+
+        principals = self.mail_client.list_principals(principal_types='domain', limit=2)
+
+        self.assertEqual(
+            [
+                {'type': 'domain', 'name': 'example.com'},
+                {'type': 'domain', 'name': 'example.net'},
+                {'type': 'domain', 'name': 'example.org'},
+            ],
+            principals,
+        )
+        self.assertEqual(
+            [
+                {'page': 1, 'limit': 2, 'types': 'domain'},
+                {'page': 2, 'limit': 2, 'types': 'domain'},
+            ],
+            [call_args.kwargs['params'] for call_args in requests_get_mock.call_args_list],
+        )
+
+    @patch.object(MailClient, 'list_principals')
+    def test_list_domains_filters_domain_principals(self, list_principals_mock: MagicMock):
+        list_principals_mock.return_value = [
+            {'type': 'domain', 'name': 'example.com'},
+            {'type': 'individual', 'name': 'user@example.com'},
+        ]
+
+        domains = self.mail_client.list_domains(limit=2)
+
+        list_principals_mock.assert_called_once_with(principal_types='domain', limit=2)
+        self.assertEqual([{'type': 'domain', 'name': 'example.com'}], domains)
+
+
+@override_settings(
     STALWART_DKIM_ALGOS=['Ed25519', 'Rsa'],
     STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'},
 )

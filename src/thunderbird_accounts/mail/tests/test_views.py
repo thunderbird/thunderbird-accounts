@@ -6,14 +6,171 @@ import json
 from unittest.mock import patch, Mock
 
 from django.conf import settings
+from django.contrib.auth.models import Permission
 from django.test import TestCase, Client as RequestClient, override_settings, RequestFactory
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.core.tests.utils import oidc_force_login
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, StaleDNSRecordCode
+from thunderbird_accounts.mail.exceptions import HostedDkimPublishRetry
 from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.mail.views import get_dns_records, remove_custom_domain
+
+
+class AdminHostedDkimMigrationTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.url = reverse('admin_hosted_dkim_migration')
+        self.user = User.objects.create(
+            username='admin@example.com',
+            email='admin@example.com',
+            oidc_id='admin-oidc-id',
+            is_staff=True,
+        )
+        permission = Permission.objects.get(codename='change_domain')
+        self.user.user_permissions.add(permission)
+        oidc_force_login(self.client, self.user)
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.migrate_legacy_hosted_dkim_domains')
+    def test_get_runs_dry_run_and_returns_plain_text(self, migrate_task_mock):
+        migrate_task_mock.return_value = {
+            'dry_run': True,
+            'domains_without_tm_selectors': ['legacy.com'],
+            'domains_missing_tm_selectors': [],
+            'domains_without_tm_selector_details': [
+                {
+                    'domain_name': 'legacy.com',
+                    'owner_email': 'owner@example.org',
+                    'active_customer': 'false',
+                    'subscription_statuses': ['canceled'],
+                    'existing_selectors': ['oldselector'],
+                    'missing_selectors': ['tm1', 'tm2'],
+                }
+            ],
+            'domains_missing_tm_selector_details': [],
+            'updated_domains': [],
+            'task_status': 'success',
+        }
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/plain; charset=utf-8')
+        migrate_task_mock.assert_called_once_with(dry_run=True)
+        body = response.content.decode()
+        self.assertIn('mode: dry-run', body)
+        self.assertIn('No changes were made.', body)
+        self.assertIn(
+            'found domain without any `tm` selectors: legacy.com '
+            'owner_email=owner@example.org active_customer=false '
+            "subscription_statuses=['canceled'] existing_selectors=['oldselector'] "
+            "missing_selectors=['tm1', 'tm2']",
+            body,
+        )
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.migrate_legacy_hosted_dkim_domains_task.delay')
+    @patch('thunderbird_accounts.mail.views.mail_tasks.migrate_legacy_hosted_dkim_domains')
+    def test_post_queues_migration_and_returns_plain_text(self, migrate_task_mock, migrate_task_delay_mock):
+        migrate_task_mock.return_value = {
+            'dry_run': True,
+            'domains_without_tm_selectors': ['legacy.com'],
+            'domains_missing_tm_selectors': ['partial.com'],
+            'domains_without_tm_selector_details': [
+                {
+                    'domain_name': 'legacy.com',
+                    'owner_email': 'owner@example.org',
+                    'active_customer': 'true',
+                    'subscription_statuses': ['active'],
+                    'existing_selectors': ['oldselector'],
+                    'missing_selectors': ['tm1', 'tm2'],
+                }
+            ],
+            'domains_missing_tm_selector_details': [],
+            'updated_domains': [],
+            'task_status': 'success',
+        }
+        migrate_task_delay_mock.return_value.id = 'task-id-123'
+
+        response = self.client.post(self.url)
+
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response['Content-Type'], 'text/plain; charset=utf-8')
+        migrate_task_mock.assert_called_once_with(dry_run=True)
+        migrate_task_delay_mock.assert_called_once_with(
+            domain_names=['legacy.com', 'partial.com'],
+            dry_run=False,
+            force_sync=True,
+        )
+        body = response.content.decode()
+        self.assertIn('mode: queued execute', body)
+        self.assertIn('task_status: queued', body)
+        self.assertIn('task_id: task-id-123', body)
+        self.assertIn('queued_domains: 2', body)
+        self.assertIn('legacy.com', body)
+        self.assertIn('partial.com', body)
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.migrate_legacy_hosted_dkim_domains_task.delay')
+    @patch('thunderbird_accounts.mail.views.mail_tasks.migrate_legacy_hosted_dkim_domains')
+    def test_post_does_not_queue_when_no_candidate_domains(self, migrate_task_mock, migrate_task_delay_mock):
+        migrate_task_mock.return_value = {
+            'dry_run': True,
+            'domains_without_tm_selectors': [],
+            'domains_missing_tm_selectors': [],
+            'domains_without_tm_selector_details': [],
+            'domains_missing_tm_selector_details': [],
+            'updated_domains': [],
+            'task_status': 'success',
+        }
+
+        response = self.client.post(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/plain; charset=utf-8')
+        migrate_task_mock.assert_called_once_with(dry_run=True)
+        migrate_task_delay_mock.assert_not_called()
+        body = response.content.decode()
+        self.assertIn('task_status: not_queued', body)
+        self.assertIn('No candidate domains were found, so no Celery task was queued.', body)
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.migrate_legacy_hosted_dkim_domains')
+    def test_post_reports_stalwart_selector_validation_failure(self, migrate_task_mock):
+        migrate_task_mock.side_effect = HostedDkimPublishRetry(
+            'no-tm-selectors.com',
+            'validate_stalwart_dkim_selectors',
+            "Expected Stalwart DKIM selectors ['tm1', 'tm2'] for no-tm-selectors.com, "
+            "but selectors ['tm1', 'tm2'] are still missing. "
+            "Existing selectors: ['202606e', '202606r']",
+            error_type='HostedDkimSelectorMissing',
+        )
+
+        response = self.client.post(self.url)
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response['Content-Type'], 'text/plain; charset=utf-8')
+        migrate_task_mock.assert_called_once_with(dry_run=True)
+        body = response.content.decode()
+        self.assertIn('Legacy hosted DKIM migration failed', body)
+        self.assertIn('mode: execute', body)
+        self.assertIn('domain: no-tm-selectors.com', body)
+        self.assertIn('phase: validate_stalwart_dkim_selectors', body)
+        self.assertIn('error_type: HostedDkimSelectorMissing', body)
+        self.assertIn("Existing selectors: ['202606e', '202606r']", body)
+
+    def test_requires_domain_change_permission(self):
+        client = RequestClient()
+        user = User.objects.create(
+            username='staff-no-permission@example.com',
+            email='staff-no-permission@example.com',
+            oidc_id='staff-no-permission-oidc-id',
+            is_staff=True,
+        )
+        oidc_force_login(client, user)
+
+        response = client.get(self.url)
+
+        self.assertEqual(response.status_code, 403)
 
 
 class AppPasswordApiTestCase(TestCase):

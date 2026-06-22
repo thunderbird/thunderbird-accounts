@@ -1,5 +1,5 @@
 import base64
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519, rsa
@@ -12,6 +12,7 @@ from thunderbird_accounts.mail.dkim import (
     build_hosted_dkim_txt_records,
     delete_hosted_dkim_txt_records,
     dkim_signatures_to_dns_records,
+    publish_hosted_dkim_txt_records,
 )
 
 
@@ -319,3 +320,24 @@ class CloudflareDNSClientTestCase(SimpleTestCase):
 
         cloudflare_client.dns.records.delete.assert_not_called()
         self.assertEqual([], deleted_record_ids)
+
+
+class PublishHostedDkimTxtRecordsTestCase(SimpleTestCase):
+    @patch('thunderbird_accounts.mail.dkim.time.sleep')
+    def test_throttles_after_each_upsert(self, sleep_mock):
+        dns_client = Mock()
+        hosted_records = [
+            {'type': 'TXT', 'name': 'tm1.example.com.dkim.example.net', 'content': 'v=DKIM1; p=one'},
+            {'type': 'TXT', 'name': 'tm2.example.com.dkim.example.net', 'content': 'v=DKIM1; p=two'},
+        ]
+
+        records = publish_hosted_dkim_txt_records(hosted_records, dns_client=dns_client, throttle_seconds=1.0)
+
+        self.assertEqual(hosted_records, records)
+        dns_client.upsert_txt_record.assert_has_calls(
+            [
+                call('tm1.example.com.dkim.example.net', 'v=DKIM1; p=one'),
+                call('tm2.example.com.dkim.example.net', 'v=DKIM1; p=two'),
+            ]
+        )
+        sleep_mock.assert_has_calls([call(1.0), call(1.0)])
