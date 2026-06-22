@@ -2,6 +2,7 @@ import json
 import time
 from enum import StrEnum
 from urllib.parse import quote, urlencode, urlparse
+import jwt
 from django.conf import settings
 from django.core.cache import cache
 from django.urls import reverse
@@ -26,6 +27,7 @@ from thunderbird_accounts.authentication.mfa import (
     has_recent_mfa_management_auth,
     make_pending_totp_cache_key,
 )
+from thunderbird_accounts.authentication.middleware import refresh_user_access_token
 from thunderbird_accounts.authentication.utils import (
     is_email_in_allow_list,
     KeycloakRequiredAction,
@@ -67,11 +69,34 @@ class RecoveryCodesRegenerateThrottle(UserRateThrottle):
 # mozilla-django-oidc stores the user's access token here when OIDC_STORE_ACCESS_TOKEN is on.
 OIDC_ACCESS_TOKEN_SESSION_KEY = 'oidc_access_token'
 
+# Refresh slightly before the real expiry so a token that's valid now but dies mid-request
+# isn't forwarded and rejected.
+_ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS = 30
+
+
+def _access_token_is_expired(access_token: str) -> bool:
+    """True only when the token's exp can be read and has passed (minus a small skew).
+    Unreadable tokens are treated as not-expired so we forward them unchanged."""
+    try:
+        claims = jwt.decode(access_token, options={'verify_signature': False})
+        exp = int(claims['exp'])
+    except (jwt.PyJWTError, KeyError, ValueError, TypeError):
+        return False
+    return time.time() >= exp - _ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS
+
 
 def get_user_access_token(request: Request) -> str | None:
     """The end user's OIDC access token, forwarded to the self-service mfa-rest provider so
-    it operates on the token subject (the caller can only manage their own MFA)."""
-    return request.session.get(OIDC_ACCESS_TOKEN_SESSION_KEY)
+    it operates on the token subject (the caller can only manage their own MFA).
+
+    The stored token is short-lived (~5 min) and our SessionRefresh middleware only renews it
+    on GET page-loads, not these POST/XHR calls — so refresh on demand before forwarding it.
+    A failed refresh falls back to the stored token, letting callers surface the usual 401.
+    """
+    access_token = request.session.get(OIDC_ACCESS_TOKEN_SESSION_KEY)
+    if access_token and not _access_token_is_expired(access_token):
+        return access_token
+    return refresh_user_access_token(request) or access_token
 
 
 def mfa_session_expired_response() -> Response:

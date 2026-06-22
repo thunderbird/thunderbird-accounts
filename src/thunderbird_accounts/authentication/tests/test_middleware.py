@@ -1,6 +1,8 @@
-from unittest.mock import MagicMock
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import freezegun
+import requests
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.forms import model_to_dict
@@ -9,9 +11,43 @@ from django.test import override_settings
 from django.test import TestCase
 
 
-from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
+from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend, refresh_user_access_token
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.models import AllowListEntry
+
+
+@override_settings(
+    OIDC_STORE_ACCESS_TOKEN=True,
+    OIDC_STORE_REFRESH_TOKEN=True,
+    OIDC_OP_TOKEN_ENDPOINT='https://keycloak.example/token',
+    OIDC_RP_CLIENT_ID='client',
+    OIDC_RP_CLIENT_SECRET='secret',
+)
+class RefreshUserAccessTokenTestCase(TestCase):
+    @staticmethod
+    def _request(**session):
+        return SimpleNamespace(session=dict(session))
+
+    @patch('thunderbird_accounts.authentication.middleware.requests.post')
+    def test_refreshes_and_persists_rotated_tokens(self, mock_post: MagicMock):
+        mock_post.return_value = MagicMock(
+            json=MagicMock(return_value={'access_token': 'new-access', 'refresh_token': 'new-refresh'})
+        )
+        request = self._request(oidc_refresh_token='old-refresh')
+
+        self.assertEqual(refresh_user_access_token(request), 'new-access')
+        # The rotated pair is persisted so the next request reuses it.
+        self.assertEqual(request.session['oidc_access_token'], 'new-access')
+        self.assertEqual(request.session['oidc_refresh_token'], 'new-refresh')
+
+    def test_returns_none_without_refresh_token(self):
+        self.assertIsNone(refresh_user_access_token(self._request()))
+
+    @patch('thunderbird_accounts.authentication.middleware.requests.post')
+    def test_returns_none_when_provider_rejects_refresh(self, mock_post: MagicMock):
+        # A dead SSO session yields a 400 from the token endpoint.
+        mock_post.side_effect = requests.exceptions.HTTPError('400 Bad Request')
+        self.assertIsNone(refresh_user_access_token(self._request(oidc_refresh_token='dead-refresh')))
 
 
 @override_settings(USE_ALLOW_LIST=True)

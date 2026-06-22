@@ -55,6 +55,50 @@ def store_tokens(request, access_token, id_token, refresh_token):
     request.session['oidc_id_token_expiration'] = time() + expiration_interval
 
 
+def _request_refreshed_tokens(refresh_token):
+    """POST a refresh_token grant to the OIDC provider and return the parsed token set.
+    Raises the underlying requests/JSON errors so callers decide how to react."""
+    token_payload = {
+        'grant_type': 'refresh_token',
+        'client_id': import_from_settings('OIDC_RP_CLIENT_ID'),
+        'client_secret': import_from_settings('OIDC_RP_CLIENT_SECRET'),
+        'refresh_token': refresh_token,
+    }
+
+    req_auth = None
+    if import_from_settings('OIDC_TOKEN_USE_BASIC_AUTH', False):
+        # Basic-auth clients send credentials in the header, not the body.
+        req_auth = HTTPBasicAuth(token_payload['client_id'], token_payload.pop('client_secret'))
+
+    response = requests.post(
+        import_from_settings('OIDC_OP_TOKEN_ENDPOINT'),
+        auth=req_auth,
+        data=token_payload,
+        verify=import_from_settings('OIDC_VERIFY_SSL', True),
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def refresh_user_access_token(request) -> Optional[str]:
+    """Refresh the session's OIDC access token from its stored refresh token, persisting the
+    rotated tokens. Returns the fresh access token, or None when no refresh token is stored or
+    the provider rejects the refresh (e.g. the SSO session has ended)."""
+    refresh_token = request.session.get(OIDC_REFRESH_TOKEN_KEY)
+    if not refresh_token:
+        return None
+
+    try:
+        token_info = _request_refreshed_tokens(refresh_token)
+    except (requests.exceptions.RequestException, JSONDecodeError):
+        return None
+
+    access_token = token_info.get('access_token')
+    # id_token dropped on refresh — see OIDCRefreshSession.process_request for the why.
+    store_tokens(request, access_token, None, token_info.get('refresh_token'))
+    return access_token
+
+
 class AccountsOIDCBackend(OIDCAuthenticationBackend):
     """User authentication middleware for OIDC
 
@@ -277,37 +321,14 @@ class OIDCRefreshSession(SessionRefresh):
         if not self.is_expired(request):
             return
 
-        token_url = import_from_settings('OIDC_OP_TOKEN_ENDPOINT')
-        client_id = import_from_settings('OIDC_RP_CLIENT_ID')
-        client_secret = import_from_settings('OIDC_RP_CLIENT_SECRET')
         refresh_token = request.session.get(OIDC_REFRESH_TOKEN_KEY)
 
         if not refresh_token:
             logging.debug('no refresh token stored')
             return self.finish(request, prompt_reauth=True)
 
-        token_payload = {
-            'grant_type': 'refresh_token',
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'refresh_token': refresh_token,
-        }
-
-        req_auth = None
-        if self.get_settings('OIDC_TOKEN_USE_BASIC_AUTH', False):
-            # When Basic auth is defined, create the Auth Header and remove secret from payload.
-            user = token_payload.get('client_id')
-            pw = token_payload.get('client_secret')
-
-            req_auth = HTTPBasicAuth(user, pw)
-            del token_payload['client_secret']
-
         try:
-            response = requests.post(
-                token_url, auth=req_auth, data=token_payload, verify=import_from_settings('OIDC_VERIFY_SSL', True)
-            )
-            response.raise_for_status()
-            token_info = response.json()
+            token_info = _request_refreshed_tokens(refresh_token)
         except requests.exceptions.Timeout:
             logging.debug('timed out refreshing access token')
             # Don't prompt for reauth as this could be a temporary problem

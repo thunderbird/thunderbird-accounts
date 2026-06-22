@@ -1,7 +1,9 @@
 import json
 import time
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+import jwt
 from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase
@@ -10,6 +12,7 @@ from requests import Response as RequestsResponse
 from requests.exceptions import RequestException
 from rest_framework.test import APIClient
 
+from thunderbird_accounts.authentication.api import get_user_access_token
 from thunderbird_accounts.authentication.clients import KeycloakClient, RequestMethods
 from thunderbird_accounts.authentication.exceptions import (
     MfaCredentialError,
@@ -604,3 +607,48 @@ class MfaReauthenticationRequestViewTestCase(TestCase):
         # OTP). Freshness comes from the realm's L2 conditional-LoA (loa-max-age=0), which
         # re-challenges the OTP each step-up without re-prompting username/password.
         self.assertNotIn('max_age', params)
+
+
+def _jwt_with_exp(exp_offset_seconds: int) -> str:
+    """A JWT whose exp is `exp_offset_seconds` from now (signature is irrelevant — we only
+    read exp without verifying)."""
+    return jwt.encode(
+        {'exp': int(time.time()) + exp_offset_seconds},
+        'test-signing-key-not-verified-0123456789',
+        algorithm='HS256',
+    )
+
+
+class GetUserAccessTokenTestCase(TestCase):
+    """get_user_access_token forwards a live token, refreshing on demand when the stored one
+    has expired so short-lived tokens don't get rejected by the mfa-rest provider."""
+
+    @staticmethod
+    def _request(**session):
+        return SimpleNamespace(session=dict(session))
+
+    @patch('thunderbird_accounts.authentication.api.refresh_user_access_token')
+    def test_returns_unexpired_token_without_refreshing(self, mock_refresh: Mock):
+        token = _jwt_with_exp(300)
+        self.assertEqual(get_user_access_token(self._request(oidc_access_token=token)), token)
+        mock_refresh.assert_not_called()
+
+    @patch('thunderbird_accounts.authentication.api.refresh_user_access_token', return_value='fresh-token')
+    def test_refreshes_expired_token(self, mock_refresh: Mock):
+        request = self._request(oidc_access_token=_jwt_with_exp(-10))
+        self.assertEqual(get_user_access_token(request), 'fresh-token')
+        mock_refresh.assert_called_once_with(request)
+
+    @patch('thunderbird_accounts.authentication.api.refresh_user_access_token', return_value=None)
+    def test_falls_back_to_stored_token_when_refresh_fails(self, _mock_refresh: Mock):
+        expired = _jwt_with_exp(-10)
+        self.assertEqual(get_user_access_token(self._request(oidc_access_token=expired)), expired)
+
+    @patch('thunderbird_accounts.authentication.api.refresh_user_access_token')
+    def test_opaque_token_is_forwarded_unchanged(self, mock_refresh: Mock):
+        self.assertEqual(get_user_access_token(self._request(oidc_access_token='opaque-not-a-jwt')), 'opaque-not-a-jwt')
+        mock_refresh.assert_not_called()
+
+    @patch('thunderbird_accounts.authentication.api.refresh_user_access_token', return_value=None)
+    def test_returns_none_when_no_token_stored(self, _mock_refresh: Mock):
+        self.assertIsNone(get_user_access_token(self._request()))
