@@ -1,15 +1,14 @@
 <script setup>
-import { TextInput, PrimaryButton, SelectInput, LinkButton } from "@thunderbirdops/services-ui";
-import { computed, ref, useTemplateRef } from "vue";
+import { TextInput, PrimaryButton, LinkButton } from "@thunderbirdops/services-ui";
+import { computed, useTemplateRef } from "vue";
 import MessageBar from '@kc/vue/components/MessageBar.vue';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
 
-const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
-const userOtpCredentials = window._page.currentView?.userOtpCredentials;
-const selectedOtpCredential = window._page.currentView?.selectedOtpCredential;
+const recoveryCodePrompt = window._page.currentView?.recoveryCodePrompt;
+const errors = window._page.currentView?.errors;
 const showTryAnotherWay = window._page.currentView?.showTryAnotherWay === 'true';
-const OtpCredentialModel = ref(selectedOtpCredential);
+
 const loginForm = useTemplateRef('login-form');
 const tryAnotherWayForm = useTemplateRef('try-another-way-form');
 
@@ -21,31 +20,27 @@ const onTryAnotherWay = () => {
   tryAnotherWayForm?.value?.cancel();
 };
 
-const totpError = computed(() => {
-  return errors?.totp !== '' ? errors?.totp : null;
+const recoveryError = computed(() => {
+  return errors?.recoveryCodeInput !== '' ? errors?.recoveryCodeInput : null;
 });
-
 </script>
 
 <script>
 export default {
-  name: 'LoginTotpView'
+  name: 'LoginRecoveryAuthnCodeView'
 };
 </script>
 
 <template>
   <div class="panel">
-    <h2>{{ $t('doLogIn') }}</h2>
-    <form id="kc-form-login" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
+    <h2>{{ $t('authRecoveryCodeHeader') }}</h2>
+    <form id="kc-recovery-code-login-form" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
           @keyup.enter="onSubmit">
       <message-bar/>
       <div class="form-elements">
-        <select-input name="device-input" data-testid="device-input" :options="userOtpCredentials" v-model="OtpCredentialModel">{{
-            $t('loginTotpDeviceName')
-          }}
-        </select-input>
-        <text-input data-testid="otp-input" id="otp" name="otp" autocomplete="one-time-code" required autofocus :error="totpError">
-          {{ $t('loginOtpOneTime') }}
+        <text-input data-testid="recovery-code-input" id="recoveryCodeInput" name="recoveryCodeInput"
+                    autocomplete="off" required autofocus :error="recoveryError">
+          {{ recoveryCodePrompt }}
         </text-input>
       </div>
       <div class="buttons">
@@ -65,21 +60,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 18px;
-}
-
-.post-password-options {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-
-  .wrapper {
-    padding-top: 21px;
-  }
-
-  a {
-    padding-top: 4px;
-    white-space: nowrap;
-  }
 }
 
 .buttons {
