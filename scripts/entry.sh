@@ -20,9 +20,8 @@ else
     # Run migrations
     ./manage.py migrate
 
-    # Ensure the Keycloak realm has the MFA step-up browser flow + acr.loa.map.
-    # Idempotent and fail-soft (won't block startup if Keycloak is briefly unreachable).
-    ./manage.py ensure_keycloak_mfa_flow
+    # NOTE: The Keycloak MFA step-up flow is reconciled by keycloak-config-cli from the
+    # keycloak container itself (scripts/apply-mfa-config.sh), not from here anymore.
 
     # Retrieve paddle products & prices
     ./manage.py get_paddle_products
