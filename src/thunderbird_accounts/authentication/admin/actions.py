@@ -221,8 +221,8 @@ def admin_backfill_recovery_email(modeladmin, request, queryset):
     skipped = 0
     failed = 0
 
-    for user in queryset.filter(Q(recovery_email__isnull=True) | Q(recovery_email='')):
-        if not user.oidc_id:
+    for user in queryset.filter(Q(recovery_email__isnull=True) | Q(recovery_email='')).exclude(oidc_id__isnull=True):
+
             skipped += 1
             continue
 
