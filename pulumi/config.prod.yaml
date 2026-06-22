@@ -694,6 +694,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-database-user-sSptNx
               - name: KC_BOOTSTRAP_ADMIN_PASSWORD
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-password-AnRwXP
+              # keycloak-config-cli (scripts/apply-mfa-config.sh) authenticates as the same admin
+              # service-account client the accounts app uses, to reconcile the MFA step-up flow.
+              - *SECRET_KEYCLOAK_ADMIN_CLIENT_ID
+              - *SECRET_KEYCLOAK_ADMIN_CLIENT_SECRET
             environment:
               - name: KC_DB
                 value: postgres
@@ -719,6 +723,21 @@ resources:
                 value: "https://accounts.tb.pro/contact"
               - name: KC_TBPRO_PRIMARY_DOMAIN
                 value: "thundermail.com"
+              # keycloak-mfa-rest: allow the accounts OIDC client's user tokens to self-manage MFA.
+              - name: KC_SPI_REALM_RESTAPI_EXTENSION_MFA_AUTHORIZED_CLIENTS
+                value: "thunderbird-accounts"
+              # Step-up gate for sensitive mutations: token must carry this acr with auth_time
+              # no older than the window. Keep aligned with accounts' MFA_RECENT_AUTH_SECONDS.
+              - name: KC_SPI_REALM_RESTAPI_EXTENSION_MFA_STEP_UP_ACR
+                value: "2"
+              - name: KC_SPI_REALM_RESTAPI_EXTENSION_MFA_STEP_UP_MAX_AGE_SECONDS
+                value: "600"
+              # Level-1 LoA window for keycloak-config-cli. MUST equal this realm's
+              # ssoSessionMaxLifespan or a still-valid SSO session re-prompts for the password.
+              # Prod tbpro ssoSessionMaxLifespan is 864000 (10d) — keep these in sync if the
+              # realm's session settings change.
+              - name: MFA_L1_LOA_MAX_AGE
+                value: "864000"
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
