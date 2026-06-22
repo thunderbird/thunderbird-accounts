@@ -216,6 +216,14 @@ def admin_sync_plan_to_keycloak(modeladmin, request, queryset):
 
 @admin.action(description=_('Backfill recovery email from Keycloak'))
 def admin_backfill_recovery_email(modeladmin, request, queryset):
+"""Backfill's recovery emails from user with ``null`` recovery emails in this system and a valid one in Keycloak.
+
+Displays the following messages on the admin panel after the action is performed:
+* Updated: The number of user's that have been successfully updated with their recovery email.
+* Skipped: The number of user's who were skipped because they don't have a valid recovery email in Keycloak.
+* Failed: The number of user's that exist in this system but do not exist in Keycloak.
+
+"""
     keycloak = KeycloakClient()
     updated = 0
     skipped = 0
