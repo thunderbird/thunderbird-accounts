@@ -1,3 +1,4 @@
+from fnmatch import fnmatch
 import re
 
 # brand related names, and also help/support
@@ -102,4 +103,15 @@ regexes = [re.compile('^' + n) for n in reserved_names]
 
 def is_reserved(test_string: str) -> bool:
     """Checks the address or random string is a reserved name which should fail user or alias creation if so."""
-    return any(r.match(test_string) for r in regexes)
+    from thunderbird_accounts.authentication.models import UsernameBlockListEntry
+
+    matches = any(r.match(test_string) for r in regexes)
+    if matches:
+        return True
+
+    # This most likely won't scale well in the future...
+    entries = UsernameBlockListEntry.objects.all()
+
+    # This is a filename search, but it's simpler than regex so hopefully it won't be a footgun. :)
+    # https://docs.python.org/3/library/fnmatch.html#fnmatch.fnmatch
+    return any(fnmatch(test_string, entry.pattern) for entry in entries)
