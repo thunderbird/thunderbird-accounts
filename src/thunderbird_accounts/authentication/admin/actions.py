@@ -4,9 +4,11 @@ import logging
 
 from django.conf import settings
 from django.contrib import messages, admin
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _, ngettext
 
-from thunderbird_accounts.authentication.exceptions import UpdateUserPlanInfoError
+from thunderbird_accounts.authentication.clients import KeycloakClient
+from thunderbird_accounts.authentication.exceptions import GetUserError, UpdateUserPlanInfoError
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail import utils as mail_utils
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError
@@ -205,6 +207,79 @@ def admin_sync_plan_to_keycloak(modeladmin, request, queryset):
             messages.ERROR,
         )
     if sum([success_activate, success_deactivate, errors]) == 0:
+        modeladmin.message_user(
+            request,
+            _('Nothing to update!'),
+            messages.INFO,
+        )
+
+
+@admin.action(description=_('Backfill recovery email from Keycloak'))
+def admin_backfill_recovery_email(modeladmin, request, queryset):
+    """Backfill's recovery emails from user with ``null`` recovery emails in this system and a valid one in Keycloak.
+
+    Displays the following messages on the admin panel after the action is performed:
+    * Updated: The number of user's that have been successfully updated with their recovery email.
+    * Skipped: The number of user's who were skipped because they don't have a valid recovery email in Keycloak.
+    * Failed: The number of user's that exist in this system but do not exist in Keycloak.
+
+    """
+    keycloak = KeycloakClient()
+    updated = 0
+    skipped = 0
+    failed = 0
+
+    for user in queryset.filter(Q(recovery_email__isnull=True) | Q(recovery_email='')).exclude(oidc_id__isnull=True):
+        try:
+            keycloak_user = keycloak.get_user(user.oidc_id).json()
+        except GetUserError as exc:
+            failed += 1
+            logging.warning('admin_backfill_recovery_email: failed to fetch Keycloak user %s: %s', user.uuid, exc)
+            continue
+
+        recovery_email = keycloak_user.get('email')
+        if not isinstance(recovery_email, str) or not recovery_email.strip():
+            skipped += 1
+            continue
+
+        user.recovery_email = recovery_email
+        user.save(update_fields=['recovery_email', 'updated_at'])
+        updated += 1
+
+    if updated:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Backfilled recovery email for %d user.',
+                'Backfilled recovery email for %d users.',
+                updated,
+            )
+            % updated,
+            messages.SUCCESS,
+        )
+    if skipped:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Skipped %d user without a Keycloak email or oidc_id.',
+                'Skipped %d users without a Keycloak email or oidc_id.',
+                skipped,
+            )
+            % skipped,
+            messages.WARNING,
+        )
+    if failed:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Failed to backfill recovery email for %d user.',
+                'Failed to backfill recovery email for %d users.',
+                failed,
+            )
+            % failed,
+            messages.ERROR,
+        )
+    if sum([updated, skipped, failed]) == 0:
         modeladmin.message_user(
             request,
             _('Nothing to update!'),

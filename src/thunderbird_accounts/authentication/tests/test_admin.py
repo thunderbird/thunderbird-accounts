@@ -8,6 +8,7 @@ from django.test import TestCase
 from requests import Response
 
 from thunderbird_accounts.authentication.admin import CustomUserAdmin
+from thunderbird_accounts.authentication.admin.actions import admin_backfill_recovery_email
 from thunderbird_accounts.authentication.clients import RequestMethods
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account, Email
@@ -462,4 +463,76 @@ class AdminDeleteUserTestCase(TestCase):
         self.assertEqual(method, RequestMethods.DELETE)
 
         mock_delete_principal.assert_not_called()
+
+
+@patch.object(CustomUserAdmin, 'message_user')
+@patch('thunderbird_accounts.authentication.admin.actions.KeycloakClient')
+class AdminBackfillRecoveryEmailActionTest(TestCase):
+    def setUp(self):
+        self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
+        self.user_admin = CustomUserAdmin(User, AdminSite())
+        self.request = HttpRequest()
+
+    def test_backfills_selected_users_missing_recovery_email(self, mock_keycloak_cls, mock_message_user):
+        user = User.objects.create(
+            username=f'missing-recovery@{self.subdomain}',
+            email=f'missing-recovery@{self.subdomain}',
+            oidc_id='oidc-missing-recovery',
+        )
+        mock_keycloak = mock_keycloak_cls.return_value
+        mock_keycloak.get_user.return_value = MagicMock(json=lambda: {'email': 'recovery@example.com'})
+
+        admin_backfill_recovery_email(self.user_admin, self.request, User.objects.filter(pk=user.pk))
+
+        user.refresh_from_db()
+        self.assertEqual(user.recovery_email, 'recovery@example.com')
+
+    def test_skips_users_with_existing_recovery_email(self, mock_keycloak_cls, mock_message_user):
+        user = User.objects.create(
+            username=f'has-recovery@{self.subdomain}',
+            email=f'has-recovery@{self.subdomain}',
+            recovery_email='existing@example.com',
+            oidc_id='oidc-has-recovery',
+        )
+
+        admin_backfill_recovery_email(self.user_admin, self.request, User.objects.filter(pk=user.pk))
+
+        mock_keycloak_cls.return_value.get_user.assert_not_called()
+        user.refresh_from_db()
+        self.assertEqual(user.recovery_email, 'existing@example.com')
+
+    def test_backfills_only_eligible_users_when_multiple_selected(self, mock_keycloak_cls, mock_message_user):
+        missing_recovery = User.objects.create(
+            username=f'missing-recovery@{self.subdomain}',
+            email=f'missing-recovery@{self.subdomain}',
+            oidc_id='oidc-missing-recovery',
+        )
+        has_recovery = User.objects.create(
+            username=f'has-recovery@{self.subdomain}',
+            email=f'has-recovery@{self.subdomain}',
+            recovery_email='existing@example.com',
+            oidc_id='oidc-has-recovery',
+        )
+        missing_oidc = User.objects.create(
+            username=f'missing-oidc@{self.subdomain}',
+            email=f'missing-oidc@{self.subdomain}',
+        )
+
+        mock_keycloak = mock_keycloak_cls.return_value
+        mock_keycloak.get_user.return_value = MagicMock(json=lambda: {'email': 'recovery@example.com'})
+
+        admin_backfill_recovery_email(
+            self.user_admin,
+            self.request,
+            User.objects.filter(pk__in=[missing_recovery.pk, has_recovery.pk, missing_oidc.pk]),
+        )
+
+        missing_recovery.refresh_from_db()
+        has_recovery.refresh_from_db()
+        missing_oidc.refresh_from_db()
+
+        self.assertEqual(missing_recovery.recovery_email, 'recovery@example.com')
+        self.assertEqual(has_recovery.recovery_email, 'existing@example.com')
+        self.assertIsNone(missing_oidc.recovery_email)
+        mock_keycloak.get_user.assert_called_once_with('oidc-missing-recovery')
 

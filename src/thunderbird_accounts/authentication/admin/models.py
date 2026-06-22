@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.admin.actions import (
+    admin_backfill_recovery_email,
     admin_fix_broken_stalwart_account,
     admin_sync_plan_to_keycloak,
     admin_manual_activate_subscription_features,
@@ -80,6 +81,7 @@ class CustomUserAdmin(UserAdmin):
         'updated_at',
     )
     actions = [
+        admin_backfill_recovery_email,
         admin_fix_broken_stalwart_account,
         admin_sync_plan_to_keycloak,
         admin_manual_activate_subscription_features,
