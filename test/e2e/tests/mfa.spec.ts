@@ -1,434 +1,39 @@
-import crypto from 'crypto';
-import http from 'http';
-import net from 'net';
-import tls from 'tls';
-import type { AddressInfo } from 'net';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 import { ensureWeAreSignedIn, waitForVueApp } from '../utils/utils';
 import {
-  ACCTS_HOST,
   ACCTS_HUB_URL,
   ACCTS_OIDC_EMAIL,
   ACCTS_OIDC_PWORD,
-  IMAP_PORT,
-  KEYCLOAK_ADMIN_BASE_URL,
-  KEYCLOAK_ADMIN_CLIENT_ID,
-  KEYCLOAK_ADMIN_CLIENT_SECRET,
-  KEYCLOAK_REALM_URL,
   PLAYWRIGHT_TAG_E2E_SUITE,
-  PRIMARY_THUNDERMAIL_EMAIL,
-  SMTP_PORT,
-  SMTP_TLS,
-  STALWART_OAUTH_CLIENT_ID,
-  STALWART_OAUTH_CLIENT_SECRET,
   TIMEOUT_30_SECONDS,
 } from '../const/constants';
-
-const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-const TOTP_PERIOD_SECONDS = 30;
-const OAUTH_CALLBACK_TIMEOUT = TIMEOUT_30_SECONDS * 3;
-
-const decodeBase32 = (input: string) => {
-  const normalized = input.replace(/\s/g, '').replace(/=+$/, '').toUpperCase();
-  const bytes: number[] = [];
-  let bits = 0;
-  let value = 0;
-
-  for (const character of normalized) {
-    const index = BASE32_ALPHABET.indexOf(character);
-    if (index === -1) {
-      throw new Error(`Invalid base32 character: ${character}`);
-    }
-
-    value = (value << 5) | index;
-    bits += 5;
-
-    if (bits >= 8) {
-      bytes.push((value >>> (bits - 8)) & 0xff);
-      bits -= 8;
-    }
-  }
-
-  return Buffer.from(bytes);
-};
-
-const makeTotpCode = (manualSecret: string) => {
-  const counter = Math.floor(Date.now() / 1000 / TOTP_PERIOD_SECONDS);
-  const counterBuffer = Buffer.alloc(8);
-  counterBuffer.writeBigUInt64BE(BigInt(counter));
-  const digest = crypto.createHmac('sha1', decodeBase32(manualSecret)).update(counterBuffer).digest();
-  const offset = digest[digest.length - 1] & 0x0f;
-  const truncatedHash = digest.readUInt32BE(offset) & 0x7fffffff;
-  return String(truncatedHash % 1_000_000).padStart(6, '0');
-};
-
-const getKeycloakAdminToken = async () => {
-  if (!KEYCLOAK_ADMIN_CLIENT_SECRET || KEYCLOAK_ADMIN_CLIENT_SECRET === 'undefined') {
-    throw new Error('KEYCLOAK_ADMIN_CLIENT_SECRET must be set to clean up MFA credentials.');
-  }
-
-  const response = await fetch(`${KEYCLOAK_ADMIN_BASE_URL}/realms/master/protocol/openid-connect/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: KEYCLOAK_ADMIN_CLIENT_ID,
-      client_secret: KEYCLOAK_ADMIN_CLIENT_SECRET,
-      grant_type: 'client_credentials',
-    }),
-  });
-  const data = await response.json();
-
-  if (!response.ok || !data.access_token) {
-    throw new Error(`Could not get Keycloak admin token: ${JSON.stringify(data)}`);
-  }
-
-  return data.access_token as string;
-};
-
-const MFA_CREDENTIAL_TYPES = ['otp', 'recovery-authn-codes'];
-
-const fetchKeycloakCredentials = async () => {
-  const adminToken = await getKeycloakAdminToken();
-  const headers = { Authorization: `Bearer ${adminToken}`, Accept: 'application/json' };
-  const usersResponse = await fetch(
-    `${KEYCLOAK_ADMIN_BASE_URL}/admin/realms/tbpro/users?${new URLSearchParams({ username: ACCTS_OIDC_EMAIL, exact: 'true' })}`,
-    { headers },
-  );
-  const users = await usersResponse.json();
-
-  if (!usersResponse.ok || users.length !== 1) {
-    throw new Error(`Could not load Keycloak user for cleanup: ${JSON.stringify(users)}`);
-  }
-
-  const credentialsResponse = await fetch(
-    `${KEYCLOAK_ADMIN_BASE_URL}/admin/realms/tbpro/users/${users[0].id}/credentials`,
-    { headers },
-  );
-  const credentials = await credentialsResponse.json();
-
-  if (!credentialsResponse.ok) {
-    throw new Error(`Could not load Keycloak credentials: ${JSON.stringify(credentials)}`);
-  }
-
-  return { userId: users[0].id as string, credentials, headers };
-};
-
-const removeExistingMfaCredentials = async () => {
-  const { userId, credentials, headers } = await fetchKeycloakCredentials();
-
-  for (const credential of credentials.filter((item: { type?: string }) => MFA_CREDENTIAL_TYPES.includes(item.type ?? ''))) {
-    const deleteResponse = await fetch(
-      `${KEYCLOAK_ADMIN_BASE_URL}/admin/realms/tbpro/users/${userId}/credentials/${credential.id}`,
-      { method: 'DELETE', headers },
-    );
-    if (!deleteResponse.ok) {
-      throw new Error(`Could not delete Keycloak credential for cleanup: ${await deleteResponse.text()}`);
-    }
-  }
-};
-
-const getRecoveryCodesCredentialMetadata = async () => {
-  const { credentials } = await fetchKeycloakCredentials();
-  return credentials
-    .filter((item: { type?: string }) => item.type === 'recovery-authn-codes')
-    .map((item: { id: string; createdDate?: number }) => ({ id: item.id, createdDate: item.createdDate }));
-};
-
-const acceptLegalPoliciesIfRequired = async (page: Page) => {
-  const acceptButton = page.getByRole('button', { name: 'Accept policies and continue' });
-  if (await acceptButton.isVisible()) {
-    await acceptButton.click();
-    await waitForVueApp(page);
-  }
-};
-
-const recoveryCodesDialog = (page: Page) => page.locator('dialog').filter({
-  has: page.getByTestId('recovery-codes-modal'),
-});
-
-const expectRecoveryCodesDialogVisible = async (page: Page) => {
-  await expect(recoveryCodesDialog(page)).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-};
-
-const dismissRecoveryCodesDialog = async (page: Page) => {
-  await recoveryCodesDialog(page).locator('button.close-button').click();
-  await expect(recoveryCodesDialog(page)).toBeHidden({ timeout: TIMEOUT_30_SECONDS });
-};
-
-// The modal opens on a confirmation step ("this resets your old codes"); continuing
-// generates and immediately commits the new codes, then displays them once.
-const continueToRecoveryCodes = async (page: Page) => {
-  await expectRecoveryCodesDialogVisible(page);
-  await page.getByTestId('recovery-codes-continue').click();
-  await expect(page.getByTestId('recovery-codes-list').locator('code')).toHaveCount(12, {
-    timeout: TIMEOUT_30_SECONDS,
-  });
-};
-
-const captureRecoveryCodesAndConfirm = async (page: Page) => {
-  await continueToRecoveryCodes(page);
-  const codeElements = await page.getByTestId('recovery-codes-list').locator('code').all();
-  const codes = await Promise.all(codeElements.map((element) => element.innerText()));
-  // The ack input is `screen-reader-only`; the visual+clickable element is its
-  // <label for="recovery-codes-ack"> sibling, which is what toggles the v-model.
-  await page.locator('label[for="recovery-codes-ack"]').click();
-  await page.getByTestId('recovery-codes-done').click();
-  await expect(recoveryCodesDialog(page)).toBeHidden({ timeout: TIMEOUT_30_SECONDS });
-  return codes;
-};
-
-const readUntil = async (socket: net.Socket, isComplete: (buffer: string) => boolean) => new Promise<string>((resolve, reject) => {
-  let buffer = '';
-  const timeout = setTimeout(() => {
-    cleanup();
-    reject(new Error(`Timed out waiting for mail server response. Last response: ${buffer}`));
-  }, TIMEOUT_30_SECONDS);
-  const cleanup = () => {
-    clearTimeout(timeout);
-    socket.off('data', onData);
-    socket.off('error', onError);
-  };
-  const onData = (data: Buffer) => {
-    buffer += data.toString('utf8');
-    if (isComplete(buffer)) {
-      cleanup();
-      resolve(buffer);
-    }
-  };
-  const onError = (error: Error) => {
-    cleanup();
-    reject(error);
-  };
-
-  socket.on('data', onData);
-  socket.on('error', onError);
-});
-
-const isTlsEnabled = (value: string) => !['false', 'none', 'undefined', ''].includes(value.toLowerCase());
-
-// Local e2e connects to the dev mail server, which presents a self-signed certificate.
-// This client only ever talks to the local stack (ACCTS_HOST), so chain verification is
-// opt-out via an explicit env flag (defaults to allowing the dev cert). Deriving the value
-// — rather than hard-coding `rejectUnauthorized: false` — keeps us from ever silently
-// disabling TLS verification against a real host. Never set this against production.
-const VERIFY_MAIL_SERVER_TLS = String(process.env.E2E_VERIFY_MAIL_TLS ?? 'false') === 'true';
-
-const connectToMailServer = async (port: number, useTls = false) => new Promise<net.Socket>((resolve, reject) => {
-  const socket = useTls
-    ? tls.connect({ host: ACCTS_HOST, port, rejectUnauthorized: VERIFY_MAIL_SERVER_TLS }, () => resolve(socket))
-    : net.createConnection({ host: ACCTS_HOST, port }, () => resolve(socket));
-  socket.setTimeout(TIMEOUT_30_SECONDS);
-  socket.once('error', reject);
-  socket.once('timeout', () => {
-    socket.destroy();
-    reject(new Error(`Timed out connecting to ${ACCTS_HOST}:${port}`));
-  });
-});
-
-const writeAndRead = async (
-  socket: net.Socket,
-  command: string,
-  isComplete: (buffer: string) => boolean,
-) => {
-  socket.write(command);
-  return readUntil(socket, isComplete);
-};
-
-const makeXoauth2Payload = (accessToken: string) => Buffer.from(
-  `user=${PRIMARY_THUNDERMAIL_EMAIL}\x01auth=Bearer ${accessToken}\x01\x01`,
-).toString('base64');
-
-const expectImapXoauth2Login = async (accessToken: string) => {
-  const socket = await connectToMailServer(IMAP_PORT);
-  const authPayload = makeXoauth2Payload(accessToken);
-
-  try {
-    await readUntil(socket, (response) => response.includes('* OK'));
-    const authResponse = await writeAndRead(
-      socket,
-      `a1 AUTHENTICATE XOAUTH2 ${authPayload}\r\n`,
-      (response) => /a1 (OK|NO|BAD)/i.test(response),
-    );
-    expect(authResponse).toMatch(/a1 OK/i);
-    await writeAndRead(socket, 'a2 LOGOUT\r\n', (response) => /a2 OK/i.test(response));
-  } finally {
-    socket.destroy();
-  }
-};
-
-const expectSmtpXoauth2Login = async (accessToken: string) => {
-  const socket = await connectToMailServer(SMTP_PORT, isTlsEnabled(SMTP_TLS));
-  const authPayload = makeXoauth2Payload(accessToken);
-
-  try {
-    await readUntil(socket, (response) => /^220/m.test(response));
-    await writeAndRead(socket, 'EHLO tb-accounts-e2e.example.org\r\n', (response) => /\r?\n250[ -]/.test(response));
-    const authResponse = await writeAndRead(
-      socket,
-      `AUTH XOAUTH2 ${authPayload}\r\n`,
-      (response) => /^(235|334|535|454)/m.test(response),
-    );
-    expect(authResponse).toMatch(/^235/m);
-    await writeAndRead(socket, 'QUIT\r\n', (response) => /^221/m.test(response));
-  } finally {
-    socket.destroy();
-  }
-};
-
-const getStalwartAccessTokenViaSso = async (page: Page) => {
-  if (!STALWART_OAUTH_CLIENT_SECRET || STALWART_OAUTH_CLIENT_SECRET === 'undefined') {
-    throw new Error('STALWART_OAUTH_CLIENT_SECRET must be set to run the Stalwart OAuth MFA test.');
-  }
-
-  const state = crypto.randomBytes(16).toString('hex');
-  let callbackTimer: NodeJS.Timeout;
-  const server = http.createServer();
-  const callbackPromise = new Promise<{ code: string; state: string }>((resolve, reject) => {
-    callbackTimer = setTimeout(() => {
-      reject(new Error('Timed out waiting for OAuth callback.'));
-    }, OAUTH_CALLBACK_TIMEOUT);
-
-    server.on('request', (request, response) => {
-      const callbackUrl = new URL(request.url || '/', 'http://127.0.0.1');
-      const code = callbackUrl.searchParams.get('code');
-      const returnedState = callbackUrl.searchParams.get('state');
-
-      response.writeHead(code ? 200 : 400, { 'Content-Type': 'text/html' });
-      response.end('<html><body>OAuth callback received</body></html>');
-
-      if (!code || !returnedState) {
-        reject(new Error(`OAuth callback did not include code and state: ${callbackUrl.search}`));
-        return;
-      }
-
-      clearTimeout(callbackTimer);
-      resolve({ code, state: returnedState });
-    });
-  });
-
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address() as AddressInfo;
-  const redirectUri = `http://127.0.0.1:${port}/callback`;
-
-  // No `prompt=login` — the caller has just signed in with password+OTP, so
-  // we deliberately let Keycloak's existing SSO session satisfy the auth request.
-  // That's also closer to how Stalwart Web/IMAP/SMTP clients use this OAuth flow
-  // (they expect SSO, not a fresh re-auth) and avoids a Firefox/localhost cookie
-  // edge case where `prompt=login` + a stale session breaks `KC_RESTART`.
-  const authUrl = new URL(`${KEYCLOAK_REALM_URL}/protocol/openid-connect/auth`);
-  authUrl.search = new URLSearchParams({
-    client_id: STALWART_OAUTH_CLIENT_ID,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: 'openid email',
-    state,
-  }).toString();
-
-  try {
-    await page.goto(authUrl.toString(), { waitUntil: 'domcontentloaded' });
-
-    const callback = await callbackPromise;
-    expect(callback.state).toBe(state);
-
-    const tokenResponse = await fetch(`${KEYCLOAK_REALM_URL}/protocol/openid-connect/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: STALWART_OAUTH_CLIENT_ID,
-        client_secret: STALWART_OAUTH_CLIENT_SECRET,
-        code: callback.code,
-        grant_type: 'authorization_code',
-        redirect_uri: redirectUri,
-      }),
-    });
-    const tokenData = await tokenResponse.json();
-
-    if (!tokenResponse.ok || !tokenData.access_token) {
-      throw new Error(`Failed to exchange OAuth code: ${JSON.stringify(tokenData)}`);
-    }
-
-    return tokenData.access_token as string;
-  } finally {
-    clearTimeout(callbackTimer!);
-    server.close();
-  }
-};
-
-const signInWithPassword = async (page: Page) => {
-  await page.context().clearCookies();
-  await page.goto(ACCTS_HUB_URL);
-  await page.getByTestId('username-input').fill(ACCTS_OIDC_EMAIL);
-  await page.getByTestId('password-input').fill(ACCTS_OIDC_PWORD);
-  await page.getByTestId('submit-btn').click();
-};
-
-// Sets up an authenticator app via the management UI and returns the TOTP secret plus
-// the code used to confirm enrollment (so later OTP prompts can avoid reusing it — see
-// freshTotpCode). Leaves the auto-chained recovery-codes modal open on its confirmation step.
-const setUpAuthenticatorApp = async (page: Page) => {
-  await page.getByRole('button', { name: 'Set up' }).first().click();
-  await page.getByRole('button', { name: 'Enter code manually' }).click();
-  const manualSecret = await page.getByTestId('totp-manual-secret').innerText();
-  await page.getByRole('button', { name: 'Continue' }).click();
-  const enrollmentCode = makeTotpCode(manualSecret);
-  await page.getByTestId('totp-code-input').fill(enrollmentCode);
-  await page.getByRole('button', { name: 'Continue' }).click();
-  return { manualSecret, enrollmentCode };
-};
-
-// Keycloak's OTP policy rejects code reuse (otpPolicyCodeReusable: false), so when two
-// OTP prompts happen within one TOTP period we must wait for the next period before
-// generating another code.
-const freshTotpCode = async (page: Page, manualSecret: string, lastUsedCode: string) => {
-  let code = makeTotpCode(manualSecret);
-  if (code === lastUsedCode) {
-    const msUntilNextPeriod = (TOTP_PERIOD_SECONDS - (Math.floor(Date.now() / 1000) % TOTP_PERIOD_SECONDS)) * 1000;
-    await page.waitForTimeout(msUntilNextPeriod + 500);
-    code = makeTotpCode(manualSecret);
-  }
-  return code;
-};
-
-// Submit the OTP challenge on Keycloak's themed login and wait until the flow actually
-// navigates back to the accounts origin. The themed page is a Vue app, so a too-eager
-// fill/click can race its hydration or an auth-session-triggered reload and silently do
-// nothing — when that happens we are still on Keycloak and retry with a fresh code.
-const completeOtpChallenge = async (page: Page, manualSecret: string, lastUsedCode: string) => {
-  const otpInput = page.getByTestId('otp-input');
-  let code = await freshTotpCode(page, manualSecret, lastUsedCode);
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await expect(otpInput).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-    await otpInput.fill(code);
-    await page.getByTestId('submit-btn').click();
-    try {
-      await page.waitForURL((url) => !url.pathname.startsWith('/realms/'), { timeout: 10_000 });
-      return code;
-    } catch {
-      // Still on Keycloak — the submit was swallowed or the code was rejected.
-      code = await freshTotpCode(page, manualSecret, code);
-    }
-  }
-  throw new Error('Keycloak did not accept the OTP challenge after 3 attempts.');
-};
-
-// The recovery-code login page prompts for a specific 1-indexed code number; enter the
-// matching captured code and submit.
-const submitRequestedRecoveryCode = async (page: Page, codes: string[]) => {
-  const input = page.getByTestId('recovery-code-input');
-  await expect(input).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-  const promptText = await page.locator('#kc-recovery-code-login-form').innerText();
-  const requestedNumber = Number(promptText.match(/#\s*(\d+)/)?.[1] ?? '1');
-  await input.fill(codes[requestedNumber - 1]);
-  await page.getByTestId('submit-btn').click();
-};
+import {
+  fetchKeycloakCredentials,
+  getRecoveryCodesCredentialMetadata,
+  MFA_CREDENTIAL_TYPES,
+  removeExistingMfaCredentials,
+} from '../utils/keycloak-admin';
+import { expectImapXoauth2Login, expectSmtpXoauth2Login } from '../utils/mail-protocol';
+import {
+  acceptLegalPoliciesIfRequired,
+  captureRecoveryCodesAndConfirm,
+  completeOtpChallenge,
+  dismissRecoveryCodesDialog,
+  expectRecoveryCodesDialogVisible,
+  recoveryCodesDialog,
+  setUpAuthenticatorApp,
+  signInWithPassword,
+  submitRequestedRecoveryCode,
+} from '../utils/mfa';
+import { getStalwartAccessTokenViaSso } from '../utils/oauth';
+import { makeTotpCode } from '../utils/totp';
 
 test.describe('multi-factor authentication', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE],
 }, () => {
   // Always leave the account credential-clean, even if a test fails partway through
-  // enrolment — otherwise leftover MFA blocks the password-only sign-in in setup.
+  // enrolment; otherwise leftover MFA blocks password-only sign-in in setup.
   test.afterEach(async () => {
     await removeExistingMfaCredentials();
   });
@@ -442,7 +47,6 @@ test.describe('multi-factor authentication', {
     await page.reload();
     await waitForVueApp(page);
 
-    // Authenticator app row (first); the recovery codes row also surfaces a "Set up" button.
     await page.getByRole('button', { name: 'Set up' }).first().click();
     await expect(page.getByRole('img', { name: 'QR code for authenticator app setup' })).toBeVisible({
       timeout: TIMEOUT_30_SECONDS,
@@ -458,8 +62,6 @@ test.describe('multi-factor authentication', {
     const enrollmentCode = makeTotpCode(manualSecret);
     await page.getByTestId('totp-code-input').fill(enrollmentCode);
     await page.getByRole('button', { name: 'Continue' }).click();
-    // The recovery-codes modal auto-opens after a successful TOTP confirm.
-    // This test isn't about recovery codes, so dismiss it to land on the management page.
     await dismissRecoveryCodesDialog(page);
     await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
 
@@ -472,8 +74,6 @@ test.describe('multi-factor authentication', {
     await completeOtpChallenge(page, manualSecret, enrollmentCode);
     await waitForVueApp(page);
 
-    // The accounts login above established a Keycloak SSO session at acr=2.
-    // Stalwart's OAuth flow should reuse that session and immediately return a code.
     const accessToken = await getStalwartAccessTokenViaSso(page);
     await expectImapXoauth2Login(accessToken);
     await expectSmtpXoauth2Login(accessToken);
@@ -488,7 +88,6 @@ test.describe('multi-factor authentication', {
     await page.reload();
     await waitForVueApp(page);
 
-    // Set up TOTP — recovery codes modal auto-opens after a successful confirm.
     await page.getByRole('button', { name: 'Set up' }).first().click();
     await page.getByRole('button', { name: 'Enter code manually' }).click();
     const manualSecret = await page.getByTestId('totp-manual-secret').innerText();
@@ -496,33 +95,28 @@ test.describe('multi-factor authentication', {
     await page.getByTestId('totp-code-input').fill(makeTotpCode(manualSecret));
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    // The recovery-codes modal auto-opens on its confirmation step (no codes generated yet).
     await expectRecoveryCodesDialogVisible(page);
     await expect(page.getByTestId('recovery-codes-continue')).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
 
-    // Dismissing before continuing must NOT write a credential to Keycloak — nothing is
-    // generated or committed until the user confirms.
     await dismissRecoveryCodesDialog(page);
     expect(await getRecoveryCodesCredentialMetadata()).toEqual([]);
     const recoveryRow = page.locator('.authentication-method').filter({ hasText: 'Recovery codes' });
     await expect(recoveryRow.getByRole('button', { name: 'Set up' })).toBeVisible();
 
-    // Set up from the Recovery codes row: continue commits the codes immediately and shows them.
     await recoveryRow.getByRole('button', { name: 'Set up' }).click();
     const firstSetCodes = await captureRecoveryCodesAndConfirm(page);
     expect(firstSetCodes).toHaveLength(12);
-    await expect(recoveryRow.getByRole('button', { name: 'Regenerate' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await expect(recoveryRow.getByRole('button', { name: 'Regenerate' })).toBeVisible({
+      timeout: TIMEOUT_30_SECONDS,
+    });
     const credentialAfterFirstSetup = await getRecoveryCodesCredentialMetadata();
     expect(credentialAfterFirstSetup).toHaveLength(1);
 
-    // Regenerate + cancel on the confirmation step: nothing is regenerated, so the committed
-    // credential (id/createdDate) must be unchanged.
     await recoveryRow.getByRole('button', { name: 'Regenerate' }).click();
     await expectRecoveryCodesDialogVisible(page);
     await dismissRecoveryCodesDialog(page);
     expect(await getRecoveryCodesCredentialMetadata()).toEqual(credentialAfterFirstSetup);
 
-    // Regenerate + confirm: continuing rotates the codes and replaces the credential.
     await recoveryRow.getByRole('button', { name: 'Regenerate' }).click();
     const replacedCodes = await captureRecoveryCodesAndConfirm(page);
     expect(replacedCodes).toHaveLength(12);
@@ -531,16 +125,12 @@ test.describe('multi-factor authentication', {
     expect(credentialAfterReplacement).toHaveLength(1);
     expect(credentialAfterReplacement[0].id).not.toBe(credentialAfterFirstSetup[0].id);
 
-    // Remove: the credential should be deleted from Keycloak.
     await recoveryRow.getByRole('button', { name: 'Remove' }).click();
     await page.locator('dialog').getByRole('button', { name: 'Remove' }).click();
     await expect(recoveryRow.getByRole('button', { name: 'Set up' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     expect(await getRecoveryCodesCredentialMetadata()).toEqual([]);
   });
 
-  // Recovery codes must never be the only registered second factor: Keycloak silently
-  // deletes the credential once the last code is spent at login, so a codes-only account
-  // is a few logins away from having no MFA at all.
   test('recovery codes require an authenticator app and are removed along with it', async ({ page }) => {
     await ensureWeAreSignedIn(page);
     await acceptLegalPoliciesIfRequired(page);
@@ -552,17 +142,16 @@ test.describe('multi-factor authentication', {
 
     const recoveryRow = page.locator('.authentication-method').filter({ hasText: 'Recovery codes' });
 
-    // With no authenticator enrolled, recovery codes cannot be set up.
     await expect(page.getByTestId('mfa-recoveryCodes-setup-button')).toBeDisabled();
     await expect(recoveryRow).toContainText('Set up an authenticator app first');
 
-    // Enrol the authenticator; the chained recovery-codes modal commits a set of codes.
     await setUpAuthenticatorApp(page);
     const codes = await captureRecoveryCodesAndConfirm(page);
     expect(codes).toHaveLength(12);
-    await expect(recoveryRow.getByRole('button', { name: 'Regenerate' })).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await expect(recoveryRow.getByRole('button', { name: 'Regenerate' })).toBeVisible({
+      timeout: TIMEOUT_30_SECONDS,
+    });
 
-    // Removing the authenticator cascades: the recovery codes are deleted with it...
     await page.getByTestId('mfa-authenticatorApp-remove-button').click();
     await page.locator('dialog').getByRole('button', { name: 'Remove' }).click();
     await expect(page.getByTestId('mfa-authenticatorApp-setup-button')).toBeVisible({
@@ -570,7 +159,6 @@ test.describe('multi-factor authentication', {
     });
     await expect(page.getByTestId('mfa-recoveryCodes-setup-button')).toBeDisabled();
 
-    // ...and in Keycloak no MFA credential of either type remains.
     const { credentials } = await fetchKeycloakCredentials();
     expect(credentials.filter((item: { type?: string }) => MFA_CREDENTIAL_TYPES.includes(item.type ?? ''))).toEqual([]);
   });
@@ -584,22 +172,16 @@ test.describe('multi-factor authentication', {
     await page.reload();
     await waitForVueApp(page);
 
-    // Enrol the authenticator app; the auto-chained recovery-codes generation is NOT
-    // step-up gated (registering the TOTP just proved a live OTP code), so it commits
-    // without an extra prompt.
     const { manualSecret, enrollmentCode } = await setUpAuthenticatorApp(page);
     const initialCodes = await captureRecoveryCodesAndConfirm(page);
     expect(initialCodes).toHaveLength(12);
     const initialCredential = await getRecoveryCodesCredentialMetadata();
     expect(initialCredential).toHaveLength(1);
 
-    // Sign in fresh (password + OTP). A normal login does not seed the MFA-management
-    // window, so the next management action must demand a step-up verification.
     await signInWithPassword(page);
     const signInCode = await completeOtpChallenge(page, manualSecret, enrollmentCode);
     await waitForVueApp(page);
 
-    // Loading the management page already requires recent MFA auth → verify modal.
     await page.goto(`${ACCTS_HUB_URL}/manage-mfa`);
     await waitForVueApp(page);
     await expect(page.getByRole('heading', { name: 'Verify your identity' })).toBeVisible({
@@ -608,12 +190,6 @@ test.describe('multi-factor authentication', {
 
     await page.getByRole('button', { name: 'Verify', exact: true }).click();
 
-    // The step-up redirect carries acr_values=2 (no max_age, so we don't force a full
-    // first-factor re-auth). The realm's L2 conditional-LoA re-challenges the OTP and
-    // refreshes the token's auth_time — which the keycloak-mfa-rest token-claims gate
-    // checks alongside acr. This normally jumps straight to the OTP challenge, but
-    // depending on how much of the SSO session Keycloak reuses it may re-ask for the
-    // credentials first; handle both.
     const otpInput = page.getByTestId('otp-input');
     const usernameInput = page.getByTestId('username-input');
     await expect(otpInput.or(usernameInput).first()).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
@@ -625,8 +201,6 @@ test.describe('multi-factor authentication', {
     await completeOtpChallenge(page, manualSecret, signInCode);
     await waitForVueApp(page);
 
-    // Back on the management page with a stepped-up session: regenerating succeeds
-    // against both the accounts pre-check and the provider's step-up gate.
     const recoveryRow = page.locator('.authentication-method').filter({ hasText: 'Recovery codes' });
     await recoveryRow.getByRole('button', { name: 'Regenerate' }).click();
     const replacedCodes = await captureRecoveryCodesAndConfirm(page);
@@ -648,26 +222,20 @@ test.describe('multi-factor authentication', {
     await page.reload();
     await waitForVueApp(page);
 
-    // Enrol both factors: authenticator (auto-chains the recovery-codes modal) + recovery codes.
     await setUpAuthenticatorApp(page);
     const codes = await captureRecoveryCodesAndConfirm(page);
     expect(codes).toHaveLength(12);
 
-    // Sign in fresh; the default second-factor page offers "Try another way".
     await signInWithPassword(page);
     await page.getByTestId('try-another-way-btn').click();
 
-    // The selector must render both methods with the authenticator app listed first.
-    await expect(page.locator('.select-auth-item__title')).toHaveText(
-      ['Authenticator App', 'Recovery Code'],
-      { timeout: TIMEOUT_30_SECONDS },
-    );
+    await expect(page.locator('.select-auth-item__title')).toHaveText(['Authenticator App', 'Recovery Code'], {
+      timeout: TIMEOUT_30_SECONDS,
+    });
 
-    // Choosing recovery codes routes to the recovery-code page and signs in.
     await page.getByRole('button', { name: /Recovery Code/ }).click();
     await submitRequestedRecoveryCode(page, codes);
 
-    // Signed in: the accounts hub banner avatar is the stable post-login signal.
     await waitForVueApp(page);
     await expect(page.getByRole('banner').locator('.avatar')).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
 
