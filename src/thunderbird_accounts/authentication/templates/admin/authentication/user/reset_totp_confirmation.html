@@ -1,6 +1,9 @@
 {% extends "admin/base_site.html" %}
 {% load i18n admin_urls %}
 
+{# Confirmation page for the admin_reset_totp_credentials action. It is rendered on the #}
+{# first invocation (no apply=1); submitting this form posts back with apply=1 to actually #}
+{# delete every selected user's Keycloak TOTP credentials. #}
 {% block content %}
   <p>
     {% blocktranslate count counter=queryset|length %}

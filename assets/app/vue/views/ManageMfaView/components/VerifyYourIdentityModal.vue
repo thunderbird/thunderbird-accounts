@@ -5,13 +5,8 @@ import { PrimaryButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/servic
 import { PhKey } from '@phosphor-icons/vue';
 import GenericModal from '@/components/GenericModal.vue';
 
-enum METHODS {
-  AUTHENTICATOR_APP = 'authenticator-app',
-}
-
 const { t } = useI18n();
 
-const method = ref<METHODS>(METHODS.AUTHENTICATOR_APP);
 const errorMessage = ref('');
 const isLoading = ref(false);
 const genericModal = useTemplateRef<InstanceType<typeof GenericModal>>('genericModal');
@@ -20,19 +15,16 @@ const props = defineProps<{
   reauthUrl?: string;
 }>();
 
-const goToCodeStep = async () => {
-  if (!method.value) return;
-
-  if (method.value === METHODS.AUTHENTICATOR_APP) {
-    const fallback = `/oidc/mfa-reauth/?next=${encodeURIComponent(window.location.pathname)}`;
-    window.location.assign(props.reauthUrl || fallback);
-    return;
-  }
+// We hand off to Keycloak, which presents whichever second factor(s) the user has
+// enrolled (authenticator app, recovery code, and more as they're added). The app can't
+// preselect one, so this is a confirmation rather than a method picker.
+const verify = () => {
+  const fallback = `/oidc/mfa-reauth/?next=${encodeURIComponent(window.location.pathname)}`;
+  window.location.assign(props.reauthUrl || fallback);
 };
 
 defineExpose({
   open: () => {
-    method.value = METHODS.AUTHENTICATOR_APP;
     errorMessage.value = '';
     isLoading.value = false;
     genericModal.value.open();
@@ -48,31 +40,23 @@ defineExpose({
     <p>{{ t('views.manageMfa.modals.verifyYourIdentity.description') }}</p>
 
     <div class="verify-your-identity-options">
-      <input
-        class="screen-reader-only"
-        type="radio"
-        name="verify-your-identity"
-        id="authenticator-app"
-        v-model="method"
-        value="authenticator-app"
-      />
-      <label class="verify-option" for="authenticator-app">
+      <div class="verify-option">
         <span class="icon"><ph-key size="24" /></span>
         <span class="content">
           <span class="title">
-            {{ t('views.manageMfa.modals.verifyYourIdentity.authenticatorApp') }}
+            {{ t('views.manageMfa.modals.verifyYourIdentity.secondFactor') }}
           </span>
           <span class="description">
-            {{ t('views.manageMfa.modals.verifyYourIdentity.authenticatorAppDescription') }}
+            {{ t('views.manageMfa.modals.verifyYourIdentity.secondFactorDescription') }}
           </span>
         </span>
-      </label>
+      </div>
     </div>
 
     <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">{{ errorMessage }}</notice-bar>
 
     <div class="verify-your-identity-options-actions">
-      <primary-button :disabled="isLoading || !method" @click="goToCodeStep">
+      <primary-button :disabled="isLoading" @click="verify">
         {{ t('views.manageMfa.modals.verifyYourIdentity.verify') }}
       </primary-button>
     </div>
@@ -94,18 +78,6 @@ p {
   gap: 1rem;
   margin-block-end: 1rem;
 
-  /* Focus ring when the hidden input is focused */
-  .screen-reader-only:focus-visible + .verify-option {
-    outline: 2px solid var(--colour-service-primary);
-    outline-offset: 2px;
-  }
-
-  /* Checked styles */
-  .screen-reader-only:checked + .verify-option {
-    border-color: var(--colour-service-primary);
-    background-color: var(--colour-service-soft);
-  }
-
   .verify-option {
     display: flex;
     align-items: center;
@@ -114,12 +86,6 @@ p {
     border-radius: 0.5rem;
     background-color: var(--colour-neutral-base);
     padding: 0.875rem 1rem;
-    cursor: pointer;
-    transition: var(--transition);
-
-    &:hover {
-      border-color: var(--colour-neutral-border-intense);
-    }
 
     .icon {
       display: inline-flex;

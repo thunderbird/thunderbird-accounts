@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, useTemplateRef } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { CheckboxInput, LinkButton, PrimaryButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
+import { CheckboxInput, CopyToClipboard, LinkButton, PrimaryButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import GenericModal from '@/components/GenericModal.vue';
 import { RecoveryCodesCredential, regenerateRecoveryCodes } from '../api';
 import { useMfaAction } from '../useMfaAction';
@@ -19,7 +19,9 @@ const genericModal = useTemplateRef<InstanceType<typeof GenericModal>>('genericM
 const step = ref<MODAL_STEPS>(MODAL_STEPS.CONFIRM);
 const codes = ref<string[]>([]);
 const acknowledged = ref(false);
-const justCopied = ref(false);
+
+// One newline-joined blob for the CopyToClipboard pattern and the download fallback.
+const codesText = computed(() => codes.value.join('\n'));
 
 const emit = defineEmits<{
   (e: 'configured', credentials: RecoveryCodesCredential[]): void;
@@ -50,24 +52,9 @@ const generate = async () => {
   downloadCodes();
 };
 
-const copyCodes = async () => {
-  if (!codes.value.length) return;
-  try {
-    await navigator.clipboard.writeText(codes.value.join('\n'));
-    justCopied.value = true;
-    setTimeout(() => {
-      justCopied.value = false;
-    }, 2000);
-  } catch {
-    // navigator.clipboard requires a secure context — fail silently here and
-    // let the user fall back to selecting the codes directly. Production runs
-    // over HTTPS so this only affects local-dev-over-HTTP testing.
-  }
-};
-
 const downloadCodes = () => {
   if (!codes.value.length) return;
-  const blob = new Blob([codes.value.join('\n')], { type: 'text/plain' });
+  const blob = new Blob([codesText.value], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -84,7 +71,6 @@ defineExpose({
     codes.value = [];
     errorMessage.value = '';
     acknowledged.value = false;
-    justCopied.value = false;
     isLoading.value = false;
     genericModal.value.open();
   },
@@ -125,11 +111,11 @@ defineExpose({
         </ul>
 
         <div class="codes-actions">
-          <link-button data-testid="recovery-codes-copy" @click="copyCodes">
-            {{ justCopied
-              ? t('views.manageMfa.modals.manageRecoveryCodes.copied')
-              : t('views.manageMfa.modals.manageRecoveryCodes.copy') }}
-          </link-button>
+          <copy-to-clipboard
+            data-testid="recovery-codes-copy"
+            :copy-value="codesText"
+            :display-text="t('views.manageMfa.modals.manageRecoveryCodes.copy')"
+          />
           <link-button data-testid="recovery-codes-download" @click="downloadCodes">
             {{ t('views.manageMfa.modals.manageRecoveryCodes.download') }}
           </link-button>

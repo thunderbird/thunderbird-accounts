@@ -20,9 +20,6 @@ else
     # Run migrations
     ./manage.py migrate
 
-    # NOTE: The Keycloak MFA step-up flow is reconciled by keycloak-config-cli from the
-    # keycloak container itself (scripts/apply-mfa-config.sh), not from here anymore.
-
     # Retrieve paddle products & prices
     ./manage.py get_paddle_products
     ./manage.py get_paddle_prices

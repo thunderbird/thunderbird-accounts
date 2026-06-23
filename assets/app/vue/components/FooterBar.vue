@@ -4,24 +4,28 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { StandardFooter } from '@thunderbirdops/services-ui';
 import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL } from '@/defines';
+import { FeatureFlag, FeatureFlagValue } from '@/types';
+import { isFeatureFlagEnabled } from '@/utils';
 
 const { t } = useI18n();
 
 const isAuthenticated = ref(window._page?.isAuthenticated);
 
-const navItemsAccounts = [
-  // TODO: Expose Manage MFA here after production validation is complete.
-  // {
-  //   route: '/manage-mfa',
-  //   i18nKey: 'manageMfa',
-  // },
+type NavItem = { route: string; i18nKey: string };
+
+const navItemsAccounts: NavItem[] = [
+  // Manage MFA is rolling out behind the SHOW_MFA flag
+  ...(isFeatureFlagEnabled(FeatureFlag.SHOW_MFA, FeatureFlagValue.TRUE)
+    ? [{ route: '/manage-mfa', i18nKey: 'manageMfa' }]
+    : []),
+  // TODO: Expose Privacy & Data here once it's ready.
   // {
   //   route: '/privacy-and-data',
   //   i18nKey: 'privacyAndData',
   // },
 ];
 
-const navItemsMail = [
+const navItemsMail: NavItem[] = [
   // TODO: Uncomment when implementing security settings
   // {
   //   route: '/mail/security-settings',

@@ -4,6 +4,17 @@ import { ACCTS_HUB_URL, ACCTS_OIDC_EMAIL, ACCTS_OIDC_PWORD, TIMEOUT_30_SECONDS }
 import { waitForVueApp } from './utils';
 import { makeTotpCode, TOTP_PERIOD_SECONDS } from './totp';
 
+// Manage MFA ships dark behind the SHOW_MFA feature flag (assets/app/vue/types.ts),
+// which gates both the /manage-mfa route and its nav link. Seed the flag in localStorage
+// before any page scripts run so the router registers the route for the whole test.
+const SHOW_MFA_FEATURE_FLAG = 'feature.show-mfa';
+
+export const enableMfaFeatureFlag = async (page: Page) => {
+  await page.addInitScript((flag) => {
+    window.localStorage.setItem(flag, 'true');
+  }, SHOW_MFA_FEATURE_FLAG);
+};
+
 export const acceptLegalPoliciesIfRequired = async (page: Page) => {
   const acceptButton = page.getByRole('button', { name: 'Accept policies and continue' });
   if (await acceptButton.isVisible()) {

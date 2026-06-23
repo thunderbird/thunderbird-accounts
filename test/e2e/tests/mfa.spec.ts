@@ -20,6 +20,7 @@ import {
   captureRecoveryCodesAndConfirm,
   completeOtpChallenge,
   dismissRecoveryCodesDialog,
+  enableMfaFeatureFlag,
   expectRecoveryCodesDialogVisible,
   recoveryCodesDialog,
   setUpAuthenticatorApp,
@@ -32,6 +33,12 @@ import { makeTotpCode } from '../utils/totp';
 test.describe('multi-factor authentication', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE],
 }, () => {
+  // Manage MFA is gated behind the SHOW_MFA feature flag; enable it per-browser so the
+  // /manage-mfa route is registered before any test navigates to it.
+  test.beforeEach(async ({ page }) => {
+    await enableMfaFeatureFlag(page);
+  });
+
   // Always leave the account credential-clean, even if a test fails partway through
   // enrolment; otherwise leftover MFA blocks password-only sign-in in setup.
   test.afterEach(async () => {

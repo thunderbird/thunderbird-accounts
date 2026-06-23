@@ -46,7 +46,8 @@
         "recoveryPhoneNumber": "Recovery Phone Number",
         "change": "change",
         "set": "Set",
-        "on": "On"
+        "on": "On",
+        "off": "Off"
       },
       "privacyAndDataCard": {
         "privacyAndData": "Privacy & Data",
@@ -443,8 +444,8 @@
         "verifyYourIdentity": {
           "title": "Verify your identity",
           "description": "To keep your account secure, please verify your identity before making changes to sensitive information.",
-          "authenticatorApp": "Authenticator App",
-          "authenticatorAppDescription": "Continue to Keycloak and enter a one-time code from your authenticator app.",
+          "secondFactor": "Authenticator app or recovery code",
+          "secondFactorDescription": "Continue to verify your identity using your authenticator app or a recovery code.",
           "verify": "Verify",
           "oneTimeCode": "One-time code",
           "authenticatorAppCodeDescription": "Enter the code from your authenticator app:",

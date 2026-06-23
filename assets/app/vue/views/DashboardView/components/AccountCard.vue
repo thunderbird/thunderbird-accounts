@@ -1,13 +1,39 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { VisualDivider } from '@thunderbirdops/services-ui';
+import { useRouter } from 'vue-router';
+import { VisualDivider, PrimaryButton } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
+import { FeatureFlag, FeatureFlagValue } from '@/types';
+import { isFeatureFlagEnabled } from '@/utils';
+import { getMfaMethods, MfaReauthenticationRequiredError } from '@/views/ManageMfaView/api';
 
 const { t } = useI18n();
+const router = useRouter();
 
 // The user's username is their primary email address
 const username = computed(() => window._page?.username);
+
+const showMfa = isFeatureFlagEnabled(FeatureFlag.SHOW_MFA, FeatureFlagValue.TRUE);
+const hasMfa = ref(false);
+
+const goToManageMfa = () => router.push('/manage-mfa');
+
+// Fetch MFA status when the card mounts so it always reflects current state (an SPA
+// navigation back from Manage MFA shows fresh status without a full page reload).
+onMounted(async () => {
+  if (!showMfa) return;
+  try {
+    const response = await getMfaMethods();
+    hasMfa.value = response.methods.authenticatorApp.set;
+  } catch (error) {
+    // The methods endpoint requires recent step-up only when an authenticator is set,
+    // so a reauth challenge here means MFA is enabled — surface "On" without prompting.
+    if (error instanceof MfaReauthenticationRequiredError) {
+      hasMfa.value = true;
+    }
+  }
+});
 </script>
 
 <template>
@@ -30,17 +56,20 @@ const username = computed(() => window._page?.username);
         </div>
       </div>
 
-      <!-- <visual-divider /> -->
+      <template v-if="showMfa">
+        <visual-divider />
 
-      <!-- TODO: Uncomment when implementing MFA -->
-      <!-- <div class="my-account-card-field with-outline-button">
-        <div>
-          <strong>{{ t('views.dashboard.accountCard.mfa') }}</strong>
-          <p>{{ t('views.dashboard.accountCard.on') }}</p>
+        <div class="my-account-card-field with-outline-button">
+          <div>
+            <strong>{{ t('views.dashboard.accountCard.mfa') }}</strong>
+            <p>{{ hasMfa ? t('views.dashboard.accountCard.on') : t('views.dashboard.accountCard.off') }}</p>
+          </div>
+
+          <primary-button variant="outline" size="small" @click="goToManageMfa">
+            {{ t('views.dashboard.accountCard.manage') }}
+          </primary-button>
         </div>
-
-        <primary-button variant="outline" size="small">{{ t('views.dashboard.accountCard.manage') }}</primary-button>
-      </div> -->
+      </template>
 
       <!-- <visual-divider /> -->
 
