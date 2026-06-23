@@ -1,7 +1,7 @@
 import enum
 import json
 import datetime
-from typing import Optional
+from typing import Optional, TypedDict
 from urllib.parse import urljoin
 
 import requests
@@ -44,6 +44,21 @@ class RequestMethods(enum.StrEnum):
     DELETE = 'delete'
 
 
+class TotpSetupResponse(TypedDict, total=False):
+    secret: str
+    encodedSecret: str
+    otpAuthUri: str
+    digits: int
+    period: int
+    algorithm: str
+
+
+class RecoveryCodesResponse(TypedDict, total=False):
+    codes: list[str]
+    total: int
+    remaining: int
+
+
 class KeycloakClient:
     access_token: Optional[str] = None
 
@@ -73,26 +88,18 @@ class KeycloakClient:
         data: Optional[dict | list | str] = None,
         params: Optional[dict] = None,
         content_type: str = 'application/json',
-        base_url: Optional[str] = None,
-        access_token: Optional[str] = None,
     ) -> requests.Response:
         """Handles authenticated requests to the keycloak api
-        Endpoint should not have a leading slash to prevent urljoin from trimming the base_url.
-        Pass ``base_url`` to target a different host than the admin API (e.g. the
-        realm-path keycloak-mfa-rest provider); defaults to the admin API endpoint.
-        Pass ``access_token`` to authenticate as a specific principal (e.g. the end user's
-        forwarded OIDC token for the mfa-rest provider); defaults to the admin client token.
+        Endpoint should not have a leading slash to prevent urljoin from trimming the admin API base URL.
         :raises RequestException: On non-200 responses. You can access the response object from the exception."""
-        if access_token is None:
-            if not self.access_token:
-                self.access_token = self._get_access_token()
-            access_token = self.access_token
+        if not self.access_token:
+            self.access_token = self._get_access_token()
 
         # TODO: Consider raising a value error instead of fixing
         if endpoint[0] == '/':
             endpoint = endpoint[1:]
 
-        url = urljoin(base_url or settings.KEYCLOAK_API_ENDPOINT, endpoint)
+        url = urljoin(settings.KEYCLOAK_API_ENDPOINT, endpoint)
 
         response = requests.request(
             method=method.value,
@@ -103,7 +110,7 @@ class KeycloakClient:
             headers={
                 'Accept': 'application/json',
                 'Content-Type': content_type,
-                'Authorization': f'Bearer {access_token}',
+                'Authorization': f'Bearer {self.access_token}',
             },
         )
 
@@ -130,99 +137,12 @@ class KeycloakClient:
         self.request(f'users/{oidc_id}/logout', RequestMethods.POST)
         return True
 
-    def _mfa_request(
-        self,
-        endpoint: str,
-        user_access_token: str,
-        method: RequestMethods = RequestMethods.GET,
-        json_data: Optional[dict] = None,
-    ) -> dict:
-        """Call the self-service keycloak-mfa-rest provider with the end user's forwarded
-        OIDC access token (the provider operates on that token's subject). Raises
-        :any:`MfaStepUpRequiredError` when the provider demands a recent second-factor
-        authentication (401 ``step_up_required``), :any:`MfaSessionExpiredError` on a plain
-        401 (the forwarded access token is missing/expired), :any:`MfaCredentialError` for
-        other client errors (e.g. an invalid TOTP code, or 409 ``mfa_already_configured``),
-        and re-raises other :any:`RequestException`\\ s as upstream failures."""
-        try:
-            response = self.request(
-                endpoint,
-                method,
-                json_data=json_data,
-                base_url=settings.KEYCLOAK_MFA_API_ENDPOINT,
-                access_token=user_access_token,
-            )
-        except RequestException as exc:
-            http_response = getattr(exc, 'response', None)
-            if http_response is not None:
-                try:
-                    error_code = http_response.json().get('error')
-                except (ValueError, JSONDecodeError):
-                    error_code = None
-                if http_response.status_code == 401:
-                    # A step-up demand carries a marker; a bare 401 means the forwarded
-                    # user token is missing/expired (its short lifetime can lapse while the
-                    # user lingers in the setup flow) — surface that as a re-login prompt.
-                    if error_code == MFA_REST_ERROR_STEP_UP_REQUIRED:
-                        raise MfaStepUpRequiredError() from exc
-                    raise MfaSessionExpiredError() from exc
-                if http_response.status_code in (400, 409):
-                    raise MfaCredentialError(error_code or 'invalid_request') from exc
-            raise
-        return response.json()
-
-    def start_totp_setup(self, user_access_token: str) -> dict:
-        """Ask the provider to generate a TOTP secret + otpauth URI for the calling user.
-
-        Authenticated with the user's forwarded OIDC token; the provider operates on the
-        token subject. Nothing is written to Keycloak yet — the returned secret is
-        committed via :any:`register_totp_credential` once the user proves possession.
-        """
-        return self._mfa_request('totp/setup', user_access_token, RequestMethods.GET)
-
-    def register_totp_credential(self, user_access_token: str, secret: str, code: str, user_label: str) -> dict:
-        """Verify ``code`` against ``secret`` and register the TOTP credential for the
-        calling user via the provider. Enrollment-only: the provider rejects the request
-        when an authenticator-app credential already exists (re-enrollment is remove,
-        then a fresh setup).
-
-        :raises MfaCredentialError: If the provider rejects the code as invalid, or an
-            authenticator app is already configured (``mfa_already_configured``)."""
-        return self._mfa_request(
-            'totp/register',
-            user_access_token,
-            RequestMethods.POST,
-            json_data={
-                'secret': secret,
-                'code': code,
-                'deviceName': user_label,
-            },
-        )
-
     def get_recovery_codes_credentials(self, oidc_id: str) -> list[dict]:
         return [
             credential
             for credential in self.get_security_credentials(oidc_id)
             if credential.get('type') == KEYCLOAK_RECOVERY_CODES_CREDENTIAL_TYPE
         ]
-
-    def regenerate_recovery_codes(self, user_access_token: str, user_label: Optional[str] = None) -> dict:
-        """Generate a fresh set of recovery codes for the calling user via the provider,
-        replacing any existing recovery-codes credential, and return the plaintext codes once.
-
-        Authenticated with the user's forwarded OIDC token (provider operates on the token
-        subject). Keycloak generates and hashes the codes; accounts never sees a stored hash.
-        The destructive "this resets your old codes" confirmation lives in the UI.
-
-        :raises MfaStepUpRequiredError: If the provider requires a recent second-factor
-            authentication (the token's acr/auth_time claims are missing or stale)."""
-        json_data = {'deviceName': user_label} if user_label else None
-        return self._mfa_request(
-            'recovery-codes/regenerate',
-            user_access_token,
-            RequestMethods.POST,
-            json_data=json_data,
-        )
 
     def _shared_clean(self, username):
         if '@' not in username:
@@ -470,3 +390,98 @@ class KeycloakClient:
                 )
 
         return pkid
+
+
+class KeycloakMfaClient:
+    """Client for the self-service keycloak-mfa-rest provider.
+
+    These calls use the end user's forwarded OIDC access token and operate on the
+    token subject. Keep this separate from the admin API client so the two trust
+    boundaries cannot accidentally share auth or endpoint routing.
+    """
+
+    def request(
+        self,
+        endpoint: str,
+        user_access_token: str,
+        method: RequestMethods = RequestMethods.GET,
+        json_data: Optional[dict] = None,
+    ) -> requests.Response:
+        if endpoint[0] == '/':
+            endpoint = endpoint[1:]
+
+        response = requests.request(
+            method=method.value,
+            url=urljoin(settings.KEYCLOAK_MFA_API_ENDPOINT, endpoint),
+            json=json_data,
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {user_access_token}',
+            },
+        )
+        response.raise_for_status()
+        return response
+
+    def _provider_request(
+        self,
+        endpoint: str,
+        user_access_token: str,
+        method: RequestMethods = RequestMethods.GET,
+        json_data: Optional[dict] = None,
+    ) -> dict:
+        """Call the self-service provider and translate its MFA-specific failures."""
+        try:
+            response = self.request(endpoint, user_access_token, method, json_data=json_data)
+        except RequestException as exc:
+            http_response = getattr(exc, 'response', None)
+            if http_response is not None:
+                try:
+                    error_code = http_response.json().get('error')
+                except (ValueError, JSONDecodeError):
+                    error_code = None
+                if http_response.status_code == 401:
+                    if error_code == MFA_REST_ERROR_STEP_UP_REQUIRED:
+                        raise MfaStepUpRequiredError() from exc
+                    raise MfaSessionExpiredError() from exc
+                if http_response.status_code in (400, 409):
+                    raise MfaCredentialError(error_code or 'invalid_request') from exc
+            raise
+        return response.json()
+
+    def start_totp_setup(self, user_access_token: str) -> TotpSetupResponse:
+        """Generate a TOTP secret + otpauth URI for the calling user without writing it."""
+        return self._provider_request('totp/setup', user_access_token, RequestMethods.GET)
+
+    def register_totp_credential(
+        self,
+        user_access_token: str,
+        secret: str,
+        code: str,
+        user_label: str,
+    ) -> dict:
+        """Verify ``code`` against ``secret`` and register an enrollment-only TOTP credential."""
+        return self._provider_request(
+            'totp/register',
+            user_access_token,
+            RequestMethods.POST,
+            json_data={
+                'secret': secret,
+                'code': code,
+                'deviceName': user_label,
+            },
+        )
+
+    def regenerate_recovery_codes(
+        self,
+        user_access_token: str,
+        user_label: Optional[str] = None,
+    ) -> RecoveryCodesResponse:
+        """Replace recovery codes for the calling user and return the plaintext codes once."""
+        json_data = {'deviceName': user_label} if user_label else None
+        return self._provider_request(
+            'recovery-codes/regenerate',
+            user_access_token,
+            RequestMethods.POST,
+            json_data=json_data,
+        )

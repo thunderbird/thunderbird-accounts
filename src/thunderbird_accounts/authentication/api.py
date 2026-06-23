@@ -1,33 +1,21 @@
-import json
-import time
 from enum import StrEnum
-from urllib.parse import quote, urlencode, urlparse
-import jwt
+from urllib.parse import quote
+
 from django.conf import settings
-from django.core.cache import cache
-from django.urls import reverse
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
 import sentry_sdk
-from requests.exceptions import RequestException
 
-from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.exceptions import (
     InvalidDomainError,
     ImportUserError,
-    MfaCredentialError,
-    MfaSessionExpiredError,
-    MfaStepUpRequiredError,
 )
-from thunderbird_accounts.authentication.mfa import (
-    MFA_MANAGEMENT_AUTH_SESSION_KEY,
-    MFA_REST_ERROR_ALREADY_CONFIGURED,
-    MFA_REST_ERROR_TOTP_NOT_CONFIGURED,
-    has_recent_mfa_management_auth,
-    make_pending_totp_cache_key,
+from thunderbird_accounts.authentication.mfa_management import (
+    MfaManagementError,
+    MfaManagementService,
+    mfa_management_error_response,
 )
-from thunderbird_accounts.authentication.middleware import refresh_user_access_token
 from thunderbird_accounts.authentication.utils import (
     is_email_in_allow_list,
     KeycloakRequiredAction,
@@ -66,160 +54,6 @@ class RecoveryCodesRegenerateThrottle(UserRateThrottle):
     scope = 'recovery_codes_regenerate'
 
 
-# mozilla-django-oidc stores the user's access token here when OIDC_STORE_ACCESS_TOKEN is on.
-OIDC_ACCESS_TOKEN_SESSION_KEY = 'oidc_access_token'
-
-# Refresh slightly before the real expiry so a token that's valid now but dies mid-request
-# isn't forwarded and rejected.
-_ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS = 30
-
-
-def _access_token_is_expired(access_token: str) -> bool:
-    """True only when the token's exp can be read and has passed (minus a small skew).
-    Unreadable tokens are treated as not-expired so we forward them unchanged."""
-    try:
-        claims = jwt.decode(access_token, options={'verify_signature': False})
-        exp = int(claims['exp'])
-    except (jwt.PyJWTError, KeyError, ValueError, TypeError):
-        return False
-    return time.time() >= exp - _ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS
-
-
-def get_user_access_token(request: Request) -> str | None:
-    """The end user's OIDC access token, forwarded to the self-service mfa-rest provider so
-    it operates on the token subject (the caller can only manage their own MFA).
-
-    The stored token is short-lived (~5 min) and our SessionRefresh middleware only renews it
-    on GET page-loads, not these POST/XHR calls — so refresh on demand before forwarding it.
-    A failed refresh falls back to the stored token, letting callers surface the usual 401.
-    """
-    access_token = request.session.get(OIDC_ACCESS_TOKEN_SESSION_KEY)
-    if access_token and not _access_token_is_expired(access_token):
-        return access_token
-    return refresh_user_access_token(request) or access_token
-
-
-def mfa_session_expired_response() -> Response:
-    return Response(
-        {'success': False, 'error': _('Your session has expired. Please sign in again.')},
-        status=401,
-    )
-
-
-def _base_credential_fields(credential: dict, default_label) -> dict:
-    return {
-        'id': credential.get('id'),
-        'label': credential.get('userLabel') or credential.get('user_label') or default_label,
-        'createdDate': credential.get('createdDate'),
-        'lastUsedDate': credential.get('lastUsedDate'),
-    }
-
-
-def serialize_totp_credentials(credentials: list[dict]) -> list[dict]:
-    return [_base_credential_fields(credential, _('Authenticator app')) for credential in credentials]
-
-
-def serialize_recovery_codes_credentials(credentials: list[dict]) -> list[dict]:
-    """Serialize stored recovery-codes credentials for the management UI.
-
-    Plaintext codes are never returned here — they're only available in the response
-    to a regenerate request. We surface the metadata Keycloak stores in
-    `credentialData` so the UI can show "X of Y remaining" without re-fetching.
-    """
-    serialized: list[dict] = []
-    for credential in credentials:
-        try:
-            credential_data = json.loads(credential.get('credentialData') or '{}')
-        except (TypeError, ValueError):
-            credential_data = {}
-        serialized.append(
-            {
-                **_base_credential_fields(credential, _('Recovery codes')),
-                'totalCodes': credential_data.get('total'),
-                'remainingCodes': credential_data.get('remaining'),
-            }
-        )
-    return serialized
-
-
-def _resolve_mfa_next_path(request: Request) -> str:
-    """Return the path to redirect the user back to after they re-authenticate.
-
-    Prefers the same-origin Referer of the request that triggered the reauth so
-    we can route the user back where they came from. Falls back to
-    ``MFA_DEFAULT_NEXT_PATH`` when the Referer is missing, cross-origin, or
-    not a relative path.
-    """
-    default = settings.MFA_DEFAULT_NEXT_PATH
-    referer = request.META.get('HTTP_REFERER', '')
-    if not referer:
-        return default
-
-    try:
-        parsed = urlparse(referer)
-    except ValueError:
-        return default
-
-    if parsed.netloc and parsed.netloc != request.get_host():
-        return default
-    if not parsed.path.startswith('/'):
-        return default
-
-    return f'{parsed.path}?{parsed.query}' if parsed.query else parsed.path
-
-
-def make_mfa_reauthentication_response(request: Request) -> Response:
-    reauth_url = f'{reverse("mfa_reauth")}?{urlencode({"next": _resolve_mfa_next_path(request)})}'
-    return Response(
-        {
-            'success': False,
-            'error': _('Please sign in again before changing multi-factor authentication.'),
-            'reauthUrl': reauth_url,
-        },
-        status=403,
-    )
-
-
-def require_recent_mfa_auth(request: Request) -> Response | None:
-    if has_recent_mfa_management_auth(request.session):
-        return None
-
-    return make_mfa_reauthentication_response(request)
-
-
-def require_recent_mfa_auth_if_totp_set(
-    request: Request,
-    totp_credentials: list[dict] | None = None,
-    keycloak: KeycloakClient | None = None,
-) -> Response | None:
-    """Returns a reauth response if the user has TOTP configured and lacks a
-    recent MFA management auth, otherwise None.
-
-    Pass `totp_credentials` to skip the Keycloak round-trip when the caller
-    already fetched them, or `keycloak` to reuse an existing client (and its
-    cached admin token) for the lookup.
-    """
-    if has_recent_mfa_management_auth(request.session):
-        return None
-
-    try:
-        credentials = (
-            totp_credentials
-            if totp_credentials is not None
-            else (keycloak or KeycloakClient()).get_totp_credentials(request.user.oidc_id)
-        )
-    except RequestException as exc:
-        sentry_sdk.capture_exception(exc)
-        return Response(
-            {'success': False, 'error': _('Could not load multi-factor authentication methods.')},
-            status=502,
-        )
-
-    if credentials:
-        return make_mfa_reauthentication_response(request)
-    return None
-
-
 @api_view(['POST'])
 def get_user_profile(request: Request):
     if not request.user:
@@ -231,36 +65,15 @@ def get_user_profile(request: Request):
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def get_mfa_methods(request: Request):
-    if not request.user.oidc_id:
-        return Response({'success': False, 'error': _('This account is not connected to Keycloak.')}, status=400)
-
     try:
-        keycloak = KeycloakClient()
-        totp_credentials = keycloak.get_totp_credentials(request.user.oidc_id)
-        recovery_codes_credentials = keycloak.get_recovery_codes_credentials(request.user.oidc_id)
-    except RequestException as exc:
-        sentry_sdk.capture_exception(exc)
-        return Response(
-            {'success': False, 'error': _('Could not load multi-factor authentication methods.')},
-            status=502,
-        )
-
-    if reauth_response := require_recent_mfa_auth_if_totp_set(request, totp_credentials=totp_credentials):
-        return reauth_response
+        methods = MfaManagementService(request).get_methods()
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
 
     return Response(
         {
             'success': True,
-            'methods': {
-                'authenticatorApp': {
-                    'set': len(totp_credentials) > 0,
-                    'credentials': serialize_totp_credentials(totp_credentials),
-                },
-                'recoveryCodes': {
-                    'set': len(recovery_codes_credentials) > 0,
-                    'credentials': serialize_recovery_codes_credentials(recovery_codes_credentials),
-                },
-            },
+            'methods': methods.as_response_data(),
         }
     )
 
@@ -269,45 +82,12 @@ def get_mfa_methods(request: Request):
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def start_totp_setup(request: Request):
-    if not request.user.oidc_id:
-        return Response({'success': False, 'error': _('This account is not connected to Keycloak.')}, status=400)
-
-    keycloak = KeycloakClient()
-    if reauth_response := require_recent_mfa_auth_if_totp_set(request, keycloak=keycloak):
-        return reauth_response
-
-    user_access_token = get_user_access_token(request)
-    if not user_access_token:
-        return mfa_session_expired_response()
-
     try:
-        setup = keycloak.start_totp_setup(user_access_token)
-    except MfaSessionExpiredError:
-        return mfa_session_expired_response()
-    except RequestException as exc:
-        sentry_sdk.capture_exception(exc)
-        return Response({'success': False, 'error': _('Could not start authenticator app setup.')}, status=502)
+        setup = MfaManagementService(request).start_totp_setup()
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
 
-    # Cache the provider-issued raw secret transiently; it's committed in confirm once
-    # the user proves possession. Accounts never generates secret material itself.
-    cache.set(
-        make_pending_totp_cache_key(request.user.pk),
-        {'secret': setup['secret']},
-        settings.MFA_SETUP_CACHE_TTL,
-    )
-
-    return Response(
-        {
-            'success': True,
-            'secret': setup.get('encodedSecret'),
-            'otpAuthUri': setup.get('otpAuthUri'),
-            'issuer': settings.MFA_TOTP_ISSUER,
-            'accountName': request.user.username,
-            'digits': setup.get('digits'),
-            'period': setup.get('period'),
-            'algorithm': setup.get('algorithm'),
-        }
-    )
+    return Response({'success': True, **setup})
 
 
 @api_view(['POST'])
@@ -315,106 +95,30 @@ def start_totp_setup(request: Request):
 @permission_classes([IsAuthenticated])
 @throttle_classes([TotpConfirmThrottle])
 def confirm_totp_setup(request: Request):
-    if not request.user.oidc_id:
-        return Response({'success': False, 'error': _('This account is not connected to Keycloak.')}, status=400)
-
-    keycloak = KeycloakClient()
-    if reauth_response := require_recent_mfa_auth_if_totp_set(request, keycloak=keycloak):
-        return reauth_response
-
-    user_access_token = get_user_access_token(request)
-    if not user_access_token:
-        return mfa_session_expired_response()
-
     code = request.data.get('code', '')
-    pending_setup = cache.get(make_pending_totp_cache_key(request.user.pk))
-    if not pending_setup:
-        return Response(
-            {'success': False, 'error': _('The authenticator setup expired. Please try again.')},
-            status=400,
-        )
-
     user_label = request.data.get('label') or _('Authenticator app')
     try:
-        # The provider validates the code against the secret and registers the
-        # credential in one call; an invalid code raises MfaCredentialError.
-        # Registration is enrollment-only: the provider rejects it when an
-        # authenticator app already exists (re-enrollment is remove, then set up).
-        keycloak.register_totp_credential(
-            user_access_token=user_access_token,
-            secret=pending_setup['secret'],
+        result = MfaManagementService(request).confirm_totp_setup(
             code=code,
             user_label=str(user_label),
+            logout_other_sessions=bool(request.data.get('logoutOtherSessions')),
         )
-    except MfaStepUpRequiredError:
-        return make_mfa_reauthentication_response(request)
-    except MfaSessionExpiredError:
-        return mfa_session_expired_response()
-    except MfaCredentialError as exc:
-        if exc.error_code == MFA_REST_ERROR_ALREADY_CONFIGURED:
-            return Response(
-                {
-                    'success': False,
-                    'error': _('An authenticator app is already set up. Remove it before setting up a new one.'),
-                },
-                status=409,
-            )
-        return Response({'success': False, 'error': _('The one-time code is invalid.')}, status=400)
-    except RequestException as exc:
-        sentry_sdk.capture_exception(exc)
-        return Response({'success': False, 'error': _('Could not save the authenticator app.')}, status=502)
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
 
-    if request.data.get('logoutOtherSessions'):
-        try:
-            keycloak.logout_user_sessions(request.user.oidc_id)
-        except RequestException as exc:
-            sentry_sdk.capture_exception(exc)
-
-    # A successful TOTP confirm is fresh proof of possession; grant management auth without OIDC step-up.
-    request.session[MFA_MANAGEMENT_AUTH_SESSION_KEY] = int(time.time())
-
-    cache.delete(make_pending_totp_cache_key(request.user.pk))
-
-    try:
-        totp_credentials = keycloak.get_totp_credentials(request.user.oidc_id)
-    except RequestException as exc:
-        sentry_sdk.capture_exception(exc)
-        totp_credentials = []
-    return Response({'success': True, 'credentials': serialize_totp_credentials(totp_credentials)})
+    return Response({'success': True, **result})
 
 
 @api_view(['DELETE'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def remove_totp_credential(request: Request, credential_id: str):
-    """Remove an authenticator-app credential. When it was the last one, any
-    recovery-codes credential is removed along with it: recovery codes are strictly a
-    backup for the authenticator, and an account whose only second factor is recovery
-    codes ends up unprotected once the codes run out (Keycloak silently deletes the
-    credential when the last code is spent)."""
-    if not request.user.oidc_id:
-        return Response({'success': False, 'error': _('This account is not connected to Keycloak.')}, status=400)
-
-    if reauthentication_response := require_recent_mfa_auth(request):
-        return reauthentication_response
-
     try:
-        keycloak = KeycloakClient()
-        totp_credentials = keycloak.get_totp_credentials(request.user.oidc_id)
-        if credential_id not in [credential.get('id') for credential in totp_credentials]:
-            return Response({'success': False, 'error': _('Authenticator app not found.')}, status=404)
+        result = MfaManagementService(request).remove_totp_credential(credential_id)
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
 
-        keycloak.delete_credential(request.user.oidc_id, credential_id)
-
-        last_authenticator_removed = len(totp_credentials) == 1
-        if last_authenticator_removed:
-            for recovery_credential in keycloak.get_recovery_codes_credentials(request.user.oidc_id):
-                keycloak.delete_credential(request.user.oidc_id, recovery_credential['id'])
-    except RequestException as exc:
-        sentry_sdk.capture_exception(exc)
-        return Response({'success': False, 'error': _('Could not remove the authenticator app.')}, status=502)
-
-    return Response({'success': True, 'recoveryCodesRemoved': last_authenticator_removed})
+    return Response({'success': True, **result})
 
 
 @api_view(['POST'])
@@ -422,82 +126,23 @@ def remove_totp_credential(request: Request, credential_id: str):
 @permission_classes([IsAuthenticated])
 @throttle_classes([RecoveryCodesRegenerateThrottle])
 def regenerate_recovery_codes(request: Request):
-    """Generate and immediately commit a fresh set of recovery codes via the provider,
-    replacing any existing recovery-codes credential, and return the plaintext codes once.
-
-    There is no separate pending/confirm step: the destructive "this resets your old
-    codes" confirmation is handled in the UI before this endpoint is called. Keycloak
-    generates and hashes the codes; accounts never sees a stored hash.
-    """
-    if not request.user.oidc_id:
-        return Response({'success': False, 'error': _('This account is not connected to Keycloak.')}, status=400)
-
-    keycloak = KeycloakClient()
-    if reauth_response := require_recent_mfa_auth_if_totp_set(request, keycloak=keycloak):
-        return reauth_response
-
-    user_access_token = get_user_access_token(request)
-    if not user_access_token:
-        return mfa_session_expired_response()
-
     user_label = request.data.get('label') or _('Recovery codes')
     try:
-        result = keycloak.regenerate_recovery_codes(user_access_token, user_label=str(user_label))
-    except MfaStepUpRequiredError:
-        # Backstop for the pre-check above: the provider verifies the token's own
-        # acr/auth_time claims, so if the two disagree the user is sent through the
-        # step-up redirect rather than getting an opaque failure.
-        return make_mfa_reauthentication_response(request)
-    except MfaSessionExpiredError:
-        return mfa_session_expired_response()
-    except MfaCredentialError as exc:
-        if exc.error_code == MFA_REST_ERROR_TOTP_NOT_CONFIGURED:
-            # Recovery codes are a backup for the authenticator app, never a standalone
-            # factor — the provider rejects (re)generation without a TOTP credential.
-            return Response(
-                {'success': False, 'error': _('Set up an authenticator app before generating recovery codes.')},
-                status=409,
-            )
-        return Response({'success': False, 'error': _('Could not save your recovery codes.')}, status=400)
-    except RequestException as exc:
-        sentry_sdk.capture_exception(exc)
-        return Response({'success': False, 'error': _('Could not save your recovery codes.')}, status=502)
+        result = MfaManagementService(request).regenerate_recovery_codes(str(user_label))
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
 
-    try:
-        recovery_codes_credentials = keycloak.get_recovery_codes_credentials(request.user.oidc_id)
-    except RequestException as exc:
-        sentry_sdk.capture_exception(exc)
-        recovery_codes_credentials = []
-
-    return Response(
-        {
-            'success': True,
-            'codes': result.get('codes', []),
-            'credentials': serialize_recovery_codes_credentials(recovery_codes_credentials),
-        }
-    )
+    return Response({'success': True, **result})
 
 
 @api_view(['DELETE'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def remove_recovery_codes_credential(request: Request, credential_id: str):
-    if not request.user.oidc_id:
-        return Response({'success': False, 'error': _('This account is not connected to Keycloak.')}, status=400)
-
-    if reauthentication_response := require_recent_mfa_auth(request):
-        return reauthentication_response
-
     try:
-        keycloak = KeycloakClient()
-        credentials = keycloak.get_recovery_codes_credentials(request.user.oidc_id)
-        if credential_id not in [credential.get('id') for credential in credentials]:
-            return Response({'success': False, 'error': _('Recovery codes not found.')}, status=404)
-
-        keycloak.delete_credential(request.user.oidc_id, credential_id)
-    except RequestException as exc:
-        sentry_sdk.capture_exception(exc)
-        return Response({'success': False, 'error': _('Could not remove your recovery codes.')}, status=502)
+        MfaManagementService(request).remove_recovery_codes_credential(credential_id)
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
 
     return Response({'success': True})
 
