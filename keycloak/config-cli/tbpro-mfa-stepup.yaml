@@ -84,7 +84,7 @@ authenticationFlows:
         authenticatorFlow: false
 
   - alias: stepup-l1-otp
-    description: conditional OTP at L1
+    description: conditional second factor at L1
     providerId: basic-flow
     topLevel: false
     builtIn: false
@@ -92,8 +92,15 @@ authenticationFlows:
       - authenticator: conditional-user-configured
         requirement: REQUIRED
         authenticatorFlow: false
+      # Both second factors are ALTERNATIVE so a user with either (or both) can
+      # complete L1: Keycloak runs the first and exposes "try another way" to switch
+      # to the other. OTP is listed first so it is the default. This mirrors stepup-l2
+      # and Keycloak's built-in "Browser - Conditional OTP" flow.
       - authenticator: auth-otp-form
-        requirement: REQUIRED
+        requirement: ALTERNATIVE
+        authenticatorFlow: false
+      - authenticator: auth-recovery-authn-code-form
+        requirement: ALTERNATIVE
         authenticatorFlow: false
 
   - alias: stepup-l2
