@@ -78,6 +78,14 @@
       "clientRole" : false,
       "containerId" : "801d55d9-d82c-44f3-8582-f440ad1dcc26",
       "attributes" : { }
+    }, {
+      "id" : "f1a2b3c4-d5e6-47a8-9b0c-1d2e3f4a5b6c",
+      "name" : "manage-mfa",
+      "description" : "Allows the accounts service account to call the keycloak-mfa-rest provider.",
+      "composite" : false,
+      "clientRole" : false,
+      "containerId" : "801d55d9-d82c-44f3-8582-f440ad1dcc26",
+      "attributes" : { }
     } ],
     "client" : {
       "stalwart" : [ ],
@@ -391,6 +399,12 @@
   "webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister" : false,
   "webAuthnPolicyPasswordlessAcceptableAaguids" : [ ],
   "webAuthnPolicyPasswordlessExtraOrigins" : [ ],
+  "users" : [ {
+    "username" : "service-account-tb-accounts-mfa",
+    "enabled" : true,
+    "serviceAccountClientId" : "tb-accounts-mfa",
+    "realmRoles" : [ "manage-mfa" ]
+  } ],
   "scopeMappings" : [ {
     "clientScope" : "offline_access",
     "roles" : [ "offline_access" ]
@@ -704,6 +718,38 @@
     "fullScopeAllowed" : true,
     "nodeReRegistrationTimeout" : -1,
     "defaultClientScopes" : [ "web-origins", "acr", "profile", "roles", "basic", "email", "tbpro" ],
+    "optionalClientScopes" : [ "address", "phone", "offline_access", "organization", "microprofile-jwt" ]
+  }, {
+    "id" : "c0ffee00-0000-4000-8000-000000000abc",
+    "clientId" : "tb-accounts-mfa",
+    "name" : "Thunderbird Accounts MFA",
+    "description" : "Service account used by accounts to call the keycloak-mfa-rest provider.",
+    "surrogateAuthRequired" : false,
+    "enabled" : true,
+    "alwaysDisplayInConsole" : false,
+    "clientAuthenticatorType" : "client-secret",
+    "secret" : "mfa-dev-secret-change-me",
+    "redirectUris" : [ ],
+    "webOrigins" : [ ],
+    "notBefore" : 0,
+    "bearerOnly" : false,
+    "consentRequired" : false,
+    "standardFlowEnabled" : false,
+    "implicitFlowEnabled" : false,
+    "directAccessGrantsEnabled" : false,
+    "serviceAccountsEnabled" : true,
+    "publicClient" : false,
+    "frontchannelLogout" : true,
+    "protocol" : "openid-connect",
+    "attributes" : {
+      "client_credentials.use_refresh_token" : "false",
+      "use.refresh.tokens" : "false",
+      "access.token.header.type.rfc9068" : "false"
+    },
+    "authenticationFlowBindingOverrides" : { },
+    "fullScopeAllowed" : true,
+    "nodeReRegistrationTimeout" : -1,
+    "defaultClientScopes" : [ "web-origins", "acr", "profile", "roles", "basic", "email" ],
     "optionalClientScopes" : [ "address", "phone", "offline_access", "organization", "microprofile-jwt" ]
   }, {
     "id" : "b1c2d3e4-f5a6-7890-abcd-ef1234567890",
@@ -1675,8 +1721,15 @@
     }, {
       "authenticator" : "auth-otp-form",
       "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
+      "requirement" : "ALTERNATIVE",
       "priority" : 20,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticator" : "auth-recovery-authn-code-form",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 30,
       "autheticatorFlow" : false,
       "userSetupAllowed" : false
     } ]

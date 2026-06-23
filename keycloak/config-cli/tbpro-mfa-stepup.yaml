@@ -1,0 +1,121 @@
+# keycloak-config-cli: MFA step-up configuration for the tbpro realm.
+#
+# This file is the single source of truth for the browser MFA step-up flow used by
+# keycloak-mfa-rest. It is applied on every Keycloak start (local + stage/prod) from
+# scripts/entry-keycloak.sh, replacing the old ensure_keycloak_mfa_flow management
+# command. config-cli reconciles declaratively: it (re)creates the managed flow to match
+# this file and leaves every other realm resource untouched (see IMPORT_MANAGED_* and the
+# no-delete strategy in entry-keycloak.sh).
+#
+# Scope is deliberately narrow: only the step-up flow, its LoA authenticator configs,
+# the realm's acr.loa.map, and the browserFlow binding. A separate top-level flow
+# (browser-mfa-stepup) is bound rather than mutating the built-in "browser" flow, so the
+# original stays intact as a fallback (rebind browserFlow to "browser" to revert).
+realm: tbpro
+
+# Map the named ACR values the provider checks (acr=2) to Keycloak LoA levels.
+attributes:
+  "acr.loa.map": '{"1":1,"2":2}'
+
+# Bind the realm's browser login to the step-up flow defined below.
+browserFlow: browser-mfa-stepup
+
+# LoA condition configs. Level 2 keeps loa-max-age=0 so Keycloak re-challenges the second
+# factor on every step-up, refreshing the token's auth_time for the provider's freshness
+# gate. Level 1's window MUST equal the realm's ssoSessionMaxLifespan: a shorter window
+# re-prompts username/password on a still-valid SSO session. MFA_L1_LOA_MAX_AGE is injected
+# per environment to match (local 36000, stage 259200, prod 864000).
+authenticatorConfig:
+  - alias: "mfa step-up level 1"
+    config:
+      loa-condition-level: "1"
+      loa-max-age: "$(env:MFA_L1_LOA_MAX_AGE)"
+  - alias: "mfa step-up level 2"
+    config:
+      loa-condition-level: "2"
+      loa-max-age: "0"
+
+# Execution order within each (sub)flow matters — config-cli builds them in array order.
+authenticationFlows:
+  - alias: browser-mfa-stepup
+    description: Browser flow with MFA step-up (LoA) for keycloak-mfa-rest
+    providerId: basic-flow
+    topLevel: true
+    builtIn: false
+    authenticationExecutions:
+      - authenticator: auth-cookie
+        requirement: ALTERNATIVE
+        authenticatorFlow: false
+      - authenticator: identity-provider-redirector
+        requirement: ALTERNATIVE
+        authenticatorFlow: false
+      - flowAlias: stepup-forms
+        requirement: ALTERNATIVE
+        authenticatorFlow: true
+
+  - alias: stepup-forms
+    description: username/password + LoA step-up
+    providerId: basic-flow
+    topLevel: false
+    builtIn: false
+    authenticationExecutions:
+      - flowAlias: stepup-l1
+        requirement: CONDITIONAL
+        authenticatorFlow: true
+      - flowAlias: stepup-l2
+        requirement: CONDITIONAL
+        authenticatorFlow: true
+
+  - alias: stepup-l1
+    description: first factor (LoA1)
+    providerId: basic-flow
+    topLevel: false
+    builtIn: false
+    authenticationExecutions:
+      - authenticator: auth-username-password-form
+        requirement: REQUIRED
+        authenticatorFlow: false
+      - flowAlias: stepup-l1-otp
+        requirement: CONDITIONAL
+        authenticatorFlow: true
+      - authenticator: conditional-level-of-authentication
+        authenticatorConfig: "mfa step-up level 1"
+        requirement: REQUIRED
+        authenticatorFlow: false
+
+  - alias: stepup-l1-otp
+    description: conditional second factor at L1
+    providerId: basic-flow
+    topLevel: false
+    builtIn: false
+    authenticationExecutions:
+      - authenticator: conditional-user-configured
+        requirement: REQUIRED
+        authenticatorFlow: false
+      # Both second factors are ALTERNATIVE so a user with either (or both) can
+      # complete L1: Keycloak runs the first and exposes "try another way" to switch
+      # to the other. OTP is listed first so it is the default. This mirrors stepup-l2
+      # and Keycloak's built-in "Browser - Conditional OTP" flow.
+      - authenticator: auth-otp-form
+        requirement: ALTERNATIVE
+        authenticatorFlow: false
+      - authenticator: auth-recovery-authn-code-form
+        requirement: ALTERNATIVE
+        authenticatorFlow: false
+
+  - alias: stepup-l2
+    description: OTP step-up (LoA2)
+    providerId: basic-flow
+    topLevel: false
+    builtIn: false
+    authenticationExecutions:
+      - authenticator: auth-otp-form
+        requirement: ALTERNATIVE
+        authenticatorFlow: false
+      - authenticator: auth-recovery-authn-code-form
+        requirement: ALTERNATIVE
+        authenticatorFlow: false
+      - authenticator: conditional-level-of-authentication
+        authenticatorConfig: "mfa step-up level 2"
+        requirement: REQUIRED
+        authenticatorFlow: false
