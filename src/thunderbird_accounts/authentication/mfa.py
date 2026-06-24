@@ -1,4 +1,5 @@
 import time
+import uuid
 
 from django.conf import settings
 
@@ -15,7 +16,7 @@ MFA_REST_ERROR_TOTP_NOT_CONFIGURED = 'totp_not_configured'
 MFA_REST_ERROR_STEP_UP_REQUIRED = 'step_up_required'
 
 
-def make_pending_totp_cache_key(user_id: int) -> str:
+def make_pending_totp_cache_key(user_id: uuid.UUID) -> str:
     return PENDING_TOTP_CACHE_KEY.format(user_id=user_id)
 
 

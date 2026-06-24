@@ -250,7 +250,7 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
             if self.request.session.pop(MFA_REAUTH_PENDING_SESSION_KEY, False):
                 # Only grant MFA management auth if Keycloak actually satisfied
                 # the requested ACR (i.e. the user completed the OTP step-up).
-                if str(payload.get('acr', '')) == settings.MFA_KEYCLOAK_ACR_VALUE:
+                if settings.MFA_KEYCLOAK_ACR_VALUE and str(payload.get('acr', '')) == settings.MFA_KEYCLOAK_ACR_VALUE:
                     self.request.session[MFA_MANAGEMENT_AUTH_SESSION_KEY] = int(time())
 
             try:

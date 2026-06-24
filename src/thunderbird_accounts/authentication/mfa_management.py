@@ -26,15 +26,7 @@ from thunderbird_accounts.authentication.mfa import (
     has_recent_mfa_management_auth,
     make_pending_totp_cache_key,
 )
-from thunderbird_accounts.authentication.middleware import refresh_user_access_token
-
-
-# mozilla-django-oidc stores the user's access token here when OIDC_STORE_ACCESS_TOKEN is on.
-OIDC_ACCESS_TOKEN_SESSION_KEY = 'oidc_access_token'
-
-# Refresh slightly before the real expiry so a token that's valid now but dies mid-request
-# isn't forwarded and rejected.
-_ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS = 30
+from thunderbird_accounts.authentication.middleware import OIDC_ACCESS_TOKEN_KEY, refresh_user_access_token
 
 
 class MfaManagementError(Exception):
@@ -146,12 +138,13 @@ def _access_token_is_expired(access_token: str) -> bool:
         exp = int(claims['exp'])
     except (jwt.PyJWTError, KeyError, ValueError, TypeError):
         return False
-    return time.time() >= exp - _ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS
+    return time.time() >= exp - settings.MFA_ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS
 
 
 def get_user_access_token(request: Request) -> str | None:
     """Return the end user's OIDC access token for the self-service MFA provider."""
-    access_token = request.session.get(OIDC_ACCESS_TOKEN_SESSION_KEY)
+    # Only local expiry is checked here; Keycloak-side revocation surfaces later as a provider 401.
+    access_token = request.session.get(OIDC_ACCESS_TOKEN_KEY)
     if access_token and not _access_token_is_expired(access_token):
         return access_token
     return refresh_user_access_token(request) or access_token
@@ -404,7 +397,7 @@ class MfaManagementService:
         return {}
 
     def _require_oidc_id(self) -> str:
-        oidc_id = getattr(self.request.user, 'oidc_id', None)
+        oidc_id = self.request.user.oidc_id
         if not oidc_id:
             raise MfaAccountNotConnectedError()
         return oidc_id

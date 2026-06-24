@@ -434,7 +434,7 @@ class KeycloakMfaClient:
         try:
             response = self.request(endpoint, user_access_token, method, json_data=json_data)
         except RequestException as exc:
-            http_response = getattr(exc, 'response', None)
+            http_response = exc.response
             if http_response is not None:
                 try:
                     error_code = http_response.json().get('error')

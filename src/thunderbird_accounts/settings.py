@@ -285,9 +285,9 @@ REST_FRAMEWORK = {
         'can_i_sign_up': '10/minute', # Give them a few refreshes
         'check_email_is_on_allow_list': '10/minute',
         'analytics': '1000/minute',  # Just in case
-        'support_customer_api': '100/day',
         'totp_confirm': '10/minute',
         'recovery_codes_regenerate': '10/minute',
+        'support_customer_api': '100/day',
     },
 }
 
@@ -589,6 +589,9 @@ MFA_TOTP_ISSUER = 'Thunderbird Accounts'
 # TTL for the transient pending-TOTP secret cached between setup and confirm.
 MFA_SETUP_CACHE_TTL = 600
 MFA_RECENT_AUTH_SECONDS = 600
+# Refresh the user's access token slightly before its real expiry so a token that's valid
+# now but dies mid-request isn't forwarded to Keycloak and rejected.
+MFA_ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS = 30
 MFA_KEYCLOAK_ACR_VALUE = '2'
 MFA_DEFAULT_NEXT_PATH = '/manage-mfa'
 

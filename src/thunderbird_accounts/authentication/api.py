@@ -4,7 +4,7 @@ from urllib.parse import quote
 from django.conf import settings
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 import sentry_sdk
 
 from thunderbird_accounts.authentication.exceptions import (
@@ -63,7 +63,6 @@ def get_user_profile(request: Request):
 
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication])
-@permission_classes([IsAuthenticated])
 def get_mfa_methods(request: Request):
     try:
         methods = MfaManagementService(request).get_methods()
@@ -80,7 +79,6 @@ def get_mfa_methods(request: Request):
 
 @api_view(['POST'])
 @authentication_classes([SessionAuthentication])
-@permission_classes([IsAuthenticated])
 def start_totp_setup(request: Request):
     try:
         setup = MfaManagementService(request).start_totp_setup()
@@ -92,7 +90,6 @@ def start_totp_setup(request: Request):
 
 @api_view(['POST'])
 @authentication_classes([SessionAuthentication])
-@permission_classes([IsAuthenticated])
 @throttle_classes([TotpConfirmThrottle])
 def confirm_totp_setup(request: Request):
     code = request.data.get('code', '')
@@ -111,7 +108,6 @@ def confirm_totp_setup(request: Request):
 
 @api_view(['DELETE'])
 @authentication_classes([SessionAuthentication])
-@permission_classes([IsAuthenticated])
 def remove_totp_credential(request: Request, credential_id: str):
     try:
         result = MfaManagementService(request).remove_totp_credential(credential_id)
@@ -123,7 +119,6 @@ def remove_totp_credential(request: Request, credential_id: str):
 
 @api_view(['POST'])
 @authentication_classes([SessionAuthentication])
-@permission_classes([IsAuthenticated])
 @throttle_classes([RecoveryCodesRegenerateThrottle])
 def regenerate_recovery_codes(request: Request):
     user_label = request.data.get('label') or _('Recovery codes')
@@ -137,7 +132,6 @@ def regenerate_recovery_codes(request: Request):
 
 @api_view(['DELETE'])
 @authentication_classes([SessionAuthentication])
-@permission_classes([IsAuthenticated])
 def remove_recovery_codes_credential(request: Request, credential_id: str):
     try:
         MfaManagementService(request).remove_recovery_codes_credential(credential_id)
