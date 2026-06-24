@@ -169,7 +169,7 @@ def exchange_autodiscover_endpoint_exists(hostname: str, domain_name: str) -> bo
                         headers=headers,
                         timeout=AUTODISCOVER_PROBE_TIMEOUT,
                         allow_redirects=False,
-                        stream=True, # enable us to only download the first few bytes
+                        stream=True,  # enable us to only download the first few bytes
                     )
                     break
                 except requests.RequestException as e:

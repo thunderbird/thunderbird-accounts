@@ -28,10 +28,12 @@ class SignUpThrottle(UserRateThrottle):
 class CanISignUpThrottle(UserRateThrottle):
     scope = 'can_i_sign_up'
 
+
 class CanISignUpResponses(StrEnum):
     WAIT_LIST = 'wait-list'
     LOGIN = 'login'
     SIGN_UP = 'sign-up'
+
 
 @api_view(['POST'])
 def get_user_profile(request: Request):
@@ -57,7 +59,6 @@ def can_i_sign_up(request: Request):
             go_to = CanISignUpResponses.LOGIN
         elif is_in_allow_list:
             go_to = CanISignUpResponses.SIGN_UP
-
 
     return Response({'go_to': go_to})
 

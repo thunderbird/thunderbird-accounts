@@ -423,5 +423,5 @@ def check_stale_dns_records(cust_domain: str) -> list[dict]:
     except Exception as e:
         logging.warning(f'SRV lookup failed for {autodiscover_srv_name}: {e}')
 
-    logging.debug("stale DNS records that should be deleted %s", stale_records)
+    logging.debug('stale DNS records that should be deleted %s', stale_records)
     return stale_records

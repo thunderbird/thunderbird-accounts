@@ -21,9 +21,7 @@ def _verify_signature(request, secret):
     signature = request.headers.get('X-Signature')
     if not signature:
         return False
-    expected = base64.b64encode(
-        hmac.new(secret.encode('utf-8'), request.body, hashlib.sha256).digest()
-    ).decode('ascii')
+    expected = base64.b64encode(hmac.new(secret.encode('utf-8'), request.body, hashlib.sha256).digest()).decode('ascii')
     return hmac.compare_digest(signature, expected)
 
 

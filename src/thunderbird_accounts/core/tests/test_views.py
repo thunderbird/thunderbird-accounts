@@ -150,10 +150,14 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
         )
 
         LegalDocumentResponse.objects.create(
-            user=self.user, document=tos, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=tos,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
         LegalDocumentResponse.objects.create(
-            user=self.user, document=privacy, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=privacy,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
 
         response = self._login_and_get_home()
@@ -175,7 +179,9 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
         )
 
         LegalDocumentResponse.objects.create(
-            user=self.user, document=tos, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=tos,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
 
         response = self._login_and_get_home()
@@ -191,7 +197,9 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
         )
 
         LegalDocumentResponse.objects.create(
-            user=self.user, document=tos, action=LegalDocumentResponse.Action.DECLINED,
+            user=self.user,
+            document=tos,
+            action=LegalDocumentResponse.Action.DECLINED,
         )
 
         response = self._login_and_get_home()
@@ -215,13 +223,19 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
 
         # Force duplicate responses
         LegalDocumentResponse.objects.create(
-            user=self.user, document=tos, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=tos,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
         LegalDocumentResponse.objects.create(
-            user=self.user, document=tos, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=tos,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
         LegalDocumentResponse.objects.create(
-            user=self.user, document=privacy, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=privacy,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
 
         response = self._login_and_get_home()

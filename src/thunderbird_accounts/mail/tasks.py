@@ -180,9 +180,7 @@ def publish_hosted_dkim_dns_records(self, domain_name: str):
     phase = 'initialize'
     dkim_dns_records = []
     hosted_records = []
-    expected_record_count = len(
-        {selector for selector in settings.STALWART_DKIM_ALGO_SELECTORS.values() if selector}
-    )
+    expected_record_count = len({selector for selector in settings.STALWART_DKIM_ALGO_SELECTORS.values() if selector})
 
     try:
         phase = 'fetch_stalwart_dkim_dns_records'
@@ -201,8 +199,7 @@ def publish_hosted_dkim_dns_records(self, domain_name: str):
             phase = 'validate_hosted_record_count'
             if len(hosted_records) < expected_record_count:
                 reason = (
-                    f'Expected {expected_record_count} hosted DKIM records for {domain_name}, '
-                    f'got {len(hosted_records)}'
+                    f'Expected {expected_record_count} hosted DKIM records for {domain_name}, got {len(hosted_records)}'
                 )
                 raise HostedDkimPublishRetry(
                     domain_name,

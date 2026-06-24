@@ -64,7 +64,7 @@ class PollKeycloakEventsTestCase(TestCase):
         def fake_request(endpoint, params=None):
             first = (params or {}).get('first', 0)
             max_results = (params or {}).get('max', settings.KEYCLOAK_EVENTS_PAGE_SIZE)
-            page = events[first:first + max_results]
+            page = events[first : first + max_results]
             resp = MagicMock()
             resp.json.return_value = page
             return resp
@@ -166,9 +166,7 @@ class PollKeycloakEventsTestCase(TestCase):
 
     def test_subscription_status_property_per_user(self):
         """Each event is tagged with the user's existing Paddle subscription status."""
-        active = User.objects.create(
-            username='active@example.org', email='active@example.org', oidc_id='active-uid'
-        )
+        active = User.objects.create(username='active@example.org', email='active@example.org', oidc_id='active-uid')
         Subscription.objects.create(user=active, status=Subscription.StatusValues.ACTIVE)
 
         canceled = User.objects.create(
@@ -176,17 +174,17 @@ class PollKeycloakEventsTestCase(TestCase):
         )
         Subscription.objects.create(user=canceled, status=Subscription.StatusValues.CANCELED)
 
-        no_subscription = User.objects.create(
-            username='none@example.org', email='none@example.org', oidc_id='none-uid'
-        )
+        no_subscription = User.objects.create(username='none@example.org', email='none@example.org', oidc_id='none-uid')
 
-        self._set_keycloak_events([
-            _make_keycloak_event('LOGIN', user_id=active.oidc_id),
-            _make_keycloak_event('LOGIN', user_id=canceled.oidc_id),
-            _make_keycloak_event('LOGIN', user_id=no_subscription.oidc_id),
-            # No matching local subscription row (e.g. mid-registration) -> "none".
-            _make_keycloak_event('LOGIN', user_id='ghost-uid'),
-        ])
+        self._set_keycloak_events(
+            [
+                _make_keycloak_event('LOGIN', user_id=active.oidc_id),
+                _make_keycloak_event('LOGIN', user_id=canceled.oidc_id),
+                _make_keycloak_event('LOGIN', user_id=no_subscription.oidc_id),
+                # No matching local subscription row (e.g. mid-registration) -> "none".
+                _make_keycloak_event('LOGIN', user_id='ghost-uid'),
+            ]
+        )
 
         poll_keycloak_events()
 

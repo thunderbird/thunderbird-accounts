@@ -272,43 +272,33 @@ Feature flags are stored in `localStorage` and read at runtime to toggle UI beha
 | --- | ------ | ----------- |
 | `feature.show-connect-now` | `true` | Shows the "Connect Now" action card on the desktop panel, which launches Thunderbird Desktop via a custom protocol URL. |
 
-## Running tests
+## Running tests and linting checks
 
 Make sure that the containers are already running.
 
-To run all tests:
+To run the tests:
 
 ```shell
+# run-tests will execute the following command:
+# docker compose exec accounts uv run python manage.py test thunderbird_accounts
+
+# Run all tests:
 ./run-tests.sh thunderbird_accounts
-```
 
-this will execute the following command for you:
-
-```shell
-docker compose exec accounts uv run python manage.py test thunderbird_accounts
-```
-
-To run tests for a specific module:
-
-```shell
+# Run a specific test:
 ./run-tests.sh thunderbird_accounts.mail.tests
-```
 
-Additionally, you can run tests with coverage to help you identify functions that aren't covered by functional or unit tests.
-
-To do so run the following command:
-
-```shell
+# Run tests with coverage. Report is storged in `./coverage/htmlcov`
 ./runs-tests-and-generate-coverage.sh thunderbird_accounts
 ```
+Please see the [E2E tests README](./test/e2e/README.md) for how to run E2E tests.
 
-The data for coverage is stored in the `coverage` folder (which is volume mounted.) It generates a detailed html report and a text report to display in-console.
+Aside from the tests, you should run the following commands to check locally:
 
-The html report is stored in `coverage/htmlcov`.
-
-## Running the E2E tests
-
-Please see the [E2E tests README](./test/e2e/README.md).
+```shell
+uv run ruff check
+uv run ruff format --check
+```
 
 
 ## Accessing the Flower Web Interface

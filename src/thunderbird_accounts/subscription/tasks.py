@@ -310,7 +310,7 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             },
         )
 
-    # Log some problem cases that would be our fault. 
+    # Log some problem cases that would be our fault.
     if len(subscription_items) == 0:
         logging.error(f'Subscription contains no items. This user ({user.uuid}) will not have any features enabled!')
     elif len(subscription_items) > 1:
