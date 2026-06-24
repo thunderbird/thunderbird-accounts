@@ -87,6 +87,10 @@ jobs:
         run: |
           docker compose exec accounts bash -c 'uv run ruff check'
 
+      - name: Accounts format check
+        run: |
+          docker compose exec accounts bash -c 'uv run ruff format --check'
+
       - name: Test with pytest
         run: |
           docker compose exec accounts bash -c 'uv run coverage run --source="thunderbird_accounts" manage.py test thunderbird_accounts'
