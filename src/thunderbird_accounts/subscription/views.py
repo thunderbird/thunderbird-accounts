@@ -136,7 +136,7 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     status = transaction.status.value
 
     if transaction and status in [Transaction.StatusValues.COMPLETED.value, Transaction.StatusValues.PAID.value]:
-        # Only set enable payment verification mode if they don't have an 
+        # Only set enable payment verification mode if they don't have an
         # active subscription (no plan, no active subscription)
         # As the webhook could technically come in before or during this successUrl redirect...
         with dj_transaction.atomic():

@@ -1,9 +1,9 @@
-
 from django.test import TestCase, override_settings
 
 from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.authentication.reserved import is_reserved, servers, support
 from thunderbird_accounts.authentication.utils import is_email_in_allow_list
+
 
 class IsReservedUnitTests(TestCase):
     def test_brand_names(self):

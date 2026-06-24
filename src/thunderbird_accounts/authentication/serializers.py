@@ -22,7 +22,7 @@ class UserCacheSerializer(serializers.ModelSerializer):
     """
     Version 1
     Formats a user model to the json format below:
-    
+
     .. code-block:: json
 
         {

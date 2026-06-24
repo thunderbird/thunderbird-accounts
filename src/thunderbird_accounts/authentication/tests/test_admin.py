@@ -535,4 +535,3 @@ class AdminBackfillRecoveryEmailActionTest(TestCase):
         self.assertEqual(has_recovery.recovery_email, 'existing@example.com')
         self.assertIsNone(missing_oidc.recovery_email)
         mock_keycloak.get_user.assert_called_once_with('oidc-missing-recovery')
-

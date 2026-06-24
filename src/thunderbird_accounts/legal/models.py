@@ -11,7 +11,10 @@ class LegalDocument(BaseModel):
         PRIVACY = 'privacy', _('Privacy Policy')
 
     document_type = models.CharField(max_length=20, choices=DocumentType.choices)
-    version = models.CharField(max_length=50, help_text=_('Version number of the document, e.g. "1.0"'),)
+    version = models.CharField(
+        max_length=50,
+        help_text=_('Version number of the document, e.g. "1.0"'),
+    )
     is_current = models.BooleanField(default=False)
     content_path = models.CharField(
         max_length=255,
@@ -34,7 +37,8 @@ class LegalDocument(BaseModel):
     def save(self, *args, **kwargs):
         if self.is_current:
             LegalDocument.objects.filter(
-                document_type=self.document_type, is_current=True,
+                document_type=self.document_type,
+                is_current=True,
             ).exclude(pk=self.pk).update(is_current=False)
         super().save(*args, **kwargs)
 

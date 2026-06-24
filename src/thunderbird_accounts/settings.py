@@ -192,15 +192,18 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'thunderbird_accounts.urls'
 
 loaders = [
-    ("django.template.loaders.cached.Loader", [
-        "django.template.loaders.filesystem.Loader",
-        "django.template.loaders.app_directories.Loader",
-    ])
+    (
+        'django.template.loaders.cached.Loader',
+        [
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader',
+        ],
+    )
 ]
 if IS_TEST:
     loaders = [
-        "django.template.loaders.filesystem.Loader",
-        "django.template.loaders.app_directories.Loader",
+        'django.template.loaders.filesystem.Loader',
+        'django.template.loaders.app_directories.Loader',
     ]
 TEMPLATES = [
     {
@@ -213,7 +216,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
-            'loaders': loaders
+            'loaders': loaders,
         },
     },
 ]
@@ -233,8 +236,8 @@ AVAILABLE_DATABASES = {
             'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
             'PORT': os.getenv('DATABASE_PORT', '5432'),
             # Neon recommends these settings (https://neon.com/docs/guides/django)
-            'DISABLE_SERVER_SIDE_CURSORS': True, # Disable server-side cursors due to db pooling issues
-            'CONN_HEALTH_CHECKS': True, # Test db connection before re-use between requests
+            'DISABLE_SERVER_SIDE_CURSORS': True,  # Disable server-side cursors due to db pooling issues
+            'CONN_HEALTH_CHECKS': True,  # Test db connection before re-use between requests
         },
     },
     'test': {
@@ -281,7 +284,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'is_username_available': '30/minute',
         'sign_up': '15/minute',
-        'can_i_sign_up': '10/minute', # Give them a few refreshes
+        'can_i_sign_up': '10/minute',  # Give them a few refreshes
         'check_email_is_on_allow_list': '10/minute',
         'analytics': '1000/minute',  # Just in case
     },

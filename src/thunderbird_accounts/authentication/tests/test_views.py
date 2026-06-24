@@ -96,7 +96,6 @@ class BulkImportAllowListTestCase(TestCase):
         messages = [str(message) for message in get_messages(response.wsgi_request)]
         self.assertTrue(
             any(
-                message.startswith('dsc_123 is not a valid discount id. Use the full Paddle id')
-                for message in messages
+                message.startswith('dsc_123 is not a valid discount id. Use the full Paddle id') for message in messages
             )
         )

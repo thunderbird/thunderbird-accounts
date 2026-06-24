@@ -26,6 +26,7 @@ class User(AbstractUser, BaseModel):
     :param avatar_url: Avatar URL from oidc profile
     :param timezone: The user's timezone
     """
+
     USERNAME_MIN_LENGTH = 3
     USERNAME_MAX_LENGTH = 150
 
