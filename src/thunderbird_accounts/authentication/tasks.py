@@ -1,22 +1,25 @@
 import logging
 from datetime import timedelta
 
+import sentry_sdk
 from celery import shared_task
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Exists, OuterRef, QuerySet
 from django.utils import timezone
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.utils import delete_user_data
 from thunderbird_accounts.celery.exceptions import TaskFailed
+from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.subscription.models import Subscription
-from thunderbird_accounts.subscription.tasks import add_or_tag_mailchimp_member
 
 logger = logging.getLogger(__name__)
 
 
-def get_abandoned_cart_users_for_mailchimp_tag() -> QuerySet[User]:
-    """Incomplete sign-ups old enough to receive the abandoned_cart Mailchimp tag."""
-    cutoff = timezone.now() - timedelta(hours=settings.ABANDONED_CART_TAG_HOURS)
+def get_stale_incomplete_signup_users(cutoff_hours: int) -> QuerySet[User]:
+    """Incomplete sign-ups older than the cutoff hours."""
+    cutoff = timezone.now() - timedelta(hours=cutoff_hours)
     has_subscription = Subscription.objects.filter(user_id=OuterRef('pk'))
     return (
         User.objects.filter(
@@ -48,8 +51,9 @@ def tag_abandoned_cart_in_mailchimp(self):
     language_fallback = settings.DEFAULT_LANGUAGE
     mailchimp_language_map = settings.ACCOUNTS_TO_MAILCHIMP_LANGUAGES
     mailchimp_tag = settings.ABANDONED_CART_MAILCHIMP_TAG
+    client = MailchimpClient()
 
-    for user in get_abandoned_cart_users_for_mailchimp_tag().iterator():
+    for user in get_stale_incomplete_signup_users(cutoff_hours=settings.ABANDONED_CART_TAG_HOURS).iterator():
         try:
             if user.subscription_set.exists():
                 skipped += 1
@@ -73,7 +77,7 @@ def tag_abandoned_cart_in_mailchimp(self):
                 continue
 
             language = mailchimp_language_map.get(user.language) or language_fallback
-            add_or_tag_mailchimp_member(
+            client.add_or_tag_member(
                 user.recovery_email,
                 mailchimp_tag,
                 language=language,
@@ -99,4 +103,65 @@ def tag_abandoned_cart_in_mailchimp(self):
         'skipped': skipped,
     }
     logger.info('tag_abandoned_cart_in_mailchimp: %s', result)
+    return result
+
+
+@shared_task(bind=True)
+def purge_incomplete_signups(self):
+    """Delete abandoned sign-up users older than INCOMPLETE_SIGNUP_PURGE_HOURS.
+
+    Only targets users with no Subscription records (including lapsed/canceled) who are not
+    waiting on payment verification after checkout.
+    """
+    deleted = 0
+    errors = 0
+    skipped = 0
+
+    for user in get_stale_incomplete_signup_users(cutoff_hours=settings.INCOMPLETE_SIGNUP_PURGE_HOURS).iterator():
+        try:
+            with transaction.atomic():
+                user = User.objects.select_for_update().get(pk=user.pk)
+
+                # Now that we have a locked fresh copy of the user, we can safely check for subscriptions
+                # and payment verification so we avoid race conditions
+                if user.subscription_set.exists():
+                    skipped += 1
+                    logger.info('purge_incomplete_signups: skipped %s because a subscription exists', user.uuid)
+                    continue
+
+                if user.is_awaiting_payment_verification:
+                    skipped += 1
+                    logger.info(
+                        'purge_incomplete_signups: skipped %s because payment verification is pending',
+                        user.uuid,
+                    )
+                    continue
+
+                purge_errors = delete_user_data(user)
+        except User.DoesNotExist:
+            skipped += 1
+            continue
+        except Exception as ex:
+            errors += 1
+            sentry_sdk.capture_exception(ex)
+            logger.exception('purge_incomplete_signups: failed to delete %s', user.uuid)
+            continue
+
+        if purge_errors:
+            errors += 1
+            logger.warning(
+                'purge_incomplete_signups: partial deletion for %s: %s',
+                user.uuid,
+                purge_errors,
+            )
+        else:
+            deleted += 1
+
+    result = {
+        'task_status': 'completed',
+        'deleted': deleted,
+        'errors': errors,
+        'skipped': skipped,
+    }
+    logger.info('purge_incomplete_signups: %s', result)
     return result

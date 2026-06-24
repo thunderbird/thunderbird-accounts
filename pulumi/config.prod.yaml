@@ -437,6 +437,16 @@ resources:
                   value: "no"
                 - name: POSTHOG_HOST
                   value: "https://us.i.posthog.com"
+                - name: ABANDONED_CART_TAG_HOURS
+                  value: "1"
+                - name: ABANDONED_CART_MAILCHIMP_TAG
+                  value: "abandoned_cart"
+                - name: INCOMPLETE_SIGNUP_PURGE_HOURS
+                  value: "120"
+                - name: INCOMPLETE_SIGNUP_PURGE_CRON_HOUR
+                  value: "3"
+                - name: INCOMPLETE_SIGNUP_PURGE_CRON_MINUTE
+                  value: "0"
 
         flower-prod:
           <<: *ACCOUNTS_TASK_DEFINITION
