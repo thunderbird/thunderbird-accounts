@@ -126,14 +126,14 @@ def purge_incomplete_signups(self):
                 # and payment verification so we avoid race conditions
                 if user.subscription_set.exists():
                     skipped += 1
-                    logger.info('purge_incomplete_signups: skipped %s because a subscription exists', user.username)
+                    logger.info('purge_incomplete_signups: skipped %s because a subscription exists', user.uuid)
                     continue
 
                 if user.is_awaiting_payment_verification:
                     skipped += 1
                     logger.info(
                         'purge_incomplete_signups: skipped %s because payment verification is pending',
-                        user.username,
+                        user.uuid,
                     )
                     continue
 
@@ -144,14 +144,14 @@ def purge_incomplete_signups(self):
         except Exception as ex:
             errors += 1
             sentry_sdk.capture_exception(ex)
-            logger.exception('purge_incomplete_signups: failed to delete %s', user.username)
+            logger.exception('purge_incomplete_signups: failed to delete %s', user.uuid)
             continue
 
         if purge_errors:
             errors += 1
             logger.warning(
                 'purge_incomplete_signups: partial deletion for %s: %s',
-                user.username,
+                user.uuid,
                 purge_errors,
             )
         else:
