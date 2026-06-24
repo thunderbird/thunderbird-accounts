@@ -201,6 +201,7 @@ class LogEntryAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('content_type')
 
+
 class PermissionAdmin(admin.ModelAdmin):
     """Allows user permissions to be shown in the django admin panel"""
 

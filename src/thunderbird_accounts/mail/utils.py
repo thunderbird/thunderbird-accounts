@@ -194,9 +194,9 @@ def fix_archives_folder(access_token, account: Account) -> bool:
                 return_response = method_response.get('notCreated', {})
                 # The only way we're getting out of here without an error, is if the folder already exists
                 desc = return_response.get(temp_id, {}).get('description')
-                
+
                 if desc and desc in already_exists_descriptions:
-                    pass # If it already exists then we can actually mark it as done and move on
+                    pass  # If it already exists then we can actually mark it as done and move on
                 else:
                     sentry_sdk.set_context('desc', {'desc': desc})
                     raise RuntimeError('Failed to create archive folder')

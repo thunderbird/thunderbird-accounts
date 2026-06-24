@@ -25,7 +25,7 @@ class LegalDocCleanSlateTestCase(TestCase):
 
 class ReadLegalContentTestCase(TestCase):
     def setUp(self):
-        self.legal_app_path = apps.get_app_config("legal").path
+        self.legal_app_path = apps.get_app_config('legal').path
         self.version = 'v999.0'
 
         self.content_dir = Path(self.legal_app_path, 'templates', 'tos', self.version).resolve()
@@ -33,6 +33,7 @@ class ReadLegalContentTestCase(TestCase):
 
     def tearDown(self):
         import shutil
+
         if self.content_dir.exists():
             shutil.rmtree(self.content_dir)
 
@@ -283,9 +284,7 @@ class AcceptLegalDocsTestCase(LegalDocCleanSlateTestCase):
         self.assertEqual(len(data2['responses']), 0)
 
         self.assertEqual(
-            LegalDocumentResponse.objects.filter(
-                user=self.user, action=LegalDocumentResponse.Action.ACCEPTED
-            ).count(),
+            LegalDocumentResponse.objects.filter(user=self.user, action=LegalDocumentResponse.Action.ACCEPTED).count(),
             2,
         )
 
@@ -313,9 +312,7 @@ class AcceptLegalDocsTestCase(LegalDocCleanSlateTestCase):
         self.assertEqual(response2.status_code, 200)
 
         self.assertEqual(
-            LegalDocumentResponse.objects.filter(
-                user=self.user, action=LegalDocumentResponse.Action.DECLINED
-            ).count(),
+            LegalDocumentResponse.objects.filter(user=self.user, action=LegalDocumentResponse.Action.DECLINED).count(),
             2,
         )
 
@@ -383,6 +380,7 @@ class DeclineLegalDocsTestCase(LegalDocCleanSlateTestCase):
         self.assertEqual(response.status_code, 200)
 
         from django.contrib.messages import get_messages
+
         messages = list(get_messages(response.wsgi_request))
         self.assertEqual(len(messages), 1)
         self.assertIn('contact support', str(messages[0]).lower())
@@ -470,9 +468,7 @@ class DeclineLegalDocsDeleteUserTestCase(LegalDocCleanSlateTestCase):
         with self.assertRaises(User.DoesNotExist):
             self.user.refresh_from_db()
 
-        self.assertFalse(
-            LegalDocumentResponse.objects.filter(user_id=self.user.pk).exists()
-        )
+        self.assertFalse(LegalDocumentResponse.objects.filter(user_id=self.user.pk).exists())
 
     @patch('thunderbird_accounts.authentication.utils.sentry_sdk')
     def test_still_deletes_db_user_on_keycloak_failure(self, mock_sentry, mock_kc_request, mock_delete_principal):

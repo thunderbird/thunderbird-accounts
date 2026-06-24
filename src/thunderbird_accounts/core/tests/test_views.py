@@ -30,7 +30,7 @@ class PublicVueRouteSyncTestCase(SimpleTestCase):
 
         for index, route_match in enumerate(route_matches):
             route_end = route_matches[index + 1].start() if index + 1 < len(route_matches) else len(router_source)
-            route_definition = router_source[route_match.start():route_end]
+            route_definition = router_source[route_match.start() : route_end]
             if not re.search(r'isPublic:\s*true\b', route_definition):
                 continue
 
@@ -151,7 +151,7 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
             return self.client.get('/')
 
     def _retrieve_json_blob(self, response) -> dict:
-        """We inject a javascript script with a plain json blob. 
+        """We inject a javascript script with a plain json blob.
         So for testing we can just strip the script tags off and load it up."""
         blob = response.context['page_load_data_script']
         blob = strip_tags(blob)

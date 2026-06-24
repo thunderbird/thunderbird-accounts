@@ -1181,9 +1181,7 @@ class AddSubscriberToMailchimpList(TestCase):
 
         get_member_response = requests.Response()
         get_member_response.status_code = 200
-        get_member_response._content = json.dumps(
-            {'tags': [{'name': abandoned_cart_tag, 'id': 1}]}
-        ).encode()
+        get_member_response._content = json.dumps({'tags': [{'name': abandoned_cart_tag, 'id': 1}]}).encode()
 
         add_tag_response = requests.Response()
         add_tag_response.status_code = 200

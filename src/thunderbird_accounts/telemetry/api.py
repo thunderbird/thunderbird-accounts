@@ -21,7 +21,7 @@ def capture_frontend_event(request: Request):
     """This function simply takes the log event,
     checks it against acceptable values and if it's valid then we log it.
 
-    This is a fire and forget function, 
+    This is a fire and forget function,
     it's not vital that they actually capture but this function should not block the frontend either."""
 
     event = request.data.get('event')

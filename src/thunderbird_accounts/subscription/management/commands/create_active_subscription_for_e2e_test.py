@@ -35,9 +35,7 @@ class Command(BaseCommand):
         username = options['username']
 
         kc_users = (
-            KeycloakClient()
-            .request('users', RequestMethods.GET, params={'username': username, 'exact': 'true'})
-            .json()
+            KeycloakClient().request('users', RequestMethods.GET, params={'username': username, 'exact': 'true'}).json()
         )
         if not kc_users:
             self.stderr.write(self.style.ERROR(f'User {username} not found in Keycloak.'))

@@ -249,9 +249,7 @@ class DeleteHostedDkimDNSRecordsTestCase(TaskTestCase):
     )
     @patch('thunderbird_accounts.mail.tasks.sentry_sdk.set_context')
     @patch('thunderbird_accounts.mail.tasks.CloudflareDNSClient')
-    def test_retries_with_context_when_cloudflare_delete_fails(
-        self, cloudflare_client_mock, set_sentry_context_mock
-    ):
+    def test_retries_with_context_when_cloudflare_delete_fails(self, cloudflare_client_mock, set_sentry_context_mock):
         cloudflare_client_mock.return_value.delete_txt_records.side_effect = RuntimeError('Cloudflare unavailable')
 
         with self.assertRaises(HostedDkimDeleteRetry) as cm:

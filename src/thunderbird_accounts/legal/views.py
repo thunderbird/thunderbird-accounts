@@ -33,9 +33,7 @@ def _read_legal_content(content_path: str, locale: str) -> str:
     doc_path = Path(legal_templates_path, content_path, f'{locale}.html').resolve()
     default_path = Path(legal_templates_path, content_path, f'{settings.DEFAULT_LANGUAGE}.html').resolve()
 
-    if not doc_path.is_relative_to(legal_templates_path) or not default_path.is_relative_to(
-        legal_templates_path
-    ):
+    if not doc_path.is_relative_to(legal_templates_path) or not default_path.is_relative_to(legal_templates_path):
         sentry_sdk.set_context(
             'legal_content_paths',
             {

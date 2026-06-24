@@ -20,12 +20,14 @@ EXPECTED_PADDLE_REJECTIONS = {
     'Too much time has elapsed between the request and this process',
 }
 
+
 class ExpectedPaddleRejectionFilter(logging.Filter):
     def filter(self, record):
         if record.getMessage() in EXPECTED_PADDLE_REJECTIONS:
             record.levelno = logging.INFO
             record.levelname = logging.getLevelName(logging.INFO)
         return True
+
 
 # The "paddle_billing" namespace is used within the Paddle SDK
 logging.getLogger('paddle_billing').addFilter(ExpectedPaddleRejectionFilter())

@@ -7,7 +7,7 @@ from requests import Response
 from thunderbird_accounts.authentication.models import User
 
 
-def oidc_force_login(client: RequestClient|APIClient, user: User, backend=None):
+def oidc_force_login(client: RequestClient | APIClient, user: User, backend=None):
     """This works like `django.test.Client` except it also bypasses the missing
     ``oidc_id_token_expiration`` session value by setting it in the far future.
 
