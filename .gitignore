@@ -71,3 +71,7 @@ node_modules
 deploy-wait-list
 
 coverage/*
+
+# Local-only docker compose override (auto-loaded) and the locally-built MFA provider jar.
+docker-compose.override.yml
+keycloak/providers/

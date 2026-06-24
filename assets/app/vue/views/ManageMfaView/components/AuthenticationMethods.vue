@@ -1,69 +1,86 @@
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue';
+import { onMounted, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhCheckCircle } from '@phosphor-icons/vue';
-import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton } from '@thunderbirdops/services-ui';
+import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 
 // Modals
 import ManageAuthenticatorAppModal from './ManageAuthenticatorAppModal.vue';
+import ManageRecoveryCodesModal from './ManageRecoveryCodesModal.vue';
 import VerifyYourIdentityModal from './VerifyYourIdentityModal.vue';
-import ManageEmailRecoveryModal from './ManageEmailRecoveryModal.vue';
+import RemoveMfaMethodModal from './RemoveMfaMethodModal.vue';
+
+import { AUTHENTICATION_METHODS, useMfaMethods } from '../useMfaMethods';
 
 const { t } = useI18n();
 
-enum AUTHENTICATION_METHODS {
-  AUTHENTICATOR_APP = 'authenticatorApp',
-  RECOVERY_PHONE_NUMBER = 'recoveryPhoneNumber',
-  RECOVERY_EMAIL_ADDRESS = 'recoveryEmailAddress'
-}
-
-interface AuthenticationMethodData {
-  set: boolean;
-  setupDate?: string;
-  lastUsedDate?: string;
-  phoneNumber?: string;
-  emailAddress?: string;
-}
-
-const authenticationMethods: Record<AUTHENTICATION_METHODS, AuthenticationMethodData> = {
-  [AUTHENTICATION_METHODS.AUTHENTICATOR_APP]: {
-    set: true,
-    setupDate: '2025-01-13 09:32',
-    lastUsedDate: '2025-06-23 17:28'
-  },
-  [AUTHENTICATION_METHODS.RECOVERY_PHONE_NUMBER]: {
-    set: false,
-  },
-  [AUTHENTICATION_METHODS.RECOVERY_EMAIL_ADDRESS]: {
-    set: true,
-    setupDate: '2025-01-13 09:32',
-    lastUsedDate: '2025-06-23 17:28',
-    emailAddress: 'te***@domain.example'
-  }
-}
-
-const verifyYourIdentityModal = useTemplateRef<InstanceType<typeof VerifyYourIdentityModal>>('verifyYourIdentityModal');
 const manageAuthenticatorAppModal = useTemplateRef<InstanceType<typeof ManageAuthenticatorAppModal>>('manageAuthenticatorAppModal');
-const manageEmailRecoveryModal = useTemplateRef<InstanceType<typeof ManageEmailRecoveryModal>>('manageEmailRecoveryModal');
+const manageRecoveryCodesModal = useTemplateRef<InstanceType<typeof ManageRecoveryCodesModal>>('manageRecoveryCodesModal');
+const verifyYourIdentityModal = useTemplateRef<InstanceType<typeof VerifyYourIdentityModal>>('verifyYourIdentityModal');
+const removeMfaMethodModal = useTemplateRef<InstanceType<typeof RemoveMfaMethodModal>>('removeMfaMethodModal');
 
-const authenticationMethodEntries = computed(() => Object.entries(authenticationMethods));
+const {
+  authenticationMethods,
+  authenticationMethodEntries,
+  isLoading,
+  errorMessage,
+  reauthenticationUrl,
+  isRemoving,
+  removeModalTitle,
+  removeModalDescription,
+  loadMfaMethods,
+  setRecoveryCodesCredentials,
+  handleAuthenticatorConfigured,
+  requestMfaVerification,
+  beginRemove,
+  confirmRemove,
+  cancelRemove,
+  clearPendingRemove,
+} = useMfaMethods({
+  openVerifyModal: () => verifyYourIdentityModal.value?.open(),
+  openRecoveryCodesModal: () => manageRecoveryCodesModal.value?.open(),
+  openRemoveModal: () => removeMfaMethodModal.value?.open(),
+  closeRemoveModal: () => removeMfaMethodModal.value?.close(),
+});
 
-const handleSetUp = (_method: string) => {
-  verifyYourIdentityModal.value.open();
-}
-
-const handleEdit = (method: string) => {
-  switch (method) {
-    case AUTHENTICATION_METHODS.AUTHENTICATOR_APP:
-      manageAuthenticatorAppModal.value.open();
-      break;
-    case AUTHENTICATION_METHODS.RECOVERY_EMAIL_ADDRESS:
-      manageEmailRecoveryModal.value.open();
-      break;
-    default:
-      break;
+// "Set up" and "Edit" open the same modal for a given method; editing recovery codes
+// re-enters the confirm-then-regenerate flow.
+const openMethodModal = (method: string) => {
+  if (method === AUTHENTICATION_METHODS.AUTHENTICATOR_APP) {
+    manageAuthenticatorAppModal.value.open();
+  } else if (method === AUTHENTICATION_METHODS.RECOVERY_CODES) {
+    manageRecoveryCodesModal.value.open();
   }
-}
+};
+
+// The authenticator app cannot be edited in place: registration is enrollment-only on
+// the Keycloak side (replacing an authenticator with a bearer token alone is the
+// "someone else's bike lock" attack). Re-enrollment is Remove, then Set up. Recovery
+// codes keep Edit since regenerating them is the whole operation (step-up gated).
+const isEditable = (method: string) => method !== AUTHENTICATION_METHODS.AUTHENTICATOR_APP;
+
+// Recovery codes don't get "edited" — the action regenerates them — so label it
+// accordingly. Other editable methods keep the generic "Edit".
+const editLabel = (method: string) =>
+  method === AUTHENTICATION_METHODS.RECOVERY_CODES
+    ? t('views.manageMfa.actions.regenerate')
+    : t('views.manageMfa.actions.edit');
+
+// Recovery codes are strictly a backup for the authenticator app, never a standalone
+// factor (Keycloak deletes the credential once the last code is spent, leaving the
+// account unprotected) — so they can't be set up until an authenticator exists.
+const isSetupDisabled = (method: string) =>
+  method === AUTHENTICATION_METHODS.RECOVERY_CODES
+  && !authenticationMethods.value[AUTHENTICATION_METHODS.AUTHENTICATOR_APP].set;
+
+const methodDescription = (method: string, isSet: boolean) => {
+  if (!isSet && isSetupDisabled(method)) {
+    return t('views.manageMfa.recoveryCodes.requiresAuthenticator');
+  }
+  return t(`views.manageMfa.${method}.description.${isSet ? 'set' : 'notSet'}`);
+};
+
+onMounted(loadMfaMethods);
 </script>
 
 <template>
@@ -71,6 +88,9 @@ const handleEdit = (method: string) => {
     <header>{{ t('views.manageMfa.authenticationMethods') }}</header>
 
     <div class="authentication-methods-content">
+      <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">{{ errorMessage }}</notice-bar>
+      <p v-if="isLoading">{{ t('views.manageMfa.loading') }}</p>
+
       <template v-for="([method, methodData], index) in authenticationMethodEntries" :key="method">
         <div class="authentication-method">
           <div class="authentication-method-content">
@@ -87,28 +107,48 @@ const handleEdit = (method: string) => {
             </div>
   
             <p :class="{ 'block-margin': methodData.set }">
-              {{ t(`views.manageMfa.${method}.description.${methodData.set ? 'set' : 'notSet'}`,
-                { phoneNumber: methodData?.phoneNumber, emailAddress: methodData?.emailAddress }) }}
+              {{ methodDescription(method, methodData.set) }}
             </p>
 
-            <template v-if="methodData.set">
+            <template v-if="methodData.set && (methodData.setupDate || methodData.lastUsedDate)">
               <p class="authentication-method-details">
-                {{ t('views.manageMfa.setupDate') }}: {{ methodData.setupDate }} | {{ t('views.manageMfa.lastUsedDate') }}: {{ methodData.lastUsedDate }}
+                <template v-if="methodData.setupDate">
+                  {{ t('views.manageMfa.setupDate') }}: {{ methodData.setupDate }}
+                </template>
+                <template v-if="methodData.lastUsedDate">
+                  | {{ t('views.manageMfa.lastUsedDate') }}: {{ methodData.lastUsedDate }}
+                </template>
+              </p>
+            </template>
+
+            <template v-if="method === AUTHENTICATION_METHODS.RECOVERY_CODES && methodData.set && typeof methodData.totalCodes === 'number'">
+              <p class="authentication-method-details">
+                {{ t('views.manageMfa.remainingCodes', { remaining: methodData.remainingCodes ?? 0, total: methodData.totalCodes }) }}
               </p>
             </template>
           </div>
 
           <div class="authentication-method-actions">
             <template v-if="methodData.set">
-              <primary-button variant="outline" size="small" @click="handleEdit(method)">
-                {{ t('views.manageMfa.actions.edit') }}
-              </primary-button>
-              <link-button size="small">
+              <!-- When a method has an Edit action, Remove sits beneath it as a subtle
+                   underlined link (matches the designs). When there's no Edit (e.g. the
+                   authenticator app, which is enrollment-only), a lone underlined link
+                   looks out of place, so Remove takes the same outline-button style Edit
+                   would have used. -->
+              <template v-if="isEditable(method)">
+                <primary-button :data-testid="`mfa-${method}-edit-button`" variant="outline" size="small" @click="openMethodModal(method)">
+                  {{ editLabel(method) }}
+                </primary-button>
+                <link-button :data-testid="`mfa-${method}-remove-button`" size="small" @click="beginRemove(method, methodData)">
+                  {{ t('views.manageMfa.actions.remove') }}
+                </link-button>
+              </template>
+              <primary-button v-else :data-testid="`mfa-${method}-remove-button`" variant="outline" size="small" @click="beginRemove(method, methodData)">
                 {{ t('views.manageMfa.actions.remove') }}
-              </link-button>
+              </primary-button>
             </template>
             <template v-else>
-              <primary-button variant="outline" size="small" @click="handleSetUp(method)">
+              <primary-button :data-testid="`mfa-${method}-setup-button`" variant="outline" size="small" :disabled="isSetupDisabled(method)" @click="openMethodModal(method)">
                 {{ t('views.manageMfa.actions.setUp') }}
               </primary-button>
             </template>
@@ -124,9 +164,29 @@ const handleEdit = (method: string) => {
   </div>
 
   <!-- Modals -->
-  <verify-your-identity-modal ref="verifyYourIdentityModal" />
-  <manage-authenticator-app-modal ref="manageAuthenticatorAppModal" />
-  <manage-email-recovery-modal ref="manageEmailRecoveryModal" />
+  <manage-authenticator-app-modal
+    ref="manageAuthenticatorAppModal"
+    @configured="handleAuthenticatorConfigured"
+    @reauth-required="requestMfaVerification"
+  />
+  <manage-recovery-codes-modal
+    ref="manageRecoveryCodesModal"
+    @configured="setRecoveryCodesCredentials"
+    @reauth-required="requestMfaVerification"
+  />
+  <verify-your-identity-modal
+    ref="verifyYourIdentityModal"
+    :reauth-url="reauthenticationUrl"
+  />
+  <remove-mfa-method-modal
+    ref="removeMfaMethodModal"
+    :title="removeModalTitle"
+    :description="removeModalDescription"
+    :is-removing="isRemoving"
+    @confirm="confirmRemove"
+    @cancel="cancelRemove"
+    @close="clearPendingRemove"
+  />
 </template>
 
 <style scoped>
@@ -150,7 +210,11 @@ const handleEdit = (method: string) => {
 
     .authentication-method {
       display: grid;
-      grid-template-columns: auto 15%;
+      /* Each method row is its own grid, so the actions column needs a shared fixed width
+         (rather than auto) for the buttons to line up across rows. It's sized to fit the
+         longest label ("Regenerate"); the content column takes the rest and may shrink
+         (minmax 0) so it never pushes the buttons out. */
+      grid-template-columns: minmax(0, 1fr) 6.5rem;
       column-gap: 2.5rem;
       color: var(--colour-ti-secondary);
 
@@ -188,8 +252,20 @@ const handleEdit = (method: string) => {
         flex-direction: column;
         gap: 0.5rem;
 
+        button {
+          /* Keep labels on a single line so they don't wrap inside the fixed-width column. */
+          white-space: nowrap;
+        }
+
         button.link {
           color: var(--colour-ti-secondary);
+          /* The "small" button variant locks every button to a fixed 2rem height and
+             vertically centers its label, which leaves the underlined Remove floating
+             well below the Edit button. Collapse the link button to its own text height
+             so Remove sits snugly beneath Edit. */
+          height: auto;
+          min-height: 0;
+          padding-block: 0;
         }
       }
 

@@ -1,10 +1,21 @@
 from enum import StrEnum
 from urllib.parse import quote
+
 from django.conf import settings
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny
 import sentry_sdk
-from thunderbird_accounts.authentication.exceptions import InvalidDomainError, ImportUserError
+
+from thunderbird_accounts.authentication.exceptions import (
+    InvalidDomainError,
+    ImportUserError,
+)
+from thunderbird_accounts.authentication.mfa_management import (
+    MfaManagementError,
+    MfaManagementService,
+    mfa_management_error_response,
+)
 from thunderbird_accounts.authentication.utils import (
     is_email_in_allow_list,
     KeycloakRequiredAction,
@@ -12,7 +23,7 @@ from thunderbird_accounts.authentication.utils import (
     can_register_with_username,
     get_user_by_contact_email,
 )
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
 from rest_framework.exceptions import NotAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -28,16 +39,106 @@ class SignUpThrottle(UserRateThrottle):
 class CanISignUpThrottle(UserRateThrottle):
     scope = 'can_i_sign_up'
 
+
 class CanISignUpResponses(StrEnum):
     WAIT_LIST = 'wait-list'
     LOGIN = 'login'
     SIGN_UP = 'sign-up'
+
+
+class TotpConfirmThrottle(UserRateThrottle):
+    scope = 'totp_confirm'
+
+
+class RecoveryCodesRegenerateThrottle(UserRateThrottle):
+    scope = 'recovery_codes_regenerate'
+
 
 @api_view(['POST'])
 def get_user_profile(request: Request):
     if not request.user:
         raise NotAuthenticated()
     return Response(UserProfileSerializer(request.user).data)
+
+
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication])
+def get_mfa_methods(request: Request):
+    try:
+        methods = MfaManagementService(request).get_methods()
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
+
+    return Response(
+        {
+            'success': True,
+            'methods': methods.as_response_data(),
+        }
+    )
+
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+def start_totp_setup(request: Request):
+    try:
+        setup = MfaManagementService(request).start_totp_setup()
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
+
+    return Response({'success': True, **setup})
+
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+@throttle_classes([TotpConfirmThrottle])
+def confirm_totp_setup(request: Request):
+    code = request.data.get('code', '')
+    user_label = request.data.get('label') or _('Authenticator app')
+    try:
+        result = MfaManagementService(request).confirm_totp_setup(
+            code=code,
+            user_label=str(user_label),
+            logout_other_sessions=bool(request.data.get('logoutOtherSessions')),
+        )
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
+
+    return Response({'success': True, **result})
+
+
+@api_view(['DELETE'])
+@authentication_classes([SessionAuthentication])
+def remove_totp_credential(request: Request, credential_id: str):
+    try:
+        result = MfaManagementService(request).remove_totp_credential(credential_id)
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
+
+    return Response({'success': True, **result})
+
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+@throttle_classes([RecoveryCodesRegenerateThrottle])
+def regenerate_recovery_codes(request: Request):
+    user_label = request.data.get('label') or _('Recovery codes')
+    try:
+        result = MfaManagementService(request).regenerate_recovery_codes(str(user_label))
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
+
+    return Response({'success': True, **result})
+
+
+@api_view(['DELETE'])
+@authentication_classes([SessionAuthentication])
+def remove_recovery_codes_credential(request: Request, credential_id: str):
+    try:
+        MfaManagementService(request).remove_recovery_codes_credential(credential_id)
+    except MfaManagementError as exc:
+        return mfa_management_error_response(request, exc)
+
+    return Response({'success': True})
 
 
 @api_view(['POST'])

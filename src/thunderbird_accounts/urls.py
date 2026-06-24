@@ -11,7 +11,7 @@ from django.shortcuts import redirect
 from django.urls import path, include, re_path
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
-from thunderbird_accounts.authentication import views as auth_views
+from thunderbird_accounts.authentication import api as auth_api, views as auth_views
 from thunderbird_accounts.core import views as core_views
 from thunderbird_accounts.infra import views as infra_views
 from thunderbird_accounts.mail import views as mail_views, api as mail_api
@@ -62,6 +62,24 @@ urlpatterns = [
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/auth/sign-up/', sign_up, name='api_sign_up'),
     path('api/v1/auth/can-i-sign-up/', can_i_sign_up, name='api_can_i_sign_up'),
+    path('api/v1/auth/mfa/methods/', auth_api.get_mfa_methods, name='api_get_mfa_methods'),
+    path('api/v1/auth/mfa/totp/setup/start/', auth_api.start_totp_setup, name='api_start_totp_setup'),
+    path('api/v1/auth/mfa/totp/setup/confirm/', auth_api.confirm_totp_setup, name='api_confirm_totp_setup'),
+    path(
+        'api/v1/auth/mfa/totp/credentials/<str:credential_id>/',
+        auth_api.remove_totp_credential,
+        name='api_remove_totp_credential',
+    ),
+    path(
+        'api/v1/auth/mfa/recovery-codes/regenerate/',
+        auth_api.regenerate_recovery_codes,
+        name='api_regenerate_recovery_codes',
+    ),
+    path(
+        'api/v1/auth/mfa/recovery-codes/credentials/<str:credential_id>/',
+        auth_api.remove_recovery_codes_credential,
+        name='api_remove_recovery_codes_credential',
+    ),
     path('api/v1/support/customer/', support_customer_api, name='api_support_customer'),
     path('api/v1/legal/current/', legal_views.get_current_legal_docs, name='legal_current'),
     path('api/v1/legal/accept/', legal_views.accept_legal_docs, name='legal_accept'),
@@ -93,6 +111,9 @@ urlpatterns = [
 
 
 if settings.AUTH_SCHEME == 'oidc':
+    urlpatterns.append(
+        path('oidc/mfa-reauth/', auth_views.MfaReauthenticationRequestView.as_view(), name='mfa_reauth')
+    )
     urlpatterns.append(path('oidc/', include('mozilla_django_oidc.urls')))
     urlpatterns.append(path('logout/', auth_views.start_oidc_logout, name='logout'))
     urlpatterns.append(path('logout/callback', auth_views.oidc_logout_callback, name='logout_callback'))
