@@ -75,6 +75,18 @@ export const removeExistingMfaCredentials = async () => {
   }
 };
 
+export const getUserSessionIds = async (): Promise<string[]> => {
+  const { userId, headers } = await fetchKeycloakCredentials();
+  const response = await fetch(`${KEYCLOAK_ADMIN_BASE_URL}/admin/realms/tbpro/users/${userId}/sessions`, { headers });
+  const sessions = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`Could not load Keycloak sessions: ${JSON.stringify(sessions)}`);
+  }
+
+  return (sessions as Array<{ id: string }>).map((session) => session.id);
+};
+
 export const getRecoveryCodesCredentialMetadata = async () => {
   const { credentials } = await fetchKeycloakCredentials();
   return credentials

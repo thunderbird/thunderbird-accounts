@@ -228,6 +228,54 @@ class MfaApiTestCase(TestCase):
         self.assertIsNone(cache.get(make_pending_totp_cache_key(self.user.pk)))
 
     @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
+    def test_confirm_totp_setup_logout_other_sessions_uses_account_api(self, mock_keycloak_client: Mock):
+        # logoutOtherSessions delegates to the Account REST API with the user's own token,
+        # which preserves the current session (unlike the admin logout-all). See #1005.
+        cache.set(make_pending_totp_cache_key(self.user.pk), {'secret': 'rawsecretvalue123456'})
+        self.mock_mfa_client.return_value.register_totp_credential.return_value = {'success': True}
+        mock_keycloak_client.return_value.get_totp_credentials.return_value = [{'id': 'new-credential-id'}]
+
+        response = self.client.post(
+            reverse('api_confirm_totp_setup'),
+            data={'code': '123456', 'logoutOtherSessions': True},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.mock_mfa_client.return_value.logout_other_sessions.assert_called_once_with('test-user-access-token')
+
+    @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
+    def test_confirm_totp_setup_without_logout_flag_skips_account_api(self, mock_keycloak_client: Mock):
+        cache.set(make_pending_totp_cache_key(self.user.pk), {'secret': 'rawsecretvalue123456'})
+        self.mock_mfa_client.return_value.register_totp_credential.return_value = {'success': True}
+        mock_keycloak_client.return_value.get_totp_credentials.return_value = [{'id': 'new-credential-id'}]
+
+        response = self.client.post(
+            reverse('api_confirm_totp_setup'),
+            data={'code': '123456'},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.mock_mfa_client.return_value.logout_other_sessions.assert_not_called()
+
+    @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
+    def test_confirm_totp_setup_succeeds_when_logout_fails(self, mock_keycloak_client: Mock):
+        # The credential is already saved, so a logout failure must not fail the request.
+        cache.set(make_pending_totp_cache_key(self.user.pk), {'secret': 'rawsecretvalue123456'})
+        self.mock_mfa_client.return_value.register_totp_credential.return_value = {'success': True}
+        mock_keycloak_client.return_value.get_totp_credentials.return_value = [{'id': 'new-credential-id'}]
+        self.mock_mfa_client.return_value.logout_other_sessions.side_effect = RequestException('boom')
+
+        response = self.client.post(
+            reverse('api_confirm_totp_setup'),
+            data={'code': '123456', 'logoutOtherSessions': True},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
     def test_start_totp_setup_requires_user_access_token(self, mock_keycloak_client: Mock):
         # No TOTP configured (no step-up), but the user's OIDC access token is missing.
         session = self.client.session

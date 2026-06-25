@@ -315,7 +315,7 @@ class MfaManagementService:
             raise MfaSaveAuthenticatorUnavailableError() from exc
 
         if logout_other_sessions:
-            self._logout_other_sessions(oidc_id)
+            self._logout_other_sessions(user_access_token)
 
         self.request.session[MFA_MANAGEMENT_AUTH_SESSION_KEY] = int(time.time())
         cache.delete(make_pending_totp_cache_key(self.request.user.pk))
@@ -441,8 +441,12 @@ class MfaManagementService:
             sentry_sdk.capture_exception(exc)
             return []
 
-    def _logout_other_sessions(self, oidc_id: str) -> None:
+    def _logout_other_sessions(self, user_access_token: str) -> None:
+        """Best-effort wrapper: report logout failures to Sentry instead of failing the request."""
+        # The TOTP credential is already saved, so a logout failure must not fail the
+        # request. Keycloak's Account API preserves the current session (the admin
+        # user-logout would evict it too — issue #1005).
         try:
-            self.keycloak.logout_user_sessions(oidc_id)
+            self.provider.logout_other_sessions(user_access_token)
         except RequestException as exc:
             sentry_sdk.capture_exception(exc)

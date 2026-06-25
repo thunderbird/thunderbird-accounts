@@ -133,10 +133,6 @@ class KeycloakClient:
         self.request(f'users/{oidc_id}/credentials/{credential_id}', RequestMethods.DELETE)
         return True
 
-    def logout_user_sessions(self, oidc_id: str) -> bool:
-        self.request(f'users/{oidc_id}/logout', RequestMethods.POST)
-        return True
-
     def get_recovery_codes_credentials(self, oidc_id: str) -> list[dict]:
         return [
             credential
@@ -393,11 +389,12 @@ class KeycloakClient:
 
 
 class KeycloakMfaClient:
-    """Client for the self-service keycloak-mfa-rest provider.
+    """Client for self-service, realm-scoped Keycloak calls made as the end user.
 
-    These calls use the end user's forwarded OIDC access token and operate on the
-    token subject. Keep this separate from the admin API client so the two trust
-    boundaries cannot accidentally share auth or endpoint routing.
+    These use the end user's forwarded OIDC access token and operate on the token subject:
+    the keycloak-mfa-rest provider (/realms/{realm}/mfa/) plus Keycloak's built-in Account
+    REST API (/realms/{realm}/account/). Keep this separate from the admin API client so
+    the two trust boundaries cannot accidentally share auth or endpoint routing.
     """
 
     def request(
@@ -485,3 +482,21 @@ class KeycloakMfaClient:
             RequestMethods.POST,
             json_data=json_data,
         )
+
+    def logout_other_sessions(self, user_access_token: str) -> bool:
+        """Sign the user out of all sessions except the one this token belongs to.
+
+        Uses Keycloak's built-in Account REST API (realm-scoped, self-service), whose
+        `DELETE account/sessions` preserves the calling session — unlike the admin
+        user-logout, which is logout-all and would evict the current session too (#1005).
+        """
+        response = requests.request(
+            method=RequestMethods.DELETE.value,
+            url=urljoin(settings.KEYCLOAK_REALM_ENDPOINT, 'account/sessions'),
+            headers={
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {user_access_token}',
+            },
+        )
+        response.raise_for_status()
+        return True
