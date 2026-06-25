@@ -97,6 +97,7 @@ class CustomUserAdmin(UserAdmin):
         'is_active',
         'is_awaiting_payment_verification',
         'plan',
+        'groups',
     ]
 
     form = CustomUserChangeForm
