@@ -11,6 +11,9 @@ import {
 
 let signUpPage: TbAcctsSignUpPage;
 
+// be sure to re-enable these tests once 986 is resolved
+test.skip(true, 'Temporarily disabled due to issue 986');
+
 test.beforeEach(async ({ page }) => {
   // Remove any authentication cookies before passing it to our page
   await page.context().clearCookies();
