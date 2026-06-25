@@ -4,8 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { StandardFooter } from '@thunderbirdops/services-ui';
 import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL } from '@/defines';
-import { FeatureFlag, FeatureFlagValue } from '@/types';
-import { isFeatureFlagEnabled } from '@/utils';
+import { isWaffleFlagActive } from '@/utils';
 
 const { t } = useI18n();
 
@@ -14,8 +13,8 @@ const isAuthenticated = ref(window._page?.isAuthenticated);
 type NavItem = { route: string; i18nKey: string };
 
 const navItemsAccounts: NavItem[] = [
-  // Manage MFA is rolling out behind the SHOW_MFA flag
-  ...(isFeatureFlagEnabled(FeatureFlag.SHOW_MFA, FeatureFlagValue.TRUE)
+  // Manage MFA is rolling out behind the multi-factor-authentication waffle flag
+  ...(isWaffleFlagActive('multi-factor-authentication')
     ? [{ route: '/manage-mfa', i18nKey: 'manageMfa' }]
     : []),
   // TODO: Expose Privacy & Data here once it's ready.

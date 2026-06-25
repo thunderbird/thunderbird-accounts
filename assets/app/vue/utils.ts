@@ -10,3 +10,6 @@ export const defaultLocale = () => {
 export const isFeatureFlagEnabled = (flag: FeatureFlag, expected: FeatureFlagValue): boolean =>
   window.localStorage.getItem(flag) === expected;
 
+export const isWaffleFlagActive = (flag: string): boolean =>
+  Boolean((window as any).waffle?.flag_is_active(flag));
+

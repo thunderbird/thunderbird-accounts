@@ -14,7 +14,6 @@ export type ServerMessage = {
 
 export enum FeatureFlag {
   SHOW_CONNECT_NOW = 'feature.show-connect-now',
-  SHOW_MFA = 'feature.show-mfa',
 };
 
 export enum FeatureFlagValue {
