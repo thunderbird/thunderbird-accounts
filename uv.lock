@@ -605,6 +605,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-waffle"
+version = "5.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/22/e1/6f533da0d4ac89f427dfd9410e39bfc14ae3a23335ecd549d76be4b2a834/django_waffle-5.0.0.tar.gz", hash = "sha256:62f9d00eedf68dafb82657beab56e601bddedc1ea1ccfef91d83df8658708509", size = 37761, upload-time = "2025-06-12T07:38:54.895Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7a/d2/6f0d664bd35a3fdd0403655c7c32ec290704923f11541ef356b180cd8fbf/django_waffle-5.0.0-py3-none-any.whl", hash = "sha256:3312851d9d926b76b9e90712355781700a383b82b5bf2b61e1f1be97532c0f3d", size = 48137, upload-time = "2025-06-12T07:38:53.698Z" },
+]
+
+[[package]]
 name = "djangorestframework"
 version = "3.17.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1756,6 +1768,7 @@ dependencies = [
     { name = "django-stubs-ext" },
     { name = "django-types" },
     { name = "django-vite" },
+    { name = "django-waffle" },
     { name = "djangorestframework" },
     { name = "djangorestframework-simplejwt" },
     { name = "dnspython" },
@@ -1817,6 +1830,7 @@ requires-dist = [
     { name = "django-stubs-ext", specifier = ">=6.0.5" },
     { name = "django-types", specifier = ">=0.24.0" },
     { name = "django-vite", specifier = ">=3.1.0" },
+    { name = "django-waffle", specifier = ">=5.0.0" },
     { name = "djangorestframework", specifier = ">=3.17.1" },
     { name = "djangorestframework-simplejwt", specifier = ">=5.5.1" },
     { name = "dnspython", specifier = ">=2.8.0" },
