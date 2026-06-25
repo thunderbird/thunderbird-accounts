@@ -171,6 +171,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_vite',
     'corsheaders',
+    'waffle',
 ]
 
 MIDDLEWARE = [
@@ -186,6 +187,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'mozilla_django_oidc.middleware.SessionRefresh',
     'thunderbird_accounts.authentication.middleware.OIDCRefreshSession',
+    'waffle.middleware.WaffleMiddleware',
     # This should be last
     'thunderbird_accounts.mail.middleware.FixMissingArchivesFolderMiddleware',
 ]
