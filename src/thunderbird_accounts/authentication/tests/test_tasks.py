@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Group
 from datetime import datetime, timedelta
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -219,6 +220,96 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
         self.assertEqual(result['task_status'], 'skipped')
         self.assertEqual(result['tagged'], 0)
 
+# TEMP: Until #1028 is no longer needed
+# @patch('thunderbird_accounts.authentication.tasks.delete_user_data')
+# class PurgeIncompleteSignupsTaskTestCase(TestCase):
+#     def setUp(self):
+#         self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
+#         stale_created_at = timezone.now() - timedelta(hours=settings.INCOMPLETE_SIGNUP_PURGE_HOURS + 1)
+#         self.user = User.objects.create(
+#             username=f'purge-me@{self.subdomain}',
+#             email='purge-me@example.com',
+#             oidc_id='purge-oidc-1',
+#         )
+#         User.objects.filter(pk=self.user.pk).update(created_at=stale_created_at)
+
+#     def test_deletes_stale_incomplete_users(self, mock_delete_user_data):
+#         mock_delete_user_data.return_value = []
+
+#         result = purge_incomplete_signups.apply().get()
+
+#         mock_delete_user_data.assert_called_once()
+#         self.assertEqual(result['deleted'], 1)
+#         self.assertEqual(result['errors'], 0)
+
+#     def test_counts_partial_deletion_as_error(self, mock_delete_user_data):
+#         mock_delete_user_data.return_value = ['Keycloak: connection refused']
+
+#         result = purge_incomplete_signups.apply().get()
+
+#         self.assertEqual(result['deleted'], 0)
+#         self.assertEqual(result['errors'], 1)
+
+#     def test_skips_user_if_subscription_appears_after_initial_selection(self, mock_delete_user_data):
+#         Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
+#         with patch('thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users') as mock_get_users:
+#             mock_get_users.return_value.iterator.return_value = [self.user]
+
+#             result = purge_incomplete_signups.apply().get()
+
+#         mock_delete_user_data.assert_not_called()
+#         self.assertEqual(result['deleted'], 0)
+#         self.assertEqual(result['errors'], 0)
+#         self.assertEqual(result['skipped'], 1)
+
+#     def test_continues_after_unexpected_delete_exception(self, mock_delete_user_data):
+#         second_user = User.objects.create(
+#             username=f'purge-me-too@{self.subdomain}',
+#             email='purge-me-too@example.com',
+#             oidc_id='purge-oidc-2',
+#         )
+#         User.objects.filter(pk=second_user.pk).update(
+#             created_at=timezone.now() - timedelta(hours=settings.INCOMPLETE_SIGNUP_PURGE_HOURS + 1)
+#         )
+#         mock_delete_user_data.side_effect = [RuntimeError('boom'), []]
+#         with patch('thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users') as mock_get_users:
+#             mock_get_users.return_value.iterator.return_value = [self.user, second_user]
+
+#             result = purge_incomplete_signups.apply().get()
+
+#         self.assertEqual(mock_delete_user_data.call_count, 2)
+#         self.assertEqual(result['deleted'], 1)
+#         self.assertEqual(result['errors'], 1)
+
+#     @override_settings(INCOMPLETE_SIGNUP_PURGE_HOURS=120)
+#     def test_skips_recent_users(self, mock_delete_user_data):
+#         User.objects.filter(pk=self.user.pk).update(created_at=timezone.now())
+
+#         result = purge_incomplete_signups.apply().get()
+
+#         mock_delete_user_data.assert_not_called()
+#         self.assertEqual(result['deleted'], 0)
+
+#     def test_does_not_delete_user_awaiting_payment_verification(self, mock_delete_user_data):
+#         self.user.is_awaiting_payment_verification = True
+#         self.user.save()
+
+#         result = purge_incomplete_signups.apply().get()
+
+#         mock_delete_user_data.assert_not_called()
+#         self.assertEqual(result['deleted'], 0)
+
+#     def test_skips_user_if_awaiting_payment_after_initial_selection(self, mock_delete_user_data):
+#         self.user.is_awaiting_payment_verification = True
+#         self.user.save()
+#         with patch('thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users') as mock_get_users:
+#             mock_get_users.return_value.iterator.return_value = [self.user]
+
+#             result = purge_incomplete_signups.apply().get()
+
+#         mock_delete_user_data.assert_not_called()
+#         self.assertEqual(result['skipped'], 1)
+
 
 @patch('thunderbird_accounts.authentication.tasks.delete_user_data')
 class PurgeIncompleteSignupsTaskTestCase(TestCase):
@@ -235,19 +326,34 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
     def test_deletes_stale_incomplete_users(self, mock_delete_user_data):
         mock_delete_user_data.return_value = []
 
+        self.assertEqual(self.user.groups.count(), 0)
+
         result = purge_incomplete_signups.apply().get()
 
-        mock_delete_user_data.assert_called_once()
+        # Test the group change
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.groups.count(), 1)
+
+        # Ensure our delete user data function did not run
+        mock_delete_user_data.assert_not_called()
+
+        # Ensure that deleted is 1
         self.assertEqual(result['deleted'], 1)
         self.assertEqual(result['errors'], 0)
 
     def test_counts_partial_deletion_as_error(self, mock_delete_user_data):
         mock_delete_user_data.return_value = ['Keycloak: connection refused']
 
+        self.assertEqual(self.user.groups.count(), 0)
+
         result = purge_incomplete_signups.apply().get()
 
-        self.assertEqual(result['deleted'], 0)
-        self.assertEqual(result['errors'], 1)
+        # Test the group change
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.groups.count(), 1)
+
+        self.assertEqual(result['deleted'], 1)
+        self.assertEqual(result['errors'], 0)
 
     def test_skips_user_if_subscription_appears_after_initial_selection(self, mock_delete_user_data):
         Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
@@ -255,6 +361,11 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
             mock_get_users.return_value.iterator.return_value = [self.user]
 
             result = purge_incomplete_signups.apply().get()
+
+        # Test the group change
+        self.assertEqual(self.user.groups.count(), 0)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.groups.count(), 0)
 
         mock_delete_user_data.assert_not_called()
         self.assertEqual(result['deleted'], 0)
@@ -267,6 +378,9 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
             email='purge-me-too@example.com',
             oidc_id='purge-oidc-2',
         )
+        
+        self.assertEqual(second_user.groups.count(), 0)
+
         User.objects.filter(pk=second_user.pk).update(
             created_at=timezone.now() - timedelta(hours=settings.INCOMPLETE_SIGNUP_PURGE_HOURS + 1)
         )
@@ -276,15 +390,26 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
 
             result = purge_incomplete_signups.apply().get()
 
-        self.assertEqual(mock_delete_user_data.call_count, 2)
-        self.assertEqual(result['deleted'], 1)
-        self.assertEqual(result['errors'], 1)
+        # Test the group change
+        second_user.refresh_from_db()
+        self.assertEqual(second_user.groups.count(), 1)
+
+        self.assertEqual(mock_delete_user_data.call_count, 0) # Not called!
+        self.assertEqual(result['deleted'], 2) # This is two because we never actually 
+        # call delete user data so there can never be an error
+        self.assertEqual(result['errors'], 0)
 
     @override_settings(INCOMPLETE_SIGNUP_PURGE_HOURS=120)
     def test_skips_recent_users(self, mock_delete_user_data):
         User.objects.filter(pk=self.user.pk).update(created_at=timezone.now())
 
+        self.assertEqual(self.user.groups.count(), 0)
+
         result = purge_incomplete_signups.apply().get()
+
+        # Test the group change
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.groups.count(), 0)
 
         mock_delete_user_data.assert_not_called()
         self.assertEqual(result['deleted'], 0)
@@ -293,7 +418,13 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
         self.user.is_awaiting_payment_verification = True
         self.user.save()
 
+        self.assertEqual(self.user.groups.count(), 0)
+
         result = purge_incomplete_signups.apply().get()
+
+        # Test the group change
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.groups.count(), 0)
 
         mock_delete_user_data.assert_not_called()
         self.assertEqual(result['deleted'], 0)
@@ -301,10 +432,55 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
     def test_skips_user_if_awaiting_payment_after_initial_selection(self, mock_delete_user_data):
         self.user.is_awaiting_payment_verification = True
         self.user.save()
+
+        self.assertEqual(self.user.groups.count(), 0)
+
         with patch('thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users') as mock_get_users:
             mock_get_users.return_value.iterator.return_value = [self.user]
 
             result = purge_incomplete_signups.apply().get()
 
+        # Test the group change
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.groups.count(), 0)
+
         mock_delete_user_data.assert_not_called()
         self.assertEqual(result['skipped'], 1)
+
+    def test_add_group_if_not_found(self, mock_delete_user_data):
+        mock_delete_user_data.return_value = []
+
+        # Group doesn't exist
+        group = Group.objects.filter(name='Users to Purge').first()
+        self.assertIsNone(group)
+
+        purge_incomplete_signups.apply().get()
+
+        # Group should exist now
+        group = Group.objects.filter(name='Users to Purge').first()
+        self.assertIsNotNone(group)
+
+        # Ensure our delete user data function did not run
+        mock_delete_user_data.assert_not_called()
+
+
+    def test_removes_from_group_if_later_matches_criteria(self, mock_delete_user_data):
+        self.assertEqual(self.user.groups.count(), 0)
+        purge_incomplete_signups.apply().get()
+        mock_delete_user_data.assert_not_called()
+
+        # Test the group change
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.groups.count(), 1)
+
+        # Adjust the user to be "safe" from this task
+        self.user.is_awaiting_payment_verification = True
+        self.user.save()
+
+        # Run the task again
+        purge_incomplete_signups.apply().get()
+        mock_delete_user_data.assert_not_called()
+
+        # We're out of the group!
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.groups.count(), 0)

@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Group
 import logging
 from datetime import timedelta
 
@@ -9,7 +10,7 @@ from django.db.models import Exists, OuterRef, QuerySet
 from django.utils import timezone
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.authentication.utils import delete_user_data
+from thunderbird_accounts.authentication.utils import delete_user_data #  noqa: F401 - needed for tests
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.subscription.models import Subscription
@@ -28,6 +29,7 @@ def get_stale_incomplete_signup_users(cutoff_hours: int) -> QuerySet[User]:
             is_staff=False,
             is_superuser=False,
             is_awaiting_payment_verification=False,
+            plan_id__isnull=True,
         )
         .annotate(has_subscription=Exists(has_subscription))
         .filter(has_subscription=False)
@@ -117,6 +119,17 @@ def purge_incomplete_signups(self):
     errors = 0
     skipped = 0
 
+    # Fetch or create the "Users to purge" group
+    group, _ = Group.objects.get_or_create(name='Users to Purge')
+    if not group:
+        result = {
+            'task_status': 'failed',
+            'deleted': 0,
+            'errors': 0,
+            'skipped': 0,
+        }
+        return result
+
     for user in get_stale_incomplete_signup_users(cutoff_hours=settings.INCOMPLETE_SIGNUP_PURGE_HOURS).iterator():
         try:
             with transaction.atomic():
@@ -137,7 +150,13 @@ def purge_incomplete_signups(self):
                     )
                     continue
 
-                purge_errors = delete_user_data(user)
+
+                # Add the user to the group
+                user.groups.add(group)
+                purge_errors = []
+                # TODO: Turn back on once we're confident
+                #purge_errors = delete_user_data(user)
+
         except User.DoesNotExist:
             skipped += 1
             continue
@@ -156,6 +175,18 @@ def purge_incomplete_signups(self):
             )
         else:
             deleted += 1
+
+    # Temp: Until we're confident about this function
+    # Remove any users that no longer match criteria
+    for user in group.user_set.iterator():
+        if any([user.is_superuser, 
+                user.is_staff, 
+                user.is_test_account, 
+                user.is_awaiting_payment_verification, 
+                user.plan,
+                user.subscription_set.count() > 0,
+            ]):
+            user.groups.remove(group)
 
     result = {
         'task_status': 'completed',
