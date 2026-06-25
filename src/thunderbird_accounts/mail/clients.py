@@ -257,11 +257,17 @@ class MailClient:
         Response objects may used for testing.
         Throws exception if request fails.
         """
+        from thunderbird_accounts.mail.dkim import _normalize_domain
+
         response_data = []
         dkim_algorithms = settings.STALWART_DKIM_ALGOS if algorithms is None else algorithms
+        normalized_domain = _normalize_domain(domain)
         for algorithm in dkim_algorithms:
+            # The signature id must match Stalwart's signing expression ('<prefix>-<domain>',
+            # e.g. rsa-example.com); otherwise outbound mail for this domain is sent unsigned.
+            id_prefix = settings.STALWART_DKIM_ALGO_ID_PREFIXES.get(algorithm)
             data = {
-                'id': None,
+                'id': f'{id_prefix}-{normalized_domain}' if id_prefix else None,
                 'algorithm': algorithm,
                 'domain': domain,
                 'selector': settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm),
