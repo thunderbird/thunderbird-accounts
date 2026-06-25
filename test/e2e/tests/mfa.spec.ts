@@ -5,6 +5,7 @@ import {
   ACCTS_HUB_URL,
   ACCTS_OIDC_EMAIL,
   ACCTS_OIDC_PWORD,
+  KEYCLOAK_ADMIN_CLIENT_SECRET,
   PLAYWRIGHT_TAG_E2E_SUITE,
   TIMEOUT_30_SECONDS,
 } from '../const/constants';
@@ -34,6 +35,9 @@ import { makeTotpCode } from '../utils/totp';
 test.describe('multi-factor authentication', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE],
 }, () => {
+
+  test.skip((!KEYCLOAK_ADMIN_CLIENT_SECRET) || KEYCLOAK_ADMIN_CLIENT_SECRET === 'undefined', 'KEYCLOAK_ADMIN_CLIENT_SECRET is needed for this test to run.');
+
   // Manage MFA is gated behind the SHOW_MFA feature flag; enable it per-browser so the
   // /manage-mfa route is registered before any test navigates to it.
   test.beforeEach(async ({ page }) => {
