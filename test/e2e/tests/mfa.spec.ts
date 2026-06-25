@@ -5,6 +5,7 @@ import {
   ACCTS_HUB_URL,
   ACCTS_OIDC_EMAIL,
   ACCTS_OIDC_PWORD,
+  KEYCLOAK_ADMIN_CLIENT_SECRET,
   PLAYWRIGHT_TAG_E2E_SUITE,
   TIMEOUT_30_SECONDS,
 } from '../const/constants';
@@ -140,6 +141,7 @@ test.describe('multi-factor authentication', {
   });
 
   test('recovery codes require an authenticator app and are removed along with it', async ({ page }) => {
+    test.skip(!KEYCLOAK_ADMIN_CLIENT_SECRET, 'KEYCLOAK_ADMIN_CLIENT_SECRET is needed for this test to run.');
     await ensureWeAreSignedIn(page);
     await acceptLegalPoliciesIfRequired(page);
     await page.goto(`${ACCTS_HUB_URL}/manage-mfa`);
