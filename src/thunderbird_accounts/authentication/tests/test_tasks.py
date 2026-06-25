@@ -466,7 +466,7 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
 
     def test_removes_from_group_if_later_matches_criteria(self, mock_delete_user_data):
         self.assertEqual(self.user.groups.count(), 0)
-        result = purge_incomplete_signups.apply().get()
+        purge_incomplete_signups.apply().get()
         mock_delete_user_data.assert_not_called()
 
         # Test the group change

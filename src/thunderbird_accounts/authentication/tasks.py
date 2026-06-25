@@ -10,7 +10,6 @@ from django.db.models import Exists, OuterRef, QuerySet
 from django.utils import timezone
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.authentication.utils import delete_user_data
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.subscription.models import Subscription
