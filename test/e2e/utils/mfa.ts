@@ -67,14 +67,23 @@ export const signInWithPassword = async (page: Page) => {
 };
 
 // Sets up an authenticator app via the management UI and leaves the auto-chained
-// recovery-codes modal open on its confirmation step.
-export const setUpAuthenticatorApp = async (page: Page) => {
+// recovery-codes modal open on its confirmation step. Pass logoutOtherSessions to also
+// tick "Sign out from other devices" before submitting the enrollment code.
+export const setUpAuthenticatorApp = async (
+  page: Page,
+  { logoutOtherSessions = false }: { logoutOtherSessions?: boolean } = {},
+) => {
   await page.getByRole('button', { name: 'Set up' }).first().click();
   await page.getByRole('button', { name: 'Enter code manually' }).click();
   const manualSecret = await page.getByTestId('totp-manual-secret').innerText();
   await page.getByRole('button', { name: 'Continue' }).click();
   const enrollmentCode = makeTotpCode(manualSecret);
   await page.getByTestId('totp-code-input').fill(enrollmentCode);
+  if (logoutOtherSessions) {
+    // The native input is screen-reader-only; its label's click handler drives the v-model.
+    await page.locator('label[for="Sign out from other devices"]').click();
+    await expect(page.getByRole('checkbox', { name: 'Sign out from other devices' })).toBeChecked();
+  }
   await page.getByRole('button', { name: 'Continue' }).click();
   return { manualSecret, enrollmentCode };
 };

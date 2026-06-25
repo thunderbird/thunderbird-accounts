@@ -11,6 +11,7 @@ import {
 import {
   fetchKeycloakCredentials,
   getRecoveryCodesCredentialMetadata,
+  getUserSessionIds,
   MFA_CREDENTIAL_TYPES,
   removeExistingMfaCredentials,
 } from '../utils/keycloak-admin';
@@ -218,6 +219,50 @@ test.describe('multi-factor authentication', {
     expect(replacedCredential[0].id).not.toBe(initialCredential[0].id);
 
     await removeExistingMfaCredentials();
+  });
+
+  test('"sign out from other devices" during setup ends other sessions but keeps the current one', async ({
+    page,
+    browser,
+  }) => {
+    // Regression guard for #1005: the old "logout other sessions" call was logout-ALL and
+    // evicted the enrolling device too, so the user hit "session expired" moments later.
+    await ensureWeAreSignedIn(page);
+    await acceptLegalPoliciesIfRequired(page);
+    await page.goto(`${ACCTS_HUB_URL}/manage-mfa`);
+    await waitForVueApp(page);
+    await removeExistingMfaCredentials();
+    await page.reload();
+    await waitForVueApp(page);
+
+    // Second device: a separate context with its own Keycloak session. The account has no
+    // MFA yet, so a password-only sign-in succeeds.
+    const otherDevice = await browser.newContext();
+    try {
+      const idsBeforeOtherDevice = new Set(await getUserSessionIds());
+      const otherPage = await otherDevice.newPage();
+      await signInWithPassword(otherPage);
+      await expect(otherPage.getByRole('banner').locator('.avatar')).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+
+      const otherDeviceSessionId = (await getUserSessionIds()).find((id) => !idsBeforeOtherDevice.has(id));
+      expect(otherDeviceSessionId, 'second device should create a new Keycloak session').toBeTruthy();
+
+      // Enrol the authenticator on the current device with "sign out from other devices" on.
+      await setUpAuthenticatorApp(page, { logoutOtherSessions: true });
+
+      // The recovery-codes step immediately follows and calls the provider with the
+      // current access token. This is the exact next interaction that failed "session
+      // expired" before the fix; it succeeding proves the current device stayed signed in.
+      const codes = await captureRecoveryCodesAndConfirm(page);
+      expect(codes).toHaveLength(12);
+
+      // ...and the other device's session is terminated.
+      await expect
+        .poll(async () => await getUserSessionIds(), { timeout: TIMEOUT_30_SECONDS })
+        .not.toContain(otherDeviceSessionId);
+    } finally {
+      await otherDevice.close();
+    }
   });
 
   test('"try another way" lists the authenticator first and signs in via a recovery code', async ({ page }) => {

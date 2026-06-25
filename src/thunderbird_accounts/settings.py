@@ -401,18 +401,24 @@ if AUTH_SCHEME == 'oidc':
     KEYCLOAK_ADMIN_CLIENT_SECRET = os.getenv('KEYCLOAK_ADMIN_CLIENT_SECRET')
     KEYCLOAK_ADMIN_TOKEN_ENDPOINT = os.getenv('KEYCLOAK_ADMIN_URL_TOKEN')
 
-    # Base URL for the keycloak-mfa-rest provider, mounted on the realm path
-    # (/realms/{realm}/mfa/). Defaults to the admin API host with the admin path
-    # swapped for the realm path; override with KEYCLOAK_URL_MFA if they differ.
-    #
-    # The provider is self-service: accounts forwards the end user's OIDC access token
-    # (session 'oidc_access_token') as the bearer, and the provider operates on the token
-    # subject. The provider's authorized-clients allowlist is set (Keycloak-side) to this
-    # app's OIDC client (OIDC_RP_CLIENT_ID), since that's the user token's azp.
-    KEYCLOAK_MFA_API_ENDPOINT = os.getenv('KEYCLOAK_URL_MFA') or (
-        f'{KEYCLOAK_API_ENDPOINT.replace("/admin/realms/", "/realms/").rstrip("/")}/mfa/'
+    # Realm base URL (/realms/{realm}/). The keycloak-mfa-rest provider and Keycloak's
+    # built-in self-service endpoints (e.g. the Account REST API) both hang off this, and
+    # all take the end user's forwarded OIDC access token (session 'oidc_access_token') as
+    # the bearer — Keycloak scopes them to the token subject. Defaults to the admin API
+    # host with the admin path swapped for the realm path; override with KEYCLOAK_URL_REALM.
+    KEYCLOAK_REALM_ENDPOINT = os.getenv('KEYCLOAK_URL_REALM') or (
+        f'{KEYCLOAK_API_ENDPOINT.replace("/admin/realms/", "/realms/").rstrip("/")}/'
         if KEYCLOAK_API_ENDPOINT
         else None
+    )
+
+    # Base URL for the keycloak-mfa-rest provider, mounted on the realm path
+    # (/realms/{realm}/mfa/). It's a custom SPI plugin so it can be relocated; override
+    # with KEYCLOAK_URL_MFA if it differs from the realm base. The provider's
+    # authorized-clients allowlist is set (Keycloak-side) to this app's OIDC client
+    # (OIDC_RP_CLIENT_ID), since that's the user token's azp.
+    KEYCLOAK_MFA_API_ENDPOINT = os.getenv('KEYCLOAK_URL_MFA') or (
+        f'{KEYCLOAK_REALM_ENDPOINT}mfa/' if KEYCLOAK_REALM_ENDPOINT else None
     )
 
     OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = os.getenv('OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS', 60 * 15)
