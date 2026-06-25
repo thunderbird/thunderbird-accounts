@@ -29,6 +29,7 @@ def get_stale_incomplete_signup_users(cutoff_hours: int) -> QuerySet[User]:
             is_staff=False,
             is_superuser=False,
             is_awaiting_payment_verification=False,
+            plan_id__isnull=True,
         )
         .annotate(has_subscription=Exists(has_subscription))
         .filter(has_subscription=False)
