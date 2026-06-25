@@ -10,6 +10,7 @@ from django.db.models import Exists, OuterRef, QuerySet
 from django.utils import timezone
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.utils import delete_user_data #  noqa: F401 - needed for tests
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.subscription.models import Subscription
@@ -182,7 +183,8 @@ def purge_incomplete_signups(self):
                 user.is_staff, 
                 user.is_test_account, 
                 user.is_awaiting_payment_verification, 
-                user.subscription_set.count() > 0
+                user.plan,
+                user.subscription_set.count() > 0,
             ]):
             user.groups.remove(group)
 
