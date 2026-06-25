@@ -18,12 +18,12 @@ import SignUpView from '@/views/SignUpView/index.vue';
 // Special Error Route
 import ErrorView from '@/views/ErrorView/index.vue';
 import { TBPRO_WAIT_LIST } from './defines';
-import { CAN_I_SIGN_UP_RESPONSES, FeatureFlag, FeatureFlagValue } from './types';
-import { isFeatureFlagEnabled } from '@/utils';
+import { CAN_I_SIGN_UP_RESPONSES } from './types';
+import { isWaffleFlagActive } from '@/utils';
 
-// Manage MFA rolls out dark: only register its route when the SHOW_MFA flag is set, so
-// /manage-mfa falls through to the 404 route until it's enabled for prod validation.
-const showMfa = isFeatureFlagEnabled(FeatureFlag.SHOW_MFA, FeatureFlagValue.TRUE);
+// Manage MFA rolls out dark: only register its route when the multi-factor-authentication
+// waffle flag is active, so /manage-mfa falls through to the 404 route until it's enabled.
+const showMfa = isWaffleFlagActive('multi-factor-authentication');
 
 // If the page template is marked as error page, only show the error page.
 const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [

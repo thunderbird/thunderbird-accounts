@@ -38,8 +38,8 @@ test.describe('multi-factor authentication', {
 
   test.skip((!KEYCLOAK_ADMIN_CLIENT_SECRET) || KEYCLOAK_ADMIN_CLIENT_SECRET === 'undefined', 'KEYCLOAK_ADMIN_CLIENT_SECRET is needed for this test to run.');
 
-  // Manage MFA is gated behind the SHOW_MFA feature flag; enable it per-browser so the
-  // /manage-mfa route is registered before any test navigates to it.
+  // Manage MFA is gated behind the multi-factor-authentication waffle flag; enable it
+  // per-browser so the /manage-mfa route is registered before any test navigates to it.
   test.beforeEach(async ({ page }) => {
     await enableMfaFeatureFlag(page);
   });
