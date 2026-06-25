@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.db import IntegrityError
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, JsonResponse, Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
@@ -712,6 +712,10 @@ class AdminStalwartList(TemplateView):
     template_name = 'admin_stalwart_view.html'
 
     def get_context_data(self, **kwargs):
+        # Just raise a 404 to make this easy
+        if not self.request.user or not self.request.user.is_authenticated or not self.request.user.is_superuser:
+            raise Http404()
+        
         context = super().get_context_data(**kwargs)
 
         stalwart = MailClient()
