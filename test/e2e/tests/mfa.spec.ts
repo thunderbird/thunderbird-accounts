@@ -35,6 +35,9 @@ import { makeTotpCode } from '../utils/totp';
 test.describe('multi-factor authentication', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE],
 }, () => {
+
+  test.skip((!KEYCLOAK_ADMIN_CLIENT_SECRET) || KEYCLOAK_ADMIN_CLIENT_SECRET === 'undefined', 'KEYCLOAK_ADMIN_CLIENT_SECRET is needed for this test to run.');
+
   // Manage MFA is gated behind the SHOW_MFA feature flag; enable it per-browser so the
   // /manage-mfa route is registered before any test navigates to it.
   test.beforeEach(async ({ page }) => {
@@ -141,7 +144,6 @@ test.describe('multi-factor authentication', {
   });
 
   test('recovery codes require an authenticator app and are removed along with it', async ({ page }) => {
-    test.skip(!KEYCLOAK_ADMIN_CLIENT_SECRET, 'KEYCLOAK_ADMIN_CLIENT_SECRET is needed for this test to run.');
     await ensureWeAreSignedIn(page);
     await acceptLegalPoliciesIfRequired(page);
     await page.goto(`${ACCTS_HUB_URL}/manage-mfa`);
