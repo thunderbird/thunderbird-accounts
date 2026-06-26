@@ -236,14 +236,14 @@ class TestMailClientCreateDkim(TestCase):
         self.assertEqual(
             [
                 {
-                    'id': None,
+                    'id': f'ed25519-{self.domain}',
                     'algorithm': 'Ed25519',
                     'domain': self.domain,
                     'selector': 'tm2',
                     'stage': DkimSignatureStage.PENDING.value,
                 },
                 {
-                    'id': None,
+                    'id': f'rsa-{self.domain}',
                     'algorithm': 'Rsa',
                     'domain': self.domain,
                     'selector': 'tm1',
