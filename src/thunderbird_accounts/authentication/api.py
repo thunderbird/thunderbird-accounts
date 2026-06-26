@@ -1,3 +1,8 @@
+from django.db import IntegrityError
+from thunderbird_accounts.authentication.models import AllowListEntry
+from thunderbird_accounts.mail.utils import validate_email
+from thunderbird_accounts.mail.exceptions import EmailNotValidError
+from thunderbird_accounts.authentication.permissions import CanCreateTestAllowListEntries
 from enum import StrEnum
 from urllib.parse import quote
 
@@ -44,7 +49,6 @@ class CanISignUpResponses(StrEnum):
     WAIT_LIST = 'wait-list'
     LOGIN = 'login'
     SIGN_UP = 'sign-up'
-
 
 class TotpConfirmThrottle(UserRateThrottle):
     scope = 'totp_confirm'
@@ -142,6 +146,31 @@ def remove_recovery_codes_credential(request: Request, credential_id: str):
 
 
 @api_view(['POST'])
+@permission_classes([CanCreateTestAllowListEntries])
+def create_test_allow_list_entry(request: Request):
+    """If the user has the permission's defined in ``CanCreateTestAllowListEntries`` 
+    they can programmatically add an allow list entry that's marked as a ``is_test_entry=True``"""
+
+    email = request.data.get('email')
+    generic_email_error = _('This email is not available.')
+
+    if not email:
+        return Response({'error': generic_email_error, 'type': 'no-email'}, status=400)
+
+    try:
+        validate_email(email, generic_email_error)
+    except EmailNotValidError:
+        return Response({'error': generic_email_error, 'type': 'bad-email'}, status=400)
+
+    try:
+        AllowListEntry.objects.create(email=email, is_test_entry=True)
+    except IntegrityError:
+        return Response({'error': _('Could not create allow list entry.'), 'type': 'failed-to-create'}, status=400)
+
+    Response({'success': True})
+
+
+@api_view(['POST'])
 @permission_classes([AllowAny])
 @throttle_classes([CanISignUpThrottle])
 def can_i_sign_up(request: Request):
@@ -158,7 +187,6 @@ def can_i_sign_up(request: Request):
             go_to = CanISignUpResponses.LOGIN
         elif is_in_allow_list:
             go_to = CanISignUpResponses.SIGN_UP
-
 
     return Response({'go_to': go_to})
 
@@ -202,6 +230,11 @@ def sign_up(request: Request):
             },
             status=403,
         )
+
+    try:
+        validate_email(username, generic_email_error)
+    except EmailNotValidError:
+        return Response({'error': generic_email_error, 'type': 'bad-email'}, status=400)
 
     # Make sure there's no email alias with this address
     if not can_register_with_username(partial_username) or is_email_reserved(username):

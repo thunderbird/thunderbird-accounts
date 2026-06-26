@@ -145,7 +145,7 @@ class CustomUserAdmin(UserAdmin):
 class AllowListEntryAdmin(admin.ModelAdmin):
     search_fields = ('email',)
     search_help_text = _('Search the allow list by email address.')
-    list_filter = ['created_at', 'updated_at']
+    list_filter = ['is_test_entry', 'created_at', 'updated_at']
     list_display = (
         'email',
         'discount_id',

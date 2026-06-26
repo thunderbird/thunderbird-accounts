@@ -195,15 +195,18 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'thunderbird_accounts.urls'
 
 loaders = [
-    ("django.template.loaders.cached.Loader", [
-        "django.template.loaders.filesystem.Loader",
-        "django.template.loaders.app_directories.Loader",
-    ])
+    (
+        'django.template.loaders.cached.Loader',
+        [
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader',
+        ],
+    )
 ]
 if IS_TEST:
     loaders = [
-        "django.template.loaders.filesystem.Loader",
-        "django.template.loaders.app_directories.Loader",
+        'django.template.loaders.filesystem.Loader',
+        'django.template.loaders.app_directories.Loader',
     ]
 TEMPLATES = [
     {
@@ -216,7 +219,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
-            'loaders': loaders
+            'loaders': loaders,
         },
     },
 ]
@@ -236,8 +239,8 @@ AVAILABLE_DATABASES = {
             'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
             'PORT': os.getenv('DATABASE_PORT', '5432'),
             # Neon recommends these settings (https://neon.com/docs/guides/django)
-            'DISABLE_SERVER_SIDE_CURSORS': True, # Disable server-side cursors due to db pooling issues
-            'CONN_HEALTH_CHECKS': True, # Test db connection before re-use between requests
+            'DISABLE_SERVER_SIDE_CURSORS': True,  # Disable server-side cursors due to db pooling issues
+            'CONN_HEALTH_CHECKS': True,  # Test db connection before re-use between requests
         },
     },
     'test': {
@@ -284,7 +287,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'is_username_available': '30/minute',
         'sign_up': '15/minute',
-        'can_i_sign_up': '10/minute', # Give them a few refreshes
+        'can_i_sign_up': '10/minute',  # Give them a few refreshes
         'check_email_is_on_allow_list': '10/minute',
         'analytics': '1000/minute',  # Just in case
         'totp_confirm': '10/minute',
@@ -565,9 +568,8 @@ CELERY_BEAT_SCHEDULER = 'redbeat.RedBeatScheduler'
 # A new beat worker can't do work until the lock is released.
 CELERY_REDBEAT_LOCK_TIMEOUT = 330
 
-CELERY_BEAT_SCHEDULE = {}
 
-INCOMPLETE_SIGNUP_PURGE_HOURS = int(os.getenv('INCOMPLETE_SIGNUP_PURGE_HOURS', '120')) # 5 days
+INCOMPLETE_SIGNUP_PURGE_HOURS = int(os.getenv('INCOMPLETE_SIGNUP_PURGE_HOURS', '120'))  # 5 days
 
 KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS = int(os.getenv('KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS', '900'))
 
@@ -612,19 +614,25 @@ POSTHOG_TASK_KWARGS = {
     'max_retries': 6,
 }
 
+CELERY_BEAT_SCHEDULE = {
+    'purge-incomplete-signups': {
+        'task': 'thunderbird_accounts.authentication.tasks.purge_incomplete_signups',
+        'schedule': crontab(
+            hour=int(os.getenv('INCOMPLETE_SIGNUP_PURGE_CRON_HOUR', '3')),
+            minute=int(os.getenv('INCOMPLETE_SIGNUP_PURGE_CRON_MINUTE', '0')),
+        ),
+    },
+    'purge-stale-test-allow-list-entries': {
+        'task': 'thunderbird_accounts.authentication.tasks.purge_stale_test_allow_list_entries',
+        'schedule': crontab(), # Every minute
+    }
+}
+
 if POSTHOG_API_KEY:
     CELERY_BEAT_SCHEDULE['poll-keycloak-events'] = {
         'task': 'thunderbird_accounts.telemetry.tasks.poll_keycloak_events',
         'schedule': KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS,
     }
-
-CELERY_BEAT_SCHEDULE['purge-incomplete-signups'] = {
-    'task': 'thunderbird_accounts.authentication.tasks.purge_incomplete_signups',
-    'schedule': crontab(
-        hour=int(os.getenv('INCOMPLETE_SIGNUP_PURGE_CRON_HOUR', '3')),
-        minute=int(os.getenv('INCOMPLETE_SIGNUP_PURGE_CRON_MINUTE', '0')),
-    ),
-}
 
 # Some debug info for sentry
 sentry_sdk.set_context(
@@ -688,3 +696,7 @@ STALE_DNS_LOOKUP_LIFETIME: float = 2.0
 
 # For contact support form allow list-less users
 CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS = True
+
+# Allow list entries (and user's created from those entries) with ``is_test_account=True``
+# become stale and are removed in a cron job after this many hours
+TEST_ALLOW_LIST_ENTRIES_STALE_TIME_IN_HOURS = 1

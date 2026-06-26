@@ -1,3 +1,4 @@
+from rest_framework.permissions import BasePermission
 import logging
 
 
@@ -27,3 +28,14 @@ class IsValidPaddleWebhook(BaseAuthentication):
         # We need to return a user, but we don't need the user for these requests
         # So return an empty user object
         return User(), None
+
+
+class CanCreateTestAllowListEntries(BasePermission):
+    """
+    Allows access to authenticated users with the create_test_entry_via_api permission
+    """
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user and request.user.is_authenticated and request.user.has_perms('create_test_entry_via_api')
+        )

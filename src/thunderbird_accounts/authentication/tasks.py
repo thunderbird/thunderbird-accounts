@@ -1,6 +1,6 @@
 from django.contrib.auth.models import Group
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime, UTC
 
 import sentry_sdk
 from celery import shared_task
@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import Exists, OuterRef, QuerySet
 from django.utils import timezone
 
-from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.models import User, AllowListEntry
 from thunderbird_accounts.authentication.utils import delete_user_data #  noqa: F401 - needed for tests
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
@@ -195,4 +195,33 @@ def purge_incomplete_signups(self):
         'skipped': skipped,
     }
     logger.info('purge_incomplete_signups: %s', result)
+    return result
+
+
+@shared_task(bind=True)
+def purge_stale_test_allow_list_entries(self):
+    entries = AllowListEntry.objects.filter(
+        is_test_entry=True,
+        created_at__lte=datetime.now(UTC) - timedelta(minutes=5),
+    )
+
+    users_deleted = 0
+    entries_deleted = 0
+
+    for entry in entries.iterator():
+        if entry.user:
+            entry.user.delete()
+            users_deleted += 1
+        entry.delete()
+        entries_deleted += 1
+
+    result = {
+        'task_status': 'completed',
+        'deleted': entries_deleted,
+        'users_deleted': users_deleted,
+    }
+    logger.info(
+        f'purge_stale_test_allow_list_entries: deleted {entries_deleted} stale entries '
+        f'and {users_deleted} associated users.'
+    )
     return result
