@@ -118,28 +118,32 @@ jobs:
           curl -fsSL https://get.pulumi.com | sh
           pip install -Ur requirements.txt
 
-      # Produce the accounts container image (only when accounts/IaC changed)
+      # Both the accounts and keycloak images are built multi-arch via Buildx +
+      # QEMU (linux/amd64 for ECS Fargate today, linux/arm64 for the Thunderbird
+      # Pro EKS clusters on Graviton). Each <tag> is a manifest list, so every
+      # runtime pulls its matching variant. Set these up whenever either image
+      # is (re)built; they must run before the build steps below.
+      - name: Set up QEMU
+        if: env.BUILD_ACCOUNTS == 'true' || env.BUILD_KEYCLOAK == 'true'
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        if: env.BUILD_ACCOUNTS == 'true' || env.BUILD_KEYCLOAK == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      # Produce the accounts container image (only when accounts/IaC changed).
       - name: Build, tag, and push accounts image to Amazon ECR
         id: build-accounts
         if: env.BUILD_ACCOUNTS == 'true'
         env:
           ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:${{ github.sha }}"
         run: |
-          # Build a docker container and push it to ECR so that it can be deployed to ECS.
-          docker build -t $ECR_TAG --platform="linux/amd64" .
-          docker push $ECR_TAG
+          # Build a multi-arch image (amd64 for ECS, arm64 for EKS) and push the
+          # manifest list to ECR. buildx --push publishes directly (no docker push).
+          docker buildx build -t $ECR_TAG \
+            --platform linux/amd64,linux/arm64 --push .
           echo "accounts-image=$ECR_TAG" >> $GITHUB_OUTPUT
 
       # Produce the keycloak container image (only when keycloak/IaC changed).
-      # Built multi-arch: linux/amd64 for ECS Fargate (current) and linux/arm64
-      # for the Thunderbird Pro EKS clusters (Graviton). The same keycloak-<sha>
-      # tag is a manifest list, so each runtime pulls its matching variant.
-      - name: Set up QEMU
-        if: env.BUILD_KEYCLOAK == 'true'
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        if: env.BUILD_KEYCLOAK == 'true'
-        uses: docker/setup-buildx-action@v3
       - name: Build, tag, and push keycloak image to Amazon ECR
         id: build-keycloak
         if: env.BUILD_KEYCLOAK == 'true'
