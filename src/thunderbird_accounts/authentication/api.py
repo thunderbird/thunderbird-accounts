@@ -50,6 +50,7 @@ class CanISignUpResponses(StrEnum):
     LOGIN = 'login'
     SIGN_UP = 'sign-up'
 
+
 class TotpConfirmThrottle(UserRateThrottle):
     scope = 'totp_confirm'
 
@@ -148,7 +149,7 @@ def remove_recovery_codes_credential(request: Request, credential_id: str):
 @api_view(['POST'])
 @permission_classes([CanCreateTestAllowListEntries])
 def create_test_allow_list_entry(request: Request):
-    """If the user has the permission's defined in ``CanCreateTestAllowListEntries`` 
+    """If the user has the permission's defined in ``CanCreateTestAllowListEntries``
     they can programmatically add an allow list entry that's marked as a ``is_test_entry=True``"""
 
     email = request.data.get('email')
@@ -159,6 +160,11 @@ def create_test_allow_list_entry(request: Request):
 
     try:
         validate_email(email, generic_email_error)
+
+        # Also shove in the "can I register with this / is reserved?"
+        if not can_register_with_username(email.split('@')[0]) or is_email_reserved(email):
+            raise EmailNotValidError(email, generic_email_error)
+
     except EmailNotValidError:
         return Response({'error': generic_email_error, 'type': 'bad-email'}, status=400)
 
@@ -167,7 +173,7 @@ def create_test_allow_list_entry(request: Request):
     except IntegrityError:
         return Response({'error': _('Could not create allow list entry.'), 'type': 'failed-to-create'}, status=400)
 
-    Response({'success': True})
+    return Response({'success': True})
 
 
 @api_view(['POST'])

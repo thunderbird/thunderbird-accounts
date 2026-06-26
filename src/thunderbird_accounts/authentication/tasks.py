@@ -10,7 +10,7 @@ from django.db.models import Exists, OuterRef, QuerySet
 from django.utils import timezone
 
 from thunderbird_accounts.authentication.models import User, AllowListEntry
-from thunderbird_accounts.authentication.utils import delete_user_data #  noqa: F401 - needed for tests
+from thunderbird_accounts.authentication.utils import delete_user_data  #  noqa: F401 - needed for tests
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.subscription.models import Subscription
@@ -150,12 +150,11 @@ def purge_incomplete_signups(self):
                     )
                     continue
 
-
                 # Add the user to the group
                 user.groups.add(group)
                 purge_errors = []
                 # TODO: Turn back on once we're confident
-                #purge_errors = delete_user_data(user)
+                # purge_errors = delete_user_data(user)
 
         except User.DoesNotExist:
             skipped += 1
@@ -179,13 +178,16 @@ def purge_incomplete_signups(self):
     # Temp: Until we're confident about this function
     # Remove any users that no longer match criteria
     for user in group.user_set.iterator():
-        if any([user.is_superuser, 
-                user.is_staff, 
-                user.is_test_account, 
-                user.is_awaiting_payment_verification, 
+        if any(
+            [
+                user.is_superuser,
+                user.is_staff,
+                user.is_test_account,
+                user.is_awaiting_payment_verification,
                 user.plan,
                 user.subscription_set.count() > 0,
-            ]):
+            ]
+        ):
             user.groups.remove(group)
 
     result = {
@@ -207,10 +209,14 @@ def purge_stale_test_allow_list_entries(self):
 
     users_deleted = 0
     entries_deleted = 0
+    errors = 0
 
     for entry in entries.iterator():
         if entry.user:
-            entry.user.delete()
+            ret = delete_user_data(entry.user)
+            if len(ret) > 0:
+                errors += 1
+                logger.error(f'Error deleting user data: {ret}')
             users_deleted += 1
         entry.delete()
         entries_deleted += 1
@@ -219,6 +225,7 @@ def purge_stale_test_allow_list_entries(self):
         'task_status': 'completed',
         'deleted': entries_deleted,
         'users_deleted': users_deleted,
+        'errors': errors,
     }
     logger.info(
         f'purge_stale_test_allow_list_entries: deleted {entries_deleted} stale entries '

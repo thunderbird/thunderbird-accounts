@@ -37,5 +37,7 @@ class CanCreateTestAllowListEntries(BasePermission):
 
     def has_permission(self, request, view):
         return bool(
-            request.user and request.user.is_authenticated and request.user.has_perms('create_test_entry_via_api')
+            request.user
+            and request.user.is_authenticated
+            and request.user.has_perm('authentication.create_test_entry_via_api')
         )

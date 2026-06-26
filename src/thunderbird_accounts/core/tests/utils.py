@@ -1,17 +1,20 @@
 from typing import Optional
 from django.test import Client as RequestClient
+from rest_framework.test import APIClient
 
 from requests import Response
 
 from thunderbird_accounts.authentication.models import User
 
 
-def oidc_force_login(client: RequestClient, user: User, backend=None):
+def oidc_force_login(client: RequestClient|APIClient, user: User, backend=None):
     """This works like `django.test.Client` except it also bypasses the missing
     ``oidc_id_token_expiration`` session value by setting it in the far future.
 
     Other-wise the request would be redirected to keycloak to login."""
     client.force_login(user, backend=backend)
+    if isinstance(client, APIClient):
+        client.force_authenticate(user)
 
     # Mock OIDC session data to prevent SessionRefresh middleware from redirecting
     session = client.session
