@@ -26,6 +26,7 @@ class User(AbstractUser, BaseModel):
     :param avatar_url: Avatar URL from oidc profile
     :param timezone: The user's timezone
     """
+
     USERNAME_MIN_LENGTH = 3
     USERNAME_MAX_LENGTH = 150
 
@@ -124,6 +125,14 @@ class AllowListEntry(BaseModel):
         help_text=_('Optional Paddle discount id to apply during checkout.'),
         validators=[DISCOUNT_ID_VALIDATOR],
     )
+    is_test_entry = models.BooleanField(
+        _('test entry'),
+        default=False,
+        help_text=_(
+            'Will this entry automatically create a test account.<br/>'
+            '<b>Note:</b> These entries are remove shortly after creation.'
+        ),
+    )
     user = models.ForeignKey(
         User,
         null=True,
@@ -134,9 +143,9 @@ class AllowListEntry(BaseModel):
 
     class Meta(BaseModel.Meta):
         verbose_name_plural = 'Allow list entries'
-        indexes = [
-            *BaseModel.Meta.indexes,
-            models.Index(fields=['email']),
+        indexes = [*BaseModel.Meta.indexes, models.Index(fields=['email']), models.Index(fields=['is_test_entry'])]
+        permissions = [
+            ('create_test_entry_via_api', 'Can create test entries via an api endpoint'),
         ]
 
     def __str__(self):

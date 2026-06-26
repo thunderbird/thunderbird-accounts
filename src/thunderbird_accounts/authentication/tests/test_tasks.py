@@ -1,3 +1,4 @@
+import uuid
 from django.contrib.auth.models import Group
 from datetime import datetime, timedelta
 from unittest.mock import patch
@@ -9,11 +10,12 @@ from django.conf import settings
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.models import User, AllowListEntry
 from thunderbird_accounts.authentication.tasks import (
     tag_abandoned_cart_in_mailchimp,
     get_stale_incomplete_signup_users,
     purge_incomplete_signups,
+    purge_stale_test_allow_list_entries,
 )
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.models import Subscription
@@ -167,9 +169,7 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
     def test_skips_user_without_recovery_email(self, mock_client_cls):
         User.objects.filter(pk=self.user.pk).update(recovery_email=None)
         self.user.refresh_from_db()
-        with patch(
-            'thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users'
-        ) as mock_get_users:
+        with patch('thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users') as mock_get_users:
             mock_get_users.return_value.iterator.return_value = [self.user]
 
             result = tag_abandoned_cart_in_mailchimp.apply().get()
@@ -201,9 +201,7 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
 
     def test_skips_user_if_subscription_appears_after_initial_selection(self, mock_client_cls):
         Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
-        with patch(
-            'thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users'
-        ) as mock_get_users:
+        with patch('thunderbird_accounts.authentication.tasks.get_stale_incomplete_signup_users') as mock_get_users:
             mock_get_users.return_value.iterator.return_value = [self.user]
 
             result = tag_abandoned_cart_in_mailchimp.apply().get()
@@ -219,6 +217,7 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
         mock_client_cls.return_value.add_or_tag_member.assert_not_called()
         self.assertEqual(result['task_status'], 'skipped')
         self.assertEqual(result['tagged'], 0)
+
 
 # TEMP: Until #1028 is no longer needed
 # @patch('thunderbird_accounts.authentication.tasks.delete_user_data')
@@ -378,7 +377,7 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
             email='purge-me-too@example.com',
             oidc_id='purge-oidc-2',
         )
-        
+
         self.assertEqual(second_user.groups.count(), 0)
 
         User.objects.filter(pk=second_user.pk).update(
@@ -394,8 +393,8 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
         second_user.refresh_from_db()
         self.assertEqual(second_user.groups.count(), 1)
 
-        self.assertEqual(mock_delete_user_data.call_count, 0) # Not called!
-        self.assertEqual(result['deleted'], 2) # This is two because we never actually 
+        self.assertEqual(mock_delete_user_data.call_count, 0)  # Not called!
+        self.assertEqual(result['deleted'], 2)  # This is two because we never actually
         # call delete user data so there can never be an error
         self.assertEqual(result['errors'], 0)
 
@@ -463,7 +462,6 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
         # Ensure our delete user data function did not run
         mock_delete_user_data.assert_not_called()
 
-
     def test_removes_from_group_if_later_matches_criteria(self, mock_delete_user_data):
         self.assertEqual(self.user.groups.count(), 0)
         purge_incomplete_signups.apply().get()
@@ -484,3 +482,98 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
         # We're out of the group!
         self.user.refresh_from_db()
         self.assertEqual(self.user.groups.count(), 0)
+
+
+@patch('thunderbird_accounts.authentication.tasks.delete_user_data')
+class PurgeStaleAllowListEntryTestCase(TestCase):
+    def setUp(self):
+        self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
+        self.stale_created_at = timezone.now() - timedelta(minutes=settings.TEST_ALLOW_LIST_ENTRIES_STALE_TIME_IN_MINS)
+
+    def _create_allow_list_entry(self, is_test_entry=True, updated_at=None):
+        allow_list_entry = AllowListEntry.objects.create(
+            email=f'{uuid.uuid4()}@example.com', is_test_entry=is_test_entry
+        )
+        if allow_list_entry and updated_at:
+            AllowListEntry.objects.filter(uuid=allow_list_entry.uuid).update(created_at=updated_at)
+            allow_list_entry.refresh_from_db()
+        return allow_list_entry
+
+    def _create_user(self, email=None, username=None, oidc_id=None, **kwargs):
+        if not email:
+            email = f'{uuid.uuid4()}@example.com'
+        if not username:
+            username = f'{uuid.uuid4()}@{self.subdomain}'
+        if not oidc_id:
+            oidc_id = f'{uuid.uuid4()}'
+        return User.objects.create(username=username, email=email, oidc_id=oidc_id, **kwargs)
+
+    def test_success(self, mock_delete_user_data):
+        mock_delete_user_data.return_value = []
+
+        allow_list_entry = self._create_allow_list_entry(is_test_entry=True, updated_at=self.stale_created_at)
+        user = self._create_user(email=allow_list_entry.email)
+        allow_list_entry.user_id = user.uuid
+        allow_list_entry.save()
+
+        allow_list_entry_without_user = self._create_allow_list_entry(
+            is_test_entry=True, updated_at=self.stale_created_at
+        )
+
+        result = purge_stale_test_allow_list_entries.apply().get()
+
+        mock_delete_user_data.assert_called_once_with(user)
+
+        self.assertEqual(result['users_deleted'], 1)
+        self.assertEqual(result['deleted'], 2)
+        self.assertEqual(result['errors'], 0)
+
+        with self.assertRaises(AllowListEntry.DoesNotExist):
+            allow_list_entry.refresh_from_db()
+        with self.assertRaises(AllowListEntry.DoesNotExist):
+            allow_list_entry_without_user.refresh_from_db()
+        # Note: User isn't destroyed destroyed because we're mocking the call
+
+    def test_non_test_entries_are_left_alone(self, mock_delete_user_data):
+        mock_delete_user_data.return_value = []
+
+        allow_list_entry = self._create_allow_list_entry(is_test_entry=False, updated_at=self.stale_created_at)
+        user = self._create_user(email=allow_list_entry.email)
+        allow_list_entry.user_id = user.uuid
+        allow_list_entry.save()
+
+        allow_list_entry_without_user = self._create_allow_list_entry(
+            is_test_entry=False, updated_at=self.stale_created_at
+        )
+
+        result = purge_stale_test_allow_list_entries.apply().get()
+
+        mock_delete_user_data.assert_not_called()
+
+        self.assertEqual(result['users_deleted'], 0)
+        self.assertEqual(result['deleted'], 0)
+        self.assertEqual(result['errors'], 0)
+
+        allow_list_entry.refresh_from_db()
+        allow_list_entry_without_user.refresh_from_db()
+
+        self.assertIsNotNone(allow_list_entry)
+        self.assertIsNotNone(allow_list_entry_without_user)
+
+    def test_fresh_entry_is_left_alone(self, mock_delete_user_data):
+        mock_delete_user_data.return_value = []
+
+        allow_list_entry = self._create_allow_list_entry(is_test_entry=True)
+        user = self._create_user(email=allow_list_entry.email)
+        allow_list_entry.user_id = user.uuid
+        allow_list_entry.save()
+
+        result = purge_stale_test_allow_list_entries.apply().get()
+
+        mock_delete_user_data.assert_not_called()
+
+        self.assertEqual(result['users_deleted'], 0)
+        self.assertEqual(result['deleted'], 0)
+        self.assertEqual(result['errors'], 0)
+
+        self.assertIsNotNone(allow_list_entry)
