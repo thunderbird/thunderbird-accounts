@@ -177,3 +177,26 @@ class LogEntryAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('content_type')
+
+class PermissionAdmin(admin.ModelAdmin):
+    """Allows user permissions to be shown in the django admin panel"""
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_view_permission(self, request, obj=None):
+        """Only show view permissinos to users with superuser and staff flags"""
+        if not request.user:
+            return False
+        if not request.user.is_superuser or not request.user.is_staff:
+            return False
+        return True
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('content_type')
