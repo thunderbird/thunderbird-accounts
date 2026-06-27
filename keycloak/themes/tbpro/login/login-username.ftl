@@ -4,16 +4,16 @@
     <#if section = "js">
     <script>
       window._page['currentView'] = {
-        formAction: '${url.loginAction}',
+        formAction: '${url.loginAction?no_esc}',
         supportUrl: '${properties.tbproContactUrl}',
-        clientUrl: '${client.baseUrl}',
+        clientUrl: '${client.baseUrl?no_esc}',
         // <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
-        registerUrl: '${url.registrationUrl}',
+        registerUrl: '${url.registrationUrl?no_esc}',
         // <#else>
         registerUrl: null,
         // </#if>
         // <#if realm.resetPasswordAllowed>
-        forgotPasswordUrl: '${url.loginResetCredentialsUrl}',
+        forgotPasswordUrl: '${url.loginResetCredentialsUrl?no_esc}',
         // <#else>
         forgotPasswordUrl: null,
         // </#if>
@@ -24,7 +24,7 @@
           {
             name: '${p.displayName!}',
             alias: '${p.alias}',
-            loginUrl: '${p.loginUrl}',
+            loginUrl: '${p.loginUrl?no_esc}',
             iconName: '${properties.kcCommonLogoIdP!}',
             className: '${properties.kcFormSocialAccountNameClass!}',
           },

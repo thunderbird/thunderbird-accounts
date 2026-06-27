@@ -103,7 +103,7 @@
         pageId: '${pageId}',
         realmTitle: '${kcSanitize(msg("loginTitleHtml",(realm.displayNameHtml!"")))?no_esc}',
         //<#if client?? && client.baseUrl?has_content>
-        clientUrl: '${client.baseUrl}',
+        clientUrl: '${client.baseUrl?no_esc}',
         //<#else>
         clientUrl: null,
         //</#if>

@@ -3,12 +3,12 @@
     <#if section = "js">
     <script>
       window._page['currentView'] = {
-        formAction: '${url.loginAction}',
+        formAction: '${url.loginAction?no_esc}',
         attemptedUserName: '${(auth.attemptedUsername!)}',
         errors: {
           username: '${kcSanitize(messagesPerField.get("username"))?no_esc}',
         },
-        loginUrl: '${url.loginUrl}',
+        loginUrl: '${url.loginUrl?no_esc}',
       };
       window._l10n = {
         ...window._l10n,

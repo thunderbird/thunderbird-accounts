@@ -4,7 +4,7 @@
 <#if section = "js">
     <script>
       window._page['currentView'] = {
-        formAction: '${url.loginAction}',
+        formAction: '${url.loginAction?no_esc}',
         errors: {
           password: '${kcSanitize(messagesPerField.get("password"))?no_esc}',
           passwordConfirm: '${kcSanitize(messagesPerField.get("password-confirm"))?no_esc}',
