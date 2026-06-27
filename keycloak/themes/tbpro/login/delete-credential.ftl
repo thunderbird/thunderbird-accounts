@@ -3,7 +3,7 @@
     <#if section = "js">
     <script>
       window._page['currentView'] = {
-        formAction: '${url.loginAction}',
+        formAction: '${url.loginAction?no_esc}',
         deleteCredentialTitle: '${msg("deleteCredentialTitle", credentialLabel)}',
         deleteCredentialMessage: '${msg("deleteCredentialMessage", credentialLabel)}',
 

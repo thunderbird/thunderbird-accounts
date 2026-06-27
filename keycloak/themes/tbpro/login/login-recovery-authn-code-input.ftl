@@ -3,7 +3,7 @@
 <#if section = "js">
     <script>
       window._page['currentView'] = {
-        formAction: '${url.loginAction}',
+        formAction: '${url.loginAction?no_esc}',
         recoveryCodePrompt: '${msg("auth-recovery-code-prompt", recoveryAuthnCodesInputBean.codeNumber?c)?js_string}',
         showTryAnotherWay: '${(auth?has_content && auth.showTryAnotherWayLink())?c}',
         errors: {

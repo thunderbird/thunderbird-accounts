@@ -3,7 +3,7 @@
 <#if section = "js">
     <script>
       window._page['currentView'] = {
-        formAction: '${url.loginAction}',
+        formAction: '${url.loginAction?no_esc}',
         errors: {
           totp: '${kcSanitize(messagesPerField.get("totp"))?no_esc}',
         },

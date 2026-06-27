@@ -5,7 +5,7 @@
     <#if section = "js">
     <script>
       window._page['currentView'] = {
-        formAction: '${url.registrationAction}',
+        formAction: '${url.registrationAction?no_esc}',
         messageHeader: '${kcSanitize(msg("${messageHeader!}"))?no_esc}',
         errors: {
           email: '${kcSanitize(messagesPerField.get("email"))?no_esc}',
@@ -13,7 +13,7 @@
           password: '${kcSanitize(messagesPerField.get("password"))?no_esc}',
           passwordConfirm: '${kcSanitize(messagesPerField.get("password-confirm"))?no_esc}',
         },
-        clientUrl: '${client.baseUrl}',
+        clientUrl: '${client.baseUrl?no_esc}',
         currentLocale: '${(locale.currentLanguageTag)!"en"}',
         tbProPrimaryDomain: '${properties.tbproPrimaryDomain}',
         attributes: {

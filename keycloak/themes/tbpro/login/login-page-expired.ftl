@@ -3,9 +3,9 @@
 <#if section = "js">
     <script>
       window._page['currentView'] = {
-        formAction: '${url.registrationAction}',
-        restartFlowUrl: '${url.loginRestartFlowUrl}',
-        loginUrl: '${url.loginAction}',
+        formAction: '${url.registrationAction?no_esc}',
+        restartFlowUrl: '${url.loginRestartFlowUrl?no_esc}',
+        loginUrl: '${url.loginAction?no_esc}',
       };
       window._l10n = {
         ...window._l10n,

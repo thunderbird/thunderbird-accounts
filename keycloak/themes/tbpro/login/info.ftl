@@ -14,7 +14,7 @@
           actionUrl: '${actionUri}',
           actionText: '${kcSanitize(msg("proceedWithAction"))?no_esc}',
           // <#elseif (client.baseUrl)?has_content>
-          actionUrl: '${client.baseUrl}',
+          actionUrl: '${client.baseUrl?no_esc}',
           actionText: '${kcSanitize(msg("backToApplication"))?no_esc}',
           // </#if>
         // </#if>
