@@ -74,6 +74,8 @@ export function useMfaMethods(options: MfaMethodsOptions) {
     [AUTHENTICATION_METHODS.RECOVERY_EMAIL_ADDRESS]: { set: false },
   });
 
+  const hasLoaded = ref(false);
+
   const reauthenticationUrl = ref('');
   const isRemoving = ref(false);
   const pendingRemove = ref<{ method: AUTHENTICATION_METHODS; credentialId: string } | null>(null);
@@ -135,6 +137,7 @@ export function useMfaMethods(options: MfaMethodsOptions) {
 
     setAuthenticatorCredentials(response.methods.authenticatorApp.credentials);
     setRecoveryCodesCredentials(response.methods.recoveryCodes.credentials);
+    hasLoaded.value = true;
   };
 
   // Per-method config for the remove flow: which API to call, how to reset state on
@@ -217,6 +220,7 @@ export function useMfaMethods(options: MfaMethodsOptions) {
     authenticationMethods,
     authenticationMethodEntries,
     isLoading,
+    hasLoaded,
     errorMessage,
     reauthenticationUrl,
     isRemoving,

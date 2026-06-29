@@ -387,7 +387,6 @@
       "multiFactorAuthenticationDescription": "Multi-factor authentication (MFA) adds an extra layer of security by requiring more than a password to sign in. We recommend setting up at least two methods to avoid lockout. You can change or remove MFA methods anytime on this screen.",
       "multiFactorAuthenticationLearnMore": "Learn more about MFA",
       "authenticationMethods": "Authentication Methods",
-      "loading": "Loading multi-factor authentication methods...",
       "confirmRemoveAuthenticatorApp": "Remove authenticator app?",
       "confirmRemoveAuthenticatorAppDescription": "Your recovery codes will also be removed, and you will need to set up a new authenticator app before multi-factor authentication is enabled again.",
       "confirmRemoveRecoveryCodes": "Remove recovery codes?",
