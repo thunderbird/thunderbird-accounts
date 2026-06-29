@@ -488,7 +488,7 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
 class PurgeStaleAllowListEntryTestCase(TestCase):
     def setUp(self):
         self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
-        self.stale_created_at = timezone.now() - timedelta(hours=settings.TEST_ALLOW_LIST_ENTRIES_STALE_TIME_IN_HOURS)
+        self.stale_created_at = timezone.now() - timedelta(minutes=settings.TEST_ALLOW_LIST_ENTRIES_STALE_TIME_IN_MINS)
 
     def _create_allow_list_entry(self, is_test_entry=True, updated_at=None):
         allow_list_entry = AllowListEntry.objects.create(

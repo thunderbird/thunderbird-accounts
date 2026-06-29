@@ -204,7 +204,7 @@ def purge_incomplete_signups(self):
 def purge_stale_test_allow_list_entries(self):
     entries = AllowListEntry.objects.filter(
         is_test_entry=True,
-        created_at__lte=datetime.now(UTC) - timedelta(minutes=5),
+        created_at__lte=datetime.now(UTC) - timedelta(minutes=settings.TEST_ALLOW_LIST_ENTRIES_STALE_TIME_IN_MINS),
     )
 
     users_deleted = 0

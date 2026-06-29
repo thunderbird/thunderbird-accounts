@@ -699,4 +699,4 @@ CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS = True
 
 # Allow list entries (and user's created from those entries) with ``is_test_account=True``
 # become stale and are removed in a cron job after this many hours
-TEST_ALLOW_LIST_ENTRIES_STALE_TIME_IN_HOURS = 1
+TEST_ALLOW_LIST_ENTRIES_STALE_TIME_IN_MINS = 5
