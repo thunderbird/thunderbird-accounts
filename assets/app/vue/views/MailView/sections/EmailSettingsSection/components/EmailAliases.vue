@@ -205,7 +205,7 @@ const onDeleteAliasError = (error: string) => {
   }
 
   .aliases-list {
-    margin-block-end: 1.5rem;
+    margin-block-end: 1rem;
 
     .alias-item {
       display: flex;

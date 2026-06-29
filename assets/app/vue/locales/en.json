@@ -210,7 +210,10 @@
           "anErrorOccurredWhileChangingDisplayName": "An error occurred while changing the display name",
           "newDisplayName": "New display name",
           "displayNamePlaceholder": "Enter your display name",
-          "displayNameRequired": "Display name is required"
+          "displayNameRequired": "Display name is required",
+          "emailAliasesLearnMore": "Learn more",
+          "emailAliasesCatchAllLearnMore": "support article",
+          "emailAliasSupportText": "{emailAliasesSupportLink} about how to setup email aliases. For catch-all aliases, access this {emailAliasesCatchAllSupportLink}."
         },
         "customDomains": {
           "customDomains": "Custom Domains",
