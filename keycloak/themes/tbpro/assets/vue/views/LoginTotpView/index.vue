@@ -40,7 +40,9 @@ export default {
           @keyup.enter="onSubmit">
       <message-bar/>
       <div class="form-elements">
-        <select-input name="device-input" data-testid="device-input" :options="userOtpCredentials" v-model="OtpCredentialModel">{{
+        <!-- #1011: with a single credential there's nothing to choose, so hide the
+             selector (matches stock Keycloak's `userOtpCredentials?size gt 1` guard). -->
+        <select-input v-if="userOtpCredentials.length > 1" name="device-input" data-testid="device-input" :options="userOtpCredentials" v-model="OtpCredentialModel">{{
             $t('loginTotpDeviceName')
           }}
         </select-input>
