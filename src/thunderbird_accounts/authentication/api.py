@@ -147,6 +147,7 @@ def remove_recovery_codes_credential(request: Request, credential_id: str):
 
 
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication])
 @permission_classes([CanCreateTestAllowListEntries])
 def create_test_allow_list_entry(request: Request):
     """If the user has the permission's defined in ``CanCreateTestAllowListEntries``
