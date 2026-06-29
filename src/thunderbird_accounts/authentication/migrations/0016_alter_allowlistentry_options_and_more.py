@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='allowlistentry',
             name='is_test_entry',
-            field=models.BooleanField(default=False, help_text='Will this entry automatically create a test account.<br/><b>Note:</b> These entries are remove 1 hour after creation.', verbose_name='test entry'),
+            field=models.BooleanField(default=False, help_text='Will this entry automatically create a test account.<br/><b>Note:</b> These entries are remove shortly after creation.', verbose_name='test entry'),
         ),
         migrations.AlterField(
             model_name='allowlistentry',

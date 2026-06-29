@@ -130,7 +130,7 @@ class AllowListEntry(BaseModel):
         default=False,
         help_text=_(
             'Will this entry automatically create a test account.<br/>'
-            '<b>Note:</b> These entries are remove 1 hour after creation.'
+            '<b>Note:</b> These entries are remove shortly after creation.'
         ),
     )
     user = models.ForeignKey(
