@@ -117,7 +117,7 @@ class ZendeskContactSubmitTestCase(TestCase):
         self.client = RequestClient()
 
     @patch('thunderbird_accounts.support.views.ZendeskClient')
-    @patch('thunderbird_accounts.core.utils.parse_user_agent_info')
+    @patch('thunderbird_accounts.support.views.parse_user_agent_info')
     @override_settings(
         ZENDESK_FORM_ID='42',
         ZENDESK_FORM_BROWSER_FIELD_ID='1001',
@@ -278,7 +278,7 @@ class ZendeskContactSubmitTestCase(TestCase):
         instance.update_ticket.assert_not_called()
 
     @patch('thunderbird_accounts.support.views.ZendeskClient')
-    @patch('thunderbird_accounts.core.utils.parse_user_agent_info')
+    @patch('thunderbird_accounts.support.views.parse_user_agent_info')
     @override_settings(
         ZENDESK_FORM_ID='42',
         ZENDESK_FORM_BROWSER_FIELD_ID='1001',
@@ -318,7 +318,7 @@ class ZendeskContactSubmitTestCase(TestCase):
         self.assertEqual(json.loads(response.content.decode()), {'success': True})
 
     @patch('thunderbird_accounts.support.views.ZendeskClient')
-    @patch('thunderbird_accounts.core.utils.parse_user_agent_info')
+    @patch('thunderbird_accounts.support.views.parse_user_agent_info')
     @override_settings(
         ZENDESK_FORM_ID='42',
         ZENDESK_FORM_BROWSER_FIELD_ID='1001',
@@ -370,7 +370,7 @@ class ZendeskContactSubmitTestCase(TestCase):
         instance.update_ticket.assert_called_once()
 
     @patch('thunderbird_accounts.support.views.ZendeskClient')
-    @patch('thunderbird_accounts.core.utils.parse_user_agent_info')
+    @patch('thunderbird_accounts.support.views.parse_user_agent_info')
     @override_settings(
         ZENDESK_FORM_ID='42',
         ZENDESK_FORM_BROWSER_FIELD_ID='1001',

@@ -1,3 +1,4 @@
+from requests import JSONDecodeError
 import json
 
 import sentry_sdk
@@ -9,6 +10,8 @@ from django.views.decorators.http import require_http_methods
 
 from thunderbird_accounts.support.zendesk import ZendeskClient
 
+# Add browser and OS information to hidden custom fields
+from thunderbird_accounts.core.utils import parse_user_agent_info
 
 @require_http_methods(['GET'])
 @cache_page(60 * 15)
@@ -168,14 +171,24 @@ def contact_submit(request: HttpRequest):
         return JsonResponse({'success': False}, status=500)
 
     # Extract the ticket ID from the response
-    response_data = zendesk_api_response.json()
-    ticket_id = response_data['request']['id']
+    try:
+        response_data = zendesk_api_response.json()
+        ticket_id = response_data['request']['id']
+    except (KeyError, JSONDecodeError) as ex:
+        sentry_sdk.set_context('exception_data', {
+            'ex': ex,
+            'zendesk_api_response': zendesk_api_response,
+            'response_data': response_data,
+        })
+        sentry_sdk.capture_message(
+            f'Failed to create Zendesk ticket: {zendesk_api_response}',
+            level='error',
+        )
+        return JsonResponse({'success': False}, status=500)
 
-    # Add browser and OS information to hidden custom fields
-    from thunderbird_accounts.core.utils import parse_user_agent_info
 
     user_agent_string = request.headers.get('User-Agent')
-    browser_string, os_string = parse_user_agent_info(user_agent_string)
+    browser_string, os_string = parse_user_agent_info(user_agent_string or '')
 
     # Hidden fields (e.g. fields with permissions set as 'Agents can edit')
     # can't be submitted through the Requests API, so we need to update the ticket manually
