@@ -2,7 +2,7 @@
 import { onMounted, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhCheckCircle } from '@phosphor-icons/vue';
-import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
+import { BaseBadge, BaseBadgeTypes, VisualDivider, PrimaryButton, LinkButton, LoadingSkeleton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 
 // Modals
 import ManageAuthenticatorAppModal from './ManageAuthenticatorAppModal.vue';
@@ -22,7 +22,7 @@ const removeMfaMethodModal = useTemplateRef<InstanceType<typeof RemoveMfaMethodM
 const {
   authenticationMethods,
   authenticationMethodEntries,
-  isLoading,
+  hasLoaded,
   errorMessage,
   reauthenticationUrl,
   isRemoving,
@@ -89,7 +89,6 @@ onMounted(loadMfaMethods);
 
     <div class="authentication-methods-content">
       <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">{{ errorMessage }}</notice-bar>
-      <p v-if="isLoading">{{ t('views.manageMfa.loading') }}</p>
 
       <template v-for="([method, methodData], index) in authenticationMethodEntries" :key="method">
         <div class="authentication-method">
@@ -97,13 +96,15 @@ onMounted(loadMfaMethods);
             <div class="authentication-method-header">
               <h3>{{ t(`views.manageMfa.${method}.title`) }}</h3>
     
-              <base-badge :type="methodData.set ? BaseBadgeTypes.Set : BaseBadgeTypes.NotSet">
-                {{ methodData.set ? t('views.manageMfa.states.set') : t('views.manageMfa.states.notSet') }}
-    
-                <template #icon v-if="methodData.set">
-                  <ph-check-circle size="16" weight="fill" />
-                </template>
-              </base-badge>
+              <loading-skeleton :is-loading="!hasLoaded" border-radius="1rem">
+                <base-badge :type="methodData.set ? BaseBadgeTypes.Set : BaseBadgeTypes.NotSet">
+                  {{ methodData.set ? t('views.manageMfa.states.set') : t('views.manageMfa.states.notSet') }}
+
+                  <template #icon v-if="methodData.set">
+                    <ph-check-circle size="16" weight="fill" />
+                  </template>
+                </base-badge>
+              </loading-skeleton>
             </div>
   
             <p :class="{ 'block-margin': methodData.set }">
@@ -129,7 +130,10 @@ onMounted(loadMfaMethods);
           </div>
 
           <div class="authentication-method-actions">
-            <template v-if="methodData.set">
+            <!-- Until methods load, the real state is unknown; show a button-sized skeleton
+                 rather than a (possibly wrong) "Set up"/"Edit" control. -->
+            <loading-skeleton v-if="!hasLoaded" width="5.5rem" height="2.25rem" />
+            <template v-else-if="methodData.set">
               <!-- When a method has an Edit action, Remove sits beneath it as a subtle
                    underlined link (matches the designs). When there's no Edit (e.g. the
                    authenticator app, which is enrollment-only), a lone underlined link
