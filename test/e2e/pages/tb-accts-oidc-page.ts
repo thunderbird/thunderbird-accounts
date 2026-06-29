@@ -29,12 +29,10 @@ export class TBAcctsOIDCPage {
    */
   async signIn(username: string | null = null, password: string | null = null) {
     if (!username) {
-      console.log('sign in NO USERNAME!', username);
       expect(ACCTS_OIDC_EMAIL, 'getting ACCTS_OIDC_EMAIL env var').toBeTruthy();
       username = String(ACCTS_OIDC_EMAIL);
     }
     if (!password) {
-      console.log('sign in NO PASSWORD!', password);
       expect(ACCTS_OIDC_PWORD, 'getting ACCTS_OIDC_PWORD env var').toBeTruthy();
       password = String(ACCTS_OIDC_PWORD);
     }

@@ -1,7 +1,7 @@
 // utility functions that may be used by any tests
 import { TBAcctsOIDCPage } from "../pages/tb-accts-oidc-page";
 import { TBAcctsHubPage } from "../pages/tb-accts-hub-page";
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, Browser, request } from '@playwright/test';
 import path from 'path';
 
 import {
@@ -59,8 +59,10 @@ export const waitForVueApp = async (page: Page) => {
  * in then just exit; otherwise if not currently signed in then sign in using the credentials
  * provided in the .env file. When singing in to the local stack we use a local sign in page and
  * aren't redirected to TB Accounts OIDC to sign in.
+ * 
+ * If username or password aren't provided the env values will be used.
  */
-export const navigateToAccountsHubAndSignIn = async (page: Page) => {
+export const navigateToAccountsHubAndSignIn = async (page: Page, username: string | null = null, password: string | null = null) => {
     console.log(`navigating to accounts hub ${ACCTS_TARGET_ENV} (${ACCTS_HUB_URL})`);   
     const tbAcctsSignInPage = new TBAcctsOIDCPage(page);
     const tbAcctsHubPage = new TBAcctsHubPage(page);
@@ -70,7 +72,7 @@ export const navigateToAccountsHubAndSignIn = async (page: Page) => {
     
     // if we are already signed in then we can skip this
     if (await tbAcctsSignInPage.signInHeaderText.isVisible() && await tbAcctsSignInPage.signInButton.isEnabled()) {
-        await tbAcctsSignInPage.signIn();
+        await tbAcctsSignInPage.signIn(username, password);
     }
 
 
