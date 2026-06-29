@@ -14,6 +14,13 @@ from thunderbird_accounts.support.zendesk import ZendeskClient
 @cache_page(60 * 15)
 def contact_fields(request: HttpRequest):
     """Get ticket fields from Zendesk API and filter based on Zendesk Admin."""
+
+    # Prevent incorrectly setup zendesk settings from crashing this route
+    if not settings.ZENDESK_SUBDOMAIN:
+        return JsonResponse(
+            {'success': False, 'error': _('Failed to fetch ticket fields')}, status=500
+        )
+
     zendesk_client = ZendeskClient()
     result = zendesk_client.get_ticket_fields()
 
