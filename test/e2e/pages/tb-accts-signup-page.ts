@@ -138,14 +138,11 @@ export class TbAcctsSignUpPage {
   }
 
   async submitForm() { 
-    
-    await this.submitButton.click();
-
     // when clicking on android it won't click it unless we force it; but force doesn't work on ios
-    /*if (this.testPlatform.includes('android')) { 
+    if (this.testPlatform.includes('android')) { 
       await this.submitButton.click({ force: true, clickCount: 1 });
     } else {
       await this.submitButton.click();
-    }*/
+    }
   }
 }
