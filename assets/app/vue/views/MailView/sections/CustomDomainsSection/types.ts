@@ -46,3 +46,34 @@ export type DomainVerificationResult = {
   criticalErrors: string[];
   warnings: string[];
 };
+
+export type InlineIssueSeverity = 'critical' | 'warning';
+
+export type RowAction = 'add' | 'edit' | 'remove';
+
+export type RowStatus = 'success' | 'warning' | 'critical';
+
+export type InlineIssue = {
+  key: string;
+  severity: InlineIssueSeverity;
+  text: string;
+};
+
+export type DnsTableRow = {
+  key: string;
+  record: DNSRecord;
+  issues: InlineIssue[];
+  severity: InlineIssueSeverity | null;
+  isStale: boolean;
+  isConflict: boolean;
+};
+
+export type DecoratedDnsTableRow = DnsTableRow & {
+  action: RowAction | null;
+  status: RowStatus;
+};
+
+export enum RecordTab {
+  CONFLICTING = 'conflicting',
+  ALL = 'all',
+}
