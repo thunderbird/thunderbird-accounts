@@ -1,12 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { TbAcctsSignUpPage } from '../../pages/tb-accts-signup-page';
-import { waitForVueApp } from '../../utils/utils';
+import { authFile, navigateToAccountsHubAndSignIn, waitForVueApp } from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
   PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
   TB_PRO_WAIT_LIST_URL,
   ACCTS_CONTACT_URL,
+  PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
+  PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
 } from '../../const/constants';
 
 let signUpPage: TbAcctsSignUpPage;
@@ -15,14 +17,21 @@ let signUpPage: TbAcctsSignUpPage;
 //test.skip(true, 'Temporarily disabled due to issue 986');
 
 test.beforeEach(async ({ page }) => {
+  console.log('inside authenticate setup, about to call navigate and sign in');
+  // Perform authentication steps
+  await navigateToAccountsHubAndSignIn(page);
+
+  // End of authentication steps, save the auth
+  await page.context().storageState({ path: authFile });
+  
   signUpPage = new TbAcctsSignUpPage(page);
   // We need to land on a page that we can stay on to retrieve a csrftoken.
   await page.goto(ACCTS_CONTACT_URL);
 });
 
 
-test.describe('sign up form on desktop browser meltime', {
-  tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
+test.describe('sign up form on browser', {
+  tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY, PLAYWRIGHT_TAG_E2E_SUITE_MOBILE, PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY],
 }, () => {
   test('form successfully submits', async ({ page }) => {    
     const testUsername: string = crypto.randomUUID().replaceAll('-', '');

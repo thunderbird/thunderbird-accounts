@@ -10,7 +10,7 @@ import {
     TIMEOUT_30_SECONDS,
 } from "../const/constants";
 
-const authFile = path.join(__dirname, '../test-results/.auth/user.json');
+export const authFile = path.join(__dirname, '../test-results/.auth/user.json');
 
 export const isAllowListEnabled = async (page: Page) => {
     return await page.evaluate('window?._page?.features?.be_allowList');
