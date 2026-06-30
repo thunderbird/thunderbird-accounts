@@ -50,20 +50,25 @@ export class TbAcctsSignUpPage {
    * Note: You must be on a page that has a csrfToken available for this to work.
    */
   async _createAllowListEntry(email: string) {
-    const csrfToken = await this.page.evaluate('window?._page?.csrfToken') as string;
+    try {
+      const csrfToken = await this.page.evaluate('window?._page?.csrfToken') as string;
 
-    const response = await this.page.request.fetch(`${ACCTS_HUB_URL}/api/v1/testing/allow-list/`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken,
-      },
-      data: JSON.stringify({
-        email
-      })
-    });
-    return await response.json();
+      const response = await this.page.request.fetch(`${ACCTS_HUB_URL}/api/v1/testing/allow-list/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+        },
+        data: JSON.stringify({
+          email
+        })
+      });
+      return await response.json();
+    } catch(ex) {
+      // Force a fail here
+      expect(true, `There was an error creating the allow list entry: ${ex}.`).toBeFalsy();
+    }
   }
 
   /**
