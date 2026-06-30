@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { CheckboxInput, LinkButton, PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
+import { LinkButton, PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import encodeQR from 'qr';
 import GenericModal from '@/components/GenericModal.vue';
 import { confirmTotpSetup, startTotpSetup, TotpCredential, TotpSetupResponse } from '../api';
@@ -21,7 +21,6 @@ const step = ref<MODAL_STEPS>(MODAL_STEPS.QR);
 const code = ref('');
 const setup = ref<TotpSetupResponse | null>(null);
 const showManualSecret = ref(false);
-const logoutOtherSessions = ref(false);
 
 const qrCode = computed(() => setup.value?.otpAuthUri ? encodeURIComponent(encodeQR(setup.value.otpAuthUri, 'svg')) : '');
 
@@ -37,7 +36,7 @@ const goToCodeStep = () => {
 const submitOneTimeCode = async () => {
   if (!code.value) return;
 
-  const response = await run(() => confirmTotpSetup(code.value, logoutOtherSessions.value), {
+  const response = await run(() => confirmTotpSetup(code.value, false), {
     fallbackErrorKey: 'views.manageMfa.modals.manageAuthenticatorApp.error',
     onReauthRequired: (reauthUrl) => {
       genericModal.value.close();
@@ -59,7 +58,6 @@ defineExpose({
     setup.value = null;
     errorMessage.value = '';
     showManualSecret.value = false;
-    logoutOtherSessions.value = false;
     genericModal.value.open();
 
     const response = await run(() => startTotpSetup(), {
@@ -109,7 +107,6 @@ defineExpose({
             <link-button data-testid="totp-show-manual-secret" @click="showManualSecret = true">
               {{ t('views.manageMfa.modals.manageAuthenticatorApp.enterCodeManually') }}
             </link-button>
-            <link-button>{{ t('views.manageMfa.modals.manageAuthenticatorApp.cantScan') }}</link-button>
           </div>
 
           <primary-button data-testid="totp-continue-to-code" :disabled="!setup" @click="goToCodeStep">
@@ -128,12 +125,6 @@ defineExpose({
         <text-input data-testid="totp-code-input" class="code-input" name="one-time-code" v-model="code" :required="true" :error="errorMessage">
           {{ t('views.manageMfa.modals.manageAuthenticatorApp.oneTimeCode') }}
         </text-input>
-
-        <checkbox-input
-          :name="t('views.manageMfa.modals.manageAuthenticatorApp.signOutFromOtherDevices')"
-          :label="t('views.manageMfa.modals.manageAuthenticatorApp.signOutFromOtherDevices')"
-          v-model="logoutOtherSessions"
-        />
       </div>
 
       <div class="code-actions">

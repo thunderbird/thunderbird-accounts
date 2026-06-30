@@ -225,7 +225,11 @@ test.describe('multi-factor authentication', {
     await removeExistingMfaCredentials();
   });
 
-  test('"sign out from other devices" during setup ends other sessions but keeps the current one', async ({
+  // Skipped: the "sign out from other devices" checkbox was removed from the TOTP setup UI
+  // (#1042/#1046), so there's no longer a user-facing way to trigger this during enrollment.
+  // The backend still supports logoutOtherSessions (covered by test_mfa.py); re-enable this
+  // if the checkbox returns.
+  test.skip('"sign out from other devices" during setup ends other sessions but keeps the current one', async ({
     page,
     browser,
   }) => {
