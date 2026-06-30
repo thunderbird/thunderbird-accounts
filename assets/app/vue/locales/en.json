@@ -462,11 +462,9 @@
           "qrAlt": "QR code for authenticator app setup",
           "enterCodeManually": "Enter code manually",
           "manualSecret": "Manual setup key",
-          "cantScan": "Can't scan?",
           "continue": "Continue",
           "oneTimeCode": "One-time code",
           "authenticatorAppCodeDescription": "Enter the code from your authenticator app:",
-          "signOutFromOtherDevices": "Sign out from other devices",
           "error": "Could not complete authenticator app setup."
         },
         "manageEmailRecovery": {
