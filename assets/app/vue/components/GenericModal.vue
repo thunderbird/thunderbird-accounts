@@ -85,7 +85,6 @@ dialog {
     display: flex;
     flex-direction: column;
     align-items: center;
-    height: 100%;
     padding-inline: 1rem;
 
     h2 {
