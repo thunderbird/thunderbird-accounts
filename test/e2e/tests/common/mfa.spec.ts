@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { ensureWeAreSignedIn, waitForVueApp } from '../utils/utils';
+import { ensureWeAreSignedIn, waitForVueApp } from '../../utils/utils';
 import {
   ACCTS_HUB_URL,
   ACCTS_OIDC_EMAIL,
@@ -8,15 +8,15 @@ import {
   KEYCLOAK_ADMIN_CLIENT_SECRET,
   PLAYWRIGHT_TAG_E2E_SUITE,
   TIMEOUT_30_SECONDS,
-} from '../const/constants';
+} from '../../const/constants';
 import {
   fetchKeycloakCredentials,
   getRecoveryCodesCredentialMetadata,
   getUserSessionIds,
   MFA_CREDENTIAL_TYPES,
   removeExistingMfaCredentials,
-} from '../utils/keycloak-admin';
-import { expectImapXoauth2Login, expectSmtpXoauth2Login } from '../utils/mail-protocol';
+} from '../../utils/keycloak-admin';
+import { expectImapXoauth2Login, expectSmtpXoauth2Login } from '../../utils/mail-protocol';
 import {
   acceptLegalPoliciesIfRequired,
   captureRecoveryCodesAndConfirm,
@@ -28,9 +28,9 @@ import {
   setUpAuthenticatorApp,
   signInWithPassword,
   submitRequestedRecoveryCode,
-} from '../utils/mfa';
-import { getStalwartAccessTokenViaSso } from '../utils/oauth';
-import { makeTotpCode } from '../utils/totp';
+} from '../../utils/mfa';
+import { getStalwartAccessTokenViaSso } from '../../utils/oauth';
+import { makeTotpCode } from '../../utils/totp';
 
 test.describe('multi-factor authentication', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE],

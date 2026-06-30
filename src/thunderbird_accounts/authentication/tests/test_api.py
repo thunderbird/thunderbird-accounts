@@ -1,12 +1,15 @@
+from thunderbird_accounts.core.tests.utils import oidc_force_login
+from django.contrib.auth.models import Permission
 from thunderbird_accounts.authentication.api import CanISignUpResponses
 from django.urls import reverse
 from json import JSONDecodeError
 from unittest.mock import MagicMock, patch
+import uuid
 
 from django.conf import settings
 from urllib.parse import quote
 from django.test import Client as RequestClient, override_settings
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIClient
 
 from thunderbird_accounts.authentication.exceptions import ImportUserError
 from thunderbird_accounts.authentication.models import User
@@ -225,7 +228,7 @@ class CanISignUpTestcase(APITestCase):
         self.wait_list = [
             '348b8787-ddf0-4ab9-931e-db388f8770c0@example.com',
             '153ff958-dabb-4afc-94ab-3b1b3b5ff051@example.com',
-            '23fd4ed0-85d9-462f-b9cb+82a72f51c477@example.com' # Subaddressing test
+            '23fd4ed0-85d9-462f-b9cb+82a72f51c477@example.com',  # Subaddressing test
         ]
         self.existing_user = User.objects.create(
             recovery_email='e9fc8f36-8d9c-4e8c-9af2-2a7e2901b036@example.com',
@@ -269,3 +272,84 @@ class CanISignUpTestcase(APITestCase):
 
         resp_data = response.json()
         self.assertEqual(CanISignUpResponses.LOGIN, resp_data.get('go_to'))
+
+
+class CreateTestAllowListEntryTestCase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('api_create_test_allow_list_entry')
+        self.user = User.objects.create(
+            recovery_email=f'{uuid.uuid4()}@example.com', username=f'{uuid.uuid4()}@example.org'
+        )
+        self.permission_codename = 'create_test_entry_via_api'
+        self.permission = Permission.objects.filter(codename=self.permission_codename).first()
+        oidc_force_login(self.client, self.user)
+
+    def _add_permission(self):
+        # Required to access the route
+        self.user.user_permissions.add(self.permission)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.has_perm(f'authentication.{self.permission_codename}'))
+
+    def test_success(self):
+        self._add_permission()
+
+        email = f'test-{uuid.uuid4()}@example.com'
+
+        response = self.client.post(self.url, {'email': email})
+        self.assertEqual(200, response.status_code, response.content)
+
+        resp_data = response.json()
+        self.assertTrue(resp_data.get('success'))
+
+        test_entry = AllowListEntry.objects.filter(email=email).first()
+        self.assertIsNotNone(test_entry)
+        self.assertTrue(test_entry.is_test_entry)  # ty:ignore[unresolved-attribute]
+
+    def test_does_not_have_permission(self):
+        self.assertFalse(self.user.has_perm(f'authentication.{self.permission_codename}'))
+
+        email = f'test-{uuid.uuid4()}@example.com'
+
+        response = self.client.post(self.url, {'email': email})
+        self.assertEqual(403, response.status_code)
+
+        test_entry = AllowListEntry.objects.filter(email=email).first()
+        self.assertIsNone(test_entry)
+
+    def test_invalid_emails_dont_get_added(self):
+        self._add_permission()
+
+        bad_emails = [
+            f'@-{uuid.uuid4()}@example.com',  # An @ symbol isn't allowed in the local part
+            {uuid.uuid4()},  # Needs to be a full email
+            'a@example.com',  # Needs to be at least 3 characters
+            'admin@example.org',  # Reserved name
+            self.user.username,  # Already in use
+        ]
+
+        for email in bad_emails:
+            response = self.client.post(self.url, {'email': email})
+            self.assertEqual(400, response.status_code, f'Invalid email {email} returned {response.content}')
+
+            resp_data = response.json()
+
+            # Ensure we got the bad-email error and that our allow list entry was not created
+            self.assertEqual('bad-email', resp_data.get('type'))
+            test_entry = AllowListEntry.objects.filter(email=email).first()
+            self.assertIsNone(test_entry)
+
+    def test_missing_emails_just_error_out(self):
+        self._add_permission()
+
+        email = ''
+
+        response = self.client.post(self.url, {'email': email})
+        self.assertEqual(400, response.status_code, response.content)
+
+        resp_data = response.json()
+
+        # Ensure we got the bad-email error and that our allow list entry was not created
+        self.assertEqual('no-email', resp_data.get('type'))
+        test_entry = AllowListEntry.objects.filter(email=email).first()
+        self.assertIsNone(test_entry)
