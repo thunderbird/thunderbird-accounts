@@ -267,14 +267,13 @@ def delete_hosted_dkim_txt_records(domain_name: str, dns_client=None) -> list[di
     If dns_client is not specified it falls back on ``CloudflareDNSClient``"""
     dns_client = dns_client or CloudflareDNSClient()
 
-    deleted_records = []
-    for name in build_hosted_dkim_txt_record_names(domain_name):
-        deleted_records.append(
-            {
-                'type': 'TXT',
-                'name': name,
-                'deleted_record_ids': dns_client.delete_txt_records(name),
-            }
-        )
+    deleted_records = [
+        {
+            'type': 'TXT',
+            'name': name,
+            'deleted_record_ids': dns_client.delete_txt_records(name),
+        }
+        for name in build_hosted_dkim_txt_record_names(domain_name)
+    ]
 
     return deleted_records

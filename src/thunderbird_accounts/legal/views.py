@@ -115,17 +115,16 @@ def get_current_legal_docs(request):
             ).values_list('document_id', flat=True)
         )
 
-    docs_data = []
-    for doc in current_docs:
-        docs_data.append(
-            {
-                'uuid': str(doc.uuid),
-                'document_type': doc.document_type,
-                'version': doc.version,
-                'content': _read_legal_content(doc.content_path, locale),
-                'accepted': doc.uuid in accepted_doc_ids,
-            }
-        )
+    docs_data = [
+        {
+            'uuid': str(doc.uuid),
+            'document_type': doc.document_type,
+            'version': doc.version,
+            'content': _read_legal_content(doc.content_path, locale),
+            'accepted': doc.uuid in accepted_doc_ids,
+        }
+        for doc in current_docs
+    ]
 
     return JsonResponse({'documents': docs_data})
 

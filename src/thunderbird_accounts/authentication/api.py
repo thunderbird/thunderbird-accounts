@@ -299,8 +299,8 @@ def sign_up(request: Request):
         sentry_sdk.capture_exception(ex)
         return Response(
             {
-                'error': ex.error_desc if ex.error_desc else _('There was an unknown error, please try again later.'),
-                'type': ex.error_code if ex.error_code else 'unknown-error',
+                'error': ex.error_desc or _('There was an unknown error, please try again later.'),
+                'type': ex.error_code or 'unknown-error',
             },
             status=400 if ex.error_code else 500,
         )
