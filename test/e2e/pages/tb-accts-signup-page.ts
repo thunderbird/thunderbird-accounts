@@ -55,10 +55,11 @@ export class TbAcctsSignUpPage {
 
       const response = await this.page.request.fetch(`${ACCTS_HUB_URL}/api/v1/testing/allow-list/`, {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': csrfToken,
+          'Origin': ACCTS_HUB_URL,
+          'Referer': this.page.url(),
         },
         data: JSON.stringify({
           email
