@@ -1,6 +1,5 @@
 import { type Page, type Locator, expect } from '@playwright/test';
-import { ACCTS_SIGN_UP_URL } from '../const/constants';
-import { waitForVueApp } from '../utils/utils';
+import { ACCTS_HUB_URL, ACCTS_SIGN_UP_URL } from '../const/constants';
 
 export class TbAcctsSignUpPage {
   readonly page: Page;
@@ -11,7 +10,6 @@ export class TbAcctsSignUpPage {
   readonly noticeBar: Locator | null;
   readonly errorNoticeBar: Locator | null;
   readonly userNameInput: Locator | null;
-  readonly verificationEmailInput: Locator | null;
   readonly passwordInput: Locator | null;
   readonly passwordConfirmInput: Locator | null;
   readonly fullUsernameInput: Locator | null;
@@ -28,7 +26,6 @@ export class TbAcctsSignUpPage {
     this.noticeBar = this.page.getByTestId('notice-bar');
     this.errorNoticeBar = null; // This will need to be retrieved on error pages
     this.userNameInput = this.page.getByTestId('username-input');
-    this.verificationEmailInput = this.page.getByTestId('verification-email-input');
     this.passwordInput = this.page.getByTestId('password-input');
     this.passwordConfirmInput = this.page.getByTestId('confirm-password-input');
     this.fullUsernameInput = this.page.getByTestId('full-username-readonly-input');
@@ -37,9 +34,64 @@ export class TbAcctsSignUpPage {
     this.submitButton = this.page.getByTestId('submit-button');
   }
 
-  async navigateToPage() {
-    await this.page.goto(ACCTS_SIGN_UP_URL);
-    await waitForVueApp(this.page);
+  /**
+   * Clear cookies, this is generally used to remove any authenticated status.
+   */
+  async clearCookies() {
+    await this.page.context().clearCookies();
+    // Ensure we're cookieless.
+    expect(await this.page.context().cookies()).toEqual([])
+  }
+
+  /**
+   * Create an allow list entry with the provided email.
+   * This will create a temporary test entry, the entry and user will be cleaned up by the server after a period of time.
+   * 
+   * Note: You must be on a page that has a csrfToken available for this to work.
+   */
+  async _createAllowListEntry(email: string) {
+    try {
+      const csrfToken = await this.page.evaluate('window?._page?.csrfToken') as string;
+
+      const response = await this.page.request.fetch(`${ACCTS_HUB_URL}/api/v1/testing/allow-list/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+        },
+        data: JSON.stringify({
+          email
+        })
+      });
+      return await response.json();
+    } catch(ex) {
+      // Force a fail here
+      expect(true, `There was an error creating the allow list entry: ${ex}.`).toBeFalsy();
+    }
+  }
+
+  /**
+   * Create an allow list entry with the given email or skip it if addEmailToAllowList is false.
+   * After clear the cookies (auth) and navigate to the signUp page.
+   */
+  async setupTest(email: string | null, addEmailToAllowList: boolean = true) {
+    if (addEmailToAllowList && email) {
+      const response = await this._createAllowListEntry(email);
+      await expect(response['success'], `Error creating allow list entry: ${JSON.stringify(response)}`).toBeTruthy();
+    }
+    await this.clearCookies();
+    await this.navigateToPage(email || '');
+  }
+
+  /**
+   * Navigate to the sign up flow
+   * 
+   * This requires an email address on the allow list. Make sure to create that ahead of time!
+   */
+  async navigateToPage(email: string|null) {
+    const url = email ? `${ACCTS_SIGN_UP_URL}?email=${encodeURIComponent(email)}` : ACCTS_SIGN_UP_URL;
+    await this.page.goto(url);
   }
   
   /**
@@ -66,7 +118,7 @@ export class TbAcctsSignUpPage {
    * 
    * This relies on the locators being lazy loaded.
    */
-  async fillForm(username: string, password?: string, passwordConfirm?: string, verificationEmail?: string) {
+  async fillForm(username: string, password?: string, passwordConfirm?: string) {
     await this.confirmPlan();
 
     await this.userNameInput?.fill(username);
@@ -83,18 +135,6 @@ export class TbAcctsSignUpPage {
 
     await this.passwordInput?.fill(password);
     await this.passwordConfirmInput?.fill(passwordConfirm);
-    await this.submitForm();
-
-    if (!verificationEmail) {
-      return;
-    }
-
-    // we expect to be on the next step; need time for the next page/step to load (will timeout if fails)
-    await expect.poll(async () => {
-      return await this.stepId.inputValue();
-    }).toBe('step-verify-email');
-
-    await this.verificationEmailInput?.fill(verificationEmail);
   }
 
   async submitForm() { 

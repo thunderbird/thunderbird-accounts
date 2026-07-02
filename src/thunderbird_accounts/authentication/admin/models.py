@@ -145,7 +145,7 @@ class CustomUserAdmin(UserAdmin):
 class AllowListEntryAdmin(admin.ModelAdmin):
     search_fields = ('email',)
     search_help_text = _('Search the allow list by email address.')
-    list_filter = ['created_at', 'updated_at']
+    list_filter = ['is_test_entry', 'created_at', 'updated_at']
     list_display = (
         'email',
         'discount_id',
@@ -157,6 +157,29 @@ class AllowListEntryAdmin(admin.ModelAdmin):
 
 class LogEntryAdmin(admin.ModelAdmin):
     """Allows Admin Log entries to be shown in the django admin panel"""
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_view_permission(self, request, obj=None):
+        """Only show view permissinos to users with superuser and staff flags"""
+        if not request.user:
+            return False
+        if not request.user.is_superuser or not request.user.is_staff:
+            return False
+        return True
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('content_type')
+
+class PermissionAdmin(admin.ModelAdmin):
+    """Allows user permissions to be shown in the django admin panel"""
 
     def has_add_permission(self, request):
         return False

@@ -20,7 +20,12 @@ from thunderbird_accounts.subscription import views as subscription_views
 from thunderbird_accounts.support import views as support_views
 from thunderbird_accounts.support.customer import support_customer_api
 
-from thunderbird_accounts.authentication.api import get_user_profile, sign_up, can_i_sign_up
+from thunderbird_accounts.authentication.api import (
+    get_user_profile,
+    sign_up,
+    can_i_sign_up,
+    create_test_allow_list_entry,
+)
 from thunderbird_accounts.legal import views as legal_views
 from thunderbird_accounts.telemetry import views as telemetry_views, api as telemetry_api
 
@@ -109,13 +114,13 @@ urlpatterns = [
     path('api/v1/telemetry/event', telemetry_api.capture_frontend_event, name='api_capture_frontend_event'),
     # Health check
     path('health', infra_views.health_check),
+    # Test routes
+    path('api/v1/testing/allow-list/', create_test_allow_list_entry, name='api_create_test_allow_list_entry'),
 ]
 
 
 if settings.AUTH_SCHEME == 'oidc':
-    urlpatterns.append(
-        path('oidc/mfa-reauth/', auth_views.MfaReauthenticationRequestView.as_view(), name='mfa_reauth')
-    )
+    urlpatterns.append(path('oidc/mfa-reauth/', auth_views.MfaReauthenticationRequestView.as_view(), name='mfa_reauth'))
     urlpatterns.append(path('oidc/', include('mozilla_django_oidc.urls')))
     urlpatterns.append(path('logout/', auth_views.start_oidc_logout, name='logout'))
     urlpatterns.append(path('logout/callback', auth_views.oidc_logout_callback, name='logout_callback'))

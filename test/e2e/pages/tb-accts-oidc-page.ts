@@ -27,15 +27,19 @@ export class TBAcctsOIDCPage {
   /**
    * Sign in to TB Accounts using the provided email and password.
    */
-  async signIn() {
-    console.log('signing in to TB Accounts');
-    expect(ACCTS_OIDC_EMAIL, 'getting ACCTS_OIDC_EMAIL env var').toBeTruthy();
-    expect(ACCTS_OIDC_PWORD, 'getting ACCTS_OIDC_PWORD env var').toBeTruthy();
-    await expect(this.emailInput).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-    await this.emailInput.fill(String(ACCTS_OIDC_EMAIL));
-    await this.page.waitForTimeout(TIMEOUT_2_SECONDS);
-    await this.passwordInput.fill(String(ACCTS_OIDC_PWORD));
-    await this.page.waitForTimeout(TIMEOUT_2_SECONDS);
+  async signIn(username: string | null = null, password: string | null = null) {
+    if (!username) {
+      expect(ACCTS_OIDC_EMAIL, 'getting ACCTS_OIDC_EMAIL env var').toBeTruthy();
+      username = String(ACCTS_OIDC_EMAIL);
+    }
+    if (!password) {
+      expect(ACCTS_OIDC_PWORD, 'getting ACCTS_OIDC_PWORD env var').toBeTruthy();
+      password = String(ACCTS_OIDC_PWORD);
+    }
+
+    await expect(this.emailInput).toBeVisible({ timeout: TIMEOUT_10_SECONDS });
+    await this.emailInput.fill(username);
+    await this.passwordInput.fill(password);
     await this.signInButton.click({ force: true });
     await this.page.waitForTimeout(TIMEOUT_10_SECONDS);
   }
