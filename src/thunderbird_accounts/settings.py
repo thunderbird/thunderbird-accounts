@@ -412,9 +412,7 @@ if AUTH_SCHEME == 'oidc':
     # the bearer — Keycloak scopes them to the token subject. Defaults to the admin API
     # host with the admin path swapped for the realm path; override with KEYCLOAK_URL_REALM.
     KEYCLOAK_REALM_ENDPOINT = os.getenv('KEYCLOAK_URL_REALM') or (
-        f'{KEYCLOAK_API_ENDPOINT.replace("/admin/realms/", "/realms/").rstrip("/")}/'
-        if KEYCLOAK_API_ENDPOINT
-        else None
+        f'{KEYCLOAK_API_ENDPOINT.replace("/admin/realms/", "/realms/").rstrip("/")}/' if KEYCLOAK_API_ENDPOINT else None
     )
 
     # Base URL for the keycloak-mfa-rest provider, mounted on the realm path
@@ -624,8 +622,8 @@ CELERY_BEAT_SCHEDULE = {
     },
     'purge-stale-test-allow-list-entries': {
         'task': 'thunderbird_accounts.authentication.tasks.purge_stale_test_allow_list_entries',
-        'schedule': crontab(), # Every minute
-    }
+        'schedule': crontab(),  # Every minute
+    },
 }
 
 if POSTHOG_API_KEY:
@@ -700,3 +698,12 @@ CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS = True
 # Allow list entries (and user's created from those entries) with ``is_test_account=True``
 # become stale and are removed in a cron job after this many hours
 TEST_ALLOW_LIST_ENTRIES_STALE_TIME_IN_MINS = 5
+
+# Waffle flag constants
+# These still have to be created on each environment to be True.
+
+# POST OIDC's token introspect route to see if a token is actually active.
+WAFFLE_FLAG_INTROSPECT_TOKEN_PER_REQUEST = 'auth-introspect-token-per-request'
+
+# Allow auth middleware to try and refresh an inactive access token with an active refresh token during non-get requests
+WAFFLE_FLAG_ALLOW_POST_REAUTH = 'auth-allow-post-reauth'

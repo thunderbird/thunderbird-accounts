@@ -1,3 +1,7 @@
+import waffle
+from enum import StrEnum
+from django.utils.module_loading import import_string
+from django.contrib.auth import BACKEND_SESSION_KEY
 from requests.auth import HTTPBasicAuth
 from json import JSONDecodeError
 from urllib.parse import urlencode, quote
@@ -14,7 +18,7 @@ from typing import Optional
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, SuspiciousOperation
-from django.http import HttpRequest, JsonResponse, HttpResponseRedirect
+from django.http import HttpRequest, JsonResponse, HttpResponseRedirect, HttpResponseForbidden
 from django.utils.translation import gettext_lazy as _
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 from sentry_sdk import capture_exception
@@ -33,6 +37,39 @@ from mozilla_django_oidc.utils import add_state_and_verifier_and_nonce_to_sessio
 OIDC_ACCESS_TOKEN_KEY = 'oidc_access_token'
 OIDC_ID_TOKEN_KEY = 'oidc_id_token'
 OIDC_REFRESH_TOKEN_KEY = 'oidc_refresh_token'
+
+
+class TokenHintType(StrEnum):
+    ACCESS_TOKEN = 'access_token'
+    REFRESH_TOKEN = 'refresh_token'
+
+
+def _is_token_active(token: str, token_hint: TokenHintType = TokenHintType.ACCESS_TOKEN) -> bool:
+    """POST the introspect route to and see if it returns 'active': True."""
+    if not token:
+        return False
+
+    token_payload = {
+        'token_type_hint': str(token_hint),
+        'client_id': import_from_settings('OIDC_RP_CLIENT_ID'),
+        'client_secret': import_from_settings('OIDC_RP_CLIENT_SECRET'),
+        'token': token,
+    }
+
+    req_auth = None
+    if import_from_settings('OIDC_TOKEN_USE_BASIC_AUTH', False):
+        # Basic-auth clients send credentials in the header, not the body.
+        req_auth = HTTPBasicAuth(token_payload['client_id'], token_payload.pop('client_secret'))
+
+    response = requests.post(
+        f'{import_from_settings("OIDC_OP_TOKEN_ENDPOINT")}introspect',
+        auth=req_auth,
+        data=token_payload,
+        verify=import_from_settings('OIDC_VERIFY_SSL', True),
+    )
+    response.raise_for_status()
+    resp = response.json()
+    return resp.get('active') or False
 
 
 def store_tokens(request, access_token, id_token, refresh_token):
@@ -301,9 +338,44 @@ class OIDCRefreshSession(SessionRefresh):
     Code is based on https://github.com/mozilla/mozilla-django-oidc/pull/377
     """
 
+    class EXIT_STATES(StrEnum):
+        """Exit states because for process_request.
+        If process_request doesn't return falsey it'll be treated as override response. 
+        We want to test for positions...
+
+        This is only used in testing."""
+        NOT_REFRESHABLE = 'not-refreshable'
+        NOT_EXPIRED = 'not-expired'
+        ACCESS_TOKEN_IS_ACTIVE = 'access-token-is-active'
+        TOKEN_IS_STORED = 'token-is-stored'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.enable_per_request_introspect = False
+        self.allow_post_reauth = False
+        self.exit_state = None
+
+    def set_exit_state(self, state: EXIT_STATES):
+        if not import_from_settings('IS_TEST'):
+            return
+        self.exit_state = state
+
     def is_refreshable_url(self, request):
         """Is the session refreshable, and do we have a refresh token?"""
-        is_refreshable = super().is_refreshable_url(request)
+        backend_session = request.session.get(BACKEND_SESSION_KEY)
+        is_oidc_enabled = True
+        if backend_session:
+            auth_backend = import_string(backend_session)
+            is_oidc_enabled = issubclass(auth_backend, OIDCAuthenticationBackend)
+
+        maybe_require_get = not self.allow_post_reauth and request.method != 'GET'
+        is_refreshable = (
+            not maybe_require_get
+            and request.user.is_authenticated
+            and is_oidc_enabled
+            and request.path not in self.exempt_urls
+            and not any(pat.match(request.path) for pat in self.exempt_url_patterns)
+        )
         return is_refreshable and request.session.get(OIDC_REFRESH_TOKEN_KEY)
 
     def is_expired(self, request):
@@ -314,14 +386,38 @@ class OIDCRefreshSession(SessionRefresh):
     def process_request(self, request):
         """Handle a refresh session request. If it's not refreshable or the token is not expired then we skip this
         and deal with the consequences elsewhere"""
+
+        # Load and check feature flags
+        introspect_flag_name = import_from_settings('WAFFLE_FLAG_INTROSPECT_TOKEN_PER_REQUEST')
+        post_reauth_flag_name = import_from_settings('WAFFLE_FLAG_ALLOW_POST_REAUTH')
+        if introspect_flag_name:
+            self.enable_per_request_introspect = waffle.flag_is_active(request, introspect_flag_name)
+        if post_reauth_flag_name:
+            self.allow_post_reauth = waffle.flag_is_active(request, post_reauth_flag_name)
+
         if not self.is_refreshable_url(request):
+            self.set_exit_state(self.EXIT_STATES.NOT_REFRESHABLE)
             logging.debug('request is not refreshable')
             return
 
-        if not self.is_expired(request):
-            return
-
         refresh_token = request.session.get(OIDC_REFRESH_TOKEN_KEY)
+        is_expired = self.is_expired(request)
+
+        # Only introspect the token if the local exp claim is expired (and the feature flag is enabled.)
+        if not is_expired and self.enable_per_request_introspect:
+            if _is_token_active(request.session.get(OIDC_ACCESS_TOKEN_KEY)):
+                self.set_exit_state(self.EXIT_STATES.ACCESS_TOKEN_IS_ACTIVE)
+                logging.debug('access token introspect is active')
+                return
+
+            # If the refresh token does not exist, or if it's not active then we need a reauth
+            refresh_token_is_active = not _is_token_active(refresh_token, TokenHintType.REFRESH_TOKEN)
+            if not refresh_token or not refresh_token_is_active:
+                logging.debug('refresh token is not active')
+                return self.finish(request, prompt_reauth=True)
+        elif not is_expired:
+            self.set_exit_state(self.EXIT_STATES.NOT_EXPIRED)
+            return
 
         if not refresh_token:
             logging.debug('no refresh token stored')
@@ -334,7 +430,12 @@ class OIDCRefreshSession(SessionRefresh):
             # Don't prompt for reauth as this could be a temporary problem
             return self.finish(request, prompt_reauth=False)
         except requests.exceptions.HTTPError as exc:
-            status_code = exc.response.status_code
+            # exc.response can return None here if we check it despite it returning a value...
+            # So wrap this in a try/except to keep errors at bay.
+            try:
+                status_code = exc.response.status_code
+            except AttributeError:
+                status_code = 400 # Force a 400
             logging.debug('http error %s when refreshing access token', status_code)
             # OAuth error response will be a 400 for various situations, including
             # an expired token. https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
@@ -355,11 +456,12 @@ class OIDCRefreshSession(SessionRefresh):
         access_token = token_info.get('access_token')
         refresh_token = token_info.get('refresh_token')
         store_tokens(request, access_token, id_token, refresh_token)
+        self.set_exit_state(self.EXIT_STATES.TOKEN_IS_STORED)
 
     def finish(self, request, prompt_reauth=True):
         """Finish request handling and handle sending downstream responses for XHR.
 
-        This function should only be run if the session is determind to
+        This function should only be run if the session is determined to
         be expired.
 
         Almost all XHR request handling in client-side code struggles
@@ -372,9 +474,10 @@ class OIDCRefreshSession(SessionRefresh):
         middleware doesn't really want the user in if they don't
         refresh their session.
         """
-        default_response = None
+        # is_redirectable = request.method == 'GET'
+        default_response = HttpResponseForbidden()
         xhr_response_json = {'error': 'the authentication session has expired'}
-        if prompt_reauth:
+        if prompt_reauth:  # and is_redirectable:
             # The id_token has expired, so we have to re-authenticate silently.
             refresh_url = self._prepare_reauthorization(request)
             default_response = HttpResponseRedirect(refresh_url)
