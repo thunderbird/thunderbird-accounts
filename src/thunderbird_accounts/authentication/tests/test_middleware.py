@@ -1,3 +1,7 @@
+from django.contrib.auth.models import AnonymousUser
+import uuid
+import datetime
+from waffle.testutils import override_flag
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -8,10 +12,14 @@ from django.core.exceptions import PermissionDenied
 from django.forms import model_to_dict
 from django.http import HttpRequest
 from django.test import override_settings
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 
 
-from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend, refresh_user_access_token
+from thunderbird_accounts.authentication.middleware import (
+    AccountsOIDCBackend,
+    refresh_user_access_token,
+    OIDCRefreshSession,
+)
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.models import AllowListEntry
 
@@ -48,6 +56,141 @@ class RefreshUserAccessTokenTestCase(TestCase):
         # A dead SSO session yields a 400 from the token endpoint.
         mock_post.side_effect = requests.exceptions.HTTPError('400 Bad Request')
         self.assertIsNone(refresh_user_access_token(self._request(oidc_refresh_token='dead-refresh')))
+
+
+@override_settings(
+    OIDC_STORE_ACCESS_TOKEN=True,
+    OIDC_STORE_REFRESH_TOKEN=True,
+    OIDC_OP_TOKEN_ENDPOINT='https://keycloak.example/token',
+    OIDC_RP_CLIENT_ID='client',
+    OIDC_RP_CLIENT_SECRET='secret',
+)
+class OIDCRefreshSessionTestCase(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        get_response = MagicMock()
+        self.middleware = OIDCRefreshSession(get_response)
+
+        email = f'{uuid.uuid4()}@example.org'
+        self.user = User.objects.create(username=f'{email}@example.org', email=f'{email}@example.org')
+        self.anonymous_user = AnonymousUser()
+
+    @patch('thunderbird_accounts.authentication.middleware.requests.post')
+    @override_flag(settings.WAFFLE_FLAG_ALLOW_POST_REAUTH, False)
+    @override_flag(settings.WAFFLE_FLAG_INTROSPECT_TOKEN_PER_REQUEST, False)
+    def test_introspect_does_not_happen_without_feature_flag(self, mock_post: MagicMock):
+        """This should hit the 'not expired' check and do nothing."""
+        session = {
+            'oidc_id_token_expiration': (datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=30)).timestamp(),
+            'oidc_access_token': 'abc123',
+            'oidc_refresh_token': 'abc456',
+        }
+
+        mock_post.side_effect = AssertionError('request.post should not get called!')
+
+        request = self.factory.get('/')
+        request.session = session
+        request.user = self.user
+        resp = self.middleware.process_request(request)
+        self.assertEqual(self.middleware.exit_state, OIDCRefreshSession.EXIT_STATES.NOT_EXPIRED)
+        self.assertIsNone(resp)
+
+    @patch('thunderbird_accounts.authentication.middleware.requests.post')
+    @override_flag(settings.WAFFLE_FLAG_ALLOW_POST_REAUTH, False)
+    @override_flag(settings.WAFFLE_FLAG_INTROSPECT_TOKEN_PER_REQUEST, True)
+    def test_introspect_does_happen_if_feature_flag_is_set(self, mock_post: MagicMock):
+        """This should hit a request.post, and our expected result for this test is the token is active."""
+        session = {
+            'oidc_id_token_expiration': (datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=30)).timestamp(),
+            'oidc_access_token': 'abc123',
+            'oidc_refresh_token': 'abc456',
+        }
+
+        mock_post.return_value = SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'active': True})
+
+        request = self.factory.get('/')
+        request.session = session
+        request.user = self.user
+        resp = self.middleware.process_request(request)
+        self.assertEqual(self.middleware.exit_state, OIDCRefreshSession.EXIT_STATES.ACCESS_TOKEN_IS_ACTIVE)
+        self.assertIsNone(resp)
+
+    @patch('thunderbird_accounts.authentication.middleware.requests.post')
+    @override_flag(settings.WAFFLE_FLAG_ALLOW_POST_REAUTH, False)
+    @override_flag(settings.WAFFLE_FLAG_INTROSPECT_TOKEN_PER_REQUEST, True)
+    def test_introspect_if_access_token_is_inactive(self, mock_post: MagicMock):
+        """This should hit a request.post, and our expected result for this test is the token is active."""
+        session = {
+            'oidc_id_token_expiration': (datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=30)).timestamp(),
+            'oidc_access_token': 'abc123',
+            'oidc_refresh_token': 'abc456',
+        }
+
+        mock_post.side_effect = [
+            # Access token check
+            SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'active': False}),
+            # Refresh token check
+            SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'active': True}),
+        ]
+
+        request = self.factory.get('/')
+        request.session = session
+        request.user = self.user
+        resp = self.middleware.process_request(request)
+        self.assertIsNone(self.middleware.exit_state)
+        self.assertIsNotNone(resp)
+        # Ensure that we're redirecting to auth
+        self.assertEqual(resp.status_code, 302)
+
+    @patch('thunderbird_accounts.authentication.middleware.requests.post')
+    @override_flag(settings.WAFFLE_FLAG_ALLOW_POST_REAUTH, False)
+    @override_flag(settings.WAFFLE_FLAG_INTROSPECT_TOKEN_PER_REQUEST, False)
+    def test_allow_post_reauth_does_not_happen_without_feature_flag(self, mock_post: MagicMock):
+        """Try posting without this feature flag. It should set a "not refreshable" state."""
+        session = {
+            'oidc_id_token_expiration': (datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=30)).timestamp(),
+            'oidc_access_token': 'abc123',
+            'oidc_refresh_token': 'abc456',
+        }
+
+        mock_post.side_effect = [
+            # Access token check
+            SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'active': False}),
+            # Refresh token check
+            SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'active': True}),
+        ]
+
+        request = self.factory.post('/')
+        request.session = session
+        request.user = self.user
+        resp = self.middleware.process_request(request)
+        self.assertEqual(self.middleware.exit_state, OIDCRefreshSession.EXIT_STATES.NOT_REFRESHABLE)
+        self.assertIsNone(resp)
+
+    @patch('thunderbird_accounts.authentication.middleware.requests.post')
+    @override_flag(settings.WAFFLE_FLAG_ALLOW_POST_REAUTH, True)
+    @override_flag(settings.WAFFLE_FLAG_INTROSPECT_TOKEN_PER_REQUEST, False)
+    def test_allow_post_reauth_does_happen_with_feature_flag(self, mock_post: MagicMock):
+        """Try posting without this feature flag. It should set a "not refreshable" state."""
+        session = {
+            'oidc_id_token_expiration': (datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=30)).timestamp(),
+            'oidc_access_token': 'abc123',
+            'oidc_refresh_token': 'abc456',
+        }
+
+        mock_post.side_effect = [
+            # Access token check
+            SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'active': False}),
+            # Refresh token check
+            SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'active': True}),
+        ]
+
+        request = self.factory.post('/')
+        request.session = session
+        request.user = self.user
+        resp = self.middleware.process_request(request)
+        self.assertEqual(self.middleware.exit_state, OIDCRefreshSession.EXIT_STATES.NOT_EXPIRED)
+        self.assertIsNone(resp)
 
 
 @override_settings(USE_ALLOW_LIST=True)
