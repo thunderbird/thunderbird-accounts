@@ -1,5 +1,5 @@
 import { type Page, type Locator, expect } from '@playwright/test';
-import { ACCTS_HUB_URL, ACCTS_SIGN_UP_URL } from '../const/constants';
+import { ACCTS_HUB_URL, ACCTS_SIGN_UP_URL, TIMEOUT_10_SECONDS } from '../const/constants';
 
 export class TbAcctsSignUpPage {
   readonly page: Page;
@@ -105,9 +105,15 @@ export class TbAcctsSignUpPage {
 
     await this.submitForm();
 
-    await expect.poll(async () => {
-      return await this.stepId.inputValue();
-    }).toBe('step-username');
+    await expect.poll(
+      async () => {
+        return await this.stepId.inputValue();
+      },
+      {
+        timeout: TIMEOUT_10_SECONDS,
+        message: 'waiting for the next step (username) to appear',
+      }
+    ).toBe('step-username');
   }
 
   /**
@@ -130,9 +136,15 @@ export class TbAcctsSignUpPage {
     }
     
     // we expect to be on the next step; need time for the next page/step to load (will timeout if fails)
-    await expect.poll(async () => {
-      return await this.stepId.inputValue();
-    }).toBe('step-password');
+    await expect.poll(
+      async () => {
+        return await this.stepId.inputValue();
+      },
+      {
+        timeout: TIMEOUT_10_SECONDS,
+        message: 'waiting for the next step (password) to appear',
+      }
+    ).toBe('step-password');
 
     await this.passwordInput?.fill(password);
     await this.passwordConfirmInput?.fill(passwordConfirm);
@@ -140,7 +152,9 @@ export class TbAcctsSignUpPage {
 
   async submitForm() { 
     // when clicking on android it won't click it unless we force it; but force doesn't work on ios
-    if (this.testPlatform.includes('android')) { 
+    console.log(`clicking '${await this.submitButton.innerText()}' button`);
+
+    if (this.testPlatform.includes('android')) {
       await this.submitButton.click({ force: true, clickCount: 1 });
     } else {
       await this.submitButton.click();
