@@ -93,10 +93,11 @@ section {
       height: 100%;
       display: flex;
       flex-direction: column;
-      gap: 2rem;
       padding: 6rem 2rem;
 
       .message-bar {
+        margin-block-end: 1.5rem;
+
         &:not(:has(:deep(.notice-bar))) {
           display: none;
         }
@@ -106,6 +107,7 @@ section {
         display: block;
         text-decoration: none;
         width: min-content;
+        margin-block-end: 2rem;
 
         .logo {
           height: 36px;
