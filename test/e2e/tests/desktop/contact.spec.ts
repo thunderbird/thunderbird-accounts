@@ -12,6 +12,7 @@ import {
   TIMEOUT_2_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
+  ACCTS_TARGET_ENV,
 } from '../../const/constants';
 
 let contactPage: ContactPage;
@@ -182,6 +183,7 @@ test.describe('contact support form on desktop browser', {
   });
 
   test('able to submit contact form successfully', async ({ page }) => {
+    test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack see issue 1058');
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
 
@@ -248,6 +250,7 @@ test.describe('contact support form on desktop browser', {
   });
 
   test('error handling works correctly', async ({ page }) => {
+    test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack see issue 1058');
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     // capture the POST /contact/submit and mock an error response
@@ -281,6 +284,7 @@ test.describe('contact support form on desktop browser', {
   });
 
   test('able to submit contact form with attachments', async ({ page }) => {
+    test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack see issue 1058');
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     // capture the POST /contact/submit and mock the response
