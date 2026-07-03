@@ -1,6 +1,4 @@
 <script setup>
-import MessageBar from '@kc/vue/components/MessageBar.vue';
-
 console.error('Route not implemented', {
   pageId: window?._page?.pageId,
   page: window?._page,
@@ -16,22 +14,12 @@ export default {
 </script>
 
 <template>
-  <message-bar />
-
   <h1>{{ $t('routeNotImplementedTitle') }}</h1>
   <p>{{ $t('routeNotImplementedText1') }}</p>
   <p>{{ $t('routeNotImplementedText2') }}</p>
 </template>
 
 <style scoped>
-.notice-bar {
-  position: absolute;
-  top: 1rem;
-  left: 1.5rem;
-  right: 1.5rem;
-  z-index: 1;
-}
-
 h1 {
   font-size: 1.5rem;
   font-family: metropolis;

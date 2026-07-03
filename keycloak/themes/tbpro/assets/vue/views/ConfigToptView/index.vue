@@ -9,8 +9,6 @@ import {
 import { computed, ref, useTemplateRef } from "vue";
 import { i18n } from '@kc/composables/i18n.js';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
-import MessageBar from "@kc/vue/components/MessageBar.vue";
-
 const isManualMode = ref(false);
 const formAction = window._page.currentView?.formAction;
 const settingsForm = useTemplateRef('settings-form');
@@ -117,8 +115,6 @@ export default {
 
 
 <template>
-  <message-bar/>
-
   <h2>{{ $t('loginTotpTitle') }}</h2>
   <cancel-form ref="cancel-form" :action="formAction" cancelId="cancelTOTPBtn" cancelValue="true"
                 cancelName="cancel-aia"/>

@@ -3,7 +3,6 @@ import { TextInput, BrandButton, NoticeBar, NoticeBarTypes } from '@thunderbirdo
 import { computed, ref, useTemplateRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { PhArrowRight } from '@phosphor-icons/vue';
-import MessageBar from '@kc/vue/components/MessageBar.vue';
 
 const route = useRoute();
 
@@ -73,12 +72,9 @@ export default {
 
   <h2 data-testid="title">{{ $t('registerTitle') }}</h2>
 
-  <slot name="notice-bars">
-    <notice-bar data-testid="error-notice-bar" :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
-      {{ $t('registerError') }}
-    </notice-bar>
-    <message-bar v-else/>
-  </slot>
+  <notice-bar data-testid="error-notice-bar" :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
+    {{ $t('registerError') }}
+  </notice-bar>
 
   <form id="kc-register-form" ref="register-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
         @keyup.enter="onSubmit">
@@ -158,14 +154,6 @@ export default {
 
 .hidden {
   display: none;
-}
-
-.notice-bar {
-  position: absolute;
-  top: 1rem;
-  left: 1.5rem;
-  right: 1.5rem;
-  z-index: 1;
 }
 
 .logo-link {

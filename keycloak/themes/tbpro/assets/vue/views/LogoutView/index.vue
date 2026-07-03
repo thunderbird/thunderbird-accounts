@@ -1,8 +1,6 @@
 <script setup>
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
-import MessageBar from '@kc/vue/components/MessageBar.vue';
-
 const formAction = window._page.currentView?.formAction;
 const logoutForm = useTemplateRef('logout-form');
 
@@ -20,8 +18,6 @@ export default {
 </script>
 
 <template>
-  <message-bar />
-
   <h2>{{ $t('logoutConfirmTitle') }}</h2>
   <form id="kc-logout-confirm" ref="logout-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
         @keyup.enter="onSubmit">
@@ -41,14 +37,6 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  position: absolute;
-  top: 1rem;
-  left: 1.5rem;
-  right: 1.5rem;
-  z-index: 1;
-}
-
 .logo-link {
   display: block;
   text-decoration: none;

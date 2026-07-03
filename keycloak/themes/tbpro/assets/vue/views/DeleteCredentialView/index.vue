@@ -2,8 +2,6 @@
 import { DangerButton, PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
-import MessageBar from '@kc/vue/components/MessageBar.vue';
-
 const formAction = window._page.currentView?.formAction;
 const loginForm = useTemplateRef('login-form');
 const cancelForm = useTemplateRef('cancel-form');
@@ -27,7 +25,6 @@ export default {
 </script>
 
 <template>
-  <message-bar/>
   <h2>{{ deleteCredentialTitle }}</h2>
   <cancel-form ref="cancel-form" :action="formAction" cancelId="kc-decline" cancelValue="$t('doCancel')"
                 cancelName="cancel-aia"/>
