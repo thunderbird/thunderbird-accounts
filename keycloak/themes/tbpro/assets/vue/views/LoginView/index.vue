@@ -157,22 +157,6 @@ export default {
   margin-bottom: 1.5rem;
 }
 
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-}
-
 h2 {
   font-size: 2.25rem;
   font-family: metropolis;
@@ -188,7 +172,7 @@ form {
 }
 
 .forgot-password-link {
-  display: block;
+  display: inline-block;
   font-size: 0.6875rem;
   color: var(--colour-ti-muted);
   margin-block-end: 2rem;

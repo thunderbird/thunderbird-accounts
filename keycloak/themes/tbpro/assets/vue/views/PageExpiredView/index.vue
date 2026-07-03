@@ -27,22 +27,6 @@ h2 {
   margin: 0 0 1.5rem 0;
 }
 
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-}
-
 .buttons {
   margin-top: var(--space-24);
   width: 100%;

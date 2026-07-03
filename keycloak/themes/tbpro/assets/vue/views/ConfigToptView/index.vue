@@ -197,18 +197,6 @@ export default {
 </template>
 
 <style scoped>
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-  }
-}
-
 h2 {
   font-size: 1.5rem;
   font-family: metropolis;

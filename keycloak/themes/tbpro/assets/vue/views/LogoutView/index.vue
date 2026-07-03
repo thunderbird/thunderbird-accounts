@@ -37,22 +37,6 @@ export default {
 </template>
 
 <style scoped>
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-}
-
 h2 {
   font-size: 2.25rem;
   font-family: metropolis;
