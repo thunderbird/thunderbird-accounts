@@ -2,16 +2,13 @@
 import { ref, computed, useTemplateRef } from 'vue';
 import { TextInput, BrandButton, CheckboxInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { PhArrowRight } from '@phosphor-icons/vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 import { TBPRO_WAIT_LIST } from '@kc/defines';
 
 const firstError = window._page.currentView?.firstError;
 const formAction = window._page.currentView?.formAction;
 const rememberMe = window._page.currentView?.rememberMe;
 const forgotPasswordUrl = window._page.currentView?.forgotPasswordUrl;
-const registerUrl = window._page.currentView?.registerUrl;
 const supportUrl = window._page.currentView?.supportUrl;
-const clientUrl = window._page.currentView?.clientUrl;
 const loginForm = useTemplateRef('login-form');
 const message = window._page?.message;
 const tbProPrimaryDomain = window._page.currentView?.tbProPrimaryDomain;
