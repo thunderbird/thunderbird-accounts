@@ -1,5 +1,5 @@
 import path from 'path';
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { ContactPage } from '../../pages/contact-page';
 import { ensureWeAreSignedIn, overridePageData } from '../../utils/utils';
 
@@ -37,6 +37,18 @@ const verifyFormPostData = async (postData: string | null) => {
   expect(postData).toContain(MOCK_TYPE_VALUE);
   expect(postData).toContain('description');
   expect(postData).toContain(TEST_DESC);
+};
+
+const fakeBeingOnAllowList = async (page: Page) => {
+  // fake having our user on the allow list so we can actually submit the contact form
+  // only needed when running on local dev stack as our stage/prod test accounts are on allow list
+  await page.route('*/**/api/v1/contact/check-email-is-on-allow-list/', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ is_on_allow_list: true }),
+    });
+  });
 };
 
 
@@ -183,7 +195,11 @@ test.describe('contact support form on desktop browser', {
   });
 
   test('able to submit contact form successfully', async ({ page }) => {
-    test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack see issue 1058');
+    // we need our user to be on the allow list so we can submit
+    if (ACCTS_TARGET_ENV == 'dev') {
+      await fakeBeingOnAllowList(page);
+    }
+
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
 
@@ -250,7 +266,11 @@ test.describe('contact support form on desktop browser', {
   });
 
   test('error handling works correctly', async ({ page }) => {
-    test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack see issue 1058');
+    // we need our user to be on the allow list so we can submit
+    if (ACCTS_TARGET_ENV == 'dev') {
+      await fakeBeingOnAllowList(page);
+    }
+
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     // capture the POST /contact/submit and mock an error response
@@ -284,7 +304,11 @@ test.describe('contact support form on desktop browser', {
   });
 
   test('able to submit contact form with attachments', async ({ page }) => {
-    test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack see issue 1058');
+    // we need our user to be on the allow list so we can submit
+    if (ACCTS_TARGET_ENV == 'dev') {
+      await fakeBeingOnAllowList(page);
+    }
+
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     // capture the POST /contact/submit and mock the response
