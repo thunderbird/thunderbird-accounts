@@ -41,6 +41,7 @@ from thunderbird_accounts.mail.utils import (
 from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail import tasks as mail_tasks
 from thunderbird_accounts.mail import utils
+from thunderbird_accounts.subscription.decorators import active_subscription_required
 
 
 def _critical_errors_from_stale_dns_records(stale_dns_records: list[dict]) -> list[DomainVerificationErrors]:
@@ -69,15 +70,10 @@ def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: st
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required(error_message=_('An active subscription is required to set an app password.'))
 @sensitive_post_parameters('password')
 def app_password_set(request: HttpRequest):
     """Sets an app password for a remote Stalwart account"""
-
-    if not request.user.has_active_subscription:
-        return JsonResponse(
-            {'success': False, 'error': str(_('An active subscription is required to set an app password.'))},
-            status=403,
-        )
 
     try:
         data = json.loads(request.body)
