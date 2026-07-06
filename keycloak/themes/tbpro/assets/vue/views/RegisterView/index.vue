@@ -10,6 +10,7 @@ const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
 const tbProPrimaryDomain = `@${window._page.currentView?.tbProPrimaryDomain}`;
 const attributeValues = window._page.currentView?.attributes;
+const message = window._page?.message;
 
 // Fixed values
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
@@ -72,7 +73,11 @@ export default {
 
   <h2 data-testid="title">{{ $t('registerTitle') }}</h2>
 
-  <notice-bar data-testid="error-notice-bar" :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
+  <notice-bar
+    data-testid="error-notice-bar"
+    :type="NoticeBarTypes.Critical"
+    v-if="!message?.type && (usernameError || passwordError || passwordConfirmError || recoveryEmailError)"
+  >
     {{ $t('registerError') }}
   </notice-bar>
 
