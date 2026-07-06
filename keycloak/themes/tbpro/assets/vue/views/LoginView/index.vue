@@ -95,8 +95,7 @@ export default {
         >
           {{ $t('email') }}
         </text-input>
-        <p v-if="showUsernameHelpText" class="username-help-text">
-          {{ $t('usernameDomainSuggestion') }}
+        <i18n-t v-if="showUsernameHelpText" class="username-help-text" keypath="usernameDomainSuggestion" tag="p">
           <button
             ref="username-suggestion-btn"
             type="button"
@@ -105,8 +104,7 @@ export default {
           >
             {{ suggestedUsername }}
           </button>
-          ?
-        </p>
+        </i18n-t>
       </div>
       <text-input
         v-if="!hidePassword"
