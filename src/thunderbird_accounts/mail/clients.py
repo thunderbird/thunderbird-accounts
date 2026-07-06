@@ -11,6 +11,7 @@ from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
     DomainNotFoundError,
     FailedToCreateDKIM,
+    FailedToReloadStalwart,
     StalwartError,
 )
 
@@ -236,6 +237,17 @@ class MailClient:
         self._raise_for_error(response)
         return response
 
+    def _reload(self):
+        response = requests.get(
+            f'{self.api_url}/reload/',
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
+        )
+        response.raise_for_status()
+        self._raise_for_error(response)
+
+        return response
+
     def get_domain(self, domain):
         response = self._get_principal(domain)
 
@@ -261,6 +273,7 @@ class MailClient:
         dkim_algorithms = settings.STALWART_DKIM_ALGOS if algorithms is None else algorithms
         for algorithm in dkim_algorithms:
             data = {
+                # Stalwart 0.15, creates defaults IDs when ID is None. Ex: `$algo-$domain`
                 'id': None,
                 'algorithm': algorithm,
                 'domain': domain,
@@ -269,16 +282,21 @@ class MailClient:
             if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
                 data['stage'] = stage.value
 
-            response = requests.post(
-                f'{self.api_url}/dkim',
-                json=data,
-                headers=self.authorized_headers,
-                verify=settings.VERIFY_PRIVATE_LINK_SSL,
-            )
             try:
+                response = requests.post(
+                    f'{self.api_url}/dkim',
+                    json=data,
+                    headers=self.authorized_headers,
+                    verify=settings.VERIFY_PRIVATE_LINK_SSL,
+                )
                 response.raise_for_status()
             except requests.RequestException as exc:
                 raise FailedToCreateDKIM(algorithm, domain, str(exc)) from exc
+            try:
+                # Stalwart 0.15 requires reloading to sync persisent state with in-memory cache
+                self._reload()
+            except (requests.RequestException, StalwartError) as exc:
+                raise FailedToReloadStalwart(domain, str(exc), algorithm=algorithm) from exc
             response_data.append(response.json().get('data'))
         return response_data
 
