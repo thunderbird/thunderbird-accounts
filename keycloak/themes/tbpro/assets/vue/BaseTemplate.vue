@@ -97,10 +97,6 @@ section {
 
       .message-bar {
         margin-block-end: 1.5rem;
-
-        &:not(:has(:deep(.notice-bar))) {
-          display: none;
-        }
       }
 
       .logo-link {
@@ -112,7 +108,6 @@ section {
         .logo {
           height: 36px;
           width: auto;
-          transition: opacity 0.2s ease;
         }
       }
     }
