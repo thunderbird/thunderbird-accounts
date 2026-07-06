@@ -113,6 +113,7 @@ def app_password_set(request: HttpRequest):
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required
 @sensitive_post_parameters('display-name')
 def display_name_set(request: HttpRequest):
     """Sets a display name for a remote Stalwart account"""
@@ -137,6 +138,7 @@ def display_name_set(request: HttpRequest):
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required
 def create_custom_domain(request: HttpRequest):
     """Creates a custom domain for the user"""
     data = json.loads(request.body)
@@ -198,6 +200,7 @@ def create_custom_domain(request: HttpRequest):
 
 @login_required
 @require_http_methods(['GET'])
+@active_subscription_required
 def get_dns_records(request: HttpRequest):
     """Gets the DNS records for a custom domain"""
     domain = request.user.domains.get(name=request.GET.get('domain-name'))
@@ -228,6 +231,7 @@ def get_dns_records(request: HttpRequest):
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required
 def verify_custom_domain(request: HttpRequest):
     """Verifies a custom domain"""
     data = json.loads(request.body)
@@ -327,6 +331,7 @@ def verify_custom_domain(request: HttpRequest):
 
 @login_required
 @require_http_methods(['DELETE'])
+@active_subscription_required
 def remove_custom_domain(request: HttpRequest):
     """Removes a custom domain"""
     data = json.loads(request.body)
@@ -400,6 +405,7 @@ def remove_custom_domain(request: HttpRequest):
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required
 def add_email_alias(request: HttpRequest):
     """Adds an email alias"""
     data = json.loads(request.body)
@@ -513,6 +519,7 @@ def add_email_alias(request: HttpRequest):
 
 @login_required
 @require_http_methods(['DELETE'])
+@active_subscription_required
 def remove_email_alias(request: HttpRequest):
     """Removes an email alias"""
     data = json.loads(request.body)
@@ -652,6 +659,7 @@ def appointment_caldav_setup(request: HttpRequest):
 
 
 @login_required
+@active_subscription_required
 def jmap_test_page(request: HttpRequest):
     from thunderbird_accounts.mail.tiny_jmap_client import TinyJMAPClient
 

@@ -1,7 +1,8 @@
 from functools import wraps
 
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 try:
@@ -36,7 +37,7 @@ def inject_paddle(func):
     return _inject_paddle
 
 
-def active_subscription_required(function=None, *, error_message=None, status=403):
+def active_subscription_required(function=None, *, error_message=None, response_data=None, status=403):
     """Require an authenticated user with an active subscription."""
 
     def decorator(view_func):
@@ -45,11 +46,35 @@ def active_subscription_required(function=None, *, error_message=None, status=40
             if getattr(request.user, 'has_active_subscription', False):
                 return view_func(request, *args, **kwargs)
 
-            message = error_message or _('An active subscription is required.')
-            return JsonResponse({'success': False, 'error': str(message)}, status=status)
+            if _wants_json_response(request):
+                message = error_message or _('An active subscription is required.')
+                data = response_data if response_data is not None else {'success': False, 'error': str(message)}
+                return JsonResponse(data, status=status)
+
+            return HttpResponseRedirect(reverse('vue_app'))
 
         return _view_wrapper
 
     if function:
         return decorator(function)
     return decorator
+
+
+def _wants_json_response(request):
+    accept = request.headers.get('Accept', '')
+    content_type = request.headers.get('Content-Type', '')
+
+    if _has_json_media_type(accept) or _has_json_media_type(content_type):
+        return True
+
+    # Existing fetch calls often rely on the browser default Accept: */*,
+    # and RequestFactory tests often omit Accept entirely.
+    return not accept or accept.strip() == '*/*'
+
+
+def _has_json_media_type(header_value):
+    for value in header_value.split(','):
+        media_type = value.split(';', 1)[0].strip().lower()
+        if media_type == 'application/json' or media_type.endswith('+json'):
+            return True
+    return False

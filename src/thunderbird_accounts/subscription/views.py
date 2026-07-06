@@ -23,7 +23,7 @@ from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks
-from thunderbird_accounts.subscription.decorators import inject_paddle
+from thunderbird_accounts.subscription.decorators import active_subscription_required, inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price, Subscription, Transaction
 from thunderbird_accounts.core.exceptions import UnexpectedBehaviour
 
@@ -182,11 +182,9 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required(response_data={}, status=401)
 @inject_paddle
 def get_paddle_portal_link(request: Request, paddle: Client):
-    if not request.user.has_active_subscription:
-        return JsonResponse({}, status=401)
-
     subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
     customer_session = paddle.customer_portal_sessions.create(
         subscription.paddle_customer_id, CreateCustomerPortalSession()
@@ -240,14 +238,11 @@ def handle_paddle_webhook(request: Request):
 
 
 @login_required
-@inject_paddle
 @require_http_methods(['POST'])
+@active_subscription_required(error_message='No active subscription found', status=404)
+@inject_paddle
 def get_subscription_plan_info(request: Request, paddle: Client):
     """Returns the user's current subscription information including plan details, pricing, and features."""
-
-    # Check if user has an active subscription
-    if not request.user.has_active_subscription:
-        return JsonResponse({'success': False, 'error': 'No active subscription found'}, status=404)
 
     # Get the user's active subscription
     subscription: Subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()

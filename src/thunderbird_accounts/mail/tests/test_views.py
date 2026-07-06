@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.core.tests.utils import oidc_force_login
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, StaleDNSRecordCode
 from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.mail.views import get_dns_records, remove_custom_domain
@@ -83,6 +84,7 @@ class DisplayNameApiTestCase(TestCase):
     def setUp(self):
         self.client = RequestClient()
         self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
         self.primary_email = f'test@{settings.PRIMARY_EMAIL_DOMAIN}'
         self.account = Account.objects.create(name=self.primary_email, user=self.user)
         Email.objects.create(address=self.primary_email, type=Email.EmailType.PRIMARY, account=self.account)
@@ -115,11 +117,51 @@ class DisplayNameApiTestCase(TestCase):
         self.assertFalse(json.loads(response.content.decode())['success'])
 
 
+class ActiveSubscriptionRequiredMailViewsTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        oidc_force_login(self.client, self.user)
+
+    def test_mail_management_views_require_active_subscription(self):
+        cases = [
+            ('api_display_name_set', 'post', {'display-name': 'New Name'}),
+            ('add_custom_domain', 'post', {'domain-name': 'example.com'}),
+            ('get_dns_records', 'get', {'domain-name': 'example.com'}),
+            ('verify_custom_domain', 'post', {'domain-name': 'example.com'}),
+            ('remove_custom_domain', 'delete', {'domain-name': 'example.com'}),
+            ('add_email_alias', 'post', {'email-alias': 'buddy', 'domain': settings.PRIMARY_EMAIL_DOMAIN}),
+            ('remove_email_alias', 'delete', {'email-alias': f'buddy@{settings.PRIMARY_EMAIL_DOMAIN}'}),
+        ]
+        if settings.AUTH_SCHEME == 'oidc':
+            cases.append(('jmap-test', 'get', {}))
+
+        for url_name, method, data in cases:
+            with self.subTest(url_name=url_name):
+                url = reverse(url_name)
+                if method == 'get':
+                    response = self.client.get(url, data=data, HTTP_ACCEPT='application/json')
+                else:
+                    response = getattr(self.client, method)(
+                        url,
+                        data=json.dumps(data),
+                        content_type='application/json',
+                        HTTP_ACCEPT='application/json',
+                    )
+
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(
+                    response.json(),
+                    {'success': False, 'error': 'An active subscription is required.'},
+                )
+
+
 @override_settings(HOSTED_DKIM_DOMAIN='dkim.example.net', HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'])
 class CustomDomainDNSRecordsTestCase(TestCase):
     def setUp(self):
         self.request_factory = RequestFactory()
         self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
         self.domain = Domain.objects.create(name='example.com', user=self.user)
         self.url = reverse('get_dns_records')
 
@@ -185,6 +227,7 @@ class VerifyCustomDomainTestCase(TestCase):
     def setUp(self):
         self.client = RequestClient()
         self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
         self.domain = Domain.objects.create(name='example.com', user=self.user)
         self.client.force_login(self.user)
         self.url = reverse('verify_custom_domain')
@@ -485,6 +528,7 @@ class RemoveCustomDomainTestCase(TestCase):
     def setUp(self):
         self.request_factory = RequestFactory()
         self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
         self.account = Account.objects.create(name=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', user=self.user)
         self.domain = Domain.objects.create(
             name='example.com',
@@ -569,6 +613,7 @@ class AddEmailAliasTestCase(TestCase):
         self.user = User.objects.create(
             username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234', plan=self.plan
         )
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
         self.account = Account.objects.create(name=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', user=self.user)
         self.client.force_login(self.user)
 
