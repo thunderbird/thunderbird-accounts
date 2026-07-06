@@ -93,7 +93,7 @@ def tag_abandoned_cart_in_mailchimp(self):
             continue
         except Exception as ex:
             errors += 1
-            logger.exception(f'tag_abandoned_cart_in_mailchimp: failed to tag {user.uuid}: {ex.reason}')
+            logger.exception(f'tag_abandoned_cart_in_mailchimp: failed to tag {user.uuid}: {ex}')
             continue
         else:
             tagged += 1
