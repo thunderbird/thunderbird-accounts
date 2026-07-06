@@ -4,7 +4,7 @@ import dns.resolver as dns_resolver
 from unittest.mock import MagicMock, patch
 from django.test import SimpleTestCase, override_settings, TestCase
 from thunderbird_accounts.mail.clients import DkimSignatureStage, MailClient, DomainVerificationErrors
-from thunderbird_accounts.mail.exceptions import FailedToCreateDKIM
+from thunderbird_accounts.mail.exceptions import FailedToCreateDKIM, FailedToReloadStalwart, StalwartError
 
 
 @override_settings(
@@ -221,18 +221,26 @@ class TestMailClientCreateDkim(TestCase):
         STALWART_DKIM_ALGO_SELECTORS={'Rsa': 'tm1', 'Ed25519': 'tm2'},
         STALWART_DKIM_STAGE_MANAGEMENT_ENABLED=True,
     )
+    @patch('requests.get')
     @patch('requests.post')
-    def test_success(self, requests_mock: MagicMock):
+    def test_success(self, requests_mock: MagicMock, requests_get_mock: MagicMock):
         success_response = requests.Response()
         success_response.status_code = 200
         success_response._content = b'{"data": {}}'
 
         requests_mock.return_value = success_response
 
+        success_reload_response = requests.Response()
+        success_reload_response.status_code = 200
+        success_reload_response._content = b'{"data": {"warnings": {}, "errors": {}}}'
+
+        requests_get_mock.return_value = success_reload_response
+
         response_data = self.mail_client.create_dkim(self.domain)
 
         self.assertIsNotNone(response_data)
         self.assertEqual(2, requests_mock.call_count)
+        self.assertEqual(2, requests_get_mock.call_count)
         self.assertEqual(
             [
                 {
@@ -252,13 +260,17 @@ class TestMailClientCreateDkim(TestCase):
             ],
             [call_args.kwargs['json'] for call_args in requests_mock.call_args_list],
         )
+        for call_args in requests_get_mock.call_args_list:
+            self.assertEqual(f'{self.mail_client.api_url}/reload/', call_args.args[0])
+            self.assertEqual(self.mail_client.authorized_headers, call_args.kwargs['headers'])
 
     @override_settings(
         STALWART_DKIM_ALGOS=['Ed25519'],
         STALWART_DKIM_ALGO_SELECTORS={'Ed25519': 'tm2'},
     )
+    @patch('requests.get')
     @patch('requests.post')
-    def test_failure_raises_failed_to_create_dkim(self, requests_mock: MagicMock):
+    def test_failure_raises_failed_to_create_dkim(self, requests_mock: MagicMock, requests_get_mock: MagicMock):
         failure_response = requests.Response()
         failure_response.status_code = 500
         failure_response.reason = 'Internal Server Error'
@@ -271,6 +283,82 @@ class TestMailClientCreateDkim(TestCase):
         self.assertEqual('Ed25519', cm.exception.algorithm)
         self.assertEqual(self.domain, cm.exception.domain)
         self.assertIsInstance(cm.exception.__cause__, requests.RequestException)
+        requests_get_mock.assert_not_called()
+
+    @override_settings(
+        STALWART_DKIM_ALGOS=['Ed25519'],
+        STALWART_DKIM_ALGO_SELECTORS={'Ed25519': 'tm2'},
+    )
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_request_failure_raises_failed_to_create_dkim(
+        self, requests_mock: MagicMock, requests_get_mock: MagicMock
+    ):
+        requests_mock.side_effect = requests.ConnectionError('Connection refused')
+
+        with self.assertRaises(FailedToCreateDKIM) as cm:
+            self.mail_client.create_dkim(self.domain)
+
+        self.assertEqual('Ed25519', cm.exception.algorithm)
+        self.assertEqual(self.domain, cm.exception.domain)
+        self.assertIsInstance(cm.exception.__cause__, requests.ConnectionError)
+        requests_get_mock.assert_not_called()
+
+    @override_settings(
+        STALWART_DKIM_ALGOS=['Ed25519'],
+        STALWART_DKIM_ALGO_SELECTORS={'Ed25519': 'tm2'},
+    )
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_reload_failure_raises_request_exception(
+        self, requests_mock: MagicMock, requests_get_mock: MagicMock
+    ):
+        success_response = requests.Response()
+        success_response.status_code = 200
+        success_response._content = b'{"data": {}}'
+
+        requests_mock.return_value = success_response
+
+        failure_reload_response = requests.Response()
+        failure_reload_response.status_code = 500
+        failure_reload_response.reason = 'Internal Server Error'
+
+        requests_get_mock.return_value = failure_reload_response
+
+        with self.assertRaises(FailedToReloadStalwart) as cm:
+            self.mail_client.create_dkim(self.domain)
+
+        self.assertEqual('Ed25519', cm.exception.algorithm)
+        self.assertEqual(self.domain, cm.exception.domain)
+        self.assertIsInstance(cm.exception.__cause__, requests.RequestException)
+
+    @override_settings(
+        STALWART_DKIM_ALGOS=['Ed25519'],
+        STALWART_DKIM_ALGO_SELECTORS={'Ed25519': 'tm2'},
+    )
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_reload_application_error_raises_failed_to_reload_stalwart(
+        self, requests_mock: MagicMock, requests_get_mock: MagicMock
+    ):
+        success_response = requests.Response()
+        success_response.status_code = 200
+        success_response._content = b'{"data": {}}'
+
+        requests_mock.return_value = success_response
+
+        failure_reload_response = requests.Response()
+        failure_reload_response.status_code = 200
+        failure_reload_response._content = b'{"error": "other", "details": "reload", "reason": "failed"}'
+
+        requests_get_mock.return_value = failure_reload_response
+
+        with self.assertRaises(FailedToReloadStalwart) as cm:
+            self.mail_client.create_dkim(self.domain)
+
+        self.assertEqual('Ed25519', cm.exception.algorithm)
+        self.assertEqual(self.domain, cm.exception.domain)
+        self.assertIsInstance(cm.exception.__cause__, StalwartError)
 
 
 @override_settings(

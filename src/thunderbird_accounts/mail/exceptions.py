@@ -76,6 +76,22 @@ class FailedToCreateDKIM(StalwartError):
         return f'FailedToCreateDKIM: {self.algorithm} for {self.domain}'
 
 
+class FailedToReloadStalwart(StalwartError):
+    """Raise when Stalwart fails to reload persisted changes."""
+
+    domain: str
+    algorithm: str | None
+
+    def __init__(self, domain, details=None, algorithm=None, *args, **kwargs):
+        super().__init__(details, *args, **kwargs)
+        self.domain = domain
+        self.algorithm = algorithm
+
+    def __str__(self):
+        context = f' after {self.algorithm} DKIM creation' if self.algorithm else ''
+        return f'FailedToReloadStalwart: {self.domain}{context}'
+
+
 class HostedDkimPublishRetry(Exception):
     """Raise when hosted DKIM publication should be retried."""
 
