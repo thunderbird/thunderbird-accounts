@@ -19,6 +19,7 @@
         // </#if>
         rememberMe: '${(login.rememberMe)!"off"}' === 'on',
         loginHint: '${login.username!''}',
+        tbProPrimaryDomain: '${properties.tbproPrimaryDomain}',
         socialProviders: [
             //<#if realm.password && social?? && social.providers?has_content>
             //<#list social.providers as p>
@@ -55,6 +56,7 @@
         needHelpAction: '${msg("needHelpAction")}',
         inviteOnly: '${msg("inviteOnly")}',
         inviteOnlyAction: '${msg("inviteOnlyAction")}',
+        usernameDomainSuggestion: '${msg("usernameDomainSuggestion")}',
       };
     </script>
     </#if>

@@ -6,7 +6,6 @@ import MessageBar from '@kc/vue/components/MessageBar.vue';
 import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 import { TBPRO_WAIT_LIST } from '@kc/defines';
 
-
 const firstError = window._page.currentView?.firstError;
 const formAction = window._page.currentView?.formAction;
 const rememberMe = window._page.currentView?.rememberMe;
@@ -16,6 +15,7 @@ const supportUrl = window._page.currentView?.supportUrl;
 const clientUrl = window._page.currentView?.clientUrl;
 const loginForm = useTemplateRef('login-form');
 const message = window._page?.message;
+const tbProPrimaryDomain = window._page.currentView?.tbProPrimaryDomain;
 
 const onSubmit = () => {
   if (loginForm.value.checkValidity()) {
@@ -33,6 +33,23 @@ const passwordError = computed(() => {
 // CheckboxInput requires a valid ref as a model to show the check icon
 const rememberMeChecked = ref(rememberMe);
 const username = ref(window._page.currentView?.loginHint);
+const showUsernameHelpText = ref(false);
+const usernameLocalPart = ref('');
+
+const suggestedUsername = computed(() => `${usernameLocalPart.value}@${tbProPrimaryDomain}`);
+
+const onUsernameBlur = (e: Event) => {
+  const inputValue = (e.target as HTMLInputElement).value.toLowerCase();
+  const [localPart, domain] = inputValue.split('@');
+
+  usernameLocalPart.value = localPart;
+  showUsernameHelpText.value = localPart && (!domain || domain !== tbProPrimaryDomain);
+};
+
+const onUsernameHelpTextClick = () => {
+  username.value = suggestedUsername.value;
+  showUsernameHelpText.value = false;
+};
 
 defineProps<{
   hidePassword: boolean;
@@ -41,36 +58,56 @@ defineProps<{
 
 <script lang="ts">
 export default {
-  name: 'LoginView'
+  name: 'LoginView',
 };
 </script>
 
 <template>
   <notice-bar :type="NoticeBarTypes.Critical" v-if="firstError">{{ firstError }}</notice-bar>
-  <message-bar v-else-if="message?.type"/>
+  <message-bar v-else-if="message?.type" />
   <notice-bar :type="NoticeBarTypes.Info" v-else>
     <i18n-t keypath="inviteOnly" tag="span">
       <a :href="TBPRO_WAIT_LIST" data-testid="go-to-invite-only-url" target="_blank">{{ $t('inviteOnlyAction') }}</a>
     </i18n-t>
   </notice-bar>
 
-  
   <h2 data-testid="header-text">{{ $t('loginAccountTitle') }}</h2>
-  <form id="kc-form-login" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
-        @keyup.enter="onSubmit">
+  <form
+    id="kc-form-login"
+    ref="login-form"
+    method="POST"
+    :action="formAction"
+    @submit.prevent="onSubmit"
+    @keyup.enter="onSubmit"
+  >
     <div class="form-elements">
-      <text-input
-        data-testid="username-input"
-        id="username"
-        name="username"
-        required
-        autocomplete="username webauthn"
-        autofocus
-        :error="usernameError"
-        v-model="username"
-      >
-        {{ $t('email') }}
-      </text-input>
+      <div>
+        <text-input
+          data-testid="username-input"
+          id="username"
+          name="username"
+          required
+          autocomplete="username webauthn"
+          autofocus
+          :error="usernameError"
+          v-model="username"
+          @blur="onUsernameBlur"
+        >
+          {{ $t('email') }}
+        </text-input>
+        <div aria-live="polite">
+          <i18n-t v-if="showUsernameHelpText" class="username-help-text" keypath="usernameDomainSuggestion" tag="p">
+            <button
+              ref="username-suggestion-btn"
+              type="button"
+              data-testid="username-suggestion-btn"
+              @click="onUsernameHelpTextClick"
+            >
+              {{ suggestedUsername }}
+            </button>
+          </i18n-t>
+        </div>
+      </div>
       <text-input
         v-if="!hidePassword"
         data-testid="password-input"
@@ -85,11 +122,7 @@ export default {
       </text-input>
     </div>
 
-    <a
-      v-if="forgotPasswordUrl && !hidePassword"
-      :href="forgotPasswordUrl"
-      class="forgot-password-link"
-    >
+    <a v-if="forgotPasswordUrl && !hidePassword" :href="forgotPasswordUrl" class="forgot-password-link">
       {{ $t('doForgotPassword') }}
     </a>
 
@@ -188,6 +221,24 @@ form {
   flex-direction: column;
   gap: 1.5rem;
   margin-bottom: 0.5rem;
+
+  .username-help-text {
+    font-size: 0.6875rem;
+    color: var(--colour-ti-muted);
+    margin-block: 0.5rem 0;
+
+    button {
+      all: unset;
+      color: var(--colour-primary-default);
+      text-decoration: underline;
+      cursor: pointer;
+
+      &:focus-visible {
+        outline: 2px solid var(--colour-primary-default);
+        outline-offset: 2px;
+      }
+    }
+  }
 }
 
 .buttons {
