@@ -459,6 +459,7 @@ class OIDCRefreshSession(SessionRefresh):
         access_token = token_info.get('access_token')
         refresh_token = token_info.get('refresh_token')
         store_tokens(request, access_token, id_token, refresh_token)
+        logging.debug('access token has been refreshed!')
         self.set_exit_state(self.EXIT_STATES.TOKEN_IS_STORED)
 
     def finish(self, request, prompt_reauth=True):

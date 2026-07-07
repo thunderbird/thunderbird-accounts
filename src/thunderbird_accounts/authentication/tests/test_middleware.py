@@ -140,7 +140,7 @@ class OIDCRefreshSessionTestCase(TestCase):
         self.assertIsNone(self.middleware.exit_state)
         self.assertIsNotNone(resp)
         # Ensure that we're redirecting to auth
-        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.status_code, 403)
 
     @patch('thunderbird_accounts.authentication.middleware.requests.post')
     @override_flag(settings.WAFFLE_FLAG_ALLOW_POST_REAUTH, False)
