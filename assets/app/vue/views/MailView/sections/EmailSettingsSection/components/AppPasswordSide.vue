@@ -113,7 +113,7 @@ const onCancelSetPassword = () => {
           <tool-tip :alt="t('views.mail.sections.emailSettings.createPasswordTooltip')">
             <i18n-t keypath="views.mail.sections.emailSettings.createPasswordTooltip" tag="span">
               <template #supportUrl>
-                <a :href="APP_PASSWORD_SUPPORT_URL" target="_blank">{{ t('views.mail.sections.emailSettings.clickHere') }}</a>
+                <a :href="APP_PASSWORD_SUPPORT_URL" target="_blank">{{ t('views.mail.sections.emailSettings.appPasswordArticleTitle') }}</a>
               </template>
             </i18n-t>
           </tool-tip>

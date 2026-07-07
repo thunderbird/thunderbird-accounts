@@ -128,12 +128,12 @@ watch(selectedDomain, () => {
   <i18n-t keypath="views.mail.sections.emailSettings.emailAliasSupportText" tag="p" class="email-alias-support-text">
     <template #emailAliasesSupportLink>
       <a :href="EMAIL_ALIASES_SUPPORT_URL" target="_blank" rel="noopener noreferrer">
-        {{ t('views.mail.sections.emailSettings.emailAliasesLearnMore') }}
+        {{ t('views.mail.sections.emailSettings.emailAliasesArticleTitle') }}
       </a>
     </template>
     <template #emailAliasesCatchAllSupportLink>
       <a :href="EMAIL_ALIASES_CATCH_ALL_SUPPORT_URL" target="_blank" rel="noopener noreferrer">
-        {{ t('views.mail.sections.emailSettings.emailAliasesCatchAllLearnMore') }}
+        {{ t('views.mail.sections.emailSettings.emailAliasesCatchAllArticleTitle') }}
       </a>
     </template>
   </i18n-t>

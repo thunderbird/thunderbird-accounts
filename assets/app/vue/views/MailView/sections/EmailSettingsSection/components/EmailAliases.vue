@@ -113,8 +113,7 @@ const onDeleteAliasError = (error: string) => {
             <tool-tip id="catch-all-tooltip" :alt="t('views.mail.sections.emailSettings.catchAllTooltip')">
               <i18n-t keypath="views.mail.sections.emailSettings.catchAllTooltip" tag="span">
                 <template #supportUrl>
-                  <!-- Uncomment when a support article exists. -->
-                  <!--<a href="" target="_blank">{{ t('views.mail.sections.emailSettings.clickHere') }}</a>-->
+                  <!-- Add a supportUrl link when a support article exists. -->
                 </template>
               </i18n-t>
             </tool-tip>
