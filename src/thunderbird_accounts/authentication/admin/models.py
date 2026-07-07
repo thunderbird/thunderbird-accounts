@@ -27,6 +27,7 @@ class CustomUserAdmin(UserAdmin):
         'first_name',
         'last_name',
         'recovery_email',
+        'recovery_email_rejected_at',
         'shorten_plan',
         'created_at',
         'last_login',
@@ -56,7 +57,19 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
         (_('Profile Info'), {'fields': ('display_name', 'avatar_url', 'timezone')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'recovery_email', 'email')}),
+        (
+            _('Personal info'),
+            {
+                'fields': (
+                    'first_name',
+                    'last_name',
+                    'recovery_email',
+                    'recovery_email_rejected_at',
+                    'recovery_email_rejection_reason',
+                    'email',
+                )
+            },
+        ),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
         (_('Timestamps'), {'fields': ('created_at', 'updated_at')}),
         (
@@ -78,6 +91,8 @@ class CustomUserAdmin(UserAdmin):
         'email',
         'display_name',
         'avatar_url',
+        'recovery_email_rejected_at',
+        'recovery_email_rejection_reason',
         'created_at',
         'updated_at',
     )
@@ -96,6 +111,7 @@ class CustomUserAdmin(UserAdmin):
         'is_test_account',
         'is_active',
         'is_awaiting_payment_verification',
+        ('recovery_email_rejected_at', admin.EmptyFieldListFilter),
         'plan',
         'groups',
     ]

@@ -17,6 +17,20 @@ from thunderbird_accounts.subscription.models import Subscription
 
 logger = logging.getLogger(__name__)
 
+# While a 400 could indicate other kinds of "bad input", it's our clearest
+# signal when Mailchimp rejects an email.
+PERMANENT_RECOVERY_EMAIL_REJECTION_STATUS_CODE = 400
+
+def is_permanent_recovery_email_rejection(ex: TaskFailed) -> bool:
+    """Return True when Mailchimp rejects the member create request."""
+    return ex.other.get('error_status_code') == PERMANENT_RECOVERY_EMAIL_REJECTION_STATUS_CODE
+
+
+def get_recovery_email_rejection_reason(ex: TaskFailed) -> str:
+    reason = ex.other.get('error_msg_detail') or ex.other.get('error_msg_title') or ex.reason
+    max_length = User._meta.get_field('recovery_email_rejection_reason').max_length
+    return str(reason)[:max_length]
+
 
 def get_stale_incomplete_signup_users(cutoff_hours: int) -> QuerySet[User]:
     """Incomplete sign-ups older than the cutoff hours."""
@@ -44,11 +58,13 @@ def tag_abandoned_cart_in_mailchimp(self):
             'task_status': 'skipped',
             'tagged': 0,
             'errors': 0,
+            'rejected': 0,
             'skipped': 0,
         }
 
     tagged = 0
     errors = 0
+    rejected = 0
     skipped = 0
     language_fallback = settings.DEFAULT_LANGUAGE
     mailchimp_language_map = settings.ACCOUNTS_TO_MAILCHIMP_LANGUAGES
@@ -78,6 +94,15 @@ def tag_abandoned_cart_in_mailchimp(self):
                 )
                 continue
 
+            if user.recovery_email_rejected_at:
+                skipped += 1
+                logger.info(
+                    'tag_abandoned_cart_in_mailchimp: skipped %s because recovery_email was rejected at %s',
+                    user.uuid,
+                    user.recovery_email_rejected_at,
+                )
+                continue
+
             language = mailchimp_language_map.get(user.language) or language_fallback
             client.add_or_tag_member(
                 user.recovery_email,
@@ -87,6 +112,24 @@ def tag_abandoned_cart_in_mailchimp(self):
             )
         except TaskFailed as ex:
             errors += 1
+            if is_permanent_recovery_email_rejection(ex):
+                rejected += 1
+                user.recovery_email_rejected_at = timezone.now()
+                user.recovery_email_rejection_reason = get_recovery_email_rejection_reason(ex)
+                user.save(
+                    update_fields=[
+                        'recovery_email_rejected_at',
+                        'recovery_email_rejection_reason',
+                        'updated_at',
+                    ],
+                )
+                logger.warning(
+                    'tag_abandoned_cart_in_mailchimp: marked recovery_email rejected for %s: %s',
+                    user.uuid,
+                    user.recovery_email_rejection_reason,
+                )
+                continue
+
             logger.warning(
                 f'tag_abandoned_cart_in_mailchimp: mailchimp error for {user.uuid}: {ex.reason}',
             )
@@ -102,6 +145,7 @@ def tag_abandoned_cart_in_mailchimp(self):
         'task_status': 'completed',
         'tagged': tagged,
         'errors': errors,
+        'rejected': rejected,
         'skipped': skipped,
     }
     logger.info('tag_abandoned_cart_in_mailchimp: %s', result)
