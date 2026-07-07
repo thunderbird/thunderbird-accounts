@@ -1,3 +1,5 @@
+import { useAuthfulFetch } from "@/composables/useFetch";
+
 interface SettingsApiResponse {
   success: boolean;
   message?: string;
@@ -5,7 +7,7 @@ interface SettingsApiResponse {
 }
 
 export const setAppPassword = async (name: string, password: string): Promise<SettingsApiResponse> => {
-  const response = await fetch('/api/v1/mail/app-passwords/set/', {
+  const { response } = await useAuthfulFetch('/api/v1/mail/app-passwords/set/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -14,11 +16,11 @@ export const setAppPassword = async (name: string, password: string): Promise<Se
     body: JSON.stringify({ name, password }),
   });
 
-  return await response.json();
+  return await response.value.json();
 };
 
 export const setDisplayName = async (displayName: string): Promise<SettingsApiResponse> => {
-  const response = await fetch('/api/v1/mail/display-name/set/', {
+  const { response } = await useAuthfulFetch('/api/v1/mail/display-name/set/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -27,11 +29,11 @@ export const setDisplayName = async (displayName: string): Promise<SettingsApiRe
     body: JSON.stringify({ 'display-name': displayName }),
   });
 
-  return await response.json();
+  return await response.value.json();
 };
 
 export const addEmailAlias = async (emailAlias: string, domain: string) => {
-  const response = await fetch(`/email-aliases/add`, {
+  const { response } = await useAuthfulFetch(`/email-aliases/add`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -40,11 +42,11 @@ export const addEmailAlias = async (emailAlias: string, domain: string) => {
     body: JSON.stringify({ 'email-alias': emailAlias, 'domain': domain }),
   });
 
-  return await response.json();
+  return await response.value.json();
 };
 
 export const removeEmailAlias = async (emailAlias: string) => {
-  const response = await fetch(`/email-aliases/remove`, {
+  const { response } = await useAuthfulFetch(`/email-aliases/remove`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -53,5 +55,5 @@ export const removeEmailAlias = async (emailAlias: string) => {
     body: JSON.stringify({ 'email-alias': emailAlias }),
   });
 
-  return await response.json();
+  return await response.value.json();
 };

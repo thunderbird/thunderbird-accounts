@@ -1,5 +1,7 @@
+import { useAuthfulFetch } from "@/composables/useFetch";
+
 export const getSubscriptionPortalLink = async () => {
-  const response = await fetch('/api/v1/subscription/paddle/portal/', {
+  const { response } = await useAuthfulFetch('/api/v1/subscription/paddle/portal/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -7,11 +9,11 @@ export const getSubscriptionPortalLink = async () => {
     },
   });
 
-  return await response.json();
+  return await response.value.json();
 }
 
 export const getSubscriptionPlanInfo = async () => {
-  const response = await fetch('/api/v1/subscription/plan/info/', {
+  const { response } = await useAuthfulFetch('/api/v1/subscription/plan/info/', {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
@@ -21,9 +23,9 @@ export const getSubscriptionPlanInfo = async () => {
   });
 
   // If we're not getting a application/json response then return the status text
-  if (!response.headers.get('content-type')?.includes('application/json')) {
-    throw new Error(response.statusText);
+  if (!response.value.headers.get('content-type')?.includes('application/json')) {
+    throw new Error(response.value.statusText);
   }
 
-  return await response.json();
+  return await response.value.json();
 }

@@ -1,3 +1,5 @@
+import { useAuthfulFetch } from "@/composables/useFetch";
+
 type AddCustomDomainResponse = {
   success: boolean;
   domain_name?: string;
@@ -6,7 +8,7 @@ type AddCustomDomainResponse = {
 };
 
 export const addCustomDomain = async (domainName: string): Promise<AddCustomDomainResponse> => {
-  const response = await fetch(`/custom-domains/add`, {
+  const { response } = await useAuthfulFetch(`/custom-domains/add`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -15,16 +17,16 @@ export const addCustomDomain = async (domainName: string): Promise<AddCustomDoma
     body: JSON.stringify({ 'domain-name': domainName }),
   });
 
-  return await response.json();
+  return await response.value.json();
 };
 
 export const getRemoteDNSRecords = async (domainName: string) => {
-  const response = await fetch(`/custom-domains/dns-records?domain-name=${domainName}`);
-  return await response.json();
+  const { response } = await useAuthfulFetch(`/custom-domains/dns-records?domain-name=${domainName}`);
+  return await response.value.json();
 };
 
 export const verifyDomain = async (domainName: string) => {
-  const response = await fetch(`/custom-domains/verify`, {
+  const { response } = await useAuthfulFetch(`/custom-domains/verify`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -33,11 +35,11 @@ export const verifyDomain = async (domainName: string) => {
     body: JSON.stringify({ 'domain-name': domainName }),
   });
 
-  return await response.json();
+  return await response.value.json();
 };
 
 export const removeCustomDomain = async (domainName: string) => {
-  const response = await fetch(`/custom-domains/remove`, {
+  const { response } = await useAuthfulFetch(`/custom-domains/remove`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -45,5 +47,5 @@ export const removeCustomDomain = async (domainName: string) => {
     },
     body: JSON.stringify({ 'domain-name': domainName }),
   });
-  return await response.json();
+  return await response.value.json();
 };
