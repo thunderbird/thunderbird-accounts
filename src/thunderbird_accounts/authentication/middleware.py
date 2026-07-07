@@ -77,16 +77,14 @@ def store_tokens(request, access_token, id_token, refresh_token):
     Mostly copy and paste from base package, but adjusted to live outside of OIDCAuthenticationBackend,
     and take in refresh_token
     """
-    session = request.session
-
     if import_from_settings('OIDC_STORE_ACCESS_TOKEN', False):
-        session[OIDC_ACCESS_TOKEN_KEY] = access_token
+        request.session[OIDC_ACCESS_TOKEN_KEY] = access_token
 
     if import_from_settings('OIDC_STORE_ID_TOKEN', False):
-        session[OIDC_ID_TOKEN_KEY] = id_token
+        request.session[OIDC_ID_TOKEN_KEY] = id_token
 
     if import_from_settings('OIDC_STORE_REFRESH_TOKEN', False):
-        session[OIDC_REFRESH_TOKEN_KEY] = refresh_token
+        request.session[OIDC_REFRESH_TOKEN_KEY] = refresh_token
 
     expiration_interval = import_from_settings('OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS', 60 * 15)
     request.session['oidc_id_token_expiration'] = time() + expiration_interval
@@ -340,10 +338,11 @@ class OIDCRefreshSession(SessionRefresh):
 
     class EXIT_STATES(StrEnum):
         """Exit states because for process_request.
-        If process_request doesn't return falsey it'll be treated as override response. 
+        If process_request doesn't return falsey it'll be treated as override response.
         We want to test for positions...
 
         This is only used in testing."""
+
         NOT_REFRESHABLE = 'not-refreshable'
         NOT_EXPIRED = 'not-expired'
         ACCESS_TOKEN_IS_ACTIVE = 'access-token-is-active'
@@ -356,6 +355,9 @@ class OIDCRefreshSession(SessionRefresh):
         self.exit_state = None
 
     def set_exit_state(self, state: EXIT_STATES):
+        """Sets an exit state on the middleware, and by using the power of code you can inspect it later!
+
+        This function is a noop outside of testing environments."""
         if not import_from_settings('IS_TEST'):
             return
         self.exit_state = state
@@ -401,18 +403,19 @@ class OIDCRefreshSession(SessionRefresh):
             return
 
         refresh_token = request.session.get(OIDC_REFRESH_TOKEN_KEY)
+        access_token = request.session.get(OIDC_ACCESS_TOKEN_KEY)
         is_expired = self.is_expired(request)
 
         # Only introspect the token if the local exp claim is expired (and the feature flag is enabled.)
         if not is_expired and self.enable_per_request_introspect:
-            if _is_token_active(request.session.get(OIDC_ACCESS_TOKEN_KEY)):
+            if _is_token_active(access_token):
                 self.set_exit_state(self.EXIT_STATES.ACCESS_TOKEN_IS_ACTIVE)
                 logging.debug('access token introspect is active')
                 return
 
             # If the refresh token does not exist, or if it's not active then we need a reauth
-            refresh_token_is_active = not _is_token_active(refresh_token, TokenHintType.REFRESH_TOKEN)
-            if not refresh_token or not refresh_token_is_active:
+            refresh_token_is_active = _is_token_active(refresh_token, TokenHintType.REFRESH_TOKEN)
+            if not refresh_token_is_active:
                 logging.debug('refresh token is not active')
                 return self.finish(request, prompt_reauth=True)
         elif not is_expired:
@@ -435,8 +438,8 @@ class OIDCRefreshSession(SessionRefresh):
             try:
                 status_code = exc.response.status_code
             except AttributeError:
-                status_code = 400 # Force a 400
-            logging.debug('http error %s when refreshing access token', status_code)
+                status_code = 400  # Force a 400
+            logging.debug(f'http error {status_code} when refreshing access token')
             # OAuth error response will be a 400 for various situations, including
             # an expired token. https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
             return self.finish(request, prompt_reauth=(status_code == 400))
@@ -445,7 +448,7 @@ class OIDCRefreshSession(SessionRefresh):
             # Don't prompt for reauth as this could be a temporary problem
             return self.finish(request, prompt_reauth=False)
         except Exception as exc:
-            logging.debug('unknown error occurred when refreshing access token: %s', exc)
+            logging.debug(f'unknown error occurred when refreshing access token: {exc}')
             # Don't prompt for reauth as this could be a temporary problem
             return self.finish(request, prompt_reauth=False)
 
@@ -474,20 +477,17 @@ class OIDCRefreshSession(SessionRefresh):
         middleware doesn't really want the user in if they don't
         refresh their session.
         """
-        # is_redirectable = request.method == 'GET'
         default_response = HttpResponseForbidden()
-        xhr_response_json = {'error': 'the authentication session has expired'}
-        if prompt_reauth:  # and is_redirectable:
+        xhr_response_json = {'error': 'the authentication session has expired', 'type': 'auth_error'}
+        if prompt_reauth:
             # The id_token has expired, so we have to re-authenticate silently.
             refresh_url = self._prepare_reauthorization(request)
             default_response = HttpResponseRedirect(refresh_url)
             xhr_response_json['refresh_url'] = refresh_url
 
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            xhr_response = JsonResponse(xhr_response_json, status=403)
-            if 'refresh_url' in xhr_response_json:
-                xhr_response['refresh_url'] = xhr_response_json['refresh_url']
-            return xhr_response
+        if (request.headers.get('x-requested-with') == 'XMLHttpRequest' or 
+            'application/json' in request.headers.get('Accept', '')):
+            return JsonResponse(xhr_response_json, status=403)
         else:
             return default_response
 
@@ -541,7 +541,11 @@ class OIDCRefreshSession(SessionRefresh):
 
         add_state_and_verifier_and_nonce_to_session(request, state, params, code_verifier)
 
-        request.session['oidc_login_next'] = request.get_full_path()
+        # Send json requests home after refresh, it sucks but this shouldn't happen often
+        if 'application/json' in request.headers.get('Accept', ''):
+            request.session['oidc_login_next'] = reverse('vue_app')
+        else:
+            request.session['oidc_login_next'] = request.get_full_path()
 
         query = urlencode(params, quote_via=quote)
         return f'{auth_url}?{query}'
