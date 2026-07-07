@@ -49,6 +49,17 @@ class User(AbstractUser, BaseModel):
     recovery_email = models.CharField(
         max_length=256, null=True, help_text=_('The recovery email associated with this account')
     )
+    recovery_email_rejected_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('When an external email service permanently rejected the recovery email.'),
+    )
+    recovery_email_rejection_reason = models.CharField(
+        max_length=512,
+        null=True,
+        blank=True,
+        help_text=_('The reason an external email service permanently rejected the recovery email.'),
+    )
     last_used_email = models.CharField(max_length=256, null=True, help_text=_('The email previously used to login'))
     language = models.CharField(
         max_length=16,
@@ -90,6 +101,25 @@ class User(AbstractUser, BaseModel):
 
     def get_short_name(self):
         return self.display_name
+
+    def save(self, *args, **kwargs):
+        # If recovery_email changes, clear related rejection fields.
+        if self.pk and self.recovery_email_rejected_at:
+            existing_recovery_email = (
+                type(self).objects.filter(pk=self.pk).values_list('recovery_email', flat=True).first()
+            )
+
+            if existing_recovery_email != self.recovery_email:
+                self.recovery_email_rejected_at = None
+                self.recovery_email_rejection_reason = None
+                update_fields = kwargs.get('update_fields')
+                if update_fields is not None:
+                    kwargs['update_fields'] = set(update_fields) | {
+                        'recovery_email_rejected_at',
+                        'recovery_email_rejection_reason',
+                    }
+
+        super().save(*args, **kwargs)
 
     @cached_property
     def has_active_subscription(self):

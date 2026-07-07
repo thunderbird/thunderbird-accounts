@@ -178,6 +178,17 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
         self.assertEqual(result['tagged'], 0)
         self.assertEqual(result['skipped'], 1)
 
+    def test_skips_user_with_rejected_recovery_email(self, mock_client_cls):
+        User.objects.filter(pk=self.user.pk).update(
+            recovery_email_rejected_at=timezone.now(),
+            recovery_email_rejection_reason='looks fake or invalid',
+        )
+
+        result = tag_abandoned_cart_in_mailchimp.apply().get()
+
+        mock_client_cls.return_value.add_or_tag_member.assert_not_called()
+        self.assertEqual(result['skipped'], 1)
+
     def test_counts_mailchimp_errors_and_continues(self, mock_client_cls):
         second_user = User.objects.create(
             username=f'abandoned-too@{self.subdomain}',
@@ -198,6 +209,56 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
         self.assertEqual(mock_client_cls.return_value.add_or_tag_member.call_count, 2)
         self.assertEqual(result['tagged'], 1)
         self.assertEqual(result['errors'], 1)
+
+    def test_marks_permanent_recovery_email_rejection(self, mock_client_cls):
+        mock_client_cls.return_value.add_or_tag_member.side_effect = TaskFailed(
+            'mailchimp error',
+            {
+                'user_uuid': str(self.user.uuid),
+                'error_status_code': 400,
+            },
+        )
+
+        tag_abandoned_cart_in_mailchimp.apply().get()
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.recovery_email_rejected_at, FROZEN_NOW)
+        self.assertEqual(self.user.recovery_email_rejection_reason, 'mailchimp error')
+
+    def test_does_not_mark_transient_mailchimp_error(self, mock_client_cls):
+        mock_client_cls.return_value.add_or_tag_member.side_effect = TaskFailed(
+            'mailchimp error',
+            {
+                'user_uuid': str(self.user.uuid),
+                'error_status_code': 500,
+                'error_msg_title': 'InternalServerError',
+                'error_msg_detail': 'A deep, internal error has occurred.',
+            },
+        )
+
+        tag_abandoned_cart_in_mailchimp.apply().get()
+
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.recovery_email_rejected_at)
+        self.assertIsNone(self.user.recovery_email_rejection_reason)
+
+    def test_clears_recovery_email_rejection_when_recovery_email_changes(self, mock_client_cls):
+        self.user.recovery_email_rejected_at = timezone.now()
+        self.user.recovery_email_rejection_reason = 'looks fake or invalid'
+        self.user.save(
+            update_fields=[
+                'recovery_email_rejected_at',
+                'recovery_email_rejection_reason',
+                'updated_at',
+            ],
+        )
+
+        self.user.recovery_email = 'new-recovery@example.com'
+        self.user.save(update_fields=['recovery_email', 'updated_at'])
+
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.recovery_email_rejected_at)
+        self.assertIsNone(self.user.recovery_email_rejection_reason)
 
     def test_skips_user_if_subscription_appears_after_initial_selection(self, mock_client_cls):
         Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)

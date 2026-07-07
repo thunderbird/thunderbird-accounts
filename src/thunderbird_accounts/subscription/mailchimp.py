@@ -10,6 +10,17 @@ from requests.exceptions import JSONDecodeError
 from thunderbird_accounts.celery.exceptions import TaskFailed
 
 
+def _get_response_error_details(ex: requests.exceptions.RequestException) -> dict:
+    try:
+        return ex.response.json() if ex.response is not None else {}
+    except (JSONDecodeError, AttributeError):
+        return {}
+
+
+def _get_response_status_code(ex: requests.exceptions.RequestException) -> int | None:
+    return ex.response.status_code if ex.response is not None else None
+
+
 class MailchimpClient:
     """Thin client for the Mailchimp Marketing API v3 list endpoints."""
 
@@ -70,11 +81,7 @@ class MailchimpClient:
             # in case the next request fails.
 
             # Error details reference: https://mailchimp.com/developer/marketing/docs/errors/#error-glossary
-            try:
-                error_details = ex.response.json()
-            except (JSONDecodeError, AttributeError):
-                error_details = {}
-
+            error_details = _get_response_error_details(ex)
             sentry_sdk.set_context('mailchimp_tag_error', error_details)
 
         # Try to create the user with the tag we want
@@ -92,11 +99,7 @@ class MailchimpClient:
             )
         except requests.exceptions.RequestException as ex:
             # Error details reference: https://mailchimp.com/developer/marketing/docs/errors/#error-glossary
-            try:
-                error_details = ex.response.json()
-            except (JSONDecodeError, AttributeError):
-                error_details = {}
-
+            error_details = _get_response_error_details(ex)
             sentry_sdk.set_context('mailchimp_error', error_details)
             sentry_sdk.capture_exception(ex)
 
@@ -105,7 +108,9 @@ class MailchimpClient:
                 {
                     **(error_context or {}),
                     'error_msg_title': error_details.get('title', 'N/A'),
-                    'error_status_code': ex.response.status_code if ex.response else None,
+                    'error_msg_detail': error_details.get('detail', 'N/A'),
+                    'error_msg_type': error_details.get('type', 'N/A'),
+                    'error_status_code': _get_response_status_code(ex),
                 },
             )
 
