@@ -95,16 +95,18 @@ export default {
         >
           {{ $t('email') }}
         </text-input>
-        <i18n-t v-if="showUsernameHelpText" class="username-help-text" keypath="usernameDomainSuggestion" tag="p">
-          <button
-            ref="username-suggestion-btn"
-            type="button"
-            data-testid="username-suggestion-btn"
-            @click="onUsernameHelpTextClick"
-          >
-            {{ suggestedUsername }}
-          </button>
-        </i18n-t>
+        <div aria-live="polite">
+          <i18n-t v-if="showUsernameHelpText" class="username-help-text" keypath="usernameDomainSuggestion" tag="p">
+            <button
+              ref="username-suggestion-btn"
+              type="button"
+              data-testid="username-suggestion-btn"
+              @click="onUsernameHelpTextClick"
+            >
+              {{ suggestedUsername }}
+            </button>
+          </i18n-t>
+        </div>
       </div>
       <text-input
         v-if="!hidePassword"
