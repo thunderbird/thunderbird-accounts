@@ -221,6 +221,52 @@ class SignUpTestcase(APITestCase):
         self.assertEqual(resp_data.get('type'), mock_test_type, msg=assert_fail_msg)
         self.assertEqual(resp_data.get('error'), mock_test_error, msg=assert_fail_msg)
 
+    def test_import_already_exists_error_does_not_capture_sentry_when_local_user_exists(
+        self, mock_import_user: MagicMock
+    ):
+        def create_local_user_and_raise(username, email, **_kwargs):
+            User.objects.create(username=username, email=email, recovery_email=email)
+            raise ImportUserError(
+                'Error<409>: User exists with same username',
+                username=username,
+                error_code='status-409',
+                error_desc='User exists with same username',
+                status_code=409,
+            )
+
+        mock_import_user.side_effect = create_local_user_and_raise
+
+        with patch('thunderbird_accounts.authentication.api.sentry_sdk.capture_exception') as mock_capture_exception:
+            response = self.client.post(
+                '/api/v1/auth/sign-up/',
+                self.make_sign_up_data(email=self.wait_list[0]),
+            )
+
+        assert_fail_msg = self.get_messages(response)
+        self.assertEqual(response.status_code, 400, msg=assert_fail_msg)
+        self.assertEqual(response.json()['type'], 'status-409', msg=assert_fail_msg)
+        mock_capture_exception.assert_not_called()
+
+    def test_import_already_exists_error_captures_sentry_without_local_user(self, mock_import_user: MagicMock):
+        mock_import_user.side_effect = ImportUserError(
+            'Error<409>: User exists with same username',
+            username='hello',
+            error_code='status-409',
+            error_desc='User exists with same username',
+            status_code=409,
+        )
+
+        with patch('thunderbird_accounts.authentication.api.sentry_sdk.capture_exception') as mock_capture_exception:
+            response = self.client.post(
+                '/api/v1/auth/sign-up/',
+                self.make_sign_up_data(email=self.wait_list[0]),
+            )
+
+        assert_fail_msg = self.get_messages(response)
+        self.assertEqual(response.status_code, 400, msg=assert_fail_msg)
+        self.assertEqual(response.json()['type'], 'status-409', msg=assert_fail_msg)
+        mock_capture_exception.assert_called_once()
+
 
 @override_settings(USE_ALLOW_LIST=True)
 class CanISignUpTestcase(APITestCase):

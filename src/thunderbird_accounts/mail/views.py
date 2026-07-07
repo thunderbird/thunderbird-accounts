@@ -447,7 +447,10 @@ def add_email_alias(request: HttpRequest):
     if (not is_catch_all and not email_alias) or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)
 
-    if (not is_catch_all and not is_custom_domain and is_reserved(email_alias)) or is_address_taken(full_email_alias):
+    if not is_catch_all and not is_custom_domain and is_reserved(email_alias):
+        return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
+
+    if is_address_taken(full_email_alias):
         return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
 
     if (
@@ -489,10 +492,17 @@ def add_email_alias(request: HttpRequest):
         )
 
         if not created:
+            logging.info('Alias creation found an existing local email record for the requested address')
             return JsonResponse(
                 {'success': False, 'error': _('This email address is not available.')},
                 status=400,
             )
+    except IntegrityError:
+        logging.info('Alias creation hit a local duplicate-address race')
+        return JsonResponse(
+            {'success': False, 'error': _('This email address is not available.')},
+            status=400,
+        )
     except Exception as e:
         logging.error(f'Error creating email alias: {e}')
         return JsonResponse(

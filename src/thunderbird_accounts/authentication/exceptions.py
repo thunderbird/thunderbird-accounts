@@ -1,6 +1,24 @@
 from typing import Optional
 
 
+POSTGRES_DUPLICATE_KEY_MARKER = 'duplicate key value violates unique constraint'
+
+
+def is_already_exists_error(
+    *,
+    status_code: Optional[int] = None,
+    error_code: Optional[str] = None,
+    error_desc: Optional[str] = None,
+    error: Optional[str] = None,
+) -> bool:
+    # HTTP 409 means "Conflict" and is returned by Keycloak when a resource already exists.
+    if status_code == 409:
+        return True
+
+    error_text = ' '.join(filter(None, [error_code, error_desc, error])).lower()
+    return POSTGRES_DUPLICATE_KEY_MARKER in error_text
+
+
 class KeycloakError(RuntimeError):
     """Generic error"""
 
@@ -38,6 +56,7 @@ class ImportUserError(KeycloakError):
         username: Optional[str] = None,
         error_code: Optional[str] = None,
         error_desc: Optional[str] = None,
+        status_code: Optional[int] = None,
         *args,
         **kwargs,
     ):
@@ -48,6 +67,16 @@ class ImportUserError(KeycloakError):
         # Structured error from keycloak
         self.error_code = error_code
         self.error_desc = error_desc
+        self.status_code = status_code
+
+    @property
+    def is_already_exists(self):
+        return is_already_exists_error(
+            status_code=self.status_code,
+            error_code=self.error_code,
+            error_desc=self.error_desc,
+            error=self.error,
+        )
 
     def __str__(self):
         return f'ImportUserError: {self.error} for {self.username}'

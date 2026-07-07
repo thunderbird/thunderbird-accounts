@@ -44,6 +44,27 @@ class RequestMethods(enum.StrEnum):
     DELETE = 'delete'
 
 
+def _keycloak_error_details(exc: RequestException) -> tuple[Optional[int], str, dict]:
+    """Given a keycloak exception, extract the error details"""
+    response = exc.response
+    if response is None:
+        return None, '', {}
+
+    response_content = response.content.decode(errors='replace')
+    try:
+        error_data: dict = json.loads(response_content)
+    except (TypeError, JSONDecodeError):
+        error_data = {}
+
+    return response.status_code, response_content, error_data
+
+
+def _format_keycloak_error(exc: RequestException, status_code: Optional[int], response_content: str) -> str:
+    if response_content:
+        return f'Error<{status_code}>: {response_content}'
+    return f'Error<{exc}>: No response!'
+
+
 class TotpSetupResponse(TypedDict, total=False):
     secret: str
     encodedSecret: str
@@ -339,22 +360,22 @@ class KeycloakClient:
                 },
             )
         except RequestException as exc:
-            sentry_sdk.capture_exception(exc)
-
-            try:
-                error_data: dict = json.loads(exc.response.content.decode())
-            except (TypeError, JSONDecodeError):
-                # Could not determine explicit error information
-                error_data = {}
+            status_code, response_content, error_data = _keycloak_error_details(exc)
 
             # Note: status_code == 409 means the user already exists on keycloak which we should have caught before this
             # function call.
-            raise ImportUserError(
+            error = ImportUserError(
                 username=username,
-                error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}',
-                error_code=error_data.get('error', f'status-{exc.response.status_code}'),
+                error=_format_keycloak_error(exc, status_code, response_content),
+                error_code=error_data.get('error', f'status-{status_code}' if status_code is not None else None),
                 error_desc=error_data.get('error_description', error_data.get('errorMessage')),
+                status_code=status_code,
             )
+
+            if not error.is_already_exists:
+                sentry_sdk.capture_exception(exc)
+
+            raise error
 
         # Request returns an empty body on a 201 success, so retrieve pkid from location.
         # ex/ {'Location': 'http://keycloak:8999/admin/realms/tbpro/users/39a7b5e8-7a64-45e3-acf1-ca7d314bfcec', ... }
