@@ -28,16 +28,18 @@ export default {
   
       <p>
         {{ t('views.manageMfa.multiFactorAuthenticationDescription') }}
-        <a href="#">{{ t('views.manageMfa.multiFactorAuthenticationLearnMore') }}</a>
+        <a v-if="false" href="#">{{ t('views.manageMfa.multiFactorAuthenticationLearnMore') }}</a>
       </p>
 
       <authentication-methods />
     </div>
 
-    <visual-divider type="vertical" class="hidden-sm" />
+    <div v-if="false">
+      <visual-divider type="vertical" class="hidden-sm" />
 
-    <div class="manage-mfa-view-right-column">
-      <need-support-card :support-links="supportLinks" />
+      <div class="manage-mfa-view-right-column">
+        <need-support-card :support-links="supportLinks" />
+      </div>
     </div>
   </div>
 </template>
