@@ -4,6 +4,7 @@ from thunderbird_accounts.authentication.api import CanISignUpResponses
 from django.urls import reverse
 from json import JSONDecodeError
 from unittest.mock import MagicMock, patch
+from waffle.models import Flag
 import uuid
 
 from django.conf import settings
@@ -353,3 +354,56 @@ class CreateTestAllowListEntryTestCase(APITestCase):
         self.assertEqual('no-email', resp_data.get('type'))
         test_entry = AllowListEntry.objects.filter(email=email).first()
         self.assertIsNone(test_entry)
+
+
+class WaffleFlagsTestcase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('api_waffle_flags')
+        self.user = User.objects.create(
+            recovery_email=f'{uuid.uuid4()}@example.com', username=f'{uuid.uuid4()}@example.org'
+        )
+
+        Flag.objects.create(name='flag-on-for-everyone', everyone=True)
+        Flag.objects.create(name='flag-off-for-everyone', everyone=False)
+        Flag.objects.create(name='flag-on-for-authenticated', authenticated=True)
+
+    def test_returns_active_flags_for_authenticated_user(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(self.url)
+        self.assertEqual(200, response.status_code, response.content)
+
+        flags = response.json().get('flags')
+        self.assertEqual(
+            {
+                'flag-on-for-everyone': True,
+                'flag-off-for-everyone': False,
+                'flag-on-for-authenticated': True,
+            },
+            flags,
+        )
+
+    def test_returns_active_flag_for_specific_user_only(self):
+        other_user = User.objects.create(
+            recovery_email=f'{uuid.uuid4()}@example.com', username=f'{uuid.uuid4()}@example.org'
+        )
+
+        flag = Flag.objects.create(name='flag-on-for-specific-user')
+        flag.users.add(self.user)
+
+        # Login in as the user created in the setup step and check that the flag is active
+        self.client.force_authenticate(self.user)
+        response = self.client.get(self.url)
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertTrue(response.json()['flags']['flag-on-for-specific-user'])
+
+        # Login in as the other user and check that the flag is not active
+        self.client.force_authenticate(other_user)
+        response = self.client.get(self.url)
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertFalse(response.json()['flags']['flag-on-for-specific-user'])
+
+    def test_requires_authentication(self):
+        response = self.client.get(self.url)
+        self.assertEqual(401, response.status_code)
