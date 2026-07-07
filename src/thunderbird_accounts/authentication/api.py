@@ -7,10 +7,12 @@ from enum import StrEnum
 from urllib.parse import quote
 
 from django.conf import settings
+from mozilla_django_oidc.contrib.drf import OIDCAuthentication
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 import sentry_sdk
+from waffle import get_waffle_flag_model
 
 from thunderbird_accounts.authentication.exceptions import (
     InvalidDomainError,
@@ -64,6 +66,28 @@ def get_user_profile(request: Request):
     if not request.user:
         raise NotAuthenticated()
     return Response(UserProfileSerializer(request.user).data)
+
+
+@api_view(['GET'])
+@authentication_classes([OIDCAuthentication])
+@permission_classes([IsAuthenticated])
+def get_waffle_flags(request: Request):
+    """Return the caller's active waffle flags.
+
+    Callers authenticate with `Authorization: Bearer <keycloak-access-token>`
+    and we resolve that to the matching local user via OIDCAuthentication.
+    """
+    flags = get_waffle_flag_model().get_all()
+
+    # read_only=True: this is a machine-to-machine request, not a browser session, so
+    # there's no waffle cookie to make percent-rollout sticky across calls.
+    # In other words, percentage-based flags will NOT be sticky unless another rule
+    # (e.g. everyone/staff/superuser/authenticated/users/groups) also qualifies the user.
+    return Response(
+        {
+            'flags': {flag.name: flag.is_active(request, read_only=True) for flag in flags},
+        }
+    )
 
 
 @api_view(['GET'])

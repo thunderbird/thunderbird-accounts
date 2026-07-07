@@ -67,6 +67,7 @@ urlpatterns = [
     path('api/v1/auth/get-profile/', get_user_profile, name='api_get_profile'),
     path('api/v1/auth/sign-up/', sign_up, name='api_sign_up'),
     path('api/v1/auth/can-i-sign-up/', can_i_sign_up, name='api_can_i_sign_up'),
+    path('api/v1/auth/waffle-flags/', auth_api.get_waffle_flags, name='api_waffle_flags'),
     path('api/v1/auth/mfa/methods/', auth_api.get_mfa_methods, name='api_get_mfa_methods'),
     path('api/v1/auth/mfa/totp/setup/start/', auth_api.start_totp_setup, name='api_start_totp_setup'),
     path('api/v1/auth/mfa/totp/setup/confirm/', auth_api.confirm_totp_setup, name='api_confirm_totp_setup'),
