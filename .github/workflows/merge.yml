@@ -9,6 +9,8 @@ on:
   push:
     branches:
       - main
+      # TEMPORARY: exercise the split-arch build on this branch. Remove before merge.
+      - ci/split-arch-image-build
   workflow_dispatch:
 
 permissions:
