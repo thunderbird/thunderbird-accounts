@@ -441,7 +441,7 @@ class OIDCRefreshSession(SessionRefresh):
         request.session['oidc_login_next'] = request.get_full_path()
 
         query = urlencode(params, quote_via=quote)
-        return '{auth_url}?{query}'.format(auth_url=auth_url, query=query)
+        return f'{auth_url}?{query}'
 
 
 class SetHostIPInAllowedHostsMiddleware:
