@@ -1,22 +1,9 @@
+import json
 from typing import Optional
 
+from requests.exceptions import RequestException
 
 POSTGRES_DUPLICATE_KEY_MARKER = 'duplicate key value violates unique constraint'
-
-
-def is_already_exists_error(
-    *,
-    status_code: Optional[int] = None,
-    error_code: Optional[str] = None,
-    error_desc: Optional[str] = None,
-    error: Optional[str] = None,
-) -> bool:
-    # HTTP 409 means "Conflict" and is returned by Keycloak when a resource already exists.
-    if status_code == 409:
-        return True
-
-    error_text = ' '.join(filter(None, [error_code, error_desc, error])).lower()
-    return POSTGRES_DUPLICATE_KEY_MARKER in error_text
 
 
 class KeycloakError(RuntimeError):
@@ -49,6 +36,7 @@ class InvalidDomainError(KeycloakError):
 class ImportUserError(KeycloakError):
     username: str
     error: str
+    """Format an error usefully if the user already exists in Keycloak"""
 
     def __init__(
         self,
@@ -69,9 +57,52 @@ class ImportUserError(KeycloakError):
         self.error_desc = error_desc
         self.status_code = status_code
 
+    @classmethod
+    def from_request_exception(cls, exc: RequestException, *, username: Optional[str] = None):
+        response = exc.response
+        status_code = None
+        response_content = ''
+        error_data = {}
+
+        if response is not None:
+            status_code = response.status_code
+            response_content = response.content.decode(errors='replace')
+            try:
+                error_data = json.loads(response_content)
+            except (TypeError, json.JSONDecodeError):
+                error_data = {}
+
+        if response_content:
+            error = f'Error<{status_code}>: {response_content}'
+        else:
+            error = f'Error<{exc}>: No response!'
+
+        return cls(
+            username=username,
+            error=error,
+            error_code=error_data.get('error', f'status-{status_code}' if status_code is not None else None),
+            error_desc=error_data.get('error_description', error_data.get('errorMessage')),
+            status_code=status_code,
+        )
+
+    @staticmethod
+    def is_already_exists_error(
+        *,
+        status_code: Optional[int] = None,
+        error_code: Optional[str] = None,
+        error_desc: Optional[str] = None,
+        error: Optional[str] = None,
+    ) -> bool:
+        # HTTP 409 means "Conflict" and is returned by Keycloak when a resource already exists.
+        if status_code == 409:
+            return True
+
+        error_text = ' '.join(filter(None, [error_code, error_desc, error])).lower()
+        return POSTGRES_DUPLICATE_KEY_MARKER in error_text
+
     @property
     def is_already_exists(self):
-        return is_already_exists_error(
+        return self.is_already_exists_error(
             status_code=self.status_code,
             error_code=self.error_code,
             error_desc=self.error_desc,
