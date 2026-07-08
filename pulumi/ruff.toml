@@ -20,7 +20,9 @@ quote-style = "single"
 
 [lint]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-select = ["E", "F"]
+# Require f-strings for interpolation instead of printf-style formatting (UP031)
+# or `.format` calls (UP032).
+select = ["E", "F", "UP031", "UP032"]
 ignore = []
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.

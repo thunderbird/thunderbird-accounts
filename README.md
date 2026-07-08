@@ -68,6 +68,10 @@ These can be installed be appending `--extra <optional dependency>` like so:
 uv sync --extra cli --extra docs --extra subscription
 ```
 
+## Python linting
+
+Ruff is the source of truth for Python linting. Read `pyproject.toml` and `pulumi/ruff.toml` for the active rules.
+
 ## Re-bootstrapping the project
 
 If you find your environment in a troubled state (it happens) you can add the option `--from-scratch` to bootstrap like
