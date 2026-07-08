@@ -361,17 +361,34 @@ class WaffleFlagsTestcase(APITestCase):
         self.client = APIClient()
         self.url = reverse('api_waffle_flags')
         self.user = User.objects.create(
-            recovery_email=f'{uuid.uuid4()}@example.com', username=f'{uuid.uuid4()}@example.org'
+            oidc_id=str(uuid.uuid4()),
+            recovery_email=f'{uuid.uuid4()}@example.com',
+            username=f'{uuid.uuid4()}@example.org',
         )
 
         Flag.objects.create(name='flag-on-for-everyone', everyone=True)
         Flag.objects.create(name='flag-off-for-everyone', everyone=False)
         Flag.objects.create(name='flag-on-for-authenticated', authenticated=True)
 
-    def test_returns_active_flags_for_authenticated_user(self):
-        self.client.force_authenticate(self.user)
+        # Due to the endpoint being gated by OIDCAuthentication
+        patcher = patch(
+            'thunderbird_accounts.authentication.middleware.AccountsOIDCBackend.get_userinfo',
+            side_effect=self._fake_userinfo,
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
-        response = self.client.get(self.url)
+    @staticmethod
+    def _fake_userinfo(access_token, id_token, payload):
+        return {
+            'sub': access_token,
+            'email': f'{access_token}@example.org',
+            'email_verified': True,
+            'preferred_username': f'{access_token}@example.org',
+        }
+
+    def test_returns_active_flags_for_authenticated_user(self):
+        response = self.client.get(self.url, headers={'authorization': f'Bearer {self.user.oidc_id}'})
         self.assertEqual(200, response.status_code, response.content)
 
         flags = response.json().get('flags')
@@ -389,21 +406,21 @@ class WaffleFlagsTestcase(APITestCase):
 
     def test_returns_active_flag_for_specific_user_only(self):
         other_user = User.objects.create(
-            recovery_email=f'{uuid.uuid4()}@example.com', username=f'{uuid.uuid4()}@example.org'
+            oidc_id=str(uuid.uuid4()),
+            recovery_email=f'{uuid.uuid4()}@example.com',
+            username=f'{uuid.uuid4()}@example.org',
         )
 
         flag = Flag.objects.create(name='flag-on-for-specific-user')
         flag.users.add(self.user)
 
-        # Login in as the user created in the setup step and check that the flag is active
-        self.client.force_authenticate(self.user)
-        response = self.client.get(self.url)
+        # Authenticate as the user created in the setup step and check that the flag is active
+        response = self.client.get(self.url, headers={'authorization': f'Bearer {self.user.oidc_id}'})
         self.assertEqual(200, response.status_code, response.content)
         self.assertTrue(response.json()['flags']['flag-on-for-specific-user']['is_active'])
 
-        # Login in as the other user and check that the flag is not active
-        self.client.force_authenticate(other_user)
-        response = self.client.get(self.url)
+        # Authenticate as the other user and check that the flag is not active
+        response = self.client.get(self.url, headers={'authorization': f'Bearer {other_user.oidc_id}'})
         self.assertEqual(200, response.status_code, response.content)
         self.assertFalse(response.json()['flags']['flag-on-for-specific-user']['is_active'])
 
