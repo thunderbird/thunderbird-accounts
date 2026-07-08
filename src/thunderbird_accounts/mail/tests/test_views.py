@@ -1128,6 +1128,25 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         self.assertEqual(payload['error'], _('An error has occurred while setting up the Appointment CalDAV.'))
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_mail_account_not_ready(self, mock_mail_client_cls, mock_backend_cls):
+        Email.objects.filter(type=Email.EmailType.PRIMARY, account=self.account).delete()
+        mock_backend = Mock()
+        mock_backend.get_user_from_access_token.return_value = self.user
+        mock_backend_cls.return_value = mock_backend
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(json.loads(response.content.decode())['code'], 'mail_account_not_ready')
+        mock_mail_client_cls.assert_not_called()
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
     @patch('thunderbird_accounts.mail.views.secrets.token_urlsafe')
     @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
     @patch('thunderbird_accounts.mail.views.utils.save_app_password')
