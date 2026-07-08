@@ -33,9 +33,9 @@ jobs:
       keycloak-changed: ${{ steps.check.outputs.keycloak-changed }}
       version: ${{ steps.read-version.outputs.value }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: check
         with:
           filters: |
@@ -73,7 +73,7 @@ jobs:
 
       - name: Get version from pyproject.toml
         id: read-version
-        uses: SebRollen/toml-action@v1.2.0
+        uses: SebRollen/toml-action@b1b3628f55fc3a28208d4203ada8b737e9687876 # v1.2.0
         with:
           file: 'pyproject.toml'
           field: 'project.version'
