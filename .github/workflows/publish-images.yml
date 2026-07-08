@@ -8,7 +8,10 @@ name: publish-images
 
 concurrency:
   group: publish-images-${{ github.ref }}
-  cancel-in-progress: true
+  # Serialize (don't cancel) so every merged commit's :<sha> image gets
+  # published and a run is never aborted mid-push/merge. Queued runs still
+  # settle :latest to the newest finished build.
+  cancel-in-progress: false
 
 on:
   push:
@@ -40,17 +43,26 @@ jobs:
               - 'assets/**'
               - 'static/**'
               - 'templates/**'
-              - 'scripts/entry.sh'
+              # The accounts frontend bundle imports the shared keycloak theme
+              # via the `@kc` vite alias (-> keycloak/themes/tbpro/assets), so
+              # `npm run build` compiles it into the accounts image. Theme edits
+              # must therefore rebuild accounts too.
+              - 'keycloak/themes/**'
+              # The accounts Dockerfile COPYs the whole scripts/ dir.
+              - 'scripts/**'
               - 'Dockerfile'
               - 'manage.py'
               - 'MANIFEST.in'
               - 'package.json'
               - 'package-lock.json'
               - 'pyproject.toml'
-              - 'README.md'
               - 'src/**'
               - 'uv.lock'
-              - 'vite.config.mjs'
+              # Frontend build inputs COPYd by the Dockerfile (note: .mts, plus
+              # tsconfig.json and env.d.ts).
+              - 'vite.config.mts'
+              - 'tsconfig.json'
+              - 'env.d.ts'
             keycloak-changed:
               - 'keycloak/**'
               - 'Dockerfile.keycloak'

@@ -83,9 +83,18 @@ jobs:
           # runners can push concurrently without clobbering a shared tag; the
           # merge job assigns the real tags afterwards. --metadata-file lets us
           # read back the digest that GHCR assigned.
+          # --provenance=false keeps each per-arch push a single plain manifest
+          # (no attestation index), so the merged manifest list contains exactly
+          # the two platform entries.
+          # GitHub Actions layer cache, scoped per image+arch (these runners are
+          # ephemeral, so nothing persists between runs without it). The scope
+          # keeps accounts/keycloak and amd64/arm64 caches from colliding.
           docker buildx build \
             -f "${{ inputs.dockerfile }}" \
             --platform "${{ matrix.platform }}" \
+            --provenance=false \
+            --cache-from "type=gha,scope=${{ inputs.artifact-prefix }}-${{ matrix.arch }}" \
+            --cache-to "type=gha,mode=max,scope=${{ inputs.artifact-prefix }}-${{ matrix.arch }}" \
             --output "type=image,name=${{ inputs.image }},push-by-digest=true,name-canonical=true,push=true" \
             --metadata-file metadata.json \
             .
