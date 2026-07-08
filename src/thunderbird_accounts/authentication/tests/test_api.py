@@ -377,12 +377,15 @@ class WaffleFlagsTestcase(APITestCase):
         flags = response.json().get('flags')
         self.assertEqual(
             {
-                'flag-on-for-everyone': True,
-                'flag-off-for-everyone': False,
-                'flag-on-for-authenticated': True,
+                'flag-on-for-everyone',
+                'flag-off-for-everyone',
+                'flag-on-for-authenticated',
             },
-            flags,
+            flags.keys(),
         )
+        self.assertTrue(flags['flag-on-for-everyone']['is_active'])
+        self.assertFalse(flags['flag-off-for-everyone']['is_active'])
+        self.assertTrue(flags['flag-on-for-authenticated']['is_active'])
 
     def test_returns_active_flag_for_specific_user_only(self):
         other_user = User.objects.create(
@@ -396,13 +399,13 @@ class WaffleFlagsTestcase(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
         self.assertEqual(200, response.status_code, response.content)
-        self.assertTrue(response.json()['flags']['flag-on-for-specific-user'])
+        self.assertTrue(response.json()['flags']['flag-on-for-specific-user']['is_active'])
 
         # Login in as the other user and check that the flag is not active
         self.client.force_authenticate(other_user)
         response = self.client.get(self.url)
         self.assertEqual(200, response.status_code, response.content)
-        self.assertFalse(response.json()['flags']['flag-on-for-specific-user'])
+        self.assertFalse(response.json()['flags']['flag-on-for-specific-user']['is_active'])
 
     def test_requires_authentication(self):
         response = self.client.get(self.url)

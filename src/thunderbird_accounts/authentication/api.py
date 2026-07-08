@@ -12,7 +12,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
 import sentry_sdk
-from waffle import get_waffle_flag_model
+from waffle.views import waffle_json
 
 from thunderbird_accounts.authentication.exceptions import (
     InvalidDomainError,
@@ -72,22 +72,13 @@ def get_user_profile(request: Request):
 @authentication_classes([OIDCAuthentication])
 @permission_classes([IsAuthenticated])
 def get_waffle_flags(request: Request):
-    """Return the caller's active waffle flags.
+    """Return the caller's active waffle flags, switches, and samples.
 
     Callers authenticate with `Authorization: Bearer <keycloak-access-token>`
     and we resolve that to the matching local user via OIDCAuthentication.
+    This is just waffle's own `waffle_json` view wrapped with our token auth.
     """
-    flags = get_waffle_flag_model().get_all()
-
-    # read_only=True: this is a machine-to-machine request, not a browser session, so
-    # there's no waffle cookie to make percent-rollout sticky across calls.
-    # In other words, percentage-based flags will NOT be sticky unless another rule
-    # (e.g. everyone/staff/superuser/authenticated/users/groups) also qualifies the user.
-    return Response(
-        {
-            'flags': {flag.name: flag.is_active(request, read_only=True) for flag in flags},
-        }
-    )
+    return waffle_json(request)
 
 
 @api_view(['GET'])
