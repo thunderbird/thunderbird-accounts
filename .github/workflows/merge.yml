@@ -53,16 +53,57 @@ jobs:
               - 'pulumi/**'
               - '.github/**'
 
-  # Build whichever image(s) changed and apply them to the stage stack in a
-  # SINGLE `pulumi up`. Pulumi takes a stack-wide lock per update, so running
-  # accounts and keycloak deploys as separate parallel jobs caused
-  # "[409] Conflict: Another update is currently in progress." See issue #884.
-  deploy:
+  # Build the accounts image multi-arch (amd64 for ECS Fargate, arm64 for the
+  # Thunderbird Pro EKS Graviton clusters) on native runners, one arch each,
+  # then merge into a manifest list tagged with the git sha. See
+  # build-multiarch-image.yml. Only runs when accounts/IaC changed.
+  build-accounts-image:
     needs: detect-changes
     if: >-
       needs.detect-changes.outputs.src-changed == 'true' ||
+      needs.detect-changes.outputs.iac-changed == 'true'
+    uses: ./.github/workflows/build-multiarch-image.yml
+    secrets: inherit
+    with:
+      dockerfile: Dockerfile
+      tag: ${{ github.sha }}
+      artifact-prefix: accounts
+
+  # Same native-runner multi-arch build for the keycloak image. Only runs when
+  # keycloak/IaC changed.
+  build-keycloak-image:
+    needs: detect-changes
+    if: >-
       needs.detect-changes.outputs.keycloak-theme-changed == 'true' ||
       needs.detect-changes.outputs.iac-changed == 'true'
+    uses: ./.github/workflows/build-multiarch-image.yml
+    secrets: inherit
+    with:
+      dockerfile: Dockerfile.keycloak
+      tag: keycloak-${{ github.sha }}
+      artifact-prefix: keycloak
+
+  # Apply whichever image(s) were built to the stage stack in a SINGLE
+  # `pulumi up`. Pulumi takes a stack-wide lock per update, so running accounts
+  # and keycloak deploys as separate parallel jobs caused "[409] Conflict:
+  # Another update is currently in progress." See issue #884.
+  deploy:
+    needs:
+      - detect-changes
+      - build-accounts-image
+      - build-keycloak-image
+    # Run whenever something changed AND neither build was cancelled/failed.
+    # always() is required because the build jobs are individually skipped when
+    # their image didn't change -- without it, a skipped need would skip deploy.
+    if: >-
+      always() &&
+      (needs.detect-changes.outputs.src-changed == 'true' ||
+       needs.detect-changes.outputs.keycloak-theme-changed == 'true' ||
+       needs.detect-changes.outputs.iac-changed == 'true') &&
+      needs.build-accounts-image.result != 'failure' &&
+      needs.build-accounts-image.result != 'cancelled' &&
+      needs.build-keycloak-image.result != 'failure' &&
+      needs.build-keycloak-image.result != 'cancelled'
     environment:
       name: staging
       deployment: true
@@ -70,14 +111,17 @@ jobs:
     env:
       IS_CI_AUTOMATION: "yes"
       PULUMI_DIR: "pulumi"
-      # Whether the accounts image was (re)built this run; gates the
-      # accounts config update, its pulumi targets, and the release artifacts.
-      BUILD_ACCOUNTS: ${{ needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true' }}
-      # Whether the keycloak image was (re)built this run.
-      BUILD_KEYCLOAK: ${{ needs.detect-changes.outputs.keycloak-theme-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true' }}
+      # Manifest-list tags produced by the build jobs above; empty when that
+      # image wasn't (re)built this run (its build job was skipped).
+      ACCOUNTS_IMAGE: ${{ needs.build-accounts-image.outputs.image }}
+      KEYCLOAK_IMAGE: ${{ needs.build-keycloak-image.outputs.image }}
+      # Whether each image was (re)built this run; gates the config update,
+      # pulumi targets, and release artifacts below.
+      BUILD_ACCOUNTS: ${{ needs.build-accounts-image.outputs.image != '' }}
+      BUILD_KEYCLOAK: ${{ needs.build-keycloak-image.outputs.image != '' }}
     outputs:
       # Non-empty only when the accounts image was built; used to gate create-release.
-      accounts-image: ${{ steps.build-accounts.outputs.accounts-image }}
+      accounts-image: ${{ needs.build-accounts-image.outputs.image }}
     steps:
       # Preparation for future steps
       - uses: actions/checkout@v4
@@ -90,12 +134,6 @@ jobs:
         with:
           aws-region: eu-central-1
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          mask-password: "true"
 
       - name: Set up Python ${{ vars.PYTHON_VERSION}}
         uses: actions/setup-python@v5
@@ -118,43 +156,10 @@ jobs:
           curl -fsSL https://get.pulumi.com | sh
           pip install -Ur requirements.txt
 
-      # Both the accounts and keycloak images are built multi-arch via Buildx +
-      # QEMU (linux/amd64 for ECS Fargate today, linux/arm64 for the Thunderbird
-      # Pro EKS clusters on Graviton). Each <tag> is a manifest list, so every
-      # runtime pulls its matching variant. Set these up whenever either image
-      # is (re)built; they must run before the build steps below.
-      - name: Set up QEMU
-        if: env.BUILD_ACCOUNTS == 'true' || env.BUILD_KEYCLOAK == 'true'
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        if: env.BUILD_ACCOUNTS == 'true' || env.BUILD_KEYCLOAK == 'true'
-        uses: docker/setup-buildx-action@v3
-
-      # Produce the accounts container image (only when accounts/IaC changed).
-      - name: Build, tag, and push accounts image to Amazon ECR
-        id: build-accounts
-        if: env.BUILD_ACCOUNTS == 'true'
-        env:
-          ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:${{ github.sha }}"
-        run: |
-          # Build a multi-arch image (amd64 for ECS, arm64 for EKS) and push the
-          # manifest list to ECR. buildx --push publishes directly (no docker push).
-          docker buildx build -t $ECR_TAG \
-            --platform linux/amd64,linux/arm64 --push .
-          echo "accounts-image=$ECR_TAG" >> $GITHUB_OUTPUT
-
-      # Produce the keycloak container image (only when keycloak/IaC changed).
-      - name: Build, tag, and push keycloak image to Amazon ECR
-        id: build-keycloak
-        if: env.BUILD_KEYCLOAK == 'true'
-        env:
-          ECR_TAG: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}:keycloak-${{ github.sha }}"
-        run: |
-          # Build a multi-arch image (amd64 for ECS, arm64 for EKS) and push the
-          # manifest list to ECR. buildx --push publishes directly (no docker push).
-          docker buildx build -f Dockerfile.keycloak -t $ECR_TAG \
-            --platform linux/amd64,linux/arm64 --push .
-          echo "keycloak-image=$ECR_TAG" >> $GITHUB_OUTPUT
+      # The accounts and keycloak images are built by the build-accounts-image /
+      # build-keycloak-image jobs above (native-runner multi-arch, one arch per
+      # runner, merged into a manifest list). This job consumes their manifest
+      # tags via ACCOUNTS_IMAGE / KEYCLOAK_IMAGE and only deploys.
 
       - name: Get version from pyproject.toml
         id: read-version
@@ -172,7 +177,7 @@ jobs:
         id: create-keycloak-artifact
         if: env.BUILD_KEYCLOAK == 'true'
         run: |
-          echo '{"ecr_tag": "${{ steps.build-keycloak.outputs.keycloak-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
+          echo '{"ecr_tag": "'"$KEYCLOAK_IMAGE"'", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
 
       - name: Archive the keycloak deployment artifact
         if: env.BUILD_KEYCLOAK == 'true'
@@ -187,7 +192,7 @@ jobs:
         id: create-artifact
         if: env.BUILD_ACCOUNTS == 'true'
         run: |
-          echo '{"ecr_tag": "${{ steps.build-accounts.outputs.accounts-image }}", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
+          echo '{"ecr_tag": "'"$ACCOUNTS_IMAGE"'", "version": "${{ steps.read-version.outputs.value }}"}' > deployment.json
 
       - name: Archive the deployment artifact
         id: tag-archive
@@ -223,8 +228,8 @@ jobs:
         shell: bash
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          ACCOUNTS_IMAGE: ${{ steps.build-accounts.outputs.accounts-image }}
-          KEYCLOAK_IMAGE: ${{ steps.build-keycloak.outputs.keycloak-image }}
+          # ACCOUNTS_IMAGE / KEYCLOAK_IMAGE are inherited from the job-level env
+          # (the manifest tags output by the build-*-image jobs).
         run: |
           # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
           # to do with the GHA workflow "env" settings above.
