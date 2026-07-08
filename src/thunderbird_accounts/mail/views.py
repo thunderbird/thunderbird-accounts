@@ -627,25 +627,37 @@ def appointment_caldav_setup(request: HttpRequest):
         error_response.status_code = 400
         return error_response
 
+    primary_email = user.stalwart_primary_email
+    if not primary_email:
+        logging.info(f'Primary Stalwart email not found during Appointment CalDAV setup for user {user.uuid}')
+        return JsonResponse(
+            {
+                'success': False,
+                'error': _('Thundermail account setup is still in progress. Please try again shortly.'),
+                'code': 'mail_account_not_ready',
+            },
+            status=409,
+        )
+
     # Use a special label for the App Password to be used in Appointment's CalDAV auto-setup
-    label = f'{settings.APPOINTMENT_APP_PASSWORD_PREFIX}{user.stalwart_primary_email}'
+    label = f'{settings.APPOINTMENT_APP_PASSWORD_PREFIX}{primary_email}'
 
     try:
         stalwart_client = MailClient()
-        email_user = stalwart_client.get_account(user.stalwart_primary_email)
+        email_user = stalwart_client.get_account(primary_email)
 
         # Remove any existing app password for this label so we can
         # replace it with a fresh one.
         expected_prefix = f'$app${label}$'
         for secret in email_user.get('secrets', []):
             if secret.startswith(expected_prefix):
-                stalwart_client.delete_app_password(user.stalwart_primary_email, secret)
+                stalwart_client.delete_app_password(primary_email, secret)
 
         # Generate a random base64 password, hash it for Stalwart
         # storage, and return the base64 password to the caller for CalDAV auth.
         base64_password = secrets.token_urlsafe(64)
         app_password_hash = utils.save_app_password(label, base64_password)
-        stalwart_client.save_app_password(user.stalwart_primary_email, app_password_hash)
+        stalwart_client.save_app_password(primary_email, app_password_hash)
 
         return JsonResponse({'success': True, 'app_password': base64_password})
 
