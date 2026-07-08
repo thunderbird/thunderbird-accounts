@@ -6,11 +6,9 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  # TEMPORARY: run on every push so the split-arch build can be tested from any
+  # branch. Restore the `branches: [main]` filter before merge.
   push:
-    branches:
-      - main
-      # TEMPORARY: exercise the split-arch build on this branch. Remove before merge.
-      - ci/split-arch-image-build
   workflow_dispatch:
 
 permissions:
@@ -65,7 +63,8 @@ jobs:
       needs.detect-changes.outputs.src-changed == 'true' ||
       needs.detect-changes.outputs.iac-changed == 'true'
     uses: ./.github/workflows/build-multiarch-image.yml
-    secrets: inherit
+    # TEMPORARY: no `secrets: inherit` during the dry-run -- the build no longer
+    # pushes to ECR, so it needs no AWS credentials. Restore before merge.
     with:
       dockerfile: Dockerfile
       tag: ${{ github.sha }}
@@ -79,7 +78,7 @@ jobs:
       needs.detect-changes.outputs.keycloak-theme-changed == 'true' ||
       needs.detect-changes.outputs.iac-changed == 'true'
     uses: ./.github/workflows/build-multiarch-image.yml
-    secrets: inherit
+    # TEMPORARY: no `secrets: inherit` during the dry-run -- see accounts job above.
     with:
       dockerfile: Dockerfile.keycloak
       tag: keycloak-${{ github.sha }}
@@ -94,18 +93,23 @@ jobs:
       - detect-changes
       - build-accounts-image
       - build-keycloak-image
+    # TEMPORARY: deploy disabled for the dry-run build test. This condition can
+    # never be true (no such branch), so the job is always skipped -- which
+    # cascades to skip create-release + e2e (they need it) and deploys nothing
+    # to stage. Remove this line to restore the real condition below before merge.
+    if: github.ref == 'refs/heads/__deploy-disabled-for-dryrun__'
     # Run whenever something changed AND neither build was cancelled/failed.
     # always() is required because the build jobs are individually skipped when
     # their image didn't change -- without it, a skipped need would skip deploy.
-    if: >-
-      always() &&
-      (needs.detect-changes.outputs.src-changed == 'true' ||
-       needs.detect-changes.outputs.keycloak-theme-changed == 'true' ||
-       needs.detect-changes.outputs.iac-changed == 'true') &&
-      needs.build-accounts-image.result != 'failure' &&
-      needs.build-accounts-image.result != 'cancelled' &&
-      needs.build-keycloak-image.result != 'failure' &&
-      needs.build-keycloak-image.result != 'cancelled'
+    # if: >-
+    #   always() &&
+    #   (needs.detect-changes.outputs.src-changed == 'true' ||
+    #    needs.detect-changes.outputs.keycloak-theme-changed == 'true' ||
+    #    needs.detect-changes.outputs.iac-changed == 'true') &&
+    #   needs.build-accounts-image.result != 'failure' &&
+    #   needs.build-accounts-image.result != 'cancelled' &&
+    #   needs.build-keycloak-image.result != 'failure' &&
+    #   needs.build-keycloak-image.result != 'cancelled'
     environment:
       name: staging
       deployment: true
