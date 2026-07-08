@@ -35,7 +35,8 @@ jobs:
               - 'assets/**'
               - 'static/**'
               - 'templates/**'
-              - 'scripts/entry.sh'
+              # Dockerfile COPYs the whole scripts/ dir.
+              - 'scripts/**'
               - 'Dockerfile'
               - 'manage.py'
               - 'MANIFEST.in'
@@ -45,7 +46,15 @@ jobs:
               - 'README.md'
               - 'src/**'
               - 'uv.lock'
-              - 'vite.config.mjs'
+              # Frontend build inputs COPYd by the Dockerfile (vite.config is
+              # .mts, not .mjs); tsconfig.json and env.d.ts were missing.
+              - 'vite.config.mts'
+              - 'tsconfig.json'
+              - 'env.d.ts'
+              # The accounts bundle imports the shared keycloak theme via the
+              # `@kc` vite alias, so `npm run build` compiles it into the accounts
+              # image -- theme edits must rebuild (and redeploy) accounts too.
+              - 'keycloak/themes/**'
             keycloak-theme-changed:
               - 'keycloak/themes/**'
               - 'Dockerfile.keycloak'
