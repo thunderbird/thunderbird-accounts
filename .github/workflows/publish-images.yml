@@ -1,0 +1,92 @@
+---
+# Decoupled image-publish pipeline. On merge to main it builds the accounts and
+# keycloak images as native multi-arch (amd64 + arm64) manifest lists and pushes
+# them to GHCR. This is INDEPENDENT of the deploy-stage pipeline (merge.yml):
+# it uses no cloud credentials, runs no Pulumi, and deploys nothing -- it only
+# publishes images. See docs/ci/image-publish-pipeline.md for the architecture.
+name: publish-images
+
+concurrency:
+  group: publish-images-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # Separate job: decide which image(s) changed and read the version once, so
+  # the build jobs below only run for images that actually changed.
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      accounts-changed: ${{ steps.check.outputs.accounts-changed }}
+      keycloak-changed: ${{ steps.check.outputs.keycloak-changed }}
+      version: ${{ steps.read-version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: check
+        with:
+          filters: |
+            accounts-changed:
+              - 'assets/**'
+              - 'static/**'
+              - 'templates/**'
+              - 'scripts/entry.sh'
+              - 'Dockerfile'
+              - 'manage.py'
+              - 'MANIFEST.in'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'pyproject.toml'
+              - 'README.md'
+              - 'src/**'
+              - 'uv.lock'
+              - 'vite.config.mjs'
+            keycloak-changed:
+              - 'keycloak/**'
+              - 'Dockerfile.keycloak'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'scripts/entry-keycloak.sh'
+              - 'scripts/apply-mfa-config.sh'
+
+      - name: Get version from pyproject.toml
+        id: read-version
+        uses: SebRollen/toml-action@v1.2.0
+        with:
+          file: 'pyproject.toml'
+          field: 'project.version'
+
+  accounts:
+    needs: detect-changes
+    # workflow_dispatch always rebuilds; pushes rebuild only on a relevant change.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      needs.detect-changes.outputs.accounts-changed == 'true'
+    uses: ./.github/workflows/build-multiarch-image.yml
+    with:
+      image: ghcr.io/thunderbird/thunderbird-accounts
+      dockerfile: Dockerfile
+      version: ${{ needs.detect-changes.outputs.version }}
+      artifact-prefix: accounts
+
+  keycloak:
+    needs: detect-changes
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      needs.detect-changes.outputs.keycloak-changed == 'true'
+    uses: ./.github/workflows/build-multiarch-image.yml
+    with:
+      image: ghcr.io/thunderbird/thunderbird-accounts-keycloak
+      dockerfile: Dockerfile.keycloak
+      version: ${{ needs.detect-changes.outputs.version }}
+      artifact-prefix: keycloak

@@ -1,34 +1,32 @@
 ---
-# Reusable workflow that builds one container image for linux/amd64 and
-# linux/arm64 on NATIVE runners (no QEMU), pushes each arch to ECR by digest,
-# then stitches the digests into a single multi-arch manifest list under the
-# real tag. Callers get back the fully-qualified image reference via the
-# `image` output. See merge.yml for how accounts + keycloak invoke this.
+# Reusable workflow: build ONE container image for linux/amd64 and linux/arm64
+# on NATIVE runners (no QEMU), push each arch to GHCR by digest, then stitch the
+# digests into a single multi-arch manifest list tagged :<sha>, :v<version> and
+# :latest. Callers get the fully-qualified :<sha> reference back via the `image`
+# output. Invoked by publish-images.yml for the accounts and keycloak images.
 #
 # Why native runners instead of `buildx --platform amd64,arm64` with QEMU:
 # emulated arm64 builds are minutes-slower and occasionally miscompile. Each
-# arch now builds on its own hardware and the two run in parallel.
+# arch builds on its own hardware and the two run in parallel.
 #
-# ============================ TEMPORARY: DRY-RUN =============================
-# This workflow is currently in a build-test mode: it builds each arch on its
-# native runner but does NOT push to ECR and does NOT produce a manifest list.
-# The AWS/ECR steps and the digest/merge machinery are commented out below so
-# the build can be exercised on any branch with no cloud credentials and no
-# side effects. Restore the commented blocks (and `secrets: inherit` in
-# merge.yml) once the native builds are confirmed green.
-# ============================================================================
+# Auth is GHCR + the automatic GITHUB_TOKEN (packages: write) -- no cloud
+# credentials, which keeps this pipeline decoupled from the ECR/Pulumi deploy.
 name: build-multiarch-image
 
 on:
   workflow_call:
     inputs:
+      image:
+        description: Fully-qualified GHCR image name WITHOUT a tag (e.g. ghcr.io/owner/name).
+        required: true
+        type: string
       dockerfile:
         description: Path to the Dockerfile to build.
         required: false
         type: string
         default: Dockerfile
-      tag:
-        description: Tag to publish the manifest list under (appended to the ECR repo).
+      version:
+        description: Semantic version (no leading v) published as the :v<version> tag.
         required: true
         type: string
       artifact-prefix:
@@ -40,16 +38,16 @@ on:
         type: string
     outputs:
       image:
-        description: The fully-qualified multi-arch image reference that was pushed.
+        description: The :<sha>-tagged multi-arch image reference that was pushed.
         value: ${{ jobs.merge.outputs.image }}
 
 permissions:
-  id-token: write
   contents: read
+  packages: write
 
 jobs:
-  # One job per architecture, each on its matching native runner. During the
-  # dry-run this just proves the build compiles natively -- nothing is pushed.
+  # One job per architecture, each on its matching native runner. Each pushes an
+  # anonymous (tag-less) image to GHCR and records its digest as an artifact.
   build:
     strategy:
       fail-fast: false
@@ -67,73 +65,51 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # TEMPORARY: AWS/ECR access disabled for the dry-run (no push == no creds).
-      # - name: Configure AWS credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     aws-region: eu-central-1
-      #     role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-      #
-      # - name: Login to Amazon ECR
-      #   id: login-ecr
-      #   uses: aws-actions/amazon-ecr-login@v2
-      #   with:
-      #     mask-password: "true"
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # TEMPORARY: build only, do NOT push. This still runs every Dockerfile
-      # stage on the native runner, so a compile/build failure fails the job --
-      # which is the evidence we're collecting. Restore the push-by-digest block
-      # below (and the digest export/upload) once builds are green.
-      - name: Build image (dry-run, no push)
+      - name: Build and push image by digest
         id: build
         run: |
+          # Build this single platform and push it to GHCR by digest only (no
+          # tag). push-by-digest keeps the pushed image anonymous so both arch
+          # runners can push concurrently without clobbering a shared tag; the
+          # merge job assigns the real tags afterwards. --metadata-file lets us
+          # read back the digest that GHCR assigned.
           docker buildx build \
             -f "${{ inputs.dockerfile }}" \
             --platform "${{ matrix.platform }}" \
-            -t "${{ inputs.artifact-prefix }}:${{ matrix.arch }}-dryrun" \
+            --output "type=image,name=${{ inputs.image }},push-by-digest=true,name-canonical=true,push=true" \
+            --metadata-file metadata.json \
             .
+          digest="$(jq -r '."containerimage.digest"' metadata.json)"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
-      # - name: Build and push image by digest
-      #   id: build
-      #   env:
-      #     IMAGE: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}"
-      #   run: |
-      #     # Build this single platform and push it to ECR by digest only (no
-      #     # tag). push-by-digest keeps the pushed image anonymous so both arch
-      #     # runners can push concurrently without clobbering a shared tag; the
-      #     # merge job assigns the real tag afterwards. --metadata-file lets us
-      #     # read back the digest that ECR assigned.
-      #     docker buildx build \
-      #       -f "${{ inputs.dockerfile }}" \
-      #       --platform "${{ matrix.platform }}" \
-      #       --output "type=image,name=${IMAGE},push-by-digest=true,name-canonical=true,push=true" \
-      #       --metadata-file metadata.json \
-      #       .
-      #     digest="$(jq -r '."containerimage.digest"' metadata.json)"
-      #     echo "digest=$digest" >> "$GITHUB_OUTPUT"
-      #
-      # - name: Export digest
-      #   run: |
-      #     # Record the digest as an empty file named after the sha256 hex, so
-      #     # the merge job can reconstruct `${IMAGE}@sha256:<hex>` references by
-      #     # listing the downloaded artifact directory.
-      #     mkdir -p "${{ runner.temp }}/digests"
-      #     digest="${{ steps.build.outputs.digest }}"
-      #     touch "${{ runner.temp }}/digests/${digest#sha256:}"
-      #
-      # - name: Upload digest
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: digests-${{ inputs.artifact-prefix }}-${{ matrix.arch }}
-      #     path: ${{ runner.temp }}/digests/*
-      #     if-no-files-found: error
-      #     retention-days: 1
+      - name: Export digest
+        run: |
+          # Record the digest as an empty file named after the sha256 hex, so
+          # the merge job can reconstruct `${IMAGE}@sha256:<hex>` references by
+          # listing the downloaded artifact directory.
+          mkdir -p "${{ runner.temp }}/digests"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
-  # Combine the per-arch digests into one manifest list under the real tag.
-  # TEMPORARY: neutralized during the dry-run (nothing was pushed to merge).
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ inputs.artifact-prefix }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Combine the per-arch digests into one manifest list under all three tags.
   merge:
     needs: build
     runs-on: ubuntu-latest
@@ -142,45 +118,39 @@ jobs:
     outputs:
       image: ${{ steps.merge.outputs.image }}
     steps:
-      - name: Merge disabled (dry-run)
-        id: merge
-        run: |
-          echo "Dry-run: skipping manifest merge; no images were pushed to ECR."
-          echo "image=" >> "$GITHUB_OUTPUT"
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Configure AWS credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     aws-region: eu-central-1
-      #     role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-      #
-      # - name: Login to Amazon ECR
-      #   id: login-ecr
-      #   uses: aws-actions/amazon-ecr-login@v2
-      #   with:
-      #     mask-password: "true"
-      #
-      # - name: Set up Docker Buildx
-      #   uses: docker/setup-buildx-action@v3
-      #
-      # - name: Download digests
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     path: ${{ runner.temp }}/digests
-      #     pattern: digests-${{ inputs.artifact-prefix }}-*
-      #     merge-multiple: true
-      #
-      # - name: Create manifest list and push
-      #   id: merge
-      #   working-directory: ${{ runner.temp }}/digests
-      #   env:
-      #     IMAGE: "${{ steps.login-ecr.outputs.registry }}/${{ vars.PROJECT }}"
-      #   run: |
-      #     # imagetools create references digests already in ECR, so nothing is
-      #     # rebuilt or re-pushed here -- it only writes the manifest list. The
-      #     # glob expands to one `${IMAGE}@sha256:<hex>` per downloaded digest.
-      #     TARGET="${IMAGE}:${{ inputs.tag }}"
-      #     docker buildx imagetools create -t "$TARGET" \
-      #       $(printf "${IMAGE}@sha256:%s " *)
-      #     docker buildx imagetools inspect "$TARGET"
-      #     echo "image=$TARGET" >> "$GITHUB_OUTPUT"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-${{ inputs.artifact-prefix }}-*
+          merge-multiple: true
+
+      - name: Create manifest list and push
+        id: merge
+        working-directory: ${{ runner.temp }}/digests
+        env:
+          IMAGE: ${{ inputs.image }}
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ github.sha }}
+        run: |
+          # imagetools create references digests already in GHCR, so nothing is
+          # rebuilt or re-pushed here -- it only writes the manifest list, under
+          # all three tags at once. The glob expands to one
+          # `${IMAGE}@sha256:<hex>` per downloaded digest.
+          docker buildx imagetools create \
+            -t "${IMAGE}:${SHA}" \
+            -t "${IMAGE}:v${VERSION}" \
+            -t "${IMAGE}:latest" \
+            $(printf "${IMAGE}@sha256:%s " *)
+          docker buildx imagetools inspect "${IMAGE}:${SHA}"
+          echo "image=${IMAGE}:${SHA}" >> "$GITHUB_OUTPUT"
