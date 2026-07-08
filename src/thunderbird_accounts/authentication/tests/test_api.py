@@ -4,9 +4,11 @@ from thunderbird_accounts.authentication.api import CanISignUpResponses
 from django.urls import reverse
 from json import JSONDecodeError
 from unittest.mock import MagicMock, patch
+from waffle.models import Flag
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import SuspiciousOperation
 from urllib.parse import quote
 from django.test import Client as RequestClient, override_settings
 from rest_framework.test import APITestCase, APIClient
@@ -353,3 +355,85 @@ class CreateTestAllowListEntryTestCase(APITestCase):
         self.assertEqual('no-email', resp_data.get('type'))
         test_entry = AllowListEntry.objects.filter(email=email).first()
         self.assertIsNone(test_entry)
+
+
+class WaffleFlagsTestcase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('api_waffle_flags')
+        self.user = User.objects.create(
+            oidc_id=str(uuid.uuid4()),
+            recovery_email=f'{uuid.uuid4()}@example.com',
+            username=f'{uuid.uuid4()}@example.org',
+        )
+
+        Flag.objects.create(name='flag-on-for-everyone', everyone=True)
+        Flag.objects.create(name='flag-off-for-everyone', everyone=False)
+        Flag.objects.create(name='flag-on-for-authenticated', authenticated=True)
+
+        # Due to the endpoint being gated by OIDCAuthentication
+        patcher = patch(
+            'thunderbird_accounts.authentication.middleware.AccountsOIDCBackend.get_userinfo',
+            side_effect=self._fake_userinfo,
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    @staticmethod
+    def _fake_userinfo(access_token, id_token, payload):
+        # Mimic a real OIDC provider, which would reject unrecognized/invalid
+        # access tokens rather than happily returning userinfo for anything.
+        if not User.objects.filter(oidc_id=access_token).exists():
+            raise SuspiciousOperation('invalid access token')
+
+        return {
+            'sub': access_token,
+            'email': f'{access_token}@example.org',
+            'email_verified': True,
+            'preferred_username': f'{access_token}@example.org',
+        }
+
+    def test_returns_active_flags_for_authenticated_user(self):
+        response = self.client.get(self.url, headers={'authorization': f'Bearer {self.user.oidc_id}'})
+        self.assertEqual(200, response.status_code, response.content)
+
+        flags = response.json().get('flags')
+        self.assertEqual(
+            {
+                'flag-on-for-everyone',
+                'flag-off-for-everyone',
+                'flag-on-for-authenticated',
+            },
+            flags.keys(),
+        )
+        self.assertTrue(flags['flag-on-for-everyone']['is_active'])
+        self.assertFalse(flags['flag-off-for-everyone']['is_active'])
+        self.assertTrue(flags['flag-on-for-authenticated']['is_active'])
+
+    def test_returns_active_flag_for_specific_user_only(self):
+        other_user = User.objects.create(
+            oidc_id=str(uuid.uuid4()),
+            recovery_email=f'{uuid.uuid4()}@example.com',
+            username=f'{uuid.uuid4()}@example.org',
+        )
+
+        flag = Flag.objects.create(name='flag-on-for-specific-user')
+        flag.users.add(self.user)
+
+        # Authenticate as the user created in the setup step and check that the flag is active
+        response = self.client.get(self.url, headers={'authorization': f'Bearer {self.user.oidc_id}'})
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertTrue(response.json()['flags']['flag-on-for-specific-user']['is_active'])
+
+        # Authenticate as the other user and check that the flag is not active
+        response = self.client.get(self.url, headers={'authorization': f'Bearer {other_user.oidc_id}'})
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertFalse(response.json()['flags']['flag-on-for-specific-user']['is_active'])
+
+    def test_requires_authentication(self):
+        response = self.client.get(self.url)
+        self.assertEqual(401, response.status_code)
+
+    def test_returns_401_for_invalid_token(self):
+        response = self.client.get(self.url, headers={'authorization': 'Bearer invalid-token'})
+        self.assertEqual(401, response.status_code)

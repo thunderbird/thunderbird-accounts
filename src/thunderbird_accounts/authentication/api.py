@@ -7,10 +7,12 @@ from enum import StrEnum
 from urllib.parse import quote
 
 from django.conf import settings
+from mozilla_django_oidc.contrib.drf import OIDCAuthentication
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 import sentry_sdk
+from waffle.views import waffle_json
 
 from thunderbird_accounts.authentication.exceptions import (
     InvalidDomainError,
@@ -64,6 +66,19 @@ def get_user_profile(request: Request):
     if not request.user:
         raise NotAuthenticated()
     return Response(UserProfileSerializer(request.user).data)
+
+
+@api_view(['GET'])
+@authentication_classes([OIDCAuthentication])
+@permission_classes([IsAuthenticated])
+def get_waffle_flags(request: Request):
+    """Return the caller's active waffle flags, switches, and samples.
+
+    Callers authenticate with `Authorization: Bearer <keycloak-access-token>`
+    and we resolve that to the matching local user via OIDCAuthentication.
+    This is just waffle's own `waffle_json` view wrapped with our token auth.
+    """
+    return waffle_json(request)
 
 
 @api_view(['GET'])
