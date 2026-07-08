@@ -8,6 +8,7 @@ from waffle.models import Flag
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import SuspiciousOperation
 from urllib.parse import quote
 from django.test import Client as RequestClient, override_settings
 from rest_framework.test import APITestCase, APIClient
@@ -380,6 +381,11 @@ class WaffleFlagsTestcase(APITestCase):
 
     @staticmethod
     def _fake_userinfo(access_token, id_token, payload):
+        # Mimic a real OIDC provider, which would reject unrecognized/invalid
+        # access tokens rather than happily returning userinfo for anything.
+        if not User.objects.filter(oidc_id=access_token).exists():
+            raise SuspiciousOperation('invalid access token')
+
         return {
             'sub': access_token,
             'email': f'{access_token}@example.org',
@@ -426,4 +432,8 @@ class WaffleFlagsTestcase(APITestCase):
 
     def test_requires_authentication(self):
         response = self.client.get(self.url)
+        self.assertEqual(401, response.status_code)
+
+    def test_returns_401_for_invalid_token(self):
+        response = self.client.get(self.url, headers={'authorization': 'Bearer invalid-token'})
         self.assertEqual(401, response.status_code)
