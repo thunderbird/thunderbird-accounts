@@ -1,16 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
 
 const tbProAppointmentUrl = window._page?.tbProAppointmentUrl;
-const tbProSendUrl = computed(() => {
-  if (!window._page?.tbProSendUrl) return undefined;
-  const url = new URL('profile', window._page.tbProSendUrl);
-  url.searchParams.set('showDashboard', 'true');
-  return url.href;
-});
+const tbProSendUrl = window._page?.tbProSendUrl;
 </script>
 
 <template>
