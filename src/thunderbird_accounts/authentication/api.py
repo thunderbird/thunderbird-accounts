@@ -314,9 +314,7 @@ def sign_up(request: Request):
     except ImportUserError as ex:
         if ex.is_already_exists and not can_register_with_username(partial_username):
             logging.info(
-                'Signup duplicate suppressed because a local username/address now exists (status=%s, error=%s)',
-                ex.status_code or 'none',
-                ex.error_code or 'unknown',
+                f'Dupe signup suppressed (status={ex.status_code or "none"}, error={ex.error_code or "unknown"})',
             )
         else:
             sentry_sdk.capture_exception(ex)
