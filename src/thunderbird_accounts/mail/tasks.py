@@ -26,6 +26,10 @@ from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.core.types import TaskReturnStatus
 
+# Allow self-healing from problems accessing our DNS provider with generous retry policy.
+# This smooths over outages on their end, but also quota overages on our end.
+HOSTED_DKIM_PUBLISH_RETRY_DAYS = 14
+HOSTED_DKIM_PUBLISH_MAX_RETRIES = 24 * HOSTED_DKIM_PUBLISH_RETRY_DAYS
 
 def _stalwart_check_or_create_domain_entry(stalwart, domain):
     # Check if we have the domain
@@ -174,7 +178,7 @@ def update_quota_on_stalwart_account(self, username: str, quota: Optional[int]):
     retry_backoff=True,
     retry_backoff_max=60 * 60,  # 1 hour
     retry_jitter=True,
-    max_retries=24,
+    max_retries=HOSTED_DKIM_PUBLISH_MAX_RETRIES,
 )
 def publish_hosted_dkim_dns_records(self, domain_name: str):
     phase = 'initialize'
