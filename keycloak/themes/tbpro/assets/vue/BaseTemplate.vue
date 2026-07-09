@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import ThundermailLogo from '@kc/svg/thundermail-logo-blue.svg';
+import MessageBar from '@kc/vue/components/MessageBar.vue';
 
 const clientUrl = window._page.currentView?.clientUrl;
-
 </script>
 
 <template>
@@ -18,6 +17,11 @@ const clientUrl = window._page.currentView?.clientUrl;
           <a :href="clientUrl" class="logo-link">
             <img :src="ThundermailLogo" alt="Thundermail" class="base-template__logo" />
           </a>
+
+          <div id="message-bar" class="message-bar">
+            <message-bar />
+          </div>
+
           <div class="panel-contents">
             <slot />
           </div>
@@ -66,7 +70,6 @@ section {
     width: 100%;
     height: auto;
     min-height: 100vh;
-    max-height: var(--max-card-height);
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -90,11 +93,22 @@ section {
       height: 100%;
       display: flex;
       flex-direction: column;
-      gap: 3rem;
       padding: 6rem 2rem;
 
-      &:has(.notice-bar) {
-        padding: 6rem 2rem;
+      .message-bar {
+        margin-block-end: 1.5rem;
+      }
+
+      .logo-link {
+        display: block;
+        text-decoration: none;
+        width: min-content;
+        margin-block-end: 2rem;
+
+        .logo {
+          height: 36px;
+          width: auto;
+        }
       }
     }
   }
@@ -146,13 +160,7 @@ section {
         min-height: auto;
 
         .panel {
-
-
-          padding: 6rem 10rem 5.625rem 6rem;
-
-          &:has(.notice-bar) {
-            padding: 6rem 10rem 5.625rem 6rem;
-          }
+          padding: 6rem 6rem 5.625rem 6rem;
         }
 
         .panel-contents {

@@ -2,17 +2,13 @@
 import { ref, computed, useTemplateRef } from 'vue';
 import { TextInput, BrandButton, CheckboxInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { PhArrowRight } from '@phosphor-icons/vue';
-import MessageBar from '@kc/vue/components/MessageBar.vue';
-import ThunderbirdLogoLight from '@kc/svg/thunderbird-pro-light.svg';
 import { TBPRO_WAIT_LIST } from '@kc/defines';
 
 const firstError = window._page.currentView?.firstError;
 const formAction = window._page.currentView?.formAction;
 const rememberMe = window._page.currentView?.rememberMe;
 const forgotPasswordUrl = window._page.currentView?.forgotPasswordUrl;
-const registerUrl = window._page.currentView?.registerUrl;
 const supportUrl = window._page.currentView?.supportUrl;
-const clientUrl = window._page.currentView?.clientUrl;
 const loginForm = useTemplateRef('login-form');
 const message = window._page?.message;
 const tbProPrimaryDomain = window._page.currentView?.tbProPrimaryDomain;
@@ -63,9 +59,8 @@ export default {
 </script>
 
 <template>
-  <notice-bar :type="NoticeBarTypes.Critical" v-if="firstError">{{ firstError }}</notice-bar>
-  <message-bar v-else-if="message?.type" />
-  <notice-bar :type="NoticeBarTypes.Info" v-else>
+  <notice-bar :type="NoticeBarTypes.Critical" v-if="firstError" class="notice-bar-login">{{ firstError }}</notice-bar>
+  <notice-bar :type="NoticeBarTypes.Info" v-else-if="!message?.type" class="notice-bar-login">
     <i18n-t keypath="inviteOnly" tag="span">
       <a :href="TBPRO_WAIT_LIST" data-testid="go-to-invite-only-url" target="_blank">{{ $t('inviteOnlyAction') }}</a>
     </i18n-t>
@@ -158,28 +153,8 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  position: absolute;
-  top: 1rem;
-  left: 1.5rem;
-  right: 1.5rem;
-  z-index: 1;
-}
-
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
+.notice-bar-login {
+  margin-bottom: 1.5rem;
 }
 
 h2 {
@@ -197,7 +172,7 @@ form {
 }
 
 .forgot-password-link {
-  display: block;
+  display: inline-block;
   font-size: 0.6875rem;
   color: var(--colour-ti-muted);
   margin-block-end: 2rem;

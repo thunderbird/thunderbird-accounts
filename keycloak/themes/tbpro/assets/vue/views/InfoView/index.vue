@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import MessageBar from '@kc/vue/components/MessageBar.vue';
 import { BrandButton } from '@thunderbirdops/services-ui';
 import { PhArrowRight } from '@phosphor-icons/vue';
 import { computed } from 'vue';
@@ -39,7 +38,6 @@ export default {
     </h1>
     <p class="text" v-if="isVerifyEmailAction">{{ $t('infoVerifyEmailText') }}</p>
     <p class="text" v-else-if="isAccountUpdated">{{ $t('infoAccountUpdatedText') }}</p>
-    <message-bar v-if="messageHeader && messageHeader !== message?.summary" />
   </header>
   <main>
     <ul class="required-actions" v-if="!isSingleAction">
@@ -57,14 +55,6 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  position: absolute;
-  top: 1rem;
-  left: 1.5rem;
-  right: 1.5rem;
-  z-index: 1;
-}
-
 .required-actions {
   margin: 0;
   margin-bottom: 1.5rem;

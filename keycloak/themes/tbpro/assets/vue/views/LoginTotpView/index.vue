@@ -1,7 +1,6 @@
 <script setup>
 import { TextInput, PrimaryButton, SelectInput, LinkButton } from "@thunderbirdops/services-ui";
 import { computed, ref, useTemplateRef } from "vue";
-import MessageBar from '@kc/vue/components/MessageBar.vue';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
 
 const errors = window._page.currentView?.errors;
@@ -38,7 +37,6 @@ export default {
     <h2>{{ $t('doLogIn') }}</h2>
     <form id="kc-form-login" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
           @keyup.enter="onSubmit">
-      <message-bar/>
       <div class="form-elements">
         <!-- #1011: with a single credential there's nothing to choose, so hide the
              selector (matches stock Keycloak's `userOtpCredentials?size gt 1` guard). -->

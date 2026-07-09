@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import MessageBar from '@kc/vue/components/MessageBar.vue';
 import { BrandButton } from '@thunderbirdops/services-ui';
 import { PhArrowLeft } from '@phosphor-icons/vue';
 
@@ -14,8 +13,6 @@ export default {
 </script>
 
 <template>
-  <message-bar/>
-
   <h2>{{ $t('errorTitle') }}</h2>
   <template v-if="actionUrl">
     <div class="button-container">
@@ -29,14 +26,6 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  position: absolute;
-  top: 1rem;
-  left: 1.5rem;
-  right: 1.5rem;
-  z-index: 1;
-}
-
 h2 {
   font-size: 1.5rem;
   font-family: metropolis;
@@ -48,21 +37,5 @@ h2 {
 
 .button-container {
   width: fit-content;
-}
-
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
 }
 </style>

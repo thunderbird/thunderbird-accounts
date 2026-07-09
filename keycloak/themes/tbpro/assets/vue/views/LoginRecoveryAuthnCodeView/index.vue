@@ -1,7 +1,6 @@
 <script setup>
 import { TextInput, PrimaryButton, LinkButton } from "@thunderbirdops/services-ui";
 import { computed, useTemplateRef } from "vue";
-import MessageBar from '@kc/vue/components/MessageBar.vue';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
 
 const formAction = window._page.currentView?.formAction;
@@ -36,7 +35,6 @@ export default {
     <h2>{{ $t('authRecoveryCodeHeader') }}</h2>
     <form id="kc-recovery-code-login-form" ref="login-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
           @keyup.enter="onSubmit">
-      <message-bar/>
       <div class="form-elements">
         <text-input data-testid="recovery-code-input" id="recoveryCodeInput" name="recoveryCodeInput"
                     autocomplete="off" required autofocus :error="recoveryError">

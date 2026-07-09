@@ -1,6 +1,4 @@
 <script setup>
-import MessageBar from '@kc/vue/components/MessageBar.vue';
-
 const restartFlowUrl = window._page.currentView?.restartFlowUrl;
 const loginUrl = window._page.currentView?.loginUrl;
 </script>
@@ -12,8 +10,6 @@ export default {
 </script>
 
 <template>
-  <message-bar/>
-
   <h2>{{ $t('pageExpiredTitle') }}</h2>
   <div class="buttons">
     <p>{{ $t('pageExpiredMsg1') }} <a data-testid="restart-flow-url" :href="restartFlowUrl">{{ $t('doClickHere') }}</a></p>
@@ -22,14 +18,6 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  position: absolute;
-  top: 1rem;
-  left: 1.5rem;
-  right: 1.5rem;
-  z-index: 1;
-}
-
 h2 {
   font-size: 1.5rem;
   font-family: metropolis;
@@ -37,22 +25,6 @@ h2 {
   line-height: 1.1;
   color: var(--colour-primary-default);
   margin: 0 0 1.5rem 0;
-}
-
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
 }
 
 .buttons {

@@ -1,6 +1,4 @@
 <script setup>
-import MessageBar from '@kc/vue/components/MessageBar.vue';
-
 const formAction = window._page.currentView?.formAction;
 
 // Surface the authenticator app first; recovery codes are a fallback. Falls back to
@@ -23,7 +21,6 @@ export default {
 <template>
   <div class="panel">
     <h2>{{ $t('loginChooseAuthenticator') }}</h2>
-    <message-bar/>
     <form method="POST" :action="formAction" class="select-auth-form">
       <button
         v-for="selection in authenticationSelections"

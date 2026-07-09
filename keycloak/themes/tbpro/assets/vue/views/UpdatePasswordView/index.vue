@@ -1,8 +1,6 @@
 <script setup>
 import { TextInput, PrimaryButton, CheckboxInput } from "@thunderbirdops/services-ui";
 import { computed, useTemplateRef } from 'vue';
-import MessageBar from '@kc/vue/components/MessageBar.vue';
-
 const formAction = window._page.currentView?.formAction;
 const updatePasswordForm = useTemplateRef('update-password-form');
 const errors = window._page.currentView?.errors;
@@ -26,8 +24,6 @@ export default {
 
 
 <template>
-  <message-bar/>
-
   <h2>{{ $t('updatePasswordTitle') }}</h2>
   <form id="kc-passwd-update-form" ref="update-password-form" method="POST" :action="formAction" @submit.prevent="onSubmit" @keyup.enter="onSubmit">
     <div class="form-elements">
@@ -45,30 +41,6 @@ export default {
 </template>
 
 <style scoped>
-.notice-bar {
-  position: absolute;
-  top: 1rem;
-  left: 1.5rem;
-  right: 1.5rem;
-  z-index: 1;
-}
-
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-}
-
 h2 {
   font-size: 1.5rem;
   font-family: metropolis;
