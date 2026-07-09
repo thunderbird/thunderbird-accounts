@@ -5,6 +5,7 @@ from thunderbird_accounts.mail.exceptions import EmailNotValidError
 from thunderbird_accounts.authentication.permissions import CanCreateTestAllowListEntries
 from enum import StrEnum
 from urllib.parse import quote
+import logging
 
 from django.conf import settings
 from mozilla_django_oidc.contrib.drf import OIDCAuthentication
@@ -311,7 +312,12 @@ def sign_up(request: Request):
             status=400,
         )
     except ImportUserError as ex:
-        sentry_sdk.capture_exception(ex)
+        if ex.is_already_exists and not can_register_with_username(partial_username):
+            logging.info(
+                f'Dupe signup suppressed (status={ex.status_code or "none"}, error={ex.error_code or "unknown"})',
+            )
+        else:
+            sentry_sdk.capture_exception(ex)
         return Response(
             {
                 'error': ex.error_desc if ex.error_desc else _('There was an unknown error, please try again later.'),

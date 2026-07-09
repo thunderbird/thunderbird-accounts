@@ -1,4 +1,9 @@
+import json
 from typing import Optional
+
+from requests.exceptions import RequestException
+
+POSTGRES_DUPLICATE_KEY_MARKER = 'duplicate key value violates unique constraint'
 
 
 class KeycloakError(RuntimeError):
@@ -31,6 +36,7 @@ class InvalidDomainError(KeycloakError):
 class ImportUserError(KeycloakError):
     username: str
     error: str
+    """Format an error usefully if the user already exists in Keycloak"""
 
     def __init__(
         self,
@@ -38,6 +44,7 @@ class ImportUserError(KeycloakError):
         username: Optional[str] = None,
         error_code: Optional[str] = None,
         error_desc: Optional[str] = None,
+        status_code: Optional[int] = None,
         *args,
         **kwargs,
     ):
@@ -48,6 +55,44 @@ class ImportUserError(KeycloakError):
         # Structured error from keycloak
         self.error_code = error_code
         self.error_desc = error_desc
+        self.status_code = status_code
+
+    @classmethod
+    def from_request_exception(cls, exc: RequestException, *, username: Optional[str] = None):
+        response = exc.response
+        status_code = None
+        response_content = ''
+        error_data = {}
+
+        if response is not None:
+            status_code = response.status_code
+            response_content = response.content.decode(errors='replace')
+            try:
+                error_data = json.loads(response_content)
+            except (TypeError, json.JSONDecodeError):
+                error_data = {}
+
+        if response_content:
+            error = f'Error<{status_code}>: {response_content}'
+        else:
+            error = f'Error<{exc}>: No response!'
+
+        return cls(
+            username=username,
+            error=error,
+            error_code=error_data.get('error', f'status-{status_code}' if status_code is not None else None),
+            error_desc=error_data.get('error_description', error_data.get('errorMessage')),
+            status_code=status_code,
+        )
+
+    @property
+    def is_already_exists(self):
+        # HTTP 409 means "Conflict" and is returned by Keycloak when a resource already exists.
+        if self.status_code == 409:
+            return True
+
+        error_text = ' '.join(filter(None, [self.error_code, self.error_desc, self.error])).lower()
+        return POSTGRES_DUPLICATE_KEY_MARKER in error_text
 
     def __str__(self):
         return f'ImportUserError: {self.error} for {self.username}'

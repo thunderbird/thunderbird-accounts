@@ -339,22 +339,14 @@ class KeycloakClient:
                 },
             )
         except RequestException as exc:
-            sentry_sdk.capture_exception(exc)
-
-            try:
-                error_data: dict = json.loads(exc.response.content.decode())
-            except (TypeError, JSONDecodeError):
-                # Could not determine explicit error information
-                error_data = {}
-
             # Note: status_code == 409 means the user already exists on keycloak which we should have caught before this
             # function call.
-            raise ImportUserError(
-                username=username,
-                error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}',
-                error_code=error_data.get('error', f'status-{exc.response.status_code}'),
-                error_desc=error_data.get('error_description', error_data.get('errorMessage')),
-            )
+            error = ImportUserError.from_request_exception(exc, username=username)
+
+            if not error.is_already_exists:
+                sentry_sdk.capture_exception(exc)
+
+            raise error
 
         # Request returns an empty body on a 201 success, so retrieve pkid from location.
         # ex/ {'Location': 'http://keycloak:8999/admin/realms/tbpro/users/39a7b5e8-7a64-45e3-acf1-ca7d314bfcec', ... }

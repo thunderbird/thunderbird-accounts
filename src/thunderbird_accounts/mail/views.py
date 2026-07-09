@@ -489,10 +489,17 @@ def add_email_alias(request: HttpRequest):
         )
 
         if not created:
+            logging.info('Alias creation found an existing local email record for the requested address')
             return JsonResponse(
                 {'success': False, 'error': _('This email address is not available.')},
                 status=400,
             )
+    except IntegrityError:
+        logging.info('Alias creation hit a local duplicate-address race')
+        return JsonResponse(
+            {'success': False, 'error': _('This email address is not available.')},
+            status=400,
+        )
     except Exception as e:
         logging.error(f'Error creating email alias: {e}')
         return JsonResponse(
