@@ -1,10 +1,15 @@
+import enum
 from typing import NamedTuple, TypedDict, NotRequired
 from sqlparse.tokens import Literal
 
+class ResponseIndex(enum.Enum):
+    NAME = 0
+    DATA = 1
+    CALL_IDS = 2
 
 class Invocation(NamedTuple):
     name: str
-    arguments: dict[str, str]
+    arguments: dict #dict[str, str]
     methodCallId: str
 
 

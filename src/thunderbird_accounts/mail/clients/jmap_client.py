@@ -1,3 +1,4 @@
+from base64 import b64encode
 from typing import Literal
 from thunderbird_accounts.mail.clients.jmap_types import SessionResource, JMapRequest, Invocation, JMapResponse
 import enum
@@ -21,7 +22,10 @@ class JMAPClient:
 
         self.base_url = base_url
         self.username = username
-        self.token = token
+        if auth_type == self.AUTH_TYPES.BASIC:
+            self.token = b64encode(f'{username}:{token}'.encode()).decode()
+        else:
+            self.token = token
         self.auth_type = auth_type
         self.session: SessionResource | None = None
         self.api_url: str | None = None
@@ -92,7 +96,7 @@ class JMAPClient:
         Python data structure."""
         if not self.api_url:
             raise RuntimeError('Session not available')
-
+        print('sending -> ', json.dumps(request_data))
         res = requests.request(
             url=self.api_url,
             method=method,
@@ -101,6 +105,7 @@ class JMAPClient:
                 'Authorization': self._authorization_value(),
             },
             data=json.dumps(request_data),
+            verify=False,
         )
         res.raise_for_status()
         return res.json()
