@@ -123,7 +123,7 @@ export default {
 
     <checkbox-input
       data-testid="remember-me-input"
-      name="keep-me-signed-in"
+      name="rememberMe"
       :label="$t('rememberMe')"
       v-model="rememberMeChecked"
     ></checkbox-input>

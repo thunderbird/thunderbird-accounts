@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Reconcile the tbpro realm's MFA step-up flow with keycloak-config-cli.
+# Reconcile the tbpro realm's remember-me settings and MFA step-up flow with
+# keycloak-config-cli.
 #
 # Runs in the background from entry-keycloak.sh on every Keycloak start (local + deploy):
 # waits for the server to report ready, then applies keycloak/config-cli/tbpro-mfa-stepup.yaml
@@ -56,7 +57,8 @@ export IMPORT_MANAGED_AUTHENTICATIONFLOW=no-delete
 # the cache makes each start re-assert the flow. The reconcile is idempotent and adds ~1s
 # to startup.
 export IMPORT_CACHE_ENABLED=false
-# Level-1 LoA window; must match the realm's ssoSessionMaxLifespan (see the config file).
-export MFA_L1_LOA_MAX_AGE="${MFA_L1_LOA_MAX_AGE:-36000}"
+# Level-1 LoA window; must cover the realm's longest SSO session — the 90-day
+# remember-me lifespan (see the config file).
+export MFA_L1_LOA_MAX_AGE="${MFA_L1_LOA_MAX_AGE:-7776000}"
 
 java -jar "${CONFIG_CLI_JAR}" || echo 'apply-mfa-config: keycloak-config-cli failed (non-fatal).'
