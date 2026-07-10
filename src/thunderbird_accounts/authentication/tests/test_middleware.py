@@ -4,16 +4,179 @@ from unittest.mock import MagicMock, patch
 import freezegun
 import requests
 from django.conf import settings
+from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 from django.forms import model_to_dict
-from django.http import HttpRequest
+from django.http import HttpRequest, JsonResponse
 from django.test import override_settings
-from django.test import TestCase
+from django.test import Client as RequestClient, SimpleTestCase, TestCase
+from django.urls import path, resolve, reverse
 
 
-from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend, refresh_user_access_token
+from thunderbird_accounts.authentication.middleware import (
+    AccountsOIDCBackend,
+    RequiredAuth,
+    refresh_user_access_token,
+)
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.models import AllowListEntry
+from thunderbird_accounts.core.tests.utils import oidc_force_login
+from thunderbird_accounts.subscription.models import Subscription
+from thunderbird_accounts.urls import authorized_path
+
+
+def authorization_test_view(request, **kwargs):
+    return JsonResponse({'kwargs': kwargs})
+
+
+authorization_test_urlpatterns = [
+    path('view/', authorization_test_view, name='authorization_test_view'),
+]
+
+urlpatterns = [
+    authorized_path(
+        'auth/',
+        authorization_test_urlpatterns,
+        required_auth=RequiredAuth.AUTHENTICATED,
+    ),
+    authorized_path(
+        'subscribed/',
+        authorization_test_urlpatterns,
+        required_auth=RequiredAuth.ACTIVE_SUBSCRIPTION,
+    ),
+    authorized_path(
+        'subscribed-empty-response/',
+        authorization_test_urlpatterns,
+        required_auth=RequiredAuth.ACTIVE_SUBSCRIPTION,
+        active_subscription_response_data={},
+        active_subscription_status=401,
+    ),
+    authorized_path(
+        'subscribed-custom-error/',
+        authorization_test_urlpatterns,
+        required_auth=RequiredAuth.ACTIVE_SUBSCRIPTION,
+        active_subscription_error_message='No active subscription found',
+        active_subscription_status=404,
+    ),
+    authorized_path(
+        'admin-only/',
+        authorization_test_urlpatterns,
+        required_auth=RequiredAuth.ADMIN,
+    ),
+    path('django-admin/', admin.site.urls),
+    path('login/', authorization_test_view, name='authorization_test_login'),
+]
+
+AUTHORIZATION_TEST_MIDDLEWARE = [
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'thunderbird_accounts.authentication.middleware.AuthorizationMiddleware',
+]
+
+
+@override_settings(
+    ROOT_URLCONF='thunderbird_accounts.authentication.tests.test_middleware',
+    MIDDLEWARE=AUTHORIZATION_TEST_MIDDLEWARE,
+    LOGIN_URL='/login/',
+)
+class AuthorizationMiddlewareTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+
+    def test_authenticated_include_requires_login_and_strips_metadata(self):
+        response = self.client.get('/auth/view/')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/login/?next=/auth/view/')
+
+        user = User.objects.create(username=f'auth@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='auth')
+        oidc_force_login(self.client, user)
+
+        response = self.client.get('/auth/view/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'kwargs': {}})
+
+    def test_active_subscription_include_requires_active_subscription(self):
+        user = User.objects.create(username=f'subscriber@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='subscriber')
+        oidc_force_login(self.client, user)
+
+        response = self.client.get('/subscribed/view/', HTTP_ACCEPT='application/json')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json(), {'success': False, 'error': 'An active subscription is required.'})
+
+        Subscription.objects.create(user=user, status=Subscription.StatusValues.ACTIVE)
+
+        response = self.client.get('/subscribed/view/', HTTP_ACCEPT='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'kwargs': {}})
+
+    def test_active_subscription_include_supports_custom_error_response(self):
+        user = User.objects.create(username=f'custom@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='custom')
+        oidc_force_login(self.client, user)
+
+        response = self.client.get('/subscribed-empty-response/view/', HTTP_ACCEPT='application/json')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json(), {})
+
+        response = self.client.get('/subscribed-custom-error/view/', HTTP_ACCEPT='application/json')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {'success': False, 'error': 'No active subscription found'})
+
+    def test_admin_include_requires_staff(self):
+        user = User.objects.create(username=f'user@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='user')
+        oidc_force_login(self.client, user)
+
+        response = self.client.get('/admin-only/view/')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/django-admin/login/?next=/admin-only/view/')
+
+        staff_user = User.objects.create(
+            username=f'staff@{settings.PRIMARY_EMAIL_DOMAIN}',
+            oidc_id='staff',
+            is_staff=True,
+        )
+        oidc_force_login(self.client, staff_user)
+
+        response = self.client.get('/admin-only/view/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'kwargs': {}})
+
+
+class AuthorizationUrlMetadataTestCase(SimpleTestCase):
+    def test_root_urlconf_marks_protected_route_groups(self):
+        self.assertEqual(
+            resolve(reverse('api_display_name_set')).extra_kwargs.get('required_auth'),
+            RequiredAuth.ACTIVE_SUBSCRIPTION,
+        )
+        self.assertEqual(
+            resolve(reverse('legal_current')).extra_kwargs.get('required_auth'),
+            RequiredAuth.AUTHENTICATED,
+        )
+        self.assertEqual(
+            resolve(reverse('admin_stalwart_list')).extra_kwargs.get('required_auth'),
+            RequiredAuth.ADMIN,
+        )
+        self.assertEqual(
+            resolve(reverse('paddle_portal')).extra_kwargs.get('required_auth'),
+            RequiredAuth.ACTIVE_SUBSCRIPTION,
+        )
+        self.assertEqual(resolve(reverse('paddle_portal')).extra_kwargs.get('active_subscription_response_data'), {})
+        self.assertEqual(resolve(reverse('paddle_portal')).extra_kwargs.get('active_subscription_status'), 401)
+        self.assertEqual(
+            resolve(reverse('subscription_plan_info')).extra_kwargs.get('required_auth'),
+            RequiredAuth.ACTIVE_SUBSCRIPTION,
+        )
+        self.assertEqual(
+            resolve(reverse('subscription_plan_info')).extra_kwargs.get('active_subscription_error_message'),
+            'No active subscription found',
+        )
+        self.assertEqual(
+            resolve(reverse('subscription_plan_info')).extra_kwargs.get('active_subscription_status'),
+            404,
+        )
+
+    def test_root_urlconf_leaves_non_session_auth_routes_unmarked(self):
+        self.assertNotIn('required_auth', resolve(reverse('api_support_customer')).extra_kwargs)
+        self.assertNotIn('required_auth', resolve(reverse('appointment_caldav_setup')).extra_kwargs)
 
 
 @override_settings(

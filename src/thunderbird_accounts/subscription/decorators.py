@@ -1,5 +1,3 @@
-from functools import wraps
-
 from django.conf import settings
 from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
@@ -37,27 +35,17 @@ def inject_paddle(func):
     return _inject_paddle
 
 
-def active_subscription_required(function=None, *, error_message=None, response_data=None, status=403):
-    """Require an authenticated user with an active subscription."""
+def active_subscription_denial_response(request, *, error_message=None, response_data=None, status=403):
+    """Return a denial response when the user lacks an active subscription."""
+    if getattr(request.user, 'has_active_subscription', False):
+        return None
 
-    def decorator(view_func):
-        @wraps(view_func)
-        def _view_wrapper(request, *args, **kwargs):
-            if getattr(request.user, 'has_active_subscription', False):
-                return view_func(request, *args, **kwargs)
+    if _wants_json_response(request):
+        message = error_message or _('An active subscription is required.')
+        data = response_data if response_data is not None else {'success': False, 'error': str(message)}
+        return JsonResponse(data, status=status)
 
-            if _wants_json_response(request):
-                message = error_message or _('An active subscription is required.')
-                data = response_data if response_data is not None else {'success': False, 'error': str(message)}
-                return JsonResponse(data, status=status)
-
-            return HttpResponseRedirect(reverse('vue_app'))
-
-        return _view_wrapper
-
-    if function:
-        return decorator(function)
-    return decorator
+    return HttpResponseRedirect(reverse('vue_app'))
 
 
 def _wants_json_response(request):
