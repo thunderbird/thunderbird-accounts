@@ -20,7 +20,7 @@ RUN rm -rf /app/keycloak/assets/*
 
 
 #
-# Keycloak dockerfile for local development
+# Keycloak dockerfile
 #
 # MFA REST provider (TOTP enrollment + recovery-code regeneration).
 #

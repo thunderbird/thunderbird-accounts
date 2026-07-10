@@ -1,6 +1,6 @@
 FROM python:3.13-trixie
 #
-# Development docker file
+# Dockerfile for Thunderbird Accounts
 #
 
 RUN mkdir -p /app/src

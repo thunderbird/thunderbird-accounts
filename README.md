@@ -270,7 +270,13 @@ sphinx-build docs build
 
 ## Feature Flags
 
-Feature flags are stored in `localStorage` and read at runtime to toggle UI behavior.
+We now use django-waffle for feature flags. You must define your feature flag in the admin ui (or via a data migration) then you can reference it throughout your code. 
+
+Please use constants to avoid mistakes.
+
+ a more simple way declare and toggle feature flags, that method is documented below.
+
+Before django-waffle was integrated we used are stored in `localStorage` and read at runtime to toggle UI behavior.
 
 | Key | Values | Description |
 | --- | ------ | ----------- |
@@ -338,3 +344,17 @@ ssh -L 8443:$FLOWER_LB_DNS:443 ec2-user@$BASTION_IP
 Our live environments all use TLS, so you will need to browse to https://localhost:8443/. You will
 have to push past an SSL certificate hostname mismatch alert, but then you will find yourself at the
 Flower landing page, listing Celery workers on the network.
+
+## Deploying
+
+After a commit has been pushed to main the CI will run a workflow to deploy code to stage. The final step of this workflow is to create 
+a draft release. This draft when published will start a production deploy from the images built for that particular stage deploy.
+
+Production images are tagged from the package version, and you will receive a CI / deployment error if you try to deploy code under 
+a version that has already been deployed. You **must** increment the version in pyproject.toml, package.json, and run `npm i && uv lock`, and commit that 
+as a (preferably) stand-alone commit labelled `vX.Y.Z` (e.g. `v1.15.0`)
+
+Once that commit has ran through the CI and created a draft release you may publish that release to start the production deployment.
+
+Keycloak theme changes are automatically deployed to stage, but **are not** automatically deployed to production. 
+Please read [the following documentation](https://pro-services-docs.thunderbird.net/en/latest/keycloak/how-to-deploy-to-prod.html) on how to deploy Keycloak theme changes to production.
