@@ -61,4 +61,22 @@ export IMPORT_CACHE_ENABLED=false
 # remember-me lifespan (see the config file).
 export MFA_L1_LOA_MAX_AGE="${MFA_L1_LOA_MAX_AGE:-7776000}"
 
-java -jar "${CONFIG_CLI_JAR}" || echo 'apply-mfa-config: keycloak-config-cli failed (non-fatal).'
+# Serialize the import across replicas with a Postgres advisory lock on Keycloak's own
+# database: during a multi-replica deploy two containers run config-cli concurrently and
+# the imports race — one fails mid-update ("Cannot remove authentication flow, it is
+# currently in use") and leaves the flow half-updated, breaking browser logins. Advisory
+# locks are session-scoped, so if a container dies mid-import the lock drops with its DB
+# session and can never wedge a future deploy.
+#
+# PgAdvisoryLockRun.java takes the lock over the image's bundled Postgres JDBC driver
+# (reading the same KC_DB_* vars Keycloak itself uses), holds it while running the
+# command given in its argv, and is fail-soft: if the DB is unreachable it warns and
+# runs the command without the lock. Run source-file style — no compile step needed.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Keycloak's bundled JDBC driver; the glob absorbs version bumps (java -cp itself only
+# expands `dir/*`, so let the shell resolve it).
+JDBC_JARS=(/opt/keycloak/lib/lib/main/org.postgresql.postgresql-*.jar)
+
+java -cp "${JDBC_JARS[0]}" "${SCRIPT_DIR}/PgAdvisoryLockRun.java" \
+    java -jar "${CONFIG_CLI_JAR}" \
+    || echo 'apply-mfa-config: keycloak-config-cli failed (non-fatal).'

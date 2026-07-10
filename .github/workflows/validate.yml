@@ -61,6 +61,9 @@ jobs:
               - 'docker-compose.yml'
               - 'Dockerfile.keycloak'
               - 'keycloak/**'
+              - 'scripts/entry-keycloak.sh'
+              - 'scripts/apply-mfa-config.sh'
+              - 'scripts/PgAdvisoryLockRun.java'
               - 'test/e2e/**'
             iac-changed:
               - 'pulumi/**'

@@ -48,7 +48,11 @@ jobs:
               - 'vite.config.mjs'
             keycloak-theme-changed:
               - 'keycloak/themes/**'
+              - 'keycloak/config-cli/**'
               - 'Dockerfile.keycloak'
+              - 'scripts/entry-keycloak.sh'
+              - 'scripts/apply-mfa-config.sh'
+              - 'scripts/PgAdvisoryLockRun.java'
             iac-changed:
               - 'pulumi/**'
               - '.github/**'
