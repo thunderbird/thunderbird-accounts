@@ -24,6 +24,13 @@ attributes:
 # Bind the realm's browser login to the step-up flow defined below.
 browserFlow: browser-mfa-stepup
 
+# Bind forgot-password to the reset flow defined below. The built-in "reset credentials"
+# flow runs the reset-otp authenticator, which ENROLLS a new authenticator app instead of
+# validating the existing one — possession of the reset email alone would bypass the
+# second factor entirely (#1098). Rebind resetCredentialsFlow to "reset credentials" to
+# revert.
+resetCredentialsFlow: reset-credentials-mfa
+
 # LoA condition configs. Level 2 keeps loa-max-age=0 so Keycloak re-challenges the second
 # factor on every step-up, refreshing the token's auth_time for the provider's freshness
 # gate. Level 1's window MUST cover the realm's longest possible SSO session — now
@@ -123,4 +130,43 @@ authenticationFlows:
       - authenticator: conditional-level-of-authentication
         authenticatorConfig: "mfa step-up level 2"
         requirement: REQUIRED
+        authenticatorFlow: false
+
+  # Forgot-password flow (#1098). Same as the built-in "reset credentials" flow except
+  # reset-otp is replaced by second factor validation.
+  - alias: reset-credentials-mfa
+    description: Reset credentials verifying the existing second factor
+    providerId: basic-flow
+    topLevel: true
+    builtIn: false
+    authenticationExecutions:
+      - authenticator: reset-credentials-choose-user
+        requirement: REQUIRED
+        authenticatorFlow: false
+      - authenticator: reset-credential-email
+        requirement: REQUIRED
+        authenticatorFlow: false
+      - flowAlias: reset-mfa-otp
+        requirement: CONDITIONAL
+        authenticatorFlow: true
+      - authenticator: reset-password
+        requirement: REQUIRED
+        authenticatorFlow: false
+
+  - alias: reset-mfa-otp
+    description: verify existing second factor during password reset
+    providerId: basic-flow
+    topLevel: false
+    builtIn: false
+    authenticationExecutions:
+      - authenticator: conditional-user-configured
+        requirement: REQUIRED
+        authenticatorFlow: false
+      # Same alternatives as stepup-l1-otp: OTP is the default, "try another way"
+      # offers recovery codes for users who lost their authenticator device.
+      - authenticator: auth-otp-form
+        requirement: ALTERNATIVE
+        authenticatorFlow: false
+      - authenticator: auth-recovery-authn-code-form
+        requirement: ALTERNATIVE
         authenticatorFlow: false
