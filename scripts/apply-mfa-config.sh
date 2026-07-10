@@ -61,4 +61,14 @@ export IMPORT_CACHE_ENABLED=false
 # remember-me lifespan (see the config file).
 export MFA_L1_LOA_MAX_AGE="${MFA_L1_LOA_MAX_AGE:-7776000}"
 
-java -jar "${CONFIG_CLI_JAR}" || echo 'apply-mfa-config: keycloak-config-cli failed (non-fatal).'
+# Serialize the import across replicas with a Postgres advisory lock on Keycloak's own
+# database: during a multi-replica deploy the imports can race which causes conflicts.
+# The lock is scoped to the db session so if anything interrupts it, the lock is dropped.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Keycloak's bundled JDBC driver; the glob absorbs version bumps (java -cp itself only
+# expands `dir/*`, so let the shell resolve it).
+JDBC_JARS=(/opt/keycloak/lib/lib/main/org.postgresql.postgresql-*.jar)
+
+java -cp "${JDBC_JARS[0]}" "${SCRIPT_DIR}/PgAdvisoryLockRun.java" \
+    java -jar "${CONFIG_CLI_JAR}" \
+    || echo 'apply-mfa-config: keycloak-config-cli failed (non-fatal).'

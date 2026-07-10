@@ -65,5 +65,8 @@ COPY --chown=keycloak:keycloak keycloak/config-cli /opt/keycloak/config-cli
 
 COPY scripts/entry-keycloak.sh scripts/entry.sh
 COPY scripts/apply-mfa-config.sh scripts/apply-mfa-config.sh
+# Advisory-lock wrapper for apply-mfa-config.sh; runs source-file style on the image's
+# bundled Java against its bundled Postgres JDBC driver — no compile step, no packages.
+COPY scripts/PgAdvisoryLockRun.java scripts/PgAdvisoryLockRun.java
 
 ENTRYPOINT ["./scripts/entry.sh"]
