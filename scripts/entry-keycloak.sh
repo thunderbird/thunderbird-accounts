@@ -9,9 +9,9 @@
 # /scripts, not /opt/keycloak/scripts).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Start Keycloak in the background so we can reconcile the MFA step-up flow once it's ready,
-# then hand the foreground back to it. apply-mfa-config.sh runs keycloak-config-cli against
-# the realm and is fail-soft.
+# Start Keycloak in the background so we can reconcile the managed realm configuration once
+# it's ready, then hand the foreground back to it. apply-mfa-config.sh runs
+# keycloak-config-cli against the realm and is fail-soft.
 if [[ "$KC_DEV" == "yes" ]]; then
     /bin/bash /opt/keycloak/bin/kc.sh start-dev --import-realm &
 else
