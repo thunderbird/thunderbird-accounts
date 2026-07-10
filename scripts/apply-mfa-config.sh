@@ -18,23 +18,26 @@ HEALTH_PORT="${KC_HTTP_MANAGEMENT_PORT:-9000}"
 HTTP_PORT="${KC_HTTP_PORT:-8080}"
 
 # Poll /health/ready over a raw bash TCP socket — the Keycloak image ships no curl/wget.
+# stderr silenced to prevent connection refused spam (#1077).
 kc_ready() {
-    exec 3<>"/dev/tcp/localhost/${HEALTH_PORT}" 2>/dev/null || return 1
+    exec 3<>"/dev/tcp/localhost/${HEALTH_PORT}" || return 1
     printf 'GET /health/ready HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3
     local status_line
     IFS= read -r status_line <&3
     exec 3>&- 3<&-
     [[ "$status_line" == *" 200 "* ]]
-}
+} 2>/dev/null
 
-for _ in $(seq 1 90); do
+# Cold starts can exceed the old 180s window (#1077); wait up to 10 minutes.
+for i in $(seq 1 300); do
     kc_ready && break
     sleep 2
 done
 if ! kc_ready; then
-    echo 'apply-mfa-config: Keycloak did not become ready in time; skipping MFA flow reconcile.'
+    echo 'apply-mfa-config: Keycloak did not become ready within 10 minutes; skipping MFA flow reconcile.'
     exit 0
 fi
+echo "apply-mfa-config: Keycloak ready after ~$((i * 2))s; reconciling."
 
 if [[ -z "${KEYCLOAK_ADMIN_CLIENT_SECRET:-}" ]]; then
     echo 'apply-mfa-config: KEYCLOAK_ADMIN_CLIENT_SECRET unset; skipping MFA flow reconcile.'
