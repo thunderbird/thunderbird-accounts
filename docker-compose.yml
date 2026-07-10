@@ -178,11 +178,13 @@ services:
       KC_SPI_REALM_RESTAPI_EXTENSION_MFA_STEP_UP_MAX_AGE_SECONDS: "600"
       # keycloak-config-cli (see scripts/apply-mfa-config.sh) reconciles the MFA step-up flow
       # on startup, authenticating as the same admin client the accounts app uses (pulled from
-      # .env). MFA_L1_LOA_MAX_AGE MUST equal this realm's ssoSessionMaxLifespan, which is 36000
-      # in the local import (stage is 259200, prod is 864000 — set in pulumi/config.*.yaml).
+      # .env). MFA_L1_LOA_MAX_AGE MUST be at least the realm's longest possible SSO session —
+      # that is ssoSessionMaxLifespanRememberMe (7776000, 90 days, reconciled everywhere by
+      # keycloak/config-cli/tbpro-mfa-stepup.yaml) — or a still-valid remember-me session
+      # re-prompts for the password when the L1 window lapses.
       KEYCLOAK_ADMIN_CLIENT_ID: "${KEYCLOAK_ADMIN_CLIENT_ID:-tb-accounts-admin}"
       KEYCLOAK_ADMIN_CLIENT_SECRET: "${KEYCLOAK_ADMIN_CLIENT_SECRET:-}"
-      MFA_L1_LOA_MAX_AGE: "36000"
+      MFA_L1_LOA_MAX_AGE: "7776000"
     volumes:
       - "./keycloak/themes:/opt/keycloak/themes:z"
       - "./keycloak/data/export:/opt/keycloak/data/export:z"

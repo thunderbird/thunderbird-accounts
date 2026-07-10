@@ -734,12 +734,13 @@ resources:
                 value: "2"
               - name: KC_SPI_REALM_RESTAPI_EXTENSION_MFA_STEP_UP_MAX_AGE_SECONDS
                 value: "600"
-              # Level-1 LoA window for keycloak-config-cli. MUST equal this realm's
-              # ssoSessionMaxLifespan or a still-valid SSO session re-prompts for the password.
-              # Stage tbpro ssoSessionMaxLifespan is 259200 (72h) — keep these in sync if the
-              # realm's session settings change.
+              # Level-1 LoA window for keycloak-config-cli. MUST cover this realm's longest
+              # possible SSO session or a still-valid session re-prompts for the password.
+              # That is now ssoSessionMaxLifespanRememberMe (7776000, 90 days — reconciled by
+              # keycloak/config-cli/tbpro-mfa-stepup.yaml); keep these in sync if the realm's
+              # session settings change.
               - name: MFA_L1_LOA_MAX_AGE
-                value: "259200"
+                value: "7776000"
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG

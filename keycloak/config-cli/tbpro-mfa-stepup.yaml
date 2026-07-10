@@ -1,17 +1,21 @@
-# keycloak-config-cli: MFA step-up configuration for the tbpro realm.
+# keycloak-config-cli: remember-me session and MFA step-up configuration for the tbpro realm.
 #
-# This file is the single source of truth for the browser MFA step-up flow used by
-# keycloak-mfa-rest. It is applied on every Keycloak start (local + stage/prod) from
-# scripts/entry-keycloak.sh, replacing the old ensure_keycloak_mfa_flow management
-# command. config-cli reconciles declaratively: it (re)creates the managed flow to match
-# this file and leaves every other realm resource untouched (see IMPORT_MANAGED_* and the
-# no-delete strategy in entry-keycloak.sh).
+# This file is the single source of truth for the remember-me session timeouts and the
+# browser MFA step-up flow used by keycloak-mfa-rest. It is applied on every Keycloak
+# start (local + stage/prod) from scripts/entry-keycloak.sh, replacing the old
+# ensure_keycloak_mfa_flow management command. config-cli reconciles declaratively: it
+# applies only the properties declared here and leaves every other realm resource
+# untouched (see IMPORT_MANAGED_* and the no-delete strategy in apply-mfa-config.sh).
 #
-# Scope is deliberately narrow: only the step-up flow, its LoA authenticator configs,
-# the realm's acr.loa.map, and the browserFlow binding. A separate top-level flow
-# (browser-mfa-stepup) is bound rather than mutating the built-in "browser" flow, so the
-# original stays intact as a fallback (rebind browserFlow to "browser" to revert).
+# A separate top-level flow (browser-mfa-stepup) is bound rather than mutating the
+# built-in "browser" flow, so the original stays intact as a fallback (rebind browserFlow
+# to "browser" to revert).
 realm: tbpro
+
+# "Keep me signed in" sessions last 90 days (seconds). MFA_L1_LOA_MAX_AGE below must be
+# at least this value or remember-me users get re-prompted for their password much earlier.
+ssoSessionIdleTimeoutRememberMe: 7776000
+ssoSessionMaxLifespanRememberMe: 7776000
 
 # Map the named ACR values the provider checks (acr=2) to Keycloak LoA levels.
 attributes:
@@ -22,9 +26,10 @@ browserFlow: browser-mfa-stepup
 
 # LoA condition configs. Level 2 keeps loa-max-age=0 so Keycloak re-challenges the second
 # factor on every step-up, refreshing the token's auth_time for the provider's freshness
-# gate. Level 1's window MUST equal the realm's ssoSessionMaxLifespan: a shorter window
-# re-prompts username/password on a still-valid SSO session. MFA_L1_LOA_MAX_AGE is injected
-# per environment to match (local 36000, stage 259200, prod 864000).
+# gate. Level 1's window MUST cover the realm's longest possible SSO session — now
+# ssoSessionMaxLifespanRememberMe (90 days, above): a shorter window re-prompts
+# username/password on a still-valid session. MFA_L1_LOA_MAX_AGE is injected per
+# environment and is 7776000 everywhere (docker-compose.yml, pulumi/config.*.yaml).
 authenticatorConfig:
   - alias: "mfa step-up level 1"
     config:
