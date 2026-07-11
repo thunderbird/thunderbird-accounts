@@ -526,6 +526,7 @@ CONNECTION_INFO = {
     'JMAP': {'HOST': os.getenv('JMAP_HOST'), 'PORT': os.getenv('JMAP_PORT'), 'TLS': os.getenv('JMAP_TLS') == 'True'},
     'SMTP': {'HOST': os.getenv('SMTP_HOST'), 'PORT': os.getenv('SMTP_PORT'), 'TLS': os.getenv('SMTP_TLS') == 'True'},
 }
+SPF_HOST = os.getenv('SPF_HOST')
 
 ALLOWED_EMAIL_DOMAINS: list[str] = (
     [domain.strip() for domain in os.getenv('ALLOWED_EMAIL_DOMAINS', '').split(',')]

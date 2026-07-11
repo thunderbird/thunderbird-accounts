@@ -705,7 +705,7 @@ class MailClient:
 
         target_domain = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
         target_domain_fqdn = f'{target_domain}.'
-        target_top_domain = '.'.join(target_domain.split('.')[1:])
+        spf_host = settings.SPF_HOST.rstrip('.')
         normalized_cust_domain = cust_domain.rstrip('.')
         mx_name = '@' if len(normalized_cust_domain.split('.')) == 2 else f'{normalized_cust_domain}.'
 
@@ -744,7 +744,7 @@ class MailClient:
             {
                 'type': 'TXT',
                 'name': f'{normalized_cust_domain}.',
-                'content': f'v=spf1 include:spf.{target_top_domain} -all',
+                'content': f'v=spf1 include:{spf_host} -all',
                 'priority': '-',
             },
             {
