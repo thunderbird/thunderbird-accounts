@@ -12,6 +12,7 @@ from thunderbird_accounts.mail.exceptions import FailedToCreateDKIM, FailedToRel
     STALWART_API_AUTH_STRING='secret',
     STALWART_API_AUTH_METHOD='bearer',
     CONNECTION_INFO={'SMTP': {'HOST': 'mail.test.com'}},
+    SPF_HOST='spf.test.com',
     HOSTED_DKIM_DOMAIN='dkim.test.net',
     HOSTED_DKIM_SELECTORS=['tm1', 'tm2'],
 )
@@ -561,6 +562,7 @@ class TestMailClientDeleteDkim(TestCase):
     STALWART_API_AUTH_STRING='secret',
     STALWART_API_AUTH_METHOD='bearer',
     CONNECTION_INFO={'SMTP': {'HOST': 'mail.test.com'}},
+    SPF_HOST='spf.example.net',
     HOSTED_DKIM_DOMAIN='dkim.test.net',
     HOSTED_DKIM_SELECTORS=['tm1', 'tm2'],
 )
@@ -612,11 +614,18 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
             {
                 'type': 'TXT',
                 'name': 'tb.stosberg.com.',
-                'content': 'v=spf1 include:spf.test.com -all',
+                'content': 'v=spf1 include:spf.example.net -all',
                 'priority': '-',
             },
             records,
         )
+
+    @override_settings(CONNECTION_INFO={'SMTP': {'HOST': 'localhost'}}, SPF_HOST='spf.localhost')
+    def test_build_expected_dns_records_with_localhost(self):
+        records = self.mail_client.build_expected_dns_records(self.domain)
+
+        spf_record = next(record for record in records if record['content'].startswith('v=spf1'))
+        self.assertEqual(spf_record['content'], 'v=spf1 include:spf.localhost -all')
 
     def test_build_expected_dns_records_normalizes_customer_domain(self):
         records = self.mail_client.build_expected_dns_records('tb.stosberg.com.')

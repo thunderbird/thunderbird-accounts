@@ -56,6 +56,7 @@
 .smtp_host: &VAR_SMTP_HOST {name: "SMTP_HOST", value: "mail.thundermail.com"}
 .smtp_port: &VAR_SMTP_PORT {name: "SMTP_PORT", value: "465"}
 .smtp_tls: &VAR_SMTP_TLS {name: "SMTP_TLS", value: "True"}
+.spf_host: &VAR_SPF_HOST {name: "SPF_HOST", value: "spf.thundermail.com"}
 .stalwart_base_api_url: &VAR_STALWART_BASE_API_URL {name: "STALWART_BASE_API_URL", value: "https://mailstrom-prod-management-i.thundermail.com:8080"}
 .stalwart_base_jmap_url: &VAR_STALWART_BASE_JMAP_URL {name: "STALWART_BASE_JMAP_URL", value: "https://mail.thundermail.com"}
 .support_contact: &VAR_SUPPORT_CONTACT {name: "SUPPORT_CONTACT", value: "dummy@example.org"}
@@ -414,6 +415,7 @@ resources:
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
+                - *VAR_SPF_HOST
                 - *VAR_STALWART_BASE_API_URL
                 - *VAR_STALWART_BASE_JMAP_URL
                 - *VAR_STALWART_DKIM_STAGE_MANAGEMENT_ENABLED
@@ -508,6 +510,7 @@ resources:
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
+                - *VAR_SPF_HOST
                 - *VAR_STALWART_BASE_API_URL
                 - *VAR_STALWART_BASE_JMAP_URL
                 - *VAR_STALWART_DKIM_STAGE_MANAGEMENT_ENABLED
@@ -923,6 +926,8 @@ resources:
                 value: '465'
               - name: SMTP_TLS
                 value: 'True'
+              - name: SPF_HOST
+                value: 'spf.thundermail.com'
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
               - name: OIDC_URL_AUTH
