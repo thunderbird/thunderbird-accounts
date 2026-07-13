@@ -15,3 +15,9 @@ const messageType = computed(() => {
 <template>
   <notice-bar data-testid="notice-bar" class="notice-bar" :type="messageType" v-if="message?.type">{{ message?.summary }}</notice-bar>
 </template>
+
+<style scoped>
+.notice-bar {
+  margin-block-end: 1.5rem;
+}
+</style>

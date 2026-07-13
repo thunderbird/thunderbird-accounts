@@ -95,15 +95,11 @@ section {
       flex-direction: column;
       padding: 6rem 2rem;
 
-      .message-bar {
-        margin-block-end: 1.5rem;
-      }
-
       .logo-link {
         display: block;
         text-decoration: none;
         width: min-content;
-        margin-block-end: 2rem;
+        margin-block-end: 1.5rem;
 
         .logo {
           height: 36px;
