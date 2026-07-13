@@ -53,9 +53,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Pinned to matching Ubuntu versions across arches (there is no
+          # `ubuntu-latest-arm` alias, so amd64 is pinned to 24.04 to match).
           - platform: linux/amd64
             arch: amd64
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
           - platform: linux/arm64
             arch: arm64
             runner: ubuntu-24.04-arm
