@@ -219,6 +219,10 @@
         },
         "customDomains": {
           "customDomains": "Custom Domains",
+          "domains": "Domains",
+          "ownerDNSRecords": "{domainName} DNS records",
+          "conflictingRecords": "Conflicting records",
+          "allRecords": "All records",
           "customDomainsDescriptionInitial": "Use your own domain to create personalized email addresses.",
           "customDomainsDescriptionAdd": "Adding a domain you own to your account allows you to create aliases using your custom domains.",
           "domainsAdded": "{domainCount} / {domainLimit} domains added",
@@ -246,9 +250,16 @@
           "recordsTableHeaderNameHost": "{'Name/Host'}",
           "recordsTableHeaderValueData": "{'Value/Data'}",
           "recordsTableHeaderPriority": "Priority",
+          "copyValue": "Copy value",
+          "recordAction": {
+            "add": "Add",
+            "edit": "Edit",
+            "remove": "Remove"
+          },
           "recordConflictWarning": "Conflict detected. Replace {currentValue} with the value in the row above.",
           "mxRecordConflictWarning": "This record conflicts. Remove conflicting MX records or change the priority.",
           "spfRecordConflictWarning": "This record conflicts. The current SPF record does not contain {includeValue}.",
+          "spfRecordIncludeValue": "the expected include value",
           "recordMissingWarning": "Record is missing.",
           "staleDnsRecordsTitle": "Remove these stale records",
           "staleDnsRecords": "Please remove the {type} record for {name} as it points to {existing_values}.",
@@ -261,6 +272,53 @@
           "domainAlreadyExists": "Domain already exists",
           "domainAlreadyConfigured": "This domain is already configured. Please {link} in case you believe this is a mistake.",
           "reachOutToSupport": "reach out to support",
+          "recordActionInfo": {
+            "MX": {
+              "remove": {
+                "remove": "Remove",
+                "content": "{bold} this record from your DNS register site to avoid having email sent to multiple servers. {link}",
+                "link": "Learn more on our support site."
+              },
+              "add": {
+                "add": "Add",
+                "content": "{bold} this record to your DNS register site to have your email sent to Thunderbird Pro servers. {link}",
+                "link": "Learn more on our support site."
+              },
+              "edit": {
+                "edit": "Edit",
+                "content": "{bold} this record from your DNS register site to avoid having email sent to multiple servers. {link}",
+                "link": "Learn more on our support site."
+              }
+            },
+            "SRV": {
+              "remove": {
+                "remove": "Remove",
+                "content": "{bold} this record from your DNS register site to avoid compatibility issues."
+              },
+              "add": {
+                "add": "Add",
+                "content": "{bold} this record to your DNS register site to avoid compatibility issues."
+              },
+              "edit": {
+                "edit": "Edit",
+                "content": "{bold} this record from your DNS register site to avoid compatibility issues."
+              }
+            },
+            "OTHER": {
+              "remove": {
+                "remove": "Remove",
+                "content": "{bold} this record from your DNS register site to avoid having your outgoing email be flagged as spam."
+              },
+              "add": {
+                "add": "Add",
+                "content": "{bold} this record to your DNS register site to avoid having your outgoing email be flagged as spam."
+              },
+              "edit": {
+                "edit": "Edit",
+                "content": "{bold} this record from your DNS register site to avoid having your outgoing email be flagged as spam."
+              }
+            }
+          },
           "verificationValidationErrors": {
             "mxLookupError": "Unable to find MX record pointing to Thundermail",
             "ipLookupError": "Unable to resolve IP addresses",
