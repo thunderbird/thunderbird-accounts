@@ -16,6 +16,12 @@ from thunderbird_accounts.mail.exceptions import (
 )
 
 
+class StalwartPrincipalType(StrEnum):
+    INDIVIDUAL = 'individual'
+    DOMAIN = 'domain'
+    API_KEY = 'apiKey'
+
+
 class StalwartErrors(StrEnum):
     """Errors defined in Stalwart's management api
     https://github.com/stalwartlabs/stalwart/blob/4d819a1041b0adfce3757df50929764afa10e27b/crates/http/src/management/mod.rs#L58
@@ -259,7 +265,7 @@ class MailClient:
         if error == StalwartErrors.NOT_FOUND.value:
             raise DomainNotFoundError(domain)
 
-        assert data.get('data', {}).get('type') == 'domain'
+        assert data.get('data', {}).get('type') == StalwartPrincipalType.DOMAIN
 
         return data.get('data')
 
@@ -423,7 +429,7 @@ class MailClient:
         quota: Optional[int] = None,
     ):
         data = {
-            'type': 'individual',
+            'type': StalwartPrincipalType.INDIVIDUAL,
             'name': principal_id,
             'description': full_name,
             'emails': emails,
@@ -448,7 +454,7 @@ class MailClient:
         if error == StalwartErrors.NOT_FOUND.value:
             raise AccountNotFoundError(principal_id)
 
-        assert data.get('data', {}).get('type') == 'individual'
+        assert data.get('data', {}).get('type') == StalwartPrincipalType.INDIVIDUAL
 
         # Return the pkid
         return data.get('data')
@@ -590,7 +596,7 @@ class MailClient:
 
         api_key_name = 'tb-accounts-api-key'
         secret = get_random_string(32)
-        data = {'type': 'apiKey', 'name': api_key_name, 'secrets': [secret], 'roles': ['admin']}
+        data = {'type': StalwartPrincipalType.API_KEY, 'name': api_key_name, 'secrets': [secret], 'roles': ['admin']}
 
         response = self._create_principal(data)
         data = response.json()
@@ -607,7 +613,7 @@ class MailClient:
 
     def create_domain(self, domain, description=''):
         data = {
-            'type': 'domain',
+            'type': StalwartPrincipalType.DOMAIN,
             'name': domain,
             'description': description,
         }
