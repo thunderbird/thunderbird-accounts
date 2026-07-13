@@ -1,6 +1,7 @@
 from requests.auth import HTTPBasicAuth
+from enum import StrEnum
 from json import JSONDecodeError
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode, quote, urlsplit
 from django.utils.crypto import get_random_string
 import requests
 from time import time
@@ -12,9 +13,13 @@ from socket import gethostbyname, gethostname
 from typing import Optional
 
 from django.conf import settings
+from django.contrib import admin
+from django.contrib.auth import REDIRECT_FIELD_NAME
+from django.contrib.auth.views import redirect_to_login
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied, SuspiciousOperation
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied, SuspiciousOperation
 from django.http import HttpRequest, JsonResponse, HttpResponseRedirect
+from django.shortcuts import resolve_url
 from django.utils.translation import gettext_lazy as _
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 from sentry_sdk import capture_exception
@@ -33,6 +38,77 @@ from mozilla_django_oidc.utils import add_state_and_verifier_and_nonce_to_sessio
 OIDC_ACCESS_TOKEN_KEY = 'oidc_access_token'
 OIDC_ID_TOKEN_KEY = 'oidc_id_token'
 OIDC_REFRESH_TOKEN_KEY = 'oidc_refresh_token'
+
+# authorizations supported by authorized_path()
+class RequiredAuth(StrEnum):
+    AUTHENTICATED = 'authenticated'
+    ACTIVE_SUBSCRIPTION = 'active_subscription'
+    ADMIN = 'admin'
+
+
+class AuthorizationMiddleware:
+    """
+    Enforce authorization from included URLconfs for secure-by-default protection of routes in there.
+    Ex:  authorized_path('', mail_urls.admin_urlpatterns, required_auth=Authz.ADMIN),
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        required_auth = view_kwargs.pop('required_auth', None)
+        if required_auth is None:
+            return None
+
+        try:
+            required_auth = RequiredAuth(required_auth)
+        except ValueError as exc:
+            raise ImproperlyConfigured(f'Unsupported required auth value: {required_auth}') from exc
+
+        if required_auth == RequiredAuth.AUTHENTICATED:
+            return self._require_authenticated(request)
+
+        if required_auth == RequiredAuth.ACTIVE_SUBSCRIPTION:
+            response = self._require_authenticated(request)
+            # Fail fast if they are not logged in.
+            if response is not None:
+                return response
+
+            from thunderbird_accounts.subscription.decorators import active_subscription_denial_response
+
+            return active_subscription_denial_response(
+                request,
+                error_message=view_kwargs.pop('active_subscription_error_message', None),
+                response_data=view_kwargs.pop('active_subscription_response_data', None),
+                status=view_kwargs.pop('active_subscription_status', 403),
+            )
+
+        if required_auth == RequiredAuth.ADMIN:
+            if admin.site.has_permission(request):
+                return None
+            return self._redirect_to_login(request, 'admin:login')
+
+        return None
+
+    def _require_authenticated(self, request):
+        if request.user.is_authenticated:
+            return None
+        return self._redirect_to_login(request, settings.LOGIN_URL)
+
+    @staticmethod
+    def _redirect_to_login(request, login_url, redirect_field_name=REDIRECT_FIELD_NAME):
+        path = request.build_absolute_uri()
+        resolved_login_url = resolve_url(login_url)
+        login_scheme, login_netloc = urlsplit(resolved_login_url)[:2]
+        current_scheme, current_netloc = urlsplit(path)[:2]
+        if (not login_scheme or login_scheme == current_scheme) and (
+            not login_netloc or login_netloc == current_netloc
+        ):
+            path = request.get_full_path()
+        return redirect_to_login(path, resolved_login_url, redirect_field_name)
 
 
 def store_tokens(request, access_token, id_token, refresh_token):

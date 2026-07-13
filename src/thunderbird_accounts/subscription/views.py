@@ -5,7 +5,6 @@ import sentry_sdk
 
 from django.db import transaction as dj_transaction
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse, HttpRequest, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
@@ -23,7 +22,7 @@ from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks
-from thunderbird_accounts.subscription.decorators import active_subscription_required, inject_paddle
+from thunderbird_accounts.subscription.decorators import inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price, Subscription, Transaction
 from thunderbird_accounts.core.exceptions import UnexpectedBehaviour
 
@@ -42,7 +41,6 @@ def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
     return True
 
 
-@login_required
 @require_http_methods(['POST'])
 def get_paddle_information(request: Request):
     signer = Signer()
@@ -73,7 +71,6 @@ def get_paddle_information(request: Request):
     )
 
 
-@login_required
 @require_http_methods(['PUT'])
 def set_paddle_transaction_id(request: Request):
     """This error is used to work-around the fact we don't get a transaction id from Paddle's successUrl redirect.
@@ -84,7 +81,6 @@ def set_paddle_transaction_id(request: Request):
     return JsonResponse({'success': True})
 
 
-@login_required
 @require_http_methods(['POST'])
 def is_paddle_transaction_done(request: Request):
     """Checks if the Paddle transaction has finished and returns True or False.
@@ -106,7 +102,6 @@ def is_paddle_transaction_done(request: Request):
     return JsonResponse({'status': status})
 
 
-@login_required
 @inject_paddle
 def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     """User is redirected by Paddle via the successUrl. This means we have a transaction that's paid or
@@ -180,9 +175,7 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     return redirect_response
 
 
-@login_required
 @require_http_methods(['POST'])
-@active_subscription_required(response_data={}, status=401)
 @inject_paddle
 def get_paddle_portal_link(request: Request, paddle: Client):
     subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
@@ -237,9 +230,7 @@ def handle_paddle_webhook(request: Request):
     return response
 
 
-@login_required
 @require_http_methods(['POST'])
-@active_subscription_required(error_message='No active subscription found', status=404)
 @inject_paddle
 def get_subscription_plan_info(request: Request, paddle: Client):
     """Returns the user's current subscription information including plan details, pricing, and features."""

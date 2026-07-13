@@ -184,6 +184,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'thunderbird_accounts.authentication.middleware.AuthorizationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'mozilla_django_oidc.middleware.SessionRefresh',
     'thunderbird_accounts.authentication.middleware.OIDCRefreshSession',

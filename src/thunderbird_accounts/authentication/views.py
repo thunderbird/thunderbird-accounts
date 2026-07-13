@@ -2,9 +2,8 @@ import csv
 import re
 
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import logout as django_logout
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import permission_required
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
@@ -26,14 +25,12 @@ from thunderbird_accounts.core.utils import get_absolute_url
 DISCOUNT_ID_PATTERN = re.compile(r'^dsc_[a-z0-9]{26}$')
 
 
-@login_required
 def start_reset_password_flow(request: HttpRequest):
     """Generates a url and redirects the user to an app initiated action that will start a flow to
     update their password."""
     return HttpResponseRedirect(create_aia_url(KeycloakRequiredAction.UPDATE_PASSWORD))
 
 
-@method_decorator(login_required, name='dispatch')
 class MfaReauthenticationRequestView(OIDCAuthenticationRequestView):
     """OIDC step-up entry point for sensitive MFA-management actions.
 
@@ -88,7 +85,6 @@ def start_oidc_logout(request: HttpRequest):
     return HttpResponseRedirect(redirect_url)
 
 
-@login_required
 def oidc_logout_callback(request: HttpRequest):
     """Finalize logout locally after the user confirmed the logout."""
     django_logout(request)
@@ -98,7 +94,6 @@ def oidc_logout_callback(request: HttpRequest):
 
 
 @require_http_methods(['POST'])
-@staff_member_required()
 @permission_required('authentication.add_allowlistentry')
 def bulk_import_allow_list(request: HttpRequest):
     """
@@ -176,7 +171,6 @@ def bulk_import_allow_list(request: HttpRequest):
 
 
 @method_decorator(never_cache, name='dispatch')
-@method_decorator(staff_member_required, name='dispatch')
 @method_decorator(permission_required('authentication.add_allowlistentry'), name='dispatch')
 class AdminAllowListEntryImport(TemplateView):
     template_name = 'admin/authentication/allowlistentry/import.html'

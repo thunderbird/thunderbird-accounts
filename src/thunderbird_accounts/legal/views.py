@@ -9,7 +9,6 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout as django_logout
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
@@ -97,7 +96,6 @@ def _record_response(request, action: str) -> JsonResponse:
     return JsonResponse({'responses': created})
 
 
-@login_required
 @require_http_methods(['GET'])
 def get_current_legal_docs(request):
     """Returns current TOS and Privacy documents with their pre-rendered HTML content
@@ -130,13 +128,11 @@ def get_current_legal_docs(request):
     return JsonResponse({'documents': docs_data})
 
 
-@login_required
 @require_http_methods(['POST'])
 def accept_legal_docs(request):
     return _record_response(request, LegalDocumentResponse.Action.ACCEPTED)
 
 
-@login_required
 @require_http_methods(['POST'])
 def decline_legal_docs(request):
     _record_response(request, LegalDocumentResponse.Action.DECLINED)
