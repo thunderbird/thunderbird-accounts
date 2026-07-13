@@ -14,7 +14,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from thunderbird_accounts.authentication import api as auth_api, views as auth_views
 from thunderbird_accounts.core import views as core_views
 from thunderbird_accounts.infra import views as infra_views
-from thunderbird_accounts.mail import views as mail_views, api as mail_api
+from thunderbird_accounts.mail import views as mail_views, api as mail_api, hosted_dkim_backfill
 from thunderbird_accounts.mail.views import jmap_test_page
 from thunderbird_accounts.subscription import views as subscription_views
 from thunderbird_accounts.support import views as support_views
@@ -135,6 +135,11 @@ if settings.DEBUG:
     urlpatterns.append(path('docs/', include('rest_framework.urls')))
 
 urlpatterns += [
+    path(
+        'mail/admin/hosted-dkim-backfill/',
+        hosted_dkim_backfill.admin_hosted_dkim_backfill,
+        name='admin_hosted_dkim_backfill',
+    ),
     path(
         'mail/admin/stalwart/',
         mail_views.AdminStalwartList.as_view(),
