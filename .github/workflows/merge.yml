@@ -3,13 +3,31 @@ name: deploy-stage
 
 concurrency:
   group: deploy-stage
-  cancel-in-progress: true
+  # Serialize (don't cancel) deploys. A single global group keeps only one
+  # `pulumi up` in flight at a time (Pulumi holds a stack-wide lock -- see the
+  # deploy job comment / issue #884), and cancel-in-progress: false ensures a
+  # later run can't abort an in-flight deploy. Previously cancel-in-progress:
+  # true let a Dependabot merge cancel an in-flight keycloak-aware run, whose
+  # replacement then change-detection-skipped -- so that commit never deployed
+  # to stage (observed on #1087). Narrowing the group per-ref instead would let
+  # deploys run in parallel and collide on the Pulumi stack lock, so we keep the
+  # single group and queue runs.
+  cancel-in-progress: false
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      force_accounts:
+        description: "Force building & deploying the accounts image, regardless of change detection"
+        type: boolean
+        default: false
+      force_keycloak:
+        description: "Force building & deploying the keycloak image, regardless of change detection"
+        type: boolean
+        default: false
 
 permissions:
   id-token: write
@@ -75,7 +93,9 @@ jobs:
     if: >-
       needs.detect-changes.outputs.src-changed == 'true' ||
       needs.detect-changes.outputs.keycloak-theme-changed == 'true' ||
-      needs.detect-changes.outputs.iac-changed == 'true'
+      needs.detect-changes.outputs.iac-changed == 'true' ||
+      github.event.inputs.force_accounts == 'true' ||
+      github.event.inputs.force_keycloak == 'true'
     environment:
       name: staging
       deployment: true
@@ -85,9 +105,11 @@ jobs:
       PULUMI_DIR: "pulumi"
       # Whether the accounts image was (re)built this run; gates the
       # accounts config update, its pulumi targets, and the release artifacts.
-      BUILD_ACCOUNTS: ${{ needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true' }}
-      # Whether the keycloak image was (re)built this run.
-      BUILD_KEYCLOAK: ${{ needs.detect-changes.outputs.keycloak-theme-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true' }}
+      # The force_accounts workflow_dispatch input overrides change detection.
+      BUILD_ACCOUNTS: ${{ needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true' || github.event.inputs.force_accounts == 'true' }}
+      # Whether the keycloak image was (re)built this run; the force_keycloak
+      # workflow_dispatch input overrides change detection.
+      BUILD_KEYCLOAK: ${{ needs.detect-changes.outputs.keycloak-theme-changed == 'true' || needs.detect-changes.outputs.iac-changed == 'true' || github.event.inputs.force_keycloak == 'true' }}
     outputs:
       # Non-empty only when the accounts image was built; used to gate create-release.
       accounts-image: ${{ steps.build-accounts.outputs.accounts-image }}
