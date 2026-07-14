@@ -110,7 +110,7 @@ docker compose up --build -V
 ### After making changes
 
 Most source files are mounted into the development containers:
-
+e
 * Changes under `assets/` should hot-reload through the `vite-dev` service.
 * Changes under `src/thunderbird_accounts/` should restart the `accounts` service automatically through Uvicorn reload.
 * Changes to Django templates should also be picked up by the reload process.
@@ -134,6 +134,25 @@ The first boot may take a while as:
 * Accounts pulls the latest Paddle product and subscription information (if you have the Paddle setup.)
 
 Please wait until the containers are fully booted before continuing.
+
+## Working with Git worktrees
+
+Git worktrees are useful for working on multiple branches checkouts at the same time.
+
+If the branch you are working on has the same major dependencies as main, you re-use the same Docker
+volumes, environment file and mail storage to save time vs bootstrapping a completely unique
+environment. To do that, run the following from a new worktree:
+
+```bash
+# Symlink (or copy) the main branch .env here
+ln -s /path/to/main/thunderbird-accounts/.env .env
+
+# Remove the `mail` folder and symlink that the main mail storage as well.:
+rm -rf mail &&  ln -s /path/to/main/thunderbird-accounts/mail mail
+
+# The `-p` flag stands for "project-name" and makes sure the same volumes get re-used.
+docker compose -p thunderbird-accounts up --build
+```
 
 ## Logging in
 
