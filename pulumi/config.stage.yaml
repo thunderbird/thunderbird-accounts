@@ -38,11 +38,11 @@
 .hosted_dkim_cloudflare_enabled: &VAR_HOSTED_DKIM_CLOUDFLARE_ENABLED {name: "HOSTED_DKIM_CLOUDFLARE_ENABLED", value: "True"}
 .hosted_dkim_cloudflare_ttl: &VAR_HOSTED_DKIM_CLOUDFLARE_TTL {name: "HOSTED_DKIM_CLOUDFLARE_TTL", value: "3600"}
 .hosted_dkim_cloudflare_zone_id: &VAR_HOSTED_DKIM_CLOUDFLARE_ZONE_ID {name: "HOSTED_DKIM_CLOUDFLARE_ZONE_ID", value: "c6e8d56e54e126edb68c1e8f1bbafe49"}
-.oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/auth"}
-.oidc_url_jwks: &VAR_OIDC_URL_JWKS {name: "OIDC_URL_JWKS", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs"}
-.oidc_url_logout: &VAR_OIDC_URL_LOGOUT {name: "OIDC_URL_LOGOUT", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout"}
-.oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token"}
-.oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo"}
+.oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/auth/"}
+.oidc_url_jwks: &VAR_OIDC_URL_JWKS {name: "OIDC_URL_JWKS", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/certs/"}
+.oidc_url_logout: &VAR_OIDC_URL_LOGOUT {name: "OIDC_URL_LOGOUT", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/logout/"}
+.oidc_url_token: &VAR_OIDC_URL_TOKEN {name: "OIDC_URL_TOKEN", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/token/"}
+.oidc_url_user: &VAR_OIDC_URL_USER {name: "OIDC_URL_USER", value: "https://auth-stage.tb.pro/realms/tbpro/protocol/openid-connect/userinfo/"}
 .paddle_env: &VAR_PADDLE_ENV {name: "PADDLE_ENV", value: "sandbox"}
 .public_base_url: &VAR_PUBLIC_BASE_URL {name: "PUBLIC_BASE_URL", value: "https://accounts-stage.tb.pro"}
 .redis_celery_db: &VAR_REDIS_CELERY_DB {name: "REDIS_CELERY_DB", value: "5"}
