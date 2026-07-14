@@ -4,8 +4,8 @@
 {% block form_top %}
   {% if not is_popup %}
     {% blocktranslate %}
-      <p>This will create a Keycloak login and email them to add a password.</p>
-      <p><b>They will need to log in once</b> to set up their Stalwart email inbox.</p>
+      <p>This will create a Keycloak login.</p>
+      <p>If you don't send them a reset password email, you'll have to send one via the Keycloak admin panel.</p>
     {% endblocktranslate %}
   {% endif %}
 {% endblock %}

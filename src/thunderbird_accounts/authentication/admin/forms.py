@@ -1,3 +1,4 @@
+from thunderbird_accounts.authentication.utils import KeycloakRequiredAction
 import zoneinfo
 
 import sentry_sdk
@@ -84,6 +85,13 @@ class CustomUserFormBase(forms.ModelForm):
 
 
 class CustomNewUserForm(CustomUserFormBase):
+    send_reset_password_email = forms.BooleanField(
+        label=_('Send "Reset Password" email'),
+        required=False,
+        widget=forms.CheckboxInput(),
+        help_text=_('Send a "Reset Password" email to the user\'s recovery email after they\'re created.'),
+    )
+
     def clean(self):
         super().clean()
 
@@ -94,12 +102,17 @@ class CustomNewUserForm(CustomUserFormBase):
         # Create the user on keycloak's end
         keycloak = KeycloakClient()
         try:
+            aia_action = (
+                KeycloakRequiredAction.UPDATE_PASSWORD if self.cleaned_data.get('send_reset_password_email') else None
+            )
+
             name = f'{self.cleaned_data.get("first_name", "")} {self.cleaned_data.get("last_name", "")}'.strip()
             keycloak_pkid = keycloak.import_user(
                 self.cleaned_data.get('username'),
                 self.cleaned_data.get('recovery_email'),
                 timezone=self.cleaned_data.get('timezone'),
                 name=name,
+                send_action_email=aia_action,
             )
 
             # Save the oidc id so it matches on login

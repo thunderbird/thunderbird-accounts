@@ -265,7 +265,10 @@ AuthConfig.name so it looks like `thunderbird_accounts.<app name>`.
 Ensure you have the requirements in docs installed and run the following command in the project's root folder:
 
 ```shell
-sphinx-build docs build
+uv run sphinx-build docs build
+
+# Or by running a handy shell script
+./build-and-run-docs.sh
 ```
 
 ## Feature Flags
