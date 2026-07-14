@@ -141,7 +141,7 @@ class OIDCRefreshSessionTestCase(TestCase):
         request = self.factory.get('/')
         request.session = session
         request.user = self.user
-        resp = self.middleware.process_request(request)
+        self.middleware.process_request(request)
         self.assertEqual(request.session.get(EXIT_STATE_KEY), OIDCRefreshSession.EXIT_STATES.TOKEN_IS_STORED)
         self.assertNotEqual(request.session.get(OIDC_ACCESS_TOKEN_KEY), original_access_token)
 
