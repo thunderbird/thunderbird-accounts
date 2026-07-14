@@ -14,7 +14,7 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.core.tests.utils import oidc_force_login
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, StaleDNSRecordCode
 from thunderbird_accounts.mail.models import Account, Domain, Email
-from thunderbird_accounts.mail.views import get_dns_records, remove_custom_domain
+from thunderbird_accounts.mail.views import create_custom_domain, get_dns_records, remove_custom_domain
 
 
 class AppPasswordApiTestCase(TestCase):
@@ -154,6 +154,58 @@ class ActiveSubscriptionRequiredMailViewsTestCase(TestCase):
                     response.json(),
                     {'success': False, 'error': 'An active subscription is required.'},
                 )
+
+
+class CreateCustomDomainTestCase(TestCase):
+    def setUp(self):
+        self.request_factory = RequestFactory()
+        self.plan = Plan.objects.create(name='Test Plan', mail_domain_count=10)
+        self.user = User.objects.create(
+            username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}',
+            oidc_id='1234',
+            plan=self.plan,
+        )
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
+        self.url = reverse('add_custom_domain')
+
+    def create_request(self, domain_name: str):
+        request = self.request_factory.post(
+            self.url,
+            data=json.dumps({'domain-name': domain_name}),
+            content_type='application/json',
+        )
+        request.user = self.user
+        return request
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_rejects_invalid_domain_before_remote_calls(self, mock_mail_client_cls, mock_publish_hosted_dkim):
+        response = create_custom_domain(self.create_request('user@example.com'))
+
+        self.assertEqual(response.status_code, 400)
+        data = json.loads(response.content.decode())
+        self.assertFalse(data['success'])
+        self.assertEqual('Enter a valid domain name.', data['error'])
+        mock_mail_client_cls.assert_not_called()
+        mock_publish_hosted_dkim.assert_not_called()
+        self.assertFalse(Domain.objects.exists())
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_normalizes_domain_before_creating_it(self, mock_mail_client_cls, mock_publish_hosted_dkim):
+        mock_instance = Mock()
+        mock_instance.get_domain.side_effect = DomainNotFoundError('example.com')
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = create_custom_domain(self.create_request(' Example.COM '))
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content.decode())
+        self.assertTrue(data['success'])
+        self.assertTrue(Domain.objects.filter(name='example.com', user=self.user).exists())
+        mock_instance.get_domain.assert_called_once_with('example.com')
+        mock_instance.create_dkim.assert_called_once_with('example.com')
+        mock_publish_hosted_dkim.assert_called_once_with('example.com')
 
 
 @override_settings(HOSTED_DKIM_DOMAIN='dkim.example.net', HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'])

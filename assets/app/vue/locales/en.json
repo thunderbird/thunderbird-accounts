@@ -230,6 +230,7 @@
           "enterCustomDomain": "Enter custom domain",
           "domainPlaceholder": "example.com",
           "domainHelp": "Enter your existing domain from registrars like GoDaddy, Namecheap, Squarespace Domains or another registrar.",
+          "invalidDomain": "Enter a valid domain name.",
           "continue": "Continue",
           "verifyStepTitle": "Next Step: Add your Thundermail DNS records",
           "verifyStepOneTitle": "1. Open your domain DNS settings",

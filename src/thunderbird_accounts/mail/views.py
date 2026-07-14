@@ -24,6 +24,7 @@ from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, MailClient, StaleDNSRecordCode
 from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
+from thunderbird_accounts.core.validators import normalize_custom_domain
 from thunderbird_accounts.mail.exceptions import (
     AccessTokenNotFound,
     AccountNotFoundError,
@@ -147,7 +148,9 @@ def create_custom_domain(request: HttpRequest):
     if not domain_name:
         return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
 
-    domain_name = domain_name.lower()
+    domain_name = normalize_custom_domain(domain_name)
+    if not domain_name:
+        return JsonResponse({'success': False, 'error': _('Enter a valid domain name.')}, status=400)
 
     custom_domain_count = request.user.domains.count()
 
