@@ -350,6 +350,7 @@ class OIDCRefreshSession(SessionRefresh):
         """Sets an exit state on the middleware, and by using the power of code you can inspect it later!
 
         This function is a noop outside of testing environments."""
+        logging.debug(f'Setting exit state to [{state.value}]')
         if not import_from_settings('IS_TEST'):
             return
         request.session[EXIT_STATE_KEY] = state
@@ -477,7 +478,9 @@ class OIDCRefreshSession(SessionRefresh):
             default_response = HttpResponseRedirect(refresh_url)
             xhr_response_json['refresh_url'] = refresh_url
 
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.accepts('application/json'):
+        preferred_response = request.get_preferred_type(['text/html', 'application/json'])
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or preferred_response == 'application/json':
             return JsonResponse(xhr_response_json, status=403)
         else:
             return default_response
