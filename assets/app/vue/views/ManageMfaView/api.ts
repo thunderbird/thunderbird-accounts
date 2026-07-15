@@ -1,3 +1,5 @@
+import { useAuthfulFetch } from "@/composables/useFetch";
+
 export interface TotpCredential {
   id: string;
   label: string;
@@ -85,56 +87,56 @@ const parseJsonResponse = async <T>(response: Response): Promise<T> => {
 };
 
 export const getMfaMethods = async () => {
-  const response = await fetch('/api/v1/auth/mfa/methods/', {
+  const { response } = await useAuthfulFetch('/api/v1/auth/mfa/methods/', {
     method: 'GET',
     headers: jsonHeaders,
   });
 
-  return parseJsonResponse<MfaMethodsResponse>(response);
+  return parseJsonResponse<MfaMethodsResponse>(response.value);
 };
 
 export const startTotpSetup = async () => {
-  const response = await fetch('/api/v1/auth/mfa/totp/setup/start/', {
+  const { response } = await useAuthfulFetch('/api/v1/auth/mfa/totp/setup/start/', {
     method: 'POST',
     headers: jsonHeaders,
   });
 
-  return parseJsonResponse<TotpSetupResponse>(response);
+  return parseJsonResponse<TotpSetupResponse>(response.value);
 };
 
 export const confirmTotpSetup = async (code: string, logoutOtherSessions: boolean) => {
-  const response = await fetch('/api/v1/auth/mfa/totp/setup/confirm/', {
+  const { response } = await useAuthfulFetch('/api/v1/auth/mfa/totp/setup/confirm/', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({ code, logoutOtherSessions }),
   });
 
-  return parseJsonResponse<TotpConfirmResponse>(response);
+  return parseJsonResponse<TotpConfirmResponse>(response.value);
 };
 
 export const removeTotpCredential = async (credentialId: string) => {
-  const response = await fetch(`/api/v1/auth/mfa/totp/credentials/${credentialId}/`, {
+  const { response } = await useAuthfulFetch(`/api/v1/auth/mfa/totp/credentials/${credentialId}/`, {
     method: 'DELETE',
     headers: jsonHeaders,
   });
 
-  return parseJsonResponse<{ success: boolean }>(response);
+  return parseJsonResponse<{ success: boolean }>(response.value);
 };
 
 export const regenerateRecoveryCodes = async () => {
-  const response = await fetch('/api/v1/auth/mfa/recovery-codes/regenerate/', {
+  const { response } = await useAuthfulFetch('/api/v1/auth/mfa/recovery-codes/regenerate/', {
     method: 'POST',
     headers: jsonHeaders,
   });
 
-  return parseJsonResponse<RegenerateRecoveryCodesResponse>(response);
+  return parseJsonResponse<RegenerateRecoveryCodesResponse>(response.value);
 };
 
 export const removeRecoveryCodesCredential = async (credentialId: string) => {
-  const response = await fetch(`/api/v1/auth/mfa/recovery-codes/credentials/${credentialId}/`, {
+  const { response } = await useAuthfulFetch(`/api/v1/auth/mfa/recovery-codes/credentials/${credentialId}/`, {
     method: 'DELETE',
     headers: jsonHeaders,
   });
 
-  return parseJsonResponse<{ success: boolean }>(response);
+  return parseJsonResponse<{ success: boolean }>(response.value);
 };
