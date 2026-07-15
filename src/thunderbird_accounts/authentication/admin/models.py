@@ -134,6 +134,13 @@ class CustomUserAdmin(UserAdmin):
                 'fields': ('first_name', 'last_name'),
             },
         ),
+        (
+            _('Side Effects'),
+            {
+                'classes': ('wide',),
+                'fields': ('send_reset_password_email',),
+            },
+        ),
     )
 
     def delete_queryset(self, request, queryset):

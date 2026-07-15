@@ -13,6 +13,7 @@ Contents
     :maxdepth: 2
     :caption: Admin Panel
 
+    admin/faq.rst
     admin/users.md
 
 .. toctree::
@@ -25,6 +26,8 @@ Contents
     mail.rst
     sign-up.rst
     tasks.rst
+
+    ci/image-publish-pipeline.md
 
 .. toctree::
     :maxdepth: 2

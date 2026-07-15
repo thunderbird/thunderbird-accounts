@@ -63,7 +63,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://www.thunderbird.net/"
+Homepage = "https://tb.pro/"
+Documentation = "https://pro-services-docs.thunderbird.net/"
+Repository = "https://github.com/thunderbird/thunderbird-accounts"
+Issues = "https://github.com/thunderbird/thunderbird-accounts/issues"
 
 [project.optional-dependencies]
 cli = [
