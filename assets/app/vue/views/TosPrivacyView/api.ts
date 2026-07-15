@@ -1,4 +1,4 @@
-import { useAuthfulFetch } from "@/composables/useFetch";
+import { useAuthFetch } from "@/composables/useFetch";
 
 export interface LegalDocMeta {
   uuid: string;
@@ -19,7 +19,7 @@ export interface AcceptedDoc {
 }
 
 export const getCurrentLegalDocs = async (locale: string): Promise<CurrentLegalDocsResponse> => {
-  const { response } = await useAuthfulFetch(`/api/v1/legal/current/?locale=${encodeURIComponent(locale)}`, {
+  const { response } = await useAuthFetch(`/api/v1/legal/current/?locale=${encodeURIComponent(locale)}`, {
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': window._page?.csrfToken,
@@ -29,7 +29,7 @@ export const getCurrentLegalDocs = async (locale: string): Promise<CurrentLegalD
 };
 
 export const acceptLegalDocs = async (sourceContext: string): Promise<{ responses: AcceptedDoc[] }> => {
-  const { response } = await useAuthfulFetch('/api/v1/legal/accept/', {
+  const { response } = await useAuthFetch('/api/v1/legal/accept/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -41,7 +41,7 @@ export const acceptLegalDocs = async (sourceContext: string): Promise<{ response
 };
 
 export const declineLegalDocs = async (sourceContext: string): Promise<{ redirect_url: string }> => {
-  const { response } = await useAuthfulFetch('/api/v1/legal/decline/', {
+  const { response } = await useAuthFetch('/api/v1/legal/decline/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

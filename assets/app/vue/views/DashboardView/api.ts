@@ -1,7 +1,7 @@
-import { useAuthfulFetch } from "@/composables/useFetch";
+import { useAuthFetch } from "@/composables/useFetch";
 
 export const getSubscriptionPortalLink = async () => {
-  const { response } = await useAuthfulFetch('/api/v1/subscription/paddle/portal/', {
+  const { response } = await useAuthFetch('/api/v1/subscription/paddle/portal/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -13,7 +13,7 @@ export const getSubscriptionPortalLink = async () => {
 }
 
 export const getSubscriptionPlanInfo = async () => {
-  const { response } = await useAuthfulFetch('/api/v1/subscription/plan/info/', {
+  const { response } = await useAuthFetch('/api/v1/subscription/plan/info/', {
     method: 'POST',
     headers: {
       'Accept': 'application/json',

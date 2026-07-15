@@ -1,4 +1,4 @@
-import { useAuthfulFetch } from "@/composables/useFetch";
+import { useAuthFetch } from "@/composables/useFetch";
 
 type AddCustomDomainResponse = {
   success: boolean;
@@ -8,7 +8,7 @@ type AddCustomDomainResponse = {
 };
 
 export const addCustomDomain = async (domainName: string): Promise<AddCustomDomainResponse> => {
-  const { response } = await useAuthfulFetch(`/custom-domains/add`, {
+  const { response } = await useAuthFetch(`/custom-domains/add`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -21,12 +21,12 @@ export const addCustomDomain = async (domainName: string): Promise<AddCustomDoma
 };
 
 export const getRemoteDNSRecords = async (domainName: string) => {
-  const { response } = await useAuthfulFetch(`/custom-domains/dns-records?domain-name=${domainName}`);
+  const { response } = await useAuthFetch(`/custom-domains/dns-records?domain-name=${domainName}`);
   return await response.value.json();
 };
 
 export const verifyDomain = async (domainName: string) => {
-  const { response } = await useAuthfulFetch(`/custom-domains/verify`, {
+  const { response } = await useAuthFetch(`/custom-domains/verify`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -39,7 +39,7 @@ export const verifyDomain = async (domainName: string) => {
 };
 
 export const removeCustomDomain = async (domainName: string) => {
-  const { response } = await useAuthfulFetch(`/custom-domains/remove`, {
+  const { response } = await useAuthFetch(`/custom-domains/remove`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
