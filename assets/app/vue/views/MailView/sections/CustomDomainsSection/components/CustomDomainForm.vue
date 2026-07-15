@@ -427,8 +427,6 @@ const handleDNSRecords = async (domainName: string) => {
 
 const onCreateCustomDomain = async () => {
   const submittedDomain = customDomain.value ?? '';
-  customDomainError.value = null;
-  domainAlreadyConfigured.value = false;
   isAddingCustomDomain.value = true;
 
   try {
@@ -437,17 +435,22 @@ const onCreateCustomDomain = async () => {
     if (data.success) {
       const domainName = data.domain_name ?? submittedDomain;
       customDomain.value = domainName;
+      customDomainError.value = null;
+      domainAlreadyConfigured.value = false;
       emit('custom-domain-added', domainName);
       await handleDNSRecords(domainName);
     } else if (data.code === 'domain_already_configured') {
       console.error(data.error);
+      customDomainError.value = null;
       domainAlreadyConfigured.value = true;
     } else {
       console.error(data.error);
+      domainAlreadyConfigured.value = false;
       customDomainError.value = data.error ?? '';
     }
   } catch (error) {
     console.error(error);
+    domainAlreadyConfigured.value = false;
     customDomainError.value = String(error);
   } finally {
     isAddingCustomDomain.value = false;
@@ -503,11 +506,6 @@ defineExpose({
 watch(step, (newStep) => {
   emit('step-change', newStep);
 }, { immediate: true });
-
-watch(customDomain, () => {
-  customDomainError.value = null;
-  domainAlreadyConfigured.value = false;
-});
 
 watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
   // If we just removed the domain we were adding, reset the step to initial
