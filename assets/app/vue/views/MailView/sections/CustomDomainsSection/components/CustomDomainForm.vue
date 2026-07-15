@@ -75,49 +75,6 @@ const spfIncludeValue = (record: DNSRecord): string =>
 const normalizeDomainName = (domainName?: string | null): string =>
   (domainName ?? '').trim().replace(/\.$/, '').toLowerCase();
 
-const normalizeCustomDomainInput = (domainName?: string | null): string =>
-  (domainName ?? '').replace(/\s+/g, '').toLowerCase();
-
-const domainLabelPattern = /^[a-z0-9\u00a1-\uffff](?:[a-z0-9\u00a1-\uffff-]{0,61}[a-z0-9\u00a1-\uffff])?$/i;
-const domainTldPattern = /^(?:[a-z\u00a1-\uffff-]{2,63}|xn--[a-z0-9]{1,59})$/i;
-
-const hasValidDomainTld = (label: string): boolean =>
-  label.length > 0
-  && label[0] !== '-'
-  && label[label.length - 1] !== '-'
-  && domainTldPattern.test(label);
-
-const isValidCustomDomainName = (domainName: string): boolean => {
-  if (!domainName.includes('.') || domainName.endsWith('.') || domainName.length > 255) {
-    return false;
-  }
-
-  const labels = domainName.split('.');
-  const tld = labels.pop();
-
-  return Boolean(tld && hasValidDomainTld(tld) && labels.every((label) => domainLabelPattern.test(label)));
-};
-
-const normalizedCustomDomain = computed(() => normalizeCustomDomainInput(customDomain.value));
-
-const isCustomDomainValid = computed(() => isValidCustomDomainName(normalizedCustomDomain.value));
-
-const customDomainInputError = computed(() => {
-  if (customDomainError.value) {
-    return customDomainError.value;
-  }
-
-  if (customDomain.value && !isCustomDomainValid.value) {
-    return t('views.mail.sections.customDomains.invalidDomain');
-  }
-
-  return null;
-});
-
-const canSubmitCustomDomain = computed(() =>
-  Boolean(customDomain.value) && isCustomDomainValid.value && !isAddingCustomDomain.value
-);
-
 const dkimRecordDomain = (record: DNSRecord): string | null => {
   if (record.type !== 'CNAME') {
     return null;
@@ -460,44 +417,34 @@ const handleDNSRecords = async (domainName: string) => {
       applyVerificationResult(domainName, validationResult(remoteDNSRecords), { showMissingIssues: false });
     } else {
       console.error(remoteDNSRecords.error);
-      customDomainError.value = remoteDNSRecords.error;    
+      customDomainError.value = remoteDNSRecords.error;
     }
   } catch (error) {
     console.error(error);
-    customDomainError.value = error;
+    customDomainError.value = String(error);
   }
 }
 
 const onCreateCustomDomain = async () => {
-  const domainName = normalizedCustomDomain.value;
-
-  if (!isValidCustomDomainName(domainName)) {
-    customDomainError.value = t('views.mail.sections.customDomains.invalidDomain');
-    return;
-  }
-
-  if (props.customDomains.some((domain) => normalizeDomainName(domain.name) === domainName)) {
-    customDomainError.value = t('views.mail.sections.customDomains.domainAlreadyExists');
-    return;
-  }
-
-  customDomain.value = domainName;
+  const submittedDomain = customDomain.value ?? '';
   customDomainError.value = null;
   domainAlreadyConfigured.value = false;
   isAddingCustomDomain.value = true;
 
   try {
-    const data = await addCustomDomain(domainName);
+    const data = await addCustomDomain(submittedDomain);
 
     if (data.success) {
+      const domainName = data.domain_name ?? submittedDomain;
+      customDomain.value = domainName;
       emit('custom-domain-added', domainName);
       await handleDNSRecords(domainName);
     } else if (data.code === 'domain_already_configured') {
       console.error(data.error);
-      domainAlreadyConfigured.value = true
+      domainAlreadyConfigured.value = true;
     } else {
       console.error(data.error);
-      customDomainError.value = data.error;
+      customDomainError.value = data.error ?? '';
     }
   } catch (error) {
     console.error(error);
@@ -595,7 +542,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
         :placeholder="t('views.mail.sections.customDomains.domainPlaceholder')"
         name="custom-domain"
         :help="t('views.mail.sections.customDomains.domainHelp')"
-        :error="customDomainInputError"
+        :error="customDomainError"
         class="custom-domain-text-input"
         v-model="customDomain"
       >
@@ -610,7 +557,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
         </i18n-t>
       </notice-bar>
 
-      <primary-button variant="outline" @click="onCreateCustomDomain" :disabled="!canSubmitCustomDomain">
+      <primary-button variant="outline" @click="onCreateCustomDomain" :disabled="isAddingCustomDomain">
         {{ t('views.mail.sections.customDomains.continue') }}
       </primary-button>
     </form>

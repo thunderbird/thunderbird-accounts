@@ -198,7 +198,7 @@ def create_custom_domain(request: HttpRequest):
             status=500,
         )
 
-    return JsonResponse({'success': True})
+    return JsonResponse({'success': True, 'domain_name': domain_name})
 
 
 @login_required
