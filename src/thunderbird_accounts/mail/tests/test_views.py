@@ -202,6 +202,7 @@ class CreateCustomDomainTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.content.decode())
         self.assertTrue(data['success'])
+        self.assertEqual(data['domain_name'], 'example.com')
         self.assertTrue(Domain.objects.filter(name='example.com', user=self.user).exists())
         mock_instance.get_domain.assert_called_once_with('example.com')
         mock_instance.create_dkim.assert_called_once_with('example.com')
