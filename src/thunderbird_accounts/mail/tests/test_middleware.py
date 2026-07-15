@@ -1,15 +1,21 @@
 from django.contrib.auth.models import AnonymousUser
-from thunderbird_accounts.subscription.models import Subscription
-from thunderbird_accounts.mail.models import Account
-from django.conf import settings
+import time
 from importlib import import_module
 from typing import Optional
-from django.http.request import HttpRequest
 from unittest.mock import MagicMock
-from thunderbird_accounts.mail.middleware import FixMissingArchivesFolderMiddleware
-from thunderbird_accounts.authentication.models import User
-from django.test.testcases import TestCase
 from unittest.mock import patch
+
+import jwt
+import requests
+from django.conf import settings
+from django.http.request import HttpRequest
+from django.test.testcases import TestCase
+from requests.exceptions import HTTPError
+
+from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.middleware import FixMissingArchivesFolderMiddleware
+from thunderbird_accounts.mail.models import Account
+from thunderbird_accounts.subscription.models import Subscription
 
 
 @patch('thunderbird_accounts.mail.tiny_jmap_client.TinyJMAPClient')
@@ -57,13 +63,20 @@ class FixMissingArchivesFolderMiddlewareTestCase(TestCase):
             'sessionState': '3e25b2a0',
         }
 
-    def build_request(self, user: Optional[User] = None, access_token: Optional[str] = None):
+    def build_request(
+        self,
+        user: Optional[User] = None,
+        access_token: Optional[str] = None,
+        refresh_token: Optional[str] = None,
+    ):
         fake_request = HttpRequest()
         engine = import_module(settings.SESSION_ENGINE)
         fake_request.session = engine.SessionStore()
 
         if access_token:
             fake_request.session['oidc_access_token'] = access_token
+        if refresh_token:
+            fake_request.session['oidc_refresh_token'] = refresh_token
 
         if user:
             fake_request.user = user
@@ -73,10 +86,22 @@ class FixMissingArchivesFolderMiddlewareTestCase(TestCase):
         fake_request.session.save()
         return fake_request
 
+    def build_access_token(self, exp_offset_seconds: int) -> str:
+        return jwt.encode(
+            {'exp': int(time.time()) + exp_offset_seconds},
+            'test-signing-key-not-verified-0123456789',
+            algorithm='HS256',
+        )
+
+    def build_unauthorized_error(self) -> HTTPError:
+        response = requests.Response()
+        response.status_code = 401
+        return HTTPError('401 Client Error: Unauthorized', response=response)
+
     def test_freshly_subscribed_user(self, tiny_jmap_mock: MagicMock):
         """A fresh user who has a subscription and a stalwart account should have their archive folder checked
         and successfully created"""
-        oidc_access_token = 'abc123'
+        oidc_access_token = self.build_access_token(300)
 
         user = User(username='test@example.org', email='test@example.com')
         user.save()
@@ -115,9 +140,101 @@ class FixMissingArchivesFolderMiddlewareTestCase(TestCase):
         account.refresh_from_db()
         self.assertTrue(account.verified_archive_folder)
 
+    @patch('thunderbird_accounts.authentication.middleware.requests.post')
+    def test_expired_access_token_refreshes_before_checking_archives_folder(
+        self, mock_post: MagicMock, tiny_jmap_mock: MagicMock
+    ):
+        user = User(username='test@example.org', email='test@example.com')
+        user.save()
+        account = Account(name=user.username, user=user)
+        account.save()
+        Subscription.objects.create(
+            paddle_id='foo', paddle_customer_id='bar', status=Subscription.StatusValues.ACTIVE, user=user
+        )
+
+        mock_post.return_value = MagicMock(
+            json=MagicMock(return_value={'access_token': 'fresh-access', 'refresh_token': 'fresh-refresh'})
+        )
+        tiny_jmap_mock.return_value.make_jmap_call.side_effect = [
+            self.build_mailbox_query_response(),
+            self.build_mailbox_set_response(),
+        ]
+
+        fake_request = self.build_request(
+            user,
+            self.build_access_token(-10),
+            refresh_token='old-refresh',
+        )
+
+        with patch('uuid.uuid4') as uuid_mock:
+            uuid_mock.return_value = self.DEFAULT_TEMP_ID
+            self.middleware(fake_request)
+
+        tiny_jmap_mock.assert_called_once_with(
+            hostname=settings.STALWART_BASE_JMAP_URL,
+            username=account.name,
+            token='fresh-access',
+        )
+        account.refresh_from_db()
+        self.assertTrue(account.verified_archive_folder)
+
+    def test_expired_access_token_without_refresh_token_skips_archives_folder(self, tiny_jmap_mock: MagicMock):
+        user = User(username='test@example.org', email='test@example.com')
+        user.save()
+        account = Account(name=user.username, user=user)
+        account.save()
+        Subscription.objects.create(
+            paddle_id='foo', paddle_customer_id='bar', status=Subscription.StatusValues.ACTIVE, user=user
+        )
+
+        fake_request = self.build_request(user, self.build_access_token(-10))
+
+        self.middleware(fake_request)
+
+        tiny_jmap_mock.assert_not_called()
+        account.refresh_from_db()
+        self.assertFalse(account.verified_archive_folder)
+
+    @patch('thunderbird_accounts.authentication.middleware.requests.post')
+    def test_unauthorized_jmap_session_retries_with_refreshed_token(
+        self, mock_post: MagicMock, tiny_jmap_mock: MagicMock
+    ):
+        user = User(username='test@example.org', email='test@example.com')
+        user.save()
+        account = Account(name=user.username, user=user)
+        account.save()
+        Subscription.objects.create(
+            paddle_id='foo', paddle_customer_id='bar', status=Subscription.StatusValues.ACTIVE, user=user
+        )
+
+        mock_post.return_value = MagicMock(
+            json=MagicMock(return_value={'access_token': 'fresh-access', 'refresh_token': 'fresh-refresh'})
+        )
+        stale_access_token = self.build_access_token(300)
+        stale_client = MagicMock()
+        stale_client.get_account_id.side_effect = self.build_unauthorized_error()
+        fresh_client = MagicMock()
+        fresh_client.get_account_id.return_value = 'd'
+        fresh_client.make_jmap_call.side_effect = [
+            self.build_mailbox_query_response(),
+            self.build_mailbox_set_response(),
+        ]
+        tiny_jmap_mock.side_effect = [stale_client, fresh_client]
+
+        fake_request = self.build_request(user, stale_access_token, refresh_token='old-refresh')
+
+        with patch('uuid.uuid4') as uuid_mock:
+            uuid_mock.return_value = self.DEFAULT_TEMP_ID
+            self.middleware(fake_request)
+
+        self.assertEqual(tiny_jmap_mock.call_args_list[0].kwargs['token'], stale_access_token)
+        self.assertEqual(tiny_jmap_mock.call_args_list[1].kwargs['token'], 'fresh-access')
+        account.refresh_from_db()
+        self.assertTrue(account.verified_archive_folder)
+
     def test_already_verified_account_isnt_checked_again(self, tiny_jmap_mock: MagicMock):
         """A user with a verified archive folder shouldn't have any jmap calls sent"""
-        oidc_access_token = 'abc123'
+        oidc_access_token = self.build_access_token(300)
 
         user = User(username='test@example.org', email='test@example.com')
         user.save()
@@ -204,7 +321,7 @@ class FixMissingArchivesFolderMiddlewareTestCase(TestCase):
         self, tiny_jmap_mock: MagicMock, fix_archives_folder_mock: MagicMock
     ):
         """An authenticated but non-subscribed user shouldn't ahve fix archives folder called"""
-        oidc_access_token = 'abc123'
+        oidc_access_token = self.build_access_token(300)
 
         user = User(username='test@example.org', email='test@example.com')
         user.save()
@@ -260,7 +377,7 @@ class FixMissingArchivesFolderMiddlewareTestCase(TestCase):
 
     def test_malformed_jmap_response_shouldnt_crash_the_request(self, tiny_jmap_mock: MagicMock):
         """An authenticated user with a non-active subscription shouldn't ahve fix archives folder called"""
-        oidc_access_token = 'abc123'
+        oidc_access_token = self.build_access_token(300)
 
         user = User(username='test@example.org', email='test@example.com')
         user.save()

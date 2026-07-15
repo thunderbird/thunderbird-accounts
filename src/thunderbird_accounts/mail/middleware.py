@@ -1,4 +1,5 @@
 from django.http import HttpRequest
+from thunderbird_accounts.authentication.tokens import AccessTokenPolicy, get_user_access_token
 from thunderbird_accounts.mail.utils import fix_archives_folder
 
 
@@ -15,15 +16,22 @@ class FixMissingArchivesFolderMiddleware:
         return self.get_response(request)
 
     def check_if_we_need_to_fix_archives_folder(self, request: HttpRequest):
-        oidc_access_token = request.session.get('oidc_access_token')
-        if not oidc_access_token:
-            return
-
         user = request.user
 
         # If the user exists, has a stalwart account reference and an oidc access token
         # Check if we need to fix their archives folder, and do it if we need to.
-        if user and user.account_set.count() > 0 and oidc_access_token:
+        if user and user.account_set.count() > 0:
             archive_folders_to_check = user.account_set.filter(verified_archive_folder=False)
             for account in archive_folders_to_check:
-                fix_archives_folder(oidc_access_token, account)
+                oidc_access_token = get_user_access_token(
+                    request,
+                    policy=AccessTokenPolicy.REQUIRE_KNOWN_FRESH,
+                )
+                if not oidc_access_token:
+                    return
+
+                fix_archives_folder(
+                    oidc_access_token,
+                    account,
+                    refresh_access_token=lambda: get_user_access_token(request, policy=AccessTokenPolicy.FORCE_REFRESH),
+                )
