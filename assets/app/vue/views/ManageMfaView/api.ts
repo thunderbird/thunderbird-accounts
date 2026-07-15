@@ -1,4 +1,4 @@
-import { useAuthfulFetch } from "@/composables/useFetch";
+import { useAuthFetch } from "@/composables/useFetch";
 
 export interface TotpCredential {
   id: string;
@@ -87,7 +87,7 @@ const parseJsonResponse = async <T>(response: Response): Promise<T> => {
 };
 
 export const getMfaMethods = async () => {
-  const { response } = await useAuthfulFetch('/api/v1/auth/mfa/methods/', {
+  const { response } = await useAuthFetch('/api/v1/auth/mfa/methods/', {
     method: 'GET',
     headers: jsonHeaders,
   });
@@ -96,7 +96,7 @@ export const getMfaMethods = async () => {
 };
 
 export const startTotpSetup = async () => {
-  const { response } = await useAuthfulFetch('/api/v1/auth/mfa/totp/setup/start/', {
+  const { response } = await useAuthFetch('/api/v1/auth/mfa/totp/setup/start/', {
     method: 'POST',
     headers: jsonHeaders,
   });
@@ -105,7 +105,7 @@ export const startTotpSetup = async () => {
 };
 
 export const confirmTotpSetup = async (code: string, logoutOtherSessions: boolean) => {
-  const { response } = await useAuthfulFetch('/api/v1/auth/mfa/totp/setup/confirm/', {
+  const { response } = await useAuthFetch('/api/v1/auth/mfa/totp/setup/confirm/', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({ code, logoutOtherSessions }),
@@ -115,7 +115,7 @@ export const confirmTotpSetup = async (code: string, logoutOtherSessions: boolea
 };
 
 export const removeTotpCredential = async (credentialId: string) => {
-  const { response } = await useAuthfulFetch(`/api/v1/auth/mfa/totp/credentials/${credentialId}/`, {
+  const { response } = await useAuthFetch(`/api/v1/auth/mfa/totp/credentials/${credentialId}/`, {
     method: 'DELETE',
     headers: jsonHeaders,
   });
@@ -124,7 +124,7 @@ export const removeTotpCredential = async (credentialId: string) => {
 };
 
 export const regenerateRecoveryCodes = async () => {
-  const { response } = await useAuthfulFetch('/api/v1/auth/mfa/recovery-codes/regenerate/', {
+  const { response } = await useAuthFetch('/api/v1/auth/mfa/recovery-codes/regenerate/', {
     method: 'POST',
     headers: jsonHeaders,
   });
@@ -133,7 +133,7 @@ export const regenerateRecoveryCodes = async () => {
 };
 
 export const removeRecoveryCodesCredential = async (credentialId: string) => {
-  const { response } = await useAuthfulFetch(`/api/v1/auth/mfa/recovery-codes/credentials/${credentialId}/`, {
+  const { response } = await useAuthFetch(`/api/v1/auth/mfa/recovery-codes/credentials/${credentialId}/`, {
     method: 'DELETE',
     headers: jsonHeaders,
   });

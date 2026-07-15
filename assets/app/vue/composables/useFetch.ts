@@ -1,7 +1,7 @@
 import { createFetch } from "@vueuse/core"
 
 //const { isFetching, error, data } = useMyFetch('users')
-export const useAuthfulFetch = createFetch({
+export const useAuthFetch = createFetch({
   options: {
     async beforeFetch(ctx) {
       // If we don't explicitly set an accept header, make sure it's set to application/json

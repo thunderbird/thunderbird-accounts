@@ -1,4 +1,4 @@
-import { useAuthfulFetch } from "@/composables/useFetch";
+import { useAuthFetch } from "@/composables/useFetch";
 
 interface SettingsApiResponse {
   success: boolean;
@@ -7,7 +7,7 @@ interface SettingsApiResponse {
 }
 
 export const setAppPassword = async (name: string, password: string): Promise<SettingsApiResponse> => {
-  const { response } = await useAuthfulFetch('/api/v1/mail/app-passwords/set/', {
+  const { response } = await useAuthFetch('/api/v1/mail/app-passwords/set/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -20,7 +20,7 @@ export const setAppPassword = async (name: string, password: string): Promise<Se
 };
 
 export const setDisplayName = async (displayName: string): Promise<SettingsApiResponse> => {
-  const { response } = await useAuthfulFetch('/api/v1/mail/display-name/set/', {
+  const { response } = await useAuthFetch('/api/v1/mail/display-name/set/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ export const setDisplayName = async (displayName: string): Promise<SettingsApiRe
 };
 
 export const addEmailAlias = async (emailAlias: string, domain: string) => {
-  const { response } = await useAuthfulFetch(`/email-aliases/add`, {
+  const { response } = await useAuthFetch(`/email-aliases/add`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -46,7 +46,7 @@ export const addEmailAlias = async (emailAlias: string, domain: string) => {
 };
 
 export const removeEmailAlias = async (emailAlias: string) => {
-  const { response } = await useAuthfulFetch(`/email-aliases/remove`, {
+  const { response } = await useAuthFetch(`/email-aliases/remove`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
