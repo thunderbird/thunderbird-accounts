@@ -3,6 +3,7 @@ import json
 
 import sentry_sdk
 from django.conf import settings
+from django.core.validators import EMPTY_VALUES
 from django.http import HttpRequest, JsonResponse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import cache_page
@@ -12,6 +13,7 @@ from thunderbird_accounts.support.zendesk import ZendeskClient
 
 # Add browser and OS information to hidden custom fields
 from thunderbird_accounts.core.utils import parse_user_agent_info
+
 
 @require_http_methods(['GET'])
 @cache_page(60 * 15)
@@ -74,8 +76,8 @@ def contact_submit(request: HttpRequest):
 
     # Name is optional in the UI,
     # but it is required for the Zendesk Requests API's requester object
-    # So we default to the email address if the name is not provided
-    name = data_json.get('name', email)
+    # So we default to the email address if the name is missing or empty.
+    name = data_json.get('name') or email
 
     fields = data_json.get('fields', [])
 
@@ -109,6 +111,16 @@ def contact_submit(request: HttpRequest):
             custom_fields.append({'id': field_id, 'value': field_value})
 
     uploaded_files = request.FILES.getlist('attachments')
+
+    # TODO: Refactor this view to use Django's Forms API instead of direct EMPTY_VALUES access.
+    if email in EMPTY_VALUES:
+        validation_errors.append('Email is required')
+
+    if subject in EMPTY_VALUES:
+        validation_errors.append('Subject is required')
+
+    if description in EMPTY_VALUES:
+        validation_errors.append('Description is required')
 
     # Check for validation errors
     if validation_errors:

@@ -205,6 +205,37 @@ class ZendeskContactSubmitTestCase(TestCase):
         mock_client_cls.assert_not_called()
 
     @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_contact_submit_rejects_missing_required_zendesk_fields_before_upload(self, mock_client_cls):
+        url = reverse('contact_submit')
+        payload = {
+            'email': 'user@example.org',
+            'name': 'User',
+            'fields': [],
+        }
+        uploaded = SimpleUploadedFile('test.txt', b'hi', content_type='text/plain')
+        response = self.client.post(url, data={'data': json.dumps(payload), 'attachments': uploaded})
+
+        self.assertEqual(response.status_code, 400)
+        body = json.loads(response.content.decode())
+        self.assertFalse(body['success'])
+        self.assertIn('Subject is required', body['error'])
+        self.assertIn('Description is required', body['error'])
+        mock_client_cls.assert_not_called()
+
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_contact_submit_rejects_missing_data_payload(self, mock_client_cls):
+        url = reverse('contact_submit')
+        response = self.client.post(url, data={})
+
+        self.assertEqual(response.status_code, 400)
+        body = json.loads(response.content.decode())
+        self.assertFalse(body['success'])
+        self.assertIn('Email is required', body['error'])
+        self.assertIn('Subject is required', body['error'])
+        self.assertIn('Description is required', body['error'])
+        mock_client_cls.assert_not_called()
+
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
     @override_settings(ZENDESK_FORM_ID='42')
     def test_contact_submit_upload_failure(self, mock_client_cls):
         instance = Mock()
