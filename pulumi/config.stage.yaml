@@ -942,6 +942,8 @@ resources:
                 value: 'https://send-stage.tb.pro/'
               - name: TB_PRO_WAIT_LIST_URL
                 value: 'https://tb.pro/waitlist/'
+              - name: WEBMAIL_URL
+                value: 'https://webmail.stage-thundermail.com/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth-stage.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
