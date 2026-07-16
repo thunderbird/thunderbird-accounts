@@ -388,8 +388,8 @@
         "close": "Close tour"
       },
       "webmailAlpha": {
-        "notice": "Webmail (early alpha) is now available, {checkItOut}.",
-        "checkItOut": "check it out here"
+        "notice": "Webmail (early alpha) is now available. {checkItOut}.",
+        "checkItOut": "Check it out here"
       }
     },
     "manageMfa": {
