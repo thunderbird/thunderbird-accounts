@@ -110,7 +110,7 @@ docker compose up --build -V
 ### After making changes
 
 Most source files are mounted into the development containers:
-e
+
 * Changes under `assets/` should hot-reload through the `vite-dev` service.
 * Changes under `src/thunderbird_accounts/` should restart the `accounts` service automatically through Uvicorn reload.
 * Changes to Django templates should also be picked up by the reload process.
