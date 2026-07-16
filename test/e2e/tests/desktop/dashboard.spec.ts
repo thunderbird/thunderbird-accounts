@@ -42,7 +42,7 @@ test.describe('dashboard controls on desktop browser', {
     await dashboardPage.verifyThundermailNavigation();
     await dashboardPage.navigateToDashboard();
 
-    await dashboardPage.verifyServiceLinksOpenConfiguredUrls();
+    await dashboardPage.verifyServiceAppsLoadAfterNavigation();
     await dashboardPage.verifyManageSubscriptionOpensPortal();
     await dashboardPage.verifyUserMenuControls();
   });

@@ -9,6 +9,7 @@ import {
   DASHBOARD_CURRENT_SUBSCRIPTION_SEND_STORAGE,
   PADDLE_HOST,
   TIMEOUT_2_SECONDS,
+  TIMEOUT_3_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
 } from '../const/constants';
@@ -18,6 +19,13 @@ interface ServiceUrls {
   appointment: string;
   send: string;
 }
+
+type PopupPageAssertion = {
+  link: Locator;
+  expectedUrl: string;
+  expectedElementName: string;
+  expectedElement: (page: Page) => Locator;
+};
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -109,15 +117,32 @@ export class DashboardPage {
   }
 
   async verifyThundermailNavigation() {
+    await this.thundermailLink.scrollIntoViewIfNeeded();
     await this.thundermailLink.click();
+    await this.page.waitForTimeout(TIMEOUT_3_SECONDS);
     await this.waitForPageToSettle();
     await expect.poll(async () => new URL(this.page.url()).pathname).toBe('/mail');
+    await expect(this.page.getByRole('heading', { name: 'Get started with Thundermail' })).toBeVisible({
+      timeout: TIMEOUT_30_SECONDS,
+    });
   }
 
-  async verifyServiceLinksOpenConfiguredUrls() {
+  async verifyServiceAppsLoadAfterNavigation() {
     const serviceUrls = await this.getConfiguredServiceUrls();
-    await this.verifyLinkOpensPopup(this.appointmentLink, serviceUrls.appointment);
-    await this.verifyLinkOpensPopup(this.sendLink, serviceUrls.send);
+    // Thundermail is an internal Accounts route and reuses the current page, while
+    // Appointment and Send are configured external services that open in popups.
+    await this.verifyPopupServiceAppLoads({
+      link: this.appointmentLink,
+      expectedUrl: serviceUrls.appointment,
+      expectedElementName: 'Copy booking link',
+      expectedElement: page => page.getByRole('button', { name: /copy booking link/i }),
+    });
+    await this.verifyPopupServiceAppLoads({
+      link: this.sendLink,
+      expectedUrl: serviceUrls.send,
+      expectedElementName: 'Recover access',
+      expectedElement: page => page.getByTestId('recover-access-button'),
+    });
   }
 
   async verifyManageSubscriptionOpensPortal() {
@@ -161,8 +186,14 @@ export class DashboardPage {
     }));
   }
 
-  private async verifyLinkOpensPopup(link: Locator, expectedUrl: string) {
+  private async verifyPopupServiceAppLoads({
+    link,
+    expectedUrl,
+    expectedElementName,
+    expectedElement,
+  }: PopupPageAssertion) {
     expect(expectedUrl).toBeTruthy();
+    await link.scrollIntoViewIfNeeded();
     await expect(link).toHaveAttribute('href', expectedUrl);
     await expect(link).toHaveAttribute('target', '_blank');
 
@@ -171,8 +202,15 @@ export class DashboardPage {
       link.click(),
     ]);
 
+    await popup.waitForTimeout(TIMEOUT_3_SECONDS);
     await expect.poll(async () => popup.url()).not.toBe('about:blank');
-    expect(new URL(popup.url()).href).toBe(new URL(expectedUrl).href);
+    await popup.waitForLoadState('domcontentloaded');
+    await popup.waitForLoadState('networkidle', { timeout: TIMEOUT_30_SECONDS }).catch(() => {});
+    expect(new URL(popup.url()).origin).toBe(new URL(expectedUrl).origin);
+    await expect(
+      expectedElement(popup),
+      `${expectedElementName} should be visible after navigating to ${expectedUrl}`,
+    ).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     await popup.close();
   }
 }
