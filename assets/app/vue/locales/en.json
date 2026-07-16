@@ -22,7 +22,7 @@
       "yourServices": "Manage Your Services"
     },
     "userMenu": {
-      "dashboard": "Dashboard",
+      "myAccount": "My Account",
       "support": "Support",
       "logout": "Logout"
     },

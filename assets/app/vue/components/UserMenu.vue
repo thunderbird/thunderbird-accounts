@@ -12,7 +12,7 @@ const { t } = useI18n();
 const internalMenuItems = computed(() => {
   const items = [
     {
-      label: t('components.userMenu.dashboard'),
+      label: t('components.userMenu.myAccount'),
       to: '/dashboard',
     },
     {
