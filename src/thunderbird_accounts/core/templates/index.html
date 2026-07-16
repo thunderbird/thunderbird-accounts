@@ -45,6 +45,7 @@
     tbProSendUrl: {{ tb_pro_send_url|to_json|safe }},
     tbProWaitListUrl: {{ tb_pro_wait_list_url|to_json|safe }},
     tbProPrimaryDomain: {{ tb_pro_primary_domain|to_json|safe }},
+    webmailUrl: {{ webmail_url|to_json|safe }},
     serverMessages: {{ server_messages|default:None|to_json|safe }},
     features: {{ features|safe|default:'{}' }},
     needsTosAcceptance: {{ needs_tos_acceptance|to_json|safe }},

@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTour, FTUE_STEPS } from '@/composables/useTour';
 import TourCard from '@/components/TourCard.vue';
+import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 
 import WelcomeHeader from './sections/DashboardSection/components/WelcomeHeader.vue';
 import GetStartedWithThundermail from './sections/DashboardSection/components/GetStartedWithThundermail.vue';
@@ -15,6 +16,7 @@ import CustomDomainsSection from './sections/CustomDomainsSection/index.vue';
 const { t } = useI18n();
 const tour = useTour();
 const isGetStartedPinned = ref(true);
+const webmailUrl = window._page?.webmailUrl;
 </script>
 
 <script lang="ts">
@@ -25,6 +27,16 @@ export default {
 
 <template>
   <div class="mail-view">
+    <notice-bar :type="NoticeBarTypes.Info" class="webmail-notice">
+      <i18n-t keypath="views.mail.webmailAlpha.notice">
+        <template #checkItOut>
+          <a :href="webmailUrl" target="_blank" rel="noopener noreferrer">
+            {{ t('views.mail.webmailAlpha.checkItOut') }}
+          </a>
+        </template>
+      </i18n-t>
+    </notice-bar>
+
     <section id="dashboard">
       <welcome-header />
       <div id="get-started-pinned-slot" class="teleport-target" />
@@ -88,5 +100,11 @@ export default {
 
 .teleport-target {
   display: contents;
+}
+
+.webmail-notice {
+  max-width: 968px;
+  width: 100%;
+  margin: 0 auto 2rem;
 }
 </style>

@@ -45,6 +45,7 @@ declare global {
       tbProSendUrl?: string;
       tbProWaitListUrl?: string;
       tbProPrimaryDomain?: string;
+      webmailUrl?: string;
       currentView?: Record<string, any>;
       serverMessages: ServerMessage[];
       needsTosAcceptance?: boolean;

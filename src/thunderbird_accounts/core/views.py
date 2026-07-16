@@ -157,6 +157,7 @@ def home(request: HttpRequest):
             'tb_pro_send_url': settings.TB_PRO_SEND_URL,
             'tb_pro_wait_list_url': settings.TB_PRO_WAIT_LIST_URL,
             'tb_pro_primary_domain': settings.PRIMARY_EMAIL_DOMAIN,
+            'webmail_url': settings.WEBMAIL_URL,
             'server_messages': [
                 {'level': message.level, 'message': str(message.message)} for message in get_messages(request)
             ],

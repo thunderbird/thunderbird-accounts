@@ -22,6 +22,7 @@
       "yourServices": "Manage Your Services"
     },
     "userMenu": {
+      "myAccount": "My Account",
       "support": "Support",
       "logout": "Logout"
     },
@@ -385,6 +386,10 @@
         "step4Text": "Add custom domains to create email aliases for any need.",
         "step5Text": "Go to your Thunderbird Pro account to view account details, manage billing, or cancel your service.",
         "close": "Close tour"
+      },
+      "webmailAlpha": {
+        "notice": "Webmail (early alpha) is now available. {checkItOut}.",
+        "checkItOut": "Check it out here"
       }
     },
     "manageMfa": {

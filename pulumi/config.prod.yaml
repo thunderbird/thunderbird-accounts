@@ -959,6 +959,8 @@ resources:
                 value: 'https://send.tb.pro/'
               - name: TB_PRO_WAIT_LIST_URL
                 value: 'https://tb.pro/waitlist/'
+              - name: WEBMAIL_URL
+                value: 'https://webmail.thundermail.com/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
