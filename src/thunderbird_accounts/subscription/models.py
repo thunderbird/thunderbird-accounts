@@ -79,9 +79,12 @@ class Price(BaseModel):
         default=StatusValues.ACTIVE,
         help_text=_('Is this price active or archived (cannot be used.)'),
     )
-    billing_cycle_frequency = models.CharField(help_text=_('Amount of time in a billing cycle.'))
+    billing_cycle_frequency = models.CharField(help_text=_('Amount of time in a billing cycle.'), null=True, blank=True)
     billing_cycle_interval = models.CharField(
-        choices=IntervalValues, help_text=_('The unit of time in a billing cycle.')
+        choices=IntervalValues,
+        help_text=_('The unit of time in a billing cycle.'),
+        null=True,
+        blank=True,
     )
     webhook_updated_at = models.DateTimeField(
         null=True, help_text=_('date when this model was last updated by a paddle webhook.')
