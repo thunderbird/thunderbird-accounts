@@ -20,7 +20,7 @@ class MailClientJMAP(MailClientInterface):
             self.account_id = list(session.get('accounts', {}).keys())[0]
 
     def get_domain(self, domain) -> DomainType:
-        response = JMapRequest(
+        response = self.client.request(JMapRequest(
             using=[
                 'urn:ietf:params:jmap:core',
                 'urn:stalwart:jmap',
@@ -46,10 +46,10 @@ class MailClientJMAP(MailClientInterface):
                     '1',
                 ),
             ],
-        )
+        ))
 
-        method_responses = response.get('methodResponses')
-        if not method_responses or method_responses[0][ResponseIndex.DATA]['total'] == 0:
+
+        if not response.methodResponses or response.methodResponses[0][ResponseIndex.DATA]['total'] == 0:
             raise DomainNotFoundError(domain)
 
 
