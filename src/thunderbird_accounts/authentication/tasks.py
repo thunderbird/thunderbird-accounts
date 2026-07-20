@@ -3,6 +3,7 @@ import logging
 from datetime import timedelta, datetime, UTC
 
 import sentry_sdk
+import waffle
 from celery import shared_task
 from django.conf import settings
 from django.db import transaction
@@ -10,7 +11,7 @@ from django.db.models import Exists, OuterRef, QuerySet
 from django.utils import timezone
 
 from thunderbird_accounts.authentication.models import User, AllowListEntry
-from thunderbird_accounts.authentication.utils import delete_user_data  #  noqa: F401 - needed for tests
+from thunderbird_accounts.authentication.utils import delete_user_data
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.subscription.models import Subscription
@@ -20,6 +21,13 @@ logger = logging.getLogger(__name__)
 # While a 400 could indicate other kinds of "bad input", it's our clearest
 # signal when Mailchimp rejects an email.
 PERMANENT_RECOVERY_EMAIL_REJECTION_STATUS_CODE = 400
+
+# When active, purge_incomplete_signups actually deletes stale users (via delete_user_data).
+# When inactive (the default), it just parks them in the "Users to Purge" group so we can
+# confirm the selection criteria are correct before nuking anyone.
+# See https://github.com/thunderbird/thunderbird-accounts/issues/964 for more info.
+PURGE_INCOMPLETE_SIGNUPS_SWITCH = 'purge-incomplete-signups'
+
 
 def is_permanent_recovery_email_rejection(ex: TaskFailed) -> bool:
     """Return True when Mailchimp rejects the member create request."""
@@ -174,6 +182,9 @@ def purge_incomplete_signups(self):
         }
         return result
 
+    switch_status = waffle.switch_is_active(PURGE_INCOMPLETE_SIGNUPS_SWITCH)
+    logger.info(f'purge_incomplete_signups: Running with {PURGE_INCOMPLETE_SIGNUPS_SWITCH} = {switch_status}')
+
     for user in get_stale_incomplete_signup_users(cutoff_hours=settings.INCOMPLETE_SIGNUP_PURGE_HOURS).iterator():
         try:
             with transaction.atomic():
@@ -194,11 +205,12 @@ def purge_incomplete_signups(self):
                     )
                     continue
 
-                # Add the user to the group
-                user.groups.add(group)
-                purge_errors = []
-                # TODO: Turn back on once we're confident
-                # purge_errors = delete_user_data(user)
+                if switch_status:
+                    logger.info('purge_incomplete_signups: purging %s', user.uuid)
+                    purge_errors = delete_user_data(user)
+                else:
+                    user.groups.add(group)
+                    purge_errors = []
 
         except User.DoesNotExist:
             skipped += 1
@@ -219,7 +231,7 @@ def purge_incomplete_signups(self):
         else:
             deleted += 1
 
-    # Temp: Until we're confident about this function
+    # Keeping this until we fully remove the switch
     # Remove any users that no longer match criteria
     for user in group.user_set.iterator():
         if any(

@@ -5,6 +5,7 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import freezegun
+from waffle.testutils import override_switch
 
 from django.conf import settings
 from django.test import TestCase, override_settings
@@ -16,6 +17,7 @@ from thunderbird_accounts.authentication.tasks import (
     get_stale_incomplete_signup_users,
     purge_incomplete_signups,
     purge_stale_test_allow_list_entries,
+    PURGE_INCOMPLETE_SIGNUPS_SWITCH,
 )
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.subscription.models import Subscription
@@ -543,6 +545,43 @@ class PurgeIncompleteSignupsTaskTestCase(TestCase):
         # We're out of the group!
         self.user.refresh_from_db()
         self.assertEqual(self.user.groups.count(), 0)
+
+    @override_switch(PURGE_INCOMPLETE_SIGNUPS_SWITCH, active=True)
+    def test_deletes_stale_users_when_switch_is_active(self, mock_delete_user_data):
+        mock_delete_user_data.return_value = []
+
+        result = purge_incomplete_signups.apply().get()
+
+        mock_delete_user_data.assert_called_once_with(self.user)
+
+        # The user was actually purged, not parked in the group
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.groups.count(), 0)
+
+        self.assertEqual(result['deleted'], 1)
+        self.assertEqual(result['errors'], 0)
+
+    @override_switch(PURGE_INCOMPLETE_SIGNUPS_SWITCH, active=True)
+    def test_counts_partial_deletion_as_error_when_switch_is_active(self, mock_delete_user_data):
+        mock_delete_user_data.return_value = ['Keycloak: connection refused']
+
+        result = purge_incomplete_signups.apply().get()
+
+        mock_delete_user_data.assert_called_once_with(self.user)
+        self.assertEqual(result['deleted'], 0)
+        self.assertEqual(result['errors'], 1)
+
+    @override_switch(PURGE_INCOMPLETE_SIGNUPS_SWITCH, active=False)
+    def test_does_not_delete_stale_users_when_switch_is_explicitly_inactive(self, mock_delete_user_data):
+        mock_delete_user_data.return_value = []
+
+        result = purge_incomplete_signups.apply().get()
+
+        mock_delete_user_data.assert_not_called()
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.groups.count(), 1)
+        self.assertEqual(result['deleted'], 1)
 
 
 @patch('thunderbird_accounts.authentication.tasks.delete_user_data')
