@@ -11,13 +11,14 @@ class StalwartType(BaseModel):
 
     type: Optional[str] = Field(alias='@type', default=None)
 
+class JMapType(BaseModel):
+    id: str
 
-class DomainType(BaseModel):
+
+class DomainType(JMapType):
     """Stalwart Domain Type
 
-    Ref: api_url_.
-    .. api_doc: https://stalw.art/docs/ref/object/domain/"""
-    id: str
+    Ref: https://stalw.art/docs/ref/object/domain/"""
     name: str
     aliases: dict  # list[str]
     isEnabled: bool
@@ -34,3 +35,62 @@ class DomainType(BaseModel):
     subAddressing: StalwartType
     allowRelaying: bool
     reportAddressUri: Optional[str] = None
+
+class AccountType(JMapType, StalwartType):
+    """Stalwart Account Type
+
+    .. code-block:: json
+
+        {
+          "name": "admin",
+          "domainId": "b",
+          "credentials": {
+            "0": {
+              "credentialId": "a",
+              "secret": "****",
+              "expiresAt": null,
+              "allowedIps": {},
+              "@type": "Password"
+            }
+          },
+          "createdAt": "2026-07-08T20:45:29Z",
+          "memberGroupIds": {},
+          "memberTenantId": null,
+          "roles": {
+            "@type": "Admin"
+          },
+          "permissions": {
+            "@type": "Inherit"
+          },
+          "quotas": {},
+          "aliases": {},
+          "description": "System administrator",
+          "locale": "en_US",
+          "timeZone": null,
+          "encryptionAtRest": {
+            "@type": "Disabled"
+          },
+          "@type": "User",
+          "usedDiskQuota": 0,
+          "emailAddress": "admin@example.org",
+          "id": "b"
+        }
+
+    Ref: https://stalw.art/docs/ref/object/account/
+    """
+    name: str
+    domainId: str
+    emailAddress: str
+    credentials: Optional[StalwartType|dict] = None
+    createdAt: Optional[datetime] = None
+    memberGroupsIds: Optional[list[str]] = None
+    memberTenantId: Optional[str] = None
+    roles: StalwartType|dict
+    permissions: StalwartType
+    quotas: Optional[dict] = None
+    usedDiskQuota: Optional[int] = None
+    aliases: Optional[dict] = None
+    description: Optional[str] = None
+    locale: Optional[str] = "en_US"
+    timezone: Optional[str] = None
+    encryptionAtRest: StalwartType

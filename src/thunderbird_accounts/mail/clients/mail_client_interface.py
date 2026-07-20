@@ -52,7 +52,7 @@ class MailClientInterface:
     ):
         raise NotImplementedError()
 
-    def get_account(self, principal_id: str) -> dict:
+    def get_account(self, principal_id: str):# -> dict:
         raise NotImplementedError()
 
     def delete_account(self, principal_id: str):

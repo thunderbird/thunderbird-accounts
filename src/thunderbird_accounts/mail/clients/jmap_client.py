@@ -71,20 +71,22 @@ class JMAPClient:
         if self.identity_id:
             return self.identity_id
 
-        identity_res = self._jmap_request(
+        identity_res = self.request(
             JMapRequest(
                 using=[
                     'urn:ietf:params:jmap:core',
                     'urn:ietf:params:jmap:submission',
                 ],
-                methodCalls=[Invocation('Identity/get', {'accountId': self.get_account_id()}, 'i')],
+                method_calls=[
+                    Invocation(name='Identity/get', arguments={'accountId': self.get_account_id()}, method_call_id='i')
+                ],
             )
         )
 
         identity_id = next(
             filter(
                 lambda i: i['email'] == self.username,
-                identity_res['methodResponses'][0][1]['list'],
+                identity_res.method_responses[0].arguments.get('list', []),
             )
         )['id']
 
