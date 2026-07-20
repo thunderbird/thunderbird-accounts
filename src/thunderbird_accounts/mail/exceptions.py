@@ -1,3 +1,4 @@
+from pydantic import ValidationError
 from typing import Optional
 
 
@@ -145,3 +146,11 @@ class EmailNotValidError(RuntimeError):
 
     def __str__(self):
         return f'EmailNotValidError: {self.email}, {self.error_message}'
+
+
+class InvalidJMapResponseError(RuntimeError):
+    """This is a generic pydantic response error. You should not get this, if you do there's a developer problem."""
+    validation_error: ValidationError
+
+    def __init__(self, validation_error):
+        self.validation_error = validation_error
