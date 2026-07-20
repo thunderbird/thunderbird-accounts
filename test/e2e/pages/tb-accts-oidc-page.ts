@@ -1,5 +1,5 @@
 import { expect, type Page, type Locator } from '@playwright/test';
-import { ACCTS_OIDC_EMAIL, ACCTS_OIDC_PWORD, TIMEOUT_2_SECONDS, TIMEOUT_10_SECONDS, TIMEOUT_30_SECONDS } from '../const/constants';
+import { ACCTS_OIDC_EMAIL, ACCTS_OIDC_PWORD, TIMEOUT_1_SECOND, TIMEOUT_10_SECONDS } from '../const/constants';
 
 export class TBAcctsOIDCPage {
   readonly page: Page;
@@ -40,6 +40,10 @@ export class TBAcctsOIDCPage {
     await expect(this.emailInput).toBeVisible({ timeout: TIMEOUT_10_SECONDS });
     await this.emailInput.fill(username);
     await this.passwordInput.fill(password);
+
+    // on android we need a force click because the sign-in button doesn't settle for some reason; sometimes
+    // the click is too fast and the sign-in doesn't actually happen; a 1 second pause here fixes this
+    await this.page.waitForTimeout(TIMEOUT_1_SECOND);
     await this.signInButton.click({ force: true });
     await this.page.waitForTimeout(TIMEOUT_10_SECONDS);
   }
