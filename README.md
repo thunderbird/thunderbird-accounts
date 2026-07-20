@@ -292,11 +292,7 @@ uv run sphinx-build docs build
 
 ## Feature Flags
 
-We now use django-waffle for feature flags. You must define your feature flag in the admin ui (or via a data migration) then you can reference it throughout your code. 
-
-Please use constants to avoid mistakes.
-
- a more simple way declare and toggle feature flags, that method is documented below.
+We now use django-waffle for feature flags. These are documented [here](https://pro-services-docs.thunderbird.net/en/latest/feature-flags).
 
 Before django-waffle was integrated we used are stored in `localStorage` and read at runtime to toggle UI behavior.
 

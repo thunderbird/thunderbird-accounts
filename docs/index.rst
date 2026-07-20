@@ -22,6 +22,7 @@ Contents
 
     readme.md
     autodoc.rst
+    feature-flags.rst
     frontend.rst
     mail.rst
     sign-up.rst
