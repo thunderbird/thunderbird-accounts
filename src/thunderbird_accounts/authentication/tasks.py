@@ -182,6 +182,9 @@ def purge_incomplete_signups(self):
         }
         return result
 
+    switch_status = waffle.switch_is_active(PURGE_INCOMPLETE_SIGNUPS_SWITCH)
+    logger.info(f'purge_incomplete_signups: Running with {PURGE_INCOMPLETE_SIGNUPS_SWITCH} = {switch_status}')
+
     for user in get_stale_incomplete_signup_users(cutoff_hours=settings.INCOMPLETE_SIGNUP_PURGE_HOURS).iterator():
         try:
             with transaction.atomic():
@@ -202,7 +205,7 @@ def purge_incomplete_signups(self):
                     )
                     continue
 
-                if waffle.switch_is_active(PURGE_INCOMPLETE_SIGNUPS_SWITCH):
+                if switch_status:
                     logger.info('purge_incomplete_signups: purging %s', user.uuid)
                     purge_errors = delete_user_data(user)
                 else:
