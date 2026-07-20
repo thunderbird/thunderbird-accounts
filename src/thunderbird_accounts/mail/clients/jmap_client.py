@@ -91,12 +91,12 @@ class JMAPClient:
         self.identity_id = str(identity_id)
         return self.identity_id
 
-    def _jmap_request(self, request_data: JMapRequest, method: Literal['get', 'post'] = 'post') -> JMapResponse:
+    def request(self, request_data: JMapRequest, method: Literal['get', 'post'] = 'post') -> JMapResponse:
         """Make a JMAP POST request to the API, returning the response as a
         Python data structure."""
         if not self.api_url:
             raise RuntimeError('Session not available')
-        print('sending -> ', json.dumps(request_data))
+        print('sending -> ', (request_data.model_dump_json()))
         res = requests.request(
             url=self.api_url,
             method=method,
@@ -104,8 +104,8 @@ class JMAPClient:
                 'Content-Type': 'application/json',
                 'Authorization': self._authorization_value(),
             },
-            data=json.dumps(request_data),
+            data=request_data.model_dump_json(),
             verify=False,
         )
         res.raise_for_status()
-        return res.json()
+        return JMapResponse(**res.json())
