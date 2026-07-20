@@ -203,6 +203,7 @@ def purge_incomplete_signups(self):
                     continue
 
                 if waffle.switch_is_active(PURGE_INCOMPLETE_SIGNUPS_SWITCH):
+                    logger.info('purge_incomplete_signups: purging %s', user.uuid)
                     purge_errors = delete_user_data(user)
                 else:
                     user.groups.add(group)
