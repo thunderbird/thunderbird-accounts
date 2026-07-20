@@ -106,6 +106,55 @@ class GetPaddlePriceTest(TestCase):
             self.assertIsNotNone(price.product)
             self.assertEqual(price.product.uuid, product.uuid)
 
+    def test_created_success_empty_billing_cycle(self):
+        """Regression test for https://github.com/thunderbird/thunderbird-accounts/issues/1127.
+        Prices that are one-off do not have a billing_cycle as they are a one-off charge,
+        so existing functionality was failing due to a property being accessed from a Nonetype."""
+
+        class UnitPriceObj:
+            amount = '1000'
+            currency_code = 'CAD'
+
+        class PriceObj:
+            id = 'pri_abc123'
+            name = 'Price A'
+            unit_price = None
+            billing_cycle = None
+            type = 'standard'
+            product_id = 'pro_abc123'
+            status = 'active'
+
+            def __init__(self):
+                self.unit_price = UnitPriceObj()
+                self.billing_cycle = None
+
+        with patch(
+            'thunderbird_accounts.subscription.management.commands.get_paddle_prices.Command.retrieve_paddle_data'
+        ) as mock_retrieve_paddle_data:
+            product = Product.objects.create(
+                name='Product A', product_type='standard', status='active', paddle_id='pro_abc123'
+            )
+
+            mock_retrieve_paddle_data.return_value = [PriceObj()]
+
+            self.assertEqual(Product.objects.count(), 1)
+            self.assertEqual(Price.objects.count(), 0)
+
+            args = []
+            opts = {}
+            call_command('get_paddle_prices', *args, **opts)
+
+            self.assertEqual(Product.objects.count(), 1)
+            self.assertEqual(Price.objects.count(), 1)
+
+            price = Price.objects.first()
+            self.assertIsNotNone(price)
+            self.assertIsNotNone(price.product)
+            self.assertEqual(price.product.uuid, product.uuid)
+
+            self.assertIsNone(price.billing_cycle_interval)
+            self.assertIsNone(price.billing_cycle_frequency)
+
     def test_updated_success(self):
         class UnitPriceObj:
             amount = '1000'
