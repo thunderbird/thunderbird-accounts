@@ -1754,7 +1754,7 @@ wheels = [
 
 [[package]]
 name = "thunderbird-accounts"
-version = "1.16.9"
+version = "1.16.10"
 source = { editable = "." }
 dependencies = [
     { name = "argon2-cffi" },
