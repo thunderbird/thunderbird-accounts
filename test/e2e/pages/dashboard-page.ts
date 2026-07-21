@@ -12,6 +12,7 @@ import {
   TIMEOUT_3_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
+  TIMEOUT_60_SECONDS,
 } from '../const/constants';
 import { waitForVueApp } from '../utils/utils';
 
@@ -25,6 +26,10 @@ type PopupPageAssertion = {
   expectedUrl: string;
   expectedElementName: string;
   expectedElement: (page: Page) => Locator;
+  beforeExpectedElements?: Array<{
+    expectedElementName: string;
+    expectedElement: (page: Page) => Locator;
+  }>;
 };
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -134,12 +139,20 @@ export class DashboardPage {
     await this.verifyPopupServiceAppLoads({
       link: this.appointmentLink,
       expectedUrl: serviceUrls.appointment,
+      beforeExpectedElements: [{
+        expectedElementName: 'Need help? Visit support',
+        expectedElement: page => page.locator('footer').getByRole('link', { name: /visit support/i }),
+      }],
       expectedElementName: 'Copy booking link',
       expectedElement: page => page.getByRole('button', { name: /copy booking link/i }),
     });
     await this.verifyPopupServiceAppLoads({
       link: this.sendLink,
       expectedUrl: serviceUrls.send,
+      beforeExpectedElements: [{
+        expectedElementName: 'Need help? Visit support',
+        expectedElement: page => page.locator('footer').getByRole('link', { name: /visit support/i }),
+      }],
       expectedElementName: 'Recover access',
       expectedElement: page => page.getByTestId('recover-access-button'),
     });
@@ -189,6 +202,7 @@ export class DashboardPage {
   private async verifyPopupServiceAppLoads({
     link,
     expectedUrl,
+    beforeExpectedElements = [],
     expectedElementName,
     expectedElement,
   }: PopupPageAssertion) {
@@ -207,10 +221,16 @@ export class DashboardPage {
     await popup.waitForLoadState('domcontentloaded');
     await popup.waitForLoadState('networkidle', { timeout: TIMEOUT_30_SECONDS }).catch(() => {});
     expect(new URL(popup.url()).origin).toBe(new URL(expectedUrl).origin);
+    for (const beforeExpectedElement of beforeExpectedElements) {
+      await expect(
+        beforeExpectedElement.expectedElement(popup),
+        `${beforeExpectedElement.expectedElementName} should be visible after navigating to ${expectedUrl}`,
+      ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
+    }
     await expect(
       expectedElement(popup),
       `${expectedElementName} should be visible after navigating to ${expectedUrl}`,
-    ).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
     await popup.close();
   }
 }
