@@ -4,6 +4,8 @@ import { LoadingSkeleton, NoticeBar, NoticeBarTypes, VisualDivider } from '@thun
 import { initializePaddle, PaddleEventData, CheckoutEventNames } from '@paddle/paddle-js';
 import CardContainer from '@/components/CardContainer.vue';
 import { onUnmounted, ref } from 'vue';
+import { useLocalStorage } from '@vueuse/core';
+import { PADDLE_TRANSACTION_STORAGE_KEY } from '@/defines';
 
 const { t } = useI18n();
 
@@ -28,6 +30,9 @@ let doneCheckerHandler = null;
 let exceptionCounter = 0;
 let transactionId = null;
 let paymentType = DEFAULT_PAYMENT_TYPE;
+let isResumingTransaction = false;
+
+const storedTransactionId = useLocalStorage<string | null>(PADDLE_TRANSACTION_STORAGE_KEY, null);
 
 const planName = ref();
 const planSystemError = ref(false);
@@ -85,6 +90,7 @@ const areWeDoneHere = async () => {
     if (['completed', 'paid'].indexOf(status) > -1) {
       // Remove the Paddle checkout form, and after a short wait reload the page.
       paymentComplete.value = true;
+      storedTransactionId.value = null;
       // We re-use this handler since it's not currently used, and it's hooked up to unMount.
       doneCheckerHandler = window.setTimeout(() => {
         window.location.reload();
@@ -112,18 +118,28 @@ const areWeDoneHere = async () => {
 /**
  * "Open" the checkout, which just really involves passing Paddle some settings for the iframe that is loaded inline.
  * Here we'll set the checkout product (paddleItems) and the signed user id which will be used to track the transaction.
+ *
+ * If we already have a transaction id from a previous mount (stored in session storage), resume that transaction
+ * instead of passing items/discountId, so Paddle doesn't spin up a new draft transaction on every reload.
  * @param paddleItems
  * @param signedUserId
  */
 const openCheckout = (paddleItems: any, signedUserId: string, discountId: string | null) => {
   const checkoutOptions: any = {
-    items: paddleItems,
-    discountId,
     customData: {
       // This will tie the transaction and subscription to our user uuid
       signed_user_id: signedUserId,
     },
   };
+
+  if (storedTransactionId.value) {
+    isResumingTransaction = true;
+    transactionId = storedTransactionId.value;
+    checkoutOptions.transactionId = storedTransactionId.value;
+  } else {
+    checkoutOptions.items = paddleItems;
+    checkoutOptions.discountId = discountId;
+  }
 
   paddle.Checkout.open(checkoutOptions);
 };
@@ -138,6 +154,19 @@ const openCheckout = (paddleItems: any, signedUserId: string, discountId: string
 const onPaddleEvent = async (evt: PaddleEventData) => {
   if (evt?.name == CheckoutEventNames.CHECKOUT_COMPLETED) {
     paymentComplete.value = true;
+    storedTransactionId.value = null;
+    return;
+  }
+
+  if (evt?.name == CheckoutEventNames.CHECKOUT_ERROR) {
+    if (isResumingTransaction) {
+      storedTransactionId.value = null;
+      isResumingTransaction = false;
+      window.location.reload();
+      return;
+    }
+
+    paddleUnknownError.value = true;
     return;
   }
 
@@ -153,6 +182,7 @@ const onPaddleEvent = async (evt: PaddleEventData) => {
     // Transaction ID should only update if we're not falsey.
     if (data?.transaction_id) {
       transactionId = data?.transaction_id ?? null;
+      storedTransactionId.value = transactionId;
     }
 
     // Payment type is only reliably updated on payment selected.
