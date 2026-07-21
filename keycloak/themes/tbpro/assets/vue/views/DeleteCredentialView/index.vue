@@ -2,6 +2,7 @@
 import { DangerButton, PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
+import { submitKeycloakForm } from '@kc/vue/keycloakForm';
 const formAction = window._page.currentView?.formAction;
 const loginForm = useTemplateRef('login-form');
 const cancelForm = useTemplateRef('cancel-form');
@@ -10,7 +11,7 @@ const deleteCredentialTitle = window._page.currentView?.deleteCredentialTitle;
 const deleteCredentialMessage = window._page.currentView?.deleteCredentialMessage;
 
 const onSubmit = () => {
-  loginForm?.value?.submit();
+  submitKeycloakForm(loginForm?.value);
 };
 const onCancel = () => {
   cancelForm?.value?.cancel();

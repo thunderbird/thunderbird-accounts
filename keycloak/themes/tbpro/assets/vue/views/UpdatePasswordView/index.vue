@@ -1,6 +1,7 @@
 <script setup>
 import { TextInput, PrimaryButton, CheckboxInput } from "@thunderbirdops/services-ui";
 import { computed, useTemplateRef } from 'vue';
+import { submitKeycloakForm } from '@kc/vue/keycloakForm';
 const formAction = window._page.currentView?.formAction;
 const updatePasswordForm = useTemplateRef('update-password-form');
 const errors = window._page.currentView?.errors;
@@ -12,7 +13,7 @@ const passwordConfirmError = computed(() => {
 });
 
 const onSubmit = () => {
-  updatePasswordForm?.value?.submit();
+  submitKeycloakForm(updatePasswordForm?.value);
 };
 </script>
 

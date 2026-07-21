@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { TextInput, PrimaryButton, NoticeBar, NoticeBarTypes } from "@thunderbirdops/services-ui";
 import { ref, computed, useTemplateRef } from 'vue';
+import { submitKeycloakForm } from '@kc/vue/keycloakForm';
 
 const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
@@ -10,7 +11,7 @@ const resetPasswordForm = useTemplateRef('reset-password-form');
 
 const onSubmit = () => {
   if (resetPasswordForm.value.checkValidity()) {
-    resetPasswordForm?.value?.submit();
+    submitKeycloakForm(resetPasswordForm?.value);
   }
 };
 

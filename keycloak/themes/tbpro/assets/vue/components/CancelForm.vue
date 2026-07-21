@@ -1,5 +1,6 @@
 <script setup>
 import {ref, useTemplateRef, watch} from "vue";
+import { submitKeycloakForm } from '@kc/vue/keycloakForm';
 
 defineProps({
   action: 'string',
@@ -20,7 +21,7 @@ const cancel = () => {
   watch(
     cancelForm,
     () => {
-      cancelForm?.value?.submit();
+      submitKeycloakForm(cancelForm?.value);
     }, {once: true});
 
   // This will cause the cancelForm not be null

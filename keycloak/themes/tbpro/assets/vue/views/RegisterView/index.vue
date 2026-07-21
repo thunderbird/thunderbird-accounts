@@ -3,6 +3,7 @@ import { TextInput, BrandButton, NoticeBar, NoticeBarTypes } from '@thunderbirdo
 import { computed, ref, useTemplateRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { PhArrowRight } from '@phosphor-icons/vue';
+import { submitKeycloakForm } from '@kc/vue/keycloakForm';
 
 const route = useRoute();
 
@@ -54,7 +55,7 @@ const onSubmit = () => {
   }
 
   if (registerForm.value.checkValidity()) {
-    registerForm?.value?.submit();
+    submitKeycloakForm(registerForm?.value);
   }
 };
 

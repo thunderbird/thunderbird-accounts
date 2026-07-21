@@ -9,6 +9,7 @@ import {
 import { computed, ref, useTemplateRef } from "vue";
 import { i18n } from '@kc/composables/i18n.js';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
+import { submitKeycloakForm } from '@kc/vue/keycloakForm';
 const isManualMode = ref(false);
 const formAction = window._page.currentView?.formAction;
 const settingsForm = useTemplateRef('settings-form');
@@ -67,7 +68,7 @@ const otpManualUrl = computed(() => {
 });
 
 const onSubmit = () => {
-  settingsForm?.value?.submit();
+  submitKeycloakForm(settingsForm?.value);
 };
 const onCancel = () => {
   cancelForm?.value?.cancel();

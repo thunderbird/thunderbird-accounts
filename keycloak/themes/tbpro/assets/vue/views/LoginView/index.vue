@@ -3,6 +3,7 @@ import { ref, computed, useTemplateRef } from 'vue';
 import { TextInput, BrandButton, CheckboxInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { PhArrowRight } from '@phosphor-icons/vue';
 import { TBPRO_WAIT_LIST } from '@kc/defines';
+import { submitKeycloakForm } from '@kc/vue/keycloakForm';
 
 const firstError = window._page.currentView?.firstError;
 const formAction = window._page.currentView?.formAction;
@@ -15,7 +16,7 @@ const tbProPrimaryDomain = window._page.currentView?.tbProPrimaryDomain;
 
 const onSubmit = () => {
   if (loginForm.value.checkValidity()) {
-    loginForm?.value?.submit();
+    submitKeycloakForm(loginForm?.value);
   }
 };
 

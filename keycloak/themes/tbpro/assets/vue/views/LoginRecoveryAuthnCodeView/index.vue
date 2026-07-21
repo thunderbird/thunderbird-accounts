@@ -2,6 +2,7 @@
 import { TextInput, PrimaryButton, LinkButton } from "@thunderbirdops/services-ui";
 import { computed, useTemplateRef } from "vue";
 import CancelForm from '@kc/vue/components/CancelForm.vue';
+import { submitKeycloakForm } from '@kc/vue/keycloakForm';
 
 const formAction = window._page.currentView?.formAction;
 const recoveryCodePrompt = window._page.currentView?.recoveryCodePrompt;
@@ -12,7 +13,7 @@ const loginForm = useTemplateRef('login-form');
 const tryAnotherWayForm = useTemplateRef('try-another-way-form');
 
 const onSubmit = () => {
-  loginForm?.value?.submit();
+  submitKeycloakForm(loginForm?.value);
 };
 
 const onTryAnotherWay = () => {

@@ -49,6 +49,8 @@ function stopSessionPolling() {
   }
 }
 
+globalThis.stopKeycloakSessionPolling = stopSessionPolling;
+
 export function checkAuthSession(pageAuthSessionHash) {
   setTimeout(() => {
     const cookieAuthSessionHash = getKcAuthSessionHash();

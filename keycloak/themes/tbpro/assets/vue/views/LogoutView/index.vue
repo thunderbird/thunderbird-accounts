@@ -1,13 +1,14 @@
 <script setup>
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
+import { submitKeycloakForm } from '@kc/vue/keycloakForm';
 const formAction = window._page.currentView?.formAction;
 const logoutForm = useTemplateRef('logout-form');
 
 const sessionCode = window._page.currentView?.sessionCode;
 const clientUrl = window._page.currentView?.clientUrl;
 const onSubmit = () => {
-  logoutForm?.value?.submit();
+  submitKeycloakForm(logoutForm?.value);
 };
 </script>
 

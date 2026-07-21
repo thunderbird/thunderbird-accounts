@@ -2,6 +2,7 @@
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import { computed, useTemplateRef } from 'vue';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
+import { submitKeycloakForm } from '@kc/vue/keycloakForm';
 
 const formAction = window._page.currentView?.formAction;
 const showForm = computed(() => window._page.appInitiatedAction !== 'false');
@@ -12,7 +13,7 @@ const verifyEmailForm = useTemplateRef('verify-email-form');
 const cancelForm = useTemplateRef('cancel-form');
 
 const onSubmit = () => {
-  verifyEmailForm?.value?.submit();
+  submitKeycloakForm(verifyEmailForm?.value);
 };
 
 const onCancel = () => {
