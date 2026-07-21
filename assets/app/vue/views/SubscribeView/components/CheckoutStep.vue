@@ -4,7 +4,8 @@ import { LoadingSkeleton, NoticeBar, NoticeBarTypes, VisualDivider } from '@thun
 import { initializePaddle, PaddleEventData, CheckoutEventNames } from '@paddle/paddle-js';
 import CardContainer from '@/components/CardContainer.vue';
 import { onUnmounted, ref } from 'vue';
-import { useSessionStorage } from '@vueuse/core';
+import { useLocalStorage } from '@vueuse/core';
+import { PADDLE_TRANSACTION_STORAGE_KEY } from '@/defines';
 
 const { t } = useI18n();
 
@@ -31,7 +32,7 @@ let transactionId = null;
 let paymentType = DEFAULT_PAYMENT_TYPE;
 let isResumingTransaction = false;
 
-const storedTransactionId = useSessionStorage<string | null>('accounts/subscribe/paddleTransactionId', null);
+const storedTransactionId = useLocalStorage<string | null>(PADDLE_TRANSACTION_STORAGE_KEY, null);
 
 const planName = ref();
 const planSystemError = ref(false);
