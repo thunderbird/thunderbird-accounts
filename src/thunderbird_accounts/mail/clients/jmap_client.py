@@ -98,7 +98,7 @@ class JMAPClient:
         Python data structure."""
         if not self.api_url:
             raise RuntimeError('Session not available')
-        print('sending -> ', (request_data.model_dump_json()))
+        print('sending -> ', (request_data.model_dump_json(exclude_none=True)))
         res = requests.request(
             url=self.api_url,
             method=method,
@@ -106,7 +106,7 @@ class JMAPClient:
                 'Content-Type': 'application/json',
                 'Authorization': self._authorization_value(),
             },
-            data=request_data.model_dump_json(),
+            data=request_data.model_dump_json(exclude_none=True),
             verify=False,
         )
         res.raise_for_status()
