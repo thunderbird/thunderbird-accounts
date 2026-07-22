@@ -239,16 +239,29 @@ class MailClient:
         """
         compat = dict(obj)
 
-        # emails = primary emailAddress + alias map keys
+        # emails = primary emailAddress + reconstructed alias addresses.
+        # aliases is a VecMap keyed by INDEX ("0","1",...), so its keys are NOT addresses;
+        # each value is an EmailAlias {name:<local part>, domainId}. Rebuild the address as
+        # <name>@<domain>. We can only cheaply resolve the domain for aliases on the account's
+        # own domain (no domainId->name lookup here), so cross-domain aliases are skipped.
         emails: list[str] = []
         primary = obj.get('emailAddress')
+        primary_domain = primary.split('@', 1)[1] if primary and '@' in primary else None
         if primary:
             emails.append(primary)
         aliases = obj.get('aliases')
-        if isinstance(aliases, dict):
-            emails.extend(aliases.keys())
-        elif isinstance(aliases, list):
-            emails.extend(aliases)
+        alias_values = (
+            list(aliases.values()) if isinstance(aliases, dict)
+            else aliases if isinstance(aliases, list) else []
+        )
+        account_domain_id = obj.get('domainId')
+        for alias in alias_values:
+            if isinstance(alias, dict):
+                name = alias.get('name')
+                if name and primary_domain and alias.get('domainId') == account_domain_id:
+                    emails.append(f'{name}@{primary_domain}')
+            elif isinstance(alias, str):
+                emails.append(alias)
 
         # secrets = credential `secret` values (credentials is a map keyed "0","1",...)
         secrets: list[str] = []
@@ -264,21 +277,14 @@ class MailClient:
             elif isinstance(entry, str):
                 secrets.append(entry)
 
-        # quota: v0.16 uses a `quotas` map (exact key unverified) + `usedDiskQuota`.
+        # quota: v0.16 `quotas` is a VecMap<StorageQuota,u64> keyed by camelCase enum name;
+        # disk bytes live under `maxDiskQuota` (source-verified). `usedDiskQuota` is separate.
         quota = 0
         quotas = obj.get('quotas')
-        if isinstance(quotas, dict) and quotas:
-            for value in quotas.values():
-                if isinstance(value, (int, float)):
-                    quota = value
-                    break
-                if isinstance(value, dict):
-                    for candidate in ('quota', 'value', 'limit'):
-                        if isinstance(value.get(candidate), (int, float)):
-                            quota = value[candidate]
-                            break
-                    if quota:
-                        break
+        if isinstance(quotas, dict):
+            value = quotas.get('maxDiskQuota')
+            if isinstance(value, (int, float)):
+                quota = value
         elif isinstance(quotas, (int, float)):
             quota = quotas
 
@@ -324,8 +330,11 @@ class MailClient:
         x:Account/query only filters by `name` (login local part) -- a full email is an
         invalid `name` value. So for an email we query by the local part and disambiguate
         by domainId; for a bare login we query by name directly.
-        Raises AccountNotFoundError when no matching account exists.
+        Raises AccountNotFoundError when no matching account exists (including when the
+        caller passes a falsy identifier, e.g. an unprovisioned user's None primary email).
         """
+        if not principal_id:
+            raise AccountNotFoundError(principal_id)
         if '@' in principal_id:
             local, _, domain = principal_id.partition('@')
             domain_id = self._resolve_domain_id(domain)

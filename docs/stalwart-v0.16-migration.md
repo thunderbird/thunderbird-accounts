@@ -78,6 +78,17 @@ Exercised through the app (`manage.py shell`) against a live instance:
 - `create_domain` / `delete_domain`
 - **`create_dkim`** — client-generated RSA + Ed25519 keypairs, created + deleted
 - subscription plan-info endpoint (`get_account(full_email)`) → `200`
+- alias add→delete: `save_email_addresses(2)` then `delete_email_addresses(1)` correctly
+  rebuilds the aliases VecMap (verified against raw Stalwart state)
+
+### Review pass (50-lens) — fixes applied
+- `_get_account_raw(None)` guarded → raises `AccountNotFoundError` instead of `TypeError`
+  (an unprovisioned user's `stalwart_primary_email` is `None`).
+- `_account_to_compat` `emails` now reconstructs alias addresses from the `EmailAlias`
+  values (`name`@`domain`) instead of the VecMap **index** keys (`"0"`,`"1"`). Cross-domain
+  aliases are skipped (no cheap domainId→name lookup in the shaper).
+- `_account_to_compat` `quota` now reads `quotas["maxDiskQuota"]` directly (source-verified)
+  rather than a heuristic scan.
 
 ## Open items — REVIEW / FOLLOW-UP (intentionally not in this PR)
 
@@ -94,10 +105,12 @@ Exercised through the app (`manage.py shell`) against a live instance:
    the same treatment as `clients.py`.
 4. **Subscription plan-info view** (`subscription/views.py`) returns **500** when a mailbox
    is missing even though used-quota is "optional" — should degrade gracefully.
-5. **`quotas` / compat quota mapping** — `_account_to_compat` maps `usedQuota`←`usedDiskQuota`;
-   confirm the `quota`←`quotas.maxDiskQuota` read mapping matches what callers expect.
-6. **`cryptography`** is required at runtime for `create_dkim` (imported lazily). Confirm it's
+5. **`cryptography`** is required at runtime for `create_dkim` (imported lazily). Confirm it's
    a declared dependency.
+6. **`_account_to_compat` `emails`** reconstructs only *same-domain* aliases (the shaper has
+   no domainId→name lookup). If multi-domain aliases must appear in `emails`, add a domain
+   cache/lookup. `secrets` returns the server-stored (hashed/masked) credential secrets, not
+   plaintext — confirm no caller relies on plaintext.
 
 ## Deployment note
 
