@@ -1,9 +1,15 @@
+import uuid
 from typing import Optional
 import sentry_sdk
 from pydantic import ValidationError
 import json
 import logging
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError, InvalidJMapResponseError, AccountNotFoundError
+from thunderbird_accounts.mail.exceptions import (
+    DomainNotFoundError,
+    InvalidJMapResponseError,
+    AccountNotFoundError,
+    AccountSetError,
+)
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
 from thunderbird_accounts.mail.clients.stalwart_types import DomainType, AccountType, EmailAlias, StalwartType
 from thunderbird_accounts.mail.clients.jmap_types import JMapRequest, Invocation, ResponseIndex
@@ -134,75 +140,127 @@ class MailClientJMAP(MailClientInterface):
     ):
         self.preflight_check()
 
-        account_name, domain_name = principal_id.split('@')
+        account_name, account_domain = principal_id.split('@')
 
-        domain_lookup_rq = Invocation(
-            name='x:Domain/query',
-            arguments={
-                'accountId': self.account_id,
-                'filter': {'name': domain_name},
-                'limit': 25,
-                'position': 0,
-                'calculateTotal': True,
-            },
-            method_call_id='0',
-        )
+        # Sort aliases by domain
+        alias_domains = {}
+        for email in emails:
+            if '@' not in email:
+                continue
 
-        aliases = {str(idx): EmailAlias(enabled=True, name=email, domainId='a') for idx, email in enumerate(emails)}
-        data = AccountType(
-            type=AccountType.Types.USER.value,
-            id=None,
-            name=account_name,
-            description=full_name,
-            encryptionAtRest=StalwartType(type='Disabled'),
-            roles=StalwartType(type='User'),
-            permissions=StalwartType(type='Inherit'),
-            locale='en_US',
-            domainId='b',
-        )
+            _, alias_domain = email.split('@')
+            if not alias_domains.get(alias_domain):
+                alias_domains[alias_domain] = [email]
+                continue
 
-        invocations = [
-            #domain_lookup_rq,
-            Invocation(
-                name='x:Account/set',
-                arguments={
-                    'accountId': self.account_id,
-                    'create': {
-                        'new-1': {
-                            **data.model_dump(exclude_none=True),
-                            #'#domainId': {'resultOf': '0', 'name': 'x:Domain/query', 'path': '/ids/0'},
-                        }
-                    },
-                },
-                method_call_id='1',
-            ),
-        ]
+            alias_domains[alias_domain].append(email)
+
+        # Build our domain id query list
+        domain_names = [account_domain]
+        if len(alias_domains):
+            domain_names += [alias_domain for alias_domain in alias_domains.keys()]
 
         response = self.client.request(
             JMapRequest(
                 using=[
                     'urn:ietf:params:jmap:core',
                     'urn:stalwart:jmap',
-                    'urn:ietf:params:jmap:blob',
-                    'urn:ietf:params:jmap:mail',
-                    'urn:ietf:params:jmap:calendars',
-                    'urn:ietf:params:jmap:contacts',
-                    'urn:ietf:params:jmap:principals',
-                    'urn:ietf:params:jmap:sieve',
-                    'urn:ietf:params:jmap:vacationresponse',
                 ],
-                method_calls=invocations,
+                method_calls=[
+                    # x:Domain/query does not support OR filter,
+                    # so we have to do a separate request for each domain
+                    Invocation(
+                        name='x:Domain/query',
+                        arguments={
+                            'accountId': self.account_id,
+                            'filter': {'name': domain_name},
+                            'limit': 5,
+                            'position': 0,
+                            'calculateTotal': False,
+                        },
+                        method_call_id=str(idx),
+                    )
+                    for idx, domain_name in enumerate(domain_names)
+                ],
             )
         )
-        print('RESPONSE->', response)
-        data = response.method_responses[1].arguments.get('list', [])[0]
+
+        domain_ids_by_domain = {}
+
+        debug_dump = []
+        for idx, _r in enumerate(response.method_responses):
+            debug_dump.append(_r.arguments)
+            id_list = _r.arguments.get('ids', [])
+            domain_name = domain_names[idx]
+            # Previously examples have required a domain to exist before we attach it to an account
+            if len(id_list) == 0:
+                raise DomainNotFoundError(domain_name)
+            domain_ids_by_domain[domain_name] = id_list[0]
+
+        self._debug_dump('set_account-domain_query', {'_': debug_dump})
+
+        aliases = {
+            str(idx): EmailAlias(
+                enabled=True, name=email.split('@')[0], domain_id=domain_ids_by_domain[email.split('@')[1]]
+            )
+            for idx, email in enumerate(emails)
+        }
+        data = AccountType(
+            type=AccountType.Types.USER.value,
+            id=None,
+            name=account_name,
+            description=full_name,
+            encryption_at_rest=StalwartType(type='Disabled'),
+            roles=StalwartType(type='User'),
+            permissions=StalwartType(type='Inherit'),
+            domain_id=domain_ids_by_domain[account_domain],
+            aliases=aliases,
+        )
+
+        temp_id = str(uuid.uuid4())
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name='x:Account/set',
+                        arguments={
+                            'accountId': self.account_id,
+                            'create': {
+                                temp_id: {
+                                    **data.model_dump(exclude_none=True),
+                                }
+                            },
+                        },
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+
+        error = response.method_responses[0].arguments.get('notCreated')
+        if error:
+            error_obj = error.get(temp_id, {})
+            error_type = error_obj.get('type')
+            error_reason = error_obj.get('description')
+            error_fields = error_obj.get('properties')
+            raise AccountSetError(error_type, error_reason, error_fields)
+
+        data = response.method_responses[0].arguments.get('created', {})
         self._debug_dump('set_account', data)
-        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
+
+        stalwart_pkids = data.get(temp_id, {}).get('ids', [])
+
+        # Just in case the account was not created and Stalwart missed an error check
+        if len(stalwart_pkids) == 0:
             raise AccountNotFoundError(principal_id)
 
         try:
-            return AccountType(**data)
-        except ValidationError as ex:
-            logging.warning(f'[MailClient.get_account({principal_id}]: Failed pydantic validation!')
+            return stalwart_pkids[0]
+        except KeyError as ex:
+            logging.warning(f'[MailClient.get_account({principal_id}]: KeyError!')
             sentry_sdk.capture_exception(ex)
             raise InvalidJMapResponseError(ex)

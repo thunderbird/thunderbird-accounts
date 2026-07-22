@@ -43,6 +43,22 @@ class AccountNotFoundError(StalwartError):
     def __str__(self):
         return f'AccountNotFoundError: {self.username}'
 
+class AccountSetError(StalwartError):
+    """Raise when an individual is not found in Stalwart"""
+
+    type: str
+    description: Optional[str] = None
+    fields: Optional[list] = None
+
+    def __init__(self, type, description, fields, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.type = type
+        self.description = description
+        self.fields = fields
+
+    def __str__(self):
+        return f'AccountSetError: {self.type} : {self.description or self.fields}'
+
 
 class AccessTokenNotFound(StalwartError):
     def __str__(self):
