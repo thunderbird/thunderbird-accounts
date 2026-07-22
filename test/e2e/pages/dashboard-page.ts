@@ -83,36 +83,36 @@ export class DashboardPage {
     await expect.poll(async () => new URL(this.page.url()).pathname).toBe('/dashboard');
   }
 
-  async verifyDashboardDisplayed(smoketest: boolean = false) {
-    // for smoketest we just want to verify we are signed in and header appears
+  async verifyDashboardSignedIn() {
+    // just verify we are signed in and header appears
     await expect(this.myAccountHeading).toBeVisible( { timeout: TIMEOUT_30_SECONDS });
     await expect(this.privacyAndDataHeading).toBeVisible();
     await expect(this.manageYourServicesHeading).toBeVisible();
-
-    if (!smoketest) {
-      await expect(this.myAccountCard).toContainText(ACCTS_OIDC_EMAIL);
-      await expect(this.currentSubscriptionHeading).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-      await expect(this.currentSubscriptionSection).toContainText(DASHBOARD_CURRENT_SUBSCRIPTION_PRICE);
-      await expect(this.currentSubscriptionSection).toContainText(
-        new RegExp(`${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE)}\\s*of Mail Storage`),
-      );
-      await expect(this.currentSubscriptionSection).toContainText(
-        new RegExp(`${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_SEND_STORAGE)}\\s*of Send Storage`),
-      );
-      await expect(this.currentSubscriptionSection).toContainText(
-        new RegExp(`${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_EMAIL_ADDRESSES)}\\s*Email Addresses`),
-      );
-      await expect(this.currentSubscriptionSection).toContainText(
-        new RegExp(`${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS)}\\s*Custom Domains`),
-      );
-      await expect(this.passwordChangeLink).toBeVisible();
-      await expect(this.deleteAccountLink).toBeVisible();
-      await expect(this.thundermailLink).toBeVisible();
-      await expect(this.appointmentLink).toBeVisible();
-      await expect(this.sendLink).toBeVisible();
-      await expect(this.manageSubscriptionButton).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-    }
   }
+
+  async verifyDashboardDisplayed() {
+    await expect(this.myAccountCard).toContainText(ACCTS_OIDC_EMAIL);
+    await expect(this.currentSubscriptionHeading).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await expect(this.currentSubscriptionSection).toContainText(DASHBOARD_CURRENT_SUBSCRIPTION_PRICE);
+    await expect(this.currentSubscriptionSection).toContainText(
+      new RegExp(`${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE)}\\s*of Mail Storage`),
+    );
+    await expect(this.currentSubscriptionSection).toContainText(
+      new RegExp(`${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_SEND_STORAGE)}\\s*of Send Storage`),
+    );
+    await expect(this.currentSubscriptionSection).toContainText(
+      new RegExp(`${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_EMAIL_ADDRESSES)}\\s*Email Addresses`),
+    );
+    await expect(this.currentSubscriptionSection).toContainText(
+      new RegExp(`${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS)}\\s*Custom Domains`),
+    );
+    await expect(this.passwordChangeLink).toBeVisible();
+    await expect(this.deleteAccountLink).toBeVisible();
+    await expect(this.thundermailLink).toBeVisible();
+    await expect(this.appointmentLink).toBeVisible();
+    await expect(this.sendLink).toBeVisible();
+    await expect(this.manageSubscriptionButton).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+}
 
   async verifyPasswordChangeNavigation() {
     await this.passwordChangeLink.click();

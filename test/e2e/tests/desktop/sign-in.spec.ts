@@ -20,16 +20,14 @@ test.beforeEach(async ({ page }) => {
  * (and not redirected to the subscription page). If this test is running in CI on a new
  * local stack (i.e. on PRs) the test user (admin) won't yet have a subscription, therefore
  * skip this test when running in CI on PRs.
- * 
- * The actual sign-in is perfomed automatically (via `auth.desktop.setup.ts`) before this
- * test starts, because it is setup as a desktop-setup dependency in the `playwright.config.ts`.
  */
-test.describe('tb accounts sign-in is succssful', {
+test.describe('tb accounts sign-in is successful', {
   tag: [PLAYWRIGHT_TAG_DEPLOYMENT_ANALYSIS],
 }, () => {
   test('accounts dashboard appears', async () => {
+    // at this point regardless of env we will be signed in via the beforeEach
     test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack until we automate subscribe');
     await dashboardPage.navigateToDashboard();
-    await dashboardPage.verifyDashboardDisplayed(true);
+    await dashboardPage.verifyDashboardSignedIn();
   });
 });

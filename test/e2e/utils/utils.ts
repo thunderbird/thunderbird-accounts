@@ -75,7 +75,6 @@ export const navigateToAccountsHubAndSignIn = async (page: Page, username: strin
         await tbAcctsSignInPage.signIn(username, password);
     }
 
-
     await waitForVueApp(page);
 
     // if tests are running on a new local stack (or new account) the terms of service page might be

@@ -1,5 +1,5 @@
 // environment where the tests will run
-export const ACCTS_TARGET_ENV = String(process.env.ACCTS_TARGET_ENV);
+export const ACCTS_TARGET_ENV = String(process.env.ACCTS_TARGET_ENV ?? 'dev');
 
 // tb accounts urls
 export const ACCTS_HUB_URL = String(process.env.ACCTS_HUB_URL);
