@@ -140,6 +140,9 @@ class MailClientJMAP(MailClientInterface):
     ):
         self.preflight_check()
 
+        if app_password:
+            raise RuntimeError('app_password is a deprecated property and cannot be used.')
+
         account_name, account_domain = principal_id.split('@')
 
         # Sort aliases by domain
@@ -215,6 +218,7 @@ class MailClientJMAP(MailClientInterface):
             permissions=StalwartType(type='Inherit'),
             domain_id=domain_ids_by_domain[account_domain],
             aliases=aliases,
+            quotas={'maxDiskQuota': quota} if quota else None,
         )
 
         temp_id = str(uuid.uuid4())
@@ -252,15 +256,10 @@ class MailClientJMAP(MailClientInterface):
         data = response.method_responses[0].arguments.get('created', {})
         self._debug_dump('set_account', data)
 
-        stalwart_pkids = data.get(temp_id, {}).get('ids', [])
+        stalwart_pkid = data.get(temp_id, {}).get('id')
 
         # Just in case the account was not created and Stalwart missed an error check
-        if len(stalwart_pkids) == 0:
+        if not stalwart_pkid:
             raise AccountNotFoundError(principal_id)
 
-        try:
-            return stalwart_pkids[0]
-        except KeyError as ex:
-            logging.warning(f'[MailClient.get_account({principal_id}]: KeyError!')
-            sentry_sdk.capture_exception(ex)
-            raise InvalidJMapResponseError(ex)
+        return stalwart_pkid
