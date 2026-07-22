@@ -38,7 +38,12 @@ class MailClientJMAP(MailClientInterface):
         with open(f'd_{name}.json', 'w') as fh:
             fh.write(json.dumps(data, indent=2))
 
-    def get_domain(self, domain) -> DomainType:
+    def get_domain(self, domain: str) -> DomainType:
+        """Retrieve a :any thunderbird_accounts.mail.clients.stalwart_types.DomainType:
+        object from a given domain name.
+
+        :raises DomainNotFoundError: If the domain is not found within Stalwart.
+        :raises InvalidJMapResponseError: If the response from Stalwart presents a malformed DomainType object."""
         self.preflight_check()
 
         response = self.client.request(
@@ -85,6 +90,11 @@ class MailClientJMAP(MailClientInterface):
             raise InvalidJMapResponseError(ex)
 
     def get_account(self, principal_id: str) -> AccountType:
+        """Retrieve an :any thunderbird_accounts.mail.clients.stalwart_types.AccountType: from a given
+        primary thundermail address.
+
+        :raises AccountNotFoundError: If the account is not found within Stalwart.
+        :raises InvalidJMapResponseError: If the response from Stalwart presents a malformed AccountType object."""
         self.preflight_check()
 
         response = self.client.request(
@@ -138,6 +148,15 @@ class MailClientJMAP(MailClientInterface):
         app_password: Optional[str] = None,
         quota: Optional[int] = None,
     ):
+        """Creates a Stalwart Account object from the given values. Domains for aliases need to be created
+        ahead of time.
+
+        Note: App password is deprecated, it's not used within actual working code and so we'll remove it soon.
+
+        :raises RuntimeError: If app_password is any value except for None.
+        :raises DomainNotFoundError: If an email alias domain is not found within Stalwart.
+        :raises AccountSetError: If there was an error with Stalwart or one of our parameters in the request.
+        :raises AccountNotFoundError: If somehow the account was created but no id was returned."""
         self.preflight_check()
 
         if app_password:
