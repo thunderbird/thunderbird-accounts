@@ -148,6 +148,18 @@ To run the E2E tests in debug mode (still in `test/e2e`):
 npm run e2e-test-debug
 ```
 
+To run the deployment-analysis E2E tests, follow the above setup instructions and then run:
+
+```bash
+npm run deployment-analysis-e2e
+```
+
+Or to watch the tests run:
+
+```bash
+npm run deployment-analysis-e2e-headed
+```
+
 ## Running on BrowserStack
 
 You can run the E2E tests from your local machine pointed at the stage environment, but against browsers provided in the BrowserStack Automate cloud.

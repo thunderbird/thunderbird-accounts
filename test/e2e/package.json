@@ -14,6 +14,8 @@
     "prod-nightly-tests-browserstack-desktop-safari": "npx browserstack-node-sdk playwright test --grep e2e-prod-desktop-nightly --project=Safari-OSX --browserstack.buildName 'TB Accounts Nightly Tests Safari Desktop' --browserstack.config 'browserstack-desktop-nightly.yml'",
     "prod-nightly-tests-mobile-browserstack-android-chrome": "npx browserstack-node-sdk playwright test --grep prod-mobile-nightly --project=android-chrome --browserstack.buildName 'TB Accounts Nightly Tests Android Chrome' --browserstack.config 'browserstack-mobile-nightly.yml'",
     "prod-nightly-tests-mobile-browserstack-ios-safari": "npx browserstack-node-sdk playwright test --grep prod-mobile-nightly --project=ios-safari --browserstack.buildName 'TB Accounts Nightly Tests iOS Safari' --browserstack.config 'browserstack-mobile-nightly.yml'",
+    "deployment-analysis-e2e": "npx playwright test --grep deployment-analysis --project=firefox",
+    "deployment-analysis-e2e-headed": "npx playwright test --grep deployment-analysis --project=firefox --headed",
     "postinstall": "npm update browserstack-node-sdk"
   },
   "keywords": [],

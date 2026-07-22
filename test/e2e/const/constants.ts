@@ -33,6 +33,7 @@ export const PLAYWRIGHT_TAG_E2E_SUITE = '@e2e-suite';
 export const PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY = '@e2e-prod-desktop-nightly';
 export const PLAYWRIGHT_TAG_E2E_SUITE_MOBILE = '@e2e-mobile-suite';
 export const PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY = '@e2e-prod-mobile-nightly';
+export const PLAYWRIGHT_TAG_DEPLOYMENT_ANALYSIS = '@deployment-analysis';
 
 // timeouts
 export const TIMEOUT_1_SECOND = 1000;
