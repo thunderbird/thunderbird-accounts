@@ -1,3 +1,4 @@
+from thunderbird_accounts.mail.clients.jmap_types import BaseSchema
 from enum import StrEnum
 from typing import Optional, Annotated
 from datetime import datetime
@@ -8,7 +9,7 @@ Duration = Annotated[str | int, Field()]
 Ref: https://stalw.art/docs/0.15/configuration/values/duration"""
 
 
-class StalwartType(BaseModel):
+class StalwartType(BaseSchema):
     """Stalwart uses custom types in the shape of {'@type': 'Type'} (like {'@type': 'Enabled'}
     in Domain.subAddressing's case)
 
@@ -18,7 +19,7 @@ class StalwartType(BaseModel):
     type: Optional[str] = Field(validation_alias=AliasChoices('@type', 'type'), serialization_alias='@type', default=None)
 
 
-class JMapType(BaseModel):
+class JMapType(BaseSchema):
     """Base type for all jmap responses"""
 
     id: Optional[str] = None
@@ -33,17 +34,17 @@ class DnsServer(StalwartType):
 
     host: str
     port: int = 53
-    keyName: str
+    key_name: str
     key: str
     protocol: str
-    tsigAlgorithm: str
+    tsig_algorithm: str
     description: str
-    memberTenantId: Optional[str] = None
+    member_tenant_id: Optional[str] = None
     timeout: Duration
     ttl: Duration
-    pollingInterval: Duration
-    propagationTimeout: Duration
-    propagationDelay: Optional[Duration] = None
+    polling_interval: Duration
+    propagation_timeout: Duration
+    propagation_delay: Optional[Duration] = None
 
 
 class DkimManagement(StalwartType):
@@ -55,10 +56,10 @@ class DkimManagementProperties(DkimManagement):
     Ref: https://stalw.art/docs/ref/object/domain/#dkimmanagementproperties"""
 
     algorithms: dict[str, bool]
-    selectorTemplate: str
-    rotateAfter: Duration
-    retireAfter: Duration
-    deleteAfter: Duration
+    selector_template: str
+    rotate_after: Duration
+    retire_after: Duration
+    delete_after: Duration
 
 
 class DnsManagement(StalwartType):
@@ -66,9 +67,9 @@ class DnsManagement(StalwartType):
 
 
 class DnsManagementProperties(DnsManagement):
-    dnsServerId: str
+    dns_server_id: str
     origin: Optional[str] = None
-    publishRecords: dict
+    publish_records: dict
 
 
 class SubAddressing(StalwartType):
@@ -76,7 +77,7 @@ class SubAddressing(StalwartType):
 
 
 class SubAddressingCustom(StalwartType):
-    customRole: dict
+    custom_role: dict
 
 
 class DomainType(JMapType):
@@ -86,20 +87,20 @@ class DomainType(JMapType):
 
     name: str
     aliases: dict  # list[str]
-    isEnabled: bool
-    createdAt: datetime
+    is_enabled: bool
+    created_at: datetime
     description: Optional[str] = None
     logo: Optional[str] = None
-    certificateManagement: dict | StalwartType
-    dkimManagement: DkimManagement | DkimManagementProperties
-    dnsManagement: DnsManagement | DnsManagementProperties
-    dnsZoneFile: str
-    memberTenantId: Optional[str] = None
-    directoryId: Optional[str] = None
-    catchAllAddress: Optional[str] = None
-    subAddressing: SubAddressing | SubAddressingCustom
-    allowRelaying: bool
-    reportAddressUri: Optional[str] = None
+    certificate_management: dict | StalwartType
+    dkim_management: DkimManagement | DkimManagementProperties
+    dns_management: DnsManagement | DnsManagementProperties
+    dns_zone_file: str
+    member_tenant_id: Optional[str] = None
+    directory_id: Optional[str] = None
+    catch_all_address: Optional[str] = None
+    sub_addressing: SubAddressing | SubAddressingCustom
+    allow_relaying: bool
+    report_address_uri: Optional[str] = None
 
 
 class Credential(StalwartType):
@@ -109,22 +110,22 @@ class Credential(StalwartType):
 class PasswordCredential(Credential):
     secret: str
     otpAuth: Optional[str] = None
-    expiresAt: Optional[datetime] = None
-    allowedIps: Optional[dict] = None
+    expires_at: Optional[datetime] = None
+    allowed_ips: Optional[dict] = None
 
 
 class SecondaryCredential(Credential):
     description: str
     secret: str
-    createdAt: Optional[datetime] = None
+    created_at: Optional[datetime] = None
     permissions: StalwartType
-    allowedIps: Optional[dict] = None
+    allowed_ips: Optional[dict] = None
 
 
-class EmailAlias(BaseModel):
+class EmailAlias(BaseSchema):
     enabled: bool
     name: str
-    domainId: str
+    domain_id: str
     description: Optional[str] = None
 
 
@@ -176,18 +177,18 @@ class AccountType(JMapType, StalwartType):
         GROUP = 'Group'
 
     name: str
-    domainId: Optional[str | dict] = None
-    emailAddress: Optional[str] = None
+    domain_id: Optional[str | dict] = None
+    email_address: Optional[str] = None
     credentials: Optional[dict[str, PasswordCredential | SecondaryCredential]] = None
-    createdAt: Optional[datetime] = None
-    memberGroupsIds: Optional[dict] = None
-    memberTenantId: Optional[str] = None
+    created_at: Optional[datetime] = None
+    member_groups_ids: Optional[dict] = None
+    member_tenant_id: Optional[str] = None
     roles: StalwartType | dict
     permissions: StalwartType
     quotas: Optional[dict] = None
-    usedDiskQuota: Optional[int] = None
+    used_disk_quota: Optional[int] = None
     aliases: Optional[dict[str, EmailAlias]] = None
     description: Optional[str] = None
     locale: Optional[str] = 'en_US'
     timezone: Optional[str] = None
-    encryptionAtRest: StalwartType
+    encryption_at_rest: StalwartType

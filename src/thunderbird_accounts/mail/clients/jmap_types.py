@@ -6,6 +6,8 @@ from sqlparse.tokens import Literal
 
 
 class BaseSchema(BaseModel):
+    """A base schema that allows us to ingest camelCase names to snake_case variables.
+    This will serialize it back to camelCase for requests as well."""
     model_config = ConfigDict(
         alias_generator=to_camel,
         serialize_by_alias=True,
