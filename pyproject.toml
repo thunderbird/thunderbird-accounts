@@ -40,6 +40,7 @@ dependencies = [
     # CVE pins
     "idna>=3.15", # CVE-2026-45409 fix
     "django-waffle>=5.0.0",
+    "pydantic[email,timezone]>=2.13.4",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"
