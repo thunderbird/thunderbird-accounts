@@ -83,11 +83,15 @@ export class DashboardPage {
     await expect.poll(async () => new URL(this.page.url()).pathname).toBe('/dashboard');
   }
 
-  async verifyDashboardDisplayed() {
-    await expect(this.myAccountHeading).toBeVisible();
-    await expect(this.myAccountCard).toContainText(ACCTS_OIDC_EMAIL);
+  async verifyDashboardSignedIn() {
+    // just verify we are signed in and header appears
+    await expect(this.myAccountHeading).toBeVisible( { timeout: TIMEOUT_30_SECONDS });
     await expect(this.privacyAndDataHeading).toBeVisible();
     await expect(this.manageYourServicesHeading).toBeVisible();
+  }
+
+  async verifyDashboardDisplayed() {
+    await expect(this.myAccountCard).toContainText(ACCTS_OIDC_EMAIL);
     await expect(this.currentSubscriptionHeading).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     await expect(this.currentSubscriptionSection).toContainText(DASHBOARD_CURRENT_SUBSCRIPTION_PRICE);
     await expect(this.currentSubscriptionSection).toContainText(
@@ -108,7 +112,7 @@ export class DashboardPage {
     await expect(this.appointmentLink).toBeVisible();
     await expect(this.sendLink).toBeVisible();
     await expect(this.manageSubscriptionButton).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-  }
+}
 
   async verifyPasswordChangeNavigation() {
     await this.passwordChangeLink.click();

@@ -31,6 +31,7 @@ test.describe('dashboard controls on desktop browser', {
     test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack until we automate tb subsrcibe step');
 
     await dashboardPage.navigateToDashboard();
+    await dashboardPage.verifyDashboardSignedIn();
     await dashboardPage.verifyDashboardDisplayed();
 
     await dashboardPage.verifyPasswordChangeNavigation();
