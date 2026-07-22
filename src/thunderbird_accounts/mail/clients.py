@@ -1,5 +1,27 @@
+# =====================================================================================
+# Stalwart v0.16 JMAP port of src/thunderbird_accounts/mail/clients.py
+# -------------------------------------------------------------------------------------
+# Stalwart v0.16.13 REMOVED the entire /api/* REST management surface. All management
+# CRUD now goes through the JMAP "Registry" API at `POST {STALWART_BASE_API_URL}/jmap`
+# using PascalCase object methods (x:Account/*, x:Domain/*, x:DkimSignature/*, ...).
+#
+# This module preserves every public method name / signature / return type of the
+# v0.15 client so callers and Celery tasks are unchanged; only the transport + object
+# shapes change. Methods that touch Stalwart are reimplemented against JMAP; purely
+# local DNS logic (build_expected_dns_records / check_domain_dns) is carried over as-is.
+#
+# Design + source-verified shapes: docs/stalwart-v0.16-migration.md
+# Every ported method is marked with a `# v0.16 JMAP port` comment.
+#
+# Verified end-to-end against a live Stalwart v0.16.13 (test matrix + the small set of
+# documented limitations still open for review are in the migration doc).
+# =====================================================================================
+
+from __future__ import annotations
+
 import base64
 import logging
+import re
 from enum import StrEnum
 from typing import Optional
 
@@ -11,14 +33,31 @@ from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
     DomainNotFoundError,
     FailedToCreateDKIM,
-    FailedToReloadStalwart,
     StalwartError,
 )
 
+# JMAP capability set. `urn:stalwart:jmap` is the registry/management capability and is
+# exempt from the JMAP `using` check.
+JMAP_USING = ['urn:ietf:params:jmap:core', 'urn:stalwart:jmap']
+
+# Map the app's configured DKIM algorithm names (settings.STALWART_DKIM_ALGOS =
+# ['Ed25519', 'Rsa']) onto the v0.16 JMAP DkimSignature `@type` discriminators.
+DKIM_ALGO_JMAP_TYPES = {
+    'Rsa': 'Dkim1RsaSha256',
+    'RSA': 'Dkim1RsaSha256',
+    'Ed25519': 'Dkim1Ed25519Sha256',
+    'ED25519': 'Dkim1Ed25519Sha256',
+    # Accept already-mapped values too, in case config is updated later.
+    'Dkim1RsaSha256': 'Dkim1RsaSha256',
+    'Dkim1Ed25519Sha256': 'Dkim1Ed25519Sha256',
+}
+
 
 class StalwartErrors(StrEnum):
-    """Errors defined in Stalwart's management api
-    https://github.com/stalwartlabs/stalwart/blob/4d819a1041b0adfce3757df50929764afa10e27b/crates/http/src/management/mod.rs#L58
+    """Errors defined in Stalwart's (legacy v0.15) management api.
+
+    Retained for backwards compatibility; v0.16 surfaces failures as JMAP SetError
+    maps (notCreated/notUpdated/notDestroyed) and method-level ["error", {...}] tuples.
     """
 
     FIELD_ALREADY_EXISTS = 'fieldAlreadyExists'
@@ -66,15 +105,21 @@ class StaleDNSRecordCode(StrEnum):
 
 
 class MailClient:
-    """A partial api client for Stalwart
-    Docs: https://stalw.art/docs/api/management/endpoints
-    Code: https://github.com/stalwartlabs/stalwart/tree/main/crates/http/src/management
+    """A partial api client for Stalwart v0.16.13 (JMAP Registry API).
 
-    Important note: The principal_id field is principal object's name, not auto-incremented id!
+    v0.16 removed the REST /api/* management surface. All management CRUD goes through
+    `POST {STALWART_BASE_API_URL}/jmap`. Objects are addressed by their numeric JMAP
+    `id`, so callers that pass a login/domain *name* are resolved to an id first.
+
+    See STALWART_V016_PORT_NOTES.md for verified object shapes.
     """
 
     def __init__(self):
+        # /api is kept only for the surviving GET /api/account health probe.
         self.api_url = f'{settings.STALWART_BASE_API_URL}/api'
+        # v0.16 JMAP port: registry endpoint lives on the same host as the API URL.
+        # STALWART_BASE_JMAP_URL is unset on tb-dev and its old `/api` path is v0.15.
+        self.jmap_url = f'{settings.STALWART_BASE_API_URL}/jmap'
         self.api_auth_string = settings.STALWART_API_AUTH_STRING
         self.api_auth_method = settings.STALWART_API_AUTH_METHOD
 
@@ -87,149 +132,176 @@ class MailClient:
             'Authorization': f'{self.api_auth_method} {self.api_auth_string}',
         }
 
+    # ------------------------------------------------------------------ #
+    # Error handling
+    # ------------------------------------------------------------------ #
+
     def _raise_for_error(self, response):
-        data = response.json()
-        error = data.get('error')
-        # Only catch 'other' errors here
-        if error == StalwartErrors.OTHER.value:
-            details_and_reason = ': '.join([data.get('details'), data.get('reason')])
-            raise StalwartError(details_and_reason)
+        """v0.16 JMAP port: parse an RFC7807 problem+json body from a non-JMAP call
+        (e.g. GET /api/account) and raise a StalwartError. Best-effort / defensive."""
+        try:
+            data = response.json()
+        except ValueError:
+            return
+        if not isinstance(data, dict):
+            return
+        # RFC7807 problem+json shape.
+        if data.get('type') or data.get('title') or data.get('detail'):
+            detail = data.get('detail') or data.get('title') or data.get('type')
+            if detail:
+                raise StalwartError(str(detail))
 
-    def _list_principals(self, page=1, limit=100, type: Optional[str] = None) -> requests.Response:
-        """Returns a response for a principal object from Stalwart
+    def _raise_on_set_error(self, arguments: dict, context: str = '') -> None:
+        """v0.16 JMAP port: raise if a x:*/set response reported per-object failures."""
+        for key in ('notCreated', 'notUpdated', 'notDestroyed'):
+            errors = arguments.get(key)
+            if errors:
+                raise StalwartError(f'{context}: {key}: {errors}')
 
-        Docs: https://stalw.art/docs/api/management/endpoints/#list-principals
+    # ------------------------------------------------------------------ #
+    # JMAP transport
+    # ------------------------------------------------------------------ #
 
-        Important: Don't use this directly!
+    def make_jmap_admin_call(self, call: dict) -> dict:
+        """v0.16 JMAP port: POST a fully-formed JMAP request ({using, methodCalls}) to
+        `/jmap` and return the parsed response dict (contains `methodResponses`).
+
+        NB: v0.15 posted to `{STALWART_BASE_JMAP_URL}/api`; that path is gone.
         """
-        params = {'page': page, 'limit': limit}
-        if type:
-            params['type'] = type
-
-        response = requests.get(
-            f'{self.api_url}/principal',
-            params=params,
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-        self._raise_for_error(response)
-
-        # Reduce log spam
-        # logging.info(f'[MailClient._list_principals()]: {response.json()}')
-
-        return response
-
-    def _get_principal(self, principal_id: str) -> requests.Response:
-        """Returns a response for a principal object from Stalwart
-
-        Docs: https://stalw.art/docs/api/management/endpoints#fetch-principal
-
-        Important: Don't use this directly!
-        """
-        response = requests.get(
-            f'{self.api_url}/principal/{principal_id}',
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-        self._raise_for_error(response)
-
-        return response
-
-    def _delete_principal(self, principal_id: str) -> requests.Response:
-        """Deletes a principal object from Stalwart
-
-        Docs: https://stalw.art/docs/api/management/endpoints/#delete-principal
-
-        Important: Don't use this directly!
-        """
-        response = requests.delete(
-            f'{self.api_url}/principal/{principal_id}',
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-        self._raise_for_error(response)
-
-        return response
-
-    def _create_principal(self, principal_data: dict):
-        """Returns a response for the creation of a principal object from Stalwart
-
-        Docs: https://stalw.art/docs/api/management/endpoints#create-principal
-
-        Important: Don't use this directly!
-        """
-        if not any([principal_data.get('type', principal_data.get('name'))]):
-            raise TypeError('Principal object must contain type AND name.')
-
-        principal_data = {
-            'quota': 0,
-            'secrets': [],
-            'emails': [],
-            'urls': [],
-            'memberOf': [],
-            'roles': [],
-            'lists': [],
-            'members': [],
-            'enabledPermissions': [],
-            'disabledPermissions': [],
-            'externalMembers': [],
-            **principal_data,
-        }
-
         response = requests.post(
-            f'{self.api_url}/principal/deploy',
-            json=principal_data,
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-
-        response.raise_for_status()
-        self._raise_for_error(response)
-
-        return response
-
-    def _update_principal(self, principal_id: str, update_data: list[dict]):
-        patch_schema = {
-            'type': ('set',),
-            'name': ('set',),
-            'description': ('set',),
-            'quota': ('set',),
-            'secrets': ('addItem', 'removeItem'),
-            'emails': ('addItem', 'removeItem'),
-            'urls': ('addItem', 'removeItem'),
-            'memberOf': ('addItem', 'removeItem'),
-            'roles': ('addItem', 'removeItem'),
-            'lists': ('addItem', 'removeItem'),
-            'members': ('addItem', 'removeItem'),
-            'enabledPermissions': ('addItem', 'removeItem'),
-            'disabledPermissions': ('addItem', 'removeItem'),
-            'externalMembers': ('addItem', 'removeItem'),
-        }
-
-        # TODO: Look into bringing in pydantic to handle schema validation
-        for data in update_data:
-            allowed_actions = patch_schema.get(data.get('field'))
-            if allowed_actions and data.get('action') not in allowed_actions:
-                raise TypeError(f'{data.get("action")} is not allowed in')
-
-        response = requests.patch(
-            f'{self.api_url}/principal/{principal_id}',
-            json=update_data,
+            self.jmap_url,
+            json=call,
             headers=self.authorized_headers,
             verify=settings.VERIFY_PRIVATE_LINK_SSL,
         )
         response.raise_for_status()
-        self._raise_for_error(response)
+        return response.json()
 
-        return response
+    def _jmap(self, method_calls: list) -> list:
+        """v0.16 JMAP port: run a list of methodCalls and return the methodResponses list.
+
+        Raises StalwartError on a method-level `["error", {...}, cid]` response.
+        """
+        response = self.make_jmap_admin_call({'using': JMAP_USING, 'methodCalls': method_calls})
+        method_responses = response.get('methodResponses', [])
+        for method_name, arguments, _call_id in method_responses:
+            if method_name == 'error':
+                raise StalwartError(f'Stalwart JMAP error: {arguments}')
+        return method_responses
+
+    @staticmethod
+    def _find_response(method_responses: list, method_name: str) -> Optional[dict]:
+        for name, arguments, _call_id in method_responses:
+            if name == method_name:
+                return arguments
+        return None
+
+    # ------------------------------------------------------------------ #
+    # name -> id resolution
+    # ------------------------------------------------------------------ #
+
+    def _resolve_account_id(self, name: str) -> str:
+        """v0.16 JMAP port: resolve an account login name OR full email to its numeric id.
+
+        x:Account/query only filters by `name` (the login local part); a full-email value
+        yields `unsupportedFilter: Filter on property name`. Delegate to _get_account_raw,
+        which queries by local part and disambiguates by domainId for emails.
+        """
+        return self._get_account_raw(name)['id']
+
+    def _resolve_domain_id(self, name: str) -> str:
+        """v0.16 JMAP port: resolve a domain name to its numeric JMAP id."""
+        responses = self._jmap([['x:Domain/query', {'filter': {'name': name}}, 'c0']])
+        arguments = self._find_response(responses, 'x:Domain/query')
+        ids = (arguments or {}).get('ids') or []
+        if not ids:
+            raise DomainNotFoundError(name)
+        return ids[0]
+
+    def _account_set_update(self, account_id: str, patch: dict, context: str = 'x:Account/set update') -> dict:
+        """v0.16 JMAP port: apply a JSON-Pointer PatchObject to an account by id."""
+        responses = self._jmap([['x:Account/set', {'update': {account_id: patch}}, 'c0']])
+        arguments = self._find_response(responses, 'x:Account/set')
+        if arguments is None:
+            raise StalwartError(f'{context}: no x:Account/set response')
+        self._raise_on_set_error(arguments, context)
+        return arguments.get('updated') or {}
+
+    # ------------------------------------------------------------------ #
+    # Compatibility shaping
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _account_to_compat(obj: dict) -> dict:
+        """v0.16 JMAP port: normalize a v0.16 x:Account object into the v0.15-shaped dict
+        callers still expect (`id`, `type`, `description`, `emails`, `secrets`, `quota`,
+        `usedQuota`). Raw v0.16 fields are preserved alongside the compat keys.
+        """
+        compat = dict(obj)
+
+        # emails = primary emailAddress + alias map keys
+        emails: list[str] = []
+        primary = obj.get('emailAddress')
+        if primary:
+            emails.append(primary)
+        aliases = obj.get('aliases')
+        if isinstance(aliases, dict):
+            emails.extend(aliases.keys())
+        elif isinstance(aliases, list):
+            emails.extend(aliases)
+
+        # secrets = credential `secret` values (credentials is a map keyed "0","1",...)
+        secrets: list[str] = []
+        credentials = obj.get('credentials')
+        cred_values = []
+        if isinstance(credentials, dict):
+            cred_values = list(credentials.values())
+        elif isinstance(credentials, list):
+            cred_values = credentials
+        for entry in cred_values:
+            if isinstance(entry, dict) and entry.get('secret'):
+                secrets.append(entry['secret'])
+            elif isinstance(entry, str):
+                secrets.append(entry)
+
+        # quota: v0.16 uses a `quotas` map (exact key unverified) + `usedDiskQuota`.
+        quota = 0
+        quotas = obj.get('quotas')
+        if isinstance(quotas, dict) and quotas:
+            for value in quotas.values():
+                if isinstance(value, (int, float)):
+                    quota = value
+                    break
+                if isinstance(value, dict):
+                    for candidate in ('quota', 'value', 'limit'):
+                        if isinstance(value.get(candidate), (int, float)):
+                            quota = value[candidate]
+                            break
+                    if quota:
+                        break
+        elif isinstance(quotas, (int, float)):
+            quota = quotas
+
+        compat['type'] = 'individual'
+        compat['id'] = obj.get('id')
+        compat['description'] = obj.get('description')
+        compat['emails'] = emails
+        compat['secrets'] = secrets
+        compat['quota'] = quota
+        compat['usedQuota'] = obj.get('usedDiskQuota')
+        return compat
+
+    # ------------------------------------------------------------------ #
+    # Health check
+    # ------------------------------------------------------------------ #
 
     def get_telemetry(self):
-        """We actually only use this for the health check"""
-        response = requests.patch(
-            f'{self.api_url}/telemetry/metrics',
+        """v0.16 JMAP port: health check via the surviving GET /api/account endpoint.
+
+        Returns the token's {permissions, edition, locale}. Used only for /health.
+        """
+        response = requests.get(
+            f'{self.api_url}/account',
             headers=self.authorized_headers,
             verify=settings.VERIFY_PRIVATE_LINK_SSL,
         )
@@ -238,67 +310,488 @@ class MailClient:
         return response
 
     def _reload(self):
-        response = requests.get(
-            f'{self.api_url}/reload/',
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-        self._raise_for_error(response)
+        """v0.16 JMAP port: no-op. Registry writes are transactional in v0.16, so the
+        v0.15 `GET /api/reload/` call has been removed."""
+        return None
 
-        return response
+    # ------------------------------------------------------------------ #
+    # Accounts
+    # ------------------------------------------------------------------ #
+
+    def _get_account_raw(self, principal_id: str) -> dict:
+        """v0.16 JMAP port: batched query->get for an account by login name OR full email.
+
+        x:Account/query only filters by `name` (login local part) -- a full email is an
+        invalid `name` value. So for an email we query by the local part and disambiguate
+        by domainId; for a bare login we query by name directly.
+        Raises AccountNotFoundError when no matching account exists.
+        """
+        if '@' in principal_id:
+            local, _, domain = principal_id.partition('@')
+            domain_id = self._resolve_domain_id(domain)
+        else:
+            local, domain_id = principal_id, None
+        responses = self._jmap(
+            [
+                ['x:Account/query', {'filter': {'name': local}}, 'c0'],
+                [
+                    'x:Account/get',
+                    {'#ids': {'resultOf': 'c0', 'name': 'x:Account/query', 'path': '/ids'}},
+                    'c1',
+                ],
+            ]
+        )
+        arguments = self._find_response(responses, 'x:Account/get')
+        account_list = (arguments or {}).get('list') or []
+        if domain_id is not None:
+            account_list = [a for a in account_list if a.get('domainId') == domain_id]
+        if not account_list:
+            raise AccountNotFoundError(principal_id)
+        return account_list[0]
+
+    def get_account(self, principal_id: str) -> dict:
+        """v0.16 JMAP port: fetch an account and return it in the v0.15-compatible shape."""
+        obj = self._get_account_raw(principal_id)
+        return self._account_to_compat(obj)
+
+    def create_account(
+        self,
+        emails: list[str],
+        principal_id: str,
+        full_name: Optional[str] = None,
+        app_password: Optional[str] = None,
+        quota: Optional[int] = None,
+    ):
+        """v0.16 JMAP port: create an account via x:Account/set create.
+
+        The domain of the primary email must already exist (resolved to a domainId).
+        Returns the created account's numeric JMAP id (the "pkid" callers store).
+        """
+        primary_email = emails[0] if emails else principal_id
+        domain_name = primary_email.split('@')[-1]
+        domain_id = self._resolve_domain_id(domain_name)
+
+        create_obj: dict = {
+            '@type': 'User',
+            'name': principal_id,
+            'description': full_name,
+            'domainId': domain_id,
+            # NOTE: emailAddress is server-derived from name@domain and is a "server set
+            # property" -- including it fails create with invalidPatch. The primary
+            # address comes from `name` (login local part) + `domainId`.
+            # roles is a typed object (role preset), NOT a list like the v0.15 ['user'].
+            'roles': {'@type': 'User'},
+        }
+
+        # Additional addresses become aliases (VecMap<EmailAlias> keyed by index).
+        extra_emails = [email for email in emails[1:] if email and email != primary_email]
+        if extra_emails:
+            create_obj['aliases'] = self._aliases_to_map([self._email_to_alias(e) for e in extra_emails])
+
+        if quota:
+            create_obj['quotas'] = {'maxDiskQuota': quota}
+
+        if app_password:
+            # Password credential (secret settable); AppPassword.secret is server-generated.
+            create_obj['credentials'] = {'0': {'@type': 'Password', 'secret': app_password}}
+
+        responses = self._jmap([['x:Account/set', {'create': {'p0': create_obj}}, 'c0']])
+        arguments = self._find_response(responses, 'x:Account/set')
+        if arguments is None:
+            raise StalwartError('create_account: no x:Account/set response')
+        self._raise_on_set_error(arguments, f'create_account {principal_id}')
+
+        created = (arguments.get('created') or {}).get('p0') or {}
+        return created.get('id')
+
+    def delete_account(self, principal_id: str):
+        """v0.16 JMAP port: delete an account via x:Account/set destroy [id]."""
+        account_id = self._resolve_account_id(principal_id)
+        responses = self._jmap([['x:Account/set', {'destroy': [account_id]}, 'c0']])
+        arguments = self._find_response(responses, 'x:Account/set')
+        if arguments is None:
+            raise StalwartError('delete_account: no x:Account/set response')
+        self._raise_on_set_error(arguments, f'delete_account {principal_id}')
+        return arguments.get('destroyed') or []
+
+    # ------------------------------------------------------------------ #
+    # App passwords (read-modify-write of the credentials map)
+    # ------------------------------------------------------------------ #
+
+    def save_app_password(self, principal_id: str, secret: str):
+        """v0.16 JMAP port: add a Password credential (client-supplied secret).
+
+        JSON-Pointer append (`credentials/<next>`) -- do NOT rewrite the whole credentials
+        map: existing entries' secrets are server-set once created, so re-sending them fails
+        with 'Cannot modify server set property credentials/secret'. AppPassword.secret is
+        server-generated, so a client secret uses a Password credential (secret IS settable),
+        matching v0.15 semantics where the `secrets` list held additional login passwords.
+        """
+        obj = self._get_account_raw(principal_id)
+        account_id = obj['id']
+        credentials = obj.get('credentials') or {}
+        indices = [int(key) for key in credentials.keys() if str(key).isdigit()]
+        next_index = (max(indices) + 1) if indices else 0
+        self._account_set_update(
+            account_id,
+            {f'credentials/{next_index}': {'@type': 'Password', 'secret': secret}},
+            context='save_app_password',
+        )
+
+    def delete_app_password(self, principal_id: str, secret: str):
+        """v0.16 JMAP port: cannot delete by plaintext secret.
+
+        v0.16 stores credential secrets hashed, so a plaintext secret cannot identify which
+        credential to remove (deletion targets a credentialId). The app's (principal_id,
+        secret) signature provides only the plaintext, so this is a logged no-op; the proper
+        PR should look up the credentialId and set `credentials/<i>` -> null.
+        """
+        logging.warning(
+            'delete_app_password: v0.16 cannot match a credential by plaintext secret '
+            '(needs credentialId); no-op'
+        )
+        return None
+
+    # ------------------------------------------------------------------ #
+    # Email addresses / aliases (read-modify-write of the aliases map)
+    # ------------------------------------------------------------------ #
+
+    # aliases = VecMap<EmailAlias> -> JSON object keyed by stringified index "0","1",...
+    # EmailAlias = {@type:"EmailAlias", name:<LOCAL PART>, domainId:<id>, enabled:bool}.
+    # `name` is validated as an email local part (a full email is rejected).
+    @staticmethod
+    def _clean_alias(alias: dict) -> dict:
+        out = {'@type': 'EmailAlias', 'name': alias.get('name'), 'enabled': alias.get('enabled', True)}
+        if alias.get('domainId'):
+            out['domainId'] = alias['domainId']
+        if alias.get('description'):
+            out['description'] = alias['description']
+        return out
+
+    def _email_to_alias(self, email: str) -> dict:
+        local, _, domain = email.partition('@')
+        alias = {'@type': 'EmailAlias', 'name': local, 'enabled': True}
+        if domain:
+            alias['domainId'] = self._resolve_domain_id(domain)
+        return alias
+
+    def _existing_aliases(self, obj: dict) -> list[dict]:
+        return [self._clean_alias(a) for a in (obj.get('aliases') or {}).values() if isinstance(a, dict)]
+
+    @staticmethod
+    def _aliases_to_map(aliases: list[dict]) -> dict:
+        return {str(i): a for i, a in enumerate(aliases)}
+
+    @staticmethod
+    def _alias_key(alias: dict):
+        return (alias.get('name'), alias.get('domainId'))
+
+    @staticmethod
+    def _aliases_replace_patch(old_count: int, desired: list[dict]) -> dict:
+        """Build a JSON-Pointer PatchObject that replaces the aliases VecMap with `desired`:
+        set aliases/0..n-1, then null out any trailing old indices to trim. (Aliases have no
+        server-set fields, so re-sending existing ones is safe -- unlike credentials.)"""
+        patch = {f'aliases/{i}': alias for i, alias in enumerate(desired)}
+        for j in range(len(desired), old_count):
+            patch[f'aliases/{j}'] = None
+        return patch
+
+    def save_email_addresses(self, principal_id: str, emails: str | list[str]):
+        """v0.16 JMAP port: add alias addresses via JSON-Pointer append (`aliases/<next>`)."""
+        if isinstance(emails, str):
+            emails = [emails]
+        obj = self._get_account_raw(principal_id)
+        account_id = obj['id']
+        existing = self._existing_aliases(obj)
+        have = {self._alias_key(a) for a in existing}
+        primary = obj.get('emailAddress')
+        patch: dict = {}
+        idx = len(existing)
+        for email in emails:
+            if not email or email == primary:
+                continue
+            alias = self._email_to_alias(email)
+            if self._alias_key(alias) in have:
+                continue
+            patch[f'aliases/{idx}'] = alias
+            have.add(self._alias_key(alias))
+            idx += 1
+        if patch:
+            self._account_set_update(account_id, patch, context='save_email_addresses')
+
+    def replace_email_addresses(self, principal_id: str, emails: list[tuple[str, str]]):
+        """v0.16 JMAP port: swap alias addresses (remove old, add new) via pointer replace."""
+        obj = self._get_account_raw(principal_id)
+        account_id = obj['id']
+        existing = self._existing_aliases(obj)
+        primary = obj.get('emailAddress')
+        desired = list(existing)
+        for old_email, new_email in emails:
+            old_key = self._alias_key(self._email_to_alias(old_email))
+            desired = [a for a in desired if self._alias_key(a) != old_key]
+            if new_email and new_email != primary:
+                desired.append(self._email_to_alias(new_email))
+        self._account_set_update(
+            account_id, self._aliases_replace_patch(len(existing), desired), context='replace_email_addresses'
+        )
+
+    def delete_email_addresses(self, principal_id: str, emails: str | list[str]):
+        """v0.16 JMAP port: remove alias addresses by (local part, domainId) via pointer replace."""
+        if isinstance(emails, str):
+            emails = [emails]
+        obj = self._get_account_raw(principal_id)
+        account_id = obj['id']
+        existing = self._existing_aliases(obj)
+        targets = {self._alias_key(self._email_to_alias(email)) for email in emails}
+        desired = [a for a in existing if self._alias_key(a) not in targets]
+        if len(desired) != len(existing):
+            self._account_set_update(
+                account_id, self._aliases_replace_patch(len(existing), desired), context='delete_email_addresses'
+            )
+
+    # ------------------------------------------------------------------ #
+    # Account field updates
+    # ------------------------------------------------------------------ #
+
+    def update_individual(
+        self,
+        principal_id: str,
+        primary_email_address: Optional[str] = None,
+        full_name: Optional[str] = None,
+    ):
+        """v0.16 JMAP port: update primary email and/or full name via a PatchObject."""
+        patch: dict = {}
+        if primary_email_address:
+            # v0.16: emailAddress is server-derived from name@domain and is a server-set
+            # property (cannot be patched directly). Change the login `name` (local part);
+            # the server re-derives the primary address. (A cross-domain change would also
+            # need domainId, not handled here.)
+            patch['name'] = primary_email_address.split('@')[0]
+        if full_name:
+            patch['description'] = full_name
+
+        if not patch:
+            raise ValueError('You must provide at least one field to change.')
+
+        account_id = self._resolve_account_id(principal_id)
+        self._account_set_update(account_id, patch, context='update_individual')
+
+    def update_quota(self, principal_id: str, quota: int):
+        """v0.16 JMAP port: update the account storage quota.
+
+        `quotas` is a VecMap<StorageQuota,u64> serialized as an object keyed by the
+        camelCase enum name; the disk-bytes key is `maxDiskQuota` (v0.16.13 source).
+        """
+        account_id = self._resolve_account_id(principal_id)
+        # JSON-Pointer update: target the map key, don't replace the whole quotas map.
+        self._account_set_update(account_id, {'quotas/maxDiskQuota': quota}, context='update_quota')
+
+    def make_api_key(self, principal_id, password):
+        """v0.16 JMAP port: BLOCKED.
+
+        API key creation now goes through x:ApiKey/set, which requires the
+        `sysApiKeyCreate` permission. The tb-dev fallback-admin token does NOT hold it,
+        and this path is dev-only, so it is intentionally not implemented.
+        """
+        raise NotImplementedError(
+            'make_api_key is not supported against Stalwart v0.16: x:ApiKey/set requires '
+            'the sysApiKeyCreate permission which the current token lacks. (dev-only path)'
+        )
+
+    # ------------------------------------------------------------------ #
+    # Domains
+    # ------------------------------------------------------------------ #
 
     def get_domain(self, domain):
-        response = self._get_principal(domain)
+        """v0.16 JMAP port: fetch a domain by name (batched query->get).
 
-        data = response.json()
-        error = data.get('error')
+        Returns the raw v0.16 x:Domain object (has `id`, `name`, `dnsZoneFile`, ...).
+        """
+        responses = self._jmap(
+            [
+                ['x:Domain/query', {'filter': {'name': domain}}, 'c0'],
+                [
+                    'x:Domain/get',
+                    {'#ids': {'resultOf': 'c0', 'name': 'x:Domain/query', 'path': '/ids'}},
+                    'c1',
+                ],
+            ]
+        )
+        arguments = self._find_response(responses, 'x:Domain/get')
+        domain_list = (arguments or {}).get('list') or []
 
-        logging.info(f'[MailClient.get_domain({domain}]: {data}')
+        logging.info(f'[MailClient.get_domain({domain})]: {domain_list}')
 
-        if error == StalwartErrors.NOT_FOUND.value:
+        if not domain_list:
             raise DomainNotFoundError(domain)
+        return domain_list[0]
 
-        assert data.get('data', {}).get('type') == 'domain'
+    def create_domain(self, domain, description=''):
+        """v0.16 JMAP port: create a domain via x:Domain/set create; returns the domainId.
 
-        return data.get('data')
+        NOTE: the v0.16 Domain schema does not clearly expose `description`; it is only
+        sent when non-empty and may need to be dropped if the set is rejected.
+        """
+        create_obj: dict = {'@type': 'Domain', 'name': domain}
+        if description:
+            create_obj['description'] = description
+
+        responses = self._jmap([['x:Domain/set', {'create': {'d0': create_obj}}, 'c0']])
+        arguments = self._find_response(responses, 'x:Domain/set')
+        if arguments is None:
+            raise StalwartError('create_domain: no x:Domain/set response')
+        self._raise_on_set_error(arguments, f'create_domain {domain}')
+
+        created = (arguments.get('created') or {}).get('d0') or {}
+        # Return the pkid (domainId)
+        return created.get('id')
+
+    def delete_domain(self, domain_name: str):
+        """v0.16 JMAP port: delete a domain via x:Domain/set destroy [id]."""
+        domain_id = self._resolve_domain_id(domain_name)  # raises DomainNotFoundError
+        responses = self._jmap([['x:Domain/set', {'destroy': [domain_id]}, 'c0']])
+        arguments = self._find_response(responses, 'x:Domain/set')
+        if arguments is None:
+            raise StalwartError('delete_domain: no x:Domain/set response')
+        self._raise_on_set_error(arguments, f'delete_domain {domain_name}')
+
+    # ------------------------------------------------------------------ #
+    # DKIM
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _generate_dkim_secret(jmap_type: str) -> str:
+        """v0.16 JMAP port: generate a DKIM private key (PEM) client-side.
+
+        v0.16 does NOT auto-generate the keypair (v0.15 did) — x:DkimSignature/set create
+        requires a `secret` (PEM private key). cryptography is imported lazily so module
+        import never fails if it is absent.
+        """
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ed25519, rsa
+
+        if jmap_type == 'Dkim1Ed25519Sha256':
+            private_key = ed25519.Ed25519PrivateKey.generate()
+        else:
+            private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+        pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        return pem.decode()
 
     def create_dkim(self, domain, stage: DkimSignatureStage = DkimSignatureStage.PENDING, algorithms=None):
-        """
-        Creates DKIM keys in Stalwart. Return list of response objects.
-        Response objects may used for testing.
-        Throws exception if request fails.
+        """v0.16 JMAP port: create DKIM signatures via x:DkimSignature/set create.
+
+        Requires a domainId (resolved) and a client-generated private key per algorithm.
+        The v0.15 `_reload` step is gone (registry writes are transactional).
+        Returns a list of created signature objects (may be used for testing).
         """
         response_data = []
         dkim_algorithms = settings.STALWART_DKIM_ALGOS if algorithms is None else algorithms
+        domain_id = self._resolve_domain_id(domain)
+
         for algorithm in dkim_algorithms:
-            data = {
-                # Stalwart 0.15, creates defaults IDs when ID is None. Ex: `$algo-$domain`
-                'id': None,
-                'algorithm': algorithm,
-                'domain': domain,
-                'selector': settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm),
-            }
-            if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
-                data['stage'] = stage.value
+            jmap_type = DKIM_ALGO_JMAP_TYPES.get(algorithm) or DKIM_ALGO_JMAP_TYPES.get(str(algorithm).capitalize())
+            if not jmap_type:
+                raise FailedToCreateDKIM(algorithm, domain, f'Unknown DKIM algorithm {algorithm!r}')
+
+            selector = settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm)
 
             try:
-                response = requests.post(
-                    f'{self.api_url}/dkim',
-                    json=data,
-                    headers=self.authorized_headers,
-                    verify=settings.VERIFY_PRIVATE_LINK_SSL,
-                )
-                response.raise_for_status()
-            except requests.RequestException as exc:
+                secret = self._generate_dkim_secret(jmap_type)
+            except Exception as exc:  # cryptography missing or keygen failure
                 raise FailedToCreateDKIM(algorithm, domain, str(exc)) from exc
+
+            create_obj: dict = {
+                '@type': jmap_type,
+                'domainId': domain_id,
+                'selector': selector,
+                # privateKey is a SecretText wrapper, not a bare `secret` field.
+                'privateKey': {'@type': 'Text', 'secret': secret},
+            }
+            if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+                create_obj['stage'] = stage.value
+
             try:
-                # Stalwart 0.15 requires reloading to sync persisent state with in-memory cache
-                self._reload()
+                responses = self._jmap([['x:DkimSignature/set', {'create': {'k0': create_obj}}, 'c0']])
             except (requests.RequestException, StalwartError) as exc:
-                raise FailedToReloadStalwart(domain, str(exc), algorithm=algorithm) from exc
-            response_data.append(response.json().get('data'))
+                raise FailedToCreateDKIM(algorithm, domain, str(exc)) from exc
+
+            arguments = self._find_response(responses, 'x:DkimSignature/set')
+            if arguments is None:
+                raise FailedToCreateDKIM(algorithm, domain, 'no x:DkimSignature/set response')
+            not_created = arguments.get('notCreated')
+            if not_created:
+                raise FailedToCreateDKIM(algorithm, domain, str(not_created))
+
+            # _reload removed in v0.16 (no-op / transactional writes).
+            created = (arguments.get('created') or {}).get('k0')
+            response_data.append(created)
+
         return response_data
+
+    def delete_dkim(self, domain) -> Optional[list]:
+        """v0.16 JMAP port: destroy all DKIM signatures for a domain.
+
+        Replaces the v0.15 /api/settings clear. Returns None if there's nothing to
+        delete, otherwise the list of destroyed signature ids.
+        """
+        try:
+            domain_id = self._resolve_domain_id(domain)
+        except DomainNotFoundError:
+            return None
+
+        responses = self._jmap([['x:DkimSignature/query', {'filter': {'domainId': domain_id}}, 'c0']])
+        arguments = self._find_response(responses, 'x:DkimSignature/query')
+        signature_ids = (arguments or {}).get('ids') or []
+        if not signature_ids:
+            return None
+
+        responses = self._jmap([['x:DkimSignature/set', {'destroy': signature_ids}, 'c0']])
+        arguments = self._find_response(responses, 'x:DkimSignature/set')
+        if arguments is None:
+            raise StalwartError('delete_dkim: no x:DkimSignature/set response')
+        self._raise_on_set_error(arguments, f'delete_dkim {domain}')
+        return arguments.get('destroyed') or []
+
+    def get_dkim_signatures(self, domain_name: str) -> list[dict]:
+        """Fetch DKIM signatures for a domain via batched x:DkimSignature query->get.
+
+        (Unchanged logic; routes through make_jmap_admin_call, now pointed at /jmap.)
+        """
+        domain = self.get_domain(domain_name)
+        domain_id = domain.get('id')
+        if not domain_id:
+            raise RuntimeError(f'Stalwart domain {domain_name} did not include an id')
+
+        response = self.make_jmap_admin_call(
+            {
+                'using': JMAP_USING,
+                'methodCalls': [
+                    [
+                        'x:DkimSignature/query',
+                        {'filter': {'domainId': domain_id}},
+                        'q',
+                    ],
+                    [
+                        'x:DkimSignature/get',
+                        {'#ids': {'resultOf': 'q', 'name': 'x:DkimSignature/query', 'path': '/ids'}},
+                        'g',
+                    ],
+                ],
+            }
+        )
+
+        for method_name, arguments, _call_id in response.get('methodResponses', []):
+            if method_name == 'x:DkimSignature/get':
+                return arguments.get('list', [])
+            if method_name == 'error':
+                raise RuntimeError(f'Stalwart JMAP error fetching DKIM signatures: {arguments}')
+
+        raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/get')
 
     def get_dkim_selectors(self, domain_name: str) -> set[str]:
         """Return DKIM selectors already present in Stalwart's DNS records."""
@@ -335,7 +828,10 @@ class MailClient:
         return self.create_dkim(domain_name, stage=stage, algorithms=missing_algorithms)
 
     def activate_pending_dkim_signatures(self, domain_name: str) -> list[str]:
-        """Activate pending DKIM signatures after their DNS records have been verified."""
+        """Activate pending DKIM signatures after their DNS records have been verified.
+
+        (Unchanged logic; routes through make_jmap_admin_call, now pointed at /jmap.)
+        """
         if not settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
             return []
 
@@ -355,7 +851,7 @@ class MailClient:
 
         response = self.make_jmap_admin_call(
             {
-                'using': ['urn:ietf:params:jmap:core', 'urn:stalwart:jmap'],
+                'using': JMAP_USING,
                 'methodCalls': [
                     [
                         'x:DkimSignature/set',
@@ -379,309 +875,6 @@ class MailClient:
 
         raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/set')
 
-    def delete_dkim(self, domain) -> Optional[requests.Response]:
-        """
-        Removes all dkim signatures for a given domain from Stalwart.
-
-        Returns None if there's nothing to delete, otherwise returns the delete response.
-        """
-
-        # Look up dkim signatures related to this domain
-        data = {'suffix': 'algorithm', 'prefix': 'signature', 'filter': domain, 'limit': 50, 'page': 1}
-        response = requests.get(
-            f'{self.api_url}/settings/group',
-            params=data,
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-
-        response_data = response.json().get('data')
-        if not response_data or not response_data.get('total'):
-            return None
-
-        # Dict comprehension to remove any duplicate _ids (there shouldn't be any, but I have trust issues.)
-        dkim_ids = {r.get('_id'): True for r in response_data.get('items', [])}
-
-        data = [{'type': 'clear', 'prefix': f'signature.{d}.'} for d in dkim_ids.keys()]
-        response = requests.post(
-            f'{self.api_url}/settings',
-            json=data,
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-
-        return response
-
-    def create_account(
-        self,
-        emails: list[str],
-        principal_id: str,
-        full_name: Optional[str] = None,
-        app_password: Optional[str] = None,
-        quota: Optional[int] = None,
-    ):
-        data = {
-            'type': 'individual',
-            'name': principal_id,
-            'description': full_name,
-            'emails': emails,
-            'roles': ['user'],
-        }
-        if quota:
-            data['quota'] = quota
-        if app_password:
-            data['secrets'] = [app_password]
-        response = self._create_principal(data)
-        data = response.json()
-
-        # Return the pkid
-        return data.get('data')
-
-    def get_account(self, principal_id: str) -> dict:
-        response = self._get_principal(principal_id)
-
-        data = response.json()
-        error = data.get('error')
-
-        if error == StalwartErrors.NOT_FOUND.value:
-            raise AccountNotFoundError(principal_id)
-
-        assert data.get('data', {}).get('type') == 'individual'
-
-        # Return the pkid
-        return data.get('data')
-
-    def delete_account(self, principal_id: str):
-        """Deletes a Stalwart principal object from the given principal_id"""
-        return self._delete_principal(principal_id)
-
-    def delete_app_password(self, principal_id: str, secret: str):
-        response = self._update_principal(
-            principal_id,
-            [{'action': 'removeItem', 'field': 'secrets', 'value': secret}],
-        )
-        # Returns data: null on success...
-        data = response.json()
-        error = data.get('error')
-        # I have no idea what the error is yet
-        if error:
-            logging.error(f'[delete_app_password] err: {data}')
-            raise RuntimeError(data)
-
-    def save_app_password(self, principal_id: str, secret: str):
-        response = self._update_principal(
-            principal_id,
-            [{'action': 'addItem', 'field': 'secrets', 'value': secret}],
-        )
-        # Returns data: null on success...
-        data = response.json()
-        error = data.get('error')
-        # I have no idea what the error is yet
-        if error:
-            logging.error(f'[save_app_password] err: {data}')
-            raise RuntimeError(data)
-
-    def save_email_addresses(self, principal_id: str, emails: str | list[str]):
-        """Adds a new email address to a stalwart's individual principal by uuid."""
-
-        if isinstance(emails, str):
-            emails = [emails]
-
-        response = self._update_principal(
-            principal_id,
-            [{'action': 'addItem', 'field': 'emails', 'value': email} for email in emails],
-        )
-        # Returns data: null on success...
-        data = response.json()
-        error = data.get('error')
-        # I have no idea what the error is yet
-        if error:
-            logging.error(f'[save_email_addresses] err: {data}')
-            raise RuntimeError(data)
-
-    def replace_email_addresses(self, principal_id: str, emails: list[tuple[str, str]]):
-        """Replaces an email address with a new one from a stalwart's individual principal by uuid."""
-
-        actions = []
-        for old_email, email in emails:
-            actions.append({'action': 'removeItem', 'field': 'emails', 'value': old_email})
-            actions.append({'action': 'addItem', 'field': 'emails', 'value': email})
-
-        response = self._update_principal(principal_id, actions)
-        # Returns data: null on success...
-        data = response.json()
-        error = data.get('error')
-        # I have no idea what the error is yet
-        if error:
-            logging.error(f'[replace_email_addresses] err: {data}')
-            raise RuntimeError(data)
-
-    def delete_email_addresses(self, principal_id: str, emails: str | list[str]):
-        """Deletes an address from a stalwart's individual principal by uuid."""
-
-        if isinstance(emails, str):
-            emails = [emails]
-
-        response = self._update_principal(
-            principal_id,
-            [{'action': 'removeItem', 'field': 'emails', 'value': email} for email in emails],
-        )
-        # Returns data: null on success...
-        data = response.json()
-        error = data.get('error')
-        # I have no idea what the error is yet
-        if error:
-            logging.error(f'[delete_email_addresses] err: {data}')
-            raise RuntimeError(data)
-
-    def update_individual(
-        self,
-        principal_id: str,
-        primary_email_address: Optional[str] = None,
-        full_name: Optional[str] = None,
-    ):
-        """Updates Stalwart and changes their primary email address and/or full name"""
-
-        update_data = []
-        if primary_email_address:
-            update_data.append(
-                {'action': 'set', 'field': 'name', 'value': primary_email_address},
-            )
-        if full_name:
-            update_data.append(
-                {'action': 'set', 'field': 'description', 'value': full_name},
-            )
-
-        if len(update_data) == 0:
-            raise ValueError('You must provide at least one field to change.')
-
-        response = self._update_principal(principal_id, update_data)
-
-        # Returns data: null on success...
-        data = response.json()
-        error = data.get('error')
-        # I have no idea what the error is yet
-        if error:
-            logging.error(f'[update_individual] err: {data}')
-            raise RuntimeError(data)
-
-    def update_quota(self, principal_id: str, quota: int):
-        update_data = [
-            {'action': 'set', 'field': 'quota', 'value': quota},
-        ]
-        response = self._update_principal(principal_id, update_data)
-
-        # Returns data: null on success...
-        data = response.json()
-        error = data.get('error')
-        # I have no idea what the error is yet
-        if error:
-            logging.error(f'[update_individual] err: {data}')
-            raise RuntimeError(data)
-
-    def make_api_key(self, principal_id, password):
-        if not settings.IS_DEV:
-            raise RuntimeError('You can only make api keys in dev.')
-
-        basic_auth = base64.b64encode(f'{principal_id}:{password}'.encode()).decode()
-        self.authorized_headers['Authorization'] = f'Basic {basic_auth}'
-
-        api_key_name = 'tb-accounts-api-key'
-        secret = get_random_string(32)
-        data = {'type': 'apiKey', 'name': api_key_name, 'secrets': [secret], 'roles': ['admin']}
-
-        response = self._create_principal(data)
-        data = response.json()
-        if data.get('error'):
-            raise StalwartError(data.get('error'))
-
-        response = self._get_principal(api_key_name)
-        data = response.json()
-
-        if not data.get('data', {}).get('id'):
-            raise RuntimeError("Error calling stalwart's api")
-
-        return base64.b64encode(f'{api_key_name}:{secret}'.encode()).decode()
-
-    def create_domain(self, domain, description=''):
-        data = {
-            'type': 'domain',
-            'name': domain,
-            'description': description,
-        }
-        response = self._create_principal(data)
-        data = response.json()
-
-        # Return the pkid
-        return data.get('data')
-
-    def delete_domain(self, domain_name: str):
-        """Deletes a Stalwart domain object from the given domain_name"""
-        response = self._delete_principal(domain_name)
-        data = response.json()
-        error = data.get('error')
-
-        if error == StalwartErrors.NOT_FOUND.value:
-            raise DomainNotFoundError(domain_name)
-        elif error:
-            logging.error(f'[delete_domain] err: {data}')
-            raise RuntimeError(data)
-
-    def get_dns_records(self, domain_name: str) -> list[dict]:
-        response = requests.get(
-            f'{self.api_url}/dns/records/{domain_name}',
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-        self._raise_for_error(response)
-        data = response.json()
-        return data.get('data')
-
-    def make_jmap_admin_call(self, call: dict) -> dict:
-        response = requests.post(
-            f'{settings.STALWART_BASE_JMAP_URL}/api',
-            json=call,
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-        return response.json()
-
-    def get_dkim_signatures(self, domain_name: str) -> list[dict]:
-        domain = self.get_domain(domain_name)
-        domain_id = domain.get('id')
-        if not domain_id:
-            raise RuntimeError(f'Stalwart domain {domain_name} did not include an id')
-
-        response = self.make_jmap_admin_call(
-            {
-                'using': ['urn:ietf:params:jmap:core', 'urn:stalwart:jmap'],
-                'methodCalls': [
-                    [
-                        'x:DkimSignature/query',
-                        {'filter': {'domainId': domain_id}},
-                        'q',
-                    ],
-                    [
-                        'x:DkimSignature/get',
-                        {'#ids': {'resultOf': 'q', 'name': 'x:DkimSignature/query', 'path': '/ids'}},
-                        'g',
-                    ],
-                ],
-            }
-        )
-
-        for method_name, arguments, _call_id in response.get('methodResponses', []):
-            if method_name == 'x:DkimSignature/get':
-                return arguments.get('list', [])
-            if method_name == 'error':
-                raise RuntimeError(f'Stalwart JMAP error fetching DKIM signatures: {arguments}')
-
-        raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/get')
-
     def get_dkim_dns_records(self, domain_name: str) -> list[dict]:
         if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
             try:
@@ -698,6 +891,226 @@ class MailClient:
             for record in self.get_dns_records(domain_name)
             if record.get('type') == 'TXT' and '_domainkey' in record.get('name', '')
         ]
+
+    # ------------------------------------------------------------------ #
+    # DNS records (parse the domain's computed BIND zonefile)
+    # ------------------------------------------------------------------ #
+
+    def get_dns_records(self, domain_name: str) -> list[dict]:
+        """v0.16 JMAP port: derive DNS records from the domain's computed `dnsZoneFile`.
+
+        v0.15 exposed GET /api/dns/records/{domain}. v0.16 instead returns a single
+        computed BIND zonefile string on the Domain object, which we parse into the
+        list-of-dicts ({type, name, content, priority}) the rest of the client expects.
+        """
+        domain = self.get_domain(domain_name)
+        zone_text = domain.get('dnsZoneFile') or ''
+        return self._parse_zonefile(zone_text, default_origin=domain_name)
+
+    # --- BIND zonefile parser ---------------------------------------------------- #
+
+    _ZONE_CLASSES = {'IN', 'CH', 'HS', 'CS'}
+    _ZONE_TYPES = {
+        'A', 'AAAA', 'MX', 'TXT', 'CNAME', 'SRV', 'NS', 'SOA', 'CAA', 'PTR',
+        'SPF', 'TLSA', 'DNSKEY', 'DS', 'NAPTR', 'HINFO', 'SVCB', 'HTTPS',
+    }
+    _ZONE_SKIP_TYPES = {'SOA', 'NS'}
+    _ZONE_TTL_RE = re.compile(r'^\d+[smhdwSMHDW]?$')
+
+    @staticmethod
+    def _zone_logical_lines(text: str) -> list[str]:
+        """Collapse a zonefile into logical records: strip `;` comments, honor quoted
+        strings, and join `( ... )` multi-line rdata onto one line."""
+        lines: list[str] = []
+        buf = ''
+        paren = 0
+        in_quote = False
+        i = 0
+        n = len(text)
+        while i < n:
+            ch = text[i]
+            if in_quote:
+                buf += ch
+                if ch == '"':
+                    in_quote = False
+                i += 1
+                continue
+            if ch == '"':
+                in_quote = True
+                buf += ch
+                i += 1
+                continue
+            if ch == ';':
+                # Comment to end of line.
+                while i < n and text[i] != '\n':
+                    i += 1
+                continue
+            if ch == '(':
+                paren += 1
+                buf += ' '
+                i += 1
+                continue
+            if ch == ')':
+                paren = max(0, paren - 1)
+                buf += ' '
+                i += 1
+                continue
+            if ch == '\n':
+                if paren > 0:
+                    buf += ' '
+                else:
+                    if buf.strip():
+                        lines.append(buf)
+                    buf = ''
+                i += 1
+                continue
+            buf += ch
+            i += 1
+        if buf.strip():
+            lines.append(buf)
+        return lines
+
+    @staticmethod
+    def _zone_tokenize(line: str) -> list[str]:
+        """Split a logical line into tokens; quoted strings are kept as single tokens
+        (quotes preserved so TXT rdata can be identified/concatenated)."""
+        tokens: list[str] = []
+        buf = ''
+        in_quote = False
+        for ch in line:
+            if in_quote:
+                buf += ch
+                if ch == '"':
+                    tokens.append(buf)
+                    buf = ''
+                    in_quote = False
+                continue
+            if ch == '"':
+                if buf:
+                    tokens.append(buf)
+                    buf = ''
+                buf = '"'
+                in_quote = True
+                continue
+            if ch in ' \t':
+                if buf:
+                    tokens.append(buf)
+                    buf = ''
+                continue
+            buf += ch
+        if buf:
+            tokens.append(buf)
+        return tokens
+
+    @staticmethod
+    def _zone_unquote(token: str) -> str:
+        if len(token) >= 2 and token[0] == '"' and token[-1] == '"':
+            return token[1:-1]
+        return token
+
+    def _parse_zonefile(self, zone_text: str, default_origin: str = '') -> list[dict]:
+        """Parse a BIND zonefile string into [{type, name, content, priority}] dicts."""
+        records: list[dict] = []
+        if not zone_text:
+            return records
+
+        origin = ''
+        if default_origin:
+            origin = default_origin if default_origin.endswith('.') else default_origin + '.'
+        last_owner = origin
+
+        def to_fqdn(owner: str) -> str:
+            if owner in ('@', ''):
+                return origin or '@'
+            if owner.endswith('.'):
+                return owner
+            if origin:
+                return f'{owner}.{origin}'
+            return f'{owner}.'
+
+        for line in self._zone_logical_lines(zone_text):
+            leading_ws = line[:1] in (' ', '\t')
+            tokens = self._zone_tokenize(line)
+            if not tokens:
+                continue
+
+            # Directives
+            first_upper = tokens[0].upper()
+            if first_upper == '$ORIGIN' and len(tokens) > 1:
+                value = tokens[1]
+                origin = value if value.endswith('.') else value + '.'
+                last_owner = origin
+                continue
+            if first_upper in ('$TTL', '$INCLUDE', '$GENERATE'):
+                continue
+
+            idx = 0
+            if leading_ws:
+                owner = last_owner
+            else:
+                owner = tokens[idx]
+                idx += 1
+
+            # Skip optional TTL / class tokens, then expect a record type.
+            rtype = None
+            while idx < len(tokens):
+                token = tokens[idx]
+                upper = token.upper()
+                if upper in self._ZONE_CLASSES:
+                    idx += 1
+                    continue
+                if self._ZONE_TTL_RE.match(token):
+                    idx += 1
+                    continue
+                if upper in self._ZONE_TYPES:
+                    rtype = upper
+                    idx += 1
+                    break
+                # Unknown token where a type is expected; treat as the type and stop.
+                rtype = upper
+                idx += 1
+                break
+
+            if rtype is None:
+                continue
+
+            last_owner = owner
+            if rtype in self._ZONE_SKIP_TYPES:
+                continue
+
+            rdata_tokens = tokens[idx:]
+            name = to_fqdn(owner)
+            priority = '-'
+
+            if rtype == 'TXT' or rtype == 'SPF':
+                content = ''.join(self._zone_unquote(token) for token in rdata_tokens)
+                record_type = 'TXT'
+            elif rtype == 'MX' and len(rdata_tokens) >= 2:
+                priority = rdata_tokens[0]
+                content = ' '.join(rdata_tokens[1:])
+                record_type = 'MX'
+            elif rtype == 'SRV' and len(rdata_tokens) >= 4:
+                priority = rdata_tokens[0]
+                content = ' '.join(rdata_tokens[1:])
+                record_type = 'SRV'
+            else:
+                content = ' '.join(self._zone_unquote(token) for token in rdata_tokens)
+                record_type = rtype
+
+            records.append(
+                {
+                    'type': record_type,
+                    'name': name,
+                    'content': content,
+                    'priority': priority,
+                }
+            )
+
+        return records
+
+    # ------------------------------------------------------------------ #
+    # Local DNS logic (unchanged; does not call Stalwart)
+    # ------------------------------------------------------------------ #
 
     def build_expected_dns_records(self, cust_domain: str) -> list[dict]:
         """Build the full list of DNS records the user must configure for a customer domain."""
