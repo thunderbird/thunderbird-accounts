@@ -14,9 +14,29 @@ depends on. `/api` now serves only `auth / discover / account / schema / token /
 PascalCase object methods: `x:Account/*`, `x:Domain/*`, `x:DkimSignature/*`,
 `x:ApiKey/*`, `x:AppPassword/*` (capability `urn:stalwart:jmap`).
 
-This PR reimplements every Stalwart-touching method in `clients.py` against that JMAP
-API while **preserving all public method names, signatures, and return types**, so
-callers and Celery tasks are unchanged. Local-only DNS logic is carried over untouched.
+This PR reimplements every Stalwart-touching method against that JMAP API while
+**preserving all public method names, signatures, and return types**, so callers and
+Celery tasks are unchanged. Local-only DNS logic is carried over untouched.
+
+### Package structure (combined with PR #1131)
+
+The single-file `mail/clients.py` is replaced by a `mail/clients/` **package**,
+adopting the cleaner architecture proposed in the parallel
+[PR #1131](https://github.com/thunderbird/thunderbird-accounts/pull/1131) and combining
+it with this branch's live-verified logic:
+
+| Module | Role |
+|---|---|
+| `__init__.py` | Re-exports the full public surface (`MailClient`, `StalwartErrors`, `DkimSignatureStage`, `DNSRecordStatus`, `DomainVerificationErrors`, `StaleDNSRecordCode`); `MailClient` is bound to `MailClientJMAP`. |
+| `mail_client_interface.py` | ABC + shared enums. |
+| `stalwart_types.py` / `jmap_types.py` | pydantic models for the v0.16 objects / JMAP envelope. Used for **non-fatal** schema-drift validation only — they never replace the dict a caller receives. |
+| `jmap_client.py` | Config-driven transport (`STALWART_BASE_API_URL` + `/jmap`, `STALWART_API_AUTH_METHOD/STRING`, `verify=VERIFY_PRIVATE_LINK_SSL`); optional JMAP session `accountId` discovery (off the hot path). |
+| `mail_client_jmap.py` | The v0.16 implementation — all methods + gotchas below. |
+| `mail_client_legacy.py` | v0.15 REST reference stub (restore from git history if a dual-run is ever needed). |
+
+`get_account`/`get_domain`/`get_dns_records` still return the **v0.15-compatible dict**
+(`_account_to_compat`), not pydantic models — this is the key divergence from #1131,
+which returned raw `AccountType` (a breaking change for dict-accessing callers).
 
 ## Why (the breaking changes)
 
@@ -80,6 +100,21 @@ Exercised through the app (`manage.py shell`) against a live instance:
 - subscription plan-info endpoint (`get_account(full_email)`) → `200`
 - alias add→delete: `save_email_addresses(2)` then `delete_email_addresses(1)` correctly
   rebuilds the aliases VecMap (verified against raw Stalwart state)
+
+### Package re-validation (live, tb-dev, after the #1131 combine)
+
+Re-ran the full suite against the deployed `mail/clients/` package (mounted as a
+full directory over `mail/clients`; Python imports the package over the image's stale
+`clients.py`):
+
+- import: `MailClient` → `MailClientJMAP`, all public re-exports resolve
+- read: `get_telemetry` (health), `get_domain`, `get_dns_records` (46 records),
+  `get_dkim_signatures` (2), `get_account(full email)` → compat dict
+- write lifecycle on a throwaway account: create → read → alias add → alias remove →
+  `update_quota` → `save_app_password` → delete → verify-gone (`AccountNotFoundError`)
+
+Known cleanup (non-blocking): `get_domain` logs the full domain object at INFO on every
+call — should be `DEBUG` or dropped.
 
 ### Review pass (50-lens) — fixes applied
 - `_get_account_raw(None)` guarded → raises `AccountNotFoundError` instead of `TypeError`

@@ -1,34 +1,39 @@
 # =====================================================================================
-# Stalwart v0.16 JMAP port of src/thunderbird_accounts/mail/clients.py
+# Stalwart v0.16 JMAP mail client implementation
 # -------------------------------------------------------------------------------------
 # Stalwart v0.16.13 REMOVED the entire /api/* REST management surface. All management
 # CRUD now goes through the JMAP "Registry" API at `POST {STALWART_BASE_API_URL}/jmap`
 # using PascalCase object methods (x:Account/*, x:Domain/*, x:DkimSignature/*, ...).
 #
-# This module preserves every public method name / signature / return type of the
-# v0.15 client so callers and Celery tasks are unchanged; only the transport + object
-# shapes change. Methods that touch Stalwart are reimplemented against JMAP; purely
-# local DNS logic (build_expected_dns_records / check_domain_dns) is carried over as-is.
+# This is the verified end-to-end port (live-validated against Stalwart v0.16.13),
+# restructured out of the old single-file `mail/clients.py` into this package. It
+# preserves every public method name / signature / return type of the v0.15 client, so
+# callers and Celery tasks are unchanged; only the transport (jmap_client.JMAPClient)
+# and object shapes change. Purely local DNS logic (build_expected_dns_records /
+# check_domain_dns) is carried over as-is.
 #
 # Design + source-verified shapes: docs/stalwart-v0.16-migration.md
-# Every ported method is marked with a `# v0.16 JMAP port` comment.
 #
-# Verified end-to-end against a live Stalwart v0.16.13 (test matrix + the small set of
-# documented limitations still open for review are in the migration doc).
+# get_account/get_domain/etc. return the v0.15-COMPATIBLE dict (see _account_to_compat),
+# NOT a raw pydantic model, so existing callers keep working. Pydantic models
+# (stalwart_types) are used only for non-fatal schema-drift validation.
 # =====================================================================================
 
 from __future__ import annotations
 
-import base64
 import logging
 import re
-from enum import StrEnum
 from typing import Optional
 
 import requests
 from django.conf import settings
-from django.utils.crypto import get_random_string
 
+from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
+from thunderbird_accounts.mail.clients.mail_client_interface import (
+    DkimSignatureStage,
+    MailClientInterface,
+)
+from thunderbird_accounts.mail.clients.stalwart_types import AccountType, DomainType
 from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
     DomainNotFoundError,
@@ -53,92 +58,27 @@ DKIM_ALGO_JMAP_TYPES = {
 }
 
 
-class StalwartErrors(StrEnum):
-    """Errors defined in Stalwart's (legacy v0.15) management api.
-
-    Retained for backwards compatibility; v0.16 surfaces failures as JMAP SetError
-    maps (notCreated/notUpdated/notDestroyed) and method-level ["error", {...}] tuples.
-    """
-
-    FIELD_ALREADY_EXISTS = 'fieldAlreadyExists'
-    FIELD_MISSING = 'fieldMissing'
-    NOT_FOUND = 'notFound'
-    UNSUPPORTED = 'unsupported'
-    ASSERT_FAILED = 'assertFailed'
-    OTHER = 'other'
-
-
-class DomainVerificationErrors(StrEnum):
-    """Domain verification error codes returned by check_domain_dns()."""
-
-    # Critical errors (fail verification)
-    MX_LOOKUP_ERROR = 'mxLookupError'
-    DKIM_RECORD_NOT_FOUND = 'dkimRecordNotFound'
-    AUTODISCOVER_RECORD_FOUND = 'autodiscoverRecordFound'
-    AUTODISCOVER_SRV_RECORD_FOUND = 'autodiscoverSrvRecordFound'
-
-    # Warnings (do not fail verification)
-    SPF_RECORD_NOT_FOUND = 'spfRecordNotFound'
-
-
-class DkimSignatureStage(StrEnum):
-    """Stalwart DKIM signature rotation stages."""
-
-    PENDING = 'pending'
-    ACTIVE = 'active'
-    RETIRING = 'retiring'
-    RETIRED = 'retired'
-
-
-class DNSRecordStatus(StrEnum):
-    MATCH = 'match'
-    CONFLICT = 'conflict'
-    MISSING = 'missing'
-    UNKNOWN = 'unknown'
-
-
-class StaleDNSRecordCode(StrEnum):
-    """Stale DNS records that should be removed to prevent issues with the Thundermail setup."""
-
-    AUTODISCOVER_CNAME_UNEXPECTED = 'autodiscoverCnameUnexpected'
-    AUTODISCOVER_SRV_UNEXPECTED = 'autodiscoverSrvUnexpected'
-
-
-class MailClient:
+class MailClientJMAP(MailClientInterface):
     """A partial api client for Stalwart v0.16.13 (JMAP Registry API).
 
     v0.16 removed the REST /api/* management surface. All management CRUD goes through
     `POST {STALWART_BASE_API_URL}/jmap`. Objects are addressed by their numeric JMAP
     `id`, so callers that pass a login/domain *name* are resolved to an id first.
 
-    See STALWART_V016_PORT_NOTES.md for verified object shapes.
+    See docs/stalwart-v0.16-migration.md for verified object shapes.
     """
 
     def __init__(self):
-        # /api is kept only for the surviving GET /api/account health probe.
-        self.api_url = f'{settings.STALWART_BASE_API_URL}/api'
-        # v0.16 JMAP port: registry endpoint lives on the same host as the API URL.
-        # STALWART_BASE_JMAP_URL is unset on tb-dev and its old `/api` path is v0.15.
-        self.jmap_url = f'{settings.STALWART_BASE_API_URL}/jmap'
-        self.api_auth_string = settings.STALWART_API_AUTH_STRING
-        self.api_auth_method = settings.STALWART_API_AUTH_METHOD
-
-        # Sanity check
-        assert self.api_auth_method in ['basic', 'bearer']
-
-        self.authorized_headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': f'{self.api_auth_method} {self.api_auth_string}',
-        }
+        # Config-driven transport (URL/auth/TLS all from settings — no hardcoded host).
+        self.jmap = JMAPClient()
 
     # ------------------------------------------------------------------ #
     # Error handling
     # ------------------------------------------------------------------ #
 
     def _raise_for_error(self, response):
-        """v0.16 JMAP port: parse an RFC7807 problem+json body from a non-JMAP call
-        (e.g. GET /api/account) and raise a StalwartError. Best-effort / defensive."""
+        """Parse an RFC7807 problem+json body from a non-JMAP call (e.g. GET /api/account)
+        and raise a StalwartError. Best-effort / defensive."""
         try:
             data = response.json()
         except ValueError:
@@ -152,7 +92,7 @@ class MailClient:
                 raise StalwartError(str(detail))
 
     def _raise_on_set_error(self, arguments: dict, context: str = '') -> None:
-        """v0.16 JMAP port: raise if a x:*/set response reported per-object failures."""
+        """Raise if a x:*/set response reported per-object failures."""
         for key in ('notCreated', 'notUpdated', 'notDestroyed'):
             errors = arguments.get(key)
             if errors:
@@ -163,22 +103,15 @@ class MailClient:
     # ------------------------------------------------------------------ #
 
     def make_jmap_admin_call(self, call: dict) -> dict:
-        """v0.16 JMAP port: POST a fully-formed JMAP request ({using, methodCalls}) to
-        `/jmap` and return the parsed response dict (contains `methodResponses`).
+        """POST a fully-formed JMAP request ({using, methodCalls}) to `/jmap` and return
+        the parsed response dict (contains `methodResponses`).
 
         NB: v0.15 posted to `{STALWART_BASE_JMAP_URL}/api`; that path is gone.
         """
-        response = requests.post(
-            self.jmap_url,
-            json=call,
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
-        return response.json()
+        return self.jmap.post(call)
 
     def _jmap(self, method_calls: list) -> list:
-        """v0.16 JMAP port: run a list of methodCalls and return the methodResponses list.
+        """Run a list of methodCalls and return the methodResponses list.
 
         Raises StalwartError on a method-level `["error", {...}, cid]` response.
         """
@@ -197,11 +130,31 @@ class MailClient:
         return None
 
     # ------------------------------------------------------------------ #
+    # Non-fatal schema-drift validation (uses the typed models internally)
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _validate(model, data: dict, context: str) -> None:
+        """Best-effort parse of a raw registry object through its pydantic model to catch
+        schema drift. NEVER fatal: callers always receive the raw dict, so a validation
+        failure here only logs (and reports to Sentry if available)."""
+        try:
+            model(**data)
+        except Exception as ex:  # ValidationError or anything else — must not break callers
+            logging.warning(f'[MailClientJMAP._validate] {context}: object failed {model.__name__} validation: {ex}')
+            try:
+                import sentry_sdk
+
+                sentry_sdk.capture_exception(ex)
+            except Exception:
+                pass
+
+    # ------------------------------------------------------------------ #
     # name -> id resolution
     # ------------------------------------------------------------------ #
 
     def _resolve_account_id(self, name: str) -> str:
-        """v0.16 JMAP port: resolve an account login name OR full email to its numeric id.
+        """Resolve an account login name OR full email to its numeric id.
 
         x:Account/query only filters by `name` (the login local part); a full-email value
         yields `unsupportedFilter: Filter on property name`. Delegate to _get_account_raw,
@@ -210,7 +163,7 @@ class MailClient:
         return self._get_account_raw(name)['id']
 
     def _resolve_domain_id(self, name: str) -> str:
-        """v0.16 JMAP port: resolve a domain name to its numeric JMAP id."""
+        """Resolve a domain name to its numeric JMAP id."""
         responses = self._jmap([['x:Domain/query', {'filter': {'name': name}}, 'c0']])
         arguments = self._find_response(responses, 'x:Domain/query')
         ids = (arguments or {}).get('ids') or []
@@ -219,7 +172,7 @@ class MailClient:
         return ids[0]
 
     def _account_set_update(self, account_id: str, patch: dict, context: str = 'x:Account/set update') -> dict:
-        """v0.16 JMAP port: apply a JSON-Pointer PatchObject to an account by id."""
+        """Apply a JSON-Pointer PatchObject to an account by id."""
         responses = self._jmap([['x:Account/set', {'update': {account_id: patch}}, 'c0']])
         arguments = self._find_response(responses, 'x:Account/set')
         if arguments is None:
@@ -233,9 +186,9 @@ class MailClient:
 
     @staticmethod
     def _account_to_compat(obj: dict) -> dict:
-        """v0.16 JMAP port: normalize a v0.16 x:Account object into the v0.15-shaped dict
-        callers still expect (`id`, `type`, `description`, `emails`, `secrets`, `quota`,
-        `usedQuota`). Raw v0.16 fields are preserved alongside the compat keys.
+        """Normalize a v0.16 x:Account object into the v0.15-shaped dict callers still
+        expect (`id`, `type`, `description`, `emails`, `secrets`, `quota`, `usedQuota`).
+        Raw v0.16 fields are preserved alongside the compat keys.
         """
         compat = dict(obj)
 
@@ -302,22 +255,17 @@ class MailClient:
     # ------------------------------------------------------------------ #
 
     def get_telemetry(self):
-        """v0.16 JMAP port: health check via the surviving GET /api/account endpoint.
+        """Health check via the surviving GET /api/account endpoint.
 
         Returns the token's {permissions, edition, locale}. Used only for /health.
         """
-        response = requests.get(
-            f'{self.api_url}/account',
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
-        )
-        response.raise_for_status()
+        response = self.jmap.api_get('/account')
         self._raise_for_error(response)
         return response
 
     def _reload(self):
-        """v0.16 JMAP port: no-op. Registry writes are transactional in v0.16, so the
-        v0.15 `GET /api/reload/` call has been removed."""
+        """No-op. Registry writes are transactional in v0.16, so the v0.15
+        `GET /api/reload/` call has been removed."""
         return None
 
     # ------------------------------------------------------------------ #
@@ -325,7 +273,7 @@ class MailClient:
     # ------------------------------------------------------------------ #
 
     def _get_account_raw(self, principal_id: str) -> dict:
-        """v0.16 JMAP port: batched query->get for an account by login name OR full email.
+        """Batched query->get for an account by login name OR full email.
 
         x:Account/query only filters by `name` (login local part) -- a full email is an
         invalid `name` value. So for an email we query by the local part and disambiguate
@@ -356,10 +304,12 @@ class MailClient:
             account_list = [a for a in account_list if a.get('domainId') == domain_id]
         if not account_list:
             raise AccountNotFoundError(principal_id)
-        return account_list[0]
+        account = account_list[0]
+        self._validate(AccountType, account, f'get_account({principal_id})')
+        return account
 
     def get_account(self, principal_id: str) -> dict:
-        """v0.16 JMAP port: fetch an account and return it in the v0.15-compatible shape."""
+        """Fetch an account and return it in the v0.15-compatible shape."""
         obj = self._get_account_raw(principal_id)
         return self._account_to_compat(obj)
 
@@ -371,7 +321,7 @@ class MailClient:
         app_password: Optional[str] = None,
         quota: Optional[int] = None,
     ):
-        """v0.16 JMAP port: create an account via x:Account/set create.
+        """Create an account via x:Account/set create.
 
         The domain of the primary email must already exist (resolved to a domainId).
         Returns the created account's numeric JMAP id (the "pkid" callers store).
@@ -414,7 +364,7 @@ class MailClient:
         return created.get('id')
 
     def delete_account(self, principal_id: str):
-        """v0.16 JMAP port: delete an account via x:Account/set destroy [id]."""
+        """Delete an account via x:Account/set destroy [id]."""
         account_id = self._resolve_account_id(principal_id)
         responses = self._jmap([['x:Account/set', {'destroy': [account_id]}, 'c0']])
         arguments = self._find_response(responses, 'x:Account/set')
@@ -428,7 +378,7 @@ class MailClient:
     # ------------------------------------------------------------------ #
 
     def save_app_password(self, principal_id: str, secret: str):
-        """v0.16 JMAP port: add a Password credential (client-supplied secret).
+        """Add a Password credential (client-supplied secret).
 
         JSON-Pointer append (`credentials/<next>`) -- do NOT rewrite the whole credentials
         map: existing entries' secrets are server-set once created, so re-sending them fails
@@ -448,7 +398,7 @@ class MailClient:
         )
 
     def delete_app_password(self, principal_id: str, secret: str):
-        """v0.16 JMAP port: cannot delete by plaintext secret.
+        """Cannot delete by plaintext secret.
 
         v0.16 stores credential secrets hashed, so a plaintext secret cannot identify which
         credential to remove (deletion targets a credentialId). The app's (principal_id,
@@ -506,7 +456,7 @@ class MailClient:
         return patch
 
     def save_email_addresses(self, principal_id: str, emails: str | list[str]):
-        """v0.16 JMAP port: add alias addresses via JSON-Pointer append (`aliases/<next>`)."""
+        """Add alias addresses via JSON-Pointer append (`aliases/<next>`)."""
         if isinstance(emails, str):
             emails = [emails]
         obj = self._get_account_raw(principal_id)
@@ -529,7 +479,7 @@ class MailClient:
             self._account_set_update(account_id, patch, context='save_email_addresses')
 
     def replace_email_addresses(self, principal_id: str, emails: list[tuple[str, str]]):
-        """v0.16 JMAP port: swap alias addresses (remove old, add new) via pointer replace."""
+        """Swap alias addresses (remove old, add new) via pointer replace."""
         obj = self._get_account_raw(principal_id)
         account_id = obj['id']
         existing = self._existing_aliases(obj)
@@ -545,7 +495,7 @@ class MailClient:
         )
 
     def delete_email_addresses(self, principal_id: str, emails: str | list[str]):
-        """v0.16 JMAP port: remove alias addresses by (local part, domainId) via pointer replace."""
+        """Remove alias addresses by (local part, domainId) via pointer replace."""
         if isinstance(emails, str):
             emails = [emails]
         obj = self._get_account_raw(principal_id)
@@ -568,7 +518,7 @@ class MailClient:
         primary_email_address: Optional[str] = None,
         full_name: Optional[str] = None,
     ):
-        """v0.16 JMAP port: update primary email and/or full name via a PatchObject."""
+        """Update primary email and/or full name via a PatchObject."""
         patch: dict = {}
         if primary_email_address:
             # v0.16: emailAddress is server-derived from name@domain and is a server-set
@@ -586,7 +536,7 @@ class MailClient:
         self._account_set_update(account_id, patch, context='update_individual')
 
     def update_quota(self, principal_id: str, quota: int):
-        """v0.16 JMAP port: update the account storage quota.
+        """Update the account storage quota.
 
         `quotas` is a VecMap<StorageQuota,u64> serialized as an object keyed by the
         camelCase enum name; the disk-bytes key is `maxDiskQuota` (v0.16.13 source).
@@ -596,7 +546,7 @@ class MailClient:
         self._account_set_update(account_id, {'quotas/maxDiskQuota': quota}, context='update_quota')
 
     def make_api_key(self, principal_id, password):
-        """v0.16 JMAP port: BLOCKED.
+        """BLOCKED.
 
         API key creation now goes through x:ApiKey/set, which requires the
         `sysApiKeyCreate` permission. The tb-dev fallback-admin token does NOT hold it,
@@ -612,7 +562,7 @@ class MailClient:
     # ------------------------------------------------------------------ #
 
     def get_domain(self, domain):
-        """v0.16 JMAP port: fetch a domain by name (batched query->get).
+        """Fetch a domain by name (batched query->get).
 
         Returns the raw v0.16 x:Domain object (has `id`, `name`, `dnsZoneFile`, ...).
         """
@@ -629,14 +579,16 @@ class MailClient:
         arguments = self._find_response(responses, 'x:Domain/get')
         domain_list = (arguments or {}).get('list') or []
 
-        logging.info(f'[MailClient.get_domain({domain})]: {domain_list}')
+        logging.info(f'[MailClientJMAP.get_domain({domain})]: {domain_list}')
 
         if not domain_list:
             raise DomainNotFoundError(domain)
-        return domain_list[0]
+        result = domain_list[0]
+        self._validate(DomainType, result, f'get_domain({domain})')
+        return result
 
     def create_domain(self, domain, description=''):
-        """v0.16 JMAP port: create a domain via x:Domain/set create; returns the domainId.
+        """Create a domain via x:Domain/set create; returns the domainId.
 
         NOTE: the v0.16 Domain schema does not clearly expose `description`; it is only
         sent when non-empty and may need to be dropped if the set is rejected.
@@ -656,7 +608,7 @@ class MailClient:
         return created.get('id')
 
     def delete_domain(self, domain_name: str):
-        """v0.16 JMAP port: delete a domain via x:Domain/set destroy [id]."""
+        """Delete a domain via x:Domain/set destroy [id]."""
         domain_id = self._resolve_domain_id(domain_name)  # raises DomainNotFoundError
         responses = self._jmap([['x:Domain/set', {'destroy': [domain_id]}, 'c0']])
         arguments = self._find_response(responses, 'x:Domain/set')
@@ -670,7 +622,7 @@ class MailClient:
 
     @staticmethod
     def _generate_dkim_secret(jmap_type: str) -> str:
-        """v0.16 JMAP port: generate a DKIM private key (PEM) client-side.
+        """Generate a DKIM private key (PEM) client-side.
 
         v0.16 does NOT auto-generate the keypair (v0.15 did) — x:DkimSignature/set create
         requires a `secret` (PEM private key). cryptography is imported lazily so module
@@ -692,7 +644,7 @@ class MailClient:
         return pem.decode()
 
     def create_dkim(self, domain, stage: DkimSignatureStage = DkimSignatureStage.PENDING, algorithms=None):
-        """v0.16 JMAP port: create DKIM signatures via x:DkimSignature/set create.
+        """Create DKIM signatures via x:DkimSignature/set create.
 
         Requires a domainId (resolved) and a client-generated private key per algorithm.
         The v0.15 `_reload` step is gone (registry writes are transactional).
@@ -743,7 +695,7 @@ class MailClient:
         return response_data
 
     def delete_dkim(self, domain) -> Optional[list]:
-        """v0.16 JMAP port: destroy all DKIM signatures for a domain.
+        """Destroy all DKIM signatures for a domain.
 
         Replaces the v0.15 /api/settings clear. Returns None if there's nothing to
         delete, otherwise the list of destroyed signature ids.
@@ -891,9 +843,9 @@ class MailClient:
 
                 return dkim_signatures_to_dns_records(domain_name, self.get_dkim_signatures(domain_name))
             except DomainNotFoundError:
-                logging.info(f'[MailClient.get_dkim_dns_records] {domain_name} is not a Stalwart domain yet')
+                logging.info(f'[MailClientJMAP.get_dkim_dns_records] {domain_name} is not a Stalwart domain yet')
             except Exception as ex:
-                logging.warning(f'[MailClient.get_dkim_dns_records] Falling back to DNS records endpoint: {ex}')
+                logging.warning(f'[MailClientJMAP.get_dkim_dns_records] Falling back to DNS records endpoint: {ex}')
 
         return [
             record
@@ -906,7 +858,7 @@ class MailClient:
     # ------------------------------------------------------------------ #
 
     def get_dns_records(self, domain_name: str) -> list[dict]:
-        """v0.16 JMAP port: derive DNS records from the domain's computed `dnsZoneFile`.
+        """Derive DNS records from the domain's computed `dnsZoneFile`.
 
         v0.15 exposed GET /api/dns/records/{domain}. v0.16 instead returns a single
         computed BIND zonefile string on the Domain object, which we parse into the
@@ -1196,6 +1148,10 @@ class MailClient:
         """Check expected DNS records and return verification details for a custom domain."""
         # Circular import, so we import here
         from thunderbird_accounts.mail.dns import enrich_dns_records_with_status
+        from thunderbird_accounts.mail.clients.mail_client_interface import (
+            DNSRecordStatus,
+            DomainVerificationErrors,
+        )
 
         expected_records = self.build_expected_dns_records(domain_name)
         dns_records = enrich_dns_records_with_status(domain_name, expected_records)
