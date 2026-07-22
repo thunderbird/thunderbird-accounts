@@ -1,3 +1,4 @@
+from django.conf import settings
 import uuid
 from typing import Optional
 import sentry_sdk
@@ -20,7 +21,7 @@ class MailClientJMAP(MailClientInterface):
     def __init__(self):
         self.client = JMAPClient('http://localhost:8080', 'admin', 'admin', JMAPClient.AUTH_TYPES.BASIC)
         self.account_id = None
-        pass
+        self.primary_domain_id = None
 
     def _get_session(self):
         session = self.client.get_session()
@@ -30,9 +31,43 @@ class MailClientJMAP(MailClientInterface):
         if not self.account_id:
             self.account_id = list(session.get('accounts', {}).keys())[0]
 
+    def _get_primary_domain_id(self):
+        """We cache the primary domain id at the moment to avoid having to retrieve it many times over.
+        This runs during preflight check so we don't need to call it in here."""
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name='x:Domain/query',
+                        arguments={
+                            'accountId': self.account_id,
+                            'filter': {'name': settings.PRIMARY_EMAIL_DOMAIN},
+                            'limit': 1,
+                            'position': 0,
+                            'calculateTotal': False,
+                        },
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+
+        id_list = response.method_responses[0].arguments.get('ids', [])
+
+        if len(id_list) == 0:
+            return
+
+        self.primary_domain_id = id_list[0]
+
     def preflight_check(self):
         if not self.account_id:
             self._get_session()
+        if not self.primary_domain_id:
+            self._get_primary_domain_id()
 
     def _debug_dump(self, name: str, data: dict):
         with open(f'd_{name}.json', 'w') as fh:
@@ -97,6 +132,8 @@ class MailClientJMAP(MailClientInterface):
         :raises InvalidJMapResponseError: If the response from Stalwart presents a malformed AccountType object."""
         self.preflight_check()
 
+        account_name = principal_id.split('@')[0]
+
         response = self.client.request(
             JMapRequest(
                 using=[
@@ -108,8 +145,10 @@ class MailClientJMAP(MailClientInterface):
                         name='x:Account/query',
                         arguments={
                             'accountId': self.account_id,
-                            'filter': {'name': principal_id},
-                            'limit': 25,
+                            # You cannot search for a full address,
+                            # so we need to filter by name (not full name) / domainId of our primary domain
+                            'filter': {'name': account_name, 'domainId': self.primary_domain_id},
+                            'limit': 5,
                             'position': 0,
                             'calculateTotal': True,
                         },
@@ -282,3 +321,59 @@ class MailClientJMAP(MailClientInterface):
             raise AccountNotFoundError(principal_id)
 
         return stalwart_pkid
+
+    def delete_account(self, principal_id: str) -> None:
+        """Deletes a Stalwart account from the given thundermail address.
+
+        :raises AccountNotFoundError: If the account you're trying to delete does not exist.
+        :raises AccountSetError: If there was a problem during the deletion process."""
+        self.preflight_check()
+
+        account_name = principal_id.split('@')[0]
+
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name='x:Account/query',
+                        arguments={
+                            'accountId': self.account_id,
+                            'filter': {'name': account_name, 'domainId': self.primary_domain_id},
+                            'limit': 5,
+                            'position': 0,
+                            'calculateTotal': True,
+                        },
+                        method_call_id='0',
+                    ),
+                    Invocation(
+                        name='x:Account/set',
+                        arguments={
+                            'accountId': self.account_id,
+                            '#destroy': {'resultOf': '0', 'name': 'x:Account/query', 'path': '/ids'},
+                        },
+                        method_call_id='1',
+                    ),
+                ],
+            )
+        )
+
+        # Account already deleted or doesn't exist? Raise a not found error
+        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
+            raise AccountNotFoundError(principal_id)
+
+        # Error during deletion
+        error = response.method_responses[1].arguments.get('notDestroyed')
+        if error:
+            error_obj = list(error.values())[0]
+            error_type = error_obj.get('type')
+            error_reason = error_obj.get('description')
+            error_fields = error_obj.get('properties')
+            raise AccountSetError(error_type, error_reason, error_fields)
+
+        print('->resp', response.method_responses)
+        data = response.method_responses[1].arguments.get('destroyed', {})
+        self._debug_dump('delete_account', data)
