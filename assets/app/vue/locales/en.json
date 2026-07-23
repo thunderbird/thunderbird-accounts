@@ -118,7 +118,9 @@
               "downloadDescription": "We recommend using the desktop application for the best experience.",
               "downloadButton": "Download",
               "autoConfigTitle": "Automatic Configuration",
-              "autoConfigDescription": "Add a new account easily in Thunderbird Desktop using your Thundermail email and password."
+              "autoConfigDescription": "Add a new account easily in Thunderbird Desktop using your Thundermail email and password.",
+              "failedToGenerateToken": "Failed to generate token",
+              "desktopConnectionFailed": "Desktop connection failed"
             },
             "mobilePanel": {
               "qrCodeTitle": "Scan QR Code",
