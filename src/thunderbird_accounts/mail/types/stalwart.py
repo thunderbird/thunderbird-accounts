@@ -1,8 +1,8 @@
-from thunderbird_accounts.mail.clients.jmap_types import BaseSchema
+from thunderbird_accounts.mail.types.jmap import BaseSchema
 from enum import StrEnum
 from typing import Optional, Annotated
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict, AliasPath, AliasChoices
+from pydantic import Field, ConfigDict, AliasChoices
 
 Duration = Annotated[str | int, Field()]
 """A field that takes in either ms as an integer or time followed by the unit as a string
@@ -16,7 +16,9 @@ class StalwartType(BaseSchema):
     This is a shape to ingest that, but we don't do any processing on what what might be inside."""
 
     model_config = ConfigDict(serialize_by_alias=True)
-    type: Optional[str] = Field(validation_alias=AliasChoices('@type', 'type'), serialization_alias='@type', default=None)
+    type: Optional[str] = Field(
+        validation_alias=AliasChoices('@type', 'type'), serialization_alias='@type', default=None
+    )
 
 
 class JMapType(BaseSchema):
@@ -80,7 +82,7 @@ class SubAddressingCustom(StalwartType):
     custom_role: dict
 
 
-class DomainType(JMapType):
+class Domain(JMapType):
     """Stalwart Domain Type
 
     Ref: https://stalw.art/docs/ref/object/domain/"""
@@ -129,7 +131,7 @@ class EmailAlias(BaseSchema):
     description: Optional[str] = None
 
 
-class AccountType(JMapType, StalwartType):
+class Account(JMapType, StalwartType):
     """Stalwart Account Type
 
     .. code-block:: json

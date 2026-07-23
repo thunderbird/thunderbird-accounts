@@ -1,6 +1,6 @@
 from base64 import b64encode
 from typing import Literal
-from thunderbird_accounts.mail.clients.jmap_types import SessionResource, JMapRequest, Invocation, JMapResponse
+from thunderbird_accounts.mail.types.jmap import SessionResource, JMapRequest, Invocation, JMapResponse
 import enum
 import json
 import requests
