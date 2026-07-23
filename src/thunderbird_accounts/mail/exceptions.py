@@ -18,6 +18,17 @@ class StalwartError(RuntimeError):
         return f'StalwartError: {self.details}'
 
 
+class JMapError(RuntimeError):
+    type: str
+    description: Optional[str] = None
+    fields: Optional[list] = None
+
+    def __init__(self, type, description, fields, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.type = type
+        self.description = description
+        self.fields = fields
+
 class DomainNotFoundError(StalwartError):
     """Raise when a domain is not found in Stalwart"""
 
@@ -43,19 +54,8 @@ class AccountNotFoundError(StalwartError):
     def __str__(self):
         return f'AccountNotFoundError: {self.username}'
 
-class AccountSetError(StalwartError):
+class AccountSetError(JMapError):
     """Raise when an individual is not found in Stalwart"""
-
-    type: str
-    description: Optional[str] = None
-    fields: Optional[list] = None
-
-    def __init__(self, type, description, fields, *args, **kwargs):
-        super().__init__(args, kwargs)
-        self.type = type
-        self.description = description
-        self.fields = fields
-
     def __str__(self):
         return f'AccountSetError: {self.type} : {self.description or self.fields}'
 

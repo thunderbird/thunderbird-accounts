@@ -1,6 +1,6 @@
 from django.conf import settings
 import uuid
-from typing import Optional
+from typing import Optional, Type
 import sentry_sdk
 from pydantic import ValidationError
 import json
@@ -10,10 +10,11 @@ from thunderbird_accounts.mail.exceptions import (
     InvalidJMapResponseError,
     AccountNotFoundError,
     AccountSetError,
+    JMapError,
 )
+from thunderbird_accounts.mail.types import stalwart
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
-from thunderbird_accounts.mail.clients.stalwart_types import DomainType, AccountType, EmailAlias, StalwartType
-from thunderbird_accounts.mail.clients.jmap_types import JMapRequest, Invocation, ResponseIndex
+from thunderbird_accounts.mail.types.jmap import JMapRequest, Invocation
 from thunderbird_accounts.mail.clients.mail_client_interface import MailClientInterface
 
 
@@ -63,6 +64,13 @@ class MailClientJMAP(MailClientInterface):
 
         self.primary_domain_id = id_list[0]
 
+    def _handle_jmap_error(self, error_obj: dict, error: Type[JMapError]) -> JMapError:
+        """Pass it the error object, and it will set and return your exception"""
+        error_type = error_obj.get('type')
+        error_reason = error_obj.get('description')
+        error_fields = error_obj.get('properties')
+        return error(error_type, error_reason, error_fields)
+
     def preflight_check(self):
         if not self.account_id:
             self._get_session()
@@ -73,12 +81,12 @@ class MailClientJMAP(MailClientInterface):
         with open(f'd_{name}.json', 'w') as fh:
             fh.write(json.dumps(data, indent=2))
 
-    def get_domain(self, domain: str) -> DomainType:
-        """Retrieve a :any thunderbird_accounts.mail.clients.stalwart_types.DomainType:
+    def get_domain(self, domain: str) -> stalwart.Domain:
+        """Retrieve a :any thunderbird_accounts.mail.types.stalwart.Domain:
         object from a given domain name.
 
         :raises DomainNotFoundError: If the domain is not found within Stalwart.
-        :raises InvalidJMapResponseError: If the response from Stalwart presents a malformed DomainType object."""
+        :raises InvalidJMapResponseError: If the response from Stalwart presents a malformed Domain object."""
         self.preflight_check()
 
         response = self.client.request(
@@ -118,14 +126,14 @@ class MailClientJMAP(MailClientInterface):
         self._debug_dump('get_domain', data)
 
         try:
-            return DomainType(**data)
+            return stalwart.Domain(**data)
         except ValidationError as ex:
             logging.warning(f'[MailClient.get_domain({domain}]: Failed pydantic validation!')
             sentry_sdk.capture_exception(ex)
             raise InvalidJMapResponseError(ex)
 
-    def get_account(self, principal_id: str) -> AccountType:
-        """Retrieve an :any thunderbird_accounts.mail.clients.stalwart_types.AccountType: from a given
+    def get_account(self, principal_id: str) -> stalwart.Account:
+        """Retrieve an :any thunderbird_accounts.mail.types.stalwart.Account: from a given
         primary thundermail address.
 
         :raises AccountNotFoundError: If the account is not found within Stalwart.
@@ -173,7 +181,7 @@ class MailClientJMAP(MailClientInterface):
         self._debug_dump('get_account', data)
 
         try:
-            return AccountType(**data)
+            return stalwart.Account(**data)
         except ValidationError as ex:
             logging.warning(f'[MailClient.get_account({principal_id}]: Failed pydantic validation!')
             sentry_sdk.capture_exception(ex)
@@ -261,19 +269,19 @@ class MailClientJMAP(MailClientInterface):
         self._debug_dump('set_account-domain_query', {'_': debug_dump})
 
         aliases = {
-            str(idx): EmailAlias(
+            str(idx): stalwart.EmailAlias(
                 enabled=True, name=email.split('@')[0], domain_id=domain_ids_by_domain[email.split('@')[1]]
             )
             for idx, email in enumerate(emails)
         }
-        data = AccountType(
-            type=AccountType.Types.USER.value,
+        data = stalwart.Account(
+            type=stalwart.Account.Types.USER.value,
             id=None,
             name=account_name,
             description=full_name,
-            encryption_at_rest=StalwartType(type='Disabled'),
-            roles=StalwartType(type='User'),
-            permissions=StalwartType(type='Inherit'),
+            encryption_at_rest=stalwart.StalwartType(type='Disabled'),
+            roles=stalwart.StalwartType(type='User'),
+            permissions=stalwart.StalwartType(type='Inherit'),
             domain_id=domain_ids_by_domain[account_domain],
             aliases=aliases,
             quotas={'maxDiskQuota': quota} if quota else None,
@@ -306,10 +314,7 @@ class MailClientJMAP(MailClientInterface):
         error = response.method_responses[0].arguments.get('notCreated')
         if error:
             error_obj = error.get(temp_id, {})
-            error_type = error_obj.get('type')
-            error_reason = error_obj.get('description')
-            error_fields = error_obj.get('properties')
-            raise AccountSetError(error_type, error_reason, error_fields)
+            raise self._handle_jmap_error(error_obj, AccountSetError)
 
         data = response.method_responses[0].arguments.get('created', {})
         self._debug_dump('set_account', data)
@@ -369,10 +374,7 @@ class MailClientJMAP(MailClientInterface):
         error = response.method_responses[1].arguments.get('notDestroyed')
         if error:
             error_obj = list(error.values())[0]
-            error_type = error_obj.get('type')
-            error_reason = error_obj.get('description')
-            error_fields = error_obj.get('properties')
-            raise AccountSetError(error_type, error_reason, error_fields)
+            raise self._handle_jmap_error(error_obj, AccountSetError)
 
         print('->resp', response.method_responses)
         data = response.method_responses[1].arguments.get('destroyed', {})
