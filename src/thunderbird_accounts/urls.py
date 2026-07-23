@@ -5,6 +5,8 @@ Thunderbird Accounts Urls
 These are the routes and some light admin panel customization are located.
 """
 
+from django.views.generic import RedirectView
+
 from django.conf import settings
 from django.contrib import admin
 from django.shortcuts import redirect
@@ -146,6 +148,9 @@ urlpatterns += [
         name='admin_stalwart_list',
     ),
 ]
+
+# Serve our favicon.ico
+urlpatterns += [path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=True))]
 
 urlpatterns += [
     # Vue App catch-all: keep this last so all explicit Django routes above take precedence

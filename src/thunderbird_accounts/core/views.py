@@ -3,7 +3,6 @@ from thunderbird_accounts.subscription.utils import get_visible_plan_info
 from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
 from gettext import gettext
 import sys
-import json
 import requests
 
 import requests.exceptions
@@ -13,6 +12,7 @@ from django.contrib import messages
 from django.http import HttpRequest, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
+from django.utils.html import json_script
 from django.utils.translation import gettext_lazy as _
 from django.contrib.messages import get_messages
 
@@ -141,32 +141,48 @@ def home(request: HttpRequest):
         # Clear form_data for any additional reloads
         request.session['form_data'] = {}
 
+    # Json script will create a json blob that's correctly escaped
+    script_tag = json_script(
+        {
+            'connectionInfo': settings.CONNECTION_INFO,
+            'appPasswords': app_passwords,
+            'allowedDomains': settings.ALLOWED_EMAIL_DOMAINS if settings.ALLOWED_EMAIL_DOMAINS else [],
+            'customDomains': custom_domains,
+            'emailAddresses': email_addresses,
+            'maxCustomDomains': max_custom_domains,
+            'maxEmailAliases': max_email_aliases,
+            'tbProAppointmentUrl': settings.TB_PRO_APPOINTMENT_URL,
+            'tbProSendUrl': settings.TB_PRO_SEND_URL,
+            'tbProWaitListUrl': settings.TB_PRO_WAIT_LIST_URL,
+            'tbProPrimaryDomain': settings.PRIMARY_EMAIL_DOMAIN,
+            'webmailUrl': settings.WEBMAIL_URL,
+            'serverMessages': [
+                {'level': message.level, 'message': str(message.message)} for message in get_messages(request)
+            ],
+            'formData': form_data or None,
+            'features': get_feature_flags(),
+            'needsTosAcceptance': needs_tos_acceptance,
+            'recoveryEmail': recovery_email,
+            'planInfo': get_visible_plan_info(),
+            'paddleToken': settings.PADDLE_TOKEN,
+            'paddleEnvironment': settings.PADDLE_ENV,
+            'isAuthenticated': request.user.is_authenticated,
+            'hasActiveSubscription': request.user.has_active_subscription if request.user.is_authenticated else False,
+            'isAwaitingPaymentVerification': request.user.is_awaiting_payment_verification
+            if request.user.is_authenticated
+            else False,
+            'userEmail': request.user.email if request.user.is_authenticated else None,
+            'userFullName': request.user.get_full_name() if request.user.is_authenticated else None,
+            'username': request.user.username if request.user.is_authenticated else None,
+            'userDisplayName': user_display_name,
+        },
+        'pageLoadData',
+    )
+
     return TemplateResponse(
         request,
         'index.html',
         {
-            'connection_info': settings.CONNECTION_INFO,
-            'app_passwords': json.dumps(app_passwords),
-            'user_display_name': user_display_name,
-            'allowed_domains': settings.ALLOWED_EMAIL_DOMAINS if settings.ALLOWED_EMAIL_DOMAINS else [],
-            'custom_domains': json.dumps(custom_domains),
-            'email_addresses': json.dumps(email_addresses),
-            'max_custom_domains': max_custom_domains,
-            'max_email_aliases': max_email_aliases,
-            'tb_pro_appointment_url': settings.TB_PRO_APPOINTMENT_URL,
-            'tb_pro_send_url': settings.TB_PRO_SEND_URL,
-            'tb_pro_wait_list_url': settings.TB_PRO_WAIT_LIST_URL,
-            'tb_pro_primary_domain': settings.PRIMARY_EMAIL_DOMAIN,
-            'webmail_url': settings.WEBMAIL_URL,
-            'server_messages': [
-                {'level': message.level, 'message': str(message.message)} for message in get_messages(request)
-            ],
-            'form_data': form_data or None,
-            'features': json.dumps(get_feature_flags()),
-            'needs_tos_acceptance': needs_tos_acceptance,
-            'recovery_email': recovery_email,
-            'plan_info': get_visible_plan_info(),
-            'paddle_token': settings.PADDLE_TOKEN,
-            'paddle_environment': settings.PADDLE_ENV,
+            'page_load_data_script': script_tag,
         },
     )
