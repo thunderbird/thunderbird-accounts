@@ -28,9 +28,9 @@ class MailClientJMAP(MailClientInterface):
         session = self.client.get_session()
 
         # Retrieve our account from the primary account for jmap calls
-        self.account_id = session.get('primaryAccounts', {}).get('urn:stalwart:jmap')
+        self.account_id = session.primary_accounts.get('urn:stalwart:jmap')
         if not self.account_id:
-            self.account_id = list(session.get('accounts', {}).keys())[0]
+            self.account_id = list(session.accounts.keys())[0]
 
     def _get_primary_domain_id(self):
         """We cache the primary domain id at the moment to avoid having to retrieve it many times over.
@@ -80,6 +80,30 @@ class MailClientJMAP(MailClientInterface):
     def _debug_dump(self, name: str, data: dict):
         with open(f'd_{name}.json', 'w') as fh:
             fh.write(json.dumps(data, indent=2))
+
+    def _query_account_by_principal_id(self, principal_id: str, method_call_id: str = '0') -> Invocation:
+        """Helper to return an Invocation object that will query the account by local part / primary domain id
+        Optionally you can provide a custom method_call_id to reference in future Invocations.
+
+        If method_call_id is left to the default value you can reference the id with:
+
+        .. code-block:: python
+
+        {'resultOf': '0', 'name': 'x:Account/query', 'path': '/ids'}
+
+        """
+        account_name = principal_id.split('@')[0]
+        return Invocation(
+            name='x:Account/query',
+            arguments={
+                'accountId': self.account_id,
+                'filter': {'name': account_name, 'domainId': self.primary_domain_id},
+                'limit': 5,
+                'position': 0,
+                'calculateTotal': True,
+            },
+            method_call_id=method_call_id,
+        )
 
     def get_domain(self, domain: str) -> stalwart.Domain:
         """Retrieve a :any thunderbird_accounts.mail.types.stalwart.Domain:
@@ -140,8 +164,6 @@ class MailClientJMAP(MailClientInterface):
         :raises InvalidJMapResponseError: If the response from Stalwart presents a malformed AccountType object."""
         self.preflight_check()
 
-        account_name = principal_id.split('@')[0]
-
         response = self.client.request(
             JMapRequest(
                 using=[
@@ -149,19 +171,7 @@ class MailClientJMAP(MailClientInterface):
                     'urn:stalwart:jmap',
                 ],
                 method_calls=[
-                    Invocation(
-                        name='x:Account/query',
-                        arguments={
-                            'accountId': self.account_id,
-                            # You cannot search for a full address,
-                            # so we need to filter by name (not full name) / domainId of our primary domain
-                            'filter': {'name': account_name, 'domainId': self.primary_domain_id},
-                            'limit': 5,
-                            'position': 0,
-                            'calculateTotal': True,
-                        },
-                        method_call_id='0',
-                    ),
+                    self._query_account_by_principal_id(principal_id),
                     Invocation(
                         name='x:Account/get',
                         arguments={
@@ -327,14 +337,23 @@ class MailClientJMAP(MailClientInterface):
 
         return stalwart_pkid
 
-    def delete_account(self, principal_id: str) -> None:
-        """Deletes a Stalwart account from the given thundermail address.
-
-        :raises AccountNotFoundError: If the account you're trying to delete does not exist.
-        :raises AccountSetError: If there was a problem during the deletion process."""
+    def _patch_account(self, principal_id: str, data: stalwart.Account):
         self.preflight_check()
 
-        account_name = principal_id.split('@')[0]
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[self._query_account_by_principal_id(principal_id)],
+            )
+        )
+
+        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
+            raise AccountNotFoundError(principal_id)
+
+        stalwart_pkid = response.method_responses[0].arguments.get('ids', [])[0]
 
         response = self.client.request(
             JMapRequest(
@@ -344,16 +363,68 @@ class MailClientJMAP(MailClientInterface):
                 ],
                 method_calls=[
                     Invocation(
-                        name='x:Account/query',
+                        name='x:Account/set',
                         arguments={
                             'accountId': self.account_id,
-                            'filter': {'name': account_name, 'domainId': self.primary_domain_id},
-                            'limit': 5,
-                            'position': 0,
-                            'calculateTotal': True,
+                            'update': {
+                                stalwart_pkid: {
+                                    **data.model_dump(exclude_none=True),
+                                }
+                            },
                         },
                         method_call_id='0',
                     ),
+                ],
+            )
+        )
+
+        print('->', response)
+        data = response.method_responses[0].arguments.get('updated', {})
+        self._debug_dump('patch_account', data)
+
+        return data
+
+    def update_individual(
+        self,
+        principal_id: str,
+        primary_email_address: Optional[str] = None,
+        full_name: Optional[str] = None,
+    ) -> None:
+        """Updates Stalwart and changes their primary email address and/or full name"""
+
+        account = stalwart.AccountUpdate(
+            name=primary_email_address or None,
+            description=full_name or None
+        )
+
+        if not account.name and not account.description:
+            raise ValueError('You must provide at least one field to change.')
+
+        self._patch_account(principal_id, account)
+
+        # Returns data: null on success...
+        #data = response.json()
+        #error = data.get('error')
+        # I have no idea what the error is yet
+        #if error:
+        #    logging.error(f'[update_individual] err: {data}')
+        #    raise RuntimeError(data)
+
+    def delete_account(self, principal_id: str) -> None:
+        """Deletes a Stalwart account from the given thundermail address.
+
+        :raises AccountNotFoundError: If the account you're trying to delete does not exist.
+        :raises AccountSetError: If there was a problem during the deletion process."""
+        self.preflight_check()
+
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    self._query_account_by_principal_id(principal_id),
                     Invocation(
                         name='x:Account/set',
                         arguments={

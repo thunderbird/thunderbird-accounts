@@ -1,7 +1,7 @@
 import enum
 from typing import Optional, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator, AliasChoices
 from pydantic.alias_generators import to_camel
 from sqlparse.tokens import Literal
 
@@ -63,31 +63,61 @@ class JMapResponse(BaseSchema):
     session_state: str = Field()
 
 
-class JMapCorePropertyCapability(TypedDict):
-    maxSizeUpload: int
-    maxConcurrentUpload: int
-    maxSizeRequest: int
-    maxConcurrentRequests: int
-    maxCallsInRequest: int
-    maxObjectsInGet: int
-    maxObjectsInSet: int
-    collationAlgorithms: list[str]
+class JMapCorePropertyCapability(BaseSchema):
+    max_size_upload: Optional[int] = None
+    max_concurrent_upload: Optional[int] = None
+    max_size_request: Optional[int] = None
+    max_concurrent_requests: Optional[int] = None
+    max_calls_in_request: Optional[int] = None
+    max_objects_in_get: Optional[int] = None
+    max_objects_in_set: Optional[int] = None
+    collation_algorithms: Optional[list[str]] = None
 
 
-class AccountType(TypedDict, total=False):
+class JMapSievePropertyCapability(BaseSchema):
+    implementation: Optional[str] = None
+
+
+class JMapWebsocketPropertyCapability(BaseSchema):
+    url: Optional[str] = None
+    supports_push: Optional[bool] = None
+
+
+class Account(BaseSchema):
     name: str
-    isPersonal: bool
-    isReadOnly: bool
-    accountCapabilities: dict
+    is_personal: bool
+    is_read_only: bool
+    account_capabilities: dict
 
 
-class SessionResource(TypedDict):
-    capabilities: dict | dict[Literal['urn:ietf:params:jmap:core'], JMapCorePropertyCapability]
-    accounts: dict[str, AccountType]
-    primaryAccounts: dict[str, str]
+class Capabilities(BaseSchema):
+    """Typed capabilities"""
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+    urn_ietf_params_jmap_core: JMapCorePropertyCapability = Field(
+        validation_alias=AliasChoices('urn:ietf:params:jmap:core', 'urn_ietf_params_jmap_core'),
+        serialization_alias='urn:ietf:params:jmap:core',
+    )
+    urn_ietf_params_jmap_sieve: JMapSievePropertyCapability = Field(
+        validation_alias=AliasChoices('urn:ietf:params:jmap:sieve', 'urn_ietf_params_jmap_sieve'),
+        serialization_alias='urn:ietf:params:jmap:sieve',
+    )
+    urn_ietf_params_jmap_websocket: JMapWebsocketPropertyCapability = Field(
+        validation_alias=AliasChoices('urn:ietf:params:jmap:websocket', 'urn_ietf_params_jmap_websocket'),
+        serialization_alias='urn:ietf:params:jmap:websocket',
+    )
+
+
+class SessionResource(BaseSchema):
+    capabilities: Capabilities  #: dict | dict[Literal['urn:ietf:params:jmap:core'], JMapCorePropertyCapability]
+    accounts: dict[str, Account]
+    primary_accounts: dict[str, str]
     username: str
-    apiUrl: str
-    downloadUrl: str
-    uploadUrl: str
-    eventSourceUrl: str
+    api_url: str
+    download_url: str
+    upload_url: str
+    event_source_url: str
     state: str
