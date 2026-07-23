@@ -194,3 +194,10 @@ class Account(JMapType, StalwartType):
     locale: Optional[str] = 'en_US'
     timezone: Optional[str] = None
     encryption_at_rest: StalwartType
+
+class AccountUpdate(Account):
+    name: Optional[str] = None
+    permissions: Optional[StalwartType] = None
+    roles: Optional[StalwartType | dict] = None
+    encryption_at_rest: Optional[StalwartType] = None
+    locale: Optional[str] = None

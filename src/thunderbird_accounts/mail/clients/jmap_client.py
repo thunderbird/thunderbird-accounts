@@ -5,10 +5,11 @@ import enum
 import json
 import requests
 
-
 class JMAPClient:
     """The tiniest JMAP client you can imagine.
     Source: https://github.com/fastmail/JMAP-Samples/blob/main/python3/tiny_jmap_library.py"""
+
+
 
     class AUTH_TYPES(enum.Enum):
         BASIC = 0
@@ -32,6 +33,8 @@ class JMAPClient:
         self.account_id: str | None = None
         self.identity_id: str | None = None
 
+
+
     def _authorization_value(self):
         return f'Bearer {self.token}' if self.auth_type == self.AUTH_TYPES.BEARER else f'Basic {self.token}'
 
@@ -48,11 +51,13 @@ class JMAPClient:
             allow_redirects=True,
         )
         r.raise_for_status()
-        session: SessionResource = r.json()
+        session = SessionResource(**r.json())
         self.session = session
+        with open('./d_get_session.json', 'w') as fh:
+            fh.write(json.dumps(session.model_dump(), indent=2))
         if not self.session:
             raise RuntimeError('Failed to get session')
-        self.api_url = session['apiUrl']
+        self.api_url = session.api_url
         return session
 
     def get_account_id(self) -> str:
@@ -62,7 +67,7 @@ class JMAPClient:
 
         session = self.get_session()
 
-        account_id = session['primaryAccounts']['urn:ietf:params:jmap:mail']
+        account_id = session.primary_accounts['urn:ietf:params:jmap:mail']
         self.account_id = account_id
         return account_id
 
