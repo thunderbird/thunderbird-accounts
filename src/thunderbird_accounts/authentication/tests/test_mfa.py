@@ -25,7 +25,12 @@ from thunderbird_accounts.authentication.mfa import (
     MFA_REST_ERROR_STEP_UP_REQUIRED,
     MFA_REST_ERROR_TOTP_NOT_CONFIGURED,
 )
-from thunderbird_accounts.authentication.mfa_management import get_user_access_token
+from thunderbird_accounts.authentication.tokens import (
+    AccessTokenExpiry,
+    AccessTokenPolicy,
+    get_access_token_expiry,
+    get_user_access_token,
+)
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.views import MfaReauthenticationRequestView
 
@@ -55,7 +60,8 @@ class MfaApiTestCase(TestCase):
         session = self.client.session
         session[MFA_MANAGEMENT_AUTH_SESSION_KEY] = int(time.time())
         # The provider is self-service: the view forwards the user's stored OIDC access token.
-        session['oidc_access_token'] = 'test-user-access-token'
+        self.user_access_token = _jwt_with_exp(300)
+        session['oidc_access_token'] = self.user_access_token
         session.save()
         self.mfa_provider_patcher = patch('thunderbird_accounts.authentication.mfa_management.KeycloakMfaClient')
         self.mock_mfa_client = self.mfa_provider_patcher.start()
@@ -220,7 +226,7 @@ class MfaApiTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.mock_mfa_client.return_value.register_totp_credential.assert_called_once_with(
-            user_access_token='test-user-access-token',
+            user_access_token=self.user_access_token,
             secret=pending_secret,
             code='123456',
             user_label='Authenticator app',
@@ -242,7 +248,7 @@ class MfaApiTestCase(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.mock_mfa_client.return_value.logout_other_sessions.assert_called_once_with('test-user-access-token')
+        self.mock_mfa_client.return_value.logout_other_sessions.assert_called_once_with(self.user_access_token)
 
     @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
     def test_confirm_totp_setup_without_logout_flag_skips_account_api(self, mock_keycloak_client: Mock):
@@ -465,7 +471,7 @@ class MfaApiTestCase(TestCase):
         self.assertEqual(body['codes'], codes)
         self.assertTrue(body['credentials'][0]['totalCodes'] == 12)
         self.mock_mfa_client.return_value.regenerate_recovery_codes.assert_called_once_with(
-            'test-user-access-token', user_label='Recovery codes'
+            self.user_access_token, user_label='Recovery codes'
         )
 
     @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
@@ -674,28 +680,43 @@ class GetUserAccessTokenTestCase(TestCase):
     def _request(**session):
         return SimpleNamespace(session=dict(session))
 
-    @patch('thunderbird_accounts.authentication.mfa_management.refresh_user_access_token')
+    @patch('thunderbird_accounts.authentication.tokens.refresh_user_access_token')
     def test_returns_unexpired_token_without_refreshing(self, mock_refresh: Mock):
         token = _jwt_with_exp(300)
         self.assertEqual(get_user_access_token(self._request(oidc_access_token=token)), token)
         mock_refresh.assert_not_called()
 
-    @patch('thunderbird_accounts.authentication.mfa_management.refresh_user_access_token', return_value='fresh-token')
+    @patch('thunderbird_accounts.authentication.tokens.refresh_user_access_token', return_value='fresh-token')
     def test_refreshes_expired_token(self, mock_refresh: Mock):
         request = self._request(oidc_access_token=_jwt_with_exp(-10))
         self.assertEqual(get_user_access_token(request), 'fresh-token')
         mock_refresh.assert_called_once_with(request)
 
-    @patch('thunderbird_accounts.authentication.mfa_management.refresh_user_access_token', return_value=None)
-    def test_falls_back_to_stored_token_when_refresh_fails(self, _mock_refresh: Mock):
+    @patch('thunderbird_accounts.authentication.tokens.refresh_user_access_token', return_value=None)
+    def test_returns_none_for_expired_token_when_refresh_fails(self, _mock_refresh: Mock):
         expired = _jwt_with_exp(-10)
-        self.assertEqual(get_user_access_token(self._request(oidc_access_token=expired)), expired)
+        self.assertIsNone(get_user_access_token(self._request(oidc_access_token=expired)))
 
-    @patch('thunderbird_accounts.authentication.mfa_management.refresh_user_access_token')
-    def test_opaque_token_is_forwarded_unchanged(self, mock_refresh: Mock):
-        self.assertEqual(get_user_access_token(self._request(oidc_access_token='opaque-not-a-jwt')), 'opaque-not-a-jwt')
-        mock_refresh.assert_not_called()
+    def test_opaque_token_has_unknown_expiry(self):
+        self.assertEqual(get_access_token_expiry('opaque-not-a-jwt'), AccessTokenExpiry.UNKNOWN)
 
-    @patch('thunderbird_accounts.authentication.mfa_management.refresh_user_access_token', return_value=None)
+    @patch('thunderbird_accounts.authentication.tokens.refresh_user_access_token', return_value='fresh-token')
+    def test_refreshes_unknown_expiry_token(self, mock_refresh: Mock):
+        request = self._request(oidc_access_token='opaque-not-a-jwt')
+        self.assertEqual(get_user_access_token(request), 'fresh-token')
+        mock_refresh.assert_called_once_with(request)
+
+    @patch('thunderbird_accounts.authentication.tokens.refresh_user_access_token', return_value=None)
+    def test_returns_none_for_unknown_expiry_when_refresh_fails(self, _mock_refresh: Mock):
+        self.assertIsNone(get_user_access_token(self._request(oidc_access_token='opaque-not-a-jwt')))
+
+    @patch('thunderbird_accounts.authentication.tokens.refresh_user_access_token', return_value='fresh-token')
+    def test_force_refresh_ignores_stored_token(self, mock_refresh: Mock):
+        stored_token = _jwt_with_exp(300)
+        request = self._request(oidc_access_token=stored_token)
+        self.assertEqual(get_user_access_token(request, policy=AccessTokenPolicy.FORCE_REFRESH), 'fresh-token')
+        mock_refresh.assert_called_once_with(request)
+
+    @patch('thunderbird_accounts.authentication.tokens.refresh_user_access_token', return_value=None)
     def test_returns_none_when_no_token_stored(self, _mock_refresh: Mock):
         self.assertIsNone(get_user_access_token(self._request()))

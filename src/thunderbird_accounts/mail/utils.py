@@ -96,7 +96,12 @@ def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
     return True
 
 
-def fix_archives_folder(access_token, account: Account) -> bool:
+def _is_unauthorized_http_error(exception: HTTPError) -> bool:
+    response = getattr(exception, 'response', None)
+    return response is not None and response.status_code == 401
+
+
+def fix_archives_folder(access_token, account: Account, *, refresh_access_token=None) -> bool:
     """Check if the archive folder exists, if it doesn't create it!
     This fixes a bug with our stalwart instance where it doesn't give us an archives folder...
 
@@ -211,7 +216,14 @@ def fix_archives_folder(access_token, account: Account) -> bool:
 
         return True
     except (HTTPError, RuntimeError, KeyError) as ex:
-        logging.error('fix_archive_folder failed!')
+        if isinstance(ex, HTTPError) and refresh_access_token and _is_unauthorized_http_error(ex):
+            refreshed_access_token = refresh_access_token()
+            if refreshed_access_token and refreshed_access_token != access_token:
+                # Retry once with a refreshed token. Do not pass refresh_access_token
+                # again, so repeated 401s fail instead of recursing indefinitely.
+                return fix_archives_folder(refreshed_access_token, account)
+
+        logging.warning('fix_archives_folder failed!')
         sentry_sdk.set_context('inbox_response', {'inboxes': inboxes})
         sentry_sdk.capture_exception(ex)
     return False
