@@ -18,41 +18,16 @@
 <body>
 {% csrf_token %}
 <script src="{% url 'wafflejs' %}"></script>
+{{ page_load_data_script }}
 <script>
   {% get_form_error_message as form_error %}
 
   const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-  // Site object
+  // Retrieve and decode our json blob from the backend
+  const pageVars = JSON.parse(document.getElementById('pageLoadData').textContent);
   window._page = {
-    csrfToken: csrfToken.value,
-    isAuthenticated: {{ user.is_authenticated|to_json }},
-    hasActiveSubscription: {{ user.has_active_subscription|default:False|to_json|safe }},
-    isAwaitingPaymentVerification: {{ user.is_awaiting_payment_verification|default:False|to_json|safe }},
-    userEmail: {{ user.email|to_json|safe }},
-    userFullName: {{ user.get_full_name|to_json|safe }},
-    userDisplayName: {{ user_display_name|to_json|safe }},
-    username: {{ user.username|to_json|safe }},
-    formError: {{ form_error|to_json|safe|default:'null' }},
-    formData: {{ form_data|to_json|safe|default:'null' }},
-    connectionInfo: {{ connection_info|to_json|safe }},
-    appPasswords: {{ app_passwords|safe|default:'[]' }},
-    allowedDomains: {{ allowed_domains|safe|default:'[]' }},
-    customDomains: {{ custom_domains|safe|default:'[]' }},
-    emailAddresses: {{ email_addresses|safe|default:'[]' }},
-    maxCustomDomains: {{ max_custom_domains|to_json|safe }},
-    maxEmailAliases: {{ max_email_aliases|to_json|safe }},
-    tbProAppointmentUrl: {{ tb_pro_appointment_url|to_json|safe }},
-    tbProSendUrl: {{ tb_pro_send_url|to_json|safe }},
-    tbProWaitListUrl: {{ tb_pro_wait_list_url|to_json|safe }},
-    tbProPrimaryDomain: {{ tb_pro_primary_domain|to_json|safe }},
-    webmailUrl: {{ webmail_url|to_json|safe }},
-    serverMessages: {{ server_messages|default:None|to_json|safe }},
-    features: {{ features|safe|default:'{}' }},
-    needsTosAcceptance: {{ needs_tos_acceptance|to_json|safe }},
-    recoveryEmail: {{ recovery_email|to_json|safe }},
-    planInfo: {{ plan_info|to_json|safe|default:'null' }},
-    paddleToken: {{ paddle_token|to_json|safe|default:'null' }},
-    paddleEnvironment: {{ paddle_environment|to_json|safe|default:'null' }},
+    csrfToken: csrfToken.value, 
+    ...pageVars,
     {% block extra_page_params %}{% endblock %}
   };
   csrfToken.remove();

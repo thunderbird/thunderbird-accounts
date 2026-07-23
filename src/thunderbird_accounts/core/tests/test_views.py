@@ -1,3 +1,5 @@
+import json
+from django.utils.html import strip_tags
 from unittest.mock import patch, Mock
 
 from django.conf import settings
@@ -118,10 +120,18 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
             mock_mail_client.return_value = mock_instance
             return self.client.get('/')
 
+    def _retrieve_json_blob(self, response) -> dict:
+        """We inject a javascript script with a plain json blob. 
+        So for testing we can just strip the script tags off and load it up."""
+        blob = response.context['page_load_data_script']
+        blob = strip_tags(blob)
+        return json.loads(blob)
+
     def test_needs_tos_acceptance_false_when_no_current_docs(self):
         response = self._login_and_get_home()
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context['needs_tos_acceptance'])
+        blob = self._retrieve_json_blob(response)
+        self.assertFalse(blob.get('needsTosAcceptance'))
 
     def test_needs_tos_acceptance_true_when_docs_not_accepted(self):
         LegalDocument.objects.create(
@@ -133,7 +143,8 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
 
         response = self._login_and_get_home()
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context['needs_tos_acceptance'])
+        blob = self._retrieve_json_blob(response)
+        self.assertTrue(blob.get('needsTosAcceptance'))
 
     def test_needs_tos_acceptance_false_when_all_docs_accepted(self):
         tos = LegalDocument.objects.create(
@@ -150,15 +161,20 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
         )
 
         LegalDocumentResponse.objects.create(
-            user=self.user, document=tos, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=tos,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
         LegalDocumentResponse.objects.create(
-            user=self.user, document=privacy, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=privacy,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
 
         response = self._login_and_get_home()
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context['needs_tos_acceptance'])
+        blob = self._retrieve_json_blob(response)
+        self.assertFalse(blob.get('needsTosAcceptance'))
 
     def test_needs_tos_acceptance_true_when_partially_accepted(self):
         tos = LegalDocument.objects.create(
@@ -175,12 +191,15 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
         )
 
         LegalDocumentResponse.objects.create(
-            user=self.user, document=tos, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=tos,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
 
         response = self._login_and_get_home()
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context['needs_tos_acceptance'])
+        blob = self._retrieve_json_blob(response)
+        self.assertTrue(blob.get('needsTosAcceptance'))
 
     def test_needs_tos_acceptance_true_when_only_declined(self):
         tos = LegalDocument.objects.create(
@@ -191,12 +210,15 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
         )
 
         LegalDocumentResponse.objects.create(
-            user=self.user, document=tos, action=LegalDocumentResponse.Action.DECLINED,
+            user=self.user,
+            document=tos,
+            action=LegalDocumentResponse.Action.DECLINED,
         )
 
         response = self._login_and_get_home()
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context['needs_tos_acceptance'])
+        blob = self._retrieve_json_blob(response)
+        self.assertTrue(blob.get('needsTosAcceptance'))
 
     def test_needs_tos_acceptance_false_with_duplicate_acceptances(self):
         """Duplicate acceptance responses should not cause the check to fail."""
@@ -215,18 +237,25 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
 
         # Force duplicate responses
         LegalDocumentResponse.objects.create(
-            user=self.user, document=tos, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=tos,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
         LegalDocumentResponse.objects.create(
-            user=self.user, document=tos, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=tos,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
         LegalDocumentResponse.objects.create(
-            user=self.user, document=privacy, action=LegalDocumentResponse.Action.ACCEPTED,
+            user=self.user,
+            document=privacy,
+            action=LegalDocumentResponse.Action.ACCEPTED,
         )
 
         response = self._login_and_get_home()
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context['needs_tos_acceptance'])
+        blob = self._retrieve_json_blob(response)
+        self.assertFalse(blob.get('needsTosAcceptance'))
 
     def test_needs_tos_acceptance_ignores_non_current_docs(self):
         LegalDocument.objects.create(
@@ -238,4 +267,5 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
 
         response = self._login_and_get_home()
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context['needs_tos_acceptance'])
+        blob = self._retrieve_json_blob(response)
+        self.assertFalse(blob.get('needsTosAcceptance'))
