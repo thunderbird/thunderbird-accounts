@@ -307,7 +307,7 @@ Make sure that the containers are already running.
 To run all tests:
 
 ```shell
-./run-tests.sh thunderbird_accounts
+./run-tests.sh
 ```
 
 this will execute the following command for you:

@@ -1,3 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-sudo docker compose exec accounts uv run manage.py test $1
+if [ "$#" -eq 0 ]; then
+  set -- thunderbird_accounts
+fi
+
+docker compose exec accounts uv run python manage.py test "$@"
