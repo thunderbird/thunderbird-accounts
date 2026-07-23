@@ -3,7 +3,6 @@ from thunderbird_accounts.subscription.utils import get_visible_plan_info
 from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
 from gettext import gettext
 import sys
-import json
 import requests
 
 import requests.exceptions
@@ -147,7 +146,6 @@ def home(request: HttpRequest):
         {
             'connectionInfo': settings.CONNECTION_INFO,
             'appPasswords': app_passwords,
-            'userDisplayName': user_display_name,
             'allowedDomains': settings.ALLOWED_EMAIL_DOMAINS if settings.ALLOWED_EMAIL_DOMAINS else [],
             'customDomains': custom_domains,
             'emailAddresses': email_addresses,
@@ -176,6 +174,7 @@ def home(request: HttpRequest):
             'userEmail': request.user.email if request.user.is_authenticated else None,
             'userFullName': request.user.get_full_name() if request.user.is_authenticated else None,
             'username': request.user.username if request.user.is_authenticated else None,
+            'userDisplayName': user_display_name,
         },
         'pageLoadData',
     )
