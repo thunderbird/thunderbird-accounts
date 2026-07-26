@@ -107,7 +107,9 @@
         //<#else>
         clientUrl: null,
         //</#if>
-        //<#if message?has_content>
+        //<#-- Honor displayMessage: pages that show an error per-field (e.g. login-otp) set it -->
+        //<#-- false to suppress the global banner, avoiding a duplicate message. -->
+        //<#if displayMessage && message?has_content>
         message: {
           type: '${message.type}',
           summary: window._page.decodeHtmlEntities('${kcSanitize(message.summary)?no_esc}')

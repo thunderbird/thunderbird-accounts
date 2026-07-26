@@ -1,5 +1,4 @@
 import base64
-import dns.resolver
 import logging
 from enum import StrEnum
 from typing import Optional
@@ -8,7 +7,13 @@ import requests
 from django.conf import settings
 from django.utils.crypto import get_random_string
 
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError, StalwartError
+from thunderbird_accounts.mail.exceptions import (
+    AccountNotFoundError,
+    DomainNotFoundError,
+    FailedToCreateDKIM,
+    FailedToReloadStalwart,
+    StalwartError,
+)
 
 
 class StalwartPrincipalType(StrEnum):
@@ -31,14 +36,39 @@ class StalwartErrors(StrEnum):
 
 
 class DomainVerificationErrors(StrEnum):
-    """Domain verification error codes returned by verify_domain()"""
+    """Domain verification error codes returned by check_domain_dns()."""
 
     # Critical errors (fail verification)
     MX_LOOKUP_ERROR = 'mxLookupError'
+    DKIM_RECORD_NOT_FOUND = 'dkimRecordNotFound'
+    AUTODISCOVER_RECORD_FOUND = 'autodiscoverRecordFound'
+    AUTODISCOVER_SRV_RECORD_FOUND = 'autodiscoverSrvRecordFound'
 
     # Warnings (do not fail verification)
     SPF_RECORD_NOT_FOUND = 'spfRecordNotFound'
-    DKIM_RECORD_NOT_FOUND = 'dkimRecordNotFound'
+
+
+class DkimSignatureStage(StrEnum):
+    """Stalwart DKIM signature rotation stages."""
+
+    PENDING = 'pending'
+    ACTIVE = 'active'
+    RETIRING = 'retiring'
+    RETIRED = 'retired'
+
+
+class DNSRecordStatus(StrEnum):
+    MATCH = 'match'
+    CONFLICT = 'conflict'
+    MISSING = 'missing'
+    UNKNOWN = 'unknown'
+
+
+class StaleDNSRecordCode(StrEnum):
+    """Stale DNS records that should be removed to prevent issues with the Thundermail setup."""
+
+    AUTODISCOVER_CNAME_UNEXPECTED = 'autodiscoverCnameUnexpected'
+    AUTODISCOVER_SRV_UNEXPECTED = 'autodiscoverSrvUnexpected'
 
 
 class MailClient:
@@ -213,6 +243,17 @@ class MailClient:
         self._raise_for_error(response)
         return response
 
+    def _reload(self):
+        response = requests.get(
+            f'{self.api_url}/reload/',
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
+        )
+        response.raise_for_status()
+        self._raise_for_error(response)
+
+        return response
+
     def get_domain(self, domain):
         response = self._get_principal(domain)
 
@@ -228,17 +269,121 @@ class MailClient:
 
         return data.get('data')
 
-    def create_dkim(self, domain):
-        data = {'id': None, 'algorithm': settings.STALWART_DKIM_ALGO, 'domain': domain, 'selector': None}
-        response = requests.post(
-            f'{self.api_url}/dkim',
-            json=data,
-            headers=self.authorized_headers,
-            verify=settings.VERIFY_PRIVATE_LINK_SSL,
+    def create_dkim(self, domain, stage: DkimSignatureStage = DkimSignatureStage.PENDING, algorithms=None):
+        """
+        Creates DKIM keys in Stalwart. Return list of response objects.
+        Response objects may used for testing.
+        Throws exception if request fails.
+        """
+        response_data = []
+        dkim_algorithms = settings.STALWART_DKIM_ALGOS if algorithms is None else algorithms
+        for algorithm in dkim_algorithms:
+            data = {
+                # Stalwart 0.15, creates defaults IDs when ID is None. Ex: `$algo-$domain`
+                'id': None,
+                'algorithm': algorithm,
+                'domain': domain,
+                'selector': settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm),
+            }
+            if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+                data['stage'] = stage.value
+
+            try:
+                response = requests.post(
+                    f'{self.api_url}/dkim',
+                    json=data,
+                    headers=self.authorized_headers,
+                    verify=settings.VERIFY_PRIVATE_LINK_SSL,
+                )
+                response.raise_for_status()
+            except requests.RequestException as exc:
+                raise FailedToCreateDKIM(algorithm, domain, str(exc)) from exc
+            try:
+                # Stalwart 0.15 requires reloading to sync persisent state with in-memory cache
+                self._reload()
+            except (requests.RequestException, StalwartError) as exc:
+                raise FailedToReloadStalwart(domain, str(exc), algorithm=algorithm) from exc
+            response_data.append(response.json().get('data'))
+        return response_data
+
+    def get_dkim_selectors(self, domain_name: str) -> set[str]:
+        """Return DKIM selectors already present in Stalwart's DNS records."""
+        selectors = set()
+        domain_name = domain_name.rstrip('.').lower()
+        suffix = f'._domainkey.{domain_name}'
+
+        for record in self.get_dkim_dns_records(domain_name):
+            if record.get('type') != 'TXT':
+                continue
+
+            record_name = record.get('name', '').rstrip('.').lower()
+            if not record_name.endswith(suffix):
+                continue
+
+            selector = record_name[: -len(suffix)]
+            if selector:
+                selectors.add(selector)
+
+        return selectors
+
+    def ensure_dkim(self, domain_name: str, stage: DkimSignatureStage = DkimSignatureStage.PENDING) -> list[dict]:
+        """Create only the configured DKIM selectors that are missing."""
+        existing_selectors = self.get_dkim_selectors(domain_name)
+        missing_algorithms = [
+            algorithm
+            for algorithm in settings.STALWART_DKIM_ALGOS
+            if (settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm) or '').lower() not in existing_selectors
+        ]
+
+        if not missing_algorithms:
+            return []
+
+        return self.create_dkim(domain_name, stage=stage, algorithms=missing_algorithms)
+
+    def activate_pending_dkim_signatures(self, domain_name: str) -> list[str]:
+        """Activate pending DKIM signatures after their DNS records have been verified."""
+        if not settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+            return []
+
+        updates = {}
+        for signature in self.get_dkim_signatures(domain_name):
+            if signature.get('stage') != DkimSignatureStage.PENDING.value:
+                continue
+
+            signature_id = signature.get('id')
+            if not signature_id:
+                raise RuntimeError(f'Pending DKIM signature for {domain_name} did not include an id')
+
+            updates[signature_id] = {'stage': DkimSignatureStage.ACTIVE.value}
+
+        if not updates:
+            return []
+
+        response = self.make_jmap_admin_call(
+            {
+                'using': ['urn:ietf:params:jmap:core', 'urn:stalwart:jmap'],
+                'methodCalls': [
+                    [
+                        'x:DkimSignature/set',
+                        {'update': updates},
+                        'u',
+                    ],
+                ],
+            }
         )
-        response.raise_for_status()
-        data = response.json()
-        return data.get('data')
+
+        for method_name, arguments, _call_id in response.get('methodResponses', []):
+            if method_name == 'x:DkimSignature/set':
+                if arguments.get('notUpdated'):
+                    raise RuntimeError(f'Stalwart failed to activate DKIM signatures: {arguments["notUpdated"]}')
+
+                updated = arguments.get('updated') or {}
+                return list(updated.keys()) if isinstance(updated, dict) else updated
+
+            if method_name == 'error':
+                raise RuntimeError(f'Stalwart JMAP error activating DKIM signatures: {arguments}')
+
+        raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/set')
 
     def delete_dkim(self, domain) -> Optional[requests.Response]:
         """
@@ -501,130 +646,166 @@ class MailClient:
         data = response.json()
         return data.get('data')
 
-    def verify_domain(self, domain_name: str):
-        """Verify domain using dnspython.
+    def make_jmap_admin_call(self, call: dict) -> dict:
+        response = requests.post(
+            f'{settings.STALWART_BASE_JMAP_URL}/api',
+            json=call,
+            headers=self.authorized_headers,
+            verify=settings.VERIFY_PRIVATE_LINK_SSL,
+        )
+        response.raise_for_status()
+        return response.json()
 
-        Checks:
-        1. MX Records exist and point to the correct host (Critical, fails verification)
-        2. SPF Record exists and includes the correct host (Warning if missing)
-        3. DKIM Record exists (Warning if missing)
+    def get_dkim_signatures(self, domain_name: str) -> list[dict]:
+        domain = self.get_domain(domain_name)
+        domain_id = domain.get('id')
+        if not domain_id:
+            raise RuntimeError(f'Stalwart domain {domain_name} did not include an id')
 
-        Returns:
-            tuple: (is_verified, critical_errors, warnings)
-                - is_verified: True if verification completed successfully without critical errors
-                - critical_errors: List of errors (e.g., DomainVerificationErrors.MX_LOOKUP_ERROR)
-                - warnings: List of warnings (e.g., DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
-        """
+        response = self.make_jmap_admin_call(
+            {
+                'using': ['urn:ietf:params:jmap:core', 'urn:stalwart:jmap'],
+                'methodCalls': [
+                    [
+                        'x:DkimSignature/query',
+                        {'filter': {'domainId': domain_id}},
+                        'q',
+                    ],
+                    [
+                        'x:DkimSignature/get',
+                        {'#ids': {'resultOf': 'q', 'name': 'x:DkimSignature/query', 'path': '/ids'}},
+                        'g',
+                    ],
+                ],
+            }
+        )
+
+        for method_name, arguments, _call_id in response.get('methodResponses', []):
+            if method_name == 'x:DkimSignature/get':
+                return arguments.get('list', [])
+            if method_name == 'error':
+                raise RuntimeError(f'Stalwart JMAP error fetching DKIM signatures: {arguments}')
+
+        raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/get')
+
+    def get_dkim_dns_records(self, domain_name: str) -> list[dict]:
+        if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+            try:
+                from thunderbird_accounts.mail.dkim import dkim_signatures_to_dns_records
+
+                return dkim_signatures_to_dns_records(domain_name, self.get_dkim_signatures(domain_name))
+            except DomainNotFoundError:
+                logging.info(f'[MailClient.get_dkim_dns_records] {domain_name} is not a Stalwart domain yet')
+            except Exception as ex:
+                logging.warning(f'[MailClient.get_dkim_dns_records] Falling back to DNS records endpoint: {ex}')
+
+        return [
+            record
+            for record in self.get_dns_records(domain_name)
+            if record.get('type') == 'TXT' and '_domainkey' in record.get('name', '')
+        ]
+
+    def build_expected_dns_records(self, cust_domain: str) -> list[dict]:
+        """Build the full list of DNS records the user must configure for a customer domain."""
+        from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
+
+        target_domain = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
+        target_domain_fqdn = f'{target_domain}.'
+        spf_host = settings.SPF_HOST.rstrip('.')
+        normalized_cust_domain = cust_domain.rstrip('.')
+        mx_name = '@' if len(normalized_cust_domain.split('.')) == 2 else f'{normalized_cust_domain}.'
+
+        records = [
+            {'type': 'MX', 'name': mx_name, 'content': target_domain_fqdn, 'priority': '10'},
+            {
+                'type': 'SRV',
+                'name': f'_jmap._tcp.{normalized_cust_domain}.',
+                'content': f'1 443 {target_domain}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_caldavs._tcp.{normalized_cust_domain}.',
+                'content': f'1 443 {target_domain}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_carddavs._tcp.{normalized_cust_domain}.',
+                'content': f'1 443 {target_domain}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_imaps._tcp.{normalized_cust_domain}.',
+                'content': f'1 993 {target_domain}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_submission._tcp.{normalized_cust_domain}.',
+                'content': f'1 587 {target_domain}',
+                'priority': '0',
+            },
+            {
+                'type': 'TXT',
+                'name': f'{normalized_cust_domain}.',
+                'content': f'v=spf1 include:{spf_host} -all',
+                'priority': '-',
+            },
+            {
+                'type': 'TXT',
+                'name': f'_mta-sts.{normalized_cust_domain}.',
+                'content': 'v=STSv1; id=18139500144460329770',
+                'priority': '-',
+            },
+            {
+                'type': 'TXT',
+                'name': f'_smtp._tls.{normalized_cust_domain}.',
+                'content': f'v=TLSRPTv1; rua=mailto:postmaster@{normalized_cust_domain}',
+                'priority': '-',
+            },
+            {
+                'type': 'TXT',
+                'name': f'_dmarc.{normalized_cust_domain}.',
+                'content': 'v=DMARC1; p=none;',
+                'priority': '-',
+            },
+        ]
+
+        records.extend(build_customer_dkim_cname_records(normalized_cust_domain))
+        return records
+
+    def check_domain_dns(self, domain_name: str) -> dict:
+        """Check expected DNS records and return verification details for a custom domain."""
+        # Circular import, so we import here
+        from thunderbird_accounts.mail.dns import enrich_dns_records_with_status
+
+        expected_records = self.build_expected_dns_records(domain_name)
+        dns_records = enrich_dns_records_with_status(domain_name, expected_records)
         critical_errors = []
         warnings = []
 
-        expected_host = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
-
-        # 1. Check MX Records
-        try:
-            mx_answers = dns.resolver.resolve(domain_name, 'MX')
-            has_correct_mx = False
-            for rdata in mx_answers:
-                exchange = rdata.exchange.to_text().rstrip('.')
-                if exchange == expected_host:
-                    has_correct_mx = True
-                    break
-
-            if not has_correct_mx:
-                logging.warning(f'MX records found for {domain_name} but none match {expected_host}')
-                critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
-
-        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-            critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
-        except Exception as e:
-            logging.error(f'MX lookup failed for {domain_name}: {e}')
+        mx_records = [record for record in dns_records if record.get('type') == 'MX']
+        if not any(record.get('status') == DNSRecordStatus.MATCH.value for record in mx_records):
             critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
 
-        # 2. Check SPF Record
-        try:
-            txt_answers = dns.resolver.resolve(domain_name, 'TXT')
-            has_spf = False
-            expected_spf_include = f'include:spf.{expected_host}'
-
-            for rdata in txt_answers:
-                # rdata.strings is a list of bytes
-                txt_content = b''.join(rdata.strings).decode('utf-8')
-                if txt_content.startswith('v=spf1') and expected_spf_include in txt_content:
-                    has_spf = True
-                    break
-
-            if not has_spf:
-                warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
-        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-            warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
-        except Exception as e:
-            logging.warning(f'SPF lookup failed for {domain_name}: {e}')
+        spf_records = [
+            record
+            for record in dns_records
+            if record.get('type') == 'TXT' and record.get('content', '').startswith('v=spf1')
+        ]
+        if not any(record.get('status') == DNSRecordStatus.MATCH.value for record in spf_records):
             warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
 
-        # 3. Check DKIM Record
-        # We need to get the selector first from Stalwart
-        # Since we don't store the selector in our DB, we'll fetch DNS records
-        # from Stalwart which generates the expected records
-        try:
-            stalwart_dns_records = self.get_dns_records(domain_name)
-
-            dkim_record = next(
-                (r for r in stalwart_dns_records if r.get('type') == 'TXT' and '_domainkey' in r.get('name', '')), None
-            )
-
-            if dkim_record:
-                # name comes back like "selector._domainkey.domain.com."
-                # we need to query "selector._domainkey.domain.com"
-                dkim_host = dkim_record['name'].rstrip('.')
-
-                txt_answers = dns.resolver.resolve(dkim_host, 'TXT')
-                has_dkim = False
-                expected_p_value = None
-
-                # Extract p= value from expected dkim record
-                parts = [p.strip() for p in dkim_record.get('content', '').split(';')]
-                for part in parts:
-                    if part.startswith('p='):
-                        expected_p_value = part[2:]
-                        break
-
-                if not expected_p_value:
-                    logging.warning(f'Could not extract p value from expected DKIM record for {domain_name}')
-                    warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
-                else:
-                    # The value from stalwart might be split or formatted differently, so we mainly check
-                    # if a TXT record exists and if it looks like a DKIM record (v=DKIM1) and has matching p
-                    for rdata in txt_answers:
-                        txt_content = b''.join(rdata.strings).decode('utf-8')
-
-                        if 'v=DKIM1' not in txt_content:
-                            continue
-
-                        # Extract p= value from DNS record
-                        actual_p_value = None
-                        parts = [p.strip() for p in txt_content.split(';')]
-
-                        for part in parts:
-                            if part.startswith('p='):
-                                actual_p_value = part[2:]
-                                break
-
-                        if actual_p_value == expected_p_value:
-                            has_dkim = True
-                            break
-
-                    if not has_dkim:
-                        warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
-            else:
-                # If we can't get the expected DKIM record from Stalwart, we can't verify it
-                logging.warning(f'No DKIM record found in Stalwart for {domain_name}')
-                warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
-
-        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-            warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
-        except Exception as e:
-            logging.warning(f'DKIM lookup failed for {domain_name}: {e}')
-            warnings.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
+        dkim_records = [record for record in dns_records if '_domainkey' in record.get('name', '')]
+        if not dkim_records or any(record.get('status') != DNSRecordStatus.MATCH.value for record in dkim_records):
+            critical_errors.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
 
         is_verified = len(critical_errors) == 0
-        return is_verified, critical_errors, warnings
+        return {
+            'is_verified': is_verified,
+            'critical_errors': critical_errors,
+            'warnings': warnings,
+            'dns_records': dns_records,
+        }

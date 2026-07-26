@@ -7,7 +7,7 @@ To ensure that our look and feel is consistent with other Thunderbird Services w
 Overview
 --------
 
-The Vue app is currently mounted in the ``templates/mail/index.html`` file through the  :any:`thunderbird_accounts.mail.views.home()` view function in the urls.py file.
+The Vue app is currently mounted in the ``src/thunderbird_accounts/core/templates/index.html`` file through the  :any:`thunderbird_accounts.core.views.home()` view function in the urls.py file.
 
 There is a catch-all route that is used to mount the Vue app on all other routes that don't match the Django router.
 

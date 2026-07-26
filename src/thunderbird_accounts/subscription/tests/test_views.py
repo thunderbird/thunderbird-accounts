@@ -7,6 +7,7 @@ from django.test import TestCase, Client as RequestClient, override_settings
 from django.urls import reverse
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.models import AllowListEntry
 from thunderbird_accounts.core.tests.utils import oidc_force_login
 
 
@@ -122,6 +123,30 @@ class PaddleCheckoutIsDoneTestCase(TestCase):
             instance.notifications.list.assert_not_called()
 
 
+class PaddleInformationTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(
+            username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}',
+            recovery_email='recovery@example.com',
+            oidc_id='1234',
+        )
+        oidc_force_login(self.client, self.user)
+        self.url = reverse('paddle_info')
+
+    def test_includes_discount_id_from_allow_list_entry(self):
+        AllowListEntry.objects.create(email='recovery@example.com', user=self.user, discount_id='dsc_123')
+
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json().get('discount_id'), 'dsc_123')
+
+    def test_includes_null_discount_id_when_not_set(self):
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json().get('discount_id'))
+
+
 class PaddleTransactionCompleteCase(TestCase):
     def setUp(self):
         self.client = RequestClient()
@@ -223,3 +248,22 @@ class PaddleTransactionCompleteCase(TestCase):
         We should also ensure IS_DEV=False does not call Paddle or the fake webhook task."""
 
         self._test_doneish_by_status(Transaction.StatusValues.COMPLETED, True)
+
+
+class ActiveSubscriptionRequiredViewTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        oidc_force_login(self.client, self.user)
+
+    def test_paddle_portal_link_requires_active_subscription(self):
+        response = self.client.post(reverse('paddle_portal'), HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json(), {})
+
+    def test_subscription_plan_info_requires_active_subscription(self):
+        response = self.client.post(reverse('subscription_plan_info'), HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {'success': False, 'error': 'No active subscription found'})

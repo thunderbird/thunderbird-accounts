@@ -4,7 +4,6 @@ import pulumi
 import pulumi_cloudflare as cloudflare
 import tb_pulumi
 import tb_pulumi.autoscale
-import tb_pulumi.ci
 import tb_pulumi.cloudwatch
 import tb_pulumi.ec2
 import tb_pulumi.elasticache
@@ -17,6 +16,16 @@ import tb_pulumi.secrets
 MSG_LB_MATCHING_CONTAINER = 'In this stack, container security groups must have matching load balancer security groups.'
 MSG_LB_MATCHING_CLUSTER = 'In this stack, Fargate clusters must have matching load balancer security groups.'
 MSG_CONTAINER_MATCHING_CLUSTER = 'In this stack, Fargate clusters must have matching container security groups.'
+
+
+def wait_for_ecs_service_steady_state(args):
+    if args.type_ != 'aws:ecs/service:Service':
+        return None
+
+    props = dict(args.props)
+    props['wait_for_steady_state'] = True
+    return pulumi.ResourceTransformationResult(props, args.opts)
+
 
 # Set up the project and convenient config access
 project = tb_pulumi.ThunderbirdPulumiProject()
@@ -114,7 +123,10 @@ for service, opts in resources['tb:fargate:FargateClusterWithLogging'].items():
         container_security_groups=[container_sgs[service].resources['sg'].id],
         load_balancer_security_groups=lb_sg_ids,
         desired_count=None if autoscaler_opts is not None else desired_count,
-        opts=pulumi.ResourceOptions(depends_on=depends_on),
+        opts=pulumi.ResourceOptions(
+            depends_on=depends_on,
+            transformations=[wait_for_ecs_service_steady_state],
+        ),
         **opts,
     )
     if autoscaler_opts is not None:
@@ -173,14 +185,6 @@ monitoring_opts = resources.get('tb:cloudwatch:CloudWatchMonitoringGroup', {}).g
 monitoring = tb_pulumi.cloudwatch.CloudWatchMonitoringGroup(
     name=f'{project.name_prefix}-monitoring', project=project, **monitoring_opts
 )
-
-auto_users_opts = resources.get('tb:ci:AwsAutomationUser', {})
-for user, user_opts in auto_users_opts.items():
-    tb_pulumi.ci.AwsAutomationUser(
-        f'{project.name_prefix}-{user}',
-        project=project,
-        **user_opts,
-    )
 
 sap = tb_pulumi.iam.StackAccessPolicies(
     f'{project.name_prefix}-sap',

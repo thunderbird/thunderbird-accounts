@@ -22,18 +22,19 @@ class AccountsAdminSite(admin.AdminSite):
     def get_app_list(self, request, app_label=None):
         """We append a fake model view in the admin panel list so we can link to the stalwart principal page"""
         app_list = super().get_app_list(request)
-        app_list += [
-            {
-                'name': 'Stalwart 🌐',
-                'app_label': 'stalwart',
-                'models': [
-                    {
-                        'name': 'Principals',
-                        'object_name': 'principals',
-                        'admin_url': '/mail/admin/stalwart/',
-                        'view_only': True,
-                    }
-                ],
-            },
-        ]
+        if request.user and request.user.is_authenticated and request.user.is_superuser:
+            app_list += [
+                {
+                    'name': 'Stalwart 🌐',
+                    'app_label': 'stalwart',
+                    'models': [
+                        {
+                            'name': 'Principals',
+                            'object_name': 'principals',
+                            'admin_url': '/mail/admin/stalwart/',
+                            'view_only': True,
+                        }
+                    ],
+                },
+            ]
         return app_list

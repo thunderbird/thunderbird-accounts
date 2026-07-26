@@ -1,7 +1,10 @@
 import enum
+import logging
 from urllib.parse import quote, urljoin
 
+import sentry_sdk
 from django.conf import settings
+from django.db.models import Q
 from django.urls import reverse
 
 from thunderbird_accounts.core.utils import get_absolute_url
@@ -42,7 +45,7 @@ class KeycloakRequiredAction(enum.StrEnum):
     WEBAUTHN_REGISTER_PASSWORDLESS = 'webauthn-register-passwordless'
 
 
-def is_email_in_allow_list(email: str):
+def is_email_in_allow_list(email: str) -> bool:
     """If USE_ALLOW_LIST is enabled check the email for an existing User or an AllowListEntry."""
     from thunderbird_accounts.authentication.models import AllowListEntry, User
 
@@ -51,7 +54,12 @@ def is_email_in_allow_list(email: str):
         return True
 
     # Are they an existing active user?
-    user = User.objects.filter(email=email).filter(is_active=True).first()
+    # Matching by email which is the thundermail address or the recovery email
+    user = User.objects.filter(
+        Q(email=email) | Q(recovery_email=email),
+        is_active=True,
+    ).first()
+
     if not user:
         try:
             # Make sure they're on the allow list
@@ -63,7 +71,33 @@ def is_email_in_allow_list(email: str):
 
 
 def is_email_reserved(email: str):
+    # Retrieve just the local part if we passed an entire email
+    if '@' in email:
+        email = email.split('@')[0]
     return is_reserved(email)
+
+
+def get_user_by_contact_email(email: str):
+    """Return a user whose recovery email or account email matches the given address."""
+    from thunderbird_accounts.authentication.models import User
+
+    return User.objects.filter(Q(email__iexact=email) | Q(recovery_email__iexact=email)).first()
+
+
+def can_register_with_username(username: str):
+    """Can a user register with this username.
+    This checks primary username and any mirrored aliases for our allowed domains
+
+    This does not check is_email_reserved, as we generally use a different error for that check."""
+    from thunderbird_accounts.mail.utils import is_address_taken
+
+    username_checks = (
+        [is_address_taken(f'{username}@{alt_domain}') for alt_domain in settings.ALLOWED_EMAIL_DOMAINS]
+        if len(settings.ALLOWED_EMAIL_DOMAINS) > 0
+        else []
+    )
+
+    return not any(username_checks)
 
 
 def create_aia_url(action: KeycloakRequiredAction):
@@ -77,3 +111,50 @@ def create_aia_url(action: KeycloakRequiredAction):
         f'&kc_action={action.value}'
         f'&redirect_uri={redirect_uri}',
     )
+
+
+def create_login_hint_url(login_hint: str):
+    """Create an authorization URL that prefills the username on Keycloak's login page."""
+    redirect_uri = quote(get_absolute_url(reverse('login')))
+    return urljoin(
+        settings.KEYCLOAK_AIA_ENDPOINT,
+        f'?response_type=code'
+        f'&client_id={settings.OIDC_RP_CLIENT_ID}'
+        f'&login_hint={quote(login_hint)}'
+        f'&redirect_uri={redirect_uri}',
+    )
+
+
+def delete_user_data(user) -> list[str]:
+    """Delete a user from Keycloak, Stalwart, and the local DB.
+
+    Returns a list of error messages (empty on full success).
+    Errors from external services are captured but do not prevent
+    the local DB deletion from proceeding.
+    """
+
+    from thunderbird_accounts.authentication.clients import KeycloakClient
+    from thunderbird_accounts.authentication.exceptions import DeleteUserError
+    from thunderbird_accounts.mail.clients import MailClient
+
+    errors = []
+
+    if user.oidc_id:
+        try:
+            KeycloakClient().delete_user(user.oidc_id)
+        except DeleteUserError as ex:
+            sentry_sdk.capture_exception(ex)
+            errors.append(f'Keycloak: {ex}')
+
+        if user.stalwart_primary_email:
+            try:
+                MailClient().delete_account(user.stalwart_primary_email)
+            except Exception as ex:
+                sentry_sdk.capture_exception(ex)
+                errors.append(f'Stalwart: {ex}')
+
+    if errors:
+        logging.error(f'Errors during user data deletion for {user.username}: {errors}')
+
+    user.delete()
+    return errors

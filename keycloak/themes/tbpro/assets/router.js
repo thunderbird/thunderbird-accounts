@@ -11,6 +11,8 @@ import InfoView from "./vue/views/InfoView/index.vue";
 import VerifyEmailView from "./vue/views/VerifyEmailView/index.vue";
 import ConfigToptView from "./vue/views/ConfigToptView/index.vue";
 import LoginTotpView from "./vue/views/LoginTotpView/index.vue";
+import LoginRecoveryAuthnCodeView from "./vue/views/LoginRecoveryAuthnCodeView/index.vue";
+import SelectAuthenticatorView from "./vue/views/SelectAuthenticatorView/index.vue";
 import DeleteCredentialView from "./vue/views/DeleteCredentialView/index.vue";
 
 /**
@@ -54,6 +56,14 @@ const routes = [
   {
     name: 'login-otp',
     component: LoginTotpView,
+  },
+  {
+    name: 'login-recovery-authn-code-input',
+    component: LoginRecoveryAuthnCodeView,
+  },
+  {
+    name: 'select-authenticator',
+    component: SelectAuthenticatorView,
   },
   {
     name: 'login-username',

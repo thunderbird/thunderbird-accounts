@@ -1,24 +1,27 @@
 import time
 import json
-from paddle_billing.Resources.Notifications.Operations.ListNotifications import ListNotifications
-from thunderbird_accounts.subscription.decorators import init_paddle
-from paddle_billing.Client import Client
-from thunderbird_accounts.celery.exceptions import TaskFailed
-import sentry_sdk
-from requests.exceptions import JSONDecodeError
-import base64
-from django.conf import settings
 import datetime
 import logging
-import requests
-import hashlib
 
+import sentry_sdk
 from celery import shared_task
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.signing import Signer, BadSignature
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product, Plan
 from thunderbird_accounts.subscription.utils import activate_subscription_features
+from thunderbird_accounts.subscription.decorators import inject_paddle, init_paddle
+from thunderbird_accounts.core.types import TaskReturnStatus
+from thunderbird_accounts.celery.exceptions import TaskFailed
+
+try:
+    from paddle_billing import Client
+    from paddle_billing.Resources.Notifications.Operations.ListNotifications import ListNotifications
+except ImportError:
+    Client = None
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -177,7 +180,7 @@ def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datet
     return {
         'paddle_id': paddle_id,
         'occurred_at': occurred_at,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
         'model_uuid': transaction.uuid,
         'model_created': transaction_created,
     }
@@ -307,6 +310,12 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             },
         )
 
+    # Log some problem cases that would be our fault. 
+    if len(subscription_items) == 0:
+        logging.error(f'Subscription contains no items. This user ({user.uuid}) will not have any features enabled!')
+    elif len(subscription_items) > 1:
+        logging.error('Subscription contains more than one item. This is not supported!')
+
     for item in subscription_items:
         # Note: These are reoccurring items only
         # Slurp up the subscription items, these are only created if all three items are new
@@ -347,8 +356,8 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             # Update quota
             plan = product_obj.plan
             if not plan:
-                logging.warning(f'Product {product.get("id")} has no plan attached!')
-            else:
+                logging.error(f'Product {product.get("id")} has no plan attached!')
+            elif status == Subscription.StatusValues.ACTIVE.value:
                 activate_subscription_features(user, plan)
 
         SubscriptionItem.objects.update_or_create(
@@ -361,15 +370,13 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             defaults={'quantity': quantity},
         )
 
-    # If the subscription updated or was created with active then clear any payment pending flags
-    if status == Subscription.StatusValues.ACTIVE.value:
-        user.is_awaiting_payment_verification = False
-        user.save()
+    # Queue up the price update for now.
+    retrieve_and_update_localized_subscription_price.delay(subscription_uuid=str(subscription.uuid))
 
     return {
         'paddle_id': paddle_id,
         'occurred_at': occurred_at,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
         'model_uuid': subscription.uuid,
         'model_created': subscription_created,
     }
@@ -434,7 +441,7 @@ def paddle_product_event(self, event_data: dict, occurred_at: datetime.datetime,
     return {
         'paddle_id': paddle_id,
         'occurred_at': occurred_at,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
         'model_uuid': product.uuid,
         'model_created': product_created,
     }
@@ -476,10 +483,11 @@ def update_thundermail_quota(self, plan_uuid):
 
     return {
         'plan_uuid': plan_uuid,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
         'updated': updated,
         'skipped': skipped,
     }
+
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
@@ -487,9 +495,7 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
     """Adds a user's thundermail address to the primary tbpro mailing list.
     This mailing list contains automations to trigger welcome emails and such."""
     try:
-        basic_auth = base64.b64encode(
-            f'this_does_not_support_bearer_auth:{settings.MAILCHIMP_API_KEY}'.encode()
-        ).decode()
+        client = MailchimpClient()
     except (UnicodeEncodeError, UnicodeDecodeError) as ex:
         logging.error(f'Could not send request to mailchimp due to error: {ex}')
         raise TaskFailed(
@@ -498,18 +504,6 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
                 'user_uuid': user_uuid,
             },
         )
-
-    def mailchimp_api_query(method: str, api_endpoint: str, _json: dict | None = None) -> requests.Response:
-        """Small method to query mailchimp's api"""
-        api_url = f'https://{settings.MAILCHIMP_DC}.api.mailchimp.com/3.0/lists/{settings.MAILCHIMP_LIST_ID}'
-        response: requests.Response = requests.request(
-            method=method.upper(),
-            url=f'{api_url}{api_endpoint}',
-            headers={'Authorization': f'Basic {basic_auth}'},
-            json=_json,
-        )
-        response.raise_for_status()
-        return response
 
     try:
         user: User = User.objects.get(pk=user_uuid)
@@ -531,80 +525,102 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
             },
         )
 
-    # Loop through the thundermail and recovery email and attempt to update or add a new tag to the mailchimp entry.
-    # It's a bit of a bit long and most of that is error catching.
-    for val in [(user.stalwart_primary_email, 'new_user'), (user.email, 'welcome')]:
-        email, tag = val
-        md5_hasher = hashlib.new('md5')
-        md5_hasher.update(email.lower().encode())
-        hashed_email = md5_hasher.hexdigest()
+    language = settings.ACCOUNTS_TO_MAILCHIMP_LANGUAGES.get(user.language) or settings.DEFAULT_LANGUAGE
+    error_context = {'user_uuid': user_uuid}
 
-        # Check if the user is on the list, and if they are then update their tags array with our new one.
-        try:
-            response = mailchimp_api_query('get', f'/members/{hashed_email}')
-            response.raise_for_status()
+    for email, tag in [(user.stalwart_primary_email, 'new_user'), (user.recovery_email, 'welcome')]:
+        client.add_or_tag_member(email, tag, language=language, error_context=error_context)
 
-            data = response.json() or {}
-            tags = {t.get('name'): True for t in data.get('tags', [])}
+    if user.recovery_email:
+        client.remove_tag_from_member(
+            user.recovery_email,
+            settings.ABANDONED_CART_MAILCHIMP_TAG,
+            error_context=error_context,
+        )
 
-            # They're already in the mailing list with the assigned tag, so don't do anything.
-            if tags.get(tag):
-                continue
-
-            response = mailchimp_api_query(
-                'post', f'/members/{hashed_email}/tags', _json={'tags': [{'name': tag, 'status': 'active'}]}
-            )
-
-            # Update tag has no response, so if we haven't ran into an exception continue along to the next email/tag.
-            continue
-
-        except requests.exceptions.RequestException as ex:
-            # Something error error'd out, we won't capture this just yet but we should add the context
-            # in case the next request fails.
-
-            # Error details reference: https://mailchimp.com/developer/marketing/docs/errors/#error-glossary
-            try:
-                error_details = ex.response.json()
-            except (JSONDecodeError, AttributeError):
-                error_details = {}
-
-            # Send some extra information to sentry
-            sentry_sdk.set_extra('tag_error_details', error_details)
-
-        # Try to create the user with the tag we want
-        try:
-            response = mailchimp_api_query(
-                'post',
-                '/members',
-                _json={
-                    'email_address': email,
-                    'status': 'subscribed',
-                    'email_type': 'html',
-                    'language': settings.ACCOUNTS_TO_MAILCHIMP_LANGUAGES.get(user.language)
-                    or settings.DEFAULT_LANGUAGE,
-                    'tags': [tag],  # Tagged for automation purposes
-                },
-            )
-        except requests.exceptions.RequestException as ex:
-            # Error details reference: https://mailchimp.com/developer/marketing/docs/errors/#error-glossary
-            try:
-                error_details = ex.response.json()
-            except (JSONDecodeError, AttributeError):
-                error_details = {}
-
-            # Send some extra information to sentry
-            sentry_sdk.set_extra('error_details', error_details)
-            sentry_sdk.capture_exception(ex)
-
-            raise TaskFailed(
-                'mailchimp error',
-                {
-                    'user_uuid': user_uuid,
-                    'error_msg_title': error_details.get('title', 'N/A'),
-                    'error_status_code': ex.response.status_code if ex.response else None,
-                },
-            )
     return {
         'user_uuid': user_uuid,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
+    }
+
+
+@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@inject_paddle
+def retrieve_and_update_localized_subscription_price(self, subscription_uuid, paddle: Client):
+    """Since Stalwart only checks the db we have to manually propagate a plan change across the user's accounts."""
+
+    try:
+        subscription: Subscription = Subscription.objects.get(pk=subscription_uuid)
+    except (Subscription.DoesNotExist, Subscription.MultipleObjectsReturned, ValidationError):
+        return {
+            'subscription_uuid': subscription_uuid,
+            'task_status': TaskReturnStatus.FAILED,
+            'reason': "Could't find subscription object",
+        }
+
+    try:
+        # Retrieve information directly from Paddle right now
+        # We can't simply use a Paddle PricePreview as this is a transaction made at a certain point in time
+        # and thus taxes can be different, etc etc...
+        paddle_subscription = paddle.subscriptions.get(subscription.paddle_id)
+
+        paddle_address = paddle.addresses.get(
+            customer_id=paddle_subscription.customer_id, address_id=paddle_subscription.address_id
+        )
+        country_code = None
+        if paddle_address:
+            country_code = paddle_address.country_code
+
+        # Retrieve the discount information if available
+        paddle_discount_amount = None
+        paddle_discount_type = None
+        if paddle_subscription.discount:
+            paddle_discount = paddle.discounts.get(paddle_subscription.discount.id)
+            paddle_discount_amount = float(paddle_discount.amount) if paddle_discount else 0.0
+            paddle_discount_type = paddle_discount.type.value
+
+        for item in paddle_subscription.items:
+            paddle_product_id = item.product.id
+
+            amount = None
+            currency = None
+
+            # Find out unit price override (if any) and use the first one that comes up.
+            unit_price_overrides = list(
+                filter(lambda upo: country_code in upo.country_codes, item.price.unit_price_overrides)
+            )
+            if len(unit_price_overrides) > 0:
+                amount = unit_price_overrides[0].unit_price.amount
+                currency = unit_price_overrides[0].unit_price.currency_code
+
+            try:
+                subscription_item = SubscriptionItem.objects.get(
+                    paddle_product_id=paddle_product_id, subscription_id=subscription_uuid
+                )
+                subscription_item.price_override_amount = amount
+                subscription_item.price_override_currency = currency
+                subscription_item.save()
+            except (SubscriptionItem.DoesNotExist, SubscriptionItem.MultipleObjectsReturned):
+                logging.error(
+                    f'Could not retrieve subscription item for product_id: [{paddle_product_id}]',
+                )
+
+        if paddle_discount_amount:
+            subscription.discount_amount = paddle_discount_amount
+        if paddle_discount_type:
+            subscription.discount_type = paddle_discount_type
+        subscription.save()
+    except Exception as ex:
+        sentry_sdk.capture_exception(ex)
+        logging.exception(ex)
+
+        return {
+            'subscription_uuid': subscription_uuid,
+            'task_status': TaskReturnStatus.FAILED,
+            'reason': 'Failed to retrieve and store discount / localized prices.',
+        }
+
+    return {
+        'subscription_uuid': subscription_uuid,
+        'task_status': TaskReturnStatus.SUCCESS,
     }

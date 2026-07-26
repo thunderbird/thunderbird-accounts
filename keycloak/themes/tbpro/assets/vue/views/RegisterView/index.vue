@@ -3,7 +3,6 @@ import { TextInput, BrandButton, NoticeBar, NoticeBarTypes } from '@thunderbirdo
 import { computed, ref, useTemplateRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { PhArrowRight } from '@phosphor-icons/vue';
-import MessageBar from '@kc/vue/components/MessageBar.vue';
 
 const route = useRoute();
 
@@ -11,6 +10,7 @@ const errors = window._page.currentView?.errors;
 const formAction = window._page.currentView?.formAction;
 const tbProPrimaryDomain = `@${window._page.currentView?.tbProPrimaryDomain}`;
 const attributeValues = window._page.currentView?.attributes;
+const message = window._page?.message;
 
 // Fixed values
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
@@ -73,12 +73,13 @@ export default {
 
   <h2 data-testid="title">{{ $t('registerTitle') }}</h2>
 
-  <slot name="notice-bars">
-    <notice-bar data-testid="error-notice-bar" :type="NoticeBarTypes.Critical" v-if="usernameError || passwordError || passwordConfirmError || recoveryEmailError">
-      {{ $t('registerError') }}
-    </notice-bar>
-    <message-bar v-else/>
-  </slot>
+  <notice-bar
+    data-testid="error-notice-bar"
+    :type="NoticeBarTypes.Critical"
+    v-if="!message?.type && (usernameError || passwordError || passwordConfirmError || recoveryEmailError)"
+  >
+    {{ $t('registerError') }}
+  </notice-bar>
 
   <form id="kc-register-form" ref="register-form" method="POST" :action="formAction" @submit.prevent="onSubmit"
         @keyup.enter="onSubmit">
@@ -158,30 +159,6 @@ export default {
 
 .hidden {
   display: none;
-}
-
-.notice-bar {
-  position: absolute;
-  top: 1rem;
-  left: 1.5rem;
-  right: 1.5rem;
-  z-index: 1;
-}
-
-.logo-link {
-  display: block;
-  text-decoration: none;
-  margin-block-end: 2.8125rem;
-
-  .logo {
-    height: 36px;
-    width: auto;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
 }
 
 h2 {

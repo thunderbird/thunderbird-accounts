@@ -4,37 +4,42 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thunderbird_accounts"
-version = "1.8.1"
+version = "1.16.12"
 dependencies = [
-    "django>=5.2.12",
+    "django>=6.0.7",
     "django-filter>=25.2",
-    "djangorestframework>=3.16.1",
+    "djangorestframework>=3.17.1",
     "markdown>=3.10",
-    "pyjwt>=2.12.0",
-    "python-dotenv>=1.2.1",
-    "cryptography>=46.0.3",
+    "pyjwt>=2.13.0",
+    "python-dotenv>=1.2.2",
+    "cryptography>=48.0.1",
     "djangorestframework-simplejwt>=5.5.1",
     "itsdangerous>=2.2.0",
-    "uvicorn[standard]>=0.38.0",
-    "psycopg[binary]>=3.2.12",
+    "uvicorn[standard]>=0.48.0",
+    "psycopg[binary]>=3.3.4",
     "redis==5.2.1", # Locked by Celery 5.5.3
-    "hiredis>=3.3.0",
+    "hiredis>=3.3.1",
     "django-vite>=3.1.0",
     "argon2-cffi>=25.1.0",
-    "servestatic>=3.1.0",
-    "sentry-sdk[django]>=2.43.0",
-    "requests>=2.32.5",
-    "celery[redis]>=5.5.3",
+    "servestatic>=4.3.0",
+    "sentry-sdk[django]>=2.60.0",
+    "requests>=2.34.2",
+    "requests-toolbelt>=0.7.0",
+    "celery[redis]>=5.6.3",
     "django-cors-headers>=4.9.0",
     "mozilla-django-oidc>=5.0.2",
     "regex>=2025.9.1",
-    "ua-parser>=1.0.1",
+    "ua-parser>=1.0.2",
     "dnspython>=2.8.0",
-    "django-types>=0.22.0",
-    "django-stubs-ext>=5.2.8",
+    "django-types>=0.24.0",
+    "django-stubs-ext>=6.0.5",
     "flower>=2.0.1",
-    "celery-redbeat>=2.3.0",
-    "posthog>=3.0.0",
+    "celery-redbeat>=2.3.3",
+    "posthog>=7.15.4",
+    "cloudflare>=5.2.0",
+    # CVE pins
+    "idna>=3.15", # CVE-2026-45409 fix
+    "django-waffle>=5.0.0",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"
@@ -58,7 +63,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://www.thunderbird.net/"
+Homepage = "https://tb.pro/"
+Documentation = "https://pro-services-docs.thunderbird.net/"
+Repository = "https://github.com/thunderbird/thunderbird-accounts"
+Issues = "https://github.com/thunderbird/thunderbird-accounts/issues"
 
 [project.optional-dependencies]
 cli = [
@@ -126,7 +134,9 @@ quote-style = "single"
 [tool.ruff.lint]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
 # Enable flagging print (T201)
-select = ["E", "F", "T201"]
+# Require f-strings for interpolation instead of printf-style formatting (UP031)
+# or `.format` calls (UP032).
+select = ["E", "F", "T201", "UP031", "UP032"]
 ignore = []
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
@@ -148,6 +158,14 @@ pythonpath = "test"
 
 [dependency-groups]
 dev = [
+    "coverage>=7.14.0",
     "faker>=33.1.0",
     "freezegun>=1.5.5",
 ]
+
+[tool.coverage.run]
+data_file = "coverage/.coverage"
+source = ["thunderbird_accounts"]
+
+[tool.coverage.html]
+directory = "coverage/htmlcov"

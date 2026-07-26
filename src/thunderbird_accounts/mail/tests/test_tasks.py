@@ -1,12 +1,12 @@
 from thunderbird_accounts.celery.exceptions import TaskFailed
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, call
 
 from django.conf import settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail import tasks
-from thunderbird_accounts.mail.exceptions import AccountNotFoundError
+from thunderbird_accounts.mail.exceptions import AccountNotFoundError, HostedDkimDeleteRetry, HostedDkimPublishRetry
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.core.tests.utils import build_mail_get_account
 
@@ -59,6 +59,211 @@ class UpdateQuotaOnStalwartAccountTestCase(TaskTestCase):
 
             self.assertEqual(results['task_status'], 'success')
             self.assertEqual(results['quota'], 0)
+
+
+class PublishHostedDkimDNSRecordsTestCase(TaskTestCase):
+    @override_settings(
+        HOSTED_DKIM_CLOUDFLARE_ENABLED=False,
+        HOSTED_DKIM_DOMAIN='dkim.example.net',
+        HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'],
+    )
+    @patch('thunderbird_accounts.mail.tasks.CloudflareDNSClient')
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_logs_records_when_cloudflare_publication_disabled(self, mail_client_mock, cloudflare_client_mock):
+        dkim_records = [
+            {'type': 'TXT', 'name': 'tm1._domainkey.example.com.', 'content': 'v=DKIM1; p=rsa'},
+            {'type': 'TXT', 'name': 'tm2._domainkey.example.com.', 'content': 'v=DKIM1; p=ed25519'},
+        ]
+        mail_client_mock.return_value.get_dkim_dns_records.return_value = dkim_records
+
+        with self.assertLogs(level='INFO') as logs:
+            results = tasks.publish_hosted_dkim_dns_records.run(domain_name='example.com')
+
+        self.assertEqual(results['task_status'], 'success')
+        self.assertTrue(results['skipped'])
+        self.assertEqual(
+            [
+                {'type': 'TXT', 'name': 'tm1.example.com.dkim.example.net', 'content': 'v=DKIM1; p=rsa'},
+                {'type': 'TXT', 'name': 'tm2.example.com.dkim.example.net', 'content': 'v=DKIM1; p=ed25519'},
+            ],
+            results['records'],
+        )
+        cloudflare_client_mock.assert_not_called()
+        self.assertIn(
+            'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS update to set '
+            '"TXT tm1.example.com.dkim.example.net v=DKIM1; p=rsa"',
+            logs.output[0],
+        )
+        self.assertIn(
+            'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS update to set '
+            '"TXT tm2.example.com.dkim.example.net v=DKIM1; p=ed25519"',
+            logs.output[1],
+        )
+
+    @override_settings(
+        HOSTED_DKIM_CLOUDFLARE_ENABLED=True,
+        HOSTED_DKIM_CLOUDFLARE_ZONE_ID='zone-id',
+        HOSTED_DKIM_CLOUDFLARE_API_TOKEN='secret',
+        HOSTED_DKIM_DOMAIN='dkim.example.net',
+        HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'],
+    )
+    @patch('thunderbird_accounts.mail.tasks.CloudflareDNSClient')
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_publishes_stalwart_dkim_records_to_hosted_domain(self, mail_client_mock, cloudflare_client_mock):
+        dkim_records = [
+            {'type': 'TXT', 'name': 'tm1._domainkey.example.com.', 'content': 'v=DKIM1; p=rsa'},
+            {'type': 'TXT', 'name': 'tm2._domainkey.example.com.', 'content': 'v=DKIM1; p=ed25519'},
+        ]
+        hosted_records = [
+            {'type': 'TXT', 'name': 'tm1.example.com.dkim.example.net', 'content': 'v=DKIM1; p=rsa'},
+            {'type': 'TXT', 'name': 'tm2.example.com.dkim.example.net', 'content': 'v=DKIM1; p=ed25519'},
+        ]
+        mail_client_mock.return_value.get_dkim_dns_records.return_value = dkim_records
+
+        results = tasks.publish_hosted_dkim_dns_records.run(domain_name='example.com')
+
+        mail_client_mock.return_value.get_dkim_dns_records.assert_called_once_with('example.com')
+        cloudflare_client_mock.return_value.upsert_txt_record.assert_has_calls(
+            [
+                call('tm1.example.com.dkim.example.net', 'v=DKIM1; p=rsa'),
+                call('tm2.example.com.dkim.example.net', 'v=DKIM1; p=ed25519'),
+            ]
+        )
+        published_names = [
+            args[0] for args, _kwargs in cloudflare_client_mock.return_value.upsert_txt_record.call_args_list
+        ]
+        self.assertNotIn('tm1._domainkey.example.com.', published_names)
+        self.assertFalse(any('._domainkey.' in name for name in published_names))
+        self.assertEqual(results['task_status'], 'success')
+        self.assertFalse(results['skipped'])
+        self.assertEqual(hosted_records, results['records'])
+
+    @override_settings(HOSTED_DKIM_CLOUDFLARE_ENABLED=False)
+    @patch('thunderbird_accounts.mail.tasks.sentry_sdk.set_context')
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_retries_with_context_when_stalwart_fetch_fails(self, mail_client_mock, set_sentry_context_mock):
+        mail_client_mock.return_value.get_dkim_dns_records.side_effect = RuntimeError('Stalwart unavailable')
+
+        with self.assertRaises(HostedDkimPublishRetry) as cm:
+            tasks.publish_hosted_dkim_dns_records.run(domain_name='example.com')
+
+        self.assertEqual('example.com', cm.exception.domain)
+        self.assertEqual('fetch_stalwart_dkim_dns_records', cm.exception.phase)
+        self.assertEqual('Stalwart unavailable', cm.exception.reason)
+        self.assertEqual('example.com', cm.exception.context['domain'])
+        self.assertEqual('fetch_stalwart_dkim_dns_records', cm.exception.context['phase'])
+        self.assertEqual('RuntimeError', cm.exception.context['error_type'])
+        set_sentry_context_mock.assert_called_once_with('hosted_dkim_publish_retry', cm.exception.context)
+
+
+class DeleteHostedDkimDNSRecordsTestCase(TaskTestCase):
+    @override_settings(
+        HOSTED_DKIM_CLOUDFLARE_ENABLED=False,
+        HOSTED_DKIM_DOMAIN='dkim.example.net',
+        HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'],
+    )
+    @patch('thunderbird_accounts.mail.tasks.CloudflareDNSClient')
+    def test_logs_records_when_cloudflare_deletion_disabled(self, cloudflare_client_mock):
+        with self.assertLogs(level='INFO') as logs:
+            results = tasks.delete_hosted_dkim_dns_records.run(domain_name='example.com')
+
+        self.assertEqual(results['task_status'], 'success')
+        self.assertTrue(results['skipped'])
+        self.assertEqual(
+            [
+                {'type': 'TXT', 'name': 'tm1.example.com.dkim.example.net'},
+                {'type': 'TXT', 'name': 'tm2.example.com.dkim.example.net'},
+                {'type': 'TXT', 'name': 'tm3.example.com.dkim.example.net'},
+            ],
+            results['records'],
+        )
+        cloudflare_client_mock.assert_not_called()
+        self.assertIn(
+            '[delete_hosted_dkim_dns_records] '
+            'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS delete for '
+            '"TXT tm1.example.com.dkim.example.net"',
+            logs.output[0],
+        )
+        self.assertIn(
+            '[delete_hosted_dkim_dns_records] '
+            'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS delete for '
+            '"TXT tm2.example.com.dkim.example.net"',
+            logs.output[1],
+        )
+        self.assertIn(
+            '[delete_hosted_dkim_dns_records] '
+            'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS delete for '
+            '"TXT tm3.example.com.dkim.example.net"',
+            logs.output[2],
+        )
+
+    @override_settings(
+        HOSTED_DKIM_CLOUDFLARE_ENABLED=True,
+        HOSTED_DKIM_CLOUDFLARE_ZONE_ID='zone-id',
+        HOSTED_DKIM_CLOUDFLARE_API_TOKEN='secret',
+        HOSTED_DKIM_DOMAIN='dkim.example.net',
+        HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'],
+    )
+    @patch('thunderbird_accounts.mail.tasks.CloudflareDNSClient')
+    def test_deletes_hosted_dkim_records_from_cloudflare(self, cloudflare_client_mock):
+        cloudflare_client_mock.return_value.delete_txt_records.side_effect = [['record-1'], ['record-2'], []]
+
+        results = tasks.delete_hosted_dkim_dns_records.run(domain_name='example.com')
+
+        cloudflare_client_mock.return_value.delete_txt_records.assert_has_calls(
+            [
+                call('tm1.example.com.dkim.example.net'),
+                call('tm2.example.com.dkim.example.net'),
+                call('tm3.example.com.dkim.example.net'),
+            ]
+        )
+        self.assertEqual(results['task_status'], 'success')
+        self.assertFalse(results['skipped'])
+        self.assertEqual(
+            [
+                {
+                    'type': 'TXT',
+                    'name': 'tm1.example.com.dkim.example.net',
+                    'deleted_record_ids': ['record-1'],
+                },
+                {
+                    'type': 'TXT',
+                    'name': 'tm2.example.com.dkim.example.net',
+                    'deleted_record_ids': ['record-2'],
+                },
+                {
+                    'type': 'TXT',
+                    'name': 'tm3.example.com.dkim.example.net',
+                    'deleted_record_ids': [],
+                },
+            ],
+            results['records'],
+        )
+
+    @override_settings(
+        HOSTED_DKIM_CLOUDFLARE_ENABLED=True,
+        HOSTED_DKIM_CLOUDFLARE_ZONE_ID='zone-id',
+        HOSTED_DKIM_CLOUDFLARE_API_TOKEN='secret',
+        HOSTED_DKIM_DOMAIN='dkim.example.net',
+        HOSTED_DKIM_SELECTORS=['tm1'],
+    )
+    @patch('thunderbird_accounts.mail.tasks.sentry_sdk.set_context')
+    @patch('thunderbird_accounts.mail.tasks.CloudflareDNSClient')
+    def test_retries_with_context_when_cloudflare_delete_fails(
+        self, cloudflare_client_mock, set_sentry_context_mock
+    ):
+        cloudflare_client_mock.return_value.delete_txt_records.side_effect = RuntimeError('Cloudflare unavailable')
+
+        with self.assertRaises(HostedDkimDeleteRetry) as cm:
+            tasks.delete_hosted_dkim_dns_records.run(domain_name='example.com')
+
+        self.assertEqual('example.com', cm.exception.domain)
+        self.assertEqual('delete_cloudflare_txt_records', cm.exception.phase)
+        self.assertEqual('Cloudflare unavailable', cm.exception.reason)
+        self.assertEqual('example.com', cm.exception.context['domain'])
+        self.assertEqual('delete_cloudflare_txt_records', cm.exception.context['phase'])
+        self.assertEqual('RuntimeError', cm.exception.context['error_type'])
+        set_sentry_context_mock.assert_called_once_with('hosted_dkim_delete_retry', cm.exception.context)
 
 
 class CreateStalwartAccountTestCase(TaskTestCase):

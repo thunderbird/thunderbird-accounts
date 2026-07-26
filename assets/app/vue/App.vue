@@ -3,10 +3,10 @@ import HeaderBar from '@/components/HeaderBar.vue';
 import FooterBar from '@/components/FooterBar.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { SERVER_MESSAGE_LEVEL } from '@/types';
-import { useRoute } from 'vue-router';
-import { onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { onMounted, ref } from 'vue';
 
-const serverMessages = window._page?.serverMessages ?? [];
+const serverMessages = ref(window._page?.serverMessages ?? []);
 const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
   switch (level) {
     case SERVER_MESSAGE_LEVEL.ERROR:
@@ -21,6 +21,18 @@ const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
 };
 
 const route = useRoute();
+const router = useRouter();
+
+let isInitialNavigation = true;
+
+router.afterEach(() => {
+  if (isInitialNavigation) {
+    isInitialNavigation = false;
+    return;
+  }
+
+  serverMessages.value = [];
+});
 
 onMounted(() => {
   window.document.body.dataset['testid'] = 'vue-app';

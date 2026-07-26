@@ -4,9 +4,14 @@ import logging
 
 from django.conf import settings
 from django.contrib import messages, admin
+from django.contrib.admin import helpers
+from django.db.models import Q
+from django.template.response import TemplateResponse
 from django.utils.translation import gettext_lazy as _, ngettext
+from requests.exceptions import RequestException
 
-from thunderbird_accounts.authentication.exceptions import UpdateUserPlanInfoError
+from thunderbird_accounts.authentication.clients import KeycloakClient
+from thunderbird_accounts.authentication.exceptions import GetUserError, UpdateUserPlanInfoError
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail import utils as mail_utils
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError
@@ -210,6 +215,173 @@ def admin_sync_plan_to_keycloak(modeladmin, request, queryset):
             _('Nothing to update!'),
             messages.INFO,
         )
+
+
+@admin.action(description=_('Backfill recovery email from Keycloak'))
+def admin_backfill_recovery_email(modeladmin, request, queryset):
+    """Backfill's recovery emails from user with ``null`` recovery emails in this system and a valid one in Keycloak.
+
+    Displays the following messages on the admin panel after the action is performed:
+    * Updated: The number of user's that have been successfully updated with their recovery email.
+    * Skipped: The number of user's who were skipped because they don't have a valid recovery email in Keycloak.
+    * Failed: The number of user's that exist in this system but do not exist in Keycloak.
+
+    """
+    keycloak = KeycloakClient()
+    updated = 0
+    skipped = 0
+    failed = 0
+
+    for user in queryset.filter(Q(recovery_email__isnull=True) | Q(recovery_email='')).exclude(oidc_id__isnull=True):
+        try:
+            keycloak_user = keycloak.get_user(user.oidc_id).json()
+        except GetUserError as exc:
+            failed += 1
+            logging.warning('admin_backfill_recovery_email: failed to fetch Keycloak user %s: %s', user.uuid, exc)
+            continue
+
+        recovery_email = keycloak_user.get('email')
+        if not isinstance(recovery_email, str) or not recovery_email.strip():
+            skipped += 1
+            continue
+
+        user.recovery_email = recovery_email
+        user.save(update_fields=['recovery_email', 'updated_at'])
+        updated += 1
+
+    if updated:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Backfilled recovery email for %d user.',
+                'Backfilled recovery email for %d users.',
+                updated,
+            )
+            % updated,
+            messages.SUCCESS,
+        )
+    if skipped:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Skipped %d user without a Keycloak email or oidc_id.',
+                'Skipped %d users without a Keycloak email or oidc_id.',
+                skipped,
+            )
+            % skipped,
+            messages.WARNING,
+        )
+    if failed:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Failed to backfill recovery email for %d user.',
+                'Failed to backfill recovery email for %d users.',
+                failed,
+            )
+            % failed,
+            messages.ERROR,
+        )
+    if sum([updated, skipped, failed]) == 0:
+        modeladmin.message_user(
+            request,
+            _('Nothing to update!'),
+            messages.INFO,
+        )
+
+
+@admin.action(description=_('Force reset TOTP credentials in Keycloak'))
+def admin_reset_totp_credentials(modeladmin, request, queryset):
+    """Delete every Keycloak TOTP credential for the selected users.
+
+    First invocation (no `apply=1`) renders a confirmation page listing the affected
+    users; the form posts back here with `apply=1` to actually delete the credentials.
+
+    Recovery codes are deleted alongside the authenticator: they are strictly a backup
+    for the authenticator app, so leaving them behind would strand the user on a
+    codes-only second factor that Keycloak burns down to nothing as codes are spent.
+    This mirrors the self-service removal cascade in ``remove_totp_credential``.
+    """
+    if request.POST.get('apply') != '1':
+        context = {
+            **modeladmin.admin_site.each_context(request),
+            'title': _('Force reset TOTP credentials'),
+            'queryset': queryset,
+            'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+            'opts': modeladmin.model._meta,
+        }
+        return TemplateResponse(request, 'admin/authentication/user/reset_totp_confirmation.html', context)
+
+    keycloak = KeycloakClient()
+    users_reset = credentials_deleted = recovery_codes_deleted = no_totp = no_keycloak_account = errors = 0
+
+    for user in queryset:
+        if not user.oidc_id:
+            no_keycloak_account += 1
+            continue
+
+        try:
+            totp_credentials = keycloak.get_totp_credentials(user.oidc_id)
+            if not totp_credentials:
+                no_totp += 1
+                continue
+
+            for credential in totp_credentials:
+                keycloak.delete_credential(user.oidc_id, credential['id'])
+                credentials_deleted += 1
+
+            # Cascade to recovery codes — they are a backup for the authenticator only.
+            for recovery_credential in keycloak.get_recovery_codes_credentials(user.oidc_id):
+                keycloak.delete_credential(user.oidc_id, recovery_credential['id'])
+                recovery_codes_deleted += 1
+            users_reset += 1
+        except (KeyError, RequestException) as ex:
+            logging.error(f'[admin_reset_totp_credentials] Could not reset TOTP for {user.username}: {ex}')
+            errors += 1
+
+    reports = [
+        (
+            users_reset,
+            'Reset TOTP credentials for %d user.',
+            'Reset TOTP credentials for %d users.',
+            messages.SUCCESS,
+        ),
+        (
+            credentials_deleted,
+            'Deleted %d Keycloak TOTP credential.',
+            'Deleted %d Keycloak TOTP credentials.',
+            messages.SUCCESS,
+        ),
+        (
+            recovery_codes_deleted,
+            'Deleted %d Keycloak recovery-codes credential.',
+            'Deleted %d Keycloak recovery-codes credentials.',
+            messages.SUCCESS,
+        ),
+        (
+            no_totp,
+            'Skipped %d user without TOTP credentials.',
+            'Skipped %d users without TOTP credentials.',
+            messages.INFO,
+        ),
+        (
+            no_keycloak_account,
+            'Skipped %d user without a linked Keycloak account.',
+            'Skipped %d users without linked Keycloak accounts.',
+            messages.WARNING,
+        ),
+        (
+            errors,
+            'Failed to reset TOTP for %d user.',
+            'Failed to reset TOTP for %d users.',
+            messages.ERROR,
+        ),
+    ]
+    for count, singular, plural, level in reports:
+        if count:
+            modeladmin.message_user(request, ngettext(singular, plural, count) % count, level)
+    if not any(count for count, *_ in reports):
+        modeladmin.message_user(request, _('Nothing to reset!'), messages.INFO)
 
 
 @admin.action(description=_('Add to Mailchimp list'))

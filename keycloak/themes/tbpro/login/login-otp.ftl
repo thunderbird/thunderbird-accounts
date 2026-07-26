@@ -17,6 +17,7 @@
           //</#list>
         ],
         selectedOtpCredential: '${otpLogin.selectedCredentialId}',
+        showTryAnotherWay: '${(auth?has_content && auth.showTryAnotherWayLink())?c}',
       };
       window._l10n = {
         ...window._l10n,

@@ -1,14 +1,48 @@
 import logging
 import uuid
+import sentry_sdk
 from typing import Optional
 from requests.exceptions import HTTPError
+from django.core.exceptions import ValidationError
+from django.core.validators import EmailValidator
 from django.contrib.auth.hashers import make_password, identify_hasher
-import sentry_sdk
-
+from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+
+from thunderbird_accounts.mail.exceptions import EmailNotValidError
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.mail import tasks
+
+
+def validate_email(email: str, error_message: str | None = None, min_length: int | None = None) -> bool:
+    """Validates the email and local part against Django's built-in email validation.
+
+    min_length overrides User.USERNAME_MIN_LENGTH when the caller has already
+    enforced its own domain-specific minimum (e.g. the add_email_alias view).
+    """
+    not_valid_err_msg = error_message or _('This email is not valid. Try another one.')
+
+    if '@' not in email:
+        raise EmailNotValidError(email, not_valid_err_msg)
+
+    local_part = email.split('@')[0]
+    effective_min = min_length if min_length is not None else User.USERNAME_MIN_LENGTH
+
+    # EmailValidator allows for up to 350 characters, but username is defined with max_length of 150.
+    # We also need to validate the minimum length of the username.
+    if len(local_part) > User.USERNAME_MAX_LENGTH or len(local_part) < effective_min:
+        raise EmailNotValidError(email, not_valid_err_msg)
+
+    email_validator = EmailValidator(not_valid_err_msg)
+    # So EmailValidator.__call__ will raise a ValidationError if it fails, but they're the wrong
+    # ValidationError...So catch this ValidationError so we can raise DRF's ValidationError.
+    try:
+        email_validator(email)
+    except ValidationError as ex:
+        raise EmailNotValidError(email, ex.message)
+
+    return True
 
 
 def save_app_password(label, password):
@@ -90,7 +124,7 @@ def fix_archives_folder(access_token, account: Account) -> bool:
                     [
                         'Mailbox/query',
                         {
-                            'accountId': account_id,
+                            'accountId': str(account_id),
                             'filter': {'role': 'archive'},
                         },
                         '0',
@@ -104,16 +138,16 @@ def fix_archives_folder(access_token, account: Account) -> bool:
             # If they don't create a new inbox with the role 'archive', named 'Archives'
             # (set in settings.STALWART_ARCHIVES_FOLDER_NAME) which is subscribed by default
             temp_id = str(uuid.uuid4())
-            inbox_res = client.make_jmap_call(
+            set_res = client.make_jmap_call(
                 {
                     'using': ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
                     'methodCalls': [
                         [
                             'Mailbox/set',
                             {
-                                'accountId': account_id,
+                                'accountId': str(account_id),
                                 'create': {
-                                    temp_id: {
+                                    str(temp_id): {
                                         'name': settings.STALWART_ARCHIVES_FOLDER_NAME,
                                         'role': 'archive',
                                         'isSubscribed': True,
@@ -154,29 +188,32 @@ def fix_archives_folder(access_token, account: Account) -> bool:
                 "A mailbox with role 'archive' already exists.",
             ]
 
-            method_response = inbox_res['methodResponses'][0][1]
+            method_response = set_res['methodResponses'][0][1]
             return_response = method_response.get('created')
             if not return_response:
                 return_response = method_response.get('notCreated', {})
                 # The only way we're getting out of here without an error, is if the folder already exists
                 desc = return_response.get(temp_id, {}).get('description')
+                
                 if desc and desc in already_exists_descriptions:
-                    raise Exception(f'Failed to create archive folder: {desc}')
+                    pass # If it already exists then we can actually mark it as done and move on
+                else:
+                    sentry_sdk.set_context('desc', {'desc': desc})
+                    raise RuntimeError('Failed to create archive folder')
             elif temp_id not in return_response:
                 # Note: If the request didn't work, it won't have temp_id in it,
                 # or if it's malformed it'll raise a keyerror.
-                raise Exception('Failed to create archive folder')
+                raise RuntimeError('Failed to create archive folder')
 
         # If we got here without an error, then we can mark this as verified
         account.verified_archive_folder = True
         account.save()
 
         return True
-    except (HTTPError, Exception, KeyError) as ex:
+    except (HTTPError, RuntimeError, KeyError) as ex:
         logging.error('fix_archive_folder failed!')
-        sentry_sdk.set_extra('inbox_response', inboxes)
+        sentry_sdk.set_context('inbox_response', {'inboxes': inboxes})
         sentry_sdk.capture_exception(ex)
-
     return False
 
 
@@ -210,7 +247,7 @@ def is_address_taken(email_address: str) -> bool:
         return True
 
     # Make sure there's no email alias with this address
-    aliases = Email.objects.filter(address=email_address).exists()
+    aliases = Email.objects.filter(address__iexact=email_address).exists()
     if aliases:
         return True
 

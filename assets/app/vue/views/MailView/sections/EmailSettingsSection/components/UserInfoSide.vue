@@ -8,6 +8,7 @@ import {
   TextInput,
   LinkButton,
 } from '@thunderbirdops/services-ui';
+import { setDisplayName } from '../api';
 
 const { t } = useI18n();
 
@@ -15,10 +16,10 @@ const showDisplayNameForm = ref(false);
 const displayName = ref<string>(null);
 const errorMessageDisplayName = ref(window._page?.formError || '');
 const isSubmittingDisplayName = ref(false);
+const userDisplayName = ref(window._page?.userDisplayName || '');
 
 // From Stalwart, primary email is always the first email address in the list
 const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
-const userDisplayName = computed(() => window._page?.userDisplayName);
 
 const onSetDisplayNameSubmit = async () => {
   if (isSubmittingDisplayName.value) return;
@@ -27,26 +28,15 @@ const onSetDisplayNameSubmit = async () => {
   isSubmittingDisplayName.value = true;
 
   try {
-    const response = await fetch('/display-name/set', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': window._page.csrfToken,
-      },
-      body: JSON.stringify({
-        'display-name': displayName.value,
-      }),
-    });
-
-    const data = await response.json();
+    const data = await setDisplayName(displayName.value);
 
     if (data.success) {
+      userDisplayName.value = displayName.value;
+      window._page.userDisplayName = displayName.value;
+
       // Reset form and close
       displayName.value = '';
       showDisplayNameForm.value = false;
-
-      // Reload the page to reflect changes
-      window.location.reload();
     } else {
       errorMessageDisplayName.value = data.error || t('views.mail.sections.emailSettings.anErrorOccurred');
     }
@@ -74,10 +64,7 @@ const onCancelSetDisplayName = () => {
 
     <div class="display-name-content">
       <template v-if="showDisplayNameForm">
-        <form
-          method="post"
-          action="/display-name/set"
-        >
+        <form @submit.prevent="onSetDisplayNameSubmit">
           <text-input v-model="displayName" name="display-name" data-testid="display-name-input">
             {{ t('views.mail.sections.emailSettings.newDisplayName') }}:
           </text-input>
@@ -85,8 +72,8 @@ const onCancelSetDisplayName = () => {
           <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessageDisplayName">{{ errorMessageDisplayName }}</notice-bar>
 
           <div class="set-display-name-buttons-container">
-            <primary-button variant="outline" @click="onCancelSetDisplayName" :disabled="isSubmittingDisplayName">{{ t('views.mail.sections.emailSettings.cancel') }}</primary-button>
-            <primary-button @click="onSetDisplayNameSubmit" :disabled="isSubmittingDisplayName" data-testid="display-name-set-btn">
+            <primary-button type="button" variant="outline" @click="onCancelSetDisplayName" :disabled="isSubmittingDisplayName">{{ t('views.mail.sections.emailSettings.cancel') }}</primary-button>
+            <primary-button type="button" @click="onSetDisplayNameSubmit" :disabled="isSubmittingDisplayName" data-testid="display-name-set-btn">
               {{ isSubmittingDisplayName ? t('views.mail.sections.emailSettings.saving') : t('views.mail.sections.emailSettings.save') }}
             </primary-button>
           </div>

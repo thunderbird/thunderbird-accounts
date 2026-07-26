@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, useTemplateRef } from 'vue';
+import { ref, onMounted, useTemplateRef, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useDebounceFn } from '@vueuse/core';
 import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTypes, CheckboxInput, LoadingSkeleton } from '@thunderbirdops/services-ui';
 import CsrfToken from '@/components/forms/CsrfToken.vue';
+import { COMMUNITY_SUPPORT_URL } from '@/defines';
 import NativeInputWrapper from './NativeInputWrapper.vue';
+import { isEmailInAllowList } from '../api';
 
 // Types
 import { ContactFieldsAPIResponse, TicketField } from '../types';
+
 
 // Zendesk Ticket Field <-> Vue Component mapping
 // https://developer.zendesk.com/api-reference/ticketing/tickets/ticket_fields/#create-ticket-field
@@ -30,14 +34,18 @@ const { t } = useI18n();
 
 const csrfTokenVal = ref(window._page.csrfToken);
 const errorText = ref(window._page.formError);
+const userEmailInAllowList = ref(true);
 const successText = ref('');
 const isSubmitting = ref(false);
+const tbProWaitListUrl = window._page?.tbProWaitListUrl;
 const form = ref({
-  email: window._page?.userEmail || '',
+  email: window._page?.hasActiveSubscription
+    ? window._page?.userEmail
+    : window._page?.recoveryEmail || '',
   name: window._page?.userFullName || '',
   attachments: [],
 });
-const formRef = ref(null);
+const formRef = ref<HTMLFormElement | null>(null);
 const fileInput = ref(null);
 const isLoadingFormFields = ref(true);
 
@@ -58,7 +66,11 @@ const nativeAttrsForField = (field: TicketField) => {
   }
 };
 
-const triggerFileSelect = () => {
+const triggerFileSelect = (event: PointerEvent) => {
+  // Do not target the fileInput if they've clicked on the fileInput.
+  if (event.target === fileInput.value) {
+    return;
+  }
   fileInput.value?.click();
 };
 
@@ -144,8 +156,25 @@ const resetForm = () => {
   formRef.value.reset();
 };
 
+const checkEmailInAllowList = useDebounceFn(async () => {
+  await nextTick();
+
+  const emailField = formRef.value?.elements.namedItem('email') as HTMLInputElement | null;
+
+  if (emailField?.checkValidity()) {
+    const { is_on_allow_list } = await isEmailInAllowList(emailField.value.trim());
+    userEmailInAllowList.value = is_on_allow_list;
+  }
+}, 250);
+
 const handleSubmit = async () => {
   if (isSubmitting.value) return;
+
+  await checkEmailInAllowList();
+
+  if (!userEmailInAllowList.value) {
+    return;
+  }
 
   errorText.value = '';
   successText.value = '';
@@ -224,11 +253,37 @@ onMounted(() => {
 <template>
   <notice-bar :type="NoticeBarTypes.Critical" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
   <notice-bar :type="NoticeBarTypes.Success" v-if="successText" class="notice">{{ successText }}</notice-bar>
+  <notice-bar :type="NoticeBarTypes.Warning" v-if="!userEmailInAllowList" class="notice">
+    <i18n-t keypath="views.contact.emailNotOnAllowList">
+      <template #joinWaitlist>
+        <a :href="tbProWaitListUrl" target="_blank" rel="noopener noreferrer">
+          {{ t('views.contact.joinWaitlist') }}
+        </a>
+      </template>
+    </i18n-t>
+
+    <br />
+
+    <i18n-t keypath="views.contact.emailNotOnAllowListSupport" tag="span" class="second-line">
+      <template #communitySupportLink>
+        <a :href="COMMUNITY_SUPPORT_URL" target="_blank" rel="noopener noreferrer">
+          {{ t('views.contact.communitySupportLink') }}
+        </a>
+      </template>
+    </i18n-t>
+  </notice-bar>
 
   <form @submit.prevent="handleSubmit" method="post" action="/contact/submit" ref="formRef">
     <!-- Email (always present) -->
-    <text-input ref="emailInput" name="email" type="email" v-model="form.email" :required="true"
-      data-testid="contact-email-input">
+    <text-input
+      ref="emailInput"
+      name="email"
+      type="email"
+      v-model="form.email"
+      :required="true"
+      data-testid="contact-email-input"
+      @input="checkEmailInAllowList"
+    >
       {{ t('views.contact.emailAddressLabel') }}
     </text-input>
 
@@ -287,7 +342,11 @@ onMounted(() => {
     </ul>
 
     <div class="form-group">
-      <primary-button @click.capture="handleSubmit" data-testid="contact-submit-btn" :disabled="isSubmitting">
+      <primary-button
+        @click.capture="handleSubmit"
+        data-testid="contact-submit-btn"
+        :disabled="isSubmitting"
+      >
         {{ isSubmitting ? t('views.contact.submitting') : t('views.contact.submit') }}
       </primary-button>
     </div>
@@ -385,6 +444,15 @@ form {
 
 .notice {
   margin-block: 1rem;
+
+  a {
+    color: var(--colour-ti-highlight);
+  }
+
+  .second-line {
+    display: inline-block;
+    margin-block-start: 0.2rem;
+  }
 }
 
 .attachment-list {

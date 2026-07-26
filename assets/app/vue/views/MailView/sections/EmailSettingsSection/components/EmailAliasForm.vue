@@ -2,14 +2,18 @@
 import { ref, computed, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { TextInput, SelectInput, PrimaryButton, LinkButton } from '@thunderbirdops/services-ui';
+import { EMAIL_ALIASES_SUPPORT_URL, EMAIL_ALIASES_CATCH_ALL_SUPPORT_URL } from '@/defines';
 
 // Types
 import { EMAIL_ALIAS_STEP } from '../types';
+import { validateEmailAlias } from './emailAliasValidation';
 
 const { t } = useI18n();
 
 const props = defineProps<{
   allDomainOptions: string[];
+  existingCatchAlls: string[];
+  showSharedDomains: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -20,48 +24,51 @@ const emit = defineEmits<{
 const allowedDomains = window._page.allowedDomains || [];
 
 const step = ref<EMAIL_ALIAS_STEP>(EMAIL_ALIAS_STEP.INITIAL);
-const emailAlias = ref(null);
+const emailAlias = ref<string>('');
 const selectedDomain = ref(props.allDomainOptions[0] ?? null);
 const formRef = useTemplateRef('formRef');
 const validationError = ref<string | null>(null);
+const customDomainSelected = computed(() => !allowedDomains.includes(selectedDomain.value));
 
 const allDomainOptions = computed(() => props.allDomainOptions.map((domain) => ({
   label: domain,
   value: domain,
-})));
+})).filter(
+  (domain) => props.showSharedDomains && allowedDomains.includes(domain.value)
+  || !allowedDomains.includes(domain.value)
+));
 
-const validateEmailAlias = (value: string): string | null => {
-  if (!value) {
-    return null; // Let built-in required validation handle empty values
+/**
+ * Returns the next to be filled in for name's help section.
+ *
+ * If you're able to make a catch-all alias a second line will appear with information.
+ */
+const nameHelp = computed(() => {
+  const hasCatchAll = props.existingCatchAlls.some((catchAll) => catchAll.endsWith(`@${selectedDomain.value}`));
+
+  if (customDomainSelected.value && !hasCatchAll) {
+    return `${t('views.mail.sections.emailSettings.nameHelp')}\n\n${t('views.mail.sections.emailSettings.nameCatchAllHelp')}`;
   }
-
-  // This rule should only apply to allowed domains, not custom domains
-  if (allowedDomains.includes(selectedDomain.value) && value.length < 3) {
-    return t('views.mail.sections.emailSettings.nameValidationErrorMinLength');
-  }
-
-  if (value.length > 40) {
-    return t('views.mail.sections.emailSettings.nameValidationErrorMaxLength');
-  }
-
-  const validPattern = /^[a-z0-9_]+$/;
-  if (!validPattern.test(value)) {
-    return t('views.mail.sections.emailSettings.nameValidationErrorPattern');
-  }
-
-  return null;
-};
+  return t('views.mail.sections.emailSettings.nameHelp');
+});
 
 const onEmailAliasInput = () => {
-  validationError.value = validateEmailAlias(emailAlias.value);
+  const messageKey = validateEmailAlias({
+    value: emailAlias.value,
+    selectedDomain: selectedDomain.value,
+    allowedDomains,
+    existingCatchAlls: props.existingCatchAlls,
+  });
+
+  validationError.value = messageKey ? t(messageKey) : null;
 };
 
 const onSubmit = () => {
-  validationError.value = validateEmailAlias(emailAlias.value);
+  onEmailAliasInput();
 
   if (!validationError.value && formRef.value.checkValidity()) {
     emit('add-alias', emailAlias.value, selectedDomain.value);
-    emailAlias.value = null;
+    emailAlias.value = '';
     selectedDomain.value = props.allDomainOptions[0] ?? null;
     validationError.value = null;
     step.value = EMAIL_ALIAS_STEP.INITIAL;
@@ -70,7 +77,11 @@ const onSubmit = () => {
 
 // Validate on selected domain change as well
 watch(selectedDomain, () => {
-  validationError.value = validateEmailAlias(emailAlias.value);
+  // Retain behaviour of not testing empty strings on domain change for now.
+  if (emailAlias.value === '') {
+    return;
+  }
+  onEmailAliasInput();
 });
 </script>
 
@@ -92,9 +103,8 @@ watch(selectedDomain, () => {
           name="email-alias"
           v-model="emailAlias"
           @input="onEmailAliasInput"
-          :help="t('views.mail.sections.emailSettings.nameHelp')"
+          :help="nameHelp"
           :error="validationError"
-          required
         >
           {{ t('views.mail.sections.emailSettings.name') }}
         </text-input>
@@ -114,11 +124,28 @@ watch(selectedDomain, () => {
       </div>
     </form>
   </template>
+
+  <i18n-t keypath="views.mail.sections.emailSettings.emailAliasSupportText" tag="p" class="email-alias-support-text">
+    <template #emailAliasesSupportLink>
+      <a :href="EMAIL_ALIASES_SUPPORT_URL" target="_blank" rel="noopener noreferrer">
+        {{ t('views.mail.sections.emailSettings.emailAliasesArticleTitle') }}
+      </a>
+    </template>
+    <template #emailAliasesCatchAllSupportLink>
+      <a :href="EMAIL_ALIASES_CATCH_ALL_SUPPORT_URL" target="_blank" rel="noopener noreferrer">
+        {{ t('views.mail.sections.emailSettings.emailAliasesCatchAllArticleTitle') }}
+      </a>
+    </template>
+  </i18n-t>
 </template>
 
 <style scoped>
 :deep(.tooltip) {
   min-width: 200px;
+}
+
+:deep(.email-alias-input-wrapper .help-label) {
+  white-space: break-spaces;
 }
 
 .email-alias-input-wrapper {
@@ -149,5 +176,14 @@ watch(selectedDomain, () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.email-alias-support-text {
+  font-size: 0.75rem;
+  margin-block-start: 1rem;
+
+  a {
+    color: var(--colour-ti-highlight);
+  }
 }
 </style>

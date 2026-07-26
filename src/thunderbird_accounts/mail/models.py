@@ -1,7 +1,5 @@
 """
-Stalwart models live here
-Schema is based on init scripts:
-https://stalw.art/docs/storage/backends/postgresql#initialization-statements
+Stalwart reference models live here
 """
 
 from django.db import models

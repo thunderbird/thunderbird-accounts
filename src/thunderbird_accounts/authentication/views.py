@@ -1,3 +1,6 @@
+import csv
+import re
+
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import logout as django_logout
@@ -14,9 +17,13 @@ from django.utils.translation import ngettext
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 from django.views.generic import TemplateView
+from mozilla_django_oidc.views import OIDCAuthenticationRequestView
 
+from thunderbird_accounts.authentication.mfa import MFA_REAUTH_PENDING_SESSION_KEY
 from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction
 from thunderbird_accounts.core.utils import get_absolute_url
+
+DISCOUNT_ID_PATTERN = re.compile(r'^dsc_[a-z0-9]{26}$')
 
 
 @login_required
@@ -24,6 +31,32 @@ def start_reset_password_flow(request: HttpRequest):
     """Generates a url and redirects the user to an app initiated action that will start a flow to
     update their password."""
     return HttpResponseRedirect(create_aia_url(KeycloakRequiredAction.UPDATE_PASSWORD))
+
+
+@method_decorator(login_required, name='dispatch')
+class MfaReauthenticationRequestView(OIDCAuthenticationRequestView):
+    """OIDC step-up entry point for sensitive MFA-management actions.
+
+    Subclasses mozilla-django-oidc's request view so we reuse its authorization-redirect
+    building, adding ``acr_values`` to force a fresh MFA challenge and flagging the
+    session so the callback knows this round-trip was a step-up.
+    """
+
+    def get(self, request, *args, **kwargs):
+        request.session[MFA_REAUTH_PENDING_SESSION_KEY] = True
+        return super().get(request, *args, **kwargs)
+
+    def get_extra_params(self, request):
+        params = super().get_extra_params(request).copy()
+        # Request the step-up LoA only. We deliberately do NOT send max_age=0: that forces a
+        # full re-authentication (username + password *and* OTP), even though the user already
+        # has a valid session — exactly the "re-enter your password to verify identity" wart.
+        # Freshness is instead guaranteed by the realm's L2 conditional-LoA, whose loa-max-age
+        # is 0: it re-challenges the OTP on every step-up (updating the token's auth_time) while
+        # the L1 factor is satisfied from the existing session. So the provider's acr + auth_time
+        # check is met without re-prompting the first factor.
+        params.update({'acr_values': settings.MFA_KEYCLOAK_ACR_VALUE})
+        return params
 
 
 def start_oidc_logout(request: HttpRequest):
@@ -77,23 +110,35 @@ def bulk_import_allow_list(request: HttpRequest):
     entries: str = request.POST.get('bulk-entry', '')
     # Normalize new lines (I'm not sure if this is actually needed but best to be safe here.)
     entries = entries.replace('\r\n', '\n').replace('\r', '\n')
-    # Now split on new line
-    split_entries: list[str] = entries.split('\n')
 
     dupes = []
     errors = []
     add_amount = 0
 
-    for entry in split_entries:
-        # Remove spaces
-        entry = entry.strip()
-        if not entry:
+    for row in csv.reader(entries.splitlines()):
+        if not row or all(not column.strip() for column in row):
+            continue
+
+        entry = row[0].strip()
+        discount_id = row[1].strip() if len(row) > 1 else None
+        if not discount_id:
+            discount_id = None
+
+        if len(row) > 2 and any(column.strip() for column in row[2:]):
+            errors.append(f'{entry} has too many columns. Use email or email,discount_id.')
             continue
 
         try:
             validate_email(entry)
         except ValidationError:
             errors.append(f'{entry} is not a valid email address.')
+            continue
+
+        if discount_id and not DISCOUNT_ID_PATTERN.fullmatch(discount_id):
+            errors.append(
+                f'{discount_id} is not a valid discount id. '
+                'Use the full Paddle id in the format dsc_ followed by 26 lowercase letters or numbers.'
+            )
             continue
 
         try:
@@ -105,7 +150,7 @@ def bulk_import_allow_list(request: HttpRequest):
         except AllowListEntry.DoesNotExist:
             # okie
             try:
-                AllowListEntry(email=entry, user=None).save()
+                AllowListEntry(email=entry, user=None, discount_id=discount_id).save()
                 add_amount += 1
             except Exception as ex:
                 errors.append(f'{entry} could not be created due to: {ex}.')

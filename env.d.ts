@@ -22,9 +22,16 @@ declare global {
       formError?: string | null;
       formData?: object | string | null; // Should be object | null, but template rendering can be tricky...
       csrfToken?: string;
+      // Paddle info for the checkout step
       paddleToken?: string;
       paddleEnvironment?: string;
       paddlePlanInfo?: string[];
+      // planInfo for the confirm plan step
+      planInfo?: {
+        name: string;
+        description: string;
+        prices: string[];
+      };
       successRedirect?: string;
       signedUserId?: string;
       appPasswords?: string[];
@@ -36,13 +43,21 @@ declare global {
       maxEmailAliases?: number;
       tbProAppointmentUrl?: string;
       tbProSendUrl?: string;
+      tbProWaitListUrl?: string;
       tbProPrimaryDomain?: string;
+      webmailUrl?: string;
       currentView?: Record<string, any>;
       serverMessages: ServerMessage[];
+      needsTosAcceptance?: boolean;
+      recoveryEmail?: string;
       // Special, only used for tbpro_500.html
       errorTitle?: string;
       isErrorPage?: boolean,
       features?: object;
+      message?: {
+        type: string;
+        summary: string;
+      };
     };
   }
 }

@@ -55,8 +55,8 @@ class Command(PaddleCommand, BaseCommand):
             'currency': str(unit_price.currency_code),
             'price_type': str(paddle_obj.type),
             'status': str(paddle_obj.status),
-            'billing_cycle_frequency': billing_cycle.frequency,
-            'billing_cycle_interval': str(billing_cycle.interval),
+            'billing_cycle_frequency': billing_cycle.frequency if billing_cycle else None,
+            'billing_cycle_interval': str(billing_cycle.interval) if billing_cycle else None,
             'product_id': product.uuid,
         }
 

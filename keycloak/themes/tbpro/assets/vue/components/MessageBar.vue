@@ -18,6 +18,6 @@ const messageType = computed(() => {
 
 <style scoped>
 .notice-bar {
-  margin-bottom: var(--space-12);
+  margin-block-end: 1.5rem;
 }
 </style>

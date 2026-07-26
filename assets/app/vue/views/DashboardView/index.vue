@@ -4,6 +4,10 @@ import YourServices from '@/components/YourServices.vue';
 import AccountCard from './components/AccountCard.vue';
 import PrivacyAndDataCard from './components/PrivacyAndDataCard.vue';
 import YourCurrentSubscription from './components/YourCurrentSubscription.vue';
+import { PADDLE_TRANSACTION_STORAGE_KEY } from '@/defines';
+
+// Just in case, attempt to empty the stored Paddle transaction id here too.
+window.localStorage?.removeItem(PADDLE_TRANSACTION_STORAGE_KEY);
 </script>
 
 <script lang="ts">

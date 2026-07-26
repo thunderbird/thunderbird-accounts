@@ -4,6 +4,8 @@ from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 
+from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.subscription.models import Subscription
 from thunderbird_accounts.telemetry.tasks import poll_keycloak_events
 
 import thunderbird_accounts.telemetry.client as telemetry_module
@@ -161,6 +163,57 @@ class PollKeycloakEventsTestCase(TestCase):
         poll_keycloak_events()
         self.assertEqual(self.mock_ph.capture.call_count, 7)
         self.assertEqual(mock_kc_client.request.call_count, 3)  # pages: 3+3+1
+
+    def test_subscription_status_property_per_user(self):
+        """Each event is tagged with the user's existing Paddle subscription status."""
+        active = User.objects.create(
+            username='active@example.org', email='active@example.org', oidc_id='active-uid'
+        )
+        Subscription.objects.create(user=active, status=Subscription.StatusValues.ACTIVE)
+
+        canceled = User.objects.create(
+            username='canceled@example.org', email='canceled@example.org', oidc_id='canceled-uid'
+        )
+        Subscription.objects.create(user=canceled, status=Subscription.StatusValues.CANCELED)
+
+        no_subscription = User.objects.create(
+            username='none@example.org', email='none@example.org', oidc_id='none-uid'
+        )
+
+        self._set_keycloak_events([
+            _make_keycloak_event('LOGIN', user_id=active.oidc_id),
+            _make_keycloak_event('LOGIN', user_id=canceled.oidc_id),
+            _make_keycloak_event('LOGIN', user_id=no_subscription.oidc_id),
+            # No matching local subscription row (e.g. mid-registration) -> "none".
+            _make_keycloak_event('LOGIN', user_id='ghost-uid'),
+        ])
+
+        poll_keycloak_events()
+
+        observed = {
+            call.kwargs['distinct_id']: call.kwargs['properties']['subscription_status']
+            for call in self.mock_ph.capture.call_args_list
+        }
+        self.assertEqual(
+            observed,
+            {
+                telemetry_module.hash_id(active.oidc_id): Subscription.StatusValues.ACTIVE,
+                telemetry_module.hash_id(canceled.oidc_id): Subscription.StatusValues.CANCELED,
+                telemetry_module.hash_id(no_subscription.oidc_id): settings.POSTHOG_NO_SUBSCRIPTION_STATUS,
+                telemetry_module.hash_id('ghost-uid'): settings.POSTHOG_NO_SUBSCRIPTION_STATUS,
+            },
+        )
+
+    def test_active_subscription_status_wins_when_user_has_multiple_subscriptions(self):
+        user = User.objects.create(username='multi@example.org', email='multi@example.org', oidc_id='multi-uid')
+        Subscription.objects.create(user=user, status=Subscription.StatusValues.CANCELED)
+        Subscription.objects.create(user=user, status=Subscription.StatusValues.ACTIVE)
+        self._set_keycloak_events([_make_keycloak_event('LOGIN', user_id=user.oidc_id)])
+
+        poll_keycloak_events()
+
+        props = self._last_capture_properties()
+        self.assertEqual(props['subscription_status'], Subscription.StatusValues.ACTIVE)
 
     def test_client_id_resolution(self):
         """clientId is attributed (token_issued_for or top-level); keycloakCallerClientId is raw Keycloak clientId."""

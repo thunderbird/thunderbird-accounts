@@ -2,15 +2,34 @@ import datetime
 import logging
 from typing import Optional
 
+import sentry_sdk
 from celery import shared_task
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients import MailClient
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError, AccountNotFoundError
+from thunderbird_accounts.mail.dkim import (
+    CloudflareDNSClient,
+    build_hosted_dkim_txt_record_names,
+    build_hosted_dkim_txt_records,
+    delete_hosted_dkim_txt_records,
+    publish_hosted_dkim_txt_records,
+)
+from thunderbird_accounts.mail.exceptions import (
+    AccountNotFoundError,
+    DomainNotFoundError,
+    HostedDkimDeleteRetry,
+    HostedDkimPublishRetry,
+)
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.celery.exceptions import TaskFailed
+from thunderbird_accounts.core.types import TaskReturnStatus
 
+# Allow self-healing from problems accessing our DNS provider with generous retry policy.
+# This smooths over outages on their end, but also quota overages on our end.
+HOSTED_DKIM_PUBLISH_RETRY_DAYS = 14
+HOSTED_DKIM_PUBLISH_MAX_RETRIES = 24 * HOSTED_DKIM_PUBLISH_RETRY_DAYS
 
 def _stalwart_check_or_create_domain_entry(stalwart, domain):
     # Check if we have the domain
@@ -69,7 +88,7 @@ def _base_email_address_to_stalwart_account(fn_name, username, emails):
     return {
         'username': username,
         'emails': emails,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
     }
 
 
@@ -149,7 +168,141 @@ def update_quota_on_stalwart_account(self, username: str, quota: Optional[int]):
     return {
         'username': username,
         'quota': quota,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
+    }
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(HostedDkimPublishRetry,),
+    retry_backoff=True,
+    retry_backoff_max=60 * 60,  # 1 hour
+    retry_jitter=True,
+    max_retries=HOSTED_DKIM_PUBLISH_MAX_RETRIES,
+)
+def publish_hosted_dkim_dns_records(self, domain_name: str):
+    phase = 'initialize'
+    dkim_dns_records = []
+    hosted_records = []
+    expected_record_count = len(
+        {selector for selector in settings.STALWART_DKIM_ALGO_SELECTORS.values() if selector}
+    )
+
+    try:
+        phase = 'fetch_stalwart_dkim_dns_records'
+        stalwart = MailClient()
+        dkim_dns_records = stalwart.get_dkim_dns_records(domain_name)
+
+        phase = 'build_hosted_txt_records'
+        hosted_records = build_hosted_dkim_txt_records(domain_name, dkim_dns_records)
+
+        if settings.HOSTED_DKIM_CLOUDFLARE_ENABLED:
+            phase = 'publish_cloudflare_txt_records'
+            hosted_records = publish_hosted_dkim_txt_records(
+                hosted_records,
+                dns_client=CloudflareDNSClient(),
+            )
+            phase = 'validate_hosted_record_count'
+            if len(hosted_records) < expected_record_count:
+                reason = (
+                    f'Expected {expected_record_count} hosted DKIM records for {domain_name}, '
+                    f'got {len(hosted_records)}'
+                )
+                raise HostedDkimPublishRetry(
+                    domain_name,
+                    phase,
+                    reason,
+                    error_type='HostedDkimRecordCountMismatch',
+                )
+            skipped = False
+        # Building and logging the full records is still useful for development.
+        else:
+            for record in hosted_records:
+                logging.info(
+                    'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS update to set '
+                    f'"{record["type"]} {record["name"]} {record["content"]}"'
+                )
+            skipped = True
+    except ImproperlyConfigured as ex:
+        logging.error(f'[publish_hosted_dkim_dns_records] Hosted DKIM is misconfigured: {ex}')
+        raise TaskFailed(str(ex), {'domain': domain_name})
+    except HostedDkimPublishRetry as ex:
+        sentry_sdk.set_context('hosted_dkim_publish_retry', ex.context)
+        logging.warning(f'[publish_hosted_dkim_dns_records] Error publishing hosted DKIM records: {ex}')
+        raise
+    except Exception as ex:
+        retry_error = HostedDkimPublishRetry(
+            domain_name,
+            phase,
+            str(ex),
+            error_type=type(ex).__name__,
+        )
+        sentry_sdk.set_context('hosted_dkim_publish_retry', retry_error.context)
+        logging.warning(f'[publish_hosted_dkim_dns_records] Error publishing hosted DKIM records: {retry_error}')
+        raise retry_error from ex
+
+    return {
+        'domain_name': domain_name,
+        'records': hosted_records,
+        'skipped': skipped,
+        'task_status': TaskReturnStatus.SUCCESS,
+    }
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(HostedDkimDeleteRetry,),
+    retry_backoff=True,
+    retry_backoff_max=60 * 60,  # 1 hour
+    retry_jitter=True,
+    max_retries=24,
+)
+def delete_hosted_dkim_dns_records(self, domain_name: str):
+    phase = 'initialize'
+    hosted_records = []
+
+    try:
+        phase = 'build_hosted_txt_record_names'
+        hosted_records = [{'type': 'TXT', 'name': name} for name in build_hosted_dkim_txt_record_names(domain_name)]
+
+        if settings.HOSTED_DKIM_CLOUDFLARE_ENABLED:
+            phase = 'delete_cloudflare_txt_records'
+            hosted_records = delete_hosted_dkim_txt_records(
+                domain_name,
+                dns_client=CloudflareDNSClient(),
+            )
+            skipped = False
+        else:
+            for record in hosted_records:
+                logging.info(
+                    '[delete_hosted_dkim_dns_records] '
+                    'HOSTED_DKIM_CLOUDFLARE_ENABLED=false: skipping DNS delete for '
+                    f'"{record["type"]} {record["name"]}"'
+                )
+            skipped = True
+    except ImproperlyConfigured as ex:
+        logging.error(f'[delete_hosted_dkim_dns_records] Hosted DKIM is misconfigured: {ex}')
+        raise TaskFailed(str(ex), {'domain': domain_name})
+    except HostedDkimDeleteRetry as ex:
+        sentry_sdk.set_context('hosted_dkim_delete_retry', ex.context)
+        logging.warning(f'[delete_hosted_dkim_dns_records] Error deleting hosted DKIM records: {ex}')
+        raise
+    except Exception as ex:
+        retry_error = HostedDkimDeleteRetry(
+            domain_name,
+            phase,
+            str(ex),
+            error_type=type(ex).__name__,
+        )
+        sentry_sdk.set_context('hosted_dkim_delete_retry', retry_error.context)
+        logging.warning(f'[delete_hosted_dkim_dns_records] Error deleting hosted DKIM records: {retry_error}')
+        raise retry_error from ex
+
+    return {
+        'domain_name': domain_name,
+        'records': hosted_records,
+        'skipped': skipped,
+        'task_status': TaskReturnStatus.SUCCESS,
     }
 
 
@@ -273,5 +426,5 @@ def create_stalwart_account(
         'stalwart_pkid': pkid,
         'username': username,
         'email': email,
-        'task_status': 'success',
+        'task_status': TaskReturnStatus.SUCCESS,
     }

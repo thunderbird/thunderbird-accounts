@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { PrimaryButton } from '@thunderbirdops/services-ui';
+import { BrandButton } from '@thunderbirdops/services-ui';
 import { useTemplateRef } from 'vue';
 import { useThrottleFn } from '@vueuse/core';
+import { PhArrowRight } from '@phosphor-icons/vue';
 
 const form = useTemplateRef<HTMLFormElement>("form");
 
@@ -11,14 +12,18 @@ withDefaults(defineProps<{
   subtitle: string;
   submitDisabled?: boolean;
   submitTitle?: string;
+  alternativeActionTitle?: string;
+  showAlternativeAction?: boolean;
   hideActions?: boolean;
 }>(), {
   submitDisabled: false,
-  hideActions: false
+  hideActions: false,
+  showAlternativeAction: false
 });
 
 const emit = defineEmits<{
   (e: 'submit'): void;
+  (e: 'alternativeAction'): void;
 }>();
 
 // Throttle to prevent emitting a bunch of events at once
@@ -27,6 +32,10 @@ const onSubmit = useThrottleFn(() => {
     return;
   }
   emit('submit');
+}, 1000);
+
+const onAlternativeAction = useThrottleFn(() => {
+  emit('alternativeAction');
 }, 1000);
 </script>
 
@@ -53,10 +62,16 @@ export default {
         <slot name="form-extras" />
       </div>
       <div class="buttons" v-if="!hideActions">
-        <primary-button form-action="submit" data-testid="submit-button" class="submit" :disabled="submitDisabled"
+        <brand-button variant="outline" v-if="showAlternativeAction" @click.prevent="onAlternativeAction()">
+          {{ alternativeActionTitle || $t('views.mail.views.signUp.back') }}
+        </brand-button>
+        <brand-button form-action="submit" data-testid="submit-button" class="submit" :disabled="submitDisabled"
           @click.prevent="onSubmit()">
+          <template #iconRight>
+            <ph-arrow-right size="20" />
+          </template>
           {{ submitTitle || $t('views.mail.views.signUp.continue') }}
-        </primary-button>
+        </brand-button>
       </div>
     </form>
   </main>
@@ -98,8 +113,8 @@ header {
   .text {
     font-size: 1rem;
     line-height: 1.32;
+    color: #272727 /* TODO: not a variable in the Design System */
   }
-
 }
 
 .form-elements {
@@ -109,12 +124,11 @@ header {
 }
 
 .buttons {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: 1.5rem;
   margin-top: var(--space-24);
   width: 100%;
-
-  .submit {
-    margin-right: 0;
-    margin-left: auto;
-  }
 }
 </style>

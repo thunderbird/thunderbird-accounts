@@ -1,27 +1,29 @@
-from django.template.response import TemplateResponse
-from paddle_billing.Notifications.Entities.Shared.PaymentMethodType import PaymentMethodType
 import datetime
 import json
 import logging
-
 import sentry_sdk
+
+from django.db import transaction as dj_transaction
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse, HttpRequest, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.core.signing import Signer
+from django.template.response import TemplateResponse
 
 from paddle_billing import Client
 from paddle_billing.Resources.CustomerPortalSessions.Operations import CreateCustomerPortalSession
+from paddle_billing.Notifications.Entities.Shared.PaymentMethodType import PaymentMethodType
 
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.request import Request
 
+from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
-from thunderbird_accounts.subscription import tasks, models
-from thunderbird_accounts.subscription.decorators import inject_paddle
+from thunderbird_accounts.subscription import tasks
+from thunderbird_accounts.subscription.decorators import active_subscription_required, inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price, Subscription, Transaction
 from thunderbird_accounts.core.exceptions import UnexpectedBehaviour
 
@@ -34,7 +36,7 @@ def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
     """Returns a boolean on whether the paddle webhook should be dispatched as a celery task or ignored."""
 
     # We only care about non-draft transactions
-    if event_type == 'transaction.created' and event_data.get('status') == models.Transaction.StatusValues.DRAFT:
+    if event_type == 'transaction.created' and event_data.get('status') == Transaction.StatusValues.DRAFT:
         return False
 
     return True
@@ -44,6 +46,14 @@ def prefilter_paddle_webhook(event_type: str, event_data: dict) -> bool:
 @require_http_methods(['POST'])
 def get_paddle_information(request: Request):
     signer = Signer()
+    discount_id = None
+
+    allow_list_entry = AllowListEntry.objects.filter(user=request.user).first()
+    if not allow_list_entry and request.user.recovery_email:
+        allow_list_entry = AllowListEntry.objects.filter(email=request.user.recovery_email).first()
+
+    if allow_list_entry:
+        discount_id = allow_list_entry.discount_id
 
     plan_info = []
     plans = Plan.objects.filter(visible_on_subscription_page=True).exclude(product_id__isnull=True).all()
@@ -58,6 +68,7 @@ def get_paddle_information(request: Request):
             'paddle_environment': settings.PADDLE_ENV,
             'paddle_plan_info': plan_info,
             'signed_user_id': signer.sign(request.user.uuid.hex),
+            'discount_id': discount_id,
         }
     )
 
@@ -102,7 +113,7 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     completed (noted as doneish.)
 
     There's some special logic for certain payment processors that open a pop-up window instead of
-    redirecting to another page or completeing on page. Those processors are defined in code, and
+    redirecting to another page or completing on page. Those processors are defined in code, and
     will redirect the pop-up window to a django template that _should_ immediately close the window.
     For those processors the doneish/redirect logic is handled in
     :any:`thunderbird_accounts.subscription.views.is_paddle_transaction_done`
@@ -111,12 +122,13 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     The front-end will handle if the check to see if the user's transaction and subscription has been pulled
     in our db via webhooks.
     """
-    user = request.user
-    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID)
-    payment_type = request.session.pop(SESSION_PADDLE_PAYMENT_TYPE)
+    user: User = request.user
+    transaction_id = request.session.pop(SESSION_PADDLE_TRANSACTION_ID, None)
+    payment_type = request.session.pop(SESSION_PADDLE_PAYMENT_TYPE, None)
     redirect_response = HttpResponseRedirect('/subscribe')
 
-    # Hmm this shouldn't happen...
+    # This can happen if their browser isn't storing our functional session cookie.
+    # This will be a small UX pain, but it won't brick their payment progress.
     if not transaction_id or not payment_type:
         return redirect_response
 
@@ -124,11 +136,15 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
     status = transaction.status.value
 
     if transaction and status in [Transaction.StatusValues.COMPLETED.value, Transaction.StatusValues.PAID.value]:
-        # Only set enable payment verification mode if they don't have an active subscription
+        # Only set enable payment verification mode if they don't have an 
+        # active subscription (no plan, no active subscription)
         # As the webhook could technically come in before or during this successUrl redirect...
-        if not user.has_active_subscription:
-            user.is_awaiting_payment_verification = True
-            user.save()
+        with dj_transaction.atomic():
+            # If it's already locked we skip this update
+            locked_user = User.objects.select_for_update(skip_locked=True).get(pk=user.uuid)
+            if locked_user and not locked_user.plan and not locked_user.has_active_subscription:
+                locked_user.is_awaiting_payment_verification = True
+                locked_user.save()
 
         if settings.IS_DEV:
             tasks.dev_only_paddle_fake_webhook.delay(transaction_id=transaction_id, user_uuid=user.uuid.hex)
@@ -166,11 +182,9 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required(response_data={}, status=401)
 @inject_paddle
 def get_paddle_portal_link(request: Request, paddle: Client):
-    if not request.user.has_active_subscription:
-        return JsonResponse({}, status=401)
-
     subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
     customer_session = paddle.customer_portal_sessions.create(
         subscription.paddle_customer_id, CreateCustomerPortalSession()
@@ -225,15 +239,13 @@ def handle_paddle_webhook(request: Request):
 
 @login_required
 @require_http_methods(['POST'])
-def get_subscription_plan_info(request: Request):
+@active_subscription_required(error_message='No active subscription found', status=404)
+@inject_paddle
+def get_subscription_plan_info(request: Request, paddle: Client):
     """Returns the user's current subscription information including plan details, pricing, and features."""
 
-    # Check if user has an active subscription
-    if not request.user.has_active_subscription:
-        return JsonResponse({'success': False, 'error': 'No active subscription found'}, status=404)
-
     # Get the user's active subscription
-    subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
+    subscription: Subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
 
     if not subscription:
         return JsonResponse({'success': False, 'error': 'No active subscription found'}, status=404)
@@ -250,8 +262,8 @@ def get_subscription_plan_info(request: Request):
     if not plan:
         return JsonResponse({'success': False, 'error': 'Plan not found for user'}, status=500)
 
-    # Get price information
-    price = subscription_item.price
+    price = subscription.current_billing_period_discounted_amount
+    currency = subscription.current_billing_period_currency
 
     # Used quota comes from Stalwart and it is optional
     used_quota = None
@@ -268,9 +280,6 @@ def get_subscription_plan_info(request: Request):
     # Build the response
     subscription_info = {
         'name': plan.name,
-        'price': price.amount,
-        'currency': price.currency,
-        'period': price.billing_cycle_interval,
         'description': subscription_item.product.description or '',
         'features': {
             'mailStorage': quota,  # The mail storage quota source of truth is Stalwart
@@ -280,6 +289,11 @@ def get_subscription_plan_info(request: Request):
         },
         'autoRenewal': subscription.next_billed_at,
         'usedQuota': used_quota,
+        'price': price,
+        'currency': currency,
+        'period': subscription.subscriptionitem_set.first().price.billing_cycle_interval
+        if subscription.subscriptionitem_set.count() > 0
+        else 'year',
     }
 
     return JsonResponse({'success': True, 'subscription': subscription_info})

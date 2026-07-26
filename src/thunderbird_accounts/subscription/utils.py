@@ -1,7 +1,24 @@
+from django.db import transaction as dj_transaction
 from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.utils import create_stalwart_account, update_quota_on_stalwart_account
-from thunderbird_accounts.subscription.models import Plan
+from thunderbird_accounts.subscription.models import Plan, Price
+
+
+def get_visible_plan_info() -> dict | None:
+    """Return the first subscription-page plan with active prices for frontend display."""
+    plan = Plan.objects.filter(visible_on_subscription_page=True).exclude(product_id__isnull=True).first()
+
+    if not plan:
+        return None
+
+    prices = plan.product.price_set.filter(status=Price.StatusValues.ACTIVE).all()
+
+    return {
+        'name': plan.name,
+        'description': plan.product.description or '',
+        'prices': [price.paddle_id for price in prices],
+    }
 
 
 def sync_plan_to_keycloak(user: User):
@@ -33,12 +50,19 @@ def activate_subscription_features(user: User, plan: Plan):
     if not user.has_active_subscription:
         return
 
-    # Associate the plan id
+    # Associate the plan id and remove any payment verification flag
     # We technically have a link through user -> subscriptions -> subscription items -> product -> plan
     # but that's too long...
-    if user.plan_id != plan.uuid:
-        user.plan_id = plan.uuid
-        user.save()
+    # We also lock the user row for this update as it's pretty important
+    with dj_transaction.atomic():
+        locked_user = User.objects.select_for_update().get(pk=user.uuid)
+        if locked_user.plan_id != plan.uuid:
+            locked_user.plan_id = plan.uuid
+        locked_user.is_awaiting_payment_verification = False
+        locked_user.save()
+
+    # Pull the updated user data from the transaction above
+    user.refresh_from_db()
 
     # TODO: Temporarily removed until https://github.com/thunderbird/thunderbird-accounts/issues/346 is ready
     # sync_plan_to_keycloak(user)

@@ -3,10 +3,10 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.7.3
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.16.5
 
 # Update this value to update all containers based on this Keycloak image
-.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-45961da09b140c985513951fdc9f7f007f92d9ea
+.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-9416511cde95206269822823a77f3c9a1790cc16
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
@@ -32,6 +32,13 @@
 .keycloak_url_api: &VAR_KEYCLOAK_URL_API {name: "KEYCLOAK_URL_API", value: "https://auth.tb.pro/admin/realms/tbpro/"}
 .log_level: &VAR_LOG_LEVEL {name: "LOG_LEVEL", value: "INFO"}
 .min_custom_domain_alias_length: &VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH {name: "MIN_CUSTOM_DOMAIN_ALIAS_LENGTH", value: "3"}
+.custom_domains_do_verify: &VAR_CUSTOM_DOMAINS_DO_VERIFY {name: "CUSTOM_DOMAINS_DO_VERIFY", value: "True"}
+.stalwart_dkim_stage_management_enabled: &VAR_STALWART_DKIM_STAGE_MANAGEMENT_ENABLED {name: "STALWART_DKIM_STAGE_MANAGEMENT_ENABLED", value: "False"}
+.hosted_dkim_domain: &VAR_HOSTED_DKIM_DOMAIN {name: "HOSTED_DKIM_DOMAIN", value: "dkim.thunderhosted.com"}
+.hosted_dkim_selectors: &VAR_HOSTED_DKIM_SELECTORS {name: "HOSTED_DKIM_SELECTORS", value: "tm1,tm2,tm3"}
+.hosted_dkim_cloudflare_enabled: &VAR_HOSTED_DKIM_CLOUDFLARE_ENABLED {name: "HOSTED_DKIM_CLOUDFLARE_ENABLED", value: "True"}
+.hosted_dkim_cloudflare_ttl: &VAR_HOSTED_DKIM_CLOUDFLARE_TTL {name: "HOSTED_DKIM_CLOUDFLARE_TTL", value: "3600"}
+.hosted_dkim_cloudflare_zone_id: &VAR_HOSTED_DKIM_CLOUDFLARE_ZONE_ID {name: "HOSTED_DKIM_CLOUDFLARE_ZONE_ID", value: "c62211cc60fe5ed1bca1d600ddfd341f"}
 .oidc_fallback_match_by_email: &VAR_OIDC_FALLBACK_MATCH_BY_EMAIL {name: "OIDC_FALLBACK_MATCH_BY_EMAIL", value: "True"}
 .oidc_url_auth: &VAR_OIDC_URL_AUTH {name: "OIDC_URL_AUTH", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/auth/"}
 .oidc_url_jwks: &VAR_OIDC_URL_JWKS {name: "OIDC_URL_JWKS", value: "https://auth.tb.pro/realms/tbpro/protocol/openid-connect/certs/"}
@@ -44,11 +51,12 @@
 .redis_celery_results_db: &VAR_REDIS_CELERY_RESULTS_DB {name: "REDIS_CELERY_RESULTS_DB", value: "6"}
 .redis_internal_db: &VAR_REDIS_INTERNAL_DB {name: "REDIS_INTERNAL_DB", value: "0"}
 .redis_shared_db: &VAR_REDIS_SHARED_DB {name: "REDIS_SHARED_DB", value: "10"}
-.sentry_profile_sample_rate: &SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", value: "0.33"}
-.sentry_traces_sample_rate: &SENTRY_TRACES_SAMPLE_RATE {name: "SENTRY_TRACES_SAMPLE_RATE", value: "1.0"}
+.sentry_profile_sample_rate: &VAR_SENTRY_PROFILE_SAMPLE_RATE {name: "SENTRY_PROFILE_SAMPLE_RATE", value: "0.33"}
+.sentry_traces_sample_rate: &VAR_SENTRY_TRACES_SAMPLE_RATE {name: "SENTRY_TRACES_SAMPLE_RATE", value: "0.33"}
 .smtp_host: &VAR_SMTP_HOST {name: "SMTP_HOST", value: "mail.thundermail.com"}
 .smtp_port: &VAR_SMTP_PORT {name: "SMTP_PORT", value: "465"}
 .smtp_tls: &VAR_SMTP_TLS {name: "SMTP_TLS", value: "True"}
+.spf_host: &VAR_SPF_HOST {name: "SPF_HOST", value: "spf.thundermail.com"}
 .stalwart_base_api_url: &VAR_STALWART_BASE_API_URL {name: "STALWART_BASE_API_URL", value: "https://mailstrom-prod-management-i.thundermail.com:8080"}
 .stalwart_base_jmap_url: &VAR_STALWART_BASE_JMAP_URL {name: "STALWART_BASE_JMAP_URL", value: "https://mail.thundermail.com"}
 .support_contact: &VAR_SUPPORT_CONTACT {name: "SUPPORT_CONTACT", value: "dummy@example.org"}
@@ -91,6 +99,7 @@
 .sentry_dsn: &SECRET_SENTRY_DSN {name: "SENTRY_DSN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/sentry-dsn-aEWFMV"}
 .stalwart_api_auth_method: &SECRET_STALWART_API_AUTH_METHOD {name: "STALWART_API_AUTH_METHOD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR"}
 .stalwart_api_auth_string: &SECRET_STALWART_API_AUTH_STRING {name: "STALWART_API_AUTH_STRING", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN"}
+.hosted_dkim_cloudflare_api_token: &SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN {name: "HOSTED_DKIM_CLOUDFLARE_API_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/hosted-dkim-cloudflare-api-token-3rY2yV"}
 # Shared HMAC secret that Stalwart uses to sign outgoing webhook payloads. Must match the
 # `webhook.posthog.signature-key` value configured in Stalwart's admin API on mailstrom-prod.
 .stalwart_webhook_secret: &SECRET_STALWART_WEBHOOK_SECRET {name: "STALWART_WEBHOOK_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-webhook-secret-t8yGzq"}
@@ -152,6 +161,7 @@
     - *SECRET_SENTRY_DSN
     - *SECRET_STALWART_API_AUTH_METHOD
     - *SECRET_STALWART_API_AUTH_STRING
+    - *SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN
     - *SECRET_ZENDESK_API_TOKEN
     - *SECRET_ZENDESK_SUBDOMAIN
     - *SECRET_ZENDESK_USER_EMAIL
@@ -178,6 +188,14 @@ resources:
         - ecr.dkr
         - logs
         - secretsmanager
+
+      peering_accepters:
+        mzla-tb-prod:
+          vpc_peering_connection_id: pcx-03ce1cff6e3eab734
+          accepter:
+            allow_remote_vpc_dns_resolution: True
+          auto_accept: True
+
       peering_connections:
         mailstrom-prod:
           peered_cidrs:
@@ -188,6 +206,10 @@ resources:
             allow_remote_vpc_dns_resolution: True
           requester:
             allow_remote_vpc_dns_resolution: True
+
+      additional_routes:
+        - destination_cidr_block: 10.130.0.0/16  # mzla-tb-prod
+          vpc_peering_connection_id: pcx-03ce1cff6e3eab734
 
   # The __main.py__ here is very specific in the following way:
   # For each ECS cluster you eventually define, you **must** have one entry by the same exact name in the
@@ -304,6 +326,7 @@ resources:
         - oidc-sign-algo
         - stalwart-api-auth-method
         - stalwart-api-auth-key
+        - hosted-dkim-cloudflare-api-token
         - stalwart-webhook-secret
         - keycloak-admin-client-id
         - keycloak-admin-client-secret
@@ -374,6 +397,7 @@ resources:
                 - *VAR_KEYCLOAK_URL_API
                 - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                - *VAR_CUSTOM_DOMAINS_DO_VERIFY
                 - *VAR_OIDC_FALLBACK_MATCH_BY_EMAIL
                 - *VAR_OIDC_URL_AUTH
                 - *VAR_OIDC_URL_TOKEN
@@ -386,11 +410,20 @@ resources:
                 - *VAR_REDIS_CELERY_RESULTS_DB
                 - *VAR_REDIS_INTERNAL_DB
                 - *VAR_REDIS_SHARED_DB
+                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+                - *VAR_SENTRY_TRACES_SAMPLE_RATE
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
+                - *VAR_SPF_HOST
                 - *VAR_STALWART_BASE_API_URL
                 - *VAR_STALWART_BASE_JMAP_URL
+                - *VAR_STALWART_DKIM_STAGE_MANAGEMENT_ENABLED
+                - *VAR_HOSTED_DKIM_DOMAIN
+                - *VAR_HOSTED_DKIM_SELECTORS
+                - *VAR_HOSTED_DKIM_CLOUDFLARE_ENABLED
+                - *VAR_HOSTED_DKIM_CLOUDFLARE_TTL
+                - *VAR_HOSTED_DKIM_CLOUDFLARE_ZONE_ID
                 - *VAR_SUPPORT_CONTACT
                 - *VAR_TB_PRO_APPOINTMENT_URL
                 - *VAR_TB_PRO_SEND_URL
@@ -406,6 +439,16 @@ resources:
                   value: "no"
                 - name: POSTHOG_HOST
                   value: "https://us.i.posthog.com"
+                - name: ABANDONED_CART_TAG_HOURS
+                  value: "1"
+                - name: ABANDONED_CART_MAILCHIMP_TAG
+                  value: "abandoned_cart"
+                - name: INCOMPLETE_SIGNUP_PURGE_HOURS
+                  value: "120"
+                - name: INCOMPLETE_SIGNUP_PURGE_CRON_HOUR
+                  value: "3"
+                - name: INCOMPLETE_SIGNUP_PURGE_CRON_MINUTE
+                  value: "0"
 
         flower-prod:
           <<: *ACCOUNTS_TASK_DEFINITION
@@ -449,6 +492,7 @@ resources:
                 - *VAR_KEYCLOAK_URL_API
                 - *VAR_LOG_LEVEL
                 - *VAR_MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
+                - *VAR_CUSTOM_DOMAINS_DO_VERIFY
                 - *VAR_OIDC_FALLBACK_MATCH_BY_EMAIL
                 - *VAR_OIDC_URL_AUTH
                 - *VAR_OIDC_URL_TOKEN
@@ -461,11 +505,20 @@ resources:
                 - *VAR_REDIS_CELERY_RESULTS_DB
                 - *VAR_REDIS_INTERNAL_DB
                 - *VAR_REDIS_SHARED_DB
+                - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+                - *VAR_SENTRY_TRACES_SAMPLE_RATE
                 - *VAR_SMTP_HOST
                 - *VAR_SMTP_PORT
                 - *VAR_SMTP_TLS
+                - *VAR_SPF_HOST
                 - *VAR_STALWART_BASE_API_URL
                 - *VAR_STALWART_BASE_JMAP_URL
+                - *VAR_STALWART_DKIM_STAGE_MANAGEMENT_ENABLED
+                - *VAR_HOSTED_DKIM_DOMAIN
+                - *VAR_HOSTED_DKIM_SELECTORS
+                - *VAR_HOSTED_DKIM_CLOUDFLARE_ENABLED
+                - *VAR_HOSTED_DKIM_CLOUDFLARE_TTL
+                - *VAR_HOSTED_DKIM_CLOUDFLARE_ZONE_ID
                 - *VAR_SUPPORT_CONTACT
                 - *VAR_TB_PRO_APPOINTMENT_URL
                 - *VAR_TB_PRO_SEND_URL
@@ -654,6 +707,10 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-database-user-sSptNx
               - name: KC_BOOTSTRAP_ADMIN_PASSWORD
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-password-AnRwXP
+              # keycloak-config-cli (scripts/apply-mfa-config.sh) authenticates as the same admin
+              # service-account client the accounts app uses, to reconcile the MFA step-up flow.
+              - *SECRET_KEYCLOAK_ADMIN_CLIENT_ID
+              - *SECRET_KEYCLOAK_ADMIN_CLIENT_SECRET
             environment:
               - name: KC_DB
                 value: postgres
@@ -679,6 +736,22 @@ resources:
                 value: "https://accounts.tb.pro/contact"
               - name: KC_TBPRO_PRIMARY_DOMAIN
                 value: "thundermail.com"
+              # keycloak-mfa-rest: allow the accounts OIDC client's user tokens to self-manage MFA.
+              - name: KC_SPI_REALM_RESTAPI_EXTENSION_MFA_AUTHORIZED_CLIENTS
+                value: "thunderbird-accounts"
+              # Step-up gate for sensitive mutations: token must carry this acr with auth_time
+              # no older than the window. Keep aligned with accounts' MFA_RECENT_AUTH_SECONDS.
+              - name: KC_SPI_REALM_RESTAPI_EXTENSION_MFA_STEP_UP_ACR
+                value: "2"
+              - name: KC_SPI_REALM_RESTAPI_EXTENSION_MFA_STEP_UP_MAX_AGE_SECONDS
+                value: "600"
+              # Level-1 LoA window for keycloak-config-cli. MUST cover this realm's longest
+              # possible SSO session or a still-valid session re-prompts for the password.
+              # That is now ssoSessionMaxLifespanRememberMe (7776000, 90 days — reconciled by
+              # keycloak/config-cli/tbpro-mfa-stepup.yaml); keep these in sync if the realm's
+              # session settings change.
+              - name: MFA_L1_LOA_MAX_AGE
+                value: "7776000"
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
@@ -785,6 +858,9 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/mailchimp-list-id-OAj8yj
               - name: APPOINTMENT_CALDAV_SECRET
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/appointment-caldav-secret-eJOI7y
+              - *SECRET_POSTHOG_API_KEY
+              - *SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN
+
             environment:
               - name: TIMES_I_NEED_TO_REDEPLOY_WITHOUT_CHANGING_IMAGE
                 value: '2'
@@ -796,6 +872,8 @@ resources:
                 value: 'thundermail.com,tb.pro'
               - name: MIN_CUSTOM_DOMAIN_ALIAS_LENGTH
                 value: '3'
+              - name: CUSTOM_DOMAINS_DO_VERIFY
+                value: 'True'
               - name: ALLOWED_HOSTS
                 value: 'accounts.tb.pro'
               - name: APP_ENV
@@ -848,6 +926,8 @@ resources:
                 value: '465'
               - name: SMTP_TLS
                 value: 'True'
+              - name: SPF_HOST
+                value: 'spf.thundermail.com'
               - name: SUPPORT_CONTACT
                 value: dummy@example.org
               - name: OIDC_URL_AUTH
@@ -866,12 +946,26 @@ resources:
                 value: 'https://mail.thundermail.com'
               - name: STALWART_BASE_API_URL
                 value: 'https://mailstrom-prod-management-i.thundermail.com:8080'
+              - name: STALWART_DKIM_STAGE_MANAGEMENT_ENABLED
+                value: 'False'
+              - name: HOSTED_DKIM_DOMAIN
+                value: 'dkim.thunderhosted.com'
+              - name: HOSTED_DKIM_SELECTORS
+                value: 'tm1,tm2,tm3'
+              - name: HOSTED_DKIM_CLOUDFLARE_ENABLED
+                value: 'True'
+              - name: HOSTED_DKIM_CLOUDFLARE_TTL
+                value: '3600'
+              - name: HOSTED_DKIM_CLOUDFLARE_ZONE_ID
+                value: 'c62211cc60fe5ed1bca1d600ddfd341f'
               - name: TB_PRO_APPOINTMENT_URL
                 value: 'https://appointment.tb.pro/'
               - name: TB_PRO_SEND_URL
                 value: 'https://send.tb.pro/'
               - name: TB_PRO_WAIT_LIST_URL
                 value: 'https://tb.pro/waitlist/'
+              - name: WEBMAIL_URL
+                value: 'https://webmail.thundermail.com/'
               - name: KEYCLOAK_URL_API
                 value: 'https://auth.tb.pro/admin/realms/tbpro/'
               - name: KEYCLOAK_ADMIN_URL_TOKEN
@@ -884,6 +978,8 @@ resources:
                 value: '44379263732755'
               - name: VERIFY_PRIVATE_LINK_SSL
                 value: 'False'
+              - *VAR_SENTRY_PROFILE_SAMPLE_RATE
+              - *VAR_SENTRY_TRACES_SAMPLE_RATE
 
   tb:autoscale:EcsServiceAutoscaler:
     accounts:
@@ -912,21 +1008,3 @@ resources:
           accounts-prod-fargate-accounts-fargateservicealb-alb-accounts:
             response_time:
               threshold: 2
-
-  tb:ci:AwsAutomationUser:
-    ci:
-      access_keys: {}
-      enable_legacy_access_key: True
-      enable_ecr_image_push: true
-      ecr_repositories:
-        - thunderbird/accounts
-      enable_fargate_deployments: true
-      fargate_clusters:
-        - accounts-prod-fargate-keycloak
-        - accounts-prod-fargate-accounts
-        - accounts-prod
-      fargate_task_role_arns:
-        - arn:aws:iam::768512802988:role/accounts-prod-fargate-keycloak
-        - arn:aws:iam::768512802988:role/accounts-prod-fargate-accounts
-        - arn:aws:iam::768512802988:role/accounts-prod-afc-accounts-celery-prod
-        - arn:aws:iam::768512802988:role/accounts-prod-afc-accounts-flower-prod

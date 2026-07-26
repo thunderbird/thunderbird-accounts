@@ -1,17 +1,16 @@
 // utility functions that may be used by any tests
 import { TBAcctsOIDCPage } from "../pages/tb-accts-oidc-page";
 import { TBAcctsHubPage } from "../pages/tb-accts-hub-page";
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, Browser, request } from '@playwright/test';
 import path from 'path';
 
 import {
     ACCTS_TARGET_ENV,
     ACCTS_HUB_URL,
-    TIMEOUT_5_SECONDS,
     TIMEOUT_30_SECONDS,
 } from "../const/constants";
 
-const authFile = path.join(__dirname, '../test-results/.auth/user.json');
+export const authFile = path.join(__dirname, '../test-results/.auth/user.json');
 
 export const isAllowListEnabled = async (page: Page) => {
     return await page.evaluate('window?._page?.features?.be_allowList');
@@ -25,6 +24,25 @@ export const showPageConsoleLog = async (page: Page) => {
     page.on('console', msg => console.log(`> ${msg.text()}`));
 
 }
+
+/**
+ * Override values on the server-rendered window._page object before the Vue app reads it.
+ */
+export const overridePageData = async (page: Page, overrides: Record<string, unknown>) => {
+    await page.addInitScript((pageOverrides) => {
+        let pageData: Record<string, unknown>;
+
+        Object.defineProperty(window, '_page', {
+            configurable: true,
+            get() {
+                return pageData;
+            },
+            set(value: Record<string, unknown>) {
+                pageData = { ...value, ...pageOverrides };
+            },
+        });
+    }, overrides);
+};
   
 /**
  * Similar to waitForLoadState but works with our vue applications.
@@ -41,23 +59,31 @@ export const waitForVueApp = async (page: Page) => {
  * in then just exit; otherwise if not currently signed in then sign in using the credentials
  * provided in the .env file. When singing in to the local stack we use a local sign in page and
  * aren't redirected to TB Accounts OIDC to sign in.
+ * 
+ * If username or password aren't provided the env values will be used.
  */
-export const navigateToAccountsHubAndSignIn = async (page: Page) => {
+export const navigateToAccountsHubAndSignIn = async (page: Page, username: string | null = null, password: string | null = null) => {
     console.log(`navigating to accounts hub ${ACCTS_TARGET_ENV} (${ACCTS_HUB_URL})`);   
     const tbAcctsSignInPage = new TBAcctsOIDCPage(page);
     const tbAcctsHubPage = new TBAcctsHubPage(page);
     
-    await page.goto(`${ACCTS_HUB_URL}`);
-    //await page.waitForTimeout(TIMEOUT_5_SECONDS);
+    await page.goto(`${ACCTS_HUB_URL}`, { waitUntil: 'domcontentloaded' });
     await waitForVueApp(page);
     
     // if we are already signed in then we can skip this
     if (await tbAcctsSignInPage.signInHeaderText.isVisible() && await tbAcctsSignInPage.signInButton.isEnabled()) {
-        await tbAcctsSignInPage.signIn();
+        await tbAcctsSignInPage.signIn(username, password);
     }
 
-
     await waitForVueApp(page);
+
+    // if tests are running on a new local stack (or new account) the terms of service page might be
+    // displayed; if so we need to accept the terms of service and then continue
+    if (await tbAcctsHubPage.acceptTOSButton.isVisible()) {
+        console.log('accepting the TB Pro ToS');
+        await tbAcctsHubPage.acceptTOSButton.click();
+    }
+
     // Confirm the signed-in hub actually rendered by waiting for the banner's
     // UserAvatar (the stable signed-in signal after the nav overhaul in #695).
     await expect(tbAcctsHubPage.userAvatar).toBeVisible({ timeout: TIMEOUT_30_SECONDS });

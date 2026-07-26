@@ -1,4 +1,11 @@
-export const addCustomDomain = async (domainName: string) => {
+type AddCustomDomainResponse = {
+  success: boolean;
+  domain_name?: string;
+  error?: string;
+  code?: string;
+};
+
+export const addCustomDomain = async (domainName: string): Promise<AddCustomDomainResponse> => {
   const response = await fetch(`/custom-domains/add`, {
     method: 'POST',
     headers: {

@@ -10,15 +10,39 @@ export enum STEP {
   VERIFY_DOMAIN = 'verify',
 };
 
+export enum DNSRecordStatus {
+  MATCH = 'match',
+  CONFLICT = 'conflict',
+  MISSING = 'missing',
+  UNKNOWN = 'unknown',
+};
+
 export type DNSRecord = {
   type: string;
   name: string;
   content: string;
   priority?: string;
+  status?: DNSRecordStatus;
+  existing_values?: string[];
+};
+
+export type StaleDNSRecord = {
+  code: string;
+  type: string;
+  name: string;
+  existing_values: string[];
 };
 
 export type CustomDomain = {
   name: string;
   status: DOMAIN_STATUS;
   emailsCount?: number;
+};
+
+export type DomainVerificationResult = {
+  domainName: string;
+  dnsRecords: DNSRecord[];
+  staleDnsRecords: StaleDNSRecord[];
+  criticalErrors: string[];
+  warnings: string[];
 };

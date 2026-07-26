@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 from importlib.metadata import version
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.types import Event, Hint
@@ -152,6 +153,8 @@ INSTALLED_APPS = [
     'thunderbird_accounts.authentication',
     'thunderbird_accounts.subscription',
     'thunderbird_accounts.mail',
+    'thunderbird_accounts.legal',
+    'thunderbird_accounts.support',
     'thunderbird_accounts.core',
     'thunderbird_accounts.telemetry',
     'thunderbird_accounts.admin.AccountsAdminConfig',  # Instead of 'django.contrib.admin'
@@ -168,6 +171,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_vite',
     'corsheaders',
+    'waffle',
 ]
 
 MIDDLEWARE = [
@@ -183,17 +187,31 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'mozilla_django_oidc.middleware.SessionRefresh',
     'thunderbird_accounts.authentication.middleware.OIDCRefreshSession',
+    'waffle.middleware.WaffleMiddleware',
     # This should be last
     'thunderbird_accounts.mail.middleware.FixMissingArchivesFolderMiddleware',
 ]
 
 ROOT_URLCONF = 'thunderbird_accounts.urls'
 
+loaders = [
+    (
+        'django.template.loaders.cached.Loader',
+        [
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader',
+        ],
+    )
+]
+if IS_TEST:
+    loaders = [
+        'django.template.loaders.filesystem.Loader',
+        'django.template.loaders.app_directories.Loader',
+    ]
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [BASE_DIR.joinpath('templates')],
-        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -201,16 +219,18 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'loaders': loaders,
         },
     },
 ]
+
 
 WSGI_APPLICATION = 'thunderbird_accounts.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 AVAILABLE_DATABASES = {
-    'dev': {
+    'main': {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.getenv('DATABASE_NAME'),
@@ -218,6 +238,9 @@ AVAILABLE_DATABASES = {
             'PASSWORD': os.getenv('DATABASE_PASSWORD'),
             'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
             'PORT': os.getenv('DATABASE_PORT', '5432'),
+            # Neon recommends these settings (https://neon.com/docs/guides/django)
+            'DISABLE_SERVER_SIDE_CURSORS': True,  # Disable server-side cursors due to db pooling issues
+            'CONN_HEALTH_CHECKS': True,  # Test db connection before re-use between requests
         },
     },
     'test': {
@@ -228,7 +251,7 @@ AVAILABLE_DATABASES = {
     },
 }
 
-DATABASES = AVAILABLE_DATABASES['test'] if IS_TEST else AVAILABLE_DATABASES['dev']
+DATABASES = AVAILABLE_DATABASES['test'] if IS_TEST else AVAILABLE_DATABASES['main']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -263,9 +286,20 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'is_username_available': '30/minute',
-        'sign_up': '10/minute'
-    }
+        'sign_up': '15/minute',
+        'can_i_sign_up': '10/minute',  # Give them a few refreshes
+        'check_email_is_on_allow_list': '10/minute',
+        'analytics': '1000/minute',  # Just in case
+        'totp_confirm': '10/minute',
+        'recovery_codes_regenerate': '10/minute',
+        'support_customer_api': '100/day',
+    },
 }
+
+if not DEBUG:
+    REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = [
+        'rest_framework.renderers.JSONRenderer',
+    ]
 
 REDIS_URL = os.getenv('REDIS_URL')
 AVAILABLE_CACHES = {
@@ -372,6 +406,26 @@ if AUTH_SCHEME == 'oidc':
     KEYCLOAK_ADMIN_CLIENT_SECRET = os.getenv('KEYCLOAK_ADMIN_CLIENT_SECRET')
     KEYCLOAK_ADMIN_TOKEN_ENDPOINT = os.getenv('KEYCLOAK_ADMIN_URL_TOKEN')
 
+    # Realm base URL (/realms/{realm}/). The keycloak-mfa-rest provider and Keycloak's
+    # built-in self-service endpoints (e.g. the Account REST API) both hang off this, and
+    # all take the end user's forwarded OIDC access token (session 'oidc_access_token') as
+    # the bearer — Keycloak scopes them to the token subject. Defaults to the admin API
+    # host with the admin path swapped for the realm path; override with KEYCLOAK_URL_REALM.
+    KEYCLOAK_REALM_ENDPOINT = os.getenv('KEYCLOAK_URL_REALM') or (
+        f'{KEYCLOAK_API_ENDPOINT.replace("/admin/realms/", "/realms/").rstrip("/")}/'
+        if KEYCLOAK_API_ENDPOINT
+        else None
+    )
+
+    # Base URL for the keycloak-mfa-rest provider, mounted on the realm path
+    # (/realms/{realm}/mfa/). It's a custom SPI plugin so it can be relocated; override
+    # with KEYCLOAK_URL_MFA if it differs from the realm base. The provider's
+    # authorized-clients allowlist is set (Keycloak-side) to this app's OIDC client
+    # (OIDC_RP_CLIENT_ID), since that's the user token's azp.
+    KEYCLOAK_MFA_API_ENDPOINT = os.getenv('KEYCLOAK_URL_MFA') or (
+        f'{KEYCLOAK_REALM_ENDPOINT}mfa/' if KEYCLOAK_REALM_ENDPOINT else None
+    )
+
     OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = os.getenv('OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS', 60 * 15)
 else:
     OIDC_RP_CLIENT_ID = None
@@ -387,18 +441,36 @@ STALWART_BASE_JMAP_URL = os.getenv('STALWART_BASE_JMAP_URL')
 STALWART_BASE_API_URL = os.getenv('STALWART_BASE_API_URL')
 STALWART_API_AUTH_STRING = os.getenv('STALWART_API_AUTH_STRING')
 STALWART_API_AUTH_METHOD = os.getenv('STALWART_API_AUTH_METHOD')
-STALWART_DKIM_ALGO = 'Ed25519'
+STALWART_DKIM_ALGOS = ['Ed25519', 'Rsa']
+STALWART_DKIM_ALGO_SELECTORS = {
+    'Rsa': 'tm1',
+    'Ed25519': 'tm2',
+}
+# Stalwart 0.15 does not expose the admin JMAP DKIM signature lifecycle API.
+STALWART_DKIM_STAGE_MANAGEMENT_ENABLED = os.getenv('STALWART_DKIM_STAGE_MANAGEMENT_ENABLED', '').lower() == 'true'
 STALWART_WEBHOOK_SECRET = os.getenv('STALWART_WEBHOOK_SECRET')
+
+HOSTED_DKIM_DOMAIN = os.getenv('HOSTED_DKIM_DOMAIN')
+HOSTED_DKIM_SELECTORS = [
+    selector.strip() for selector in os.getenv('HOSTED_DKIM_SELECTORS', 'tm1,tm2,tm3').split(',') if selector.strip()
+]
+HOSTED_DKIM_CLOUDFLARE_ENABLED = os.getenv('HOSTED_DKIM_CLOUDFLARE_ENABLED', '').lower() == 'true'
+HOSTED_DKIM_CLOUDFLARE_API_TOKEN = os.getenv('HOSTED_DKIM_CLOUDFLARE_API_TOKEN')
+HOSTED_DKIM_CLOUDFLARE_ZONE_ID = os.getenv('HOSTED_DKIM_CLOUDFLARE_ZONE_ID')
+HOSTED_DKIM_CLOUDFLARE_TTL = int(os.getenv('HOSTED_DKIM_CLOUDFLARE_TTL', 1))
 
 # Stalwart telemetry: map of incoming Stalwart event types to PostHog event names.
 STALWART_EVENT_MAP = {
     'message-ingest.ham': 'thundermail.message-ingest.ham',
     'message-ingest.spam': 'thundermail.message-ingest.spam',
-    'queue.queue-message-authenticated': 'thundermail.queue.queue-message-authenticated',
+    'queue.queue-message-authenticated': 'thundermail.message-sending.sent',
 }
 # Cache config for the Stalwart accountId/email -> hashed oidc_id lookup.
 STALWART_USER_CACHE_PREFIX = 'stalwart_uid:'
 STALWART_USER_CACHE_TTL = 3600
+
+# List of acceptable frontend events for the frontend telemetry route.
+FRONTEND_EVENTS = ['accounts.sign-up.support', 'accounts.sign-up.error', 'accounts.sign-up.step']
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
@@ -407,6 +479,8 @@ LANGUAGE_CODE = 'en'
 
 # Default language in accounts (todo: merge with language_code)
 DEFAULT_LANGUAGE = 'en'
+
+SUPPORTED_LEGAL_LANGUAGES = ['en']
 
 TIME_ZONE = 'UTC'
 
@@ -452,6 +526,7 @@ CONNECTION_INFO = {
     'JMAP': {'HOST': os.getenv('JMAP_HOST'), 'PORT': os.getenv('JMAP_PORT'), 'TLS': os.getenv('JMAP_TLS') == 'True'},
     'SMTP': {'HOST': os.getenv('SMTP_HOST'), 'PORT': os.getenv('SMTP_PORT'), 'TLS': os.getenv('SMTP_TLS') == 'True'},
 }
+SPF_HOST = os.getenv('SPF_HOST')
 
 ALLOWED_EMAIL_DOMAINS: list[str] = (
     [domain.strip() for domain in os.getenv('ALLOWED_EMAIL_DOMAINS', '').split(',')]
@@ -460,6 +535,7 @@ ALLOWED_EMAIL_DOMAINS: list[str] = (
 )
 
 MIN_CUSTOM_DOMAIN_ALIAS_LENGTH = int(os.getenv('MIN_CUSTOM_DOMAIN_ALIAS_LENGTH', '3'))
+CUSTOM_DOMAINS_DO_VERIFY = os.getenv('CUSTOM_DOMAINS_DO_VERIFY', 'false').lower() == 'true'
 
 # The email domain that will be used for account creation and login
 PRIMARY_EMAIL_DOMAIN = (
@@ -493,12 +569,14 @@ CELERY_BEAT_SCHEDULER = 'redbeat.RedBeatScheduler'
 # A new beat worker can't do work until the lock is released.
 CELERY_REDBEAT_LOCK_TIMEOUT = 330
 
-CELERY_BEAT_SCHEDULE = {}
+
+INCOMPLETE_SIGNUP_PURGE_HOURS = int(os.getenv('INCOMPLETE_SIGNUP_PURGE_HOURS', '120'))  # 5 days
 
 KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS = int(os.getenv('KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS', '900'))
 
 POSTHOG_API_KEY = os.getenv('POSTHOG_API_KEY')
 POSTHOG_HOST = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com')
+POSTHOG_NO_SUBSCRIPTION_STATUS = 'none'
 
 KEYCLOAK_EVENT_MAP = {
     'LOGIN': 'accounts.login',
@@ -515,6 +593,19 @@ KEYCLOAK_SEEN_EVENTS_CACHE_KEY = 'keycloak_poll:seen_event_ids'
 KEYCLOAK_SEEN_EVENTS_CACHE_TTL = 3600
 KEYCLOAK_EVENTS_PAGE_SIZE = 500
 
+# TOTP secrets and recovery codes are generated, validated, and hashed entirely by
+# the keycloak-mfa-rest provider (Keycloak's own credential providers). Accounts only
+# orchestrates the flow, so the secret/digit/period/algorithm tunables live in Keycloak.
+MFA_TOTP_ISSUER = 'Thunderbird Accounts'
+# TTL for the transient pending-TOTP secret cached between setup and confirm.
+MFA_SETUP_CACHE_TTL = 600
+MFA_RECENT_AUTH_SECONDS = 600
+# Refresh the user's access token slightly before its real expiry so a token that's valid
+# now but dies mid-request isn't forwarded to Keycloak and rejected.
+MFA_ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS = 30
+MFA_KEYCLOAK_ACR_VALUE = '2'
+MFA_DEFAULT_NEXT_PATH = '/manage-mfa'
+
 # Shared Celery task options for any task that submits to PostHog, so all tasks
 # have the same behaviour and error handling.
 POSTHOG_TASK_KWARGS = {
@@ -524,6 +615,20 @@ POSTHOG_TASK_KWARGS = {
     'max_retries': 6,
 }
 
+CELERY_BEAT_SCHEDULE = {
+    'purge-incomplete-signups': {
+        'task': 'thunderbird_accounts.authentication.tasks.purge_incomplete_signups',
+        'schedule': crontab(
+            hour=int(os.getenv('INCOMPLETE_SIGNUP_PURGE_CRON_HOUR', '3')),
+            minute=int(os.getenv('INCOMPLETE_SIGNUP_PURGE_CRON_MINUTE', '0')),
+        ),
+    },
+    'purge-stale-test-allow-list-entries': {
+        'task': 'thunderbird_accounts.authentication.tasks.purge_stale_test_allow_list_entries',
+        'schedule': crontab(), # Every minute
+    }
+}
+
 if POSTHOG_API_KEY:
     CELERY_BEAT_SCHEDULE['poll-keycloak-events'] = {
         'task': 'thunderbird_accounts.telemetry.tasks.poll_keycloak_events',
@@ -531,11 +636,16 @@ if POSTHOG_API_KEY:
     }
 
 # Some debug info for sentry
-sentry_sdk.set_extra('REDIS_URL', REDIS_URL)
-sentry_sdk.set_extra('CELERY_BROKER_URL', CELERY_BROKER_URL)
-sentry_sdk.set_extra('CELERY_RESULT_BACKEND', CELERY_RESULT_BACKEND)
-sentry_sdk.set_extra('CELERY_RESULT_EXPIRES', CELERY_RESULT_EXPIRES)
-sentry_sdk.set_extra('CELERY_TASK_ALWAYS_EAGER', CELERY_TASK_ALWAYS_EAGER)
+sentry_sdk.set_context(
+    'celery_settings',
+    {
+        'REDIS_URL': REDIS_URL,
+        'CELERY_BROKER_URL': CELERY_BROKER_URL,
+        'CELERY_RESULT_BACKEND': CELERY_RESULT_BACKEND,
+        'CELERY_RESULT_EXPIRES': CELERY_RESULT_EXPIRES,
+        'CELERY_TASK_ALWAYS_EAGER': CELERY_TASK_ALWAYS_EAGER,
+    },
+)
 
 # Cors
 CORS_PREFLIGHT_MAX_AGE = 0  # For debugging purposes
@@ -554,11 +664,21 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not IS_DEV else
 TB_PRO_APPOINTMENT_URL: str = os.getenv('TB_PRO_APPOINTMENT_URL')
 TB_PRO_SEND_URL: str = os.getenv('TB_PRO_SEND_URL')
 TB_PRO_WAIT_LIST_URL: str = os.getenv('TB_PRO_WAIT_LIST_URL')
+WEBMAIL_URL: str = os.getenv('WEBMAIL_URL')
 
 MAILCHIMP_DC = os.getenv('MAILCHIMP_DC')
 MAILCHIMP_API_KEY = os.getenv('MAILCHIMP_API_KEY')
 MAILCHIMP_LIST_ID = os.getenv('MAILCHIMP_LIST_ID')
 USE_MAILCHIMP = bool(MAILCHIMP_API_KEY)  # If we don't have an api key disable mailchimp
+
+ABANDONED_CART_TAG_HOURS = int(os.getenv('ABANDONED_CART_TAG_HOURS', '1'))
+ABANDONED_CART_MAILCHIMP_TAG = os.getenv('ABANDONED_CART_MAILCHIMP_TAG', 'abandoned_cart')
+
+if USE_MAILCHIMP:
+    CELERY_BEAT_SCHEDULE['tag-abandoned-cart-mailchimp'] = {
+        'task': 'thunderbird_accounts.authentication.tasks.tag_abandoned_cart_in_mailchimp',
+        'schedule': crontab(minute=0),
+    }
 
 # While they currently line up, we need to ensure that is consistent.
 # https://mailchimp.com/help/view-and-edit-contact-languages/#Language_codes
@@ -572,3 +692,13 @@ VERIFY_PRIVATE_LINK_SSL = True if os.getenv('VERIFY_PRIVATE_LINK_SSL', 'true').l
 
 # For Appointment's CalDAV auto-setup
 APPOINTMENT_APP_PASSWORD_PREFIX: str = 'appointment-caldav-setup-'
+
+# Max seconds for each DNS lookup when checking stale records
+STALE_DNS_LOOKUP_LIFETIME: float = 2.0
+
+# For contact support form allow list-less users
+CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS = True
+
+# Allow list entries (and user's created from those entries) with ``is_test_account=True``
+# become stale and are removed in a cron job after this many hours
+TEST_ALLOW_LIST_ENTRIES_STALE_TIME_IN_MINS = 5

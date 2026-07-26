@@ -8,6 +8,22 @@ import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+const firefoxLaunchOptions = {
+  firefoxUserPrefs: {
+    // Disable Firefox's "insecure form submission" confirmation dialog. The
+    // local stack runs over plain HTTP, so otherwise every login form submit
+    // hangs waiting on a modal that Playwright can't reach.
+    'security.warn_submit_insecure': false,
+    'security.warn_submit_secure_to_insecure': false,
+    // Disable HTTPS-First upgrades: the local stack is plain HTTP, and when
+    // another local service occupies :443 (e.g. Stalwart) the silent upgrade
+    // lands on its self-signed cert and Firefox shows a security interstitial
+    // instead of falling back to http.
+    'dom.security.https_first': false,
+    'dom.security.https_first_schemeless': false,
+  },
+};
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -24,7 +40,7 @@ export default defineConfig({
   // Global timeout: Playwright will timeout if the entire session (includes all test runs) exceeds this.
   // Must take into account running on mulitple browsers (and BrowserStack is much slower too!). Odds are the
   // tests will time out at the locator/test level first anyway; but there is no default so best to specify
-  globalTimeout: 10 * 60 * 1000,
+  globalTimeout: 12 * 60 * 1000,
   // Individual test timeout - a single test will time out if it is still running after this time (ms)
   timeout: 150 * 1000, // 2.5 minutes
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
@@ -52,7 +68,8 @@ export default defineConfig({
     { name: 'desktop-setup',
       testMatch: /.*\.desktop.setup\.ts/,
       use: {
-        ...devices['Desktop Chrome'],
+        ...devices['Desktop Firefox'],
+        launchOptions: firefoxLaunchOptions,
         screenshot: 'only-on-failure',
        },
     },
@@ -73,12 +90,34 @@ export default defineConfig({
       name: 'firefox',
       use: {
         ...devices['Desktop Firefox'],
+        launchOptions: firefoxLaunchOptions,
         screenshot: 'only-on-failure',
         // Use prepared auth state
         storageState: 'test-results/.auth/user.json',
        },
       dependencies: ['desktop-setup'],
     },
+
+    {
+      name: 'safari',
+      use: {
+        ...devices['Desktop Safari'],
+        screenshot: 'only-on-failure',
+        // Use prepared auth state
+        storageState: 'test-results/.auth/user.json',
+      },
+      dependencies: ['desktop-setup'],
+    },
+  
+      /* Test against mobile viewports. */
+    {
+      name: 'Google-Pixel-7-View',
+      use: {
+        ...devices['Pixel 7'],
+        screenshot: 'only-on-failure',
+       },
+    },
+    // no dependency as mobile browsers don't support loading auth state so must sign-in for each test
   ],
 
   /* Run your local dev server before starting the tests */

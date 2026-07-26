@@ -51,7 +51,8 @@ Then edit your local `.env` file and provide the following values:
 ```dotenv
 ACCTS_HUB_URL=<URL-for-TB-Accts-Hub>
 ACCTS_OIDC_EMAIL=<existing-tbpro-user-email>
-ACCTS_OIDC_PWORD=<exisiting-tbro-password>
+ACCTS_OIDC_PWORD=<existing-tbpro-password>
+ACCTS_OIDC_RECOVERY_EMAIL=<existing-tbpro-user-recovery-email>
 PRIMARY_THUNDERMAIL_EMAIL=<primary-thundermail-email-address>
 ```
 
@@ -96,6 +97,18 @@ If you don't want to or cannot setup the backend for Paddle you can skip the Pad
 npm run e2e-test -- --grep-invert @paddle
 ```
 
+## Running on a Local Playwright Emulated Mobile Browser View
+
+You can run the E2E tests on your local machine on emulated mobile browser views provided by Playwright (as installed above). Note: This is not a real device emulator, it just uses a local plawyright browser and sets the browser screen size to match a mobile device, etc. More info about mobile emulation [is here](https://playwright.dev/docs/emulation).
+
+To run the E2E tests on an emulated Google Pixel 7 mobile browser view (still in `test/e2e`):
+
+```bash
+npx playwright test --grep e2e-mobile-suite --project=Google-Pixel-7-View --headed
+```
+
+Note that for project you can use any of the project/browser names as listed in the [playwright.config.ts](./playwright.config.ts) file (but the browser must be installed on your local machine).
+
 ## Running the E2E tests against the stage environmnent
 
 `Prerequisite`: When running the tests on the stage env, the TB Accounts test account must have a Thundermail email address already set up.
@@ -113,6 +126,7 @@ Then edit your local `.env` file and provide the following values:
 ACCTS_HUB_URL=<URL-for-TB-Accts-Hub>
 ACCTS_OIDC_EMAIL=<existing-tbpro-user-email>
 ACCTS_OIDC_PWORD=<exisiting-tbro-password>
+ACCTS_OIDC_RECOVERY_EMAIL=<existing-tbpro-user-recovery-email>
 PRIMARY_THUNDERMAIL_EMAIL=<primary-thundermail-email-address>
 ```
 
@@ -132,6 +146,18 @@ To run the E2E tests in debug mode (still in `test/e2e`):
 
 ```bash
 npm run e2e-test-debug
+```
+
+To run the deployment-analysis E2E tests, follow the above setup instructions and then run:
+
+```bash
+npm run deployment-analysis-e2e
+```
+
+Or to watch the tests run:
+
+```bash
+npm run deployment-analysis-e2e-headed
 ```
 
 ## Running on BrowserStack
@@ -163,6 +189,12 @@ To run the E2E tests on BrowserStack (still in `test/e2e`):
 
 ```bash
 npm run e2e-test-browserstack-desktop-firefox
+```
+
+Or on mobile:
+
+```bash
+npm run e2e-tests-mobile-browserstack-android-chrome
 ```
 
 After the tests finish in your local console you'll see a link to the BrowserStack test session; when signed into your BrowserStack account you'll be able to use that link to see the test session results including video playback.

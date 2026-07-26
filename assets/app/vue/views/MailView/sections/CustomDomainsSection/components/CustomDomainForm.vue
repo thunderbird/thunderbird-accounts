@@ -1,19 +1,34 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
-import { PhX } from '@phosphor-icons/vue';
+import { PhWarningCircle, PhWarningOctagon } from '@phosphor-icons/vue';
 
 // Types
-import { CustomDomain, DNSRecord, STEP, DOMAIN_STATUS } from '../types';
+import { CustomDomain, DNSRecord, StaleDNSRecord, STEP, DOMAIN_STATUS, DNSRecordStatus } from '../types';
+import type { DomainVerificationResult } from '../types';
 
 // API
 import { addCustomDomain, verifyDomain, getRemoteDNSRecords } from '../api';
 
-// Utils
-import { generateDNSRecords, extractDKIMRecords, deduplicateCriticalErrors } from '../utils';
+const { t, te } = useI18n();
 
-const { t } = useI18n();
+type InlineIssueSeverity = 'critical' | 'warning';
+
+type InlineIssue = {
+  key: string;
+  severity: InlineIssueSeverity;
+  text: string;
+};
+
+type DnsTableRow = {
+  key: string;
+  record: DNSRecord;
+  issues: InlineIssue[];
+  severity: InlineIssueSeverity | null;
+  isStale: boolean;
+  isConflict: boolean;
+};
 
 const props = defineProps<{
   customDomains: CustomDomain[];
@@ -27,61 +42,416 @@ const emit = defineEmits<{
 }>();
 
 const step = ref<STEP>(STEP.INITIAL);
-const customDomain = ref(null);
+const customDomain = ref<string | null>(null);
 const isAddingCustomDomain = ref(false);
 const isVerifyingDomain = ref(false);
 const customDomainError = ref<string>(null);
 const domainAlreadyConfigured = ref(false);
-const verificationCriticalErrors = ref<string[]>([]);
 
 const maxCustomDomains = window._page?.maxCustomDomains;
 
 const recordsInfo = ref<DNSRecord[]>([]);
+const staleDnsRecords = ref<StaleDNSRecord[]>([]);
+const criticalErrors = ref<string[]>([]);
+const validationWarnings = ref<string[]>([]);
+const showMissingIssues = ref(false);
+const verificationResultsByDomain = ref<Record<string, Omit<DomainVerificationResult, 'domainName'>>>({});
+
+const formatValidationError = (error: string): string => {
+  const translationKey = `views.mail.sections.customDomains.verificationValidationErrors.${error}`;
+  return te(translationKey) ? t(translationKey) : error;
+};
+
+const currentValue = (record: DNSRecord): string => record.existing_values?.join(', ') || '-';
+
+const isMxRecord = (record: DNSRecord): boolean => record.type === 'MX';
+
+const isSpfRecord = (record: DNSRecord): boolean =>
+  record.type === 'TXT' && record.content.trim().toLowerCase().startsWith('v=spf1');
+
+const spfIncludeValue = (record: DNSRecord): string =>
+  record.content.split(/\s+/).find((part) => part.startsWith('include:')) ?? 'the expected include value';
+
+const normalizeDomainName = (domainName?: string | null): string =>
+  (domainName ?? '').trim().replace(/\.$/, '').toLowerCase();
+
+const dkimRecordDomain = (record: DNSRecord): string | null => {
+  if (record.type !== 'CNAME') {
+    return null;
+  }
+
+  const normalizedName = normalizeDomainName(record.name);
+  const domainKeySegment = '._domainkey.';
+  const domainKeyIndex = normalizedName.indexOf(domainKeySegment);
+  if (domainKeyIndex <= 0) {
+    return null;
+  }
+
+  return normalizedName.slice(domainKeyIndex + domainKeySegment.length);
+};
+
+const isDkimRecordForCurrentDomain = (record: DNSRecord): boolean =>
+  dkimRecordDomain(record) === normalizeDomainName(customDomain.value);
+
+const missingOrConflicted = (record: DNSRecord): boolean =>
+  record.status === DNSRecordStatus.MISSING || record.status === DNSRecordStatus.CONFLICT;
+
+const missingValidationKeys = new Set(['mxLookupError', 'spfRecordNotFound', 'dkimRecordNotFound']);
+
+const hasValidationIssue = (key: string): boolean =>
+  criticalErrors.value.includes(key) || validationWarnings.value.includes(key);
+
+const validationSeverity = (key?: string | null): InlineIssueSeverity =>
+  key && criticalErrors.value.includes(key) ? 'critical' : 'warning';
+
+const shouldAnchorDkimMissingIssue = (record: DNSRecord): boolean =>
+  showMissingIssues.value
+  && hasValidationIssue('dkimRecordNotFound')
+  && isDkimRecordForCurrentDomain(record);
+
+const validationResult = (data?: {
+  critical_errors?: string[];
+  warnings?: string[];
+  dns_records?: DNSRecord[];
+  stale_dns_records?: StaleDNSRecord[];
+}): Pick<DomainVerificationResult, 'criticalErrors' | 'warnings' | 'dnsRecords' | 'staleDnsRecords'> => ({
+  criticalErrors: data?.critical_errors ?? [],
+  warnings: data?.warnings ?? [],
+  dnsRecords: data?.dns_records ?? [],
+  staleDnsRecords: data?.stale_dns_records ?? [],
+});
+
+const applyVerificationResult = (
+  domainName: string,
+  result: Omit<DomainVerificationResult, 'domainName'>,
+  options: { showMissingIssues: boolean; cacheResult?: boolean }
+) => {
+  customDomain.value = domainName;
+  recordsInfo.value = result.dnsRecords;
+  staleDnsRecords.value = result.staleDnsRecords;
+  criticalErrors.value = result.criticalErrors;
+  validationWarnings.value = result.warnings;
+  showMissingIssues.value = options.showMissingIssues;
+  step.value = STEP.VERIFY_DOMAIN;
+
+  if (options.cacheResult) {
+    verificationResultsByDomain.value = {
+      ...verificationResultsByDomain.value,
+      [domainName]: result,
+    };
+  }
+};
+
+const issueSeverity = (issues: InlineIssue[]): InlineIssueSeverity | null => {
+  if (issues.some((issue) => issue.severity === 'critical')) {
+    return 'critical';
+  }
+  if (issues.length > 0) {
+    return 'warning';
+  }
+  return null;
+};
+
+const recordValidationKeys = (record: DNSRecord): string[] => {
+  const keys = [];
+  if (isMxRecord(record)) {
+    keys.push('mxLookupError');
+  }
+  if (isSpfRecord(record)) {
+    keys.push('spfRecordNotFound');
+  }
+  if (isDkimRecordForCurrentDomain(record)) {
+    keys.push('dkimRecordNotFound');
+  }
+  return keys;
+};
+
+const recordStatusIssue = (record: DNSRecord): InlineIssue | null => {
+  const validationKeys = recordValidationKeys(record);
+  const validationKey = validationKeys.find(
+    (key) => criticalErrors.value.includes(key) || validationWarnings.value.includes(key)
+  );
+  const missingKey = validationKey ?? validationKeys.find((key) => missingValidationKeys.has(key));
+
+  if (isMxRecord(record) && record.status === DNSRecordStatus.CONFLICT) {
+    return {
+      key: 'mxLookupError',
+      severity: 'critical',
+      text: t('views.mail.sections.customDomains.mxRecordConflictWarning'),
+    };
+  }
+
+  if (isMxRecord(record) && record.status === DNSRecordStatus.MISSING) {
+    if (!showMissingIssues.value) {
+      return null;
+    }
+
+    return {
+      key: 'mxLookupError',
+      severity: 'critical',
+      text: formatValidationError('mxLookupError'),
+    };
+  }
+
+  if (record.status === DNSRecordStatus.UNKNOWN && shouldAnchorDkimMissingIssue(record)) {
+    return {
+      key: 'dkimRecordNotFound',
+      severity: validationSeverity('dkimRecordNotFound'),
+      text: t('views.mail.sections.customDomains.recordMissingWarning'),
+    };
+  }
+
+  if (isSpfRecord(record) && record.status === DNSRecordStatus.CONFLICT) {
+    return {
+      key: 'spfRecordNotFound',
+      severity: 'warning',
+      text: t('views.mail.sections.customDomains.spfRecordConflictWarning', { includeValue: spfIncludeValue(record) }),
+    };
+  }
+
+  if (record.status === DNSRecordStatus.CONFLICT) {
+    return {
+      key: validationKey ?? `${record.type}-${record.name}-conflict`,
+      severity: validationSeverity(validationKey),
+      text: t('views.mail.sections.customDomains.recordConflictWarning', { currentValue: currentValue(record) }),
+    };
+  }
+
+  if (record.status === DNSRecordStatus.MISSING) {
+    if (!showMissingIssues.value) {
+      return null;
+    }
+
+    return {
+      key: missingKey ?? `${record.type}-${record.name}-missing`,
+      severity: validationSeverity(missingKey),
+      text: t('views.mail.sections.customDomains.recordMissingWarning'),
+    };
+  }
+
+  return null;
+};
+
+const validationIssuesForRecord = (record: DNSRecord): InlineIssue[] =>
+  recordValidationKeys(record)
+    .filter((key) => criticalErrors.value.includes(key) || validationWarnings.value.includes(key))
+    .filter((key) => showMissingIssues.value || !missingValidationKeys.has(key))
+    .filter((key) => key === 'mxLookupError' || missingOrConflicted(record))
+    .map((key) => ({
+      key,
+      severity: criticalErrors.value.includes(key) ? 'critical' : 'warning',
+      text: formatValidationError(key),
+    }));
+
+const createDnsTableRow = (record: DNSRecord, index: number): DnsTableRow => {
+  const hasConflictRows = record.status === DNSRecordStatus.CONFLICT && (record.existing_values?.length ?? 0) > 0;
+  const statusIssue = hasConflictRows ? null : recordStatusIssue(record);
+  const validationIssues = statusIssue || hasConflictRows ? [] : validationIssuesForRecord(record);
+  const issues = statusIssue ? [statusIssue, ...validationIssues] : validationIssues;
+
+  return {
+    key: `${record.type}-${record.name}-${record.content}-${index}`,
+    record,
+    issues,
+    severity: issueSeverity(issues),
+    isStale: false,
+    isConflict: false,
+  };
+};
+
+const conflictSeverity = (record: DNSRecord): InlineIssueSeverity =>
+  isMxRecord(record) || recordValidationKeys(record).some((key) => criticalErrors.value.includes(key))
+    ? 'critical'
+    : 'warning';
+
+const createConflictingRecord = (record: DNSRecord, existingValue: string): DNSRecord => {
+  const valueParts = existingValue.trim().split(/\s+/);
+
+  if (record.type === 'MX' && valueParts.length > 1) {
+    return {
+      ...record,
+      content: valueParts.slice(1).join(' '),
+      priority: valueParts[0],
+      existing_values: [existingValue],
+    };
+  }
+
+  if (record.type === 'SRV' && valueParts.length > 3) {
+    return {
+      ...record,
+      content: valueParts.slice(1).join(' '),
+      priority: valueParts[0],
+      existing_values: [existingValue],
+    };
+  }
+
+  return {
+    ...record,
+    content: existingValue,
+    priority: '-',
+    existing_values: [existingValue],
+  };
+};
+
+const createConflictDnsTableRows = (record: DNSRecord, index: number): DnsTableRow[] => {
+  if (record.status !== DNSRecordStatus.CONFLICT || !record.existing_values?.length) {
+    return [];
+  }
+
+  const statusIssue = recordStatusIssue(record);
+  const validationIssues = statusIssue ? [] : validationIssuesForRecord(record);
+  const issues = statusIssue ? [statusIssue, ...validationIssues] : validationIssues;
+
+  return record.existing_values.map((existingValue, conflictIndex) => ({
+    key: `conflict-${record.type}-${record.name}-${existingValue}-${index}-${conflictIndex}`,
+    record: createConflictingRecord(record, existingValue),
+    issues: conflictIndex === 0 ? issues : [],
+    severity: conflictSeverity(record),
+    isStale: false,
+    isConflict: true,
+  }));
+};
+
+const createDnsTableRows = (record: DNSRecord, index: number): DnsTableRow[] => [
+  createDnsTableRow(record, index),
+  ...createConflictDnsTableRows(record, index),
+];
+
+const createStaleDnsTableRow = (record: StaleDNSRecord): DnsTableRow => {
+  const isSrv = record.code === 'autodiscoverSrvUnexpected';
+  const validationKey = isSrv ? 'autodiscoverSrvRecordFound' : 'autodiscoverRecordFound';
+  const issues = [
+    {
+      key: validationKey,
+      severity: 'critical' as const,
+      text: formatValidationError(validationKey),
+    },
+  ];
+
+  return {
+    key: `stale-${record.code}-${record.type}-${record.name}`,
+    record: {
+      type: record.type,
+      name: record.name,
+      content: record.existing_values.join(', '),
+      priority: '-',
+      status: DNSRecordStatus.CONFLICT,
+      existing_values: record.existing_values,
+    },
+    issues,
+    severity: 'critical',
+    isStale: true,
+    isConflict: false,
+  };
+};
+
+const staleAddressRows = computed(() =>
+  staleDnsRecords.value
+    .filter((record) => record.code === 'autodiscoverCnameUnexpected')
+    .map(createStaleDnsTableRow)
+);
+
+const staleSrvRows = computed(() =>
+  staleDnsRecords.value
+    .filter((record) => record.code === 'autodiscoverSrvUnexpected')
+    .map(createStaleDnsTableRow)
+);
+
+const dnsTableRows = computed(() => {
+  const expectedRows = recordsInfo.value.flatMap(createDnsTableRows);
+  const rows = [];
+  let insertedAddressRows = false;
+  let insertedSrvRows = false;
+
+  expectedRows.forEach((row, index) => {
+    rows.push(row);
+    const nextRow = expectedRows[index + 1];
+
+    if (!insertedSrvRows && row.record.type === 'SRV' && nextRow?.record.type !== 'SRV') {
+      rows.push(...staleSrvRows.value);
+      insertedSrvRows = true;
+    }
+
+    if (!insertedAddressRows && row.record.type === 'CNAME' && nextRow?.record.type !== 'CNAME') {
+      rows.push(...staleAddressRows.value);
+      insertedAddressRows = true;
+    }
+  });
+
+  if (!insertedSrvRows) {
+    rows.push(...staleSrvRows.value);
+  }
+  if (!insertedAddressRows) {
+    rows.push(...staleAddressRows.value);
+  }
+
+  return rows;
+});
+
+const anchoredValidationKeys = computed(() => new Set(dnsTableRows.value.flatMap((row) => row.issues.map((issue) => issue.key))));
+
+const unanchoredValidationIssues = computed<InlineIssue[]>(() => [
+  ...criticalErrors.value
+    .filter((key) => !anchoredValidationKeys.value.has(key))
+    .filter((key) => showMissingIssues.value || !missingValidationKeys.has(key))
+    .map((key) => ({
+      key,
+      severity: 'critical' as const,
+      text: formatValidationError(key),
+    })),
+  ...validationWarnings.value
+    .filter((key) => !anchoredValidationKeys.value.has(key))
+    .filter((key) => showMissingIssues.value || !missingValidationKeys.has(key))
+    .map((key) => ({
+      key,
+      severity: 'warning' as const,
+      text: formatValidationError(key),
+    })),
+]);
 
 const handleDNSRecords = async (domainName: string) => {
   try {
     const remoteDNSRecords = await getRemoteDNSRecords(domainName);
 
     if (remoteDNSRecords.success) {
-      const dkimRecords = extractDKIMRecords(remoteDNSRecords.dns_records, domainName);
-      const dnsRecords = [...generateDNSRecords(domainName), ...dkimRecords];
-
-      recordsInfo.value = dnsRecords;
-      step.value = STEP.VERIFY_DOMAIN;
+      applyVerificationResult(domainName, validationResult(remoteDNSRecords), { showMissingIssues: false });
     } else {
       console.error(remoteDNSRecords.error);
-      customDomainError.value = remoteDNSRecords.error;    
+      customDomainError.value = remoteDNSRecords.error;
     }
   } catch (error) {
     console.error(error);
-    customDomainError.value = error;
+    customDomainError.value = String(error);
   }
 }
 
 const onCreateCustomDomain = async () => {
-  if (props.customDomains.some((domain) => domain.name === customDomain.value)) {
-    customDomainError.value = t('views.mail.sections.customDomains.domainAlreadyExists');
-    return;
-  }
-
+  const submittedDomain = customDomain.value ?? '';
   isAddingCustomDomain.value = true;
 
   try {
-    const data = await addCustomDomain(customDomain.value);
+    const data = await addCustomDomain(submittedDomain);
 
     if (data.success) {
-      emit('custom-domain-added', customDomain.value);
-      await handleDNSRecords(customDomain.value);
+      const domainName = data.domain_name ?? submittedDomain;
+      customDomain.value = domainName;
+      customDomainError.value = null;
+      domainAlreadyConfigured.value = false;
+      emit('custom-domain-added', domainName);
+      await handleDNSRecords(domainName);
     } else if (data.code === 'domain_already_configured') {
       console.error(data.error);
-      domainAlreadyConfigured.value = true
+      customDomainError.value = null;
+      domainAlreadyConfigured.value = true;
     } else {
       console.error(data.error);
-      customDomainError.value = data.error;
+      domainAlreadyConfigured.value = false;
+      customDomainError.value = data.error ?? '';
     }
   } catch (error) {
     console.error(error);
-    customDomainError.value = error;
+    domainAlreadyConfigured.value = false;
+    customDomainError.value = String(error);
   } finally {
     isAddingCustomDomain.value = false;
   }
@@ -90,25 +460,24 @@ const onCreateCustomDomain = async () => {
 const onVerifyDomain = async () => {
   isVerifyingDomain.value = true;
 
-  // Cleanup previous verification results
-  verificationCriticalErrors.value = [];
-
   try {
     const data = await verifyDomain(customDomain.value);
 
+    applyVerificationResult(customDomain.value, validationResult(data), {
+      showMissingIssues: true,
+      cacheResult: true,
+    });
+
     if (data.success) {
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.VERIFIED });
-      step.value = STEP.INITIAL;
-      customDomain.value = null;
       customDomainError.value = null;
       domainAlreadyConfigured.value = false;
     } else {
-      verificationCriticalErrors.value = deduplicateCriticalErrors(data.critical_errors || []);
       emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
     }
   } catch (error) {
     emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.FAILED });
-    customDomainError.value = error;
+    customDomainError.value = String(error);
   } finally {
     isVerifyingDomain.value = false;
   }
@@ -116,11 +485,22 @@ const onVerifyDomain = async () => {
 
 const viewDnsRecords = async (domainName: string) => {
   customDomain.value = domainName;
+  const verificationResult = verificationResultsByDomain.value[domainName];
+  if (verificationResult) {
+    applyVerificationResult(domainName, verificationResult, { showMissingIssues: true });
+    return;
+  }
+
   await handleDNSRecords(domainName);
 };
 
+const showVerificationResult = (result: DomainVerificationResult) => {
+  applyVerificationResult(result.domainName, result, { showMissingIssues: true, cacheResult: true });
+};
+
 defineExpose({
-  viewDnsRecords
+  viewDnsRecords,
+  showVerificationResult,
 });
 
 watch(step, (newStep) => {
@@ -134,6 +514,11 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
     customDomain.value = null;
     customDomainError.value = null;
     domainAlreadyConfigured.value = false;
+    staleDnsRecords.value = [];
+    criticalErrors.value = [];
+    validationWarnings.value = [];
+    showMissingIssues.value = false;
+    delete verificationResultsByDomain.value[newLastDomainRemoved];
   }
 }, { immediate: true });
 </script>
@@ -198,11 +583,52 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderValueData') }}</p>
         <p>{{ t('views.mail.sections.customDomains.recordsTableHeaderPriority') }}</p>
       </div>
-      <div class="records-table-row" v-for="record in recordsInfo" :key="`${record.type}-${record.name}-${record.content}`">
-        <p>{{ record.type }}</p>
-        <p>{{ record.name }}</p>
-        <p>{{ record.content }}</p>
-        <p>{{ record.priority || '-' }}</p>
+      <div
+        class="records-table-row"
+        :class="{
+          'record-critical': row.severity === 'critical',
+          'record-warning': row.severity === 'warning',
+          'record-stale': row.isStale,
+          'record-conflict': row.isConflict,
+        }"
+        v-for="row in dnsTableRows"
+        :key="row.key"
+      >
+        <div class="records-table-row-cells">
+          <p>{{ row.record.type }}</p>
+          <p>{{ row.record.name }}</p>
+          <p>{{ row.record.content }}</p>
+          <p>{{ row.record.priority || '-' }}</p>
+        </div>
+
+        <div
+          v-if="row.issues.length > 0"
+          class="record-inline-issues"
+        >
+          <p
+            v-for="issue in row.issues"
+            :key="issue.key"
+            class="inline-issue"
+            :class="`inline-issue-${issue.severity}`"
+          >
+            <ph-warning-octagon v-if="issue.severity === 'critical'" size="18" weight="fill" aria-hidden="true" />
+            <ph-warning-circle v-else size="18" weight="fill" aria-hidden="true" />
+            <span>{{ issue.text }}</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="records-table-footer" v-if="unanchoredValidationIssues.length > 0">
+        <p
+          v-for="issue in unanchoredValidationIssues"
+          :key="issue.key"
+          class="inline-issue"
+          :class="`inline-issue-${issue.severity}`"
+        >
+          <ph-warning-octagon v-if="issue.severity === 'critical'" size="18" weight="fill" aria-hidden="true" />
+          <ph-warning-circle v-else size="18" weight="fill" aria-hidden="true" />
+          <span>{{ issue.text }}</span>
+        </p>
       </div>
     </div>
 
@@ -217,18 +643,6 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
         </button>
       </template>
     </notice-bar> -->
-
-    <notice-bar :type="NoticeBarTypes.Critical" class="verify-step-notice-bar" v-if="verificationCriticalErrors.length > 0">
-      <template v-for="criticalError in verificationCriticalErrors" :key="criticalError">
-        <p>{{ t(`views.mail.sections.customDomains.verificationCriticalErrors.${criticalError}`) }}</p>
-      </template>
-
-      <template #cta>
-        <button class="close-button" @click="verificationCriticalErrors = []">
-          <ph-x size="24" />
-        </button>
-      </template>
-    </notice-bar>
 
     <primary-button
       class="verify-step-button"
@@ -315,6 +729,39 @@ h3 {
 
 .records-table-row {
   display: flex;
+  flex-direction: column;
+  min-width: max-content;
+  border-inline-start: 0.25rem solid transparent;
+
+  &:nth-child(odd) {
+    background-color: var(--colour-neutral-lower);
+  }
+
+  &.record-warning {
+    border-inline-start-color: var(--colour-warning-default);
+    background-color: var(--colour-warning-soft);
+  }
+
+  &.record-critical {
+    border-inline-start-color: var(--colour-danger-default);
+    background-color: var(--colour-danger-soft);
+  }
+
+  &.record-stale {
+    .records-table-row-cells p:first-child {
+      font-weight: 600;
+    }
+  }
+
+  &.record-conflict {
+    .records-table-row-cells p {
+      font-weight: 600;
+    }
+  }
+}
+
+.records-table-row-cells {
+  display: flex;
   align-items: center;
   min-width: max-content;
 
@@ -325,10 +772,42 @@ h3 {
     flex-shrink: 0;
     word-break: break-word;
   }
+}
 
-  &:nth-child(odd) {
-    background-color: var(--colour-neutral-lower);
+.record-inline-issues,
+.records-table-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 1rem 1rem;
+}
+
+.records-table-footer {
+  min-width: max-content;
+  border-block-start: 1px solid var(--colour-neutral-border);
+  padding-block-start: 1rem;
+}
+
+.inline-issue {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+
+  svg {
+    flex: 0 0 auto;
+    margin-block-start: 0.0625rem;
   }
+}
+
+.inline-issue-critical {
+  color: var(--colour-danger-default);
+}
+
+.inline-issue-warning {
+  color: var(--colour-ti-warning);
 }
 
 .verify-step-notice-bar {
@@ -383,6 +862,10 @@ h3 {
   }
 
   .records-table-row {
+    min-width: auto;
+  }
+
+  .records-table-row-cells {
     min-width: auto;
 
     p {

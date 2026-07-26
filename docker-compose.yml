@@ -57,6 +57,7 @@ services:
       - "./assets:/app/assets:z"
       - "./keycloak:/app/assets/keycloak:z"
       - "./templates:/app/templates:z"
+      - "./coverage:/app/coverage:z"
     depends_on:
       - postgres
       - redis
@@ -167,6 +168,23 @@ services:
       KC_TBPRO_SIGN_UP: "http://localhost:8087/sign-up"
       KC_TBPRO_CONTACT: "http://localhost:8087/contact"
       KC_TBPRO_PRIMARY_DOMAIN: "example.org"
+      # keycloak-mfa-rest: allow the accounts OIDC client's user tokens to self-manage MFA.
+      KC_SPI_REALM_RESTAPI_EXTENSION_MFA_AUTHORIZED_CLIENTS: "tb-accounts"
+      # keycloak-mfa-rest step-up gate: sensitive mutations on an account with MFA already
+      # in place need a token at this acr with auth_time no older than this window. Keep
+      # the window aligned with accounts' MFA_RECENT_AUTH_SECONDS (600) so the accounts
+      # pre-check and the provider's token check expire together.
+      KC_SPI_REALM_RESTAPI_EXTENSION_MFA_STEP_UP_ACR: "2"
+      KC_SPI_REALM_RESTAPI_EXTENSION_MFA_STEP_UP_MAX_AGE_SECONDS: "600"
+      # keycloak-config-cli (see scripts/apply-mfa-config.sh) reconciles the MFA step-up flow
+      # on startup, authenticating as the same admin client the accounts app uses (pulled from
+      # .env). MFA_L1_LOA_MAX_AGE MUST be at least the realm's longest possible SSO session —
+      # that is ssoSessionMaxLifespanRememberMe (7776000, 90 days, reconciled everywhere by
+      # keycloak/config-cli/tbpro-mfa-stepup.yaml) — or a still-valid remember-me session
+      # re-prompts for the password when the L1 window lapses.
+      KEYCLOAK_ADMIN_CLIENT_ID: "${KEYCLOAK_ADMIN_CLIENT_ID:-tb-accounts-admin}"
+      KEYCLOAK_ADMIN_CLIENT_SECRET: "${KEYCLOAK_ADMIN_CLIENT_SECRET:-}"
+      MFA_L1_LOA_MAX_AGE: "7776000"
     volumes:
       - "./keycloak/themes:/opt/keycloak/themes:z"
       - "./keycloak/data/export:/opt/keycloak/data/export:z"

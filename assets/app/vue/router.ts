@@ -4,9 +4,8 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import DashboardView from '@/views/DashboardView/index.vue';
 import ManageMfaView from '@/views/ManageMfaView/index.vue';
 import PrivacyAndDataView from '@/views/PrivacyAndDataView.vue';
-import PrivacyView from '@/views/PrivacyView.vue';
 import SubscribeView from '@/views/SubscribeView/index.vue';
-import TermsView from '@/views/TermsView.vue';
+import TosPrivacyView from '@/views/TosPrivacyView/index.vue';
 
 // Thundermail Routes
 import MailView from '@/views/MailView/index.vue';
@@ -18,6 +17,13 @@ import SignUpView from '@/views/SignUpView/index.vue';
 
 // Special Error Route
 import ErrorView from '@/views/ErrorView/index.vue';
+import { TBPRO_WAIT_LIST } from './defines';
+import { CAN_I_SIGN_UP_RESPONSES } from './types';
+import { isWaffleFlagActive } from '@/utils';
+
+// Manage MFA rolls out dark: only register its route when the multi-factor-authentication
+// waffle flag is active, so /manage-mfa falls through to the 404 route until it's enabled.
+const showMfa = isWaffleFlagActive('multi-factor-authentication');
 
 // If the page template is marked as error page, only show the error page.
 const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
@@ -44,7 +50,52 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     meta: {
       isPublic: true,
       useAppTemplate: false,
-    }
+    },
+    beforeEnter: (async (to, from) => {
+      /* This is a bit too long but we cannot use beforeEnter in-component. :( */
+      let failQueryParam = '';
+
+      if (to.query?.email) {
+        // Attempt to repair non-uri encoded emails
+        const email = (to.query.email as string).replaceAll(' ', '+');
+
+        try {
+          const response = await fetch('/api/v1/auth/can-i-sign-up/', {
+            method: 'POST',
+            body: JSON.stringify({
+              email,
+            }),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': window._page?.csrfToken,
+            },
+          });
+
+          const data = await response.json();
+          if (data?.go_to === CAN_I_SIGN_UP_RESPONSES.SIGN_UP) { // continue along with the request
+            return true; 
+          } else if (data?.go_to === CAN_I_SIGN_UP_RESPONSES.LOGIN) { // Ship to login, we don't use login hints here!
+            window.location.href = '/';
+            return false;
+          } else if (data?.detail) { // rate limited
+
+            // A small hack
+            console.error("Sign-up rate limit reached:", data?.detail);
+            window._page.errorTitle = data?.detail;
+            window.history.pushState(to.fullPath, '', window.location.href);
+            return { name: 'rate-limit', replace: false };
+          }
+
+          failQueryParam = `?email=${email}`;
+        } catch (e) {
+          console.error("Failed to fetch allowed status for the sign up page. Error: ", e);
+        }
+      }
+
+      // Fail state, send them to the wait list.
+      window.location.href = `${TBPRO_WAIT_LIST}${failQueryParam}`;
+      return false;
+    }),
   },
   {
     path: '/sign-up/complete', // This is the "Check your email" page after sign-up.
@@ -60,15 +111,20 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     name: 'dashboard',
     component: DashboardView,
   },
-  {
+  ...(showMfa ? [{
     path: '/manage-mfa',
     name: 'manage-mfa',
     component: ManageMfaView,
-  },
+  }] : []),
   {
     path: '/privacy-and-data',
     name: 'privacy-and-data',
     component: PrivacyAndDataView,
+  },
+  {
+    path: '/tos-privacy',
+    name: 'tos-privacy',
+    component: TosPrivacyView,
   },
   // Thundermail Routes
   {
@@ -80,23 +136,6 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     path: '/mail/security-settings',
     name: 'mail-security-settings',
     component: SecuritySettingsView,
-  },
-  // Footer links (shared between Accounts and Thundermail)
-  {
-    path: '/privacy',
-    name: 'privacy',
-    component: PrivacyView,
-    meta: {
-      isPublic: true,
-    },
-  },
-  {
-    path: '/terms',
-    name: 'terms',
-    component: TermsView,
-    meta: {
-      isPublic: true,
-    },
   },
   // Sign Up / Subscribe
   {
@@ -112,6 +151,19 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     meta: {
       isPublic: true,
     },
+  },
+  // Rate-limit page
+  {
+    path: '/chill', 
+    name: 'rate-limit',
+    component: ErrorView,
+    props: {
+      isRateLimit: true,
+    },
+    meta: {
+      isPublic: true,
+      useAppTemplate: false,
+    }
   },
   // Fallback 404 page
   {
@@ -159,21 +211,36 @@ router.beforeEach((to, _from) => {
   }
 
   const isAuthenticated = window._page?.isAuthenticated;
-  const hasActiveSubscription = window._page?.hasActiveSubscription;
-  const isAwaitingPaymentVerification = window._page?.isAwaitingPaymentVerification;
-  const sendToSubscribe = isAwaitingPaymentVerification || !hasActiveSubscription;
+  const routeName = to.name?.toString();
 
-  // Don't let unauthenticated users anywhere except the home view
-  if (!isAuthenticated && !to.meta?.isPublic) {
-    // Login is done through Django routing and not Vue router
-    window.location.href = '/login/';
-    return false;
+  // Unauthenticated users can only visit public routes
+  if (!isAuthenticated) {
+    if (!to.meta?.isPublic) {
+      window.location.href = '/login/';
+      return false;
+    }
+    return true;
   }
 
-  // Don't let unsubscribed users anywhere except the subscribe view
-  if (isAuthenticated && sendToSubscribe && !['subscribe', 'contact'].includes(to.name.toString())) {
+  // --- Authenticated users below ---
+  // Guards are ordered by priority: TOS > subscription > normal access.
+
+  const allowedFor = {
+    tos: ['tos-privacy', 'contact'],
+    subscription: ['subscribe', 'contact', 'tos-privacy'],
+  };
+
+  if (window._page?.needsTosAcceptance && !allowedFor.tos.includes(routeName)) {
+    return { name: 'tos-privacy' };
+  }
+
+  const needsSubscription = window._page?.isAwaitingPaymentVerification || !window._page?.hasActiveSubscription;
+
+  if (needsSubscription && !allowedFor.subscription.includes(routeName)) {
     return { name: 'subscribe' };
-  } else if (isAuthenticated && !sendToSubscribe && to.name === 'subscribe') {
+  }
+
+  if (!needsSubscription && routeName === 'subscribe') {
     return { name: 'mail' };
   }
 

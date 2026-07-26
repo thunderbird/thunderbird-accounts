@@ -3,23 +3,28 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { StandardFooter } from '@thunderbirdops/services-ui';
+import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL } from '@/defines';
+import { isWaffleFlagActive } from '@/utils';
 
 const { t } = useI18n();
 
 const isAuthenticated = ref(window._page?.isAuthenticated);
 
-const navItemsAccounts = [
-  // {
-  //   route: '/manage-mfa',
-  //   i18nKey: 'manageMfa',
-  // },
+type NavItem = { route: string; i18nKey: string };
+
+const navItemsAccounts: NavItem[] = [
+  // Manage MFA is rolling out behind the multi-factor-authentication waffle flag
+  ...(isWaffleFlagActive('multi-factor-authentication')
+    ? [{ route: '/manage-mfa', i18nKey: 'manageMfa' }]
+    : []),
+  // TODO: Expose Privacy & Data here once it's ready.
   // {
   //   route: '/privacy-and-data',
   //   i18nKey: 'privacyAndData',
   // },
 ];
 
-const navItemsMail = [
+const navItemsMail: NavItem[] = [
   // TODO: Uncomment when implementing security settings
   // {
   //   route: '/mail/security-settings',
@@ -34,21 +39,15 @@ const isSubscribePage = computed(() => currentRoute.path.startsWith('/subscribe'
 const navItems = computed(() => isThundermail.value ? navItemsMail : navItemsAccounts);
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
-const logoSrc = computed(() => {
-  if (isThundermail.value) {
-    return new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).href;
-  }
-
-  return new URL('@/assets/svg/thunderbird-pro-dark.svg', import.meta.url).href;
-})
+const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).href;
 </script>
 
 <template>
   <standard-footer contributeToThisSiteUrl="https://github.com/thunderbird/thunderbird-accounts">
     <template #default>
       <nav>
-        <router-link to="/">
-          <img :src="logoSrc" :alt="isThundermail ? 'Thundermail' : 'Thunderbird Pro'" />
+        <router-link to="/mail">
+          <img :src="logoSrc" alt="Thundermail" />
         </router-link>
         <ul>
           <template v-if="isAuthenticated && !isSubscribePage">
@@ -71,15 +70,15 @@ const logoSrc = computed(() => {
     </template>
 
     <template #privacyPolicy>
-      <router-link to="/privacy">
+      <a :href="PRIVACY_POLICY_URL" target="_blank">
         {{ t('footer.privacyPolicy') }}
-      </router-link>
+      </a>
     </template>
 
     <template #legal>
-      <router-link to="/terms">
+      <a :href="TERMS_OF_SERVICE_URL" target="_blank">
         {{ t('footer.legal') }}
-      </router-link>
+      </a>
     </template>
   </standard-footer>
 </template>

@@ -28,7 +28,7 @@ platforms:
   - os: OS X
     osVersion: Sequoia
     browserName: playwright-firefox
-    browserVersion: latest
+    browserVersion: 139.0
     playwrightConfigOptions:
       name: Firefox-OSX
       setup:
@@ -37,14 +37,26 @@ platforms:
       use:
         storageState: 'test-results/.auth/user.json'
 
+  - os: Windows
+    osVersion: 11
+    browserName: playwright-chromium
+    browserVersion: 138.0
+    playwrightConfigOptions:
+      name: Chromium-Win11
+      setup: 
+      - name: 'setup_chromium'
+        testMatch: 'auth.desktop.setup.ts'
+      use:
+        storageState: 'test-results/.auth/user.json'
+
   - os: OS X
     osVersion: Sequoia
-    browserName: playwright-chromium
-    browserVersion: latest
+    browserName: playwright-webkit
+    browserVersion: 18.5
     playwrightConfigOptions:
-      name: Chromium-OSX
-      setup:
-      - name: 'setup_chrome_auth'
+      name: Safari-OSX
+      setup: 
+      - name: 'setup_webkit'
         testMatch: 'auth.desktop.setup.ts'
       use:
         storageState: 'test-results/.auth/user.json'
@@ -80,7 +92,7 @@ debug: false # <boolean> # Set to true if you need screenshots for every seleniu
 networkLogs: false # <boolean> Set to true to enable HAR logs capturing; off as may contain sensitive info like login API requests
 consoleLogs: info # <string> Remote browser's console debug levels to be printed (`disable`, `errors`, `warnings`, `info`, or `verbose`)
 framework: playwright
-browserstack.playwrightVersion: 1.55.0 # must match our client playwright version in package.json; this is the latest supported in BrowserStack
+browserstack.playwrightVersion: 1.59.1 # must match our client playwright version in package.json; this is the latest supported in BrowserStack
 browserstack.playwrightLogs: false # disable playwright logs appearing on browserstack builds as may contain sensitive info like credentials
 # CUSTOM_TAG_<INT>: # <string> (Default: parent folder name of the test file) Custom tag for your test suite
 browserstack.maskBasicAuth: true # mask username and passwords from browserstack session logs

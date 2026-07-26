@@ -6,8 +6,12 @@ import { onMounted, ref } from 'vue';
 import { useDebounceFn } from '@vueuse/core';
 import { isUsernameAvailable } from './api';
 import { storeToRefs } from 'pinia';
-import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
+import { useSignUpFlowStore, SIGN_UP_STEPS } from '../../stores/signUpFlowStore';
 import SignUpLayout from '../../components/SignUpLayout.vue';
+import { captureStep } from '../../api';
+
+const USERNAME_MIN_LENGTH = 3;
+const USERNAME_MAX_LENGTH = 150;
 
 const { t } = useI18n();
 const tbProPrimaryDomain = `@${window._page.currentView?.tbProPrimaryDomain}`;
@@ -21,8 +25,27 @@ const usernameOk = ref(false);
 const usernameError = ref(null);
 
 const usernameCheckDebounced = useDebounceFn(async () => {
-  const { success, error } = await isUsernameAvailable(username.value);
   loading.value = false;
+
+  const value = username.value ?? '';
+
+  if (value.length < USERNAME_MIN_LENGTH) {
+    usernameOk.value = false;
+    usernameError.value = t('views.mail.views.signUp.step1.usernameTooShort', {
+      minLength: USERNAME_MIN_LENGTH
+    });
+    return;
+  }
+
+  if (value.length > USERNAME_MAX_LENGTH) {
+    usernameOk.value = false;
+    usernameError.value = t('views.mail.views.signUp.step1.usernameTooLong', {
+      maxLength: USERNAME_MAX_LENGTH
+    });
+    return;
+  }
+
+  const { success, error } = await isUsernameAvailable(value);
 
   if (success === true) {
     usernameOk.value = true;
@@ -56,6 +79,17 @@ onMounted(() => {
   if (window._page.currentView?.attributes?.username) {
     username.value = window._page.currentView?.attributes?.username;
   }
+
+  // Validate any pre-filled username (from query param or session storage) since
+  // programmatic assignment doesn't set the input's dirty flag and therefore
+  // skips the browser's built-in minlength/maxlength constraint checks.
+  if (username.value) {
+    loading.value = true;
+    usernameCheckDebounced();
+  }
+
+  // Capture the very first step to PostHog
+  captureStep(SIGN_UP_STEPS.USERNAME);
 });
 
 </script>
@@ -69,7 +103,7 @@ export default {
 <template>
   <sign-up-layout step-id="step-username" :title="$t('views.mail.views.signUp.step1.title')"
     :subtitle="$t('views.mail.views.signUp.step1.subtitle')" :submitDisabled="loading || !!usernameError"
-    @submit="onSubmit">
+    @submit="onSubmit" :submit-title="$t('views.mail.views.signUp.step1.action')">
     <template v-slot:notice-bars>
       <slot name="notice-bars"/>
     </template>
@@ -78,6 +112,7 @@ export default {
       data-testid="username-input" 
       name="partialUsername" 
       required
+      minlength="3"
       maxlength="150"
       autocomplete="username" 
       @input="usernameCheckDebounced"

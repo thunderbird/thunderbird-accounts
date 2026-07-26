@@ -40,6 +40,12 @@ During development it's great to have these handy!
 
 Make sure you have [uv](https://github.com/astral-sh/uv) up and running.
 
+Add the following to `/etc/hosts`:
+
+```text
+127.0.0.1 keycloak
+127.0.0.1 stalwart
+```
 
 ## Getting Started
 
@@ -52,14 +58,19 @@ uv run bootstrap.py
 
 This will create a virtual environment if needed and sync the latest project dependencies to your local environment.
 
-The project comes with some optional dependencies such as cli tools, tools for building the docs, and tools for working
-with our Subscription app powered by Paddle.
+The command is safe to run again after future schema changes.
+
+The project comes with some optional dependencies such as cli tools, tools for building the docs, and tools for working with our Subscription app powered by Paddle.
 
 These can be installed be appending `--extra <optional dependency>` like so:
 
 ```bash
 uv sync --extra cli --extra docs --extra subscription
 ```
+
+## Python linting
+
+Ruff is the source of truth for Python linting. Read `pyproject.toml` and `pulumi/ruff.toml` for the active rules.
 
 ## Re-bootstrapping the project
 
@@ -83,6 +94,9 @@ basic development config for keycloak, and a keycloak environment defined in doc
 stopping you from using a different OIDC provider. Please refer to the package documentation and your local `.env` file
 for settings you may need to change.
 
+For local Docker usage, keep the default `keycloak` hostname in `.env`. If your browser redirects to
+`http://keycloak:8999`, that is expected; check the `/etc/hosts` entry above if the page does not load.
+
 ## Running
 
 Once you have the project bootstrapped you'll want to actually run the project via docker:
@@ -93,13 +107,52 @@ docker compose up --build -V
 
 (Note: If you're not attached to the docker group you may need to add sudo before the above command.)
 
+### After making changes
+
+Most source files are mounted into the development containers:
+
+* Changes under `assets/` should hot-reload through the `vite-dev` service.
+* Changes under `src/thunderbird_accounts/` should restart the `accounts` service automatically through Uvicorn reload.
+* Changes to Django templates should also be picked up by the reload process.
+
+If a change does not appear to take effect, restart only the affected service:
+
+```bash
+docker compose restart accounts
+docker compose restart vite-dev
+```
+
+Rebuild only when changing image or dependency inputs such as `Dockerfile`, `pyproject.toml`, `uv.lock`, `package.json`, or `package-lock.json`:
+
+```bash
+docker compose up --build
+```
+
 The first boot may take a while as:
 
 * Keycloak imports realm / user information from `keycloak/data/import`
-* Accounts runs the required database migrations
 * Accounts pulls the latest Paddle product and subscription information (if you have the Paddle setup.)
 
 Please wait until the containers are fully booted before continuing.
+
+## Working with Git worktrees
+
+Git worktrees are useful for working on multiple branches checkouts at the same time.
+
+If the branch you are working on has the same major dependencies as main, you re-use the same Docker
+volumes, environment file and mail storage to save time vs bootstrapping a completely unique
+environment. To do that, run the following from a new worktree:
+
+```bash
+# Symlink (or copy) the main branch .env here
+ln -s /path/to/main/thunderbird-accounts/.env .env
+
+# Remove the `mail` folder and symlink that the main mail storage as well.:
+rm -rf mail &&  ln -s /path/to/main/thunderbird-accounts/mail mail
+
+# The `-p` flag stands for "project-name" and makes sure the same volumes get re-used.
+docker compose -p thunderbird-accounts up --build
+```
 
 ## Logging in
 
@@ -119,6 +172,8 @@ From here you can create an email account.
 
 The default admin user is also setup you use Django's admin panel available
 at [http://localhost:8087/admin/](http://localhost:8087/admin/).
+
+You may also need create a subscription plan, which can be done at [http://localhost:8087/admin/subscription/plan/add/](http://localhost:8087/admin/subscription/plan/add/).
 
 ### Stalwart
 
@@ -159,6 +214,58 @@ Additionally, you can access a simple user management portal under the tbpro rea
 at [http://keycloak:8999/realms/tbpro/account](http://keycloak:8999/realms/tbpro/account). Since this within the tbpro
 realm you can login to any account you created for accounts including admin@example.org.
 
+## Legal Documents
+
+Legal documents (Terms of Service, Privacy Policy) are stored as markdown source files under
+`assets/legal/` and served to the frontend as pre-rendered HTML within `src/thunderbird_accounts/legal/templates/`.
+
+### Directory structure
+
+```
+assets/legal/
+├── tos/
+│   └── v1.0/
+│       ├── en.md        # Markdown source (source of truth)
+└── privacy/
+    └── v1.0/
+        ├── en.md
+
+src/thunderbird_accounts/legal/templates/
+├── tos/
+│   └── v1.0/
+│       └── en.html      # Pre-rendered HTML (served by the API)
+└── privacy/
+    └── v1.0/
+        └── en.html
+```
+
+Each version directory can contain multiple locale files (e.g. `de.md`, `fr.md`). The API falls
+back to `en.html` when a requested locale is not available.
+
+### Adding a new document version
+
+1. Create a new versioned directory, e.g. `assets/legal/tos/v2.0/`
+2. Write the markdown source file, e.g. `en.md`
+3. Run the conversion command to generate the HTML:
+   ```bash
+   uv run python manage.py convert_legal_docs
+   ```
+4. Commit both the `.md` and `.html` files
+5. In Django admin, create or update the `LegalDocument` record -- set `content_path` (e.g.
+   `tos/v2.0`), `version`, and check `is_current`. Saving will automatically unset `is_current` on
+   the previous version of the same document type.
+6. If adding new locales, update the SUPPORTED_LEGAL_LANGUAGES value in settings.py
+
+### Regenerating HTML from markdown
+
+If you edit an existing markdown file, re-run the conversion command to update the HTML:
+
+```bash
+uv run python manage.py convert_legal_docs
+```
+
+This converts all `*.md` files under `assets/legal/` and writes a sibling `.html` for each.
+
 ## Creating additional apps
 
 Apps are feature of django we can use to create re-usable modules with. We mostly just use them to separate out and
@@ -177,8 +284,21 @@ AuthConfig.name so it looks like `thunderbird_accounts.<app name>`.
 Ensure you have the requirements in docs installed and run the following command in the project's root folder:
 
 ```shell
-sphinx-build docs build
+uv run sphinx-build docs build
+
+# Or by running a handy shell script
+./build-and-run-docs.sh
 ```
+
+## Feature Flags
+
+We now use django-waffle for feature flags. These are documented [here](https://pro-services-docs.thunderbird.net/en/latest/feature-flags).
+
+Before django-waffle was integrated we used are stored in `localStorage` and read at runtime to toggle UI behavior.
+
+| Key | Values | Description |
+| --- | ------ | ----------- |
+| `feature.show-connect-now` | `true` | Shows the "Connect Now" action card on the desktop panel, which launches Thunderbird Desktop via a custom protocol URL. |
 
 ## Running tests
 
@@ -187,14 +307,32 @@ Make sure that the containers are already running.
 To run all tests:
 
 ```shell
-docker compose exec backend uv run python manage.py test
+./run-tests.sh
+```
+
+this will execute the following command for you:
+
+```shell
+docker compose exec accounts uv run python manage.py test thunderbird_accounts
 ```
 
 To run tests for a specific module:
 
 ```shell
-docker compose exec backend uv run manage.py test thunderbird_accounts.client.tests
+./run-tests.sh thunderbird_accounts.mail.tests
 ```
+
+Additionally, you can run tests with coverage to help you identify functions that aren't covered by functional or unit tests.
+
+To do so run the following command:
+
+```shell
+./runs-tests-and-generate-coverage.sh thunderbird_accounts
+```
+
+The data for coverage is stored in the `coverage` folder (which is volume mounted.) It generates a detailed html report and a text report to display in-console.
+
+The html report is stored in `coverage/htmlcov`.
 
 ## Running the E2E tests
 
@@ -224,3 +362,17 @@ ssh -L 8443:$FLOWER_LB_DNS:443 ec2-user@$BASTION_IP
 Our live environments all use TLS, so you will need to browse to https://localhost:8443/. You will
 have to push past an SSL certificate hostname mismatch alert, but then you will find yourself at the
 Flower landing page, listing Celery workers on the network.
+
+## Deploying
+
+After a commit has been pushed to main the CI will run a workflow to deploy code to stage. The final step of this workflow is to create 
+a draft release. This draft when published will start a production deploy from the images built for that particular stage deploy.
+
+Production images are tagged from the package version, and you will receive a CI / deployment error if you try to deploy code under 
+a version that has already been deployed. You **must** increment the version in pyproject.toml, package.json, and run `npm i && uv lock`, and commit that 
+as a (preferably) stand-alone commit labelled `vX.Y.Z` (e.g. `v1.15.0`)
+
+Once that commit has ran through the CI and created a draft release you may publish that release to start the production deployment.
+
+Keycloak theme changes are automatically deployed to stage, but **are not** automatically deployed to production. 
+Please read [the following documentation](https://pro-services-docs.thunderbird.net/en/latest/keycloak/how-to-deploy-to-prod.html) on how to deploy Keycloak theme changes to production.

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, useTemplateRef, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
 import { UserAvatar } from '@thunderbirdops/services-ui';
 
 defineProps<{
@@ -9,14 +8,18 @@ defineProps<{
 }>();
 
 const { t } = useI18n();
-const currentRoute = useRoute();
-const isThundermail = computed(() => currentRoute.path.startsWith('/mail'));
 
 const internalMenuItems = computed(() => {
-  const items = [{
-    label: t('components.userMenu.support'),
-    to: '/contact',
-  }]
+  const items = [
+    {
+      label: t('components.userMenu.myAccount'),
+      to: '/dashboard',
+    },
+    {
+      label: t('components.userMenu.support'),
+      to: '/contact',
+    },
+  ];
 
   return items;
 });
@@ -51,36 +54,29 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <template v-if="isThundermail">
-    <router-link to="/dashboard" class="user-avatar-link">
-      <user-avatar :username="username" class="avatar" />
-    </router-link>
-  </template>
-  <template v-else>
-    <button class="user-menu" ref="menuRef">
-      <user-avatar :username="username" class="avatar" @click="toggleMenu" />
-  
-      <div v-if="showMenu" class="dropdown">
-        <!-- Holds internal links (VueJS routes) -->
-        <router-link v-for="internalItem in internalMenuItems" :key="internalItem.label" :to="internalItem.to"
-          @click="toggleMenu">
-          {{ internalItem.label }}
-        </router-link>
-  
-        <!-- Holds external links (primarily Django routes) -->
-        <a v-for="externalItem in externalMenuItems" :key="externalItem.label" :href="externalItem.href">
-          {{ externalItem.label }}
-        </a>
-      </div>
-    </button>
-  </template>
+  <button class="user-menu" ref="menuRef">
+    <user-avatar :username="username" class="avatar" @click="toggleMenu" />
+
+    <div v-if="showMenu" class="dropdown">
+      <!-- Holds internal links (VueJS routes) -->
+      <router-link
+        v-for="internalItem in internalMenuItems"
+        :key="internalItem.label"
+        :to="internalItem.to"
+        @click="toggleMenu"
+      >
+        {{ internalItem.label }}
+      </router-link>
+
+      <!-- Holds external links (primarily Django routes) -->
+      <a v-for="externalItem in externalMenuItems" :key="externalItem.label" :href="externalItem.href">
+        {{ externalItem.label }}
+      </a>
+    </div>
+  </button>
 </template>
 
 <style scoped>
-.user-avatar-link {
-  text-decoration: none;
-}
-
 /* TODO: Temporary fix for UserAvatar color bug */
 .avatar {
   cursor: pointer;

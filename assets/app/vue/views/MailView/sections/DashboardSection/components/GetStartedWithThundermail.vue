@@ -21,7 +21,7 @@ defineEmits<{
 }>();
 
 const { t } = useI18n();
-const selectedTab = ref<string>(SETUP_TABS.DESKTOP);
+const selectedTab = ref<string>(window.matchMedia("(max-width: 768px)").matches ? SETUP_TABS.MOBILE : SETUP_TABS.DESKTOP);
 
 const tabs = computed<SegmentedControlTab[]>(() => [
   {

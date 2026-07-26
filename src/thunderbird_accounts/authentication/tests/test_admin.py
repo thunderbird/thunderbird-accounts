@@ -2,12 +2,15 @@ from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 from django.contrib.admin import AdminSite
-from django.http import HttpRequest
+from django.http import HttpRequest, QueryDict
 from django.test import TestCase
+from django.template.response import TemplateResponse
 
 from requests import Response
 
+from thunderbird_accounts.authentication.admin.actions import admin_reset_totp_credentials
 from thunderbird_accounts.authentication.admin import CustomUserAdmin
+from thunderbird_accounts.authentication.admin.actions import admin_backfill_recovery_email
 from thunderbird_accounts.authentication.clients import RequestMethods
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account, Email
@@ -40,7 +43,7 @@ class AdminCreateUserTestCase(TestCase):
         # Bad username
         form_data = {
             'username': 'frog',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
         }
 
@@ -55,7 +58,7 @@ class AdminCreateUserTestCase(TestCase):
         # Bad username
         form_data = {
             'username': 'support@thundermail.com',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
         }
 
@@ -70,7 +73,7 @@ class AdminCreateUserTestCase(TestCase):
         # Bad email domain
         form_data = {
             'username': 'frog@badexample.com',
-            'email': 'frog@badexample.com',
+            'recovery_email': 'frog@badexample.com',
             'timezone': 'America/Toronto',
         }
 
@@ -84,7 +87,7 @@ class AdminCreateUserTestCase(TestCase):
         self.assertTrue(len(form.errors) > 0)
         self.assertIn('Thundermail address must end with', str(form.errors))
 
-        # No email
+        # No recovery email
         form_data = {
             'username': 'frog@example.com',
             'timezone': 'America/Toronto',
@@ -93,7 +96,7 @@ class AdminCreateUserTestCase(TestCase):
         form = self._build_form(form_data)
 
         self.assertTrue(len(form.errors) > 0)
-        self.assertIn('email', form.errors)
+        self.assertIn('recovery_email', form.errors)
 
         mock_requests.assert_not_called()
 
@@ -101,7 +104,7 @@ class AdminCreateUserTestCase(TestCase):
         # Bad username
         form_data = {
             'username': 'frog',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Victoria',
         }
 
@@ -115,7 +118,7 @@ class AdminCreateUserTestCase(TestCase):
     def test_success(self, mock_requests: MagicMock):
         form_data = {
             'username': f'frog@{self.subdomain}',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
         }
 
@@ -142,7 +145,7 @@ class AdminCreateUserTestCase(TestCase):
     def test_success_with_reserved_username(self, mock_requests: MagicMock):
         form_data = {
             'username': f'admin@{self.subdomain}',
-            'email': 'admin@example.com',
+            'recovery_email': 'admin@example.com',
             'timezone': 'America/Toronto',
         }
 
@@ -192,7 +195,7 @@ class AdminUpdateUserTestcase(TestCase):
     def test_failed_invalid_timezone(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': f'frog@{self.subdomain}',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Victoria',  # Bad timezone!
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -215,7 +218,7 @@ class AdminUpdateUserTestcase(TestCase):
     def test_failed_empty_username(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': '',
-            'email': self.user.email,
+            'recovery_email': self.user.email,
             'timezone': self.user.timezone,
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -238,7 +241,7 @@ class AdminUpdateUserTestcase(TestCase):
     def test_failed_empty_email(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': self.user.username,
-            'email': '',
+            'recovery_email': '',
             'timezone': self.user.timezone,
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -254,7 +257,7 @@ class AdminUpdateUserTestcase(TestCase):
             form.save(True)
 
         self.assertTrue(len(form.errors) > 0)
-        self.assertIn('email', form.errors)
+        self.assertIn('recovery_email', form.errors)
 
         self.assertEqual(mock_update_principal.call_count, 0)
 
@@ -270,7 +273,7 @@ class AdminUpdateUserTestcase(TestCase):
 
         form_data = {
             'username': f'frog@{self.subdomain}',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -309,7 +312,7 @@ class AdminUpdateUserTestcase(TestCase):
     def test_success_without_stalwart_account(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
         form_data = {
             'username': f'frog@{self.subdomain}',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -354,7 +357,7 @@ class AdminUpdateUserTestcase(TestCase):
 
         form_data = {
             'username': f'internaltest@{self.subdomain}',
-            'email': 'frog@example.com',
+            'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
             'oidc_id': self.user.oidc_id,
             # This is dumb, the fields are split into 2 and are populated via existing data
@@ -462,4 +465,185 @@ class AdminDeleteUserTestCase(TestCase):
         self.assertEqual(method, RequestMethods.DELETE)
 
         mock_delete_principal.assert_not_called()
+
+
+@patch.object(CustomUserAdmin, 'message_user')
+@patch('thunderbird_accounts.authentication.admin.actions.KeycloakClient')
+class AdminBackfillRecoveryEmailActionTest(TestCase):
+    def setUp(self):
+        self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
+        self.user_admin = CustomUserAdmin(User, AdminSite())
+        self.request = HttpRequest()
+
+    def test_backfills_selected_users_missing_recovery_email(self, mock_keycloak_cls, mock_message_user):
+        user = User.objects.create(
+            username=f'missing-recovery@{self.subdomain}',
+            email=f'missing-recovery@{self.subdomain}',
+            oidc_id='oidc-missing-recovery',
+        )
+        mock_keycloak = mock_keycloak_cls.return_value
+        mock_keycloak.get_user.return_value = MagicMock(json=lambda: {'email': 'recovery@example.com'})
+
+        admin_backfill_recovery_email(self.user_admin, self.request, User.objects.filter(pk=user.pk))
+
+        user.refresh_from_db()
+        self.assertEqual(user.recovery_email, 'recovery@example.com')
+
+    def test_skips_users_with_existing_recovery_email(self, mock_keycloak_cls, mock_message_user):
+        user = User.objects.create(
+            username=f'has-recovery@{self.subdomain}',
+            email=f'has-recovery@{self.subdomain}',
+            recovery_email='existing@example.com',
+            oidc_id='oidc-has-recovery',
+        )
+
+        admin_backfill_recovery_email(self.user_admin, self.request, User.objects.filter(pk=user.pk))
+
+        mock_keycloak_cls.return_value.get_user.assert_not_called()
+        user.refresh_from_db()
+        self.assertEqual(user.recovery_email, 'existing@example.com')
+
+    def test_backfills_only_eligible_users_when_multiple_selected(self, mock_keycloak_cls, mock_message_user):
+        missing_recovery = User.objects.create(
+            username=f'missing-recovery@{self.subdomain}',
+            email=f'missing-recovery@{self.subdomain}',
+            oidc_id='oidc-missing-recovery',
+        )
+        has_recovery = User.objects.create(
+            username=f'has-recovery@{self.subdomain}',
+            email=f'has-recovery@{self.subdomain}',
+            recovery_email='existing@example.com',
+            oidc_id='oidc-has-recovery',
+        )
+        missing_oidc = User.objects.create(
+            username=f'missing-oidc@{self.subdomain}',
+            email=f'missing-oidc@{self.subdomain}',
+        )
+
+        mock_keycloak = mock_keycloak_cls.return_value
+        mock_keycloak.get_user.return_value = MagicMock(json=lambda: {'email': 'recovery@example.com'})
+
+        admin_backfill_recovery_email(
+            self.user_admin,
+            self.request,
+            User.objects.filter(pk__in=[missing_recovery.pk, has_recovery.pk, missing_oidc.pk]),
+        )
+
+        missing_recovery.refresh_from_db()
+        has_recovery.refresh_from_db()
+        missing_oidc.refresh_from_db()
+
+        self.assertEqual(missing_recovery.recovery_email, 'recovery@example.com')
+        self.assertEqual(has_recovery.recovery_email, 'existing@example.com')
+        self.assertIsNone(missing_oidc.recovery_email)
+        mock_keycloak.get_user.assert_called_once_with('oidc-missing-recovery')
+
+
+class AdminResetTotpCredentialsTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(
+            oidc_id=FAKE_OIDC_UUID,
+            username='test@example.com',
+            email='test@example.com',
+        )
+        self.unlinked_user = User.objects.create(
+            username='unlinked@example.com',
+            email='unlinked@example.com',
+        )
+
+    def _build_request(self, apply: bool = True):
+        request = HttpRequest()
+        request.method = 'POST'
+        request.POST = QueryDict('apply=1' if apply else '')
+        return request
+
+    def _build_modeladmin(self):
+        modeladmin = MagicMock()
+        modeladmin.model = User
+        modeladmin.admin_site.each_context.return_value = {}
+        return modeladmin
+
+    @patch('thunderbird_accounts.authentication.admin.actions.KeycloakClient')
+    def test_reset_totp_credentials_deletes_keycloak_otp_credentials(self, mock_keycloak_client: MagicMock):
+        keycloak = mock_keycloak_client.return_value
+        keycloak.get_totp_credentials.return_value = [
+            {'id': 'credential-1', 'type': 'otp'},
+            {'id': 'credential-2', 'type': 'otp'},
+        ]
+        keycloak.get_recovery_codes_credentials.return_value = []
+        modeladmin = self._build_modeladmin()
+        request = self._build_request()
+
+        admin_reset_totp_credentials(
+            modeladmin,
+            request,
+            User.objects.filter(pk=self.user.pk),
+        )
+
+        keycloak.get_totp_credentials.assert_called_once_with(FAKE_OIDC_UUID)
+        self.assertEqual(keycloak.delete_credential.call_count, 2)
+        keycloak.delete_credential.assert_any_call(FAKE_OIDC_UUID, 'credential-1')
+        keycloak.delete_credential.assert_any_call(FAKE_OIDC_UUID, 'credential-2')
+        modeladmin.message_user.assert_any_call(
+            request,
+            'Reset TOTP credentials for 1 user.',
+            25,
+        )
+
+    @patch('thunderbird_accounts.authentication.admin.actions.KeycloakClient')
+    def test_reset_totp_credentials_cascades_recovery_codes(self, mock_keycloak_client: MagicMock):
+        keycloak = mock_keycloak_client.return_value
+        keycloak.get_totp_credentials.return_value = [{'id': 'credential-1', 'type': 'otp'}]
+        keycloak.get_recovery_codes_credentials.return_value = [
+            {'id': 'recovery-1', 'type': 'recovery-authn-codes'},
+        ]
+        modeladmin = self._build_modeladmin()
+        request = self._build_request()
+
+        admin_reset_totp_credentials(
+            modeladmin,
+            request,
+            User.objects.filter(pk=self.user.pk),
+        )
+
+        keycloak.get_recovery_codes_credentials.assert_called_once_with(FAKE_OIDC_UUID)
+        keycloak.delete_credential.assert_any_call(FAKE_OIDC_UUID, 'credential-1')
+        keycloak.delete_credential.assert_any_call(FAKE_OIDC_UUID, 'recovery-1')
+        modeladmin.message_user.assert_any_call(
+            request,
+            'Deleted 1 Keycloak recovery-codes credential.',
+            25,
+        )
+
+    @patch('thunderbird_accounts.authentication.admin.actions.KeycloakClient')
+    def test_reset_totp_credentials_skips_users_without_keycloak_account(self, mock_keycloak_client: MagicMock):
+        modeladmin = self._build_modeladmin()
+        request = self._build_request()
+
+        admin_reset_totp_credentials(
+            modeladmin,
+            request,
+            User.objects.filter(pk=self.unlinked_user.pk),
+        )
+
+        mock_keycloak_client.return_value.get_totp_credentials.assert_not_called()
+        modeladmin.message_user.assert_called_once_with(
+            request,
+            'Skipped 1 user without a linked Keycloak account.',
+            30,
+        )
+
+    def test_reset_totp_credentials_requires_confirmation(self):
+        modeladmin = self._build_modeladmin()
+
+        response = admin_reset_totp_credentials(
+            modeladmin,
+            self._build_request(apply=False),
+            User.objects.filter(pk=self.user.pk),
+        )
+
+        self.assertIsInstance(response, TemplateResponse)
+        self.assertEqual(response.template_name, 'admin/authentication/user/reset_totp_confirmation.html')
+        response.render()
+        self.assertIn('Yes, reset TOTP credentials', response.content.decode())
 

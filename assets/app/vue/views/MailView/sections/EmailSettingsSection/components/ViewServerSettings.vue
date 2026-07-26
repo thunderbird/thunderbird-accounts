@@ -13,6 +13,9 @@ const { t } = useI18n();
       <ph-sliders size="24" />
     </template>
 
-    <server-settings-card />
+    <server-settings-card
+      :is-manual-configuration-section="false"
+      :show-footer="true"
+    />
   </details-summary>
 </template>

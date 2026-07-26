@@ -95,9 +95,12 @@ Additionally, the first and last names are optional and are part of the default 
 user profile. These fields are intended for display purposes only, and won't be used for billing. For display purposes
 they will be concatenated together with a space between.
 
-It'd be good to refresh up
-on [common falsehoods about names](https://www.kalzumeus.com/2010/06/17/falsehoods-programmers-believe-about-names/)
-too.
+Finally if you need to login to this account you **should definitely** check `Send "Reset Password" email`. This will 
+send a reset password email from Keycloak so the user may setup their credentials. If you fail to do this, you will 
+need to login to the Keycloak admin panel and send it via the user's credentials tab.
+
+This form does not check against the reserved word list, and therefore you can create users with thundermail addresses 
+that they would not be allowed to create themselves.
 
 ![A screenshot of the Add user page. Showing a few required fields mentioned above.](./users_4.png)
 
@@ -111,8 +114,8 @@ error.
 ![A screenshot of the required fields highlighted in a red outline with different errors.](./users_5.png)
 
 If there are no issues with the data, you'll be brought to one of the three places you've selected and that user will be
-created on Keycloak and promptly sent an `Update your password` type email. They **must** log in at least once to set up
-their Stalwart inbox.
+created on Keycloak. If the `Send "Reset Password" email` was checked they will receive an email via Keycloak to 
+reset / setup their credentials.
 
 ## Changing Users
 

@@ -1,5 +1,6 @@
 import hashlib
 import logging
+from datetime import datetime
 from functools import cache
 
 from django.conf import settings
@@ -32,7 +33,7 @@ def submit_event(
     properties: dict | None = None,
     service: str = 'accounts',
     uuid: str | None = None,
-    timestamp: str | None = None,
+    timestamp: str | datetime | None = None,
 ):
     """Submit an event to PostHog with an already-hashed distinct_id.
 
@@ -46,6 +47,11 @@ def submit_event(
     if client is None:
         logger.debug(f'PostHog not configured, skipping event {event}')
         return
+
+    # PostHog SDK silently drops events when timestamp is a string (its
+    # guess_timezone() helper assumes a datetime), so parse RFC3339 here.
+    if isinstance(timestamp, str):
+        timestamp = datetime.fromisoformat(timestamp)
 
     event_properties = {
         'environment': settings.APP_ENV,

@@ -1,6 +1,7 @@
 from functools import cached_property
 
 from django.conf import settings
+from django.core.validators import MinLengthValidator, RegexValidator
 from django.db import models
 
 from django.contrib.auth.models import AbstractUser
@@ -8,17 +9,25 @@ from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.core.models import BaseModel
 
+DISCOUNT_ID_VALIDATOR = RegexValidator(
+    regex=r'^dsc_[a-z0-9]{26}$',
+    message=_('Enter a full Paddle discount id in the format dsc_ followed by 26 lowercase letters or numbers.'),
+)
+
 
 class User(AbstractUser, BaseModel):
     """
     :param username: The thundermail address, aligns with keycloak's usage of username.
     :param oidc_id: The ID of the connected oidc account
+    :param recovery_email: The recovery email associated with this account
     :param last_used_email: The last used email associated with this account
     :param language: The user's preferred language to view the ui/system emails in
     :param display_name: Display name from oidc profile
     :param avatar_url: Avatar URL from oidc profile
     :param timezone: The user's timezone
     """
+
+    USERNAME_MIN_LENGTH = 3
     USERNAME_MAX_LENGTH = 150
 
     class UserLanguageType(models.TextChoices):
@@ -29,13 +38,28 @@ class User(AbstractUser, BaseModel):
         _('username'),
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        help_text=_(f'Required. {USERNAME_MAX_LENGTH} characters or fewer.'),
+        help_text=_(f'Required. {USERNAME_MIN_LENGTH}–{USERNAME_MAX_LENGTH} characters.'),
+        validators=[MinLengthValidator(USERNAME_MIN_LENGTH)],
         error_messages={
             'unique': _('A user with that username already exists.'),
         },
     )
 
     oidc_id = models.CharField(max_length=256, null=True, help_text=_("OIDC's UID field"))
+    recovery_email = models.CharField(
+        max_length=256, null=True, help_text=_('The recovery email associated with this account')
+    )
+    recovery_email_rejected_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('When an external email service permanently rejected the recovery email.'),
+    )
+    recovery_email_rejection_reason = models.CharField(
+        max_length=512,
+        null=True,
+        blank=True,
+        help_text=_('The reason an external email service permanently rejected the recovery email.'),
+    )
     last_used_email = models.CharField(max_length=256, null=True, help_text=_('The email previously used to login'))
     language = models.CharField(
         max_length=16,
@@ -78,6 +102,25 @@ class User(AbstractUser, BaseModel):
     def get_short_name(self):
         return self.display_name
 
+    def save(self, *args, **kwargs):
+        # If recovery_email changes, clear related rejection fields.
+        if self.pk and self.recovery_email_rejected_at:
+            existing_recovery_email = (
+                type(self).objects.filter(pk=self.pk).values_list('recovery_email', flat=True).first()
+            )
+
+            if existing_recovery_email != self.recovery_email:
+                self.recovery_email_rejected_at = None
+                self.recovery_email_rejection_reason = None
+                update_fields = kwargs.get('update_fields')
+                if update_fields is not None:
+                    kwargs['update_fields'] = set(update_fields) | {
+                        'recovery_email_rejected_at',
+                        'recovery_email_rejection_reason',
+                    }
+
+        super().save(*args, **kwargs)
+
     @cached_property
     def has_active_subscription(self):
         from thunderbird_accounts.subscription.models import Subscription
@@ -105,6 +148,21 @@ class AllowListEntry(BaseModel):
     relationship. (Unless they're created by outside means.)"""
 
     email = models.EmailField(_('email address'), unique=True)
+    discount_id = models.CharField(
+        max_length=256,
+        null=True,
+        blank=True,
+        help_text=_('Optional Paddle discount id to apply during checkout.'),
+        validators=[DISCOUNT_ID_VALIDATOR],
+    )
+    is_test_entry = models.BooleanField(
+        _('test entry'),
+        default=False,
+        help_text=_(
+            'Will this entry automatically create a test account.<br/>'
+            '<b>Note:</b> These entries are remove shortly after creation.'
+        ),
+    )
     user = models.ForeignKey(
         User,
         null=True,
@@ -115,9 +173,9 @@ class AllowListEntry(BaseModel):
 
     class Meta(BaseModel.Meta):
         verbose_name_plural = 'Allow list entries'
-        indexes = [
-            *BaseModel.Meta.indexes,
-            models.Index(fields=['email']),
+        indexes = [*BaseModel.Meta.indexes, models.Index(fields=['email']), models.Index(fields=['is_test_entry'])]
+        permissions = [
+            ('create_test_entry_via_api', 'Can create test entries via an api endpoint'),
         ]
 
     def __str__(self):

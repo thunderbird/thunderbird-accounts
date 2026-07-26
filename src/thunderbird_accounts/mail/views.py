@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.db import IntegrityError
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, JsonResponse, Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
@@ -22,21 +22,56 @@ from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
-from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.clients import DomainVerificationErrors, MailClient, StaleDNSRecordCode
+from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
+from thunderbird_accounts.core.validators import normalize_custom_domain
 from thunderbird_accounts.mail.exceptions import (
     AccessTokenNotFound,
     AccountNotFoundError,
     DomainAlreadyExistsError,
     DomainNotFoundError,
+    EmailNotValidError,
 )
-from thunderbird_accounts.mail.utils import filter_app_passwords, is_address_taken
+from thunderbird_accounts.mail.dns import check_stale_dns_records
+from thunderbird_accounts.mail.utils import (
+    filter_app_passwords,
+    is_address_taken,
+    validate_email,
+)
 
 from thunderbird_accounts.mail.models import Account, Email, Domain
+from thunderbird_accounts.mail import tasks as mail_tasks
 from thunderbird_accounts.mail import utils
+from thunderbird_accounts.subscription.decorators import active_subscription_required
+
+
+def _critical_errors_from_stale_dns_records(stale_dns_records: list[dict]) -> list[DomainVerificationErrors]:
+    stale_record_codes = {record.get('code') for record in stale_dns_records}
+    critical_errors = []
+
+    if StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value in stale_record_codes:
+        critical_errors.append(DomainVerificationErrors.AUTODISCOVER_RECORD_FOUND)
+    if StaleDNSRecordCode.AUTODISCOVER_SRV_UNEXPECTED.value in stale_record_codes:
+        critical_errors.append(DomainVerificationErrors.AUTODISCOVER_SRV_RECORD_FOUND)
+
+    return critical_errors
+
+
+def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: str):
+    sentry_sdk.set_context(
+        'domain',
+        {
+            'phase': phase,
+            'domain_name': domain.name,
+            'domain_status': domain.status,
+        },
+    )
+    sentry_sdk.capture_exception(exception)
 
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required(error_message=_('An active subscription is required to set an app password.'))
 @sensitive_post_parameters('password')
 def app_password_set(request: HttpRequest):
     """Sets an app password for a remote Stalwart account"""
@@ -79,6 +114,7 @@ def app_password_set(request: HttpRequest):
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required
 @sensitive_post_parameters('display-name')
 def display_name_set(request: HttpRequest):
     """Sets a display name for a remote Stalwart account"""
@@ -103,6 +139,7 @@ def display_name_set(request: HttpRequest):
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required
 def create_custom_domain(request: HttpRequest):
     """Creates a custom domain for the user"""
     data = json.loads(request.body)
@@ -110,6 +147,10 @@ def create_custom_domain(request: HttpRequest):
 
     if not domain_name:
         return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
+
+    domain_name = normalize_custom_domain(domain_name)
+    if not domain_name:
+        return JsonResponse({'success': False, 'error': _('Enter a valid domain name.')}, status=400)
 
     custom_domain_count = request.user.domains.count()
 
@@ -132,6 +173,7 @@ def create_custom_domain(request: HttpRequest):
         # we want this to happen before the local reference (Domain model) is created
         # so we're not missing any dkim records in the dns record list.
         stalwart_client.create_dkim(domain_name)
+        mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
 
         try:
             Domain.objects.create(name=domain_name, user=request.user, stalwart_id=None, stalwart_created_at=None)
@@ -156,11 +198,12 @@ def create_custom_domain(request: HttpRequest):
             status=500,
         )
 
-    return JsonResponse({'success': True})
+    return JsonResponse({'success': True, 'domain_name': domain_name})
 
 
 @login_required
 @require_http_methods(['GET'])
+@active_subscription_required
 def get_dns_records(request: HttpRequest):
     """Gets the DNS records for a custom domain"""
     domain = request.user.domains.get(name=request.GET.get('domain-name'))
@@ -169,8 +212,18 @@ def get_dns_records(request: HttpRequest):
 
     try:
         stalwart_client = MailClient()
-        dns_records = stalwart_client.get_dns_records(domain.name)
-        return JsonResponse({'success': True, 'dns_records': dns_records})
+        dns_records = stalwart_client.build_expected_dns_records(domain.name)
+
+        return JsonResponse(
+            {
+                'success': True,
+                'critical_errors': [],
+                'warnings': [],
+                'dns_records': dns_records,
+                'stale_dns_records': [],
+                'dkim_cname_records': build_customer_dkim_cname_records(domain.name),
+            }
+        )
     except Exception as e:
         logging.error(f'Error getting DNS records: {e}')
         return JsonResponse(
@@ -181,12 +234,15 @@ def get_dns_records(request: HttpRequest):
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required
 def verify_custom_domain(request: HttpRequest):
     """Verifies a custom domain"""
     data = json.loads(request.body)
     domain_name = data.get('domain-name')
     if not domain_name:
         return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
+
+    domain_name = domain_name.lower()
 
     domain = request.user.domains.get(name=domain_name)
     if not domain:
@@ -197,36 +253,74 @@ def verify_custom_domain(request: HttpRequest):
     try:
         stalwart_client = MailClient()
 
-        # For dev / localhost we can't verify domains, so we will always return success
-        if not settings.IS_DEV:
-            is_verified, critical_errors, warnings = stalwart_client.verify_domain(domain.name)
+        dns_check = stalwart_client.check_domain_dns(domain.name)
+        if settings.CUSTOM_DOMAINS_DO_VERIFY:
+            is_verified = dns_check['is_verified']
+            critical_errors = dns_check['critical_errors']
+            warnings = dns_check['warnings']
         else:
             is_verified = True
             critical_errors = []
-            warnings = ['Dev mode activated. Automatically verified domain.']
+            warnings = [_('Custom domain DNS verification disabled. Automatically verified domain.')]
 
         domain.last_verification_attempt = now
 
+        dns_records = dns_check['dns_records']
+        stale_dns_records = check_stale_dns_records(domain.name)
+        stale_dns_critical_errors = _critical_errors_from_stale_dns_records(stale_dns_records)
+        for critical_error in stale_dns_critical_errors:
+            if critical_error not in critical_errors:
+                critical_errors.append(critical_error)
+
+        if stale_dns_critical_errors:
+            is_verified = False
+
+        response_data = {
+            'critical_errors': critical_errors,
+            'warnings': warnings,
+            'dns_records': dns_records,
+            'stale_dns_records': stale_dns_records,
+        }
+
+        # If we're verified via dns check
         if is_verified:
-            domain.status = Domain.DomainStatus.VERIFIED
-            domain.verified_at = now
+            try:
+                stalwart_resp = stalwart_client.get_domain(domain_name)
+            except DomainNotFoundError:
+                stalwart_resp = None
 
-            # Now attach the stalwart domain id to the user domain object
-            domain_id = stalwart_client.create_domain(domain_name)
-            # Harmless to retry
-            stalwart_client.create_dkim(domain_name)
-            now = datetime.datetime.now(datetime.UTC)
+            # Only roll through these steps if we're not already verified OR stalwart doesn't have our domain
+            if domain.status != Domain.DomainStatus.VERIFIED or not stalwart_resp:
+                domain.status = Domain.DomainStatus.VERIFIED
+                domain.verified_at = now
 
-            domain.stalwart_id = domain_id
-            domain.stalwart_created_at = now
-            domain.save()
+                # Fetch or create a domain on Stalwart's end, and retrieve the domain_id
+                if stalwart_resp:
+                    domain_id = stalwart_resp.get('id')
+                else:
+                    domain_id = stalwart_client.create_domain(domain_name)
 
-            return JsonResponse({'success': True, 'critical_errors': critical_errors, 'warnings': warnings})
+                # Ensure missing DKIM selectors without replacing keys created at domain-add time.
+                stalwart_client.ensure_dkim(domain_name)
+
+                mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
+                if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+                    stalwart_client.activate_pending_dkim_signatures(domain_name)
+
+                if domain_id:
+                    domain.stalwart_id = domain_id
+                else:
+                    logging.error(f'There was a problem saving the domain id for {domain.name} / {domain.uuid}')
+
+                domain.stalwart_created_at = datetime.datetime.now(datetime.UTC)
+                domain.save()
+
+            return JsonResponse({'success': True, **response_data})
         else:
             domain.status = Domain.DomainStatus.FAILED
             domain.save()
 
-            return JsonResponse({'success': False, 'critical_errors': critical_errors, 'warnings': warnings})
+            return JsonResponse({'success': False, **response_data})
     except Exception as e:
         domain.status = Domain.DomainStatus.FAILED
         domain.save()
@@ -240,6 +334,7 @@ def verify_custom_domain(request: HttpRequest):
 
 @login_required
 @require_http_methods(['DELETE'])
+@active_subscription_required
 def remove_custom_domain(request: HttpRequest):
     """Removes a custom domain"""
     data = json.loads(request.body)
@@ -248,6 +343,7 @@ def remove_custom_domain(request: HttpRequest):
     if not domain_name:
         return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
 
+    domain_name = domain_name.lower()
     domain = request.user.domains.get(name=domain_name)
     if not domain:
         return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
@@ -275,24 +371,33 @@ def remove_custom_domain(request: HttpRequest):
             )
 
     stalwart_client = MailClient()
+    cleanup_phase = 'load_local_domains'
     try:
-        domains = request.user.domains.filter(name=domain_name).all()
+        domains = request.user.domains.filter(name__iexact=domain_name).all()
         # There should only be one here, but just in case...
         for _domain in domains:
             if _domain.stalwart_id:
                 try:
-                    stalwart_client.delete_domain(domain.name)
-                except DomainNotFoundError:
+                    cleanup_phase = 'delete_stalwart_domain'
+                    stalwart_client.delete_domain(_domain.name)
+                except DomainNotFoundError as ex:
                     # While it's not in Stalwart we seem to have a local reference,
                     # so try deleting dkim and then local ref
-                    pass
-                stalwart_client.delete_dkim(domain.name)
-                break
+                    _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
 
+            cleanup_phase = 'delete_dkim'
+            stalwart_client.delete_dkim(_domain.name)
+
+            cleanup_phase = 'delete_hosted_dkim_dns_records'
+            mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
+            break
+
+        cleanup_phase = 'delete_local_domain'
         domain.delete()
 
     except Exception as e:
         logging.error(f'Error removing custom domain: {e}')
+        _capture_domain_exception(e, domain, phase=cleanup_phase)
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while removing the custom domain. Please try again later.'},
             status=500,
@@ -303,17 +408,49 @@ def remove_custom_domain(request: HttpRequest):
 
 @login_required
 @require_http_methods(['POST'])
+@active_subscription_required
 def add_email_alias(request: HttpRequest):
     """Adds an email alias"""
     data = json.loads(request.body)
     email_alias = data.get('email-alias')
     domain = data.get('domain')
+    is_shared_domain = domain in settings.ALLOWED_EMAIL_DOMAINS
+    is_custom_domain = (
+        domain in request.user.domains.values_list('name', flat=True) and not is_shared_domain
+    )
+    is_catch_all = is_custom_domain and (email_alias == '*' or email_alias == '')
+
+    # We don't need to specify the asterisk for catch-all on stalwart's end.
+    if is_catch_all:
+        email_alias = ''
+
+    email_alias = email_alias.lower()
+
     full_email_alias = f'{email_alias}@{domain}'
 
-    if not email_alias or not domain:
+    if not is_catch_all and email_alias and '+' in email_alias:
+        return JsonResponse(
+            {'success': False, 'error': _('The + symbol is not allowed.')},
+            status=400,
+        )
+
+    if domain in settings.ALLOWED_EMAIL_DOMAINS and len(email_alias) < settings.MIN_CUSTOM_DOMAIN_ALIAS_LENGTH:
+        return JsonResponse(
+            {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
+            status=400,
+        )
+
+    if not is_catch_all:
+        # min_length=1 because the domain-specific minimum has already been checked above.
+        try:
+            validate_email(full_email_alias, min_length=1)
+        except EmailNotValidError as ex:
+            return JsonResponse({'success': False, 'error': ex.error_message}, status=400)
+
+    if (not is_catch_all and not email_alias) or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)
 
-    if is_reserved(email_alias) or is_address_taken(full_email_alias):
+    if (not is_catch_all and not is_custom_domain and is_reserved(email_alias)) or is_address_taken(full_email_alias):
         return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
 
     if (
@@ -321,12 +458,6 @@ def add_email_alias(request: HttpRequest):
         and domain not in settings.ALLOWED_EMAIL_DOMAINS
     ):
         return JsonResponse({'success': False, 'error': _('Domain not found.')}, status=404)
-
-    if domain in settings.ALLOWED_EMAIL_DOMAINS and len(email_alias) < settings.MIN_CUSTOM_DOMAIN_ALIAS_LENGTH:
-        return JsonResponse(
-            {'success': False, 'error': _('Email alias must be at least 3 characters long.')},
-            status=400,
-        )
 
     # Get the user's account
     try:
@@ -336,6 +467,18 @@ def add_email_alias(request: HttpRequest):
         return JsonResponse(
             {'success': False, 'error': _('There was an error retrieving your mail account.')},
             status=404,
+        )
+
+    emails = account.email_set.filter(type=Email.EmailType.ALIAS.value).all()
+    shared_domain_aliases = list(
+        filter(None, [email.address.split('@')[1] in settings.ALLOWED_EMAIL_DOMAINS for email in emails])
+    )
+
+    # If it's a shared domain, add one to the count and see if we go over the plan's limit.
+    if is_shared_domain and len(shared_domain_aliases) + 1 > request.user.plan.mail_address_count:
+        return JsonResponse(
+            {'success': False, 'error': _('You cannot create anymore aliases.')},
+            status=400,
         )
 
     # Create the email alias record locally
@@ -349,10 +492,17 @@ def add_email_alias(request: HttpRequest):
         )
 
         if not created:
+            logging.info('Alias creation found an existing local email record for the requested address')
             return JsonResponse(
                 {'success': False, 'error': _('This email address is not available.')},
                 status=400,
             )
+    except IntegrityError:
+        logging.info('Alias creation hit a local duplicate-address race')
+        return JsonResponse(
+            {'success': False, 'error': _('This email address is not available.')},
+            status=400,
+        )
     except Exception as e:
         logging.error(f'Error creating email alias: {e}')
         return JsonResponse(
@@ -379,6 +529,7 @@ def add_email_alias(request: HttpRequest):
 
 @login_required
 @require_http_methods(['DELETE'])
+@active_subscription_required
 def remove_email_alias(request: HttpRequest):
     """Removes an email alias"""
     data = json.loads(request.body)
@@ -386,6 +537,8 @@ def remove_email_alias(request: HttpRequest):
 
     if not email_alias:
         return JsonResponse({'success': False, 'error': _('Email alias is required.')}, status=400)
+
+    email_alias = email_alias.lower()
 
     # Get the account
     try:
@@ -399,7 +552,7 @@ def remove_email_alias(request: HttpRequest):
 
     # Get the local Email object
     try:
-        email_obj = Email.objects.get(address=email_alias, type=Email.EmailType.ALIAS, account=account)
+        email_obj = Email.objects.get(address__iexact=email_alias, type=Email.EmailType.ALIAS, account=account)
     except Email.DoesNotExist:
         logging.error(f'Email alias not found for user {request.user.uuid} and email {email_alias}')
         return JsonResponse(
@@ -487,25 +640,37 @@ def appointment_caldav_setup(request: HttpRequest):
         error_response.status_code = 400
         return error_response
 
+    primary_email = user.stalwart_primary_email
+    if not primary_email:
+        logging.info(f'Primary Stalwart email not found during Appointment CalDAV setup for user {user.uuid}')
+        return JsonResponse(
+            {
+                'success': False,
+                'error': _('Thundermail account setup is still in progress. Please try again shortly.'),
+                'code': 'mail_account_not_ready',
+            },
+            status=409,
+        )
+
     # Use a special label for the App Password to be used in Appointment's CalDAV auto-setup
-    label = f'{settings.APPOINTMENT_APP_PASSWORD_PREFIX}{user.stalwart_primary_email}'
+    label = f'{settings.APPOINTMENT_APP_PASSWORD_PREFIX}{primary_email}'
 
     try:
         stalwart_client = MailClient()
-        email_user = stalwart_client.get_account(user.stalwart_primary_email)
+        email_user = stalwart_client.get_account(primary_email)
 
         # Remove any existing app password for this label so we can
         # replace it with a fresh one.
         expected_prefix = f'$app${label}$'
         for secret in email_user.get('secrets', []):
             if secret.startswith(expected_prefix):
-                stalwart_client.delete_app_password(user.stalwart_primary_email, secret)
+                stalwart_client.delete_app_password(primary_email, secret)
 
         # Generate a random base64 password, hash it for Stalwart
         # storage, and return the base64 password to the caller for CalDAV auth.
         base64_password = secrets.token_urlsafe(64)
         app_password_hash = utils.save_app_password(label, base64_password)
-        stalwart_client.save_app_password(user.stalwart_primary_email, app_password_hash)
+        stalwart_client.save_app_password(primary_email, app_password_hash)
 
         return JsonResponse({'success': True, 'app_password': base64_password})
 
@@ -516,6 +681,7 @@ def appointment_caldav_setup(request: HttpRequest):
 
 
 @login_required
+@active_subscription_required
 def jmap_test_page(request: HttpRequest):
     from thunderbird_accounts.mail.tiny_jmap_client import TinyJMAPClient
 
@@ -572,6 +738,10 @@ class AdminStalwartList(TemplateView):
     template_name = 'admin_stalwart_view.html'
 
     def get_context_data(self, **kwargs):
+        # Just raise a 404 to make this easy
+        if not self.request.user or not self.request.user.is_authenticated or not self.request.user.is_superuser:
+            raise Http404()
+        
         context = super().get_context_data(**kwargs)
 
         stalwart = MailClient()

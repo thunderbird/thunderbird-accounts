@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
 import { BrandButton } from '@thunderbirdops/services-ui';
 import UserMenu from '@/components/UserMenu.vue';
 
@@ -10,32 +9,15 @@ const { t } = useI18n();
 const isAuthenticated = ref(window._page?.isAuthenticated);
 const avatarUsername = ref(window._page?.userDisplayName || window._page?.userEmail);
 
-const currentRoute = useRoute();
-
-const isThundermail = computed(() => currentRoute.path.startsWith('/mail'));
-
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
-const logoSrc = computed(() => {
-  if (isThundermail.value) {
-    return new URL('../assets/svg/thundermail-logo.svg', import.meta.url).href;
-  }
-
-  return new URL('../assets/svg/thunderbird-pro-dark.svg', import.meta.url).href;
-})
+const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).href;
 </script>
 
 <template>
   <header>
-    <template v-if="isThundermail">
-      <router-link to="/mail">
-        <img :src="logoSrc" alt="Thundermail" />
-      </router-link>
-    </template>
-    <template v-else>
-      <router-link to="/">
-        <img :src="logoSrc" alt="Thunderbird Pro" />
-      </router-link>
-    </template>
+    <router-link to="/mail">
+      <img :src="logoSrc" alt="Thundermail" />
+    </router-link>
 
     <template v-if="isAuthenticated">
       <user-menu :username="avatarUsername" />
