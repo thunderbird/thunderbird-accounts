@@ -5,6 +5,7 @@ export interface ActiveSession {
     os?: string | null;
     os_version?: string | null;
     browser?: string | null;
+    app?: string | null;
     is_mobile?: boolean | null;
   } | null;
   ip_address: string;

@@ -672,6 +672,7 @@ class KeycloakAccountClientTestCase(TestCase):
                             'ipAddress': '203.0.113.11',
                             'lastAccess': 1710000000100,
                             'current': True,
+                            'clients': {'thunderbird-desktop': 'Thunderbird'},
                         }
                     ],
                 }
@@ -694,6 +695,7 @@ class KeycloakAccountClientTestCase(TestCase):
                         'os': 'macOS',
                         'os_version': '14.5',
                         'browser': 'Firefox',
+                        'app': 'Thunderbird',
                         'is_mobile': False,
                     },
                     'is_current': True,

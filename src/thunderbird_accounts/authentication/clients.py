@@ -471,7 +471,7 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
                             'lastAccess': session.get('lastAccess') or device.get('lastAccess'),
                             'current': session.get('current', device.get('current')),
                         },
-                        device_info,
+                        self._device_info(device, session),
                     )
                 )
         return active_sessions
@@ -485,14 +485,32 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
             'is_current': bool(session.get('current')),
         }
 
-    def _device_info(self, device: dict) -> dict:
+    def _device_info(self, device: dict, session: dict | None = None) -> dict:
+        app = self._app_name(device, session)
         return {
             'device': device.get('device'),
             'os': device.get('os'),
             'os_version': device.get('osVersion'),
             'browser': device.get('browser'),
+            'app': app,
             'is_mobile': device.get('mobile'),
         }
+
+    def _app_name(self, device: dict, session: dict | None = None) -> str | None:
+        clients = (session or {}).get('clients') or device.get('clients') or {}
+        if isinstance(clients, dict):
+            first_client = next(iter(clients.values()), None)
+            if isinstance(first_client, str):
+                return first_client
+            if isinstance(first_client, dict):
+                return first_client.get('clientName') or first_client.get('name') or first_client.get('clientId')
+        if isinstance(clients, list):
+            first_client = next(iter(clients), None)
+            if isinstance(first_client, str):
+                return first_client
+            if isinstance(first_client, dict):
+                return first_client.get('clientName') or first_client.get('name') or first_client.get('clientId')
+        return device.get('browser')
 
 
 class KeycloakMfaClient(KeycloakSelfServiceClient):
