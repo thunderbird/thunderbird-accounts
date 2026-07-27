@@ -1,4 +1,5 @@
 import type { ComposerTranslation } from 'vue-i18n';
+import type { ActiveSession } from './types';
 
 /**
  * Formats the last access date for the account activity table
@@ -34,4 +35,16 @@ export const formatDate = (date: Date, locale: string, t: ComposerTranslation): 
     const day = date.getDate();
     return `${month} ${day}, ${timeString}`;
   }
+};
+
+export const formatDeviceInfo = (
+  deviceInfo: ActiveSession['device_info'],
+  unknownDevice: string,
+): string => {
+  if (!deviceInfo) {
+    return unknownDevice;
+  }
+
+  const device = deviceInfo.os || deviceInfo.device || unknownDevice;
+  return deviceInfo.browser ? `${device} – ${deviceInfo.browser}` : device;
 };
