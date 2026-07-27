@@ -108,7 +108,7 @@ class CustomPriceAdmin(CustomReadonlyAdmin):
         'billing_cycle',
     )
 
-    @admin.display(description=_('Amount'), ordering='amount')
+    @admin.display(description=_('Amount (in USD)'), ordering='amount')
     def formatted_amount(self, obj):
         try:
             amount = int(obj.amount) / 100
@@ -165,7 +165,7 @@ class CustomSubscriptionItemAdmin(CustomReadonlyAdmin):
             return obj.price.name
         return None
 
-    @admin.display(description=_('Price Amount'), ordering='price__amount')
+    @admin.display(description=_('Price Amount (in USD)'), ordering='price__amount')
     def price_amount(self, obj):
         if obj.price:
             try:
