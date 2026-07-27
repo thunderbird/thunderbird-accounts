@@ -46,5 +46,6 @@ export const formatDeviceInfo = (
   }
 
   const device = deviceInfo.os || deviceInfo.device || unknownDevice;
-  return deviceInfo.browser ? `${device} – ${deviceInfo.browser}` : device;
+  const app = deviceInfo.app || deviceInfo.browser;
+  return app ? `${device} - ${app}` : device;
 };
