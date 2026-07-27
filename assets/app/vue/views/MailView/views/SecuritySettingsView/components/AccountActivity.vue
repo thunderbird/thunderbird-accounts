@@ -12,7 +12,7 @@ import { getActiveSessions, signOutSession } from '../api';
 import type { ActiveSession } from '../types';
 
 // Utils
-import { formatDate } from '../utils';
+import { formatDate, formatDeviceInfo } from '../utils';
 
 const { t, locale } = useI18n();
 
@@ -43,7 +43,7 @@ onMounted(async () => {
 
     activeSessions.value = sortedData.map((session: ActiveSession) => ({
       id: session.id,
-      deviceInfo: session.device_info,
+      deviceInfo: formatDeviceInfo(session.device_info, t('views.mail.views.securitySettings.unknownDevice')),
       ipAddress: session.ip_address,
       lastAccess: formatDate(new Date(session.last_access), locale.value, t),
     }));
