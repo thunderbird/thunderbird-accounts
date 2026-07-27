@@ -483,3 +483,58 @@ class WaffleFlagsTestcase(APITestCase):
     def test_returns_401_for_invalid_token(self):
         response = self.client.get(self.url, headers={'authorization': 'Bearer invalid-token'})
         self.assertEqual(401, response.status_code)
+
+
+class ActiveSessionsTestcase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create(
+            oidc_id=str(uuid.uuid4()),
+            recovery_email=f'{uuid.uuid4()}@example.com',
+            username=f'{uuid.uuid4()}@example.org',
+        )
+        self.client.force_authenticate(self.user)
+        session = self.client.session
+        session['oidc_access_token'] = 'test-user-access-token'
+        session.save()
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_get_active_sessions_uses_user_access_token(self, mock_account_client: MagicMock):
+        mock_account_client.return_value.get_active_sessions.return_value = [
+            {
+                'id': 'session-id',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Firefox'},
+            }
+        ]
+
+        response = self.client.get(reverse('api_get_active_sessions'))
+
+        self.assertEqual(response.status_code, 200)
+        mock_account_client.return_value.get_active_sessions.assert_called_once_with('test-user-access-token')
+        self.assertEqual(response.json()[0]['id'], 'session-id')
+
+    @patch('thunderbird_accounts.authentication.api.AccountsOIDCBackend')
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_sign_out_session_uses_user_access_token(
+        self,
+        mock_account_client: MagicMock,
+        mock_oidc_backend: MagicMock,
+    ):
+        session = self.client.session
+        session['oidc_id_token'] = 'test-id-token'
+        session.save()
+        mock_oidc_backend.return_value.verify_token.return_value = {'sid': 'other-session-id'}
+
+        response = self.client.post(
+            reverse('api_sign_out_session'),
+            data={'session_id': 'session-id'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_account_client.return_value.sign_out_session.assert_called_once_with(
+            'test-user-access-token',
+            'session-id',
+        )

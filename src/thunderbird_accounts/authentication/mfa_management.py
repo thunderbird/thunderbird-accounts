@@ -13,7 +13,7 @@ from requests.exceptions import RequestException
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from thunderbird_accounts.authentication.clients import KeycloakClient, KeycloakMfaClient
+from thunderbird_accounts.authentication.clients import KeycloakAccountClient, KeycloakClient, KeycloakMfaClient
 from thunderbird_accounts.authentication.exceptions import (
     MfaCredentialError,
     MfaSessionExpiredError,
@@ -233,10 +233,12 @@ class MfaManagementService:
         request: Request,
         keycloak: KeycloakClient | None = None,
         provider: KeycloakMfaClient | None = None,
+        account_client: KeycloakAccountClient | None = None,
     ):
         self.request = request
         self.keycloak = keycloak or KeycloakClient()
         self.provider = provider or KeycloakMfaClient()
+        self.account_client = account_client or KeycloakAccountClient()
 
     def get_methods(self) -> MfaMethodsResult:
         oidc_id = self._require_oidc_id()
@@ -447,6 +449,6 @@ class MfaManagementService:
         # request. Keycloak's Account API preserves the current session (the admin
         # user-logout would evict it too — issue #1005).
         try:
-            self.provider.logout_other_sessions(user_access_token)
+            self.account_client.logout_other_sessions(user_access_token)
         except RequestException as exc:
             sentry_sdk.capture_exception(exc)
