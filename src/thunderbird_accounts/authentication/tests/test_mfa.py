@@ -12,7 +12,7 @@ from requests import Response as RequestsResponse
 from requests.exceptions import RequestException
 from rest_framework.test import APIClient
 
-from thunderbird_accounts.authentication.clients import KeycloakMfaClient, RequestMethods
+from thunderbird_accounts.authentication.clients import KeycloakAccountClient, KeycloakMfaClient, RequestMethods
 from thunderbird_accounts.authentication.exceptions import (
     MfaCredentialError,
     MfaSessionExpiredError,
@@ -60,6 +60,9 @@ class MfaApiTestCase(TestCase):
         self.mfa_provider_patcher = patch('thunderbird_accounts.authentication.mfa_management.KeycloakMfaClient')
         self.mock_mfa_client = self.mfa_provider_patcher.start()
         self.addCleanup(self.mfa_provider_patcher.stop)
+        self.account_client_patcher = patch('thunderbird_accounts.authentication.mfa_management.KeycloakAccountClient')
+        self.mock_account_client = self.account_client_patcher.start()
+        self.addCleanup(self.account_client_patcher.stop)
 
     @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
     def test_get_mfa_methods_returns_keycloak_totp_credentials(self, mock_keycloak_client: Mock):
@@ -242,7 +245,7 @@ class MfaApiTestCase(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.mock_mfa_client.return_value.logout_other_sessions.assert_called_once_with('test-user-access-token')
+        self.mock_account_client.return_value.logout_other_sessions.assert_called_once_with('test-user-access-token')
 
     @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
     def test_confirm_totp_setup_without_logout_flag_skips_account_api(self, mock_keycloak_client: Mock):
@@ -257,7 +260,7 @@ class MfaApiTestCase(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.mock_mfa_client.return_value.logout_other_sessions.assert_not_called()
+        self.mock_account_client.return_value.logout_other_sessions.assert_not_called()
 
     @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
     def test_confirm_totp_setup_succeeds_when_logout_fails(self, mock_keycloak_client: Mock):
@@ -265,7 +268,7 @@ class MfaApiTestCase(TestCase):
         cache.set(make_pending_totp_cache_key(self.user.pk), {'secret': 'rawsecretvalue123456'})
         self.mock_mfa_client.return_value.register_totp_credential.return_value = {'success': True}
         mock_keycloak_client.return_value.get_totp_credentials.return_value = [{'id': 'new-credential-id'}]
-        self.mock_mfa_client.return_value.logout_other_sessions.side_effect = RequestException('boom')
+        self.mock_account_client.return_value.logout_other_sessions.side_effect = RequestException('boom')
 
         response = self.client.post(
             reverse('api_confirm_totp_setup'),
@@ -643,6 +646,72 @@ class KeycloakClientMfaTestCase(TestCase):
         self.assertEqual(method, RequestMethods.POST)
         self.assertEqual(mock_request.call_args.kwargs['json_data'], {'deviceName': 'Recovery codes'})
         self.assertEqual(result['codes'], ['AAAA', 'BBBB'])
+
+
+class KeycloakAccountClientTestCase(TestCase):
+    USER_TOKEN = 'user-access-token'
+
+    def test_get_active_sessions_calls_account_devices_endpoint(self):
+        client = KeycloakAccountClient()
+
+        with patch.object(client, 'request') as mock_request:
+            mock_request.return_value.json.return_value = [
+                {
+                    'id': 'device-id',
+                    'ipAddress': '203.0.113.10',
+                    'lastAccess': 1710000000000,
+                    'os': 'macOS',
+                    'osVersion': '14.5',
+                    'browser': 'Firefox',
+                    'device': 'Mac',
+                    'mobile': False,
+                    'current': True,
+                    'sessions': [
+                        {
+                            'id': 'session-id',
+                            'ipAddress': '203.0.113.11',
+                            'lastAccess': 1710000000100,
+                            'current': True,
+                        }
+                    ],
+                }
+            ]
+            result = client.get_active_sessions(self.USER_TOKEN)
+
+        endpoint, user_token, method = mock_request.call_args.args[:3]
+        self.assertEqual(endpoint, 'account/sessions/devices')
+        self.assertEqual(user_token, self.USER_TOKEN)
+        self.assertEqual(method, RequestMethods.GET)
+        self.assertEqual(
+            result,
+            [
+                {
+                    'id': 'session-id',
+                    'last_access': 1710000000100,
+                    'ip_address': '203.0.113.11',
+                    'device_info': {
+                        'device': 'Mac',
+                        'os': 'macOS',
+                        'os_version': '14.5',
+                        'browser': 'Firefox',
+                        'is_mobile': False,
+                    },
+                    'is_current': True,
+                }
+            ],
+        )
+
+    def test_sign_out_session_deletes_account_session(self):
+        client = KeycloakAccountClient()
+
+        with patch.object(client, 'request') as mock_request:
+            result = client.sign_out_session(self.USER_TOKEN, 'session-id')
+
+        endpoint, user_token, method = mock_request.call_args.args[:3]
+        self.assertEqual(endpoint, 'account/sessions/session-id')
+        self.assertEqual(user_token, self.USER_TOKEN)
+        self.assertEqual(method, RequestMethods.DELETE)
+        self.assertEqual(result, {'success': True})
 
 
 class MfaReauthenticationRequestViewTestCase(TestCase):
