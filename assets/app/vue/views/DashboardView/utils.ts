@@ -1,7 +1,7 @@
 import type { ComposerNumberFormatting, ComposerTranslation, ComposerDateTimeFormatting } from 'vue-i18n';
 import type { SubscriptionData } from './types';
 import { i18n } from '@/composables/i18n';
-import { dinero, add, toDecimal, toSnapshot, allocate } from 'dinero.js';
+import { dinero, toDecimal, allocate } from 'dinero.js';
 import * as currencies from 'dinero.js/currencies';
 /**
  * Converts bytes to the most appropriate unit (KB, MB, or GB) with the unit label

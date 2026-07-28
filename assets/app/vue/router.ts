@@ -51,7 +51,7 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
       isPublic: true,
       useAppTemplate: false,
     },
-    beforeEnter: (async (to, from) => {
+    beforeEnter: (async (to, _from) => {
       /* This is a bit too long but we cannot use beforeEnter in-component. :( */
       let failQueryParam = '';
 

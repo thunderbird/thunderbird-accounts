@@ -8,7 +8,6 @@ import { useI18n } from 'vue-i18n';
 import SignUpLayout from '../../components/SignUpLayout.vue';
 import { useSignUpFlowStore } from '../../stores/signUpFlowStore';
 import { formatLocalizedMonthlyPrice } from '@/views/DashboardView/utils';
-import { dinero, add, toDecimal, toSnapshot } from 'dinero.js';
 const DEFAULT_MONTHLY_PRICE = '$6';
 
 const { t } = useI18n();
@@ -49,7 +48,6 @@ const loadPlanPrice = async () => {
         quantity: 1,
         priceId,
       })),
-      currencyCode: 'JPY',
     });
 
     const lineItem = preview.data.details.lineItems[0];
