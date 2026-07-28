@@ -3,10 +3,10 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.16.5
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.16.12
 
 # Update this value to update all containers based on this Keycloak image
-.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-9416511cde95206269822823a77f3c9a1790cc16
+.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-1b20b5c2be2a9906c92ab86e69b283033dd3a862
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}
@@ -291,7 +291,7 @@ resources:
               protocol: tcp
               from_port: 0
               to_port: 65535
-      
+
   tb:secrets:PulumiSecretsManager:
     pulumi:
       secret_names:
@@ -351,7 +351,7 @@ resources:
       transit_encryption_mode: required
       transit_encryption_enabled: True
       apply_immediately: True
-      
+
   tb:fargate:AutoscalingFargateCluster:
     accounts:
       cluster: {}
@@ -532,6 +532,8 @@ resources:
                   value: "no"
                 - name: TBA_FLOWER
                   value: "yes"
+                - name: FLOWER_UNAUTHENTICATED_API
+                  value: 'true'
 
       targets:
         flower:
@@ -549,7 +551,7 @@ resources:
           protocol: HTTP
           target_type: ip
           ip_address_type: ipv4
-      
+
       load_balancers:
         flower:
           enable_cross_zone_load_balancing: yes
@@ -606,7 +608,7 @@ resources:
                 description: Allow local TLS traffic only
                 cidr_blocks:
                   - 10.10.0.0/16
-      
+
       listeners:
         flower:  # Load balancer to attach to
           flower:  # Target to route traffic to
@@ -618,7 +620,7 @@ resources:
         celery-prod:
           assign_public_ip: yes
           service:
-            desired_count: 1
+            desired_count: 4
           target: null
         flower-prod:
           assign_public_ip: yes
@@ -640,13 +642,13 @@ resources:
           - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/*
         flower-prod:
           - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/*
-      
+
       ssm_params: {}
 
       autoscalers:
         celery-prod:
           min_capacity: 2
-          max_capacity: 4
+          max_capacity: 8
         flower-prod:
           min_capacity: 1
           max_capacity: 1
