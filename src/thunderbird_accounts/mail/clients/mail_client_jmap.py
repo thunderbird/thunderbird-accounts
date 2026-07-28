@@ -213,30 +213,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             sentry_sdk.capture_exception(ex)
             raise InvalidJMapResponseError(ex)
 
-    def create_account(
-        self,
-        emails: list[str],
-        principal_id: str,
-        full_name: Optional[str] = None,
-        app_password: Optional[str] = None,
-        quota: Optional[int] = None,
-    ):
-        """Creates a Stalwart Account object from the given values. Domains for aliases need to be created
-        ahead of time.
-
-        Note: App password is deprecated, it's not used within actual working code and so we'll remove it soon.
-
-        :raises RuntimeError: If app_password is any value except for None.
-        :raises DomainNotFoundError: If an email alias domain is not found within Stalwart.
-        :raises AccountSetError: If there was an error with Stalwart or one of our parameters in the request.
-        :raises AccountNotFoundError: If somehow the account was created but no id was returned."""
-        self.preflight_check()
-
-        if app_password:
-            raise RuntimeError('app_password is a deprecated property and cannot be used.')
-
-        account_name, account_domain = principal_id.split('@')
-
+    def _query_domain_ids_by_name(self, account_domain: str, emails: list[str]) -> dict[str,str]:
         # Sort aliases by domain
         alias_domains = {}
         for email in emails:
@@ -280,6 +257,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             )
         )
 
+
         domain_ids_by_domain = {}
 
         debug_dump = []
@@ -293,6 +271,34 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             domain_ids_by_domain[domain_name] = id_list[0]
 
         self._debug_dump('set_account-domain_query', {'_': debug_dump})
+
+        return domain_ids_by_domain
+
+    def create_account(
+        self,
+        emails: list[str],
+        principal_id: str,
+        full_name: Optional[str] = None,
+        app_password: Optional[str] = None,
+        quota: Optional[int] = None,
+    ):
+        """Creates a Stalwart Account object from the given values. Domains for aliases need to be created
+        ahead of time.
+
+        Note: App password is deprecated, it's not used within actual working code and so we'll remove it soon.
+
+        :raises RuntimeError: If app_password is any value except for None.
+        :raises DomainNotFoundError: If an email alias domain is not found within Stalwart.
+        :raises AccountSetError: If there was an error with Stalwart or one of our parameters in the request.
+        :raises AccountNotFoundError: If somehow the account was created but no id was returned."""
+        self.preflight_check()
+
+        if app_password:
+            raise RuntimeError('app_password is a deprecated property and cannot be used.')
+
+        account_name, account_domain = principal_id.split('@')
+
+        domain_ids_by_domain = self._query_domain_ids_by_name(account_domain, emails)
 
         aliases = {
             str(idx): stalwart.EmailAlias(
