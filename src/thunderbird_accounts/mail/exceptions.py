@@ -59,6 +59,10 @@ class AccountSetError(JMapError):
     def __str__(self):
         return f'AccountSetError: {self.type} : {self.description or self.fields}'
 
+class AppPasswordSetError(JMapError):
+    """Raise when an app password is not found in Stalwart"""
+    def __str__(self):
+        return f'AppPasswordSetError: {self.type} : {self.description or self.fields}'
 
 class AccessTokenNotFound(StalwartError):
     def __str__(self):

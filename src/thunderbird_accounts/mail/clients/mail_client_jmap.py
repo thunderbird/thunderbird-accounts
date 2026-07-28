@@ -3,7 +3,7 @@ from django.conf import settings
 import uuid
 from typing import Optional, Type
 import sentry_sdk
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel
 import json
 import logging
 from thunderbird_accounts.mail.exceptions import (
@@ -12,6 +12,7 @@ from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
     AccountSetError,
     JMapError,
+    AppPasswordSetError,
 )
 from thunderbird_accounts.mail.types import stalwart
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
@@ -19,16 +20,15 @@ from thunderbird_accounts.mail.types.jmap import JMapRequest, Invocation
 from thunderbird_accounts.mail.clients.mail_client_interface import MailClientInterface
 
 
-class MailClientJMAP(MailClientInterface):
-    def __init__(self):
-        self.client = self._get_user_client('admin', 'admin', JMAPClient.AUTH_TYPES.BASIC)
-        self.account_id = None
-        self.primary_domain_id = None
+class BaseJMAP:
+    client: JMAPClient
+    account_id: Optional[str] = None
+    primary_domain_id: Optional[str] = None
 
     def _get_user_client(
         self, username, user_token, auth_type: JMAPClient.AUTH_TYPES = JMAPClient.AUTH_TYPES.BEARER
     ) -> JMAPClient:
-        client =  JMAPClient('http://localhost:8080', username, user_token, auth_type)
+        client = JMAPClient('http://localhost:8080', username, user_token, auth_type)
         # Make sure we retrieve the session
         client.get_session()
         return client
@@ -113,6 +113,13 @@ class MailClientJMAP(MailClientInterface):
             },
             method_call_id=method_call_id,
         )
+
+
+class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
+    def __init__(self):
+        self.client = self._get_user_client('admin', 'admin', JMAPClient.AUTH_TYPES.BASIC)
+        self.account_id = None
+        self.primary_domain_id = None
 
     def get_domain(self, domain: str) -> stalwart.Domain:
         """Retrieve a :any thunderbird_accounts.mail.types.stalwart.Domain:
@@ -408,54 +415,6 @@ class MailClientJMAP(MailClientInterface):
 
         self._patch_account(principal_id, account)
 
-    def save_app_password(self, principal_id: str, secret: str):
-        """Create an app password. This will return a generated app password, and this must be
-        done on the user's token. Admins cannot create secondary credentials.
-
-        FIXME: Secret in this case is used for the jwt token"""
-
-        credentials = AppPassword(
-            description='Generated App Password',
-            permissions=StalwartType(type='Inherit'),
-            allowed_ips={},
-        )
-
-        user_client = self._get_user_client(principal_id, secret)
-        if not user_client.session:
-            raise RuntimeError("Could not retrieve user session!")
-
-        temp_id = str(uuid.uuid4())
-        response = user_client.request(
-            JMapRequest(
-                using=[
-                    'urn:ietf:params:jmap:core',
-                    'urn:stalwart:jmap',
-                ],
-                method_calls=[
-                    Invocation(
-                        name='x:AppPassword/set',
-                        arguments={
-                            'accountId': user_client.session.primary_accounts.get('urn:stalwart:jmap'),
-                            'create': {
-                                temp_id: {
-                                    **credentials.model_dump(exclude_none=True),
-                                }
-                            }
-                        },
-                        method_call_id='0',
-                    ),
-                ],
-            )
-        )
-        print('------>', response)
-        data = response.method_responses[0].arguments
-        self._debug_dump('set_app_password', data)
-
-        data = response.method_responses[0].arguments.get('created', {})
-        new_app_password = data.get(temp_id, {}).get('secret')
-
-        return new_app_password
-
     def delete_account(self, principal_id: str) -> None:
         """Deletes a Stalwart account from the given thundermail address.
 
@@ -496,3 +455,90 @@ class MailClientJMAP(MailClientInterface):
         print('->resp', response.method_responses)
         data = response.method_responses[1].arguments.get('destroyed', {})
         self._debug_dump('delete_account', data)
+
+
+class MailClientUserJMAP(BaseJMAP):
+    """Some api endpoints are only accessible via the user's own token.
+    We've split this out to a separate object to avoid conflating admin scoped functions with user scoped functions"""
+
+    class SaveAppPasswordReturn(BaseModel):
+        id: str
+        secret: str
+
+    def __init__(self, username, user_jwt: str):
+        self.client = self._get_user_client(username, user_jwt, JMAPClient.AUTH_TYPES.BEARER)
+        self.account_id = None
+        self.primary_domain_id = None
+
+    def save_app_password(self, label: str) -> SaveAppPasswordReturn:
+        """Create an app password with a given label and return the pkid and secret the server generates."""
+        self.preflight_check()
+
+        credentials = AppPassword(
+            description=label,
+            permissions=StalwartType(type='Inherit'),
+            allowed_ips={},
+        )
+
+        temp_id = str(uuid.uuid4())
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name='x:AppPassword/set',
+                        arguments={
+                            'accountId': self.account_id,
+                            'create': {
+                                temp_id: {
+                                    **credentials.model_dump(exclude_none=True),
+                                }
+                            },
+                        },
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+
+        self._debug_dump('set_app_password', response.method_responses[0].arguments)
+
+        data = response.method_responses[0].arguments.get('created', {}).get(temp_id, {})
+
+        return self.SaveAppPasswordReturn(id=data.get('id'), secret=data.get('secret'))
+
+    def delete_app_password(self, app_password_pkid: str):
+        """Removes an app password by the pkid."""
+        self.preflight_check()
+
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name='x:AppPassword/set',
+                        arguments={'accountId': self.account_id, 'destroy': [app_password_pkid]},
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+
+        self._debug_dump('delete_app_password', response.method_responses[0].arguments)
+
+        # Error during deletion
+        data = response.method_responses[0].arguments.get('destroyed', [])
+        error = response.method_responses[0].arguments.get('notDestroyed')
+        if error:
+            error_obj = list(error.values())[0]
+            raise self._handle_jmap_error(error_obj, AppPasswordSetError)
+        elif len(data) == 0:
+            raise ValueError('Response has no pkid!')
+
+        return data[0] == app_password_pkid
