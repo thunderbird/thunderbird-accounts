@@ -1,3 +1,4 @@
+from thunderbird_accounts.mail.types.stalwart import SecondaryCredential, AppPassword, StalwartType
 from django.conf import settings
 import uuid
 from typing import Optional, Type
@@ -20,9 +21,17 @@ from thunderbird_accounts.mail.clients.mail_client_interface import MailClientIn
 
 class MailClientJMAP(MailClientInterface):
     def __init__(self):
-        self.client = JMAPClient('http://localhost:8080', 'admin', 'admin', JMAPClient.AUTH_TYPES.BASIC)
+        self.client = self._get_user_client('admin', 'admin', JMAPClient.AUTH_TYPES.BASIC)
         self.account_id = None
         self.primary_domain_id = None
+
+    def _get_user_client(
+        self, username, user_token, auth_type: JMAPClient.AUTH_TYPES = JMAPClient.AUTH_TYPES.BEARER
+    ) -> JMAPClient:
+        client =  JMAPClient('http://localhost:8080', username, user_token, auth_type)
+        # Make sure we retrieve the session
+        client.get_session()
+        return client
 
     def _get_session(self):
         session = self.client.get_session()
@@ -392,23 +401,60 @@ class MailClientJMAP(MailClientInterface):
     ) -> None:
         """Updates Stalwart and changes their primary email address and/or full name"""
 
-        account = stalwart.AccountUpdate(
-            name=primary_email_address or None,
-            description=full_name or None
-        )
+        account = stalwart.AccountUpdate(name=primary_email_address or None, description=full_name or None)
 
         if not account.name and not account.description:
             raise ValueError('You must provide at least one field to change.')
 
         self._patch_account(principal_id, account)
 
-        # Returns data: null on success...
-        #data = response.json()
-        #error = data.get('error')
-        # I have no idea what the error is yet
-        #if error:
-        #    logging.error(f'[update_individual] err: {data}')
-        #    raise RuntimeError(data)
+    def save_app_password(self, principal_id: str, secret: str):
+        """Create an app password. This will return a generated app password, and this must be
+        done on the user's token. Admins cannot create secondary credentials.
+
+        FIXME: Secret in this case is used for the jwt token"""
+
+        credentials = AppPassword(
+            description='Generated App Password',
+            permissions=StalwartType(type='Inherit'),
+            allowed_ips={},
+        )
+
+        user_client = self._get_user_client(principal_id, secret)
+        if not user_client.session:
+            raise RuntimeError("Could not retrieve user session!")
+
+        temp_id = str(uuid.uuid4())
+        response = user_client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name='x:AppPassword/set',
+                        arguments={
+                            'accountId': user_client.session.primary_accounts.get('urn:stalwart:jmap'),
+                            'create': {
+                                temp_id: {
+                                    **credentials.model_dump(exclude_none=True),
+                                }
+                            }
+                        },
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+        print('------>', response)
+        data = response.method_responses[0].arguments
+        self._debug_dump('set_app_password', data)
+
+        data = response.method_responses[0].arguments.get('created', {})
+        new_app_password = data.get(temp_id, {}).get('secret')
+
+        return new_app_password
 
     def delete_account(self, principal_id: str) -> None:
         """Deletes a Stalwart account from the given thundermail address.

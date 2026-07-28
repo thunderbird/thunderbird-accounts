@@ -108,6 +108,10 @@ class Domain(JMapType):
 class Credential(StalwartType):
     model_config = ConfigDict(polymorphic_serialization=True)
 
+    class Types(StrEnum):
+        PASSWORD = 'Password'
+        APP_PASSWORD = 'AppPassword'
+        API_KEY = 'ApiKey'
 
 class PasswordCredential(Credential):
     secret: str
@@ -117,12 +121,21 @@ class PasswordCredential(Credential):
 
 
 class SecondaryCredential(Credential):
+    """Read-only query object"""
     description: str
     secret: str
     created_at: Optional[datetime] = None
     permissions: StalwartType
     allowed_ips: Optional[dict] = None
 
+class AppPassword(BaseSchema):
+    """A mix of the above credential objects"""
+    description: str
+    secret: Optional[str] = None  # Server set
+    created_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    permissions: StalwartType
+    allowed_ips: Optional[dict] = None
 
 class EmailAlias(BaseSchema):
     enabled: bool
