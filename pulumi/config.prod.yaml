@@ -336,13 +336,10 @@ resources:
         - appointment-caldav-secret
 
 
-  tb:ec2:SshableInstance: {}
-  # Fill out this template to build an SSH bastion
-  # tb:ec2:SshableInstance:
-  #   bastion:
-  #     ssh_keypair_name: your-ec2-keypair
-  #     source_cidrs:
-  #       - your.ip.addr.ess/32
+  tb:ec2:SshableInstance:
+    bastion:
+      ssh_keypair_name: accounts-prod
+      source_cidrs: []
 
   tb:elasticache:ElastiCacheReplicaGroup:
     accounts:
