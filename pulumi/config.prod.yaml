@@ -291,7 +291,7 @@ resources:
               protocol: tcp
               from_port: 0
               to_port: 65535
-      
+
   tb:secrets:PulumiSecretsManager:
     pulumi:
       secret_names:
@@ -351,7 +351,7 @@ resources:
       transit_encryption_mode: required
       transit_encryption_enabled: True
       apply_immediately: True
-      
+
   tb:fargate:AutoscalingFargateCluster:
     accounts:
       cluster: {}
@@ -532,6 +532,8 @@ resources:
                   value: "no"
                 - name: TBA_FLOWER
                   value: "yes"
+                - name: FLOWER_UNAUTHENTICATED_API
+                  value: 'true'
 
       targets:
         flower:
@@ -549,7 +551,7 @@ resources:
           protocol: HTTP
           target_type: ip
           ip_address_type: ipv4
-      
+
       load_balancers:
         flower:
           enable_cross_zone_load_balancing: yes
@@ -606,7 +608,7 @@ resources:
                 description: Allow local TLS traffic only
                 cidr_blocks:
                   - 10.10.0.0/16
-      
+
       listeners:
         flower:  # Load balancer to attach to
           flower:  # Target to route traffic to
@@ -640,13 +642,13 @@ resources:
           - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/*
         flower-prod:
           - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/*
-      
+
       ssm_params: {}
 
       autoscalers:
         celery-prod:
           min_capacity: 2
-          max_capacity: 4
+          max_capacity: 8
         flower-prod:
           min_capacity: 1
           max_capacity: 1
