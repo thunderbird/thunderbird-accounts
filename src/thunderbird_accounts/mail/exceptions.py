@@ -64,6 +64,11 @@ class AppPasswordSetError(JMapError):
     def __str__(self):
         return f'AppPasswordSetError: {self.type} : {self.description or self.fields}'
 
+class DomainSetError(JMapError):
+    """Raise when an domain is not found in Stalwart"""
+    def __str__(self):
+        return f'DomainSetError: {self.type} : {self.description or self.fields}'
+
 class AccessTokenNotFound(StalwartError):
     def __str__(self):
         return f'AccessTokenNotFoundError: {self.details}'

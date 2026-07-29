@@ -4,6 +4,29 @@ from typing import Optional, Annotated
 from datetime import datetime
 from pydantic import Field, ConfigDict, AliasChoices
 
+class StalwartMethods(StrEnum):
+    ACCOUNT = 'x:Account'
+    DKIM_SIGNATURE = 'x:DkimSignature'
+    DOMAIN = 'x:Domain'
+
+    # Helper methods
+
+    @staticmethod
+    def get(method: 'StalwartMethods'):
+        return f'{method}/get'
+
+    @staticmethod
+    def set(method: 'StalwartMethods'):
+        return f'{method}/set'
+    
+    @staticmethod
+    def destroy(method: 'StalwartMethods'):
+        return StalwartMethods.set(method)
+
+    @staticmethod
+    def query(method: 'StalwartMethods'):
+        return f'{method}/query'
+
 Duration = Annotated[str | int, Field()]
 """A field that takes in either ms as an integer or time followed by the unit as a string
 Ref: https://stalw.art/docs/0.15/configuration/values/duration"""
@@ -104,6 +127,11 @@ class Domain(JMapType):
     allow_relaying: bool
     report_address_uri: Optional[str] = None
 
+class DomainCreate(Domain):
+    created_at: Optional[datetime] = None
+    allow_relaying: Optional[bool] = None
+    dns_zone_file: Optional[str] = None
+
 
 class Credential(StalwartType):
     model_config = ConfigDict(polymorphic_serialization=True)
@@ -146,6 +174,9 @@ class EmailAlias(BaseSchema):
 
 class Account(JMapType, StalwartType):
     """Stalwart Account Type
+
+    FIXME: Required fields were loosened to allow updates, 
+    should extend AccountUpdate type and fix required fields again.
 
     .. code-block:: json
 

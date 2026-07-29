@@ -1,4 +1,4 @@
-from thunderbird_accounts.mail.types.stalwart import SecondaryCredential, AppPassword, StalwartType
+from thunderbird_accounts.mail.types.stalwart import SecondaryCredential, AppPassword, StalwartType, StalwartMethods
 from django.conf import settings
 import uuid
 from typing import Optional, Type
@@ -13,6 +13,7 @@ from thunderbird_accounts.mail.exceptions import (
     AccountSetError,
     JMapError,
     AppPasswordSetError,
+    DomainAlreadyExistsError, DomainSetError,
 )
 from thunderbird_accounts.mail.types import stalwart
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
@@ -121,6 +122,91 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         self.account_id = None
         self.primary_domain_id = None
 
+    def _handle_destroy(self, method: StalwartMethods, pkid: str | list[str]):
+        if isinstance(pkid, str):
+            pkid = [pkid]
+
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name=StalwartMethods.destroy(method),
+                        arguments={
+                            'accountId': self.account_id,
+                            'destroy': pkid,
+                        },
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+
+        self._debug_dump(f'{method.replace('/', '_')}_handle_destroy', response.method_responses[0].arguments)
+
+        error = response.method_responses[0].arguments.get('notDestroyed')
+        if error:
+            error_obj = list(error.values())[0]
+            raise self._handle_jmap_error(error_obj, DomainSetError)
+
+        data = response.method_responses[0].arguments.get('created', {})
+
+        #stalwart_pkid = data.get(temp_id, {}).get('id')
+
+        # Just in case the account was not created and Stalwart missed an error check
+        #if not stalwart_pkid:
+        #    raise DomainNotFoundError(domain)
+
+        # Return the pkid
+        return True
+
+    def get_dkim_signatures(self, domain_name: str):
+        self.preflight_check()
+
+        domain = self.get_domain(domain_name)
+
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name='x:DkimSignature/query',
+                        arguments={
+                            'accountId': self.account_id,
+                            'filter': {'domainId': domain.id},
+                            'limit': 25,
+                            'position': 0,
+                            'calculateTotal': True,
+                        },
+                        method_call_id='0',
+                    ),
+                    Invocation(
+                        name='x:DkimSignature/get',
+                        arguments={
+                            'accountId': self.account_id,
+                            '#ids': {'resultOf': '0', 'name': 'x:DkimSignature/query', 'path': '/ids'},
+                        },
+                        method_call_id='1',
+                    ),
+                ],
+            )
+        )
+
+        self._debug_dump('get_dkim_signatures', response.method_responses[1].arguments)
+
+        # FIXME: Temp
+        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
+            raise RuntimeError(domain_name)
+
+        return response.method_responses[1].arguments.get('list', [])
+
+
     def get_domain(self, domain: str) -> stalwart.Domain:
         """Retrieve a :any thunderbird_accounts.mail.types.stalwart.Domain:
         object from a given domain name.
@@ -163,7 +249,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             raise DomainNotFoundError(domain)
 
         data = response.method_responses[1].arguments.get('list', [])[0]
-        self._debug_dump('get_domain', data)
+        self._debug_dump('get_domain', response.method_responses[1].arguments)
 
         try:
             return stalwart.Domain(**data)
@@ -171,6 +257,85 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             logging.warning(f'[MailClient.get_domain({domain}]: Failed pydantic validation!')
             sentry_sdk.capture_exception(ex)
             raise InvalidJMapResponseError(ex)
+
+    def create_domain(self, domain, description=''):
+        self.preflight_check()
+
+        # If the domain already exists, we ignore and return None
+        try:
+            self.get_domain(domain)
+            raise DomainAlreadyExistsError(domain)
+        except DomainNotFoundError:
+            pass
+
+        domain = stalwart.DomainCreate(
+            name=domain,
+            is_enabled=True,
+            description=description,
+            aliases={},
+            certificate_management=stalwart.StalwartType(type='Manual'),
+            dkim_management=stalwart.StalwartType(type='Automatic'),
+            dns_management=stalwart.StalwartType(type='Manual'),
+            sub_addressing=stalwart.StalwartType(type='Enabled'),
+        )
+
+        temp_id = str(uuid.uuid4())
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name='x:Domain/set',
+                        arguments={
+                            'accountId': self.account_id,
+                            'create': {temp_id: domain.model_dump(exclude_none=True)},
+                        },
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+
+        self._debug_dump('create_domain', response.method_responses[0].arguments)
+
+        error = response.method_responses[0].arguments.get('notCreated')
+        if error:
+            error_obj = error.get(temp_id, {})
+            raise self._handle_jmap_error(error_obj, DomainSetError)
+
+        data = response.method_responses[0].arguments.get('created', {})
+
+        stalwart_pkid = data.get(temp_id, {}).get('id')
+
+        # Just in case the account was not created and Stalwart missed an error check
+        if not stalwart_pkid:
+            raise DomainNotFoundError(domain)
+
+        # Return the pkid
+        return stalwart_pkid
+
+    def delete_domain(self, domain_name: str):
+        
+        # Allow DomainNotFound to raise if the domain is not found
+        domain = self.get_domain(domain_name)
+
+        if not domain or not domain.id:
+            return False
+
+        try:
+            dkim_signatures = self.get_dkim_signatures(domain_name)
+            dkim_signature_ids = [signature['id'] for signature in dkim_signatures]
+            self._handle_destroy('x:DkimSignature/set', dkim_signature_ids)
+        except RuntimeError:
+            print('errrrr@@@')
+            pass
+
+
+        self._handle_destroy('x:Domain/set', domain.id)
+
 
     def get_account(self, principal_id: str) -> stalwart.Account:
         """Retrieve an :any thunderbird_accounts.mail.types.stalwart.Account: from a given
@@ -204,7 +369,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             raise AccountNotFoundError(principal_id)
 
         data = response.method_responses[1].arguments.get('list', [])[0]
-        self._debug_dump('get_account', data)
+        self._debug_dump('get_account', response.method_responses[1].arguments)
 
         try:
             return stalwart.Account(**data)
@@ -213,7 +378,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             sentry_sdk.capture_exception(ex)
             raise InvalidJMapResponseError(ex)
 
-    def _query_domain_ids_by_name(self, account_domain: str, emails: list[str]) -> dict[str,str]:
+    def _query_domain_ids_by_name(self, account_domain: str, emails: list[str]) -> dict[str, str]:
         # Sort aliases by domain
         alias_domains = {}
         for email in emails:
@@ -256,7 +421,6 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 ],
             )
         )
-
 
         domain_ids_by_domain = {}
 
@@ -349,7 +513,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             raise self._handle_jmap_error(error_obj, AccountSetError)
 
         data = response.method_responses[0].arguments.get('created', {})
-        self._debug_dump('set_account', data)
+        self._debug_dump('set_account', response.method_responses[0].arguments)
 
         stalwart_pkid = data.get(temp_id, {}).get('id')
 
@@ -461,6 +625,36 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         print('->resp', response.method_responses)
         data = response.method_responses[1].arguments.get('destroyed', {})
         self._debug_dump('delete_account', data)
+
+    def save_email_addresses(self, principal_id: str, emails: str | list[str]):
+        """Saves a list of new aliases to Stalwart.
+        We need to first look-up the existing stalwart account to get a fresh list of aliases,
+        then we retrieve domain ids and check to make sure we're not adding dupes."""
+        if isinstance(emails, str):
+            emails = [emails]
+
+        # Retrieve a fresh list of our aliases
+        account = self.get_account(principal_id)
+
+        # FIXME: query domain ids by name does not need account domain...
+        domain_ids_by_name = self._query_domain_ids_by_name(principal_id.split()[1], emails)
+
+        if account.aliases:
+            for idx, alias in account.aliases.items():
+                if alias.name in domain_ids_by_name and domain_ids_by_name[alias.name] == alias.domain_id:
+                    # sloooww
+                    emails.remove(alias.name)
+
+        if len(emails) == 0:
+            return
+
+        account_update = stalwart.AccountUpdate(aliases={})
+
+    def replace_email_addresses(self, principal_id: str, emails: list[tuple[str, str]]):
+        raise NotImplementedError()
+
+    def delete_email_addresses(self, principal_id: str, emails: str | list[str]):
+        raise NotImplementedError()
 
 
 class MailClientUserJMAP(BaseJMAP):
