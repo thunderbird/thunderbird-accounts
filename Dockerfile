@@ -3,6 +3,12 @@ FROM python:3.13-trixie
 # Dockerfile for Thunderbird Accounts
 #
 
+# This a Stable URL for this content that's regularly refreshed with new data.
+# If ever it fails, compatible data sources are available in a number of places.
+# Check: https://github.com/wp-statistics/DbIP-City-lite/
+# Upstream:  https://db-ip.com/db/lite.php
+ARG GEOIP_CITY_MMDB_GZ_URL=https://cdn.jsdelivr.net/npm/dbip-city-lite/dbip-city-lite.mmdb.gz
+
 RUN mkdir -p /app/src
 WORKDIR /app
 
@@ -13,12 +19,16 @@ ENV IN_CONTAINER=True
 
 # Upgrade the OS, 
 RUN apt update && \
-    apt install -y cron npm && \
+    apt install -y cron npm curl && \
     apt install -y postgresql && \
     apt install -y gettext && \
     apt-get clean && \
     mkdir scripts && \
     pip --no-cache install --upgrade pip uv
+
+RUN mkdir -p /app/data && \
+    curl -fsSL "${GEOIP_CITY_MMDB_GZ_URL}" -o /app/data/dbip-city-lite.mmdb.gz && \
+    gunzip -f /app/data/dbip-city-lite.mmdb.gz
 
 # Copy in the relevant files
 COPY manage.py \

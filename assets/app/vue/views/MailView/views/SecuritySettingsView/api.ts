@@ -20,3 +20,10 @@ export const signOutSession = async (sessionId: string) => {
 
   return await response.json();
 }
+
+export const signOutAllSessions = async () => {
+  const activeSessions = await getActiveSessions();
+  const orderedSessions = [...activeSessions].sort((a, b) => Number(a.is_current) - Number(b.is_current));
+
+  return await Promise.all(orderedSessions.map((session) => signOutSession(session.id)));
+}

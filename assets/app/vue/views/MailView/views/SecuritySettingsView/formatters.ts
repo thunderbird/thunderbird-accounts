@@ -49,3 +49,19 @@ export const formatDeviceInfo = (
   const app = deviceInfo.app || deviceInfo.browser;
   return app ? `${device} - ${app}` : device;
 };
+
+export const formatSessionLocation = (
+  location: ActiveSession['location'],
+  locale: string,
+  unknownLocation: string,
+): string => {
+  if (!location) {
+    return unknownLocation;
+  }
+
+  const country = location.country_code
+    ? new Intl.DisplayNames([locale], { type: 'region' }).of(location.country_code)
+    : null;
+
+  return [location.city, location.state, country || location.country_code].filter(Boolean).join(', ') || unknownLocation;
+};
