@@ -9,6 +9,7 @@ import uuid
 
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
+import jwt
 from urllib.parse import quote
 from django.test import Client as RequestClient, override_settings
 from rest_framework.test import APITestCase, APIClient
@@ -499,7 +500,12 @@ class ActiveSessionsTestcase(APITestCase):
         session.save()
 
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
-    def test_get_active_sessions_uses_user_access_token(self, mock_account_client: MagicMock):
+    @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
+    def test_get_active_sessions_uses_user_access_token(
+        self,
+        mock_enrich_sessions_with_geoip,
+        mock_account_client: MagicMock,
+    ):
         mock_account_client.return_value.get_active_sessions.return_value = [
             {
                 'id': 'session-id',
@@ -508,12 +514,140 @@ class ActiveSessionsTestcase(APITestCase):
                 'device_info': {'os': 'macOS', 'browser': 'Firefox'},
             }
         ]
+        mock_enrich_sessions_with_geoip.return_value = [
+            {
+                'id': 'session-id',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Firefox'},
+                'location': {'city': 'Mountain View', 'state': 'California', 'country_code': 'US'},
+            }
+        ]
 
         response = self.client.get(reverse('api_get_active_sessions'))
 
         self.assertEqual(response.status_code, 200)
         mock_account_client.return_value.get_active_sessions.assert_called_once_with('test-user-access-token')
+        mock_enrich_sessions_with_geoip.assert_called_once_with(mock_account_client.return_value.get_active_sessions.return_value)
         self.assertEqual(response.json()[0]['id'], 'session-id')
+        self.assertEqual(response.json()[0]['location']['city'], 'Mountain View')
+
+    @patch('thunderbird_accounts.authentication.api.AccountsOIDCBackend')
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
+    def test_get_active_sessions_marks_only_current_id_token_session(
+        self,
+        mock_enrich_sessions_with_geoip,
+        mock_account_client: MagicMock,
+        mock_oidc_backend: MagicMock,
+    ):
+        session = self.client.session
+        session['oidc_id_token'] = 'test-id-token'
+        session.save()
+        mock_oidc_backend.return_value.verify_token.return_value = {'sid': 'firefox-session-id'}
+        mock_account_client.return_value.get_active_sessions.return_value = [
+            {
+                'id': 'firefox-session-id',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Firefox'},
+                'is_current': True,
+            },
+            {
+                'id': 'chrome-session-id',
+                'last_access': 1710000000100,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Chrome'},
+                'is_current': True,
+            },
+        ]
+        mock_enrich_sessions_with_geoip.side_effect = lambda sessions: sessions
+
+        response = self.client.get(reverse('api_get_active_sessions'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {session['id']: session['is_current'] for session in response.json()},
+            {
+                'firefox-session-id': True,
+                'chrome-session-id': False,
+            },
+        )
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
+    def test_get_active_sessions_falls_back_to_access_token_session_id(
+        self,
+        mock_enrich_sessions_with_geoip,
+        mock_account_client: MagicMock,
+    ):
+        session = self.client.session
+        session['oidc_access_token'] = jwt.encode({'sid': 'firefox-session-id'}, key='', algorithm='none')
+        session.save()
+        mock_account_client.return_value.get_active_sessions.return_value = [
+            {
+                'id': 'firefox-session-id',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Firefox'},
+                'is_current': True,
+            },
+            {
+                'id': 'chrome-session-id',
+                'last_access': 1710000000100,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Chrome'},
+                'is_current': True,
+            },
+        ]
+        mock_enrich_sessions_with_geoip.side_effect = lambda sessions: sessions
+
+        response = self.client.get(reverse('api_get_active_sessions'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {session['id']: session['is_current'] for session in response.json()},
+            {
+                'firefox-session-id': True,
+                'chrome-session-id': False,
+            },
+        )
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
+    def test_get_active_sessions_clears_current_flags_without_session_id(
+        self,
+        mock_enrich_sessions_with_geoip,
+        mock_account_client: MagicMock,
+    ):
+        mock_account_client.return_value.get_active_sessions.return_value = [
+            {
+                'id': 'firefox-session-id',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Firefox'},
+                'is_current': True,
+            },
+            {
+                'id': 'chrome-session-id',
+                'last_access': 1710000000100,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Chrome'},
+                'is_current': True,
+            },
+        ]
+        mock_enrich_sessions_with_geoip.side_effect = lambda sessions: sessions
+
+        response = self.client.get(reverse('api_get_active_sessions'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {session['id']: session['is_current'] for session in response.json()},
+            {
+                'firefox-session-id': False,
+                'chrome-session-id': False,
+            },
+        )
 
     @patch('thunderbird_accounts.authentication.api.AccountsOIDCBackend')
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')

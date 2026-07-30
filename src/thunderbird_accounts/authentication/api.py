@@ -9,6 +9,7 @@ import logging
 
 from django.conf import settings
 from mozilla_django_oidc.contrib.drf import OIDCAuthentication
+import jwt
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -41,6 +42,7 @@ from django.utils.translation import gettext_lazy as _
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.serializers import UserProfileSerializer
 from thunderbird_accounts.authentication.clients import KeycloakAccountClient, KeycloakClient
+from thunderbird_accounts.core.geoip import enrich_sessions_with_geoip
 
 
 class SignUpThrottle(UserRateThrottle):
@@ -65,6 +67,40 @@ class RecoveryCodesRegenerateThrottle(UserRateThrottle):
     scope = 'recovery_codes_regenerate'
 
 
+def _session_id_from_access_token(request: Request) -> str | None:
+    access_token = request.session.get('oidc_access_token')
+    if not access_token:
+        return None
+
+    try:
+        return jwt.decode(access_token, options={'verify_signature': False}).get('sid')
+    except (jwt.PyJWTError, TypeError):
+        return None
+
+
+def mark_current_session(request: Request, sessions: list[dict]) -> list[dict]:
+    oidc_id_token = request.session.get('oidc_id_token')
+    current_session_id = None
+
+    if oidc_id_token:
+        try:
+            current_session_id = AccountsOIDCBackend().verify_token(oidc_id_token).get('sid')
+        except Exception:
+            logging.exception('Error determining current Keycloak session')
+
+    current_session_id = current_session_id or _session_id_from_access_token(request)
+
+    if not current_session_id:
+        for session in sessions:
+            session['is_current'] = False
+        return sessions
+
+    for session in sessions:
+        session['is_current'] = session.get('id') == current_session_id
+
+    return sessions
+
+
 @api_view(['POST'])
 def get_user_profile(request: Request):
     if not request.user:
@@ -85,7 +121,8 @@ def get_active_sessions(request: Request):
     try:
         keycloak_client = KeycloakAccountClient()
         sessions = keycloak_client.get_active_sessions(user_access_token)
-        return Response(sessions)
+        sessions = mark_current_session(request, sessions)
+        return Response(enrich_sessions_with_geoip(sessions))
     except Exception as e:
         logging.exception(f'Error fetching active sessions: {e}')
         raise ValidationError('Error fetching active sessions')
