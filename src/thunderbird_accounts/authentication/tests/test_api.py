@@ -708,3 +708,22 @@ class ActiveSessionsTestcase(APITestCase):
             'test-user-access-token',
             'session-id',
         )
+
+    @patch('thunderbird_accounts.authentication.api.sentry_sdk.capture_exception')
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_sign_out_session_reports_keycloak_failure_to_sentry(
+        self,
+        mock_account_client: MagicMock,
+        mock_capture_exception: MagicMock,
+    ):
+        error = RuntimeError('keycloak delete failed')
+        mock_account_client.return_value.sign_out_session.side_effect = error
+
+        response = self.client.post(
+            reverse('api_sign_out_session'),
+            data={'session_id': 'session-id'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        mock_capture_exception.assert_called_once_with(error)

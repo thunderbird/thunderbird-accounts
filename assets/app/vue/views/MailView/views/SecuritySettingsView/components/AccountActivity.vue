@@ -42,7 +42,7 @@ const signOut = async (id: string) => {
       activeSessions.value = activeSessions.value.filter((session) => session.id !== id);
     } catch (error) {
       console.log(error);
-      errorMessage.value = t('views.mail.views.securitySettings.errorSigningOutSession', { error: error });
+      errorMessage.value = t('views.mail.views.securitySettings.errorSigningOutSession');
     }
   }
 };
@@ -64,7 +64,8 @@ onMounted(async () => {
       lastAccess: formatDate(new Date(session.last_access), locale.value, t),
     }));
   } catch (error) {
-    errorMessage.value = t('views.mail.views.securitySettings.errorLoadingActiveSessions', error);
+    console.log(error);
+    errorMessage.value = t('views.mail.views.securitySettings.errorLoadingActiveSessions');
   } finally {
     loading.value = false;
   }

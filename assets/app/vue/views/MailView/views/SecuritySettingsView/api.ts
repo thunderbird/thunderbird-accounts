@@ -1,10 +1,22 @@
+import type { ActiveSession } from './types';
+
+const parseJsonResponse = async <T>(response: Response): Promise<T> => {
+  const data = await response.json();
+
+  if (!response.ok || data.success === false) {
+    throw new Error(data.error || data.detail || response.statusText);
+  }
+
+  return data;
+};
+
 export const getActiveSessions = async () => {
   const response = await fetch('/api/v1/auth/get-active-sessions/', {
     method: 'GET',
     credentials: 'include',
   });
 
-  return await response.json();
+  return parseJsonResponse<ActiveSession[]>(response);
 }
 
 export const signOutSession = async (sessionId: string) => {
@@ -18,7 +30,7 @@ export const signOutSession = async (sessionId: string) => {
     body: JSON.stringify({ session_id: sessionId }),
   });
 
-  return await response.json();
+  return parseJsonResponse<{ success: boolean }>(response);
 }
 
 export const signOutAllSessions = async () => {
