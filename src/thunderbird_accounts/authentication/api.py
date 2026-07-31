@@ -422,4 +422,5 @@ def sign_out_session(request: Request):
 
     except Exception as e:
         logging.exception(f'Error signing out session: {e}')
+        sentry_sdk.capture_exception(e)
         raise ValidationError('Error signing out session')
