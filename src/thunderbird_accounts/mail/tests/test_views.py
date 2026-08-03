@@ -621,6 +621,25 @@ class RemoveCustomDomainTestCase(TestCase):
 
     @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_deleting_an_already_removed_domain_is_successful(
+        self,
+        mock_mail_client_cls,
+        mock_delete_hosted_dkim_dns_records,
+    ):
+        mock_instance = Mock()
+        mock_mail_client_cls.return_value = mock_instance
+
+        self.assertEqual(self._delete_domain().status_code, 200)
+        response = self._delete_domain()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content.decode()), {'success': True})
+        mock_instance.delete_domain.assert_called_once_with(self.domain.name)
+        mock_instance.delete_dkim.assert_called_once_with(self.domain.name)
+        mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
     def test_pending_domain_still_deletes_dkim_and_cloudflare_records(
         self,
         mock_mail_client_cls,
