@@ -25,6 +25,17 @@ from thunderbird_accounts.mail.utils import decode_app_password, filter_app_pass
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 
 
+# Keep in sync with the public routes in assets/app/vue/router.ts.
+PUBLIC_VUE_ROUTES = frozenset(
+    {
+        '/sign-up',
+        '/sign-up/complete',
+        '/contact',
+        '/chill',
+    }
+)
+
+
 def handle_500(request: HttpRequest, template_name=None):
     """Overrides Django's default 500 error page with our own"""
     # Retrieve the last known exception
@@ -107,19 +118,7 @@ def home(request: HttpRequest):
             max_custom_domains = request.user.plan.mail_domain_count
             max_email_aliases = request.user.plan.mail_address_count
     elif not request.user.is_authenticated:  # Only if the user is not authenticated
-        # Check if path is included in Vue's public routes (assets/app/vue/router.ts)
-        public_routes = [
-            '/privacy',
-            '/terms',
-            '/contact',
-            '/sign-up',
-            '/sign-up/complete',
-            '/logout',
-            '/error',
-            '/chill',
-        ]
-
-        if request.path not in public_routes:
+        if request.path not in PUBLIC_VUE_ROUTES:
             return HttpResponseRedirect(reverse('login'))
 
     # Check if the user needs to accept the latest legal documents

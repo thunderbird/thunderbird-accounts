@@ -1,14 +1,48 @@
 import json
+import os
+import re
 from django.utils.html import strip_tags
 from unittest.mock import patch, Mock
 
 from django.conf import settings
-from django.test import TestCase, Client as RequestClient
+from django.test import SimpleTestCase, TestCase, Client as RequestClient
 from django.urls import reverse
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.core.views import PUBLIC_VUE_ROUTES
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 from thunderbird_accounts.mail.models import Account
+
+
+class PublicVueRouteSyncTestCase(SimpleTestCase):
+    """Test that public routes stay in sync between Vue and Django"""
+
+    def test_django_public_vue_routes_match_vue_router_public_routes(self):
+        vue_public_routes = self._extract_vue_public_routes()
+
+        self.assertSetEqual(vue_public_routes, PUBLIC_VUE_ROUTES)
+
+    def _extract_vue_public_routes(self):
+        router_path = os.path.join(settings.BASE_DIR, 'assets', 'app', 'vue', 'router.ts')
+        router_source = router_path.read_text()
+        route_matches = list(re.finditer(r"^\s+path:\s*'([^']+)'", router_source, re.MULTILINE))
+        public_routes = set()
+
+        for index, route_match in enumerate(route_matches):
+            route_end = route_matches[index + 1].start() if index + 1 < len(route_matches) else len(router_source)
+            route_definition = router_source[route_match.start():route_end]
+            if not re.search(r'isPublic:\s*true\b', route_definition):
+                continue
+
+            path = route_match.group(1)
+            if self._is_concrete_vue_path(path):
+                public_routes.add(path)
+
+        return public_routes
+
+    @staticmethod
+    def _is_concrete_vue_path(path):
+        return path.startswith('/') and ':' not in path and '*' not in path and path != '/'
 
 
 class HomeViewRedirectTestCase(TestCase):
@@ -34,17 +68,13 @@ class HomeViewRedirectTestCase(TestCase):
                 self.assertEqual(response.status_code, 302)
                 self.assertEqual(response.url, reverse('login'))
 
-    def test_unauthenticated_user_can_access_privacy_page(self):
-        """Test that unauthenticated users can access the /privacy public route."""
-        response = self.client.get('/privacy')
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'index.html')
-
-    def test_unauthenticated_user_can_access_terms_page(self):
-        """Test that unauthenticated users can access the /terms public route."""
-        response = self.client.get('/terms')
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'index.html')
+    def test_unauthenticated_user_can_access_public_vue_routes(self):
+        """Test that unauthenticated users can access public Vue routes."""
+        for path in PUBLIC_VUE_ROUTES:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, 'index.html')
 
     def test_authenticated_user_can_access_home(self):
         """Test that authenticated users can access home without redirect."""
