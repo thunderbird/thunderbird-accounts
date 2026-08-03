@@ -344,9 +344,11 @@ def remove_custom_domain(request: HttpRequest):
         return JsonResponse({'success': False, 'error': _('Domain name is required')}, status=400)
 
     domain_name = domain_name.lower()
-    domain = request.user.domains.get(name=domain_name)
-    if not domain:
-        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+    try:
+        domain = request.user.domains.get(name=domain_name)
+    except Domain.DoesNotExist:
+        logging.info(f'Custom domain {domain_name} was already removed for user {request.user.uuid}')
+        return JsonResponse({'success': True})
 
     # Check if we have any aliases for that domain setup
     try:
