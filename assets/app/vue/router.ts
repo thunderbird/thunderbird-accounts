@@ -25,6 +25,7 @@ import { isWaffleFlagActive } from '@/utils';
 // waffle flag is active, so /manage-mfa falls through to the 404 route until it's enabled.
 const showMfa = isWaffleFlagActive('multi-factor-authentication');
 
+// Keep public routes in sync with PUBLIC_VUE_ROUTES in src/thunderbird_accounts/core/views.py.
 // If the page template is marked as error page, only show the error page.
 const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
   {
