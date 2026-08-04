@@ -78,7 +78,11 @@ def get_paddle_information(request: Request):
 def set_paddle_transaction_id(request: Request):
     """This error is used to work-around the fact we don't get a transaction id from Paddle's successUrl redirect.
     It kinda sucks, but it works for now."""
-    data = json.loads(request.body.decode())
+    try:
+        data = json.loads(request.body.decode())
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'success': False, 'error': str(_('Invalid request data'))}, status=400)
+
     request.session[SESSION_PADDLE_TRANSACTION_ID] = data.get('txid')
     request.session[SESSION_PADDLE_PAYMENT_TYPE] = data.get('payment_type')
     return JsonResponse({'success': True})
