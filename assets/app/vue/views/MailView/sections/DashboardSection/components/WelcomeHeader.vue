@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
-import { formatBytes } from '@/views/DashboardView/utils';
+import { formatBytes } from '@/views/DashboardView/formatters';
 
 // Types
 import { SubscriptionData } from '@/views/DashboardView/types';
