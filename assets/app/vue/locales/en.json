@@ -57,7 +57,7 @@
         "manageDevicesButtonLabel": "Manage devices",
         "logoutFromAllDevicesButtonLabel": "Log out from all devices",
         "deleteAccount": "Delete Account",
-        "deleteAccountText": "To permanently delete your Thunderbird Pro account and unsubscribe from the service, please reach out to our support team who will be able to assist you. Once your account is deleted, you will not be able to reactivate it or access your data.",
+        "deleteAccountText": "To permanently delete your Thundermail account and unsubscribe from the service, please reach out to our support team who will be able to assist you. Once your account is deleted, you will not be able to reactivate it or access your data.",
         "deleteAccountButtonLabel": "Delete account and all data"
       },
       "yourCurrentSubscription": {
@@ -384,7 +384,7 @@
         "step2Text": "Create an app password for email, calendar, and other apps that need a separate sign-in.",
         "step3Text": "Claim any additional email aliases you would like to use.",
         "step4Text": "Add custom domains to create email aliases for any need.",
-        "step5Text": "Go to your Thunderbird Pro account to view account details, manage billing, or cancel your service.",
+        "step5Text": "Go to 'Your Account' to view account details, manage billing, or cancel your service.",
         "close": "Close tour"
       },
       "webmailAlpha": {
@@ -503,10 +503,10 @@
     },
     "privacyAndData": {
       "deleteAccountData": "Delete Account Data",
-      "deleteAccountDataText": "This will permanently delete your Thunderbird Pro account and all data. You cannot reactivate your account.",
-      "deleteAccountWill": "Deleting your Thunderbird Pro account will:",
+      "deleteAccountDataText": "This will permanently delete your Thundermail account and all data. You cannot reactivate your account.",
+      "deleteAccountWill": "Deleting your Thundermail account will:",
       "deleteAccountWillOne": "Permanently erase your account and all data (emails, contacts, attachments, events, passwords, files).",
-      "deleteAccountWillTwo": "Log you out of all devices and end access to Thunderbird Pro services.",
+      "deleteAccountWillTwo": "Log you out of all devices and end access to Thundermail services.",
       "deleteAccountImportant": "Important:",
       "deleteAccountImportantOne": "Deleting your data does not cancel your subscription. Unsubscribe first to stop billing and service access.",
       "deleteAccountImportantTwo": "After X days, all data will be erased and your Thundermail address may be reassigned. Emails sent during this time will be rejected.",
@@ -518,7 +518,7 @@
     },
     "tosPrivacy": {
       "title": "One quick step before you continue",
-      "description": "Please review the Terms of Service and Privacy Policy, then accept to continue using Thunderbird Pro.",
+      "description": "Please review the Terms of Service and Privacy Policy, then accept to continue using Thundermail.",
       "tosTab": "Terms of Service",
       "privacyTab": "Privacy Policy",
       "acknowledgment": "By accepting, you acknowledge that you have read and understood our policies.",
