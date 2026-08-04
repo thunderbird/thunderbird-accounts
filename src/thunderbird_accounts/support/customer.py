@@ -294,6 +294,7 @@ def _get_total_spend(user: User) -> list[dict]:
     for transaction in transactions:
         totals[transaction.currency] += int(transaction.total)
 
+    # FIXME: Support is getting the incorrect value, we should just pull directly from Paddle instead.
     return [{'currency': currency, 'amount': f'{amount / 100:.2f}'} for currency, amount in sorted(totals.items())]
 
 

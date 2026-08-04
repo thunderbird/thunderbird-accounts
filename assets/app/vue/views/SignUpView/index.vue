@@ -8,13 +8,12 @@ import BaseTemplate from '@kc/vue/BaseTemplate.vue';
 import Step1Username from './views/Step1Username/index.vue';
 import StepConfirmPlan from './views/StepConfirmPlan/index.vue';
 import Step2Password from './views/Step2Password/index.vue';
-import Step3Verify from './views/Step3Verify/index.vue';
 import SignUpLayout from './components/SignUpLayout.vue';
 
 // Import our i18n composable
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
-import { onBeforeRouteUpdate, useRoute } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { SIGN_UP_STEPS, useSignUpFlowStore } from './stores/signUpFlowStore';
 import { storeToRefs } from 'pinia';
