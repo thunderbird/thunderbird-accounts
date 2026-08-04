@@ -26,6 +26,26 @@ class PaddleCheckoutIsDoneTestCase(TestCase):
         data = txid_response.json()
         self.assertTrue(data.get('success'))
 
+    def test_set_paddle_transaction_id_rejects_invalid_json(self):
+        response = self.client.put(
+            reverse('paddle_txid'),
+            data='invalid json',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {'success': False, 'error': 'Invalid request data'})
+
+    def test_set_paddle_transaction_id_rejects_invalid_utf8(self):
+        response = self.client.put(
+            reverse('paddle_txid'),
+            data=b'\x80',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {'success': False, 'error': 'Invalid request data'})
+
     @override_settings(IS_DEV=False)
     def test_no_tx_id_in_session(self):
         """This route requires a transaction id in their session. So if they don't have a transaction id,
