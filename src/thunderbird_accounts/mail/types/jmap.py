@@ -15,6 +15,7 @@ class BaseSchema(BaseModel):
         serialize_by_alias=True,
         populate_by_name=True,
         from_attributes=True,
+        extra='allow', # Allow extra items not declared in the model
     )
 
 
