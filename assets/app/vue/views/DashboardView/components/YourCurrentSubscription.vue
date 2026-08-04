@@ -3,15 +3,9 @@ import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PrimaryButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
-
-// Types
 import type { SubscriptionData } from '../types';
-
-// API
 import { getSubscriptionPlanInfo, getSubscriptionPortalLink } from '../api';
-
-// Utils
-import { formatSubscriptionData } from '../utils';
+import { formatSubscriptionData } from '../formatters';
 
 const { t, n, d } = useI18n();
 
