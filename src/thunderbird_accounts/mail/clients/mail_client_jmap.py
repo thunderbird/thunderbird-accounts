@@ -55,7 +55,7 @@ class BaseJMAP:
                 ],
                 method_calls=[
                     Invocation(
-                        name='x:Domain/query',
+                        name=StalwartMethods.query(StalwartMethods.DOMAIN),
                         arguments={
                             'accountId': self.account_id,
                             'filter': {'name': settings.PRIMARY_EMAIL_DOMAIN},
@@ -106,7 +106,7 @@ class BaseJMAP:
         """
         account_name = principal_id.split('@')[0]
         return Invocation(
-            name='x:Account/query',
+            name=StalwartMethods.query(StalwartMethods.ACCOUNT),
             arguments={
                 'accountId': self.account_id,
                 'filter': {'name': account_name, 'domainId': self.primary_domain_id},
@@ -154,7 +154,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                     # x:Domain/query does not support OR filter,
                     # so we have to do a separate request for each domain
                     Invocation(
-                        name='x:Domain/query',
+                        name=StalwartMethods.query(StalwartMethods.DOMAIN),
                         arguments={
                             'accountId': self.account_id,
                             'filter': {'name': domain_name},
@@ -252,7 +252,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 ],
                 method_calls=[
                     Invocation(
-                        name='x:Account/set',
+                        name=StalwartMethods.set(StalwartMethods.ACCOUNT),
                         arguments={
                             'accountId': self.account_id,
                             'update': {
@@ -286,7 +286,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 ],
                 method_calls=[
                     Invocation(
-                        name='x:DkimSignature/query',
+                        name=StalwartMethods.query(StalwartMethods.DKIM_SIGNATURE),
                         arguments={
                             'accountId': self.account_id,
                             'filter': {'domainId': domain.id},
@@ -297,7 +297,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                         method_call_id='0',
                     ),
                     Invocation(
-                        name='x:DkimSignature/get',
+                        name=StalwartMethods.get(StalwartMethods.DKIM_SIGNATURE),
                         arguments={
                             'accountId': self.account_id,
                             '#ids': {'resultOf': '0', 'name': 'x:DkimSignature/query', 'path': '/ids'},
@@ -332,7 +332,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 ],
                 method_calls=[
                     Invocation(
-                        name='x:Domain/query',
+                        name=StalwartMethods.query(StalwartMethods.DOMAIN),
                         arguments={
                             'accountId': self.account_id,
                             'filter': {'name': domain},
@@ -343,7 +343,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                         method_call_id='0',
                     ),
                     Invocation(
-                        name='x:Domain/get',
+                        name=StalwartMethods.get(StalwartMethods.DOMAIN),
                         arguments={
                             'accountId': self.account_id,
                             '#ids': {'resultOf': '0', 'name': 'x:Domain/query', 'path': '/ids'},
@@ -397,7 +397,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 ],
                 method_calls=[
                     Invocation(
-                        name='x:Domain/set',
+                        name=StalwartMethods.set(StalwartMethods.DOMAIN),
                         arguments={
                             'accountId': self.account_id,
                             'create': {temp_id: domain.model_dump(exclude_none=True)},
@@ -461,7 +461,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 method_calls=[
                     self._query_account_by_principal_id(principal_id),
                     Invocation(
-                        name='x:Account/get',
+                        name=StalwartMethods.set(StalwartMethods.ACCOUNT),
                         arguments={
                             'accountId': self.account_id,
                             '#ids': {'resultOf': '0', 'name': 'x:Account/query', 'path': '/ids'},
@@ -539,7 +539,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 ],
                 method_calls=[
                     Invocation(
-                        name='x:Account/set',
+                        name=StalwartMethods.set(StalwartMethods.ACCOUNT),
                         arguments={
                             'accountId': self.account_id,
                             'create': {
@@ -604,7 +604,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 method_calls=[
                     self._query_account_by_principal_id(principal_id),
                     Invocation(
-                        name='x:Account/set',
+                        name=StalwartMethods.set(StalwartMethods.ACCOUNT),
                         arguments={
                             'accountId': self.account_id,
                             '#destroy': {
@@ -705,7 +705,7 @@ class MailClientUserJMAP(BaseJMAP):
                 ],
                 method_calls=[
                     Invocation(
-                        name='x:AppPassword/set',
+                        name=StalwartMethods.set(StalwartMethods.APP_PASSWORD),
                         arguments={
                             'accountId': self.account_id,
                             'create': {
@@ -738,7 +738,7 @@ class MailClientUserJMAP(BaseJMAP):
                 ],
                 method_calls=[
                     Invocation(
-                        name='x:AppPassword/set',
+                        name=StalwartMethods.set(StalwartMethods.APP_PASSWORD),
                         arguments={'accountId': self.account_id, 'destroy': [app_password_pkid]},
                         method_call_id='0',
                     ),

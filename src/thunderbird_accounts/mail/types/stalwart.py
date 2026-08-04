@@ -6,6 +6,7 @@ from pydantic import Field, ConfigDict, AliasChoices
 
 class StalwartMethods(StrEnum):
     ACCOUNT = 'x:Account'
+    APP_PASSWORD = 'x:AppPassword'
     DKIM_SIGNATURE = 'x:DkimSignature'
     DOMAIN = 'x:Domain'
 
