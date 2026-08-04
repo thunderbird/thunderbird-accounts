@@ -1,5 +1,4 @@
 import json
-import os
 import re
 from django.utils.html import strip_tags
 from unittest.mock import patch, Mock
@@ -7,6 +6,7 @@ from unittest.mock import patch, Mock
 from django.conf import settings
 from django.test import SimpleTestCase, TestCase, Client as RequestClient
 from django.urls import reverse
+from pathlib import Path
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.core.views import PUBLIC_VUE_ROUTES
@@ -23,7 +23,7 @@ class PublicVueRouteSyncTestCase(SimpleTestCase):
         self.assertSetEqual(vue_public_routes, PUBLIC_VUE_ROUTES)
 
     def _extract_vue_public_routes(self):
-        router_path = os.path.join(settings.BASE_DIR, 'assets', 'app', 'vue', 'router.ts')
+        router_path = Path(settings.BASE_DIR) / 'assets' / 'app' / 'vue' / 'router.ts'
         router_source = router_path.read_text()
         route_matches = list(re.finditer(r"^\s+path:\s*'([^']+)'", router_source, re.MULTILINE))
         public_routes = set()
