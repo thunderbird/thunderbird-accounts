@@ -3,6 +3,7 @@ from thunderbird_accounts.mail.exceptions import DomainNotFoundError
 from django.utils.crypto import get_random_string
 from thunderbird_accounts.subscription.models import Plan, Subscription
 import json
+import requests
 from unittest.mock import patch, Mock
 
 from django.conf import settings
@@ -572,6 +573,52 @@ class VerifyCustomDomainTestCase(TestCase):
         mock_instance.create_domain.assert_not_called()
         mock_instance.ensure_dkim.assert_not_called()
         mock_publish_hosted_dkim.assert_not_called()
+
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_backend_unavailable_returns_503(self, mock_mail_client_cls):
+        """A backend outage (requests.RequestException) is a transient upstream
+        failure: return 503, not 500, and leave the domain status untouched."""
+        mock_instance = Mock()
+        mock_instance.check_domain_dns.side_effect = requests.exceptions.HTTPError(
+            '500 Server Error: Internal Server Error for url: '
+            'https://mail-backend.example:8080/api/principal/deploy'
+        )
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 503, response.content)
+        self.assertFalse(json.loads(response.content.decode())['success'])
+
+        # A transient backend outage must not permanently mark the domain FAILED.
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.PENDING, self.domain.status)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_unexpected_error_still_returns_500(self, mock_mail_client_cls):
+        """A genuine, unexpected error keeps the original 500 behaviour and marks
+        the domain FAILED — only backend outages are downgraded to 503."""
+        mock_instance = Mock()
+        mock_instance.check_domain_dns.side_effect = ValueError('unexpected internal error')
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 500, response.content)
+        self.assertFalse(json.loads(response.content.decode())['success'])
 
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)

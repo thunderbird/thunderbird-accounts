@@ -321,6 +321,21 @@ def verify_custom_domain(request: HttpRequest):
             domain.save()
 
             return JsonResponse({'success': False, **response_data})
+    except requests.RequestException as e:
+        # The Stalwart mail backend is unreachable or returned a server error
+        # (e.g. a 5xx from /api/principal/deploy). That is a transient upstream
+        # outage, not a failure of the user's domain, so we don't mark the domain
+        # FAILED — we surface it as 503 Service Unavailable so the caller knows to
+        # retry, while still reporting it to Sentry so a backend outage is alerted.
+        logging.error(f'Error verifying domain (mail backend unavailable): {e}')
+        sentry_sdk.capture_exception(e)
+        return JsonResponse(
+            {
+                'success': False,
+                'error': _('The mail backend is temporarily unavailable. Please try verifying again in a few minutes.'),
+            },
+            status=503,
+        )
     except Exception as e:
         domain.status = Domain.DomainStatus.FAILED
         domain.save()
