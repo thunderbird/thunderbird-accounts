@@ -4,6 +4,7 @@ from typing import Optional, Annotated
 from datetime import datetime
 from pydantic import Field, ConfigDict, AliasChoices
 
+
 class StalwartMethods(StrEnum):
     ACCOUNT = 'x:Account'
     APP_PASSWORD = 'x:AppPassword'
@@ -19,7 +20,7 @@ class StalwartMethods(StrEnum):
     @staticmethod
     def set(method: 'StalwartMethods'):
         return f'{method}/set'
-    
+
     @staticmethod
     def destroy(method: 'StalwartMethods'):
         return StalwartMethods.set(method)
@@ -27,6 +28,7 @@ class StalwartMethods(StrEnum):
     @staticmethod
     def query(method: 'StalwartMethods'):
         return f'{method}/query'
+
 
 Duration = Annotated[str | int, Field()]
 """A field that takes in either ms as an integer or time followed by the unit as a string
@@ -128,6 +130,7 @@ class Domain(JMapType):
     allow_relaying: bool
     report_address_uri: Optional[str] = None
 
+
 class DomainCreate(Domain):
     created_at: Optional[datetime] = None
     allow_relaying: Optional[bool] = None
@@ -142,6 +145,7 @@ class Credential(StalwartType):
         APP_PASSWORD = 'AppPassword'
         API_KEY = 'ApiKey'
 
+
 class PasswordCredential(Credential):
     secret: str
     otpAuth: Optional[str] = None
@@ -151,20 +155,24 @@ class PasswordCredential(Credential):
 
 class SecondaryCredential(Credential):
     """Read-only query object"""
+
     description: str
     secret: str
     created_at: Optional[datetime] = None
     permissions: StalwartType
     allowed_ips: Optional[dict] = None
 
+
 class AppPassword(BaseSchema):
     """A mix of the above credential objects"""
+
     description: str
     secret: Optional[str] = None  # Server set
     created_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None
     permissions: StalwartType
     allowed_ips: Optional[dict] = None
+
 
 class EmailAlias(BaseSchema):
     enabled: bool
@@ -175,9 +183,6 @@ class EmailAlias(BaseSchema):
 
 class Account(JMapType, StalwartType):
     """Stalwart Account Type
-
-    FIXME: Required fields were loosened to allow updates, 
-    should extend AccountUpdate type and fix required fields again.
 
     .. code-block:: json
 
@@ -240,7 +245,12 @@ class Account(JMapType, StalwartType):
     timezone: Optional[str] = None
     encryption_at_rest: StalwartType
 
+
 class AccountUpdate(Account):
+    """An Account model that has no required fields.
+    If you are updating an object rather than replacing the entire object you'll need to use json pointers.
+    `save_email_addresses` has the best existing example at the moment."""
+
     name: Optional[str] = None
     permissions: Optional[StalwartType] = None
     roles: Optional[StalwartType | dict] = None

@@ -215,7 +215,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             error_obj = list(error.values())[0]
             raise self._handle_jmap_error(error_obj, DomainSetError)
 
-        data = response.method_responses[0].arguments.get('created', {})
+        # data = response.method_responses[0].arguments.get('created', {})
 
         # stalwart_pkid = data.get(temp_id, {}).get('id')
 
@@ -257,7 +257,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                             'accountId': self.account_id,
                             'update': {
                                 stalwart_pkid: {
-                                    **data.model_dump(exclude_none=True),
+                                    **data.model_dump(exclude_unset=True),
                                 }
                             },
                         },
@@ -400,7 +400,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                         name=StalwartMethods.set(StalwartMethods.DOMAIN),
                         arguments={
                             'accountId': self.account_id,
-                            'create': {temp_id: domain.model_dump(exclude_none=True)},
+                            'create': {temp_id: domain.model_dump(exclude_unset=True)},
                         },
                         method_call_id='0',
                     ),
@@ -461,7 +461,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 method_calls=[
                     self._query_account_by_principal_id(principal_id),
                     Invocation(
-                        name=StalwartMethods.set(StalwartMethods.ACCOUNT),
+                        name=StalwartMethods.get(StalwartMethods.ACCOUNT),
                         arguments={
                             'accountId': self.account_id,
                             '#ids': {'resultOf': '0', 'name': 'x:Account/query', 'path': '/ids'},
@@ -509,7 +509,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
 
         account_name, account_domain = principal_id.split('@')
 
-        domain_ids_by_domain = self._get_domain_ids_by_name([account_domain, *emails])
+        domain_ids_by_domain = self._get_domain_ids_by_name([principal_id, *emails])
 
         aliases = {
             str(idx): stalwart.EmailAlias(
@@ -519,7 +519,6 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         }
         data = stalwart.Account(
             type=stalwart.Account.Types.USER.value,
-            id=None,
             name=account_name,
             description=full_name,
             encryption_at_rest=stalwart.StalwartType(type='Disabled'),
@@ -544,7 +543,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                             'accountId': self.account_id,
                             'create': {
                                 temp_id: {
-                                    **data.model_dump(exclude_none=True),
+                                    **data.model_dump(exclude_unset=True),
                                 }
                             },
                         },
@@ -587,14 +586,13 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
 
     def delete_account(self, principal_id: str) -> None:
         """
-        FIXME: This doesn't actually do what it needs to do.
-
         Deletes a Stalwart account from the given thundermail address.
 
         :raises AccountNotFoundError: If the account you're trying to delete does not exist.
         :raises AccountSetError: If there was a problem during the deletion process."""
         self.preflight_check()
 
+        account = self.get_account(principal_id)
         response = self.client.request(
             JMapRequest(
                 using=[
@@ -602,35 +600,28 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                     'urn:stalwart:jmap',
                 ],
                 method_calls=[
-                    self._query_account_by_principal_id(principal_id),
                     Invocation(
-                        name=StalwartMethods.set(StalwartMethods.ACCOUNT),
+                        name=StalwartMethods.destroy(StalwartMethods.ACCOUNT),
                         arguments={
                             'accountId': self.account_id,
-                            '#destroy': {
-                                'resultOf': '0',
-                                'name': 'x:Account/query',
-                                'path': '/ids',
-                            },  # this doesn't work!
+                            'destroy': [
+                                account.id
+                            ],
                         },
-                        method_call_id='1',
+                        method_call_id='0',
                     ),
                 ],
             )
         )
 
-        # Account already deleted or doesn't exist? Raise a not found error
-        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
-            raise AccountNotFoundError(principal_id)
-
         # Error during deletion
-        error = response.method_responses[1].arguments.get('notDestroyed')
+        error = response.method_responses[0].arguments.get('notDestroyed')
         if error:
             error_obj = list(error.values())[0]
             raise self._handle_jmap_error(error_obj, AccountSetError)
 
         print('->resp', response.method_responses)
-        data = response.method_responses[1].arguments.get('destroyed', {})
+        data = response.method_responses[0].arguments.get('destroyed', {})
         self._debug_dump('delete_account', data)
 
     def save_email_addresses(self, principal_id: str, emails: str | list[str]):
@@ -665,12 +656,42 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         account_update = stalwart.AccountUpdate(**aliases)  # ty: ignore[invalid-argument-type]
         self._patch_account(principal_id, account_update)
 
-
     def replace_email_addresses(self, principal_id: str, emails: list[tuple[str, str]]):
-        raise NotImplementedError()
+        """Previously we replaced email addresses. That's fine, 
+        but for now let's just delete the old and add in the new."""
+        to_remove, to_add = zip(*emails)
+        self.delete_email_addresses(principal_id, list(to_remove))
+        self.save_email_addresses(principal_id, list(to_add))
 
     def delete_email_addresses(self, principal_id: str, emails: str | list[str]):
-        raise NotImplementedError()
+        if isinstance(emails, str):
+            emails = [emails]
+
+        if len(emails) == 0:
+            return
+
+        # Retrieve a fresh list of our aliases
+        account = self.get_account(principal_id)
+        domain_ids_by_name = self._get_domain_ids_by_name(emails)
+
+        if not account.aliases:
+            return  # EmailNotFound
+
+        # Gross double loop to find a match between saved aliases, and aliases to remove / domain_ids
+        ids_to_remove = []
+        for idx, alias in account.aliases.items():
+            for email in emails:
+                local_part, domain_name = email.split('@')
+                domain_id = domain_ids_by_name.get(domain_name)
+                if not domain_id:
+                    continue
+                if alias.name == local_part and alias.domain_id == domain_id:
+                    ids_to_remove.append(idx)
+
+        # None out the aliases in question
+        aliases = {f'aliases/{idx}': None for idx in ids_to_remove}
+        account_update = stalwart.AccountUpdate(**aliases)
+        self._patch_account(principal_id, account_update)
 
 
 class MailClientUserJMAP(BaseJMAP):
@@ -710,7 +731,7 @@ class MailClientUserJMAP(BaseJMAP):
                             'accountId': self.account_id,
                             'create': {
                                 temp_id: {
-                                    **credentials.model_dump(exclude_none=True),
+                                    **credentials.model_dump(exclude_unset=True),
                                 }
                             },
                         },
@@ -738,7 +759,7 @@ class MailClientUserJMAP(BaseJMAP):
                 ],
                 method_calls=[
                     Invocation(
-                        name=StalwartMethods.set(StalwartMethods.APP_PASSWORD),
+                        name=StalwartMethods.destroy(StalwartMethods.APP_PASSWORD),
                         arguments={'accountId': self.account_id, 'destroy': [app_password_pkid]},
                         method_call_id='0',
                     ),
