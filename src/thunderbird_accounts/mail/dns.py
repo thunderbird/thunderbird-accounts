@@ -15,6 +15,7 @@ TXT_TAG_SPEC_RE = re.compile(
 )
 DMARC_VERSION_TAG_RE = re.compile(r'^[ \t]*v[ \t]*=')
 VALID_DMARC_POLICIES = {'none', 'quarantine', 'reject'}
+MAX_SRV_PRIORITY = 65_535
 
 
 def normalize_dns_query_name(name: str, domain_name: str) -> str:
@@ -78,10 +79,8 @@ def check_mx_record_status(domain_name: str, record: dict) -> tuple[DNSRecordSta
 def check_srv_record_status(domain_name: str, record: dict) -> tuple[DNSRecordStatus, list[str]]:
     query_name = normalize_dns_query_name(record['name'], domain_name)
     content_parts = record['content'].split()
-    expected_weight = int(content_parts[0])
     expected_port = int(content_parts[1])
     expected_target = content_parts[2].rstrip('.').lower()
-    expected_priority = int(record.get('priority', '0'))
 
     try:
         answers = dns_resolver.resolve(query_name, 'SRV')
@@ -92,21 +91,20 @@ def check_srv_record_status(domain_name: str, record: dict) -> tuple[DNSRecordSt
         return DNSRecordStatus.UNKNOWN, []
 
     live_values = []
-    has_match = False
+    matching_priorities = []
+    # Intentionally an impossible value
+    best_priority = MAX_SRV_PRIORITY + 1
 
     for rdata in answers:
         target = rdata.target.to_text().rstrip('.')
         live_value = f'{rdata.priority} {rdata.weight} {rdata.port} {target}'
         live_values.append(live_value)
-        if (
-            rdata.priority == expected_priority
-            and rdata.weight == expected_weight
-            and rdata.port == expected_port
-            and target.lower() == expected_target
-        ):
-            has_match = True
+        # Lower is better (higher priority) for SRV records.
+        best_priority = min(best_priority, rdata.priority)
+        if rdata.port == expected_port and target.lower() == expected_target:
+            matching_priorities.append(rdata.priority)
 
-    if has_match:
+    if best_priority in matching_priorities:
         return DNSRecordStatus.MATCH, []
     if live_values:
         return DNSRecordStatus.CONFLICT, live_values

@@ -714,31 +714,31 @@ class MailClient:
             {
                 'type': 'SRV',
                 'name': f'_jmap._tcp.{normalized_cust_domain}.',
-                'content': f'1 443 {target_domain}',
+                'content': f'0 443 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
                 'name': f'_caldavs._tcp.{normalized_cust_domain}.',
-                'content': f'1 443 {target_domain}',
+                'content': f'0 443 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
                 'name': f'_carddavs._tcp.{normalized_cust_domain}.',
-                'content': f'1 443 {target_domain}',
+                'content': f'0 443 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
                 'name': f'_imaps._tcp.{normalized_cust_domain}.',
-                'content': f'1 993 {target_domain}',
+                'content': f'0 993 {target_domain}',
                 'priority': '0',
             },
             {
                 'type': 'SRV',
                 'name': f'_submission._tcp.{normalized_cust_domain}.',
-                'content': f'1 587 {target_domain}',
+                'content': f'0 587 {target_domain}',
                 'priority': '0',
             },
             {

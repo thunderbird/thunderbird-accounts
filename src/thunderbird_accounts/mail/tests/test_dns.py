@@ -172,15 +172,15 @@ class TestDNSRecordStatus(SimpleTestCase):
         self.assertEqual(existing_values, [])
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
-    def test_srv_match_with_extra_records(self, mock_resolve):
+    def test_srv_match_at_best_priority_with_any_weight(self, mock_resolve):
         mock_correct = MagicMock()
-        mock_correct.priority = 0
-        mock_correct.weight = 1
+        mock_correct.priority = 5
+        mock_correct.weight = 0
         mock_correct.port = 443
         mock_correct.target.to_text.return_value = 'mail.test.com.'
         mock_extra = MagicMock()
-        mock_extra.priority = 0
-        mock_extra.weight = 1
+        mock_extra.priority = 10
+        mock_extra.weight = 50
         mock_extra.port = 443
         mock_extra.target.to_text.return_value = 'other.test.com.'
         mock_resolve.return_value = [mock_extra, mock_correct]
@@ -197,6 +197,33 @@ class TestDNSRecordStatus(SimpleTestCase):
 
         self.assertEqual(status, DNSRecordStatus.MATCH)
         self.assertEqual(existing_values, [])
+
+    @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
+    def test_srv_conflict_when_match_is_not_at_best_priority(self, mock_resolve):
+        mock_correct = MagicMock()
+        mock_correct.priority = 10
+        mock_correct.weight = 0
+        mock_correct.port = 443
+        mock_correct.target.to_text.return_value = 'mail.test.com.'
+        mock_preferred = MagicMock()
+        mock_preferred.priority = 5
+        mock_preferred.weight = 50
+        mock_preferred.port = 443
+        mock_preferred.target.to_text.return_value = 'other.test.com.'
+        mock_resolve.return_value = [mock_preferred, mock_correct]
+
+        status, existing_values = check_srv_record_status(
+            self.domain,
+            {
+                'type': 'SRV',
+                'name': f'_jmap._tcp.{self.domain}.',
+                'content': '0 443 mail.test.com',
+                'priority': '0',
+            },
+        )
+
+        self.assertEqual(status, DNSRecordStatus.CONFLICT)
+        self.assertEqual(existing_values, ['5 50 443 other.test.com', '10 0 443 mail.test.com'])
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_cname_match(self, mock_resolve):
