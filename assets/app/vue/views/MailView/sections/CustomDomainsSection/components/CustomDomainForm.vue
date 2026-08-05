@@ -66,6 +66,8 @@ const currentValue = (record: DNSRecord): string => record.existing_values?.join
 
 const isMxRecord = (record: DNSRecord): boolean => record.type === 'MX';
 
+const isSrvRecord = (record: DNSRecord): boolean => record.type === 'SRV';
+
 const isSpfRecord = (record: DNSRecord): boolean =>
   record.type === 'TXT' && record.content.trim().toLowerCase().startsWith('v=spf1');
 
@@ -190,6 +192,14 @@ const recordStatusIssue = (record: DNSRecord): InlineIssue | null => {
       key: 'mxLookupError',
       severity: 'critical',
       text: formatValidationError('mxLookupError'),
+    };
+  }
+
+  if (isSrvRecord(record) && record.status === DNSRecordStatus.CONFLICT) {
+    return {
+      key: `${record.type}-${record.name}-conflict`,
+      severity: 'warning',
+      text: t('views.mail.sections.customDomains.srvRecordConflictWarning'),
     };
   }
 

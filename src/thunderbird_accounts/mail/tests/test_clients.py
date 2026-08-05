@@ -605,7 +605,7 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
             {
                 'type': 'SRV',
                 'name': '_jmap._tcp.tb.stosberg.com.',
-                'content': '1 443 mail.test.com',
+                'content': '0 443 mail.test.com',
                 'priority': '0',
             },
             records,
