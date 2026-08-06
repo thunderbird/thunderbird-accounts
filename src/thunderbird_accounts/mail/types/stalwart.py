@@ -180,6 +180,26 @@ class EmailAlias(BaseSchema):
     domain_id: str
     description: Optional[str] = None
 
+class StorageQuota(BaseSchema):
+    """Ref: https://stalw.art/docs/ref/object/account/#storagequota"""
+    max_emails: Optional[int] = None
+    max_mailboxes: Optional[int] = None
+    max_email_submissions: Optional[int] = None
+    max_email_identities: Optional[int] = None
+    max_participant_identities: Optional[int] = None
+    max_sieve_scripts: Optional[int] = None
+    max_push_subscriptions: Optional[int] = None
+    max_calendars: Optional[int] = None
+    max_calendar_event_notifications: Optional[int] = None
+    max_address_books: Optional[int] = None
+    max_contact_cards: Optional[int] = None
+    max_files: Optional[int] = None
+    max_folders: Optional[int] = None
+    max_masked_addresses: Optional[int] = None
+    max_app_passwords: Optional[int] = None
+    max_api_keys: Optional[int] = None
+    max_public_keys: Optional[int] = None
+    max_disk_quota: Optional[int] = None
 
 class Account(JMapType, StalwartType):
     """Stalwart Account Type
@@ -237,7 +257,7 @@ class Account(JMapType, StalwartType):
     member_tenant_id: Optional[str] = None
     roles: StalwartType | dict
     permissions: StalwartType
-    quotas: Optional[dict] = None
+    quotas: Optional[StorageQuota] = None
     used_disk_quota: Optional[int] = None
     aliases: Optional[dict[str, EmailAlias]] = None
     description: Optional[str] = None

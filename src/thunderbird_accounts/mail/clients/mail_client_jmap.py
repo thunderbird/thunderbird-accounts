@@ -526,7 +526,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             permissions=stalwart.StalwartType(type='Inherit'),
             domain_id=domain_ids_by_domain[account_domain],
             aliases=aliases,
-            quotas={'maxDiskQuota': quota} if quota else None,
+            quotas=stalwart.StorageQuota(max_disk_quota=quota) if quota else None,
         )
 
         temp_id = str(uuid.uuid4())
@@ -582,6 +582,10 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         if not account.name and not account.description:
             raise ValueError('You must provide at least one field to change.')
 
+        self._patch_account(principal_id, account)
+
+    def update_quota(self, principal_id: str, quota: int):
+        account = stalwart.AccountUpdate(quotas=stalwart.StorageQuota(max_disk_quota=quota))
         self._patch_account(principal_id, account)
 
     def delete_account(self, principal_id: str) -> None:
