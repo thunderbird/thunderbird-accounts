@@ -232,21 +232,24 @@ def get_dns_records(request: HttpRequest):
         )
 
 
-# HTTP status at/above which a backend response counts as a transient outage.
-_TRANSIENT_BACKEND_STATUS_FLOOR = 500
+# Backend responses that indicate the operation may succeed if attempted later.
+# A numeric 5xx range would be too broad: statuses such as 501 and 505 describe
+# conditions that retrying does not normally resolve.
+_TRANSIENT_BACKEND_STATUS_CODES = frozenset({500, 502, 503, 504})
 
 
 def _is_transient_backend_error(exc: requests.RequestException) -> bool:
     """Whether a MailClient/requests failure is a transient upstream outage.
 
-    True for a 5xx response, or a connection/timeout error with no response at all
-    — cases where retrying may succeed. A non-transient response (e.g. a 4xx)
-    returns False so it is treated as a genuine failure rather than "try again".
+    True for an explicitly retryable backend response, or for a connection/timeout
+    error where no response was received. Other request failures are treated as
+    genuine errors rather than assuming that retrying will resolve them.
     """
     response = getattr(exc, 'response', None)
     if response is not None:
-        return response.status_code >= _TRANSIENT_BACKEND_STATUS_FLOOR
-    return True
+        return response.status_code in _TRANSIENT_BACKEND_STATUS_CODES
+
+    return isinstance(exc, (requests.ConnectionError, requests.Timeout))
 
 
 def _domain_verification_error(domain, exc) -> JsonResponse:
@@ -350,15 +353,9 @@ def verify_custom_domain(request: HttpRequest):
 
             return JsonResponse({'success': False, **response_data})
     except requests.RequestException as e:
+        # For transient errors, return 503 to the frontend, warn in the logs but don't call Sentry.
         if _is_transient_backend_error(e):
-            # The Stalwart mail backend is unreachable or returned a 5xx (e.g. from
-            # /api/principal/deploy). That is a transient upstream outage, not a
-            # failure of the user's domain: return a stable `mail_backend_unavailable`
-            # code with 503 so the caller retries, leave the domain status untouched
-            # instead of flipping it to FAILED, and report to Sentry so an outage is
-            # alerted. The frontend localises the code via the shared error notice.
-            logging.error(f'Error verifying domain (mail backend unavailable): {e}')
-            sentry_sdk.capture_exception(e)
+            logging.warn(f'Error verifying domain (mail backend unavailable): {e}')
             return JsonResponse(
                 {'success': False, 'code': 'mail_backend_unavailable'},
                 status=503,

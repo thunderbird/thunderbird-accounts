@@ -649,6 +649,14 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
       </div>
     </div>
 
+    <notice-bar
+      :type="NoticeBarTypes.Critical"
+      class="verify-step-notice-bar"
+      v-if="customDomainError"
+    >
+      <p>{{ customDomainError }}</p>
+    </notice-bar>
+
     <!-- TODO: Uncomment this once we have the task / job to automatically verify domains -->
     <!-- <notice-bar :type="NoticeBarTypes.Info" class="verify-step-notice-bar" v-if="showNoticeBar">
       <strong>{{ t('views.mail.sections.customDomains.verifyStepInfoTitle') }}</strong>
