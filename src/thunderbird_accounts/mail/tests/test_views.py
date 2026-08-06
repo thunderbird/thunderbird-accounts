@@ -15,7 +15,12 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.core.tests.utils import oidc_force_login
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, StaleDNSRecordCode
 from thunderbird_accounts.mail.models import Account, Domain, Email
-from thunderbird_accounts.mail.views import create_custom_domain, get_dns_records, remove_custom_domain
+from thunderbird_accounts.mail.views import (
+    _is_transient_backend_error,
+    create_custom_domain,
+    get_dns_records,
+    remove_custom_domain,
+)
 
 
 class AppPasswordApiTestCase(TestCase):
@@ -598,13 +603,32 @@ class VerifyCustomDomainTestCase(TestCase):
         response.status_code = status_code
         return requests.exceptions.HTTPError(f'{status_code} Server Error', response=response)
 
+    def test_backend_error_transience_is_explicit(self):
+        transient_errors = [
+            self._http_error(status_code) for status_code in (500, 502, 503, 504)
+        ] + [
+            requests.ConnectionError('Connection refused'),
+            requests.Timeout('Request timed out'),
+        ]
+        non_transient_errors = [
+            self._http_error(status_code) for status_code in (400, 501, 505)
+        ] + [requests.RequestException('Unclassified request failure')]
+
+        for error in transient_errors:
+            with self.subTest(error=error):
+                self.assertTrue(_is_transient_backend_error(error))
+
+        for error in non_transient_errors:
+            with self.subTest(error=error):
+                self.assertFalse(_is_transient_backend_error(error))
+
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_backend_5xx_during_create_domain_returns_503(
+    def test_backend_500_during_create_domain_returns_503(
         self, mock_mail_client_cls, mock_check_stale_dns_records
     ):
-        """DNS verification succeeds, then the Stalwart backend 5xxs on
+        """DNS verification succeeds, then the Stalwart backend returns 500 on
         create_domain() (/api/principal/deploy). That transient outage returns 503
         with the stable `mail_backend_unavailable` code, and leaves the domain
         PENDING rather than flipping it to FAILED."""
