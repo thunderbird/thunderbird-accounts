@@ -96,7 +96,7 @@ class MailClientInterface:
     def get_dns_records(self, domain_name: str) -> list[dict]:
         raise NotImplementedError()
 
-    def get_dkim_signatures(self, domain_name: str) -> list[dict]:
+    def get_dkim_signatures(self, domain_name: str):
         raise NotImplementedError()
 
     def get_dkim_dns_records(self, domain_name: str) -> list[dict]:

@@ -30,6 +30,10 @@ class StalwartMethods(StrEnum):
         return f'{method}/query'
 
 
+Id = Annotated[str, Field()]
+"""A JMap ID field
+Ref: https://jmap.io/spec/rfc8620/#section-1.2"""
+
 Duration = Annotated[str | int, Field()]
 """A field that takes in either ms as an integer or time followed by the unit as a string
 Ref: https://stalw.art/docs/0.15/configuration/values/duration"""
@@ -50,7 +54,7 @@ class StalwartType(BaseSchema):
 class JMapType(BaseSchema):
     """Base type for all jmap responses"""
 
-    id: Optional[str] = None
+    id: Optional[Id] = Field(default=None)
 
 
 class DnsServer(StalwartType):
@@ -73,6 +77,41 @@ class DnsServer(StalwartType):
     polling_interval: Duration
     propagation_timeout: Duration
     propagation_delay: Optional[Duration] = None
+
+
+class DkimSignature(StalwartType, JMapType):
+    model_config = ConfigDict(polymorphic_serialization=True)
+    private_key: str
+    public_key: str
+    domain_id: Id
+    member_tenant_id: Optional[Id] = None
+    selector: str
+    created_at: Optional[datetime] = None
+    next_transition_at: Optional[datetime] = None
+    stage: str = 'active'
+
+
+class DkimSignature1(DkimSignature):
+    """Type is either Dkim1Ed25519Sha256 or Dkim1RsaSha256"""
+
+    aud: Optional[str] = None
+    canonicalization: str = 'relaxed/relaxed'
+    expire: Optional[Duration] = None
+    headers: dict[str, bool] = {'From': True, 'To': True, 'Date': True, 'Subject': True, 'Message-ID': True}
+    report: Optional[bool] = True
+    third_party: Optional[str] = None
+    third_party_hash: Optional[str] = None
+
+
+class DkimSignature2(DkimSignature):
+    """Type is either Dkim2Ed25519Sha256 or Dkim2RsaSha256"""
+
+    class Dkim2Flag(StrEnum):
+        DO_NOT_MODIFY = 'donotmodify'
+        DO_NOT_EXPLODE = 'donotexplode'
+        FEEDBACK = 'feedback'
+
+    flags: list[Dkim2Flag] = []
 
 
 class DkimManagement(StalwartType):
@@ -180,8 +219,10 @@ class EmailAlias(BaseSchema):
     domain_id: str
     description: Optional[str] = None
 
+
 class StorageQuota(BaseSchema):
     """Ref: https://stalw.art/docs/ref/object/account/#storagequota"""
+
     max_emails: Optional[int] = None
     max_mailboxes: Optional[int] = None
     max_email_submissions: Optional[int] = None
@@ -200,6 +241,7 @@ class StorageQuota(BaseSchema):
     max_api_keys: Optional[int] = None
     max_public_keys: Optional[int] = None
     max_disk_quota: Optional[int] = None
+
 
 class Account(JMapType, StalwartType):
     """Stalwart Account Type
