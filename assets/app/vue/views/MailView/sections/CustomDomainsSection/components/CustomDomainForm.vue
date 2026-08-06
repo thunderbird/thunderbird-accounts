@@ -463,6 +463,13 @@ const onVerifyDomain = async () => {
   try {
     const data = await verifyDomain(customDomain.value);
 
+    // Transient mail-backend outage: surface the error notice and leave the
+    // domain's verification state untouched (don't apply results or mark FAILED).
+    if (data.code === 'mail_backend_unavailable') {
+      customDomainError.value = t('views.mail.sections.customDomains.mailBackendUnavailable');
+      return;
+    }
+
     applyVerificationResult(customDomain.value, validationResult(data), {
       showMissingIssues: true,
       cacheResult: true,
