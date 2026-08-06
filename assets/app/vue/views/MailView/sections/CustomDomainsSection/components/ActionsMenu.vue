@@ -54,6 +54,14 @@ const handleRetry = async () => {
   try {
     const data = await verifyDomain(props.domain.name);
 
+    // Transient mail-backend outage: surface the error notice and don't touch the
+    // domain's verification state (don't apply results or mark it FAILED).
+    if (data.code === 'mail_backend_unavailable') {
+      emit('custom-domain-error', t('views.mail.sections.customDomains.mailBackendUnavailable'));
+      showMenu.value = false;
+      return;
+    }
+
     emitVerificationResult(data);
 
     if (data.success) {

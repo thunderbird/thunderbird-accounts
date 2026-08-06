@@ -577,17 +577,39 @@ class VerifyCustomDomainTestCase(TestCase):
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
 
-    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
-    @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_backend_unavailable_returns_503(self, mock_mail_client_cls):
-        """A backend outage (requests.RequestException) is a transient upstream
-        failure: return 503, not 500, and leave the domain status untouched."""
+    def _mock_client_verified_then_create_raises(self, mock_mail_client_cls, side_effect):
+        """MailClient mock whose DNS check passes (so create_domain() is reached),
+        with create_domain() raising the given side effect."""
         mock_instance = Mock()
-        mock_instance.check_domain_dns.side_effect = requests.exceptions.HTTPError(
-            '500 Server Error: Internal Server Error for url: '
-            'https://mail-backend.example:8080/api/principal/deploy'
-        )
+        mock_instance.check_domain_dns.return_value = {
+            'is_verified': True,
+            'critical_errors': [],
+            'warnings': [],
+            'dns_records': [],
+        }
+        mock_instance.get_domain.side_effect = DomainNotFoundError(self.domain.name)
+        mock_instance.create_domain.side_effect = side_effect
         mock_mail_client_cls.return_value = mock_instance
+        return mock_instance
+
+    @staticmethod
+    def _http_error(status_code: int) -> requests.exceptions.HTTPError:
+        response = requests.Response()
+        response.status_code = status_code
+        return requests.exceptions.HTTPError(f'{status_code} Server Error', response=response)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_backend_5xx_during_create_domain_returns_503(
+        self, mock_mail_client_cls, mock_check_stale_dns_records
+    ):
+        """DNS verification succeeds, then the Stalwart backend 5xxs on
+        create_domain() (/api/principal/deploy). That transient outage returns 503
+        with the stable `mail_backend_unavailable` code, and leaves the domain
+        PENDING rather than flipping it to FAILED."""
+        mock_check_stale_dns_records.return_value = []
+        self._mock_client_verified_then_create_raises(mock_mail_client_cls, self._http_error(500))
 
         response = self.client.post(
             self.url,
@@ -596,17 +618,41 @@ class VerifyCustomDomainTestCase(TestCase):
         )
 
         self.assertEqual(response.status_code, 503, response.content)
-        self.assertFalse(json.loads(response.content.decode())['success'])
+        body = json.loads(response.content.decode())
+        self.assertFalse(body['success'])
+        self.assertEqual('mail_backend_unavailable', body['code'])
 
-        # A transient backend outage must not permanently mark the domain FAILED.
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.PENDING, self.domain.status)
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_backend_4xx_is_not_transient_returns_500(
+        self, mock_mail_client_cls, mock_check_stale_dns_records
+    ):
+        """A non-transient backend response (4xx) is a genuine failure, not a
+        retryable outage, so it keeps the original 500 + FAILED behaviour."""
+        mock_check_stale_dns_records.return_value = []
+        self._mock_client_verified_then_create_raises(mock_mail_client_cls, self._http_error(400))
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 500, response.content)
+        self.assertFalse(json.loads(response.content.decode())['success'])
+
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.MailClient')
     def test_unexpected_error_still_returns_500(self, mock_mail_client_cls):
-        """A genuine, unexpected error keeps the original 500 behaviour and marks
-        the domain FAILED — only backend outages are downgraded to 503."""
+        """A genuine, unexpected (non-requests) error keeps the original 500 +
+        FAILED behaviour — only transient backend outages are downgraded to 503."""
         mock_instance = Mock()
         mock_instance.check_domain_dns.side_effect = ValueError('unexpected internal error')
         mock_mail_client_cls.return_value = mock_instance
