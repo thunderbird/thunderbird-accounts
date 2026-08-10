@@ -1,6 +1,7 @@
-from unittest.mock import Mock, patch
+import logging
+from types import SimpleNamespace
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 
@@ -11,36 +12,25 @@ class IsValidPaddleWebhookTestCase(SimpleTestCase):
         'Too much time has elapsed between the request and this process',
     )
 
-    def test_expected_verification_rejections_are_logged_and_rejected(self):
+    @override_settings(PADDLE_WEBHOOK_KEY='test-secret')
+    def test_expected_verification_rejections_are_logged_at_info_and_rejected(self):
         for message in self.expected_rejections:
             with self.subTest(message=message):
-                verifier = Mock()
-                verifier.return_value.verify.side_effect = Exception(message)
+                request = SimpleNamespace(headers={}, body=b'{}')
+                if message.startswith('Too much'):
+                    request.headers['Paddle-Signature'] = 'ts=0;h1=unused'
 
-                with (
-                    patch('thunderbird_accounts.authentication.permissions.Verifier', verifier),
-                    patch('thunderbird_accounts.authentication.permissions.Secret'),
-                    patch('thunderbird_accounts.authentication.permissions.logging.info') as mock_info,
-                ):
-                    result = None
-                    try:
-                        result = IsValidPaddleWebhook().authenticate(Mock())
-                    except Exception as exception:
-                        self.fail(f'Expected Paddle rejection propagated: {exception}')
+                with self.assertLogs('paddle_billing', level='INFO') as logs:
+                    self.assertIsNone(IsValidPaddleWebhook().authenticate(request))
 
-                self.assertIsNone(result)
-                mock_info.assert_called_once_with(message)
+                record = next(record for record in logs.records if record.getMessage() == message)
+                self.assertEqual(record.levelno, logging.INFO)
 
-    def test_unexpected_verification_rejection_propagates(self):
-        verifier = Mock()
-        verifier.return_value.verify.side_effect = Exception('Unexpected Paddle verification failure')
+    def test_unexpected_paddle_critical_log_remains_critical(self):
+        message = 'Unexpected Paddle verification failure'
 
-        with (
-            patch('thunderbird_accounts.authentication.permissions.Verifier', verifier),
-            patch('thunderbird_accounts.authentication.permissions.Secret'),
-            patch('thunderbird_accounts.authentication.permissions.logging.info') as mock_info,
-            self.assertRaisesRegex(Exception, 'Unexpected Paddle verification failure'),
-        ):
-            IsValidPaddleWebhook().authenticate(Mock())
+        with self.assertLogs('paddle_billing', level='INFO') as logs:
+            logging.getLogger('paddle_billing').critical(message)
 
-        mock_info.assert_not_called()
+        record = next(record for record in logs.records if record.getMessage() == message)
+        self.assertEqual(record.levelno, logging.CRITICAL)

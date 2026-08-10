@@ -20,19 +20,24 @@ EXPECTED_PADDLE_REJECTIONS = {
 }
 
 
+class ExpectedPaddleRejectionFilter(logging.Filter):
+    def filter(self, record):
+        if record.getMessage() in EXPECTED_PADDLE_REJECTIONS:
+            record.levelno = logging.INFO
+            record.levelname = logging.getLevelName(logging.INFO)
+        return True
+
+
+logging.getLogger('paddle_billing').addFilter(ExpectedPaddleRejectionFilter())
+
+
 class IsValidPaddleWebhook(BaseAuthentication):
     def authenticate(self, request):
         if not Verifier or not Secret:
             logging.error('Paddle package is not installed. This webhook has been rejected.')
             return None
 
-        try:
-            integrity_check = Verifier().verify(request, Secret(settings.PADDLE_WEBHOOK_KEY))
-        except Exception as exception:
-            if str(exception) in EXPECTED_PADDLE_REJECTIONS:
-                logging.info(str(exception))
-                return None
-            raise
+        integrity_check = Verifier().verify(request, Secret(settings.PADDLE_WEBHOOK_KEY))
 
         if not integrity_check:
             return None
