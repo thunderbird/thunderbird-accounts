@@ -466,13 +466,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         if not domain.id:
             raise DomainNotFoundError(domain_name)
 
-        try:
-            dkim_signatures = self.get_dkim_signatures(domain_name)
-            dkim_signature_ids = [signature.id for signature in dkim_signatures]
-            self._handle_destroy(StalwartMethods.DKIM_SIGNATURE, dkim_signature_ids)  # ty: ignore[invalid-argument-type]
-        except RuntimeError:
-            pass
-
+        self.delete_dkim(domain_name)
         self._handle_destroy(StalwartMethods.DOMAIN, domain.id)
 
     #
@@ -907,3 +901,8 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             raise RuntimeError(domain_name)
 
         return response.method_responses[1].arguments.get('list', [])
+
+    def delete_dkim(self, domain):
+        dkim_signatures = self.get_dkim_signatures(domain)
+        dkim_signature_ids = [signature.id for signature in dkim_signatures]
+        self._handle_destroy(StalwartMethods.DKIM_SIGNATURE, dkim_signature_ids)  # ty: ignore[invalid-argument-type]
