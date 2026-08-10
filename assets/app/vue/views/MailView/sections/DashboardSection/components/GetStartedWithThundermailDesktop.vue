@@ -58,6 +58,8 @@ export default {
         :title="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectTitle')"
         :description="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectDescription')"
       >
+        <p class="error-message" v-if="error">{{ error }}</p>
+
         <template #icon>
           <ph-arrow-square-out :size="20" />
         </template>
