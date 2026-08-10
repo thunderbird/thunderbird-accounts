@@ -20,7 +20,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 
-from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend, OIDC_REFRESH_TOKEN_KEY
+from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, MailClient, StaleDNSRecordCode
 from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records

@@ -1,4 +1,4 @@
-import { FeatureFlag, FeatureFlagValue } from '@/types';
+import { WAFFLE_FLAG } from '@/types';
 
 // Check if we already have a local user preferred language
 // Otherwise just use the navigators language.
@@ -7,9 +7,6 @@ export const defaultLocale = () => {
   return user?.settings?.language ?? navigator.language.split('-')[0];
 };
 
-export const isFeatureFlagEnabled = (flag: FeatureFlag, expected: FeatureFlagValue): boolean =>
-  window.localStorage.getItem(flag) === expected;
-
-export const isWaffleFlagActive = (flag: string): boolean =>
+export const isWaffleFlagActive = (flag: WAFFLE_FLAG): boolean =>
   Boolean((window as any).waffle?.flag_is_active(flag));
 

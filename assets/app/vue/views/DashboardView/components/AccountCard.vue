@@ -6,6 +6,7 @@ import { VisualDivider, PrimaryButton } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 import { isWaffleFlagActive } from '@/utils';
 import { getMfaMethods, MfaReauthenticationRequiredError } from '@/views/ManageMfaView/api';
+import { WAFFLE_FLAG } from '@/types';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -13,7 +14,7 @@ const router = useRouter();
 // The user's username is their primary email address
 const username = computed(() => window._page?.username);
 
-const showMfa = isWaffleFlagActive('multi-factor-authentication');
+const showMfa = isWaffleFlagActive(WAFFLE_FLAG.MULTI_FACTOR_AUTHENTICATION);
 const hasMfa = ref(false);
 
 const goToManageMfa = () => router.push('/manage-mfa');

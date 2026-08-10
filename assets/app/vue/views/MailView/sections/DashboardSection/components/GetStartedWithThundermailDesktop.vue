@@ -5,8 +5,8 @@ import { PhArrowSquareOut, PhDownloadSimple } from '@phosphor-icons/vue';
 import { PrimaryButton } from '@thunderbirdops/services-ui';
 import ActionCard from '@/components/ActionCard.vue';
 import { DOWNLOAD_THUNDERBIRD_DESKTOP_URL } from '@/defines';
-import { FeatureFlag, FeatureFlagValue } from '@/types';
-import { isFeatureFlagEnabled } from '@/utils';
+import { WAFFLE_FLAG } from '@/types';
+import { isWaffleFlagActive } from '@/utils';
 import { getDesktopConnectToken } from '../api';
 
 const { t } = useI18n();
@@ -16,7 +16,7 @@ const error = ref<string | null>(null);
 // From Stalwart, primary email is always the first email address in the list
 const primaryEmail = window._page?.emailAddresses?.[0] || '';
 const userDisplayName = window._page?.userDisplayName || primaryEmail;
-const showConnectNow = isFeatureFlagEnabled(FeatureFlag.SHOW_CONNECT_NOW, FeatureFlagValue.TRUE);
+const showConnectNow = isWaffleFlagActive(WAFFLE_FLAG.SHOW_CONNECT_NOW);
 
 async function handleConnectClick() {
   isConnecting.value = true;
@@ -37,7 +37,7 @@ async function handleConnectClick() {
       `&token=${encodeURIComponent(data.token)}`;
 
     window.location.href = url;
-  } catch (error) {
+  } catch (_error) {
     error.value = t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.desktopConnectionFailed');
   } finally {
     isConnecting.value = false;

@@ -18,12 +18,12 @@ import SignUpView from '@/views/SignUpView/index.vue';
 // Special Error Route
 import ErrorView from '@/views/ErrorView/index.vue';
 import { TBPRO_WAIT_LIST } from './defines';
-import { CAN_I_SIGN_UP_RESPONSES } from './types';
+import { CAN_I_SIGN_UP_RESPONSES, WAFFLE_FLAG } from './types';
 import { isWaffleFlagActive } from '@/utils';
 
 // Manage MFA rolls out dark: only register its route when the multi-factor-authentication
 // waffle flag is active, so /manage-mfa falls through to the 404 route until it's enabled.
-const showMfa = isWaffleFlagActive('multi-factor-authentication');
+const showMfa = isWaffleFlagActive(WAFFLE_FLAG.MULTI_FACTOR_AUTHENTICATION);
 
 // Keep public routes in sync with PUBLIC_VUE_ROUTES in src/thunderbird_accounts/core/views.py.
 // If the page template is marked as error page, only show the error page.
