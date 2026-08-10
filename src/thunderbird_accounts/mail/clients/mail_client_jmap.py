@@ -822,9 +822,6 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 ),
             )
 
-            with open(f'private_key_{algorithm}.key', 'w') as fh:
-                fh.write(signature.private_key.secret)
-
             temp_id = str(uuid.uuid4())
             try:
                 response = self.client.request(
