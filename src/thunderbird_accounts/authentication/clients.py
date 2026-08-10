@@ -386,6 +386,7 @@ class KeycloakClient:
 
         return pkid
 
+
 class KeycloakSelfServiceClient:
     """Base client for realm-scoped Keycloak calls made as the end user.
 
@@ -435,8 +436,11 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
     base_url_setting = 'KEYCLOAK_REALM_ENDPOINT'
 
     def get_active_sessions(self, user_access_token: str) -> list[ActiveSessionResponse]:
-        response = self.request('account/sessions/devices', user_access_token, RequestMethods.GET)
-        return self._normalize_session_devices(response.json())
+        # Keycloak 26.5+ includes offline sessions in the devices response. Use the
+        # online-only sessions endpoint as the source of truth for Logged-in Sessions.
+        sessions_response = self.request('account/sessions', user_access_token, RequestMethods.GET)
+        devices_response = self.request('account/sessions/devices', user_access_token, RequestMethods.GET)
+        return self._normalize_session_devices(sessions_response.json(), devices_response.json())
 
     def sign_out_session(self, user_access_token: str, session_id: str) -> dict:
         self.request(f'account/sessions/{session_id}', user_access_token, RequestMethods.DELETE)
@@ -451,29 +455,34 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
         self.request('account/sessions', user_access_token, RequestMethods.DELETE)
         return True
 
-    def _normalize_session_devices(self, devices: list[dict]) -> list[ActiveSessionResponse]:
-        active_sessions = []
+    def _normalize_session_devices(
+        self, online_sessions: list[dict], devices: list[dict]
+    ) -> list[ActiveSessionResponse]:
+        devices_by_session_id = {}
         for device in devices:
-            device_info = self._device_info(device)
-            device_sessions = device.get('sessions') or []
+            for session in device.get('sessions') or []:
+                session_id = session.get('id')
+                if session_id:
+                    devices_by_session_id.setdefault(session_id, (device, session))
 
-            if not device_sessions:
-                active_sessions.append(self._active_session_response(device, device_info))
-                continue
-
-            for session in device_sessions:
-                active_sessions.append(
-                    self._active_session_response(
-                        {
-                            **device,
-                            **session,
-                            'ipAddress': session.get('ipAddress') or device.get('ipAddress'),
-                            'lastAccess': session.get('lastAccess') or device.get('lastAccess'),
-                            'current': session.get('current', device.get('current')),
-                        },
-                        self._device_info(device, session),
-                    )
+        active_sessions = []
+        for session in online_sessions:
+            device, device_session = devices_by_session_id.get(session.get('id'), ({}, {}))
+            normalized_session = {
+                **device,
+                **device_session,
+                **session,
+                'ipAddress': session.get('ipAddress') or device_session.get('ipAddress') or device.get('ipAddress'),
+                'lastAccess': session.get('lastAccess') or device_session.get('lastAccess') or device.get('lastAccess'),
+                'current': session.get('current', device_session.get('current', device.get('current'))),
+            }
+            active_sessions.append(
+                self._active_session_response(
+                    normalized_session,
+                    self._device_info(device, session),
                 )
+            )
+
         return active_sessions
 
     def _active_session_response(self, session: dict, device_info: dict) -> ActiveSessionResponse:
@@ -491,7 +500,7 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
             'device': device.get('device'),
             'os': device.get('os'),
             'os_version': device.get('osVersion'),
-            'browser': device.get('browser'),
+            'browser': (session or {}).get('browser') or device.get('browser'),
             'app': app,
             'is_mobile': device.get('mobile'),
         }
