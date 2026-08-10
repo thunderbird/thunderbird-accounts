@@ -685,18 +685,20 @@ def appointment_caldav_setup(request: HttpRequest):
 @login_required
 @require_http_methods(['POST'])
 def generate_desktop_connect_token(request: HttpRequest):
-    """Returns the OIDC refresh token for the Thunderbird Desktop custom
-    protocol connect flow. The token is fetched on-click rather than
-    embedded in the page to limit its exposure in the DOM."""
+    """Returns the access token for the Thunderbird Desktop custom
+    protocol connect flow.
 
-    refresh_token = request.session.get(OIDC_REFRESH_TOKEN_KEY)
-    if not refresh_token:
+    TODO: In the future, this should be done through Keycloak's
+    device authorization one time code."""
+
+    access_token = request.session.get('oidc_access_token')
+    if not access_token:
         return JsonResponse(
             {'success': False, 'error': str(_('Authentication token not available. Please try logging in again.'))},
             status=401,
         )
 
-    return JsonResponse({'success': True, 'token': refresh_token})
+    return JsonResponse({'success': True, 'token': access_token})
 
 
 @login_required
