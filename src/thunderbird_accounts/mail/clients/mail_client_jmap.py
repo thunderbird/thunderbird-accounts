@@ -1,3 +1,7 @@
+import requests
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives import _serialization
 from abc import ABC
 import json
 import logging
@@ -9,7 +13,7 @@ from django.conf import settings
 from pydantic import BaseModel, ValidationError
 
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
-from thunderbird_accounts.mail.clients.mail_client_interface import MailClientInterface
+from thunderbird_accounts.mail.clients.mail_client_interface import MailClientInterface, DkimSignatureStage
 from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
     AccountSetError,
@@ -19,6 +23,7 @@ from thunderbird_accounts.mail.exceptions import (
     DomainSetError,
     InvalidJMapResponseError,
     JMapError,
+    FailedToCreateDKIM,
 )
 from thunderbird_accounts.mail.types import stalwart, jmap
 
@@ -779,6 +784,89 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
     #
     # DKIM
     #
+
+    def create_dkim(self, domain, stage: DkimSignatureStage = DkimSignatureStage.PENDING, algorithms=None):
+        dkim_algorithms = settings.STALWART_DKIM_ALGOS if algorithms is None else algorithms
+
+        domain_obj = self.get_domain(domain)
+        if not domain_obj or not domain_obj.id:
+            raise RuntimeError('Domain not found!')
+
+        for algorithm in dkim_algorithms:
+            selector = settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm)
+
+            # cryptography's types are not really compatible with each other,
+            # but they overlap enough for this to work.
+            if algorithm == 'Ed25519':
+                dkim_type = stalwart.DkimSignature.Types.DKIM1_Ed25519_SHA_256
+                private_key = Ed25519PrivateKey.generate()
+            elif algorithm == 'Rsa':
+                dkim_type = stalwart.DkimSignature.Types.DKIM1_RSA_SHA_256
+                private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+            else:
+                logging.warning(f'Unknown algorithm {algorithm}. DkimSignature creation is being skipped.')
+                continue
+
+            signature = stalwart.DkimSignature1(
+                type=dkim_type.value,
+                selector=selector,
+                domain_id=domain_obj.id,
+                stage=stage.value,
+                private_key=stalwart.SecretText(
+                    type='Text',
+                    secret=private_key.private_bytes(
+                        encoding=_serialization.Encoding.PEM,
+                        format=_serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=_serialization.NoEncryption(),
+                    ),
+                ),
+            )
+
+            with open(f'private_key_{algorithm}.key', 'w') as fh:
+                fh.write(signature.private_key.secret)
+
+            temp_id = str(uuid.uuid4())
+            try:
+                response = self.client.request(
+                    JMapRequest(
+                        using=[
+                            'urn:ietf:params:jmap:core',
+                            'urn:stalwart:jmap',
+                        ],
+                        method_calls=[
+                            Invocation(
+                                name=StalwartMethods.set(StalwartMethods.DKIM_SIGNATURE),
+                                arguments={
+                                    'accountId': self.account_id,
+                                    'create': {
+                                        temp_id: {**signature.model_dump(exclude_unset=True)},
+                                    },
+                                },
+                                method_call_id='0',
+                            ),
+                        ],
+                    )
+                )
+                print('Got back --->', response)
+            except requests.RequestException as exc:
+                raise FailedToCreateDKIM(algorithm, domain, str(exc)) from exc
+
+        self._debug_dump('create_dkim', response.method_responses[0].arguments)
+
+        error = response.method_responses[0].arguments.get('notCreated')
+        if error:
+            error_obj = error.get(temp_id, {})
+            raise self._handle_jmap_error(error_obj, DomainSetError)
+
+        data = response.method_responses[0].arguments.get('created', {})
+
+        stalwart_pkid = data.get(temp_id, {}).get('id')
+
+        if not stalwart_pkid:
+            raise FailedToCreateDKIM(algorithm, domain, 'pkid not found')
+
+        # Return the pkid
+        return stalwart_pkid
 
     def get_dkim_signatures(self, domain_name: str) -> list[stalwart.DkimSignature]:
         self.preflight_check()

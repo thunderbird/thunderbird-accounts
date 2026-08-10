@@ -30,8 +30,6 @@ class StalwartMethods(StrEnum):
         return f'{method}/query'
 
 
-
-
 Duration = Annotated[str | int, Field()]
 """A field that takes in either ms as an integer or time followed by the unit as a string
 Ref: https://stalw.art/docs/0.15/configuration/values/duration"""
@@ -48,6 +46,12 @@ class StalwartType(BaseSchema):
         validation_alias=AliasChoices('@type', 'type'), serialization_alias='@type', default=None
     )
 
+
+class SecretText(StalwartType):
+    """
+    ref: https://stalw.art/docs/ref/object/dkim-signature/#secrettext"""
+
+    secret: str
 
 
 class DnsServer(StalwartType):
@@ -73,9 +77,15 @@ class DnsServer(StalwartType):
 
 
 class DkimSignature(StalwartType, JMapType):
+    class Types(StrEnum):
+        DKIM1_Ed25519_SHA_256 = 'Dkim1Ed25519Sha256'
+        DKIM1_RSA_SHA_256 = 'Dkim1RsaSha256'
+        DKIM2_Ed25519_SHA_256 = 'Dkim2Ed25519Sha256'
+        DKIM2_RSA_SHA_256 = 'Dkim2RsaSha256'
+
     model_config = ConfigDict(polymorphic_serialization=True)
-    private_key: str
-    public_key: str
+    private_key: SecretText
+    public_key: Optional[str] = None
     domain_id: Id
     member_tenant_id: Optional[Id] = None
     selector: str
