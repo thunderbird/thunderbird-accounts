@@ -1,5 +1,5 @@
 import enum
-from typing import Optional, TypedDict
+from typing import Optional, TypedDict, Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator, AliasChoices
 from pydantic.alias_generators import to_camel
@@ -15,7 +15,7 @@ class BaseSchema(BaseModel):
         serialize_by_alias=True,
         populate_by_name=True,
         from_attributes=True,
-        extra='allow', # Allow extra items not declared in the model
+        extra='allow',  # Allow extra items not declared in the model
     )
 
 
@@ -121,3 +121,23 @@ class SessionResource(BaseSchema):
     upload_url: str
     event_source_url: str
     state: str
+
+
+Id = Annotated[str, Field()]
+"""A JMap ID field
+Ref: https://jmap.io/spec/rfc8620/#section-1.2"""
+
+
+class JMapType(BaseSchema):
+    """Base type for all jmap responses"""
+
+    id: Optional[Id] = Field(default=None)
+
+class Identity(JMapType):
+    name: str
+    email: str
+    reply_to: Optional[list] = None
+    bcc: Optional[list] = None
+    text_signature: str
+    htmlSignature: str
+    mayDelete: bool

@@ -20,7 +20,9 @@ from thunderbird_accounts.mail.exceptions import (
     InvalidJMapResponseError,
     JMapError,
 )
-from thunderbird_accounts.mail.types import stalwart
+from thunderbird_accounts.mail.types import stalwart, jmap
+
+# Fixme: Remove these imports
 from thunderbird_accounts.mail.types.jmap import Invocation, JMapRequest
 from thunderbird_accounts.mail.types.stalwart import AppPassword, SecondaryCredential, StalwartMethods, StalwartType
 
@@ -132,6 +134,37 @@ class MailClientUserJMAP(BaseJMAP):
         self.client = self._get_user_client(username, user_jwt, JMAPClient.AUTH_TYPES.BEARER)
         self.account_id = None
         self.primary_domain_id = None
+
+    def get_identity(self) -> list[jmap.Identity]:
+        """Retrieves and returns a list of jmap identities (display name, email, signature)"""
+        self.preflight_check()
+        response = self.client.request(
+            JMapRequest(
+                using=['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:submission'],
+                method_calls=[
+                    Invocation(
+                        name='Identity/get',
+                        arguments={
+                            'accountId': self.account_id,
+                        },
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+        self._debug_dump('get_identity', response.method_responses[0].arguments)
+
+        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
+            raise RuntimeError('No identities found')
+
+        identities = response.method_responses[0].arguments.get('list', [])
+
+        try:
+            return [jmap.Identity(**identity) for identity in identities]
+        except ValidationError as ex:
+            logging.warning('[MailClientUserJMAP.get_identity]: Failed pydantic validation!')
+            sentry_sdk.capture_exception(ex)
+            raise InvalidJMapResponseError(ex) from ex
 
     def save_app_password(self, label: str) -> SaveAppPasswordReturn:
         """Create an app password with a given label and return the pkid and secret the server generates."""
@@ -362,7 +395,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             sentry_sdk.capture_exception(ex)
             raise InvalidJMapResponseError(ex) from ex
 
-    def create_domain(self, domain, description='') -> stalwart.Id:
+    def create_domain(self, domain, description='') -> jmap.Id:
         self.preflight_check()
 
         # If the domain already exists, we ignore and return None
@@ -489,7 +522,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         full_name: Optional[str] = None,
         app_password: Optional[str] = None,
         quota: Optional[int] = None,
-    ) -> stalwart.Id:
+    ) -> jmap.Id:
         """Creates a Stalwart Account object from the given values. Domains for aliases need to be created
         ahead of time.
 

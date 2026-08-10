@@ -1,4 +1,4 @@
-from thunderbird_accounts.mail.types.jmap import BaseSchema
+from thunderbird_accounts.mail.types.jmap import BaseSchema, JMapType, Id
 from enum import StrEnum
 from typing import Optional, Annotated
 from datetime import datetime
@@ -30,9 +30,7 @@ class StalwartMethods(StrEnum):
         return f'{method}/query'
 
 
-Id = Annotated[str, Field()]
-"""A JMap ID field
-Ref: https://jmap.io/spec/rfc8620/#section-1.2"""
+
 
 Duration = Annotated[str | int, Field()]
 """A field that takes in either ms as an integer or time followed by the unit as a string
@@ -50,11 +48,6 @@ class StalwartType(BaseSchema):
         validation_alias=AliasChoices('@type', 'type'), serialization_alias='@type', default=None
     )
 
-
-class JMapType(BaseSchema):
-    """Base type for all jmap responses"""
-
-    id: Optional[Id] = Field(default=None)
 
 
 class DnsServer(StalwartType):
