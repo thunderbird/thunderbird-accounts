@@ -14,13 +14,25 @@ except ImportError:
     Verifier, Secret = None, None
 
 
+EXPECTED_PADDLE_REJECTIONS = {
+    "Unable to extract the 'Paddle-Signature' header from the request",
+    'Too much time has elapsed between the request and this process',
+}
+
+
 class IsValidPaddleWebhook(BaseAuthentication):
     def authenticate(self, request):
         if not Verifier or not Secret:
             logging.error('Paddle package is not installed. This webhook has been rejected.')
             return None
 
-        integrity_check = Verifier().verify(request, Secret(settings.PADDLE_WEBHOOK_KEY))
+        try:
+            integrity_check = Verifier().verify(request, Secret(settings.PADDLE_WEBHOOK_KEY))
+        except Exception as exception:
+            if str(exception) in EXPECTED_PADDLE_REJECTIONS:
+                logging.info(str(exception))
+                return None
+            raise
 
         if not integrity_check:
             return None
