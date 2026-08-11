@@ -14,11 +14,11 @@ except ImportError:
     Verifier, Secret = None, None
 
 
+# Re-classify log-level for some cases expected from pen-testers, but not internally.
 EXPECTED_PADDLE_REJECTIONS = {
     "Unable to extract the 'Paddle-Signature' header from the request",
     'Too much time has elapsed between the request and this process',
 }
-
 
 class ExpectedPaddleRejectionFilter(logging.Filter):
     def filter(self, record):
@@ -27,7 +27,7 @@ class ExpectedPaddleRejectionFilter(logging.Filter):
             record.levelname = logging.getLevelName(logging.INFO)
         return True
 
-
+# The "paddle_billing" namespace is used within the Paddle SDK
 logging.getLogger('paddle_billing').addFilter(ExpectedPaddleRejectionFilter())
 
 
