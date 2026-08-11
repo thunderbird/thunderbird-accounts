@@ -321,3 +321,11 @@ class AccountUpdate(Account):
     roles: Optional[StalwartType | dict] = None
     encryption_at_rest: Optional[StalwartType] = None
     locale: Optional[str] = None
+
+class DnsRecord(BaseSchema):
+    """Not an existing stalwart type, but it's the response format of the old dns record endpoint.
+    Ref: https://stalw.art/docs/0.15/api/management/endpoints/#obtain-dns-records-for-domain"""
+    type: Optional[str] = None
+    name: Optional[str] = None
+    content: Optional[str] = None
+    priority: Optional[str] = None  # Custom!

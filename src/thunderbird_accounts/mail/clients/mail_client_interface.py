@@ -20,6 +20,26 @@ class DNSRecordStatus(StrEnum):
     UNKNOWN = 'unknown'
 
 
+class DomainVerificationErrors(StrEnum):
+    """Domain verification error codes returned by check_domain_dns()."""
+
+    # Critical errors (fail verification)
+    MX_LOOKUP_ERROR = 'mxLookupError'
+    DKIM_RECORD_NOT_FOUND = 'dkimRecordNotFound'
+    AUTODISCOVER_RECORD_FOUND = 'autodiscoverRecordFound'
+    AUTODISCOVER_SRV_RECORD_FOUND = 'autodiscoverSrvRecordFound'
+
+    # Warnings (do not fail verification)
+    SPF_RECORD_NOT_FOUND = 'spfRecordNotFound'
+
+
+class StaleDNSRecordCode(StrEnum):
+    """Stale DNS records that should be removed to prevent issues with the Thundermail setup."""
+
+    AUTODISCOVER_CNAME_UNEXPECTED = 'autodiscoverCnameUnexpected'
+    AUTODISCOVER_SRV_UNEXPECTED = 'autodiscoverSrvUnexpected'
+
+
 class MailClientInterface:
     def get_telemetry(self):
         raise NotImplementedError()
@@ -52,7 +72,7 @@ class MailClientInterface:
     ):
         raise NotImplementedError()
 
-    def get_account(self, principal_id: str):# -> dict:
+    def get_account(self, principal_id: str):  # -> dict:
         raise NotImplementedError()
 
     def delete_account(self, principal_id: str):
@@ -99,7 +119,7 @@ class MailClientInterface:
     def get_dkim_signatures(self, domain_name: str):
         raise NotImplementedError()
 
-    def get_dkim_dns_records(self, domain_name: str) -> list[dict]:
+    def get_dkim_dns_records(self, domain_name: str):  # -> list[dict]:
         raise NotImplementedError()
 
     def build_expected_dns_records(self, cust_domain: str) -> list[dict]:

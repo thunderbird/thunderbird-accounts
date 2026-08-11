@@ -1,19 +1,39 @@
-import requests
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives import _serialization
-from abc import ABC
+"""JMap Stalwart client
+
+This file contains 3 classes:
+    - ``BaseJMAP``: which hosts some common classes, as well as some class level variables.
+    - ``MailClientUserJMAP``: which is derived from BaseJMAP, and hosts the app password functionality. This requires
+a user jwt since the interface for creating stalwart credentials aren't available from the admin api.
+    - ``MailClientAdminJMAP``: also derived from BaseJMAP. This hosts basically everything else, and is almost a
+clone of mail_client_interface/legacy. The main difference is some return types are pydantic'd, and some functions
+were marked with a starting ``_`` to indicate they're not used outside of this class.
+
+"""
+
 import json
 import logging
 import uuid
+from abc import ABC
 from typing import Optional, Type
 
+import requests
 import sentry_sdk
+from cryptography.hazmat.primitives import _serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from django.conf import settings
+from dns import rdatatype, zone
 from pydantic import BaseModel, ValidationError
 
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
-from thunderbird_accounts.mail.clients.mail_client_interface import MailClientInterface, DkimSignatureStage
+from thunderbird_accounts.mail.clients.mail_client_interface import (
+    DkimSignatureStage,
+    MailClientInterface,
+    DNSRecordStatus,
+    DomainVerificationErrors,
+)
+from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
+from thunderbird_accounts.mail.dns import enrich_dns_records_with_status
 from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
     AccountSetError,
@@ -21,15 +41,13 @@ from thunderbird_accounts.mail.exceptions import (
     DomainAlreadyExistsError,
     DomainNotFoundError,
     DomainSetError,
+    FailedToCreateDKIM,
     InvalidJMapResponseError,
     JMapError,
-    FailedToCreateDKIM,
 )
-from thunderbird_accounts.mail.types import stalwart, jmap
-
-# Fixme: Remove these imports
+from thunderbird_accounts.mail.types import jmap, stalwart
 from thunderbird_accounts.mail.types.jmap import Invocation, JMapRequest
-from thunderbird_accounts.mail.types.stalwart import AppPassword, SecondaryCredential, StalwartMethods, StalwartType
+from thunderbird_accounts.mail.types.stalwart import AppPassword, StalwartMethods, StalwartType
 
 
 class BaseJMAP(ABC):
@@ -246,7 +264,31 @@ class MailClientUserJMAP(BaseJMAP):
 
 
 class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
+    """The JMap client for communication with Stalwart's Admin api.
+
+    This class is nearly identical to ``mail_client_legacy`` which hosts the old pre-v0.16 api client. Some functions
+    are return typed with pydantic types, and some functions are prefixed with ``_`` if they're not used outside of
+    this class.
+
+    Ideally this class will:
+        - Return pydantic types for ``Get`` functions.
+        - Return pkid (or list of pkids) for ``Create`` functions.
+        - Return nothing for ``Update`` or ``Delete`` functions.
+
+    Any errors should raise an appropriate custom exception type so they can be clearly caught.
+
+    For easier navigation some sections have been marked such as ``# Section Name``.
+
+    These sections are:
+        - Domain
+        - Account
+        - Alias / Email Address
+        - DKIM
+        - DNS
+    """
+
     def __init__(self):
+        # FIXME: Setup correct admin login
         self.client = self._get_user_client('admin', 'admin', JMAPClient.AUTH_TYPES.BASIC)
         self.account_id = None
         self.primary_domain_id = None
@@ -779,13 +821,45 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
     # DKIM
     #
 
+    def _get_dkim_dns_records(self, domain_name: str) -> list[dict]:
+        return [
+            record
+            for record in self._get_dns_records(domain_name)
+            if record.type == 'TXT' and '_domainkey' in (record.name or '')
+        ]
+
+    def _get_dkim_selectors(self, domain_name: str) -> set[str]:
+        """Return DKIM selectors already present in Stalwart's DNS records."""
+        selectors = set()
+        domain_name = domain_name.rstrip('.').lower()
+        suffix = f'._domainkey.{domain_name}'
+
+        for record in self._get_dkim_dns_records(domain_name):
+            if record.type != 'TXT':
+                continue
+
+            record_name = (record.name or '').rstrip('.').lower()
+            if not record_name.endswith(suffix):
+                continue
+
+            selector = record_name[: -len(suffix)]
+            if selector:
+                selectors.add(selector)
+
+        return selectors
+
     def create_dkim(self, domain, stage: DkimSignatureStage = DkimSignatureStage.PENDING, algorithms=None):
+        """Creates either a ed25519 or rsa dkim signature including private key that is submitted to Stalwart.
+
+        FIXME: This function can be optimized to do both creations in one request, but for now it's split up."""
         dkim_algorithms = settings.STALWART_DKIM_ALGOS if algorithms is None else algorithms
 
         domain_obj = self.get_domain(domain)
         if not domain_obj or not domain_obj.id:
             raise RuntimeError('Domain not found!')
 
+        pkid_list = []
+        responses = []
         for algorithm in dkim_algorithms:
             selector = settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm)
 
@@ -838,26 +912,26 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                         ],
                     )
                 )
-                print('Got back --->', response)
+
+                error = response.method_responses[0].arguments.get('notCreated')
+                if error:
+                    error_obj = error.get(temp_id, {})
+                    raise self._handle_jmap_error(error_obj, DomainSetError)
+
+                data = response.method_responses[0].arguments.get('created', {})
+
+                stalwart_pkid = data.get(temp_id, {}).get('id')
+                responses.append(responses)
+                if not stalwart_pkid:
+                    raise FailedToCreateDKIM(algorithm, domain, 'pkid not found')
+                pkid_list.append(stalwart_pkid)
             except requests.RequestException as exc:
                 raise FailedToCreateDKIM(algorithm, domain, str(exc)) from exc
 
-        self._debug_dump('create_dkim', response.method_responses[0].arguments)
-
-        error = response.method_responses[0].arguments.get('notCreated')
-        if error:
-            error_obj = error.get(temp_id, {})
-            raise self._handle_jmap_error(error_obj, DomainSetError)
-
-        data = response.method_responses[0].arguments.get('created', {})
-
-        stalwart_pkid = data.get(temp_id, {}).get('id')
-
-        if not stalwart_pkid:
-            raise FailedToCreateDKIM(algorithm, domain, 'pkid not found')
+        self._debug_dump('create_dkim', {'_': responses})
 
         # Return the pkid
-        return stalwart_pkid
+        return pkid_list
 
     def get_dkim_signatures(self, domain_name: str) -> list[stalwart.DkimSignature]:
         self.preflight_check()
@@ -900,9 +974,163 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
             raise RuntimeError(domain_name)
 
-        return response.method_responses[1].arguments.get('list', [])
+        dkim_signatures = response.method_responses[1].arguments.get('list', [])
+        signatures = [stalwart.DkimSignature(**signature) for signature in dkim_signatures]
+
+        return signatures
 
     def delete_dkim(self, domain):
         dkim_signatures = self.get_dkim_signatures(domain)
         dkim_signature_ids = [signature.id for signature in dkim_signatures]
         self._handle_destroy(StalwartMethods.DKIM_SIGNATURE, dkim_signature_ids)  # ty: ignore[invalid-argument-type]
+
+    def ensure_dkim(self, domain_name: str, stage: DkimSignatureStage = DkimSignatureStage.PENDING):
+        existing_selectors = self._get_dkim_selectors(domain_name)
+
+        missing_algorithms = [
+            algorithm
+            for algorithm in settings.STALWART_DKIM_ALGOS
+            if (settings.STALWART_DKIM_ALGO_SELECTORS.get(algorithm) or '').lower() not in existing_selectors
+        ]
+
+        if not missing_algorithms:
+            return []
+
+        return self.create_dkim(domain_name, stage=stage, algorithms=missing_algorithms)
+
+    def activate_pending_dkim_signatures(self, domain_name: str) -> list[str]:
+        """No-op, work out of scope."""
+        return []
+
+    #
+    # DNS
+    #
+
+    def _get_dns_records(self, domain_name: str) -> list[stalwart.DnsRecord]:
+        """Retrieve dns records for a particular domain.
+
+        Previously we could fetch this nicely with a single endpoint that is already split up for us.
+        Now we have to read/parse a zonefile via dnspython. I'm not 100% sure the end result will be the same."""
+        domain = self.get_domain(domain_name)
+
+        dns_records = []
+        # Need to set a default ttl otherwise dnspython will yell at us
+        dns_zone_str = f'$TTL 3600\n{domain.dns_zone_file}'
+
+        # If we want to exclude the origin at some point in the future flip this to True.
+        exclude_origin = False
+        dns_zone_file = zone.from_text(
+            dns_zone_str, origin=domain_name, relativize=exclude_origin, check_origin=False, allow_directives=True
+        )
+        for name, _ttl, rdata in dns_zone_file.iterate_rdatas():
+            dns_records.append(
+                stalwart.DnsRecord(type=rdatatype.to_text(rdata.rdtype), name=str(name), content=str(rdata))
+            )
+
+        return dns_records
+
+    def build_expected_dns_records(self, cust_domain: str) -> list[dict]:
+        """Build the full list of DNS records the user must configure for a customer domain.
+
+        TODO: Remove this out of the api client.
+        FIXME: Have this form and return DnsRecord"""
+
+        target_domain = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
+        target_domain_fqdn = f'{target_domain}.'
+        spf_host = (settings.SPF_HOST or '').rstrip('.')
+        normalized_cust_domain = cust_domain.rstrip('.')
+        mx_name = '@' if len(normalized_cust_domain.split('.')) == 2 else f'{normalized_cust_domain}.'
+
+        records = [
+            {'type': 'MX', 'name': mx_name, 'content': target_domain_fqdn, 'priority': '10'},
+            {
+                'type': 'SRV',
+                'name': f'_jmap._tcp.{normalized_cust_domain}.',
+                'content': f'1 443 {target_domain}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_caldavs._tcp.{normalized_cust_domain}.',
+                'content': f'1 443 {target_domain}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_carddavs._tcp.{normalized_cust_domain}.',
+                'content': f'1 443 {target_domain}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_imaps._tcp.{normalized_cust_domain}.',
+                'content': f'1 993 {target_domain}',
+                'priority': '0',
+            },
+            {
+                'type': 'SRV',
+                'name': f'_submission._tcp.{normalized_cust_domain}.',
+                'content': f'1 587 {target_domain}',
+                'priority': '0',
+            },
+            {
+                'type': 'TXT',
+                'name': f'{normalized_cust_domain}.',
+                'content': f'v=spf1 include:{spf_host} -all',
+                'priority': '-',
+            },
+            {
+                'type': 'TXT',
+                'name': f'_mta-sts.{normalized_cust_domain}.',
+                'content': 'v=STSv1; id=18139500144460329770',
+                'priority': '-',
+            },
+            {
+                'type': 'TXT',
+                'name': f'_smtp._tls.{normalized_cust_domain}.',
+                'content': f'v=TLSRPTv1; rua=mailto:postmaster@{normalized_cust_domain}',
+                'priority': '-',
+            },
+            {
+                'type': 'TXT',
+                'name': f'_dmarc.{normalized_cust_domain}.',
+                'content': 'v=DMARC1; p=none;',
+                'priority': '-',
+            },
+        ]
+
+        records.extend(build_customer_dkim_cname_records(normalized_cust_domain))
+        return records
+
+    def check_domain_dns(self, domain_name: str) -> dict:
+        """Check expected DNS records and return verification details for a custom domain.
+
+        TODO: Remove this out of api client."""
+        expected_records = self.build_expected_dns_records(domain_name)
+        dns_records = enrich_dns_records_with_status(domain_name, expected_records)
+        critical_errors = []
+        warnings = []
+
+        mx_records = [record for record in dns_records if record.get('type') == 'MX']
+        if not any(record.get('status') == DNSRecordStatus.MATCH.value for record in mx_records):
+            critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
+
+        spf_records = [
+            record
+            for record in dns_records
+            if record.get('type') == 'TXT' and record.get('content', '').startswith('v=spf1')
+        ]
+        if not any(record.get('status') == DNSRecordStatus.MATCH.value for record in spf_records):
+            warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
+
+        dkim_records = [record for record in dns_records if '_domainkey' in record.get('name', '')]
+        if not dkim_records or any(record.get('status') != DNSRecordStatus.MATCH.value for record in dkim_records):
+            critical_errors.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
+
+        is_verified = len(critical_errors) == 0
+        return {
+            'is_verified': is_verified,
+            'critical_errors': critical_errors,
+            'warnings': warnings,
+            'dns_records': dns_records,
+        }

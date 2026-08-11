@@ -758,36 +758,4 @@ class MailClientLegacy(MailClientInterface):
         records.extend(build_customer_dkim_cname_records(normalized_cust_domain))
         return records
 
-    def check_domain_dns(self, domain_name: str) -> dict:
-        """Check expected DNS records and return verification details for a custom domain."""
-        # Circular import, so we import here
-        from thunderbird_accounts.mail.dns import enrich_dns_records_with_status
-
-        expected_records = self.build_expected_dns_records(domain_name)
-        dns_records = enrich_dns_records_with_status(domain_name, expected_records)
-        critical_errors = []
-        warnings = []
-
-        mx_records = [record for record in dns_records if record.get('type') == 'MX']
-        if not any(record.get('status') == DNSRecordStatus.MATCH.value for record in mx_records):
-            critical_errors.append(DomainVerificationErrors.MX_LOOKUP_ERROR)
-
-        spf_records = [
-            record
-            for record in dns_records
-            if record.get('type') == 'TXT' and record.get('content', '').startswith('v=spf1')
-        ]
-        if not any(record.get('status') == DNSRecordStatus.MATCH.value for record in spf_records):
-            warnings.append(DomainVerificationErrors.SPF_RECORD_NOT_FOUND)
-
-        dkim_records = [record for record in dns_records if '_domainkey' in record.get('name', '')]
-        if not dkim_records or any(record.get('status') != DNSRecordStatus.MATCH.value for record in dkim_records):
-            critical_errors.append(DomainVerificationErrors.DKIM_RECORD_NOT_FOUND)
-
-        is_verified = len(critical_errors) == 0
-        return {
-            'is_verified': is_verified,
-            'critical_errors': critical_errors,
-            'warnings': warnings,
-            'dns_records': dns_records,
-        }
+    

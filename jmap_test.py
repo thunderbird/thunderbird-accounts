@@ -21,6 +21,11 @@ print('delete account->', client.delete_account('pizza@example.org'))
 #print('delete app password->', user_client.delete_app_password(app_password.id))
 #print('save alias->', client.save_email_addresses('admin@example.org', ['pants123@example.org']))
 #print('remove alias->', client.delete_email_addresses('admin@example.org', ['pants123@example.org']))
+#print('???', user_client.get_identity())
+#print('create dkim->',client.create_dkim('example.org'))
 
+print('get dns record->', client._get_dns_records('example.org'))
+print('build dns record->', client.build_expected_dns_records('example.org'))
+print('check dns record->', client.check_domain_dns('faviconfetcher.ca'))
 
 #print('->', AccountUpdate(aliases={'0': EmailAlias(enabled=True, name='beans', domain_id='g')}).model_dump())
