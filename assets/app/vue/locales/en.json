@@ -119,7 +119,6 @@
               "downloadButton": "Download",
               "autoConfigTitle": "Automatic Configuration",
               "autoConfigDescription": "Add a new account easily in Thunderbird Desktop using your Thundermail email and password.",
-              "failedToGenerateToken": "Failed to generate token",
               "desktopConnectionFailed": "Desktop connection failed"
             },
             "mobilePanel": {

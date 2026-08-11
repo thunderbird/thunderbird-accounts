@@ -7,7 +7,6 @@ import ActionCard from '@/components/ActionCard.vue';
 import { DOWNLOAD_THUNDERBIRD_DESKTOP_URL } from '@/defines';
 import { WAFFLE_FLAG } from '@/types';
 import { isWaffleFlagActive } from '@/utils';
-import { getDesktopConnectToken } from '../api';
 
 const { t } = useI18n();
 const isConnecting = ref(false);
@@ -23,18 +22,14 @@ async function handleConnectClick() {
   error.value = null;
 
   try {
-    const data = await getDesktopConnectToken();
-
-    if (!data.success) {
-      error.value = t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.failedToGenerateToken');
-      return;
-    }
-
+    // The API on TB Desktop side requires a token to be passed
+    // to trigger Account Hub. However, TB Desktop will open the external browser
+    // and get the actual refresh token by itself since we are already logged in at this point.
     const url =
       'net.thunderbird://thundermail/add' +
       `?name=${encodeURIComponent(userDisplayName)}` +
       `&email=${encodeURIComponent(primaryEmail)}` +
-      `&token=${encodeURIComponent(data.token)}`;
+      `&token=not-a-real-token`;
 
     window.location.href = url;
   } catch (_error) {
