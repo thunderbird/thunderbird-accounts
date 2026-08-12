@@ -19,7 +19,7 @@ def _retry_or_report(task, exc, message):
     Keeps transient PostHog/DB/Redis outages from spamming Sentry with one event
     per retry attempt while still surfacing persistent failures.
     """
-    logger.error(f'{message}: {exc}')
+    logger.warning(f'{message}: {exc}')
     if task.request.retries >= task.max_retries:
         sentry_sdk.capture_exception(exc)
     raise task.retry(exc=exc)
