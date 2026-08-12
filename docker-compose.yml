@@ -117,13 +117,15 @@ services:
       - "./templates:/app/templates:z"
       - "./keycloak/themes:/app/keycloak/themes:z"
 
-  stalwart:
+  stalwart_legacy:
     image: stalwartlabs/stalwart:v0.15.4
+    hostname: 'legacy-stalwart'
+    domainname: 'legacy.stalwart.local'
     #build:
     #  context: ../stalwart
     #  dockerfile: Dockerfile
     volumes:
-      - "./mail:/opt/stalwart:z"
+      - "./mail/stalwart_legacy:/opt/stalwart:z"
     ports:
       - "443:443"
       - "8080:8080"
@@ -140,6 +142,29 @@ services:
       <<: *env
       ADMIN_SECRET: "{plain}accounts"
       MAIL_STALWART_PATH: "/opt/stalwart"
+
+  stalwart_new:
+    image: stalwartlabs/stalwart:v0.16
+    hostname: 'new-stalwart'
+    domainname: 'new.stalwart.local'
+    volumes:
+      - "./mail/stalwart/etc:/etc/stalwart:Z"
+      - "./mail/stalwart/lib:/var/lib/stalwart:Z"
+    ports:
+      - "8443:443"
+      - "8180:8080"
+    #  - "8081:8081"
+    #  - "25:25"
+    #  - "587:587"
+    #  - "465:465"
+    #  - "143:143"
+    #  - "993:993"
+    #  - "4190:4190"
+    #  - "110:110"
+    #  - "995:995"
+    environment:
+      STALWART_RECOVERY_ADMIN: "admin:admin" 
+      # admin@example.com : iKeBFzrCbRRzaAZW
 
   keycloak:
     #image: quay.io/keycloak/keycloak:latest

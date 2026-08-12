@@ -448,6 +448,9 @@ STALWART_DKIM_ALGO_SELECTORS = {
 STALWART_DKIM_STAGE_MANAGEMENT_ENABLED = os.getenv('STALWART_DKIM_STAGE_MANAGEMENT_ENABLED', '').lower() == 'true'
 STALWART_WEBHOOK_SECRET = os.getenv('STALWART_WEBHOOK_SECRET')
 
+# Use the v0.16 jmap api instead of the pre-v0.16 rest based api
+STALWART_ADMIN_API_USE_JMAP = os.getenv('STALWART_ADMIN_API_USE_JMAP', False)
+
 HOSTED_DKIM_DOMAIN = os.getenv('HOSTED_DKIM_DOMAIN')
 HOSTED_DKIM_SELECTORS = [
     selector.strip() for selector in os.getenv('HOSTED_DKIM_SELECTORS', 'tm1,tm2,tm3').split(',') if selector.strip()

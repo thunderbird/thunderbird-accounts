@@ -1,0 +1,1 @@
+{"@type":"Sqlite","path":"/var/lib/stalwart/main.db","poolWorkers":null,"poolMaxConnections":10}
