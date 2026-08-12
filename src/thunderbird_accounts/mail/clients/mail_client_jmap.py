@@ -58,7 +58,7 @@ class BaseJMAP(ABC):
     def _get_user_client(
         self, username, user_token, auth_type: JMAPClient.AUTH_TYPES = JMAPClient.AUTH_TYPES.BEARER
     ) -> JMAPClient:
-        client = JMAPClient('http://localhost:8080', username, user_token, auth_type)
+        client = JMAPClient('http://localhost:8180', username, user_token, auth_type)
         # Make sure we retrieve the session
         client.get_session()
         return client
@@ -821,7 +821,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
     # DKIM
     #
 
-    def _get_dkim_dns_records(self, domain_name: str) -> list[dict]:
+    def _get_dkim_dns_records(self, domain_name: str) -> list[stalwart.DnsRecord]:
         return [
             record
             for record in self._get_dns_records(domain_name)
