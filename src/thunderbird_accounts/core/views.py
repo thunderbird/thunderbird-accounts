@@ -1,3 +1,4 @@
+from thunderbird_accounts.mail.types import stalwart
 from thunderbird_accounts.core.utils import get_feature_flags
 from thunderbird_accounts.subscription.utils import get_visible_plan_info
 from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
@@ -85,14 +86,19 @@ def home(request: HttpRequest):
             stalwart_client = MailClient()
 
             email_user = stalwart_client.get_account(request.user.stalwart_primary_email)
-            user_display_name = email_user.get('description')
+            if isinstance(email_user, dict):
+                user_display_name = email_user.get('description')
 
-            # Get user's app passwords from Stalwart, excluding internal ones
-            for secret in filter_app_passwords(email_user.get('secrets', [])):
-                app_passwords.append(decode_app_password(secret))
+                # Get user's app passwords from Stalwart, excluding internal ones
+                for secret in filter_app_passwords(email_user.get('secrets', [])):
+                    app_passwords.append(decode_app_password(secret))
 
-            # Get user's email addresses from Stalwart
-            email_addresses = email_user.get('emails', [])
+                # Get user's email addresses from Stalwart
+                email_addresses = email_user.get('emails', [])
+            elif isinstance(email_user, stalwart.Account):
+                user_display_name = email_user.description
+                email_addresses = [ email_user.email_address ]
+                email_addresses += [ alias.full_address for alias in email_user.aliases.values() ]
         except AccountNotFoundError:
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))

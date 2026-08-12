@@ -32,7 +32,8 @@ class JMAPClient:
         self.api_url: str | None = None
         self.account_id: str | None = None
         self.identity_id: str | None = None
-
+        self.verify_ssl = False
+        
 
 
     def _authorization_value(self):
@@ -49,6 +50,7 @@ class JMAPClient:
                 'Authorization': self._authorization_value(),
             },
             allow_redirects=True,
+            verify=self.verify_ssl,
         )
         r.raise_for_status()
         session = SessionResource(**r.json())
@@ -112,7 +114,7 @@ class JMAPClient:
                 'Authorization': self._authorization_value(),
             },
             data=request_data.model_dump_json(exclude_none=True),
-            verify=False,
+            verify=self.verify_ssl,
         )
         res.raise_for_status()
         return JMapResponse(**res.json())

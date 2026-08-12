@@ -221,6 +221,7 @@ class EmailAlias(BaseSchema):
     name: str
     domain_id: str
     description: Optional[str] = None
+    full_address: Optional[str] = None # Our extra, filled in with get_account
 
 
 class StorageQuota(BaseSchema):

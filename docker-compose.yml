@@ -119,8 +119,6 @@ services:
 
   stalwart_legacy:
     image: stalwartlabs/stalwart:v0.15.4
-    hostname: 'legacy-stalwart'
-    domainname: 'legacy.stalwart.local'
     #build:
     #  context: ../stalwart
     #  dockerfile: Dockerfile
@@ -145,14 +143,14 @@ services:
 
   stalwart_new:
     image: stalwartlabs/stalwart:v0.16
-    hostname: 'new-stalwart'
-    domainname: 'new.stalwart.local'
+    hostname: 'stalwart_new'
+    domainname: 'stalwart_new.local'
     volumes:
       - "./mail/stalwart/etc:/etc/stalwart:Z"
       - "./mail/stalwart/lib:/var/lib/stalwart:Z"
     ports:
       - "8443:443"
-      - "8180:8180"
+      - "8180:8080"
     #  - "8081:8081"
     #  - "25:25"
     #  - "587:587"
@@ -165,6 +163,11 @@ services:
     environment:
       STALWART_RECOVERY_ADMIN: "admin:admin" 
       # admin@example.com : iKeBFzrCbRRzaAZW
+    networks:
+      default:
+        aliases:
+          - stalwart_new.local
+
 
   keycloak:
     #image: quay.io/keycloak/keycloak:latest

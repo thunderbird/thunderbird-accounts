@@ -18,6 +18,11 @@ class BaseSchema(BaseModel):
         extra='allow',  # Allow extra items not declared in the model
     )
 
+    def get(self, key: object, default: None = None, /):
+        """TODO: Remove me once we've integrated v0.16 api calls into the app"""
+        fields = self.model_dump()
+        return fields.get(key, default)
+
 
 class ResponseIndex(enum.Enum):
     NAME = 0

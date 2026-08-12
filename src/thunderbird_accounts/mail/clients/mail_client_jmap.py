@@ -58,7 +58,7 @@ class BaseJMAP(ABC):
     def _get_user_client(
         self, username, user_token, auth_type: JMAPClient.AUTH_TYPES = JMAPClient.AUTH_TYPES.BEARER
     ) -> JMAPClient:
-        client = JMAPClient('http://localhost:8180', username, user_token, auth_type)
+        client = JMAPClient('http://stalwart_new:8080', username, user_token, auth_type)
         # Make sure we retrieve the session
         client.get_session()
         return client
@@ -391,6 +391,44 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
     # Domain
     #
 
+    def _get_domains_by_id(self, domain_ids: str|list[str]) -> list[stalwart.Domain]:
+        self.preflight_check()
+        
+        if isinstance(domain_ids, str):
+            domain_ids = [domain_ids]
+
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name=StalwartMethods.get(StalwartMethods.DOMAIN),
+                        arguments={
+                            'accountId': self.account_id,
+                            'ids': domain_ids,
+                        },
+                        method_call_id='1',
+                    ),
+                ],
+            )
+        )
+
+        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
+            raise DomainNotFoundError(domain_ids[0])
+
+        data = response.method_responses[0].arguments.get('list', [])
+        self._debug_dump('_get_domains_by_id', response.method_responses[0].arguments)
+
+        try:
+            return [ stalwart.Domain(**domain) for domain in data ]
+        except ValidationError as ex:
+            logging.warning(f'[MailClient._get_domains_by_id({domain_ids}]: Failed pydantic validation!')
+            sentry_sdk.capture_exception(ex)
+            raise InvalidJMapResponseError(ex) from ex
+
     def get_domain(self, domain: str) -> stalwart.Domain:
         """Retrieve a :any thunderbird_accounts.mail.types.stalwart.Domain:
         object from a given domain name.
@@ -548,6 +586,15 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
 
         data = response.method_responses[1].arguments.get('list', [])[0]
         self._debug_dump('get_account', response.method_responses[1].arguments)
+
+        if len(data.get('aliases', {}).values()) > 0:
+            domain_ids = [ alias.get('domainId') for alias in data.get('aliases', {}).values() ]
+            print('domain ids --->', domain_ids, '|', data.get('aliases', {}).values())
+            domains = self._get_domains_by_id(domain_ids)
+            for idx, domain in data.get('aliases').items():
+
+                data['aliases'][idx]['full_address'] = f'{domain.get("name")}@{domains[0].name}'
+            print('----->', data)
 
         try:
             return stalwart.Account(**data)
