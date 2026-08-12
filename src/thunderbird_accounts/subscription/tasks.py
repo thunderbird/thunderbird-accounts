@@ -310,7 +310,7 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             },
         )
 
-    # Log some problem cases that would be our fault. 
+    # Log some problem cases that would be our fault.
     if len(subscription_items) == 0:
         logging.error(f'Subscription contains no items. This user ({user.uuid}) will not have any features enabled!')
     elif len(subscription_items) > 1:
@@ -487,7 +487,6 @@ def update_thundermail_quota(self, plan_uuid):
         'updated': updated,
         'skipped': skipped,
     }
-
 
 
 @shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)

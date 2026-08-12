@@ -412,9 +412,7 @@ if AUTH_SCHEME == 'oidc':
     # the bearer — Keycloak scopes them to the token subject. Defaults to the admin API
     # host with the admin path swapped for the realm path; override with KEYCLOAK_URL_REALM.
     KEYCLOAK_REALM_ENDPOINT = os.getenv('KEYCLOAK_URL_REALM') or (
-        f'{KEYCLOAK_API_ENDPOINT.replace("/admin/realms/", "/realms/").rstrip("/")}/'
-        if KEYCLOAK_API_ENDPOINT
-        else None
+        f'{KEYCLOAK_API_ENDPOINT.replace("/admin/realms/", "/realms/").rstrip("/")}/' if KEYCLOAK_API_ENDPOINT else None
     )
 
     # Base URL for the keycloak-mfa-rest provider, mounted on the realm path
@@ -625,8 +623,8 @@ CELERY_BEAT_SCHEDULE = {
     },
     'purge-stale-test-allow-list-entries': {
         'task': 'thunderbird_accounts.authentication.tasks.purge_stale_test_allow_list_entries',
-        'schedule': crontab(), # Every minute
-    }
+        'schedule': crontab(),  # Every minute
+    },
 }
 
 if POSTHOG_API_KEY:

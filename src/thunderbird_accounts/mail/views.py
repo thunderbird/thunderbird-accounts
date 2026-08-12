@@ -451,9 +451,7 @@ def add_email_alias(request: HttpRequest):
     email_alias = data.get('email-alias')
     domain = data.get('domain')
     is_shared_domain = domain in settings.ALLOWED_EMAIL_DOMAINS
-    is_custom_domain = (
-        domain in request.user.domains.values_list('name', flat=True) and not is_shared_domain
-    )
+    is_custom_domain = domain in request.user.domains.values_list('name', flat=True) and not is_shared_domain
     is_catch_all = is_custom_domain and (email_alias == '*' or email_alias == '')
 
     # We don't need to specify the asterisk for catch-all on stalwart's end.
@@ -777,7 +775,7 @@ class AdminStalwartList(TemplateView):
         # Just raise a 404 to make this easy
         if not self.request.user or not self.request.user.is_authenticated or not self.request.user.is_superuser:
             raise Http404()
-        
+
         context = super().get_context_data(**kwargs)
 
         stalwart = MailClient()

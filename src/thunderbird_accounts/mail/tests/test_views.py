@@ -604,15 +604,13 @@ class VerifyCustomDomainTestCase(TestCase):
         return requests.exceptions.HTTPError(f'{status_code} Server Error', response=response)
 
     def test_backend_error_transience_is_explicit(self):
-        transient_errors = [
-            self._http_error(status_code) for status_code in (500, 502, 503, 504)
-        ] + [
+        transient_errors = [self._http_error(status_code) for status_code in (500, 502, 503, 504)] + [
             requests.ConnectionError('Connection refused'),
             requests.Timeout('Request timed out'),
         ]
-        non_transient_errors = [
-            self._http_error(status_code) for status_code in (400, 501, 505)
-        ] + [requests.RequestException('Unclassified request failure')]
+        non_transient_errors = [self._http_error(status_code) for status_code in (400, 501, 505)] + [
+            requests.RequestException('Unclassified request failure')
+        ]
 
         for error in transient_errors:
             with self.subTest(error=error):
@@ -625,9 +623,7 @@ class VerifyCustomDomainTestCase(TestCase):
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_backend_500_during_create_domain_returns_503(
-        self, mock_mail_client_cls, mock_check_stale_dns_records
-    ):
+    def test_backend_500_during_create_domain_returns_503(self, mock_mail_client_cls, mock_check_stale_dns_records):
         """DNS verification succeeds, then the Stalwart backend returns 500 on
         create_domain() (/api/principal/deploy). That transient outage returns 503
         with the stable `mail_backend_unavailable` code, and leaves the domain
@@ -652,9 +648,7 @@ class VerifyCustomDomainTestCase(TestCase):
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_backend_4xx_is_not_transient_returns_500(
-        self, mock_mail_client_cls, mock_check_stale_dns_records
-    ):
+    def test_backend_4xx_is_not_transient_returns_500(self, mock_mail_client_cls, mock_check_stale_dns_records):
         """A non-transient backend response (4xx) is a genuine failure, not a
         retryable outage, so it keeps the original 500 + FAILED behaviour."""
         mock_check_stale_dns_records.return_value = []

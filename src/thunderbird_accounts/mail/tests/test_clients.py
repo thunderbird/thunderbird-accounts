@@ -292,9 +292,7 @@ class TestMailClientCreateDkim(TestCase):
     )
     @patch('requests.get')
     @patch('requests.post')
-    def test_request_failure_raises_failed_to_create_dkim(
-        self, requests_mock: MagicMock, requests_get_mock: MagicMock
-    ):
+    def test_request_failure_raises_failed_to_create_dkim(self, requests_mock: MagicMock, requests_get_mock: MagicMock):
         requests_mock.side_effect = requests.ConnectionError('Connection refused')
 
         with self.assertRaises(FailedToCreateDKIM) as cm:
@@ -311,9 +309,7 @@ class TestMailClientCreateDkim(TestCase):
     )
     @patch('requests.get')
     @patch('requests.post')
-    def test_reload_failure_raises_request_exception(
-        self, requests_mock: MagicMock, requests_get_mock: MagicMock
-    ):
+    def test_reload_failure_raises_request_exception(self, requests_mock: MagicMock, requests_get_mock: MagicMock):
         success_response = requests.Response()
         success_response.status_code = 200
         success_response._content = b'{"data": {}}'

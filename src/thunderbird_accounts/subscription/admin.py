@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _, ngettext
 from thunderbird_accounts.subscription.models import Subscription, Plan, SubscriptionItem, Price, Transaction, Product
 from thunderbird_accounts.subscription.tasks import retrieve_and_update_localized_subscription_price
 
+
 @admin.action(description=_('Retrieve localized pricing / discount information (#430)'))
 def admin_retrieve_missing_localized_pricing_and_discounts(modeladmin, request, queryset):
     """Queries Paddle for any missing localized pricing or discounts"""

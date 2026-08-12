@@ -220,7 +220,7 @@ class DkimSignatureConversionTestCase(SimpleTestCase):
     def test_raises_for_missing_signature_stage(self):
         public_pem, _expected_public_key = _ed25519_public_key()
 
-        with self.assertRaisesRegex(RuntimeError, "unexpected stage None"):
+        with self.assertRaisesRegex(RuntimeError, 'unexpected stage None'):
             dkim_signatures_to_dns_records(
                 'example.com',
                 [{'id': 'sig-1', 'selector': 'tm3', 'publicKey': public_pem}],

@@ -369,9 +369,7 @@ class MfaManagementService:
             sentry_sdk.capture_exception(exc)
             raise MfaSaveRecoveryCodesUnavailableError() from exc
 
-        recovery_codes_credentials = self._safe_read_credentials(
-            self.keycloak.get_recovery_codes_credentials, oidc_id
-        )
+        recovery_codes_credentials = self._safe_read_credentials(self.keycloak.get_recovery_codes_credentials, oidc_id)
 
         return {
             'codes': result.get('codes', []),

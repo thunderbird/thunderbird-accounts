@@ -1,4 +1,5 @@
 """Tests for Stalwart telemetry: webhook view, user resolver, event processor."""
+
 import base64
 import hashlib
 import hmac
@@ -125,9 +126,7 @@ class ProcessStalwartEventTestCase(TestCase):
 
     def setUp(self):
         self.submit_patcher = patch('thunderbird_accounts.telemetry.tasks.submit_event')
-        self.resolve_patcher = patch(
-            'thunderbird_accounts.telemetry.tasks._resolve_user_id', return_value='hashed-id'
-        )
+        self.resolve_patcher = patch('thunderbird_accounts.telemetry.tasks._resolve_user_id', return_value='hashed-id')
         self.mock_submit = self.submit_patcher.start()
         self.mock_resolve = self.resolve_patcher.start()
         self.addCleanup(self.submit_patcher.stop)
@@ -135,23 +134,27 @@ class ProcessStalwartEventTestCase(TestCase):
 
     def test_ingest_event_uses_first_recipient_as_identity(self):
         """message-ingest events identify the inbox owner via the `to` list."""
-        _process_stalwart_event({
-            'id': 'e1',
-            'createdAt': '2024-01-01T00:00:00Z',
-            'type': 'message-ingest.ham',
-            'data': {'from': 'sender@elsewhere.test', 'to': ['owner@thundermail.test'], 'accountId': 42},
-        })
+        _process_stalwart_event(
+            {
+                'id': 'e1',
+                'createdAt': '2024-01-01T00:00:00Z',
+                'type': 'message-ingest.ham',
+                'data': {'from': 'sender@elsewhere.test', 'to': ['owner@thundermail.test'], 'accountId': 42},
+            }
+        )
 
         self.mock_resolve.assert_called_once_with(account_id=42, email='owner@thundermail.test')
 
     def test_queue_event_uses_sender_as_identity(self):
         """queue.queue-message-* events identify the sender, since the inbox owner is the `from`."""
-        _process_stalwart_event({
-            'id': 'e2',
-            'createdAt': '2024-01-01T00:00:00Z',
-            'type': 'queue.queue-message-authenticated',
-            'data': {'from': 'owner@thundermail.test', 'to': ['recipient@elsewhere.test']},
-        })
+        _process_stalwart_event(
+            {
+                'id': 'e2',
+                'createdAt': '2024-01-01T00:00:00Z',
+                'type': 'queue.queue-message-authenticated',
+                'data': {'from': 'owner@thundermail.test', 'to': ['recipient@elsewhere.test']},
+            }
+        )
 
         self.mock_resolve.assert_called_once_with(account_id=None, email='owner@thundermail.test')
 
@@ -159,12 +162,14 @@ class ProcessStalwartEventTestCase(TestCase):
         """Stalwart event id is hashed into a UUID5 (PostHog rejects integer-string uuids,
         see PostHog/posthog#35684); same Stalwart id must always derive the same UUID."""
         event_id = '304404571900346369'
-        _process_stalwart_event({
-            'id': event_id,
-            'createdAt': '2024-01-01T12:34:56Z',
-            'type': 'message-ingest.ham',
-            'data': {'to': ['owner@thundermail.test']},
-        })
+        _process_stalwart_event(
+            {
+                'id': event_id,
+                'createdAt': '2024-01-01T12:34:56Z',
+                'type': 'message-ingest.ham',
+                'data': {'to': ['owner@thundermail.test']},
+            }
+        )
 
         kwargs = self.mock_submit.call_args.kwargs
         expected_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, f'stalwart-event-{event_id}'))
@@ -175,10 +180,12 @@ class ProcessStalwartEventTestCase(TestCase):
 
     def test_missing_event_id_passes_no_uuid(self):
         """If Stalwart somehow omits the id, send the event without a uuid rather than break."""
-        _process_stalwart_event({
-            'createdAt': '2024-01-01T12:34:56Z',
-            'type': 'message-ingest.ham',
-            'data': {'to': ['owner@thundermail.test']},
-        })
+        _process_stalwart_event(
+            {
+                'createdAt': '2024-01-01T12:34:56Z',
+                'type': 'message-ingest.ham',
+                'data': {'to': ['owner@thundermail.test']},
+            }
+        )
 
         self.assertIsNone(self.mock_submit.call_args.kwargs['uuid'])

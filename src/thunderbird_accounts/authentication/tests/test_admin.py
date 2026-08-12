@@ -646,4 +646,3 @@ class AdminResetTotpCredentialsTestCase(TestCase):
         self.assertEqual(response.template_name, 'admin/authentication/user/reset_totp_confirmation.html')
         response.render()
         self.assertIn('Yes, reset TOTP credentials', response.content.decode())
-

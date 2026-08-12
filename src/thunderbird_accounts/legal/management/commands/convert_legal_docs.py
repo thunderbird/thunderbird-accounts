@@ -27,10 +27,10 @@ class Command(BaseCommand):
     help = 'Converts legal document markdown files under assets/legal/ to HTML.'
 
     def handle(self, *args, **options):
-        legal_app_path = apps.get_app_config("legal").path
+        legal_app_path = apps.get_app_config('legal').path
 
         legal_dir_in = Path(settings.ASSETS_ROOT, 'legal')
-        legal_dir_out = Path(legal_app_path, 'templates')  
+        legal_dir_out = Path(legal_app_path, 'templates')
 
         if not legal_dir_in.exists() or not legal_dir_out.exists():
             self.stderr.write(
@@ -48,7 +48,7 @@ class Command(BaseCommand):
         for md_file in md_files:
             file_name = md_file.stem
             # Retrieve the last two folders (as of writing this it's 'privacy' -or- 'tos' and 'v1.0')
-            type, version =  md_file.resolve().parent.parts[-2:]
+            type, version = md_file.resolve().parent.parts[-2:]
             html_file = Path(legal_dir_out, type, version, f'{file_name}.html')
             html_file.parent.mkdir(parents=True, exist_ok=True)
             md.reset()
