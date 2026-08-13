@@ -12,12 +12,9 @@ export type ServerMessage = {
   message: string;
 };
 
-export enum FeatureFlag {
-  SHOW_CONNECT_NOW = 'feature.show-connect-now',
-};
-
-export enum FeatureFlagValue {
-  TRUE = 'true',
+export enum WAFFLE_FLAG {
+  MULTI_FACTOR_AUTHENTICATION = 'multi-factor-authentication',
+  SHOW_CONNECT_NOW = 'show-connect-now'
 };
 
 export enum TELEMETRY_EVENTS {

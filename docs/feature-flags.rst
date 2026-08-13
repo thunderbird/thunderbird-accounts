@@ -11,5 +11,7 @@ Please use constants to avoid mistakes.
 +=============================+========+==================================================================================================================================================+
 | multi-factor-authentication | flag   | Displays the Multi-factor Authentication link and pages on the dashboard.                                                                        |
 +-----------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+| show-connect-now            | flag   | Displays the 'Connect now' button in the Mail dashboard that triggers Thunderbird Desktop                                                        |
++-----------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------------------+
 | purge-incomplete-signups    | switch | When active, purge_incomplete_signups will delete stale users. When inactive (default) it will move stale users into the "Users to Purge" group. |
 +-----------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------------------+

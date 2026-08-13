@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 import { StandardFooter } from '@thunderbirdops/services-ui';
 import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL } from '@/defines';
 import { isWaffleFlagActive } from '@/utils';
+import { WAFFLE_FLAG } from '@/types';
 
 const { t } = useI18n();
 
@@ -14,7 +15,7 @@ type NavItem = { route: string; i18nKey: string };
 
 const navItemsAccounts: NavItem[] = [
   // Manage MFA is rolling out behind the multi-factor-authentication waffle flag
-  ...(isWaffleFlagActive('multi-factor-authentication')
+  ...(isWaffleFlagActive(WAFFLE_FLAG.MULTI_FACTOR_AUTHENTICATION)
     ? [{ route: '/manage-mfa', i18nKey: 'manageMfa' }]
     : []),
   // TODO: Expose Privacy & Data here once it's ready.
