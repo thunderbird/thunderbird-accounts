@@ -69,10 +69,10 @@ def main():
     print('Bootstrapping project:', args.__dict__)  # noqa: T201
 
     if not new_only:
-        print('Bootstrapping v0.15') # noqa: T201
+        print('Bootstrapping v0.15')  # noqa: T201
         bootstrap_legacy(from_scratch)
 
-    print('Bootstrapping v0.16') # noqa: T201
+    print('Bootstrapping v0.16')  # noqa: T201
     bootstrap_new(from_scratch)
 
 

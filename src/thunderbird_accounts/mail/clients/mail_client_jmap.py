@@ -390,9 +390,9 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
     # Domain
     #
 
-    def _get_domains_by_id(self, domain_ids: str|list[str]) -> list[stalwart.Domain]:
+    def _get_domains_by_id(self, domain_ids: str | list[str]) -> list[stalwart.Domain]:
         self.preflight_check()
-        
+
         if isinstance(domain_ids, str):
             domain_ids = [domain_ids]
 
@@ -422,7 +422,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         self._debug_dump('_get_domains_by_id', response.method_responses[0].arguments)
 
         try:
-            return [ stalwart.Domain(**domain) for domain in data ]
+            return [stalwart.Domain(**domain) for domain in data]
         except ValidationError as ex:
             logging.warning(f'[MailClient._get_domains_by_id({domain_ids}]: Failed pydantic validation!')
             sentry_sdk.capture_exception(ex)
@@ -579,7 +579,6 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         # I've never seen this return anything useful tbh, but we'll return a generic dict for now.
         return data
 
-
     def delete_domain(self, domain_name: str) -> None:
 
         # Allow DomainNotFound to raise if the domain is not found
@@ -629,7 +628,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         self._debug_dump('get_account', response.method_responses[1].arguments)
 
         if len(data.get('aliases', {}).values()) > 0:
-            domain_ids = [ alias.get('domainId') for alias in data.get('aliases', {}).values() ]
+            domain_ids = [alias.get('domainId') for alias in data.get('aliases', {}).values()]
             domains = self._get_domains_by_id(domain_ids)
             # FIXME: We should just require domains to have their new stalwart ids...
             for idx, domain in data.get('aliases').items():

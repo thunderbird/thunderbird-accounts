@@ -29,6 +29,7 @@ class JMapError(RuntimeError):
         self.description = description
         self.fields = fields
 
+
 class DomainNotFoundError(StalwartError):
     """Raise when a domain is not found in Stalwart"""
 
@@ -54,20 +55,27 @@ class AccountNotFoundError(StalwartError):
     def __str__(self):
         return f'AccountNotFoundError: {self.username}'
 
+
 class AccountSetError(JMapError):
     """Raise when an individual is not found in Stalwart"""
+
     def __str__(self):
         return f'AccountSetError: {self.type} : {self.description or self.fields}'
 
+
 class AppPasswordSetError(JMapError):
     """Raise when an app password is not found in Stalwart"""
+
     def __str__(self):
         return f'AppPasswordSetError: {self.type} : {self.description or self.fields}'
 
+
 class DomainSetError(JMapError):
     """Raise when an domain is not found in Stalwart"""
+
     def __str__(self):
         return f'DomainSetError: {self.type} : {self.description or self.fields}'
+
 
 class AccessTokenNotFound(StalwartError):
     def __str__(self):
@@ -175,6 +183,7 @@ class EmailNotValidError(RuntimeError):
 
 class InvalidJMapResponseError(RuntimeError):
     """This is a generic pydantic response error. You should not get this, if you do there's a developer problem."""
+
     validation_error: ValidationError
 
     def __init__(self, validation_error):

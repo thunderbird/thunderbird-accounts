@@ -6,11 +6,10 @@ import enum
 import json
 import requests
 
+
 class JMAPClient:
     """The tiniest JMAP client you can imagine.
     Source: https://github.com/fastmail/JMAP-Samples/blob/main/python3/tiny_jmap_library.py"""
-
-
 
     class AUTH_TYPES(enum.Enum):
         BASIC = 0
@@ -34,8 +33,6 @@ class JMAPClient:
         self.account_id: str | None = None
         self.identity_id: str | None = None
         self.verify_ssl = False
-        
-
 
     def _authorization_value(self):
         return f'Bearer {self.token}' if self.auth_type == self.AUTH_TYPES.BEARER else f'Basic {self.token}'

@@ -46,6 +46,7 @@ class DomainVerificationErrors(StrEnum):
     # Warnings (do not fail verification)
     SPF_RECORD_NOT_FOUND = 'spfRecordNotFound'
 
+
 class StaleDNSRecordCode(StrEnum):
     """Stale DNS records that should be removed to prevent issues with the Thundermail setup."""
 

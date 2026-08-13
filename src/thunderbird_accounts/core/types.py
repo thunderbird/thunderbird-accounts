@@ -22,5 +22,6 @@ class TaskReturnStatus(StrEnum):
     FAILED = 'failed'
     SUCCESS = 'success'
 
+
 class AuthenticatedHttpRequest(HttpRequest):
     user: User

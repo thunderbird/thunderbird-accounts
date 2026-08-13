@@ -178,6 +178,7 @@ class DomainCreate(Domain):
     allow_relaying: Optional[bool] = None
     dns_zone_file: Optional[str] = None
 
+
 class DomainUpdate(DomainCreate):
     name: Optional[str] = None
     aliases: Optional[dict] = None
@@ -186,6 +187,7 @@ class DomainUpdate(DomainCreate):
     dkim_management: Optional[DkimManagement | DkimManagementProperties] = None
     dns_management: Optional[DnsManagement | DnsManagementProperties] = None
     sub_addressing: Optional[SubAddressing | SubAddressingCustom] = None
+
 
 class Credential(StalwartType):
     model_config = ConfigDict(polymorphic_serialization=True)
@@ -229,7 +231,7 @@ class EmailAlias(BaseSchema):
     name: str
     domain_id: str
     description: Optional[str] = None
-    full_address: Optional[str] = None # Our extra, filled in with get_account
+    full_address: Optional[str] = None  # Our extra, filled in with get_account
 
 
 class StorageQuota(BaseSchema):
@@ -331,9 +333,11 @@ class AccountUpdate(Account):
     encryption_at_rest: Optional[StalwartType] = None
     locale: Optional[str] = None
 
+
 class DnsRecord(BaseSchema):
     """Not an existing stalwart type, but it's the response format of the old dns record endpoint.
     Ref: https://stalw.art/docs/0.15/api/management/endpoints/#obtain-dns-records-for-domain"""
+
     type: Optional[str] = None
     name: Optional[str] = None
     content: Optional[str] = None

@@ -97,8 +97,8 @@ def home(request: HttpRequest):
                 email_addresses = email_user.get('emails', [])
             elif isinstance(email_user, stalwart.Account):
                 user_display_name = email_user.description
-                email_addresses = [ email_user.email_address ]
-                email_addresses += [ alias.full_address for alias in email_user.aliases.values() ]
+                email_addresses = [email_user.email_address]
+                email_addresses += [alias.full_address for alias in email_user.aliases.values()]
         except AccountNotFoundError:
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))

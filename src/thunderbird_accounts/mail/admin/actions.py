@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _, ngettext
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.models import Account, BaseStalwartObject, Domain
 
+
 def _fetch_and_save_stalwart_ids(queryset):
     success = 0
     ignored = 0
@@ -42,6 +43,7 @@ def _fetch_and_save_stalwart_ids(queryset):
         principal_obj.save()
         success += 1
     return (success, ignored, not_found)
+
 
 @admin.action(description=_('Fix Empty Stalwart IDs (#323)'))
 def admin_fix_stalwart_ids(modeladmin, request, queryset):
@@ -87,6 +89,7 @@ def admin_fix_stalwart_ids(modeladmin, request, queryset):
             _('Nothing to fix!'),
             messages.INFO,
         )
+
 
 @admin.action(description=_('Replace Stalwart IDs for Stalwart Upgrade (#1188)'))
 def admin_replace_stalwart_ids(modeladmin, request, queryset):
