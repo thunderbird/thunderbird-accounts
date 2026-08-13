@@ -1,0 +1,34 @@
+{
+  "accountId": "d333333",
+  "list": [
+    {
+      "auid": null,
+      "canonicalization": "relaxed/relaxed",
+      "expire": null,
+      "headers": {
+        "From": true,
+        "To": true,
+        "Date": true,
+        "Subject": true,
+        "Message-ID": true
+      },
+      "privateKey": {
+        "secret": "****",
+        "@type": "Text"
+      },
+      "report": true,
+      "thirdParty": null,
+      "thirdPartyHash": null,
+      "domainId": "g",
+      "memberTenantId": null,
+      "selector": "v1-ed25519-20260729",
+      "createdAt": "2026-07-29T22:35:55Z",
+      "nextTransitionAt": null,
+      "stage": "active",
+      "@type": "Dkim1Ed25519Sha256",
+      "publicKey": "1xaKytJ80df4EwnXkR+phsYPqwwLzXYYC46pBR4NeiY=",
+      "id": "i0ertxweadqb"
+    }
+  ],
+  "notFound": []
+}

@@ -1,0 +1,22 @@
+{
+  "accountId": "d333333",
+  "notDestroyed": {
+    "d": {
+      "type": "objectIsLinked",
+      "objectId": {
+        "object": "Domain",
+        "id": "d"
+      },
+      "linkedObjects": [
+        {
+          "object": "DkimSignature",
+          "id": "i0eilb9iaaqb"
+        },
+        {
+          "object": "DkimSignature",
+          "id": "i0eilcgcabab"
+        }
+      ]
+    }
+  }
+}

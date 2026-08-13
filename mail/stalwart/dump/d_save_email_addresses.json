@@ -1,0 +1,17 @@
+{
+  "accountId": "d333333",
+  "list": [
+    {
+      "aliases": {
+        "0": {
+          "enabled": true,
+          "name": "ham",
+          "domainId": "c",
+          "description": null
+        }
+      },
+      "id": "b"
+    }
+  ],
+  "notFound": []
+}

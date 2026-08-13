@@ -1,0 +1,34 @@
+{
+  "accountId": "d333333",
+  "list": [
+    {
+      "name": "pizza",
+      "domainId": "b",
+      "credentials": {},
+      "createdAt": "2026-08-10T22:18:31Z",
+      "memberGroupIds": {},
+      "memberTenantId": null,
+      "roles": {
+        "@type": "User"
+      },
+      "permissions": {
+        "@type": "Inherit"
+      },
+      "quotas": {
+        "maxDiskQuota": 15000
+      },
+      "aliases": {},
+      "description": "PIZZA!",
+      "locale": "en_US",
+      "timeZone": null,
+      "encryptionAtRest": {
+        "@type": "Disabled"
+      },
+      "@type": "User",
+      "usedDiskQuota": 0,
+      "emailAddress": "pizza@example.org",
+      "id": "bv"
+    }
+  ],
+  "notFound": []
+}

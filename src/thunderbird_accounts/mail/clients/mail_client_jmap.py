@@ -116,8 +116,9 @@ class BaseJMAP(ABC):
             self._get_primary_domain_id()
 
     def _debug_dump(self, name: str, data: dict):
-        with open(f'd_{name}.json', 'w') as fh:
-            fh.write(json.dumps(data, indent=2))
+        pass
+        #with open(f'd_{name}.json', 'w') as fh:
+        #    fh.write(json.dumps(data, indent=2))
 
     def _query_account_by_principal_id(self, principal_id: str, method_call_id: str = '0') -> Invocation:
         """Helper to return an Invocation object that will query the account by local part / primary domain id
@@ -945,9 +946,10 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         FIXME: This function can be optimized to do both creations in one request, but for now it's split up."""
         dkim_algorithms = settings.STALWART_DKIM_ALGOS if algorithms is None else algorithms
 
-        domain_obj = self.get_domain(domain)
-        if not domain_obj or not domain_obj.id:
-            raise RuntimeError('Domain not found!')
+        try:
+            domain_obj = self.get_domain(domain)
+        except DomainNotFoundError:
+            raise
 
         pkid_list = []
         responses = []
