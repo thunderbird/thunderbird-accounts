@@ -158,7 +158,7 @@ class Domain(JMapType):
     name: str
     aliases: dict  # list[str]
     is_enabled: bool
-    created_at: datetime|str
+    created_at: datetime | str
     description: Optional[str] = None
     logo: Optional[str] = None
     certificate_management: dict | StalwartType

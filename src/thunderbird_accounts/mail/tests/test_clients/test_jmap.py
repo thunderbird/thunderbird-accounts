@@ -1,14 +1,11 @@
-import datetime
 import json
 from pathlib import Path
 from typing import Literal
 from unittest.mock import MagicMock, patch
 
-import requests
 from django.test import SimpleTestCase, override_settings
 
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
-from thunderbird_accounts.mail.clients.mail_client_interface import DkimSignatureStage
 from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientAdminJMAP
 from thunderbird_accounts.mail.tests.test_clients.test_legacy import (
     TestMailClientCheckDomainDNS,
@@ -120,4 +117,3 @@ class TestCreateDkim(SimpleTestCase):
 
         self.assertIsNotNone(response_data)
         self.assertEqual(3, requests_mock.call_count)
-        
