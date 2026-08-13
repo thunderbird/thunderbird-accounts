@@ -57,7 +57,7 @@ class BaseJMAP(ABC):
     def _get_user_client(
         self, username, user_token, auth_type: JMAPClient.AUTH_TYPES = JMAPClient.AUTH_TYPES.BEARER
     ) -> JMAPClient:
-        client = JMAPClient('http://stalwart_new:8080', username, user_token, auth_type)
+        client = JMAPClient(settings.STALWART_JMAP_API_URL, username, user_token, auth_type)
         # Make sure we retrieve the session
         client.get_session()
         return client
@@ -288,7 +288,13 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
 
     def __init__(self):
         # FIXME: Setup correct admin login
-        self.client = self._get_user_client('admin', 'admin', JMAPClient.AUTH_TYPES.BASIC)
+        self.client = self._get_user_client(
+            settings.STALWART_JMAP_API_AUTH_USER,
+            settings.STALWART_JMAP_API_AUTH_SECRET,
+            JMAPClient.AUTH_TYPES.BASIC
+            if settings.STALWART_JMAP_API_AUTH_METHOD == 'basic'
+            else JMAPClient.AUTH_TYPES.BEARER,
+        )
         self.account_id = None
         self.primary_domain_id = None
 
