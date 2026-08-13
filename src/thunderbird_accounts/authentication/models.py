@@ -136,6 +136,12 @@ class User(AbstractUser, BaseModel):
             return email.address if email else None
         return None
 
+    @cached_property
+    def is_migrated(self) -> bool:
+        """Returns whether the user has been migrated
+        Right now it just checks the django setting, but eventually it will cache the migration proxy lookup."""
+        return settings.STALWART_ADMIN_API_USE_JMAP
+
 
 class AllowListEntry(BaseModel):
     """Allow List Entry

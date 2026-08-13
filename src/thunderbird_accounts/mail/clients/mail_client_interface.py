@@ -1,3 +1,4 @@
+from thunderbird_accounts.mail.types import stalwart
 from enum import StrEnum
 from typing import Optional
 
@@ -107,7 +108,7 @@ class MailClientInterface:
     def make_api_key(self, principal_id, password):
         raise NotImplementedError()
 
-    def create_domain(self, domain, description=''):
+    def create_domain(self, domain, description='', **kwargs):
         raise NotImplementedError()
 
     def delete_domain(self, domain_name: str):
@@ -126,4 +127,9 @@ class MailClientInterface:
         raise NotImplementedError()
 
     def check_domain_dns(self, domain_name: str) -> dict:
+        raise NotImplementedError()
+
+    # Not in legacy:
+
+    def update_domain(self, domain_name: str, data: stalwart.DomainUpdate):
         raise NotImplementedError()

@@ -1,9 +1,8 @@
 import enum
-from typing import Optional, TypedDict, Annotated
+from typing import Optional, Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator, AliasChoices
 from pydantic.alias_generators import to_camel
-from sqlparse.tokens import Literal
 
 
 class BaseSchema(BaseModel):

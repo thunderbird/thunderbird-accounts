@@ -32,7 +32,6 @@ from thunderbird_accounts.mail.clients.mail_client_interface import (
     DNSRecordStatus,
     DomainVerificationErrors,
 )
-from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
 from thunderbird_accounts.mail.dns import enrich_dns_records_with_status
 from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
@@ -480,8 +479,15 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             sentry_sdk.capture_exception(ex)
             raise InvalidJMapResponseError(ex) from ex
 
-    def create_domain(self, domain, description='') -> jmap.Id:
+    def create_domain(self, domain, description='', **kwargs) -> jmap.Id:
         self.preflight_check()
+
+        # Compat
+        is_enabled = kwargs.get('is_enabled', True)
+
+        # If description is an empty string make it none
+        if not description.strip():
+            description = None
 
         # If the domain already exists, we ignore and return None
         try:
@@ -492,11 +498,11 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
 
         domain = stalwart.DomainCreate(
             name=domain,
-            is_enabled=True,
+            is_enabled=is_enabled,
             description=description,
             aliases={},
             certificate_management=stalwart.StalwartType(type='Manual'),
-            dkim_management=stalwart.StalwartType(type='Automatic'),
+            dkim_management=stalwart.StalwartType(type='Manual'),
             dns_management=stalwart.StalwartType(type='Manual'),
             sub_addressing=stalwart.StalwartType(type='Enabled'),
         )
@@ -538,6 +544,41 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
 
         # Return the pkid
         return stalwart_pkid
+
+    def update_domain(self, domain_name: str, data: stalwart.DomainUpdate):
+        domain = self.get_domain(domain_name)
+        if not domain.id:
+            raise DomainNotFoundError(domain_name)
+
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name=StalwartMethods.set(StalwartMethods.DOMAIN),
+                        arguments={
+                            'accountId': self.account_id,
+                            'update': {
+                                domain.id: {
+                                    **data.model_dump(exclude_unset=True),
+                                }
+                            },
+                        },
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+
+        data = response.method_responses[0].arguments.get('updated', {})
+        self._debug_dump('update_domain', data)
+
+        # I've never seen this return anything useful tbh, but we'll return a generic dict for now.
+        return data
+
 
     def delete_domain(self, domain_name: str) -> None:
 
@@ -968,7 +1009,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 data = response.method_responses[0].arguments.get('created', {})
 
                 stalwart_pkid = data.get(temp_id, {}).get('id')
-                responses.append(responses)
+                responses.append(data)
                 if not stalwart_pkid:
                     raise FailedToCreateDKIM(algorithm, domain, 'pkid not found')
                 pkid_list.append(stalwart_pkid)
@@ -1081,6 +1122,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
 
         TODO: Remove this out of the api client.
         FIXME: Have this form and return DnsRecord"""
+        from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
 
         target_domain = settings.CONNECTION_INFO['SMTP']['HOST'].rstrip('.')
         target_domain_fqdn = f'{target_domain}.'

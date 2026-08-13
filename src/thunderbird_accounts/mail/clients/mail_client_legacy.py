@@ -593,7 +593,7 @@ class MailClientLegacy(MailClientInterface):
 
         return base64.b64encode(f'{api_key_name}:{secret}'.encode()).decode()
 
-    def create_domain(self, domain, description=''):
+    def create_domain(self, domain, description='', **kwargs):
         data = {
             'type': 'domain',
             'name': domain,

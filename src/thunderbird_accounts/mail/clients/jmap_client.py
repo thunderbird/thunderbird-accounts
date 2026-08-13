@@ -1,3 +1,4 @@
+import logging
 from base64 import b64encode
 from typing import Literal
 from thunderbird_accounts.mail.types.jmap import SessionResource, JMapRequest, Invocation, JMapResponse
@@ -105,7 +106,7 @@ class JMAPClient:
         Python data structure."""
         if not self.api_url:
             raise RuntimeError('Session not available')
-        print('sending -> ', (request_data.model_dump_json(exclude_none=True)))
+        logging.debug(f'[jmap_client.request] sending -> {(request_data.model_dump_json(exclude_none=True))}')
         res = requests.request(
             url=self.api_url,
             method=method,
@@ -117,4 +118,6 @@ class JMAPClient:
             verify=self.verify_ssl,
         )
         res.raise_for_status()
-        return JMapResponse(**res.json())
+        res_data = res.json()
+        logging.debug(f'[jmap_client.request] received -> {res_data}')
+        return JMapResponse(**res_data)

@@ -178,6 +178,14 @@ class DomainCreate(Domain):
     allow_relaying: Optional[bool] = None
     dns_zone_file: Optional[str] = None
 
+class DomainUpdate(DomainCreate):
+    name: Optional[str] = None
+    aliases: Optional[dict] = None
+    is_enabled: Optional[bool] = None
+    certificate_management: Optional[dict | StalwartType] = None
+    dkim_management: Optional[DkimManagement | DkimManagementProperties] = None
+    dns_management: Optional[DnsManagement | DnsManagementProperties] = None
+    sub_addressing: Optional[SubAddressing | SubAddressingCustom] = None
 
 class Credential(StalwartType):
     model_config = ConfigDict(polymorphic_serialization=True)

@@ -7,18 +7,14 @@ from django.utils.translation import gettext_lazy as _, ngettext
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.models import Account, BaseStalwartObject, Domain
 
-
-@admin.action(description=_('Fix Empty Stalwart IDs (#323)'))
-def admin_fix_stalwart_ids(modeladmin, request, queryset):
-    """Queries stalwart base objects and fixes any empty Stalwart IDs as well as fill in any empty timestamps."""
+def _fetch_and_save_stalwart_ids(queryset):
     success = 0
     ignored = 0
     not_found = 0
 
     stalwart = MailClient()
-    results = queryset.filter(stalwart_id__isnull=True)
 
-    for principal_obj in results:
+    for principal_obj in queryset:
         principal_obj: BaseStalwartObject
 
         try:
@@ -45,6 +41,57 @@ def admin_fix_stalwart_ids(modeladmin, request, queryset):
             principal_obj.stalwart_updated_at = now
         principal_obj.save()
         success += 1
+    return (success, ignored, not_found)
+
+@admin.action(description=_('Fix Empty Stalwart IDs (#323)'))
+def admin_fix_stalwart_ids(modeladmin, request, queryset):
+    """Queries stalwart base objects and fixes any empty Stalwart IDs as well as fill in any empty timestamps."""
+    success, ignored, not_found = _fetch_and_save_stalwart_ids(queryset.filter(stalwart_id__isnull=True))
+
+    if success:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Matched %d principal object with their id.',
+                'Matched %d principal objects with their ids.',
+                success,
+            )
+            % success,
+            messages.SUCCESS,
+        )
+    if ignored:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Ignored %d principal object as they were not an Account or Domain.',
+                'Ignored %d principal objects as they were not an Account or Domain.',
+                ignored,
+            )
+            % ignored,
+            messages.INFO,
+        )
+    if not_found:
+        modeladmin.message_user(
+            request,
+            ngettext(
+                'Could not find %d principal object within Stalwart.',
+                'Could not find %d principal objects within Stalwart.',
+                not_found,
+            )
+            % not_found,
+            messages.ERROR,
+        )
+    if sum([success, ignored, not_found]) == 0:
+        modeladmin.message_user(
+            request,
+            _('Nothing to fix!'),
+            messages.INFO,
+        )
+
+@admin.action(description=_('Replace Stalwart IDs for Stalwart Upgrade (#1188)'))
+def admin_replace_stalwart_ids(modeladmin, request, queryset):
+    """Queries stalwart base objects and fixes any empty Stalwart IDs as well as fill in any empty timestamps."""
+    success, ignored, not_found = _fetch_and_save_stalwart_ids(queryset)
 
     if success:
         modeladmin.message_user(
