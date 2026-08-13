@@ -145,9 +145,10 @@ services:
     image: stalwartlabs/stalwart:v0.16
     hostname: 'stalwart_new'
     domainname: 'stalwart_new.local'
+    #entrypoint: bash
     volumes:
       - "./mail/stalwart/etc:/etc/stalwart:Z"
-      - "./mail/stalwart/lib:/var/lib/stalwart:Z"
+      - "./mail/stalwart/lib/main.db:/var/lib/stalwart/main.db:Z"
     ports:
       - "8443:443"
       - "8180:8080"
