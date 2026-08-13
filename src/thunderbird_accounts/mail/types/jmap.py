@@ -33,7 +33,8 @@ class Invocation(BaseSchema):
     """The shape for a jmap request.
 
     The ``name`` is the request you'd like to make (e.g. ``x:Domains/get`` to do a get request for Stalwart domains.)
-    ``arguments`` is the request data, and ``method_call_id`` is an id that can be used to reference this request in batched queries.
+    ``arguments`` is the request data, and ``method_call_id`` is an id that can be used to 
+    reference this request in batched queries.
 
     Ref: https://jmap.io/spec/rfc8620/#section-3.2"""
 

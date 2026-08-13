@@ -1,8 +1,7 @@
 """MailClientJMAP test script. These examples are tested against a stand-alone Stalwart v0.16 instance.
 The results and responses will be used in unit tests."""
-from thunderbird_accounts.mail.types.stalwart import AccountUpdate, EmailAlias
 
-from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientAdminJMAP, MailClientUserJMAP
+from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientAdminJMAP
 
 jwt = None
 client = MailClientAdminJMAP()

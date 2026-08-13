@@ -630,12 +630,10 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
 
         if len(data.get('aliases', {}).values()) > 0:
             domain_ids = [ alias.get('domainId') for alias in data.get('aliases', {}).values() ]
-            print('domain ids --->', domain_ids, '|', data.get('aliases', {}).values())
             domains = self._get_domains_by_id(domain_ids)
+            # FIXME: We should just require domains to have their new stalwart ids...
             for idx, domain in data.get('aliases').items():
-
                 data['aliases'][idx]['full_address'] = f'{domain.get("name")}@{domains[0].name}'
-            print('----->', data)
 
         try:
             return stalwart.Account(**data)
