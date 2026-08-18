@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
+import { WAFFLE_FLAG } from '@/types';
+import { isWaffleFlagActive } from '@/utils';
 import { BrandButton } from '@thunderbirdops/services-ui';
 import UserMenu from '@/components/UserMenu.vue';
 
@@ -8,6 +11,26 @@ const { t } = useI18n();
 
 const isAuthenticated = ref(window._page?.isAuthenticated);
 const avatarUsername = ref(window._page?.userDisplayName || window._page?.userEmail);
+
+const navItems = [
+  {
+    route: '/mail',
+    i18nKey: 'dashboard',
+  },
+  {
+    route: '/custom-domains',
+    i18nKey: 'customDomains',
+  },
+];
+
+const currentRoute = useRoute();
+
+const needsTosAcceptance = ref(window._page?.needsTosAcceptance);
+const needsSubscription = ref(
+  window._page?.isAwaitingPaymentVerification || !window._page?.hasActiveSubscription,
+);
+const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
+const showNav = computed(() => !needsTosAcceptance.value && !needsSubscription.value && isCustomDomainsRevampActive.value);
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).href;
@@ -20,6 +43,16 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
     </router-link>
 
     <template v-if="isAuthenticated">
+      <nav v-if="showNav" class="desktop">
+        <ul>
+          <li v-for="navItem in navItems" :key="navItem.route">
+            <router-link :to="navItem.route" :class="{ active: currentRoute.path === navItem.route }">
+              {{ t(`navigationLinks.${navItem.i18nKey}`) }}
+            </router-link>
+          </li>
+        </ul>
+      </nav>
+
       <user-menu :username="avatarUsername" />
     </template>
 
@@ -59,6 +92,10 @@ header {
     margin-left: auto;
   }
 
+  nav.desktop {
+    display: none;
+  }
+
   .login-button-link {
     text-decoration: none;
 
@@ -87,6 +124,17 @@ header {
         border-radius: 0.5rem;
         box-shadow: inset 0 0.25rem 0.25rem 0 rgba(0, 0, 0, 0.15);
       }
+    }
+  }
+}
+
+@media (min-width: 768px) {
+  header {
+    nav.desktop {
+      display: block;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
     }
   }
 }
