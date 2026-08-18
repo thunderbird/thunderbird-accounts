@@ -1,0 +1,20 @@
+export interface ActiveSession {
+  id: string;
+  device_info: {
+    device?: string | null;
+    os?: string | null;
+    os_version?: string | null;
+    browser?: string | null;
+    app?: string | null;
+    is_mobile?: boolean | null;
+  } | null;
+  ip_address: string;
+  location?: {
+    city?: string | null;
+    state?: string | null;
+    country_code?: string | null;
+    continent?: string | null;
+  } | null;
+  last_access: number;
+  is_current?: boolean;
+}

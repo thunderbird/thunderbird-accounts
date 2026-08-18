@@ -9,6 +9,7 @@ import logging
 
 from django.conf import settings
 from mozilla_django_oidc.contrib.drf import OIDCAuthentication
+import jwt
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -22,6 +23,7 @@ from thunderbird_accounts.authentication.exceptions import (
 from thunderbird_accounts.authentication.mfa_management import (
     MfaManagementError,
     MfaManagementService,
+    get_user_access_token,
     mfa_management_error_response,
 )
 from thunderbird_accounts.authentication.utils import (
@@ -32,12 +34,15 @@ from thunderbird_accounts.authentication.utils import (
     get_user_by_contact_email,
 )
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
-from rest_framework.exceptions import NotAuthenticated
+from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
 
+from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.serializers import UserProfileSerializer
+from thunderbird_accounts.authentication.clients import KeycloakAccountClient, KeycloakClient
+from thunderbird_accounts.core.geoip import enrich_sessions_with_geoip
 
 
 class SignUpThrottle(UserRateThrottle):
@@ -62,11 +67,65 @@ class RecoveryCodesRegenerateThrottle(UserRateThrottle):
     scope = 'recovery_codes_regenerate'
 
 
+def _session_id_from_access_token(request: Request) -> str | None:
+    access_token = request.session.get('oidc_access_token')
+    if not access_token:
+        return None
+
+    try:
+        return jwt.decode(access_token, options={'verify_signature': False}).get('sid')
+    except (jwt.PyJWTError, TypeError):
+        return None
+
+
+def mark_current_session(request: Request, sessions: list[dict]) -> list[dict]:
+    oidc_id_token = request.session.get('oidc_id_token')
+    current_session_id = None
+
+    if oidc_id_token:
+        try:
+            current_session_id = AccountsOIDCBackend().verify_token(oidc_id_token).get('sid')
+        except Exception:
+            logging.exception('Error determining current Keycloak session')
+
+    current_session_id = current_session_id or _session_id_from_access_token(request)
+
+    if not current_session_id:
+        for session in sessions:
+            session['is_current'] = False
+        return sessions
+
+    for session in sessions:
+        session['is_current'] = session.get('id') == current_session_id
+
+    return sessions
+
+
 @api_view(['POST'])
 def get_user_profile(request: Request):
     if not request.user:
         raise NotAuthenticated()
     return Response(UserProfileSerializer(request.user).data)
+
+
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication])
+def get_active_sessions(request: Request):
+    if not request.user.is_authenticated:
+        raise NotAuthenticated()
+
+    user_access_token = get_user_access_token(request)
+    if not user_access_token:
+        raise NotAuthenticated('OIDC session has expired')
+
+    try:
+        keycloak_client = KeycloakAccountClient()
+        sessions = keycloak_client.get_active_sessions(user_access_token)
+        sessions = mark_current_session(request, sessions)
+        return Response(enrich_sessions_with_geoip(sessions))
+    except Exception as e:
+        logging.exception(f'Error fetching active sessions: {e}')
+        raise ValidationError('Error fetching active sessions')
 
 
 @api_view(['GET'])
@@ -224,7 +283,6 @@ def sign_up(request: Request):
     We only create the local Accounts user object if the Keycloak user object was successfully created.
     """
     # This file is loaded before models are ready, so we import locally here...for now.
-    from thunderbird_accounts.authentication.clients import KeycloakClient
     from thunderbird_accounts.authentication.models import AllowListEntry, User
 
     data = request.data
@@ -327,3 +385,42 @@ def sign_up(request: Request):
         )
 
     return Response({'success': True})
+
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+def sign_out_session(request: Request):
+    if not request.user.is_authenticated:
+        raise NotAuthenticated()
+
+    session_id = request.data.get('session_id')
+
+    if not session_id:
+        raise ValidationError('session_id is required')
+
+    user_access_token = get_user_access_token(request)
+    if not user_access_token:
+        raise NotAuthenticated('OIDC session has expired')
+
+    try:
+        # Sign out from the Keycloak session
+        keycloak_client = KeycloakAccountClient()
+        keycloak_client.sign_out_session(user_access_token, session_id)
+
+        oidc_id_token = request.session.get('oidc_id_token')
+        if oidc_id_token:
+            # Verify if the request's keycloak session_id matches the one in the ID token.
+            auth_backend = AccountsOIDCBackend()
+            payload = auth_backend.verify_token(oidc_id_token)
+            keycloak_session_id = payload.get('sid')
+
+            if keycloak_session_id == session_id:
+                # If so, delete current session data and cookie from Django as well.
+                request.session.flush()
+
+        return Response({'success': True})
+
+    except Exception as e:
+        logging.exception(f'Error signing out session: {e}')
+        sentry_sdk.capture_exception(e)
+        raise ValidationError('Error signing out session')

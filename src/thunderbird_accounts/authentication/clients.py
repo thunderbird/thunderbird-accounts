@@ -59,6 +59,13 @@ class RecoveryCodesResponse(TypedDict, total=False):
     remaining: int
 
 
+class ActiveSessionResponse(TypedDict, total=False):
+    id: str
+    last_access: int
+    ip_address: str
+    device_info: dict
+
+
 class KeycloakClient:
     access_token: Optional[str] = None
 
@@ -380,14 +387,24 @@ class KeycloakClient:
         return pkid
 
 
-class KeycloakMfaClient:
-    """Client for self-service, realm-scoped Keycloak calls made as the end user.
+class KeycloakSelfServiceClient:
+    """Base client for realm-scoped Keycloak calls made as the end user.
 
     These use the end user's forwarded OIDC access token and operate on the token subject:
-    the keycloak-mfa-rest provider (/realms/{realm}/mfa/) plus Keycloak's built-in Account
-    REST API (/realms/{realm}/account/). Keep this separate from the admin API client so
-    the two trust boundaries cannot accidentally share auth or endpoint routing.
+    Keycloak's built-in Account REST API and our self-service provider APIs. Keep this
+    separate from the admin API client so the two trust boundaries cannot accidentally
+    share auth or endpoint routing.
     """
+
+    base_url_setting: str | None = None
+
+    def get_base_url(self) -> str:
+        if not self.base_url_setting:
+            raise ValueError('Keycloak self-service client needs a base URL.')
+        base_url = getattr(settings, self.base_url_setting)
+        if not base_url:
+            raise ValueError(f'{self.base_url_setting} is not configured.')
+        return base_url
 
     def request(
         self,
@@ -401,7 +418,7 @@ class KeycloakMfaClient:
 
         response = requests.request(
             method=method.value,
-            url=urljoin(settings.KEYCLOAK_MFA_API_ENDPOINT, endpoint),
+            url=urljoin(self.get_base_url(), endpoint),
             json=json_data,
             headers={
                 'Accept': 'application/json',
@@ -411,6 +428,104 @@ class KeycloakMfaClient:
         )
         response.raise_for_status()
         return response
+
+
+class KeycloakAccountClient(KeycloakSelfServiceClient):
+    """Client for Keycloak's built-in Account REST API."""
+
+    base_url_setting = 'KEYCLOAK_REALM_ENDPOINT'
+
+    def get_active_sessions(self, user_access_token: str) -> list[ActiveSessionResponse]:
+        # Keycloak 26.5+ includes offline sessions in the devices response. Use the
+        # online-only sessions endpoint as the source of truth for Logged-in Sessions.
+        sessions_response = self.request('account/sessions', user_access_token, RequestMethods.GET)
+        devices_response = self.request('account/sessions/devices', user_access_token, RequestMethods.GET)
+        return self._normalize_session_devices(sessions_response.json(), devices_response.json())
+
+    def sign_out_session(self, user_access_token: str, session_id: str) -> dict:
+        self.request(f'account/sessions/{session_id}', user_access_token, RequestMethods.DELETE)
+        return {'success': True}
+
+    def logout_other_sessions(self, user_access_token: str) -> bool:
+        """Sign the user out of all sessions except the one this token belongs to.
+
+        Keycloak's Account API preserves the calling session unlike the admin user-logout,
+        which is logout-all and would evict it too (#1005).
+        """
+        self.request('account/sessions', user_access_token, RequestMethods.DELETE)
+        return True
+
+    def _normalize_session_devices(
+        self, online_sessions: list[dict], devices: list[dict]
+    ) -> list[ActiveSessionResponse]:
+        devices_by_session_id = {}
+        for device in devices:
+            for session in device.get('sessions') or []:
+                session_id = session.get('id')
+                if session_id:
+                    devices_by_session_id.setdefault(session_id, (device, session))
+
+        active_sessions = []
+        for session in online_sessions:
+            device, device_session = devices_by_session_id.get(session.get('id'), ({}, {}))
+            normalized_session = {
+                **device,
+                **device_session,
+                **session,
+                'ipAddress': session.get('ipAddress') or device_session.get('ipAddress') or device.get('ipAddress'),
+                'lastAccess': session.get('lastAccess') or device_session.get('lastAccess') or device.get('lastAccess'),
+                'current': session.get('current', device_session.get('current', device.get('current'))),
+            }
+            active_sessions.append(
+                self._active_session_response(
+                    normalized_session,
+                    self._device_info(device, session),
+                )
+            )
+
+        return active_sessions
+
+    def _active_session_response(self, session: dict, device_info: dict) -> ActiveSessionResponse:
+        return {
+            'id': session['id'],
+            'last_access': session.get('lastAccess'),
+            'ip_address': session.get('ipAddress'),
+            'device_info': device_info,
+            'is_current': bool(session.get('current')),
+        }
+
+    def _device_info(self, device: dict, session: dict | None = None) -> dict:
+        app = self._app_name(device, session)
+        return {
+            'device': device.get('device'),
+            'os': device.get('os'),
+            'os_version': device.get('osVersion'),
+            'browser': (session or {}).get('browser') or device.get('browser'),
+            'app': app,
+            'is_mobile': device.get('mobile'),
+        }
+
+    def _app_name(self, device: dict, session: dict | None = None) -> str | None:
+        clients = (session or {}).get('clients') or device.get('clients') or {}
+        if isinstance(clients, dict):
+            first_client = next(iter(clients.values()), None)
+            if isinstance(first_client, str):
+                return first_client
+            if isinstance(first_client, dict):
+                return first_client.get('clientName') or first_client.get('name') or first_client.get('clientId')
+        if isinstance(clients, list):
+            first_client = next(iter(clients), None)
+            if isinstance(first_client, str):
+                return first_client
+            if isinstance(first_client, dict):
+                return first_client.get('clientName') or first_client.get('name') or first_client.get('clientId')
+        return device.get('browser')
+
+
+class KeycloakMfaClient(KeycloakSelfServiceClient):
+    """Client for the keycloak-mfa-rest provider."""
+
+    base_url_setting = 'KEYCLOAK_MFA_API_ENDPOINT'
 
     def _provider_request(
         self,
@@ -474,21 +589,3 @@ class KeycloakMfaClient:
             RequestMethods.POST,
             json_data=json_data,
         )
-
-    def logout_other_sessions(self, user_access_token: str) -> bool:
-        """Sign the user out of all sessions except the one this token belongs to.
-
-        Uses Keycloak's built-in Account REST API (realm-scoped, self-service), whose
-        `DELETE account/sessions` preserves the calling session — unlike the admin
-        user-logout, which is logout-all and would evict the current session too (#1005).
-        """
-        response = requests.request(
-            method=RequestMethods.DELETE.value,
-            url=urljoin(settings.KEYCLOAK_REALM_ENDPOINT, 'account/sessions'),
-            headers={
-                'Accept': 'application/json',
-                'Authorization': f'Bearer {user_access_token}',
-            },
-        )
-        response.raise_for_status()
-        return True
