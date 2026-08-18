@@ -14,7 +14,8 @@ export type ServerMessage = {
 
 export enum WAFFLE_FLAG {
   MULTI_FACTOR_AUTHENTICATION = 'multi-factor-authentication',
-  SHOW_CONNECT_NOW = 'show-connect-now'
+  SHOW_CONNECT_NOW = 'show-connect-now',
+  CUSTOM_DOMAINS_REVAMP = 'custom-domains-revamp'
 };
 
 export enum TELEMETRY_EVENTS {
