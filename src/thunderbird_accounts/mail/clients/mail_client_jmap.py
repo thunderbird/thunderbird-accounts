@@ -116,7 +116,7 @@ class BaseJMAP(ABC):
 
     def _debug_dump(self, name: str, data: dict):
         pass
-        #with open(f'd_{name}.json', 'w') as fh:
+        # with open(f'd_{name}.json', 'w') as fh:
         #    fh.write(json.dumps(data, indent=2))
 
     def _query_account_by_principal_id(self, principal_id: str, method_call_id: str = '0') -> Invocation:
