@@ -673,13 +673,8 @@ class ActiveSessionsTestcase(APITestCase):
             'session-id',
         )
 
-    @patch('thunderbird_accounts.authentication.api.sentry_sdk.capture_exception')
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
-    def test_sign_out_session_reports_keycloak_failure_to_sentry(
-        self,
-        mock_account_client: MagicMock,
-        mock_capture_exception: MagicMock,
-    ):
+    def test_sign_out_session_returns_generic_server_error(self, mock_account_client: MagicMock):
         error = RuntimeError('keycloak delete failed')
         mock_account_client.return_value.sign_out_session.side_effect = error
 
@@ -689,5 +684,5 @@ class ActiveSessionsTestcase(APITestCase):
             format='json',
         )
 
-        self.assertEqual(response.status_code, 400)
-        mock_capture_exception.assert_called_once_with(error)
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json(), {'detail': 'Internal server error'})
