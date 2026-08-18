@@ -74,7 +74,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <details-summary :title="t('views.mail.views.securitySettings.accountActivity')" :expandable="false" default-open>
+  <details-summary
+    id="current-sign-ins"
+    :title="t('views.mail.views.securitySettings.accountActivity')"
+    :expandable="false"
+    default-open
+  >
     <template #icon>
       <ph-devices size="24" />
     </template>

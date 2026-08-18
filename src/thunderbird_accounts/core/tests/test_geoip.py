@@ -60,6 +60,16 @@ class GeoIPLookupTestCase(TestCase):
         )
 
     @patch('thunderbird_accounts.core.geoip.lookup_ip_location')
+    def test_enrich_sessions_with_geoip_skips_missing_ip(self, mock_lookup_ip_location):
+        sessions = [{'client_id': 'thunderbird-desktop'}]
+
+        self.assertEqual(
+            enrich_sessions_with_geoip(sessions),
+            [{'client_id': 'thunderbird-desktop', 'location': None}],
+        )
+        mock_lookup_ip_location.assert_not_called()
+
+    @patch('thunderbird_accounts.core.geoip.lookup_ip_location')
     def test_enrich_sessions_with_geoip_reuses_lookup_for_matching_ips(self, mock_lookup_ip_location):
         mock_lookup_ip_location.return_value = {'city': 'Mountain View'}
         sessions = [

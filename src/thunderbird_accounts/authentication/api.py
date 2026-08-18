@@ -125,6 +125,21 @@ def get_active_sessions(request: Request):
 
 
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication])
+def get_connected_apps(request: Request):
+    if not request.user.is_authenticated:
+        raise NotAuthenticated()
+
+    user_access_token = get_user_access_token(request)
+    if not user_access_token:
+        raise NotAuthenticated('OIDC session has expired')
+
+    keycloak_client = KeycloakAccountClient()
+    connected_apps = keycloak_client.get_connected_apps(user_access_token)
+    return Response(enrich_sessions_with_geoip(connected_apps))
+
+
+@api_view(['GET'])
 @authentication_classes([OIDCAuthentication])
 @permission_classes([IsAuthenticated])
 def get_waffle_flags(request: Request):
@@ -413,4 +428,23 @@ def sign_out_session(request: Request):
             # If so, delete current session data and cookie from Django as well.
             request.session.flush()
 
+    return Response({'success': True})
+
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+def revoke_connected_app(request: Request):
+    if not request.user.is_authenticated:
+        raise NotAuthenticated()
+
+    client_id = request.data.get('client_id')
+    if not client_id:
+        raise ValidationError('client_id is required')
+
+    user_access_token = get_user_access_token(request)
+    if not user_access_token:
+        raise NotAuthenticated('OIDC session has expired')
+
+    keycloak_client = KeycloakAccountClient()
+    keycloak_client.revoke_connected_app(user_access_token, client_id)
     return Response({'success': True})
