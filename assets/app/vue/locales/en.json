@@ -114,6 +114,8 @@
               "connectTitle": "Connect Thunderbird Desktop",
               "connectDescription": "Add Thundermail to Thunderbird Desktop automatically.",
               "connectButton": "Connect now",
+              "connectButtonTooltip": "Thunderbird Desktop did not open? Please {downloadLink} and click 'Connect now' again.",
+              "connectButtonTooltipDownloadLink": "download and install the app",
               "downloadTitle": "Download Thunderbird Desktop",
               "downloadDescription": "We recommend using the desktop application for the best experience.",
               "downloadButton": "Download",
