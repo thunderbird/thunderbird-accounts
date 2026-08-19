@@ -37,6 +37,23 @@ class MockJMapClient(JMAPClient):
         raise NotImplementedError('Monkeypatch me!')
 
 
+def build_admin_client() -> MailClientAdminJMAP:
+    """Build a MailClientAdminJMAP that never touches the network.
+
+    ``MailClientAdminJMAP.__init__`` builds a real ``JMAPClient`` and eagerly fetches the session
+    resource over HTTP, so patch ``_get_user_client`` for the duration of construction to hand back
+    a ``MockJMapClient`` (which reads the session from a fixture) instead.
+    """
+
+    def _mock_user_client(self, *args, **kwargs) -> MockJMapClient:
+        client = MockJMapClient('http://stalwart.local', 'admin', 'admin')
+        client.get_session()
+        return client
+
+    with patch.object(MailClientAdminJMAP, '_get_user_client', _mock_user_client):
+        return MailClientAdminJMAP()
+
+
 @override_settings(
     STALWART_BASE_API_URL='http://stalwart.test',
     STALWART_API_AUTH_STRING='secret',
@@ -48,16 +65,15 @@ class MockJMapClient(JMAPClient):
 )
 class TestCheckDomainDNS(TestMailClientCheckDomainDNS):
     def setUp(self):
-        self.mail_client = MailClientAdminJMAP()
+        self.mail_client = build_admin_client()
         self.domain = 'example.com'
         self.expected_host = 'mail.test.com'
 
 
 class TestCreateDkim(SimpleTestCase):
     def setUp(self):
-        self.mail_client = MailClientAdminJMAP()
+        self.mail_client = build_admin_client()
         self.mail_client.preflight_check = MagicMock()
-        self.mail_client.client = MockJMapClient('http://stalwart.local', 'admin', 'admin')
         self.domain = 'example.com'
         self.expected_host = 'mail.test.com'
 
