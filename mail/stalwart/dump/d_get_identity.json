@@ -1,0 +1,37 @@
+{
+  "accountId": "c",
+  "state": "sba",
+  "list": [
+    {
+      "id": "g",
+      "name": "my name",
+      "email": "coffee@pizza.lol",
+      "replyTo": null,
+      "bcc": null,
+      "textSignature": "",
+      "htmlSignature": "",
+      "mayDelete": true
+    },
+    {
+      "id": "h",
+      "name": "my name",
+      "email": "pizza@pizza.lol",
+      "replyTo": null,
+      "bcc": null,
+      "textSignature": "",
+      "htmlSignature": "",
+      "mayDelete": true
+    },
+    {
+      "id": "i",
+      "name": "my name",
+      "email": "test@example.com",
+      "replyTo": null,
+      "bcc": null,
+      "textSignature": "",
+      "htmlSignature": "",
+      "mayDelete": true
+    }
+  ],
+  "notFound": []
+}

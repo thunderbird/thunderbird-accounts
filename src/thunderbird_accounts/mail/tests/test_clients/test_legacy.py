@@ -3,7 +3,9 @@ import requests
 import dns.resolver as dns_resolver
 from unittest.mock import MagicMock, patch
 from django.test import SimpleTestCase, override_settings, TestCase
-from thunderbird_accounts.mail.clients import DkimSignatureStage, MailClient, DomainVerificationErrors
+from thunderbird_accounts.mail.clients import DomainVerificationErrors
+from thunderbird_accounts.mail.clients.mail_client_legacy import MailClientLegacy as MailClient
+from thunderbird_accounts.mail.clients.mail_client_interface import DkimSignatureStage
 from thunderbird_accounts.mail.exceptions import FailedToCreateDKIM, FailedToReloadStalwart, StalwartError
 
 

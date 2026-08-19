@@ -1,0 +1,149 @@
+import enum
+from typing import Optional, Annotated
+
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator, AliasChoices
+from pydantic.alias_generators import to_camel
+
+
+class BaseSchema(BaseModel):
+    """A base schema that allows us to ingest camelCase names to snake_case variables.
+    This will serialize it back to camelCase for requests as well."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        serialize_by_alias=True,
+        populate_by_name=True,
+        from_attributes=True,
+        extra='allow',  # Allow extra items not declared in the model
+    )
+
+    def get(self, key: object, default: None = None, /):
+        """TODO: Remove me once we've integrated v0.16 api calls into the app"""
+        fields = self.model_dump()
+        return fields.get(key, default)
+
+
+class ResponseIndex(enum.Enum):
+    NAME = 0
+    DATA = 1
+    CALL_IDS = 2
+
+
+class Invocation(BaseSchema):
+    """The shape for a jmap request.
+
+    The ``name`` is the request you'd like to make (e.g. ``x:Domains/get`` to do a get request for Stalwart domains.)
+    ``arguments`` is the request data, and ``method_call_id`` is an id that can be used to
+    reference this request in batched queries.
+
+    Ref: https://jmap.io/spec/rfc8620/#section-3.2"""
+
+    name: str
+    arguments: dict
+    method_call_id: str
+
+    @model_validator(mode='before')
+    @classmethod
+    def transform_tuple(cls, data):
+        """Since we serialize this model as a list, we need to a way to reverse this serialization."""
+        if isinstance(data, list):
+            data = {'name': data[0], 'arguments': data[1], 'method_call_id': data[2]}
+        return data
+
+    @model_serializer(mode='plain')
+    def serialize_model(self) -> list:
+        """JMAP spec wants this data as a tuple (well list in our case.)"""
+        return [self.name, self.arguments, self.method_call_id]
+
+
+class JMapRequest(BaseSchema):
+    using: list[str]
+    method_calls: list[Invocation]
+    created_ids: Optional[list[str]] = Field(default=None)
+
+
+class JMapResponse(BaseSchema):
+    method_responses: list[Invocation] = Field()
+    created_ids: Optional[list[str]] = Field(default=None)
+    session_state: str = Field()
+
+
+class JMapCorePropertyCapability(BaseSchema):
+    max_size_upload: Optional[int] = None
+    max_concurrent_upload: Optional[int] = None
+    max_size_request: Optional[int] = None
+    max_concurrent_requests: Optional[int] = None
+    max_calls_in_request: Optional[int] = None
+    max_objects_in_get: Optional[int] = None
+    max_objects_in_set: Optional[int] = None
+    collation_algorithms: Optional[list[str]] = None
+
+
+class JMapSievePropertyCapability(BaseSchema):
+    implementation: Optional[str] = None
+
+
+class JMapWebsocketPropertyCapability(BaseSchema):
+    url: Optional[str] = None
+    supports_push: Optional[bool] = None
+
+
+class Account(BaseSchema):
+    name: str
+    is_personal: bool
+    is_read_only: bool
+    account_capabilities: dict
+
+
+class Capabilities(BaseSchema):
+    """Typed capabilities"""
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+    urn_ietf_params_jmap_core: JMapCorePropertyCapability = Field(
+        validation_alias=AliasChoices('urn:ietf:params:jmap:core', 'urn_ietf_params_jmap_core'),
+        serialization_alias='urn:ietf:params:jmap:core',
+    )
+    urn_ietf_params_jmap_sieve: JMapSievePropertyCapability = Field(
+        validation_alias=AliasChoices('urn:ietf:params:jmap:sieve', 'urn_ietf_params_jmap_sieve'),
+        serialization_alias='urn:ietf:params:jmap:sieve',
+    )
+    urn_ietf_params_jmap_websocket: JMapWebsocketPropertyCapability = Field(
+        validation_alias=AliasChoices('urn:ietf:params:jmap:websocket', 'urn_ietf_params_jmap_websocket'),
+        serialization_alias='urn:ietf:params:jmap:websocket',
+    )
+
+
+class SessionResource(BaseSchema):
+    capabilities: Capabilities  #: dict | dict[Literal['urn:ietf:params:jmap:core'], JMapCorePropertyCapability]
+    accounts: dict[str, Account]
+    primary_accounts: dict[str, str]
+    username: str
+    api_url: str
+    download_url: str
+    upload_url: str
+    event_source_url: str
+    state: str
+
+
+Id = Annotated[str, Field()]
+"""A JMap ID field
+Ref: https://jmap.io/spec/rfc8620/#section-1.2"""
+
+
+class JMapType(BaseSchema):
+    """Base type for all jmap responses"""
+
+    id: Optional[Id] = Field(default=None)
+
+
+class Identity(JMapType):
+    name: str
+    email: str
+    reply_to: Optional[list] = None
+    bcc: Optional[list] = None
+    text_signature: str
+    htmlSignature: str
+    mayDelete: bool

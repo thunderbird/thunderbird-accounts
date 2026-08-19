@@ -1,3 +1,4 @@
+from django.http import HttpRequest
 from enum import StrEnum
 from django.contrib.sessions.backends.base import SessionBase
 from django.http.request import HttpRequest as DjangoHttpRequest
@@ -20,3 +21,7 @@ class TaskReturnStatus(StrEnum):
 
     FAILED = 'failed'
     SUCCESS = 'success'
+
+
+class AuthenticatedHttpRequest(HttpRequest):
+    user: User

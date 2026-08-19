@@ -1,3 +1,4 @@
+from pydantic import ValidationError
 from typing import Optional
 
 
@@ -15,6 +16,18 @@ class StalwartError(RuntimeError):
 
     def __str__(self):
         return f'StalwartError: {self.details}'
+
+
+class JMapError(RuntimeError):
+    type: str
+    description: Optional[str] = None
+    fields: Optional[list] = None
+
+    def __init__(self, type, description, fields, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.type = type
+        self.description = description
+        self.fields = fields
 
 
 class DomainNotFoundError(StalwartError):
@@ -41,6 +54,27 @@ class AccountNotFoundError(StalwartError):
 
     def __str__(self):
         return f'AccountNotFoundError: {self.username}'
+
+
+class AccountSetError(JMapError):
+    """Raise when an individual is not found in Stalwart"""
+
+    def __str__(self):
+        return f'AccountSetError: {self.type} : {self.description or self.fields}'
+
+
+class AppPasswordSetError(JMapError):
+    """Raise when an app password is not found in Stalwart"""
+
+    def __str__(self):
+        return f'AppPasswordSetError: {self.type} : {self.description or self.fields}'
+
+
+class DomainSetError(JMapError):
+    """Raise when an domain is not found in Stalwart"""
+
+    def __str__(self):
+        return f'DomainSetError: {self.type} : {self.description or self.fields}'
 
 
 class AccessTokenNotFound(StalwartError):
@@ -145,3 +179,12 @@ class EmailNotValidError(RuntimeError):
 
     def __str__(self):
         return f'EmailNotValidError: {self.email}, {self.error_message}'
+
+
+class InvalidJMapResponseError(RuntimeError):
+    """This is a generic pydantic response error. You should not get this, if you do there's a developer problem."""
+
+    validation_error: ValidationError
+
+    def __init__(self, validation_error):
+        self.validation_error = validation_error
