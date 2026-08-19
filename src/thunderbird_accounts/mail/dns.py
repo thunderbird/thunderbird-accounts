@@ -7,7 +7,7 @@ import dns.resolver as dns_resolver
 from django.conf import settings
 
 from thunderbird_accounts.mail.autodiscover_probe import exchange_autodiscover_endpoint_exists
-from thunderbird_accounts.mail.clients import DNSRecordStatus, StaleDNSRecordCode
+from thunderbird_accounts.mail.clients.mail_client_interface import DNSRecordStatus, StaleDNSRecordCode
 
 TXT_TAG_SPEC_RE = re.compile(
     r'[ \t]*(?P<tag>[A-Za-z][A-Za-z0-9_]*)[ \t]*=[ \t]*'

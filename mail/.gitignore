@@ -1,3 +1,4 @@
-etc/config.toml
-data/*
-logs/*
+stalwart_legacy/data/*
+stalwart_legacy/logs/*
+stalwart/lib/main.db
+stalwart/etc/config.json

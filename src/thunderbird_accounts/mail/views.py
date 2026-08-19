@@ -1,3 +1,4 @@
+from thunderbird_accounts.core.types import AuthenticatedHttpRequest
 import datetime
 import json
 import logging
@@ -43,6 +44,7 @@ from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail import tasks as mail_tasks
 from thunderbird_accounts.mail import utils
 from thunderbird_accounts.subscription.decorators import active_subscription_required
+from thunderbird_accounts.mail.types import stalwart
 
 
 def _critical_errors_from_stale_dns_records(stale_dns_records: list[dict]) -> list[DomainVerificationErrors]:
@@ -140,7 +142,7 @@ def display_name_set(request: HttpRequest):
 @login_required
 @require_http_methods(['POST'])
 @active_subscription_required
-def create_custom_domain(request: HttpRequest):
+def create_custom_domain(request: AuthenticatedHttpRequest):
     """Creates a custom domain for the user"""
     data = json.loads(request.body)
     domain_name = data.get('domain-name')
@@ -168,6 +170,15 @@ def create_custom_domain(request: HttpRequest):
                 raise DomainAlreadyExistsError(domain_name)
         except DomainNotFoundError:
             pass
+
+        if request.user.is_migrated:
+            try:
+                # We need to create a disabled domain
+                stalwart_client.create_domain(domain_name, is_enabled=False)
+            except DomainAlreadyExistsError as ex:
+                raise ex
+
+        # FIXME: There may need to be clean up done if create_dkim raises an error.
 
         # If request fails the dkim will hit our general exception catch
         # we want this to happen before the local reference (Domain model) is created
@@ -266,7 +277,7 @@ def _domain_verification_error(domain, exc) -> JsonResponse:
 @login_required
 @require_http_methods(['POST'])
 @active_subscription_required
-def verify_custom_domain(request: HttpRequest):
+def verify_custom_domain(request: AuthenticatedHttpRequest):
     """Verifies a custom domain"""
     data = json.loads(request.body)
     domain_name = data.get('domain-name')
@@ -328,6 +339,9 @@ def verify_custom_domain(request: HttpRequest):
                 # Fetch or create a domain on Stalwart's end, and retrieve the domain_id
                 if stalwart_resp:
                     domain_id = stalwart_resp.get('id')
+                    # Now we need to enable the domain if it's not already enabled.
+                    if request.user.is_migrated and not stalwart_resp.is_enabled:
+                        stalwart_client.update_domain(domain_name, stalwart.DomainUpdate(is_enabled=True))
                 else:
                     domain_id = stalwart_client.create_domain(domain_name)
 
@@ -369,7 +383,7 @@ def verify_custom_domain(request: HttpRequest):
 @login_required
 @require_http_methods(['DELETE'])
 @active_subscription_required
-def remove_custom_domain(request: HttpRequest):
+def remove_custom_domain(request: AuthenticatedHttpRequest):
     """Removes a custom domain"""
     data = json.loads(request.body)
     domain_name = data.get('domain-name')
@@ -421,11 +435,12 @@ def remove_custom_domain(request: HttpRequest):
                     # so try deleting dkim and then local ref
                     _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
 
-            cleanup_phase = 'delete_dkim'
-            stalwart_client.delete_dkim(_domain.name)
+            if not request.user.is_migrated:
+                cleanup_phase = 'delete_dkim'
+                stalwart_client.delete_dkim(_domain.name)
 
-            cleanup_phase = 'delete_hosted_dkim_dns_records'
-            mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
+                cleanup_phase = 'delete_hosted_dkim_dns_records'
+                mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
             break
 
         cleanup_phase = 'delete_local_domain'

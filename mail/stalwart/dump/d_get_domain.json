@@ -1,0 +1,41 @@
+{
+  "accountId": "d333333",
+  "list": [
+    {
+      "name": "example.org",
+      "aliases": {},
+      "isEnabled": true,
+      "createdAt": "2026-07-08T20:45:29Z",
+      "description": null,
+      "logo": null,
+      "certificateManagement": {
+        "@type": "Manual"
+      },
+      "dkimManagement": {
+        "algorithms": {
+          "Dkim1Ed25519Sha256": true,
+          "Dkim1RsaSha256": true
+        },
+        "selectorTemplate": "v{version}-{algorithm}-{date-%Y%m%d}",
+        "rotateAfter": 7776000000,
+        "retireAfter": 604800000,
+        "deleteAfter": 2592000000,
+        "@type": "Automatic"
+      },
+      "dnsManagement": {
+        "@type": "Manual"
+      },
+      "memberTenantId": null,
+      "directoryId": null,
+      "catchAllAddress": null,
+      "subAddressing": {
+        "@type": "Enabled"
+      },
+      "allowRelaying": false,
+      "reportAddressUri": "mailto:postmaster",
+      "dnsZoneFile": "v1-ed25519-20260708._domainkey.example.org. IN TXT \"v=DKIM1; k=ed25519; h=sha256; p=9+cu/yPmUtLxeB+9t05gdsb7QyP30XTIG4psBzXoeo8=\"\nv1-rsa-20260708._domainkey.example.org. IN TXT (\n    \"v=DKIM1; k=rsa; h=sha256; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt1On6haD6FjwRawZU7Zxxp5y/NZ+9DqlG6kxZOBWQtSa6u52AL/Upw/pj8QvzN9IOwRumtSIKYUaPH7Pfn/p3XFBqZ60MzII07nElKTgs0VK3RjLkHC1CTyilCMyz06fsEzHCP5bODw2uMvwGcZ0zOehtj6F+2iq/uBvsHGFSS6Ndxc3B0f0rmR\"\n    \"mL9+Gjo5TwvUig10wX1WNSW71SCL27oZHwd0X7I5qNyZ7y26a9W8qyJJsflTuyh5zu6h+fdExkcEQwpFvRb6DOPjyfZ4aGo+zePKcNg50A11Iqp3QSn+I7/qAZdKuNHkweX1zx1iDUKtG/GSpD3sw2PbW4OstlQIDAQAB\"\n)\ntm2._domainkey.example.org. IN TXT \"v=DKIM1; k=ed25519; h=sha256; p=fnu0gYq8NVK9Uy9CHwcBewpPc/6mas3orb7Im07C+w4=\"\ntm1._domainkey.example.org. IN TXT (\n    \"v=DKIM1; k=rsa; h=sha256; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5UJ0gv1W1WPGPSY068enHd8SeZHl3cbS1ytL+SqpX99PrxvX0eYI/Vev2GaiPXjHUwxyR4+GH3wdrZbniMkrp+xCkA9XyDpMCtMWyJMdmV+z4v07Mg4ZZes5RHoyeQHB/MXwNFUmRWsJza/MbeY4Uo+BDNEx7twfPQghinp5BZxBx3Cib5WB3nP\"\n    \"beLjpho0hXJlMcfmvbA5j4Fy1dJnYVpkcoRmihswlhAYUmuFzWJDQuFjyIRNqy1pOV8MOy3OJbtqP8PjVzLZSdU2KrlKJulHB+tTeUNG1K6b7FTRj/PkrUTCfhXqJFil4tMKZiqUqlrzwsgj+EFBsIej+9/2c1wIDAQAB\"\n)\nexample.org. IN TXT \"v=spf1 mx -all\"\nexample.org. IN MX 10 localhost.\n_dmarc.example.org. IN TXT \"v=DMARC1; p=reject; rua=mailto:postmaster@example.org\"\n_caldavs._tcp.example.org. IN SRV 0 1 443 localhost.\n_carddavs._tcp.example.org. IN SRV 0 1 443 localhost.\n_imaps._tcp.example.org. IN SRV 0 1 993 localhost.\n_jmap._tcp.example.org. IN SRV 0 1 443 localhost.\n_pop3s._tcp.example.org. IN SRV 0 1 995 localhost.\n_submissions._tcp.example.org. IN SRV 0 1 465 localhost.\nmta-sts.example.org. IN CNAME localhost.\n_mta-sts.example.org. IN TXT \"v=STSv1; id=4232045293755012620\"\n_smtp._tls.example.org. IN TXT \"v=TLSRPTv1; rua=mailto:postmaster@example.org\"\nua-auto-config.example.org. IN CNAME localhost.\n_ua-auto-config.example.org. IN TXT \"v=UAAC1; a=sha256; d=9ad8mF0wDsgAuHkuMnc9a6rE+4GEMMPsIWzP2rty3L4=\"\nautoconfig.example.org. IN CNAME localhost.\nautodiscover.example.org. IN CNAME localhost.\n",
+      "id": "b"
+    }
+  ],
+  "notFound": []
+}
