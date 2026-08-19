@@ -1,5 +1,6 @@
 {
   "navigationLinks": {
+    "dashboard": "Dashboard",
     "manageMfa": "Manage MFA",
     "privacyAndData": "Privacy & Data",
     "manageEmails": "Manage Emails",
