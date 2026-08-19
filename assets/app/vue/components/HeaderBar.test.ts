@@ -11,6 +11,7 @@ type PageOverrides = Partial<Window['_page']>;
 const mountHeaderBar = async (pageOverrides: PageOverrides = {}, activeFlags: WAFFLE_FLAG[] = []) => {
   window._page = {
     isAuthenticated: true,
+    userDisplayName: 'Test User',
     needsTosAcceptance: false,
     isAwaitingPaymentVerification: false,
     hasActiveSubscription: true,
