@@ -3,7 +3,6 @@ import time
 from dataclasses import dataclass
 from urllib.parse import urlencode, urlparse
 
-import jwt
 import sentry_sdk
 from django.conf import settings
 from django.core.cache import cache
@@ -26,7 +25,7 @@ from thunderbird_accounts.authentication.mfa import (
     has_recent_mfa_management_auth,
     make_pending_totp_cache_key,
 )
-from thunderbird_accounts.authentication.middleware import OIDC_ACCESS_TOKEN_KEY, refresh_user_access_token
+from thunderbird_accounts.authentication.tokens import get_user_access_token
 
 
 class MfaManagementError(Exception):
@@ -128,26 +127,6 @@ class MfaMethodsResult:
                 'credentials': serialize_recovery_codes_credentials(self.recovery_codes_credentials),
             },
         }
-
-
-def _access_token_is_expired(access_token: str) -> bool:
-    """True only when the token's exp can be read and has passed (minus a small skew).
-    Unreadable tokens are treated as not-expired so we forward them unchanged."""
-    try:
-        claims = jwt.decode(access_token, options={'verify_signature': False})
-        exp = int(claims['exp'])
-    except (jwt.PyJWTError, KeyError, ValueError, TypeError):
-        return False
-    return time.time() >= exp - settings.MFA_ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS
-
-
-def get_user_access_token(request: Request) -> str | None:
-    """Return the end user's OIDC access token for the self-service MFA provider."""
-    # Only local expiry is checked here; Keycloak-side revocation surfaces later as a provider 401.
-    access_token = request.session.get(OIDC_ACCESS_TOKEN_KEY)
-    if access_token and not _access_token_is_expired(access_token):
-        return access_token
-    return refresh_user_access_token(request) or access_token
 
 
 def mfa_session_expired_response() -> Response:
