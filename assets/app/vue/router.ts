@@ -10,7 +10,7 @@ import TosPrivacyView from '@/views/TosPrivacyView/index.vue';
 // Thundermail Routes
 import MailView from '@/views/MailView/index.vue';
 import SecuritySettingsView from '@/views/MailView/views/SecuritySettingsView/index.vue';
-import CustomDomainsView from '@/views/CustomDomainsView.vue';
+import CustomDomainsView from '@/views/CustomDomainsView/index.vue';
 
 // Zendesk Contact Form (Support)
 import ContactView from '@/views/ContactView/index.vue';
