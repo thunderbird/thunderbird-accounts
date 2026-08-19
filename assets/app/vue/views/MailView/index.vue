@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTour, FTUE_STEPS } from '@/composables/useTour';
 import TourCard from '@/components/TourCard.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
+import { WAFFLE_FLAG } from '@/types';
+import { isWaffleFlagActive } from '@/utils';
 
 import WelcomeHeader from './sections/DashboardSection/components/WelcomeHeader.vue';
 import GetStartedWithThundermail from './sections/DashboardSection/components/GetStartedWithThundermail.vue';
@@ -17,6 +19,8 @@ const { t } = useI18n();
 const tour = useTour();
 const isGetStartedPinned = ref(true);
 const webmailUrl = window._page?.webmailUrl;
+
+const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
 </script>
 
 <script lang="ts">
@@ -43,7 +47,7 @@ export default {
     </section>
 
     <email-settings-section />
-    <custom-domains-section />
+    <custom-domains-section v-if="!isCustomDomainsRevampActive" />
 
     <div id="get-started-unpinned-slot" class="teleport-target" />
 
