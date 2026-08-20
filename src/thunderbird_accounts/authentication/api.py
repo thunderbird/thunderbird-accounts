@@ -118,14 +118,25 @@ def get_active_sessions(request: Request):
     if not user_access_token:
         raise NotAuthenticated('OIDC session has expired')
 
-    try:
-        keycloak_client = KeycloakAccountClient()
-        sessions = keycloak_client.get_active_sessions(user_access_token)
-        sessions = mark_current_session(request, sessions)
-        return Response(enrich_sessions_with_geoip(sessions))
-    except Exception as e:
-        logging.exception(f'Error fetching active sessions: {e}')
-        raise ValidationError('Error fetching active sessions')
+    keycloak_client = KeycloakAccountClient()
+    sessions = keycloak_client.get_active_sessions(user_access_token)
+    sessions = mark_current_session(request, sessions)
+    return Response(enrich_sessions_with_geoip(sessions))
+
+
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication])
+def get_connected_apps(request: Request):
+    if not request.user.is_authenticated:
+        raise NotAuthenticated()
+
+    user_access_token = get_user_access_token(request)
+    if not user_access_token:
+        raise NotAuthenticated('OIDC session has expired')
+
+    keycloak_client = KeycloakAccountClient()
+    connected_apps = keycloak_client.get_connected_apps(user_access_token)
+    return Response(enrich_sessions_with_geoip(connected_apps))
 
 
 @api_view(['GET'])
@@ -402,25 +413,38 @@ def sign_out_session(request: Request):
     if not user_access_token:
         raise NotAuthenticated('OIDC session has expired')
 
-    try:
-        # Sign out from the Keycloak session
-        keycloak_client = KeycloakAccountClient()
-        keycloak_client.sign_out_session(user_access_token, session_id)
+    # Sign out from the Keycloak session
+    keycloak_client = KeycloakAccountClient()
+    keycloak_client.sign_out_session(user_access_token, session_id)
 
-        oidc_id_token = request.session.get('oidc_id_token')
-        if oidc_id_token:
-            # Verify if the request's keycloak session_id matches the one in the ID token.
-            auth_backend = AccountsOIDCBackend()
-            payload = auth_backend.verify_token(oidc_id_token)
-            keycloak_session_id = payload.get('sid')
+    oidc_id_token = request.session.get('oidc_id_token')
+    if oidc_id_token:
+        # Verify if the request's keycloak session_id matches the one in the ID token.
+        auth_backend = AccountsOIDCBackend()
+        payload = auth_backend.verify_token(oidc_id_token)
+        keycloak_session_id = payload.get('sid')
 
-            if keycloak_session_id == session_id:
-                # If so, delete current session data and cookie from Django as well.
-                request.session.flush()
+        if keycloak_session_id == session_id:
+            # If so, delete current session data and cookie from Django as well.
+            request.session.flush()
 
-        return Response({'success': True})
+    return Response({'success': True})
 
-    except Exception as e:
-        logging.exception(f'Error signing out session: {e}')
-        sentry_sdk.capture_exception(e)
-        raise ValidationError('Error signing out session')
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+def revoke_connected_app(request: Request):
+    if not request.user.is_authenticated:
+        raise NotAuthenticated()
+
+    client_id = request.data.get('client_id')
+    if not client_id:
+        raise ValidationError('client_id is required')
+
+    user_access_token = get_user_access_token(request)
+    if not user_access_token:
+        raise NotAuthenticated('OIDC session has expired')
+
+    keycloak_client = KeycloakAccountClient()
+    keycloak_client.revoke_connected_app(user_access_token, client_id)
+    return Response({'success': True})
