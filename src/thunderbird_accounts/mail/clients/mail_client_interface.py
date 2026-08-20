@@ -45,6 +45,9 @@ class MailClientInterface:
     def get_telemetry(self):
         raise NotImplementedError()
 
+    def list_principals(self) -> list[dict]:
+        raise NotImplementedError()
+
     def get_domain(self, domain):
         raise NotImplementedError()
 

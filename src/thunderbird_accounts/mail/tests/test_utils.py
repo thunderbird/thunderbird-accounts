@@ -1,8 +1,64 @@
-from django.test import TestCase
+from unittest.mock import MagicMock, patch
+
+from django.test import TestCase, override_settings
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
-from thunderbird_accounts.mail.utils import validate_email
+from thunderbird_accounts.mail.models import Account
+from thunderbird_accounts.mail.types.jmap import Invocation, JMapResponse
+from thunderbird_accounts.mail.utils import fix_archives_folder, validate_email
+
+
+class FixArchivesFolderClientSelectionTestCase(TestCase):
+    @override_settings(
+        STALWART_ADMIN_API_USE_JMAP=True,
+        STALWART_BASE_JMAP_URL='http://stalwart_legacy:8081',
+        STALWART_JMAP_API_URL='http://stalwart_new:8080',
+    )
+    @patch('thunderbird_accounts.mail.tiny_jmap_client.TinyJMAPClient')
+    @patch('thunderbird_accounts.mail.clients.mail_client_jmap.JMAPClient')
+    def test_jmap_flag_uses_v016_user_endpoint(self, jmap_client_mock: MagicMock, tiny_jmap_client_mock: MagicMock):
+        account = MagicMock(spec=Account)
+        account.name = 'user@example.org'
+        access_token = 'oidc-access-token'
+
+        legacy_client = tiny_jmap_client_mock.return_value
+        legacy_client.get_account_id.return_value = 'legacy-account'
+        legacy_client.make_jmap_call.side_effect = [
+            {'methodResponses': [['Mailbox/query', {'ids': []}, '0']]},
+            {'methodResponses': [['Mailbox/set', {'created': {'temp-id': {'id': 'archive-id'}}}, '0']]},
+        ]
+
+        user_client = jmap_client_mock.return_value
+        user_client.get_account_id.return_value = 'user-account'
+        query_response = JMapResponse(
+            method_responses=[Invocation(name='Mailbox/query', arguments={'ids': []}, method_call_id='0')],
+            session_state='state-1',
+        )
+        set_response = JMapResponse(
+            method_responses=[
+                Invocation(
+                    name='Mailbox/set',
+                    arguments={'created': {'temp-id': {'id': 'archive-id'}}},
+                    method_call_id='0',
+                )
+            ],
+            session_state='state-2',
+        )
+        user_client.request.side_effect = [query_response, set_response]
+
+        with patch('thunderbird_accounts.mail.utils.uuid.uuid4', return_value='temp-id'):
+            self.assertTrue(fix_archives_folder(access_token, account))
+        jmap_client_mock.assert_called_once()
+        self.assertEqual(
+            jmap_client_mock.call_args.args[:3],
+            ('http://stalwart_new:8080', account.name, access_token),
+        )
+        self.assertEqual(
+            [call.args[0].method_calls[0].name for call in user_client.request.call_args_list],
+            ['Mailbox/query', 'Mailbox/set'],
+        )
+        tiny_jmap_client_mock.assert_not_called()
 
 
 class ValidateEmailTestCase(TestCase):

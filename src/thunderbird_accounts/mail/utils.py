@@ -11,7 +11,10 @@ from django.conf import settings
 
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientUserJMAP
 from thunderbird_accounts.mail.models import Account
+from thunderbird_accounts.mail import tiny_jmap_client
+from thunderbird_accounts.mail.types.jmap import JMapRequest
 from thunderbird_accounts.mail import tasks
 
 
@@ -96,28 +99,37 @@ def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
     return True
 
 
+def _make_archive_jmap_call(client, request_data: dict, use_jmap: bool) -> dict:
+    if use_jmap:
+        return client.request(JMapRequest(**request_data)).model_dump()
+    return client.make_jmap_call(request_data)
+
+
 def fix_archives_folder(access_token, account: Account) -> bool:
     """Check if the archive folder exists, if it doesn't create it!
     This fixes a bug with our stalwart instance where it doesn't give us an archives folder...
 
     This function is a little messy, and will hopefully be removed in the future."""
-    from thunderbird_accounts.mail.tiny_jmap_client import TinyJMAPClient
-
     if not access_token:
         return False
 
     inboxes = None
 
     try:
-        client = TinyJMAPClient(
-            hostname=settings.STALWART_BASE_JMAP_URL,
-            username=account.name,
-            token=access_token,
-        )
+        use_jmap = settings.STALWART_ADMIN_API_USE_JMAP
+        if use_jmap:
+            client = MailClientUserJMAP(account.name, access_token).client
+        else:
+            client = tiny_jmap_client.TinyJMAPClient(
+                hostname=settings.STALWART_BASE_JMAP_URL,
+                username=account.name,
+                token=access_token,
+            )
         account_id = client.get_account_id()
 
         # Look up if they have an archives folder
-        inbox_res = client.make_jmap_call(
+        inbox_res = _make_archive_jmap_call(
+            client,
             {
                 'using': ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
                 'methodCalls': [
@@ -130,7 +142,8 @@ def fix_archives_folder(access_token, account: Account) -> bool:
                         '0',
                     ]
                 ],
-            }
+            },
+            use_jmap,
         )
 
         inboxes = inbox_res['methodResponses'][0][1]['ids']
@@ -138,7 +151,8 @@ def fix_archives_folder(access_token, account: Account) -> bool:
             # If they don't create a new inbox with the role 'archive', named 'Archives'
             # (set in settings.STALWART_ARCHIVES_FOLDER_NAME) which is subscribed by default
             temp_id = str(uuid.uuid4())
-            set_res = client.make_jmap_call(
+            set_res = _make_archive_jmap_call(
+                client,
                 {
                     'using': ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
                     'methodCalls': [
@@ -157,7 +171,8 @@ def fix_archives_folder(access_token, account: Account) -> bool:
                             '0',
                         ]
                     ],
-                }
+                },
+                use_jmap,
             )
 
             """

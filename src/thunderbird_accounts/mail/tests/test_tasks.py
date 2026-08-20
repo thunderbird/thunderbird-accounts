@@ -8,7 +8,7 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail import tasks
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError, HostedDkimDeleteRetry, HostedDkimPublishRetry
 from thunderbird_accounts.mail.models import Account, Email
-from thunderbird_accounts.core.tests.utils import build_mail_get_account
+from thunderbird_accounts.core.tests.utils import build_mail_get_account, build_stalwart_account
 
 
 class TaskTestCase(TestCase):
@@ -406,6 +406,38 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             self.assertEqual(username_and_email, task_results.get('username'))
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
             self.assertEqual(mock_stalwart_pkid, task_results.get('stalwart_pkid'))
+
+    @override_settings(USE_MAILCHIMP=False)
+    def test_typed_existing_account_does_not_readd_existing_addresses(self):
+        with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
+            username = f'typed_user@{settings.PRIMARY_EMAIL_DOMAIN}'
+            email_alias = f'typed_user@{settings.ALLOWED_EMAIL_DOMAINS[1]}'
+            oidc_id = 'typed-account'
+            instance_mock = Mock()
+            instance_mock.get_account.return_value = build_stalwart_account(
+                account_id='typed-stalwart-id',
+                email_address=username,
+                aliases={
+                    '0': {
+                        'enabled': True,
+                        'name': 'typed_user',
+                        'domainId': 'alias-domain-id',
+                        'fullAddress': email_alias,
+                    }
+                },
+            )
+            mail_client_mock.return_value = instance_mock
+            User.objects.create(oidc_id=oidc_id, username=username, email=username)
+
+            task_results = tasks.create_stalwart_account.run(
+                oidc_id=oidc_id,
+                username=username,
+                email=username,
+            )
+
+            instance_mock.save_email_addresses.assert_not_called()
+            instance_mock.delete_email_addresses.assert_not_called()
+            self.assertEqual(task_results['stalwart_pkid'], 'typed-stalwart-id')
 
     def test_creating_with_not_primary_domain(self):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:

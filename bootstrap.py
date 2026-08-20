@@ -1,8 +1,6 @@
-from pathlib import Path
 import argparse
-import os
 import shutil
-from shutil import SameFileError
+from pathlib import Path
 
 arg_parse = argparse.ArgumentParser()
 
@@ -20,44 +18,38 @@ arg_parse.add_argument(
 args = arg_parse.parse_args()
 
 
+def copy_template(source, destination, from_scratch):
+    source_path = Path(source)
+    destination_path = Path(destination)
+
+    if from_scratch:
+        destination_path.unlink(missing_ok=True)
+    if destination_path.is_file():
+        return False
+
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(source_path, destination_path)
+    return True
+
+
 def bootstrap_legacy(from_scratch):
-    if not os.path.isfile('.env') or from_scratch:
-        try:
-            shutil.copy('.env.example', '.env')
-            print('\t* Copied .env.example to .env')  # noqa: T201
-        except SameFileError:
-            pass
+    if copy_template('.env.example', '.env', from_scratch):
+        print('\t* Copied .env.example to .env')  # noqa: T201
 
-    if os.path.isdir('mail/stalwart_legacy/data') and from_scratch:
-        shutil.rmtree('mail/stalwart_legacy/data')
-        print('\t* Removed mail/stalwart_legacy/data')  # noqa: T201
+    data_path = Path('mail/stalwart_legacy/data')
+    if data_path.is_dir() and from_scratch:
+        shutil.rmtree(data_path)
+        print(f'\t* Removed {data_path}')  # noqa: T201
 
-    if not os.path.isfile('mail/stalwart_legacy/etc/config.toml') or from_scratch:
-        try:
-            os.makedirs('mail/stalwart_legacy/etc/', exist_ok=True)
-            shutil.copy('config.toml.example', 'mail/stalwart_legacy/etc/config.toml')
-            print('\t* Copied config.toml.example to mail/stalwart_legacy/etc/config.toml')  # noqa: T201
-        except SameFileError:
-            pass
+    config_path = Path('mail/stalwart_legacy/etc/config.toml')
+    if copy_template('config.toml.example', config_path, from_scratch):
+        print(f'\t* Copied config.toml.example to {config_path}')  # noqa: T201
 
 
 def bootstrap_new(from_scratch):
-    # Handle v0.16
-    path = Path('mail/stalwart/lib')
-    if os.path.isdir(path) and from_scratch:
-        os.remove(path / 'main.db')
-        print(f'\t* Removed {path}/main.db')  # noqa: T201
-    if not os.path.isfile(path / 'main.db'):
-        shutil.copy(path / 'main.db.example', path / 'main.db')
-        print(f'\t* Copied {path}/main.db.example to {path}/main.db')  # noqa: T201
-
-    path = Path('mail/stalwart/etc')
-    if os.path.isdir(path) and from_scratch:
-        os.remove(path / 'config.json')
-        print(f'\t* Removed {path}/config.json')  # noqa: T201
-    if not os.path.isfile(path / 'config.json'):
-        shutil.copy(path / 'config.json.example', path / 'config.json')
-        print(f'\t* Copied {path}/config.json.example to {path}/config.json')  # noqa: T201
+    config_path = Path('mail/stalwart/etc/config.json')
+    if copy_template(config_path.with_name('config.json.example'), config_path, from_scratch):
+        print(f'\t* Copied {config_path.with_name("config.json.example")} to {config_path}')  # noqa: T201
 
     print('Finished!')  # noqa: T201
 
