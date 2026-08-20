@@ -89,8 +89,18 @@ class JMAPClient:
             session = SessionResource.model_validate(r.json())
         except ValidationError as ex:
             raise InvalidJMapResponseError(ex) from ex
-        # With STALWART_JMAP_API_IGNORE_API_URL the advertised apiUrl is never used, so there is
-        # nothing to pin: requests go to the configured base_url.
+        return self._accept_session(session)
+
+    def _accept_session(self, session: SessionResource) -> SessionResource:
+        """Validate and store a fetched session.
+
+        Split out of get_session() so the origin check has exactly one home: any test double or
+        future cache that populates a session must come through here, rather than reimplementing
+        the assignment and silently bypassing the pin.
+
+        With STALWART_JMAP_API_IGNORE_API_URL the advertised apiUrl is never used, so there is
+        nothing to pin: requests go to the configured base_url.
+        """
         if settings.STALWART_JMAP_API_IGNORE_API_URL:
             self.api_url = self.base_url
         else:
