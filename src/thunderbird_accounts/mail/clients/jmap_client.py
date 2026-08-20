@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 import requests
 from pydantic import ValidationError
 
-from thunderbird_accounts.mail.exceptions import InvalidJMapResponseError
+from thunderbird_accounts.mail.exceptions import InvalidJMapResponseError, JMapOriginMismatchError
 from thunderbird_accounts.mail.types.jmap import Invocation, JMapRequest, JMapResponse, SessionResource
 
 
@@ -68,7 +68,16 @@ class JMAPClient:
                 'Content-Type': 'application/json',
                 'Authorization': self._authorization_value(),
             },
-            allow_redirects=False,
+            # RFC 8620 2.2 defines the session resource as fetched "following any redirects",
+            # and Stalwart v0.16 ALWAYS 307s /.well-known/jmap -> /jmap/session with an empty
+            # body. With redirects disabled, raise_for_status() is a no-op on 3xx and the empty
+            # body reaches .json(), raising an untyped JSONDecodeError before any of this class's
+            # error handling runs. Redirects stay enabled here; the destination is still pinned,
+            # because the origin check below runs against the resulting session.
+            #
+            # This does NOT relax request(), where allow_redirects=False is correct: a 307/308
+            # replays the POST body (DKIM private keys, app passwords) at the new host.
+            allow_redirects=True,
             verify=self.verify_ssl,
             timeout=self.timeout,
         )
@@ -77,11 +86,18 @@ class JMAPClient:
             session = SessionResource.model_validate(r.json())
         except ValidationError as ex:
             raise InvalidJMapResponseError(ex) from ex
+        return self._accept_session(session)
+
+    def _accept_session(self, session: SessionResource) -> SessionResource:
+        """Validate and store a fetched session.
+
+        Split out of get_session() so the origin check has exactly one home: any test double or
+        future cache that populates a session must come through here, rather than reimplementing
+        the assignment and silently bypassing the pin.
+        """
         if self._origin(session.api_url) != self._origin(self.base_url):
-            raise ValueError('JMAP apiUrl origin does not match configured base URL')
+            raise JMapOriginMismatchError(session.api_url, self.base_url)
         self.session = session
-        if not self.session:
-            raise RuntimeError('Failed to get session')
         self.api_url = session.api_url
         return session
 

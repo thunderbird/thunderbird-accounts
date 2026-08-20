@@ -143,7 +143,9 @@ def _dkim_key_type_and_public_key_value(signature: dict) -> tuple[str, str]:
             try:
                 public_key_obj = serialization.load_der_public_key(public_key_bytes)
             except (ValueError, UnsupportedAlgorithm) as ex:
-                signature_type = signature.get('@type', '')
+                # Pydantic emits the key with a None value when unset, so a bare default is
+                # not enough -- `'Ed25519' in None` is a TypeError, not the intended RuntimeError.
+                signature_type = signature.get('@type') or ''
                 if 'Ed25519' in signature_type and len(public_key_bytes) == 32:
                     public_key_obj = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
                 else:
