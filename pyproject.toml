@@ -39,6 +39,7 @@ dependencies = [
     "cloudflare>=5.2.0",
     # CVE pins
     "idna>=3.15", # CVE-2026-45409 fix
+    "sqlparse>=0.6.0", # CVE fixes
     "django-waffle>=5.0.0",
     "pydantic[email,timezone]>=2.13.4",
 ]
