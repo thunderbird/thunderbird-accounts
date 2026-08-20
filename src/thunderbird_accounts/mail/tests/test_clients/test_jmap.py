@@ -133,3 +133,50 @@ class TestCreateDkim(SimpleTestCase):
 
         self.assertIsNotNone(response_data)
         self.assertEqual(3, requests_mock.call_count)
+
+
+class TestSessionApiUrlOrigin(SimpleTestCase):
+    """The session resource must not be able to relocate the client to another host.
+
+    Stalwart advertises its PUBLIC url as ``apiUrl``. That is frequently not the address this
+    app should use (split-horizon DNS, an internal-only deployment reached by Service DNS), and
+    following it blindly sends the configured admin credential to a host we never configured.
+    """
+
+    def _session(self, api_url: str) -> dict:
+        fixture_path = Path(__file__).parent.parent.joinpath(Path('fixtures') / 'jmap_get_session.json')
+        with open(fixture_path, 'r') as fh:
+            data = json.loads(fh.read())
+        data['apiUrl'] = api_url
+        return data
+
+    @patch('thunderbird_accounts.mail.clients.jmap_client.requests.get')
+    def _api_url_for(self, advertised: str, requests_get: MagicMock) -> str:
+        response = MagicMock()
+        response.json.return_value = self._session(advertised)
+        requests_get.return_value = response
+
+        client = JMAPClient('https://stalwart.internal.example:8443', 'admin', 'secret')
+        client.get_session()
+        return client.api_url
+
+    def test_offhost_api_url_is_not_followed(self):
+        """An advertised url on a DIFFERENT host keeps our configured origin, path preserved."""
+        self.assertEqual(
+            'https://stalwart.internal.example:8443/jmap/',
+            self._api_url_for('https://mail.public.example/jmap/'),
+        )
+
+    def test_nonstandard_path_is_preserved(self):
+        """We take the PATH from the server, so a non-default JMAP path still works."""
+        self.assertEqual(
+            'https://stalwart.internal.example:8443/custom/jmap/api',
+            self._api_url_for('https://mail.public.example/custom/jmap/api'),
+        )
+
+    def test_matching_host_is_unchanged(self):
+        """When the server already advertises our configured host, nothing changes."""
+        self.assertEqual(
+            'https://stalwart.internal.example:8443/jmap/',
+            self._api_url_for('https://stalwart.internal.example:8443/jmap/'),
+        )

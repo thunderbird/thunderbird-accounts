@@ -1,6 +1,7 @@
 import logging
 from base64 import b64encode
 from typing import Literal
+from urllib.parse import urljoin, urlparse
 from thunderbird_accounts.mail.types.jmap import SessionResource, JMapRequest, Invocation, JMapResponse
 import enum
 import json
@@ -57,7 +58,11 @@ class JMAPClient:
             fh.write(json.dumps(session.model_dump(), indent=2))
         if not self.session:
             raise RuntimeError('Failed to get session')
-        self.api_url = session.api_url
+        # Take the PATH from the session but keep the ORIGIN we were configured with, so a
+        # server can never redirect this client (and its credentials) to another host. Stalwart
+        # advertises its public URL here, which is not necessarily the address we should use --
+        # e.g. split-horizon DNS, or an internal-only deployment reached by Service DNS.
+        self.api_url = urljoin(self.base_url, urlparse(session.api_url).path)
         return session
 
     def get_account_id(self) -> str:
