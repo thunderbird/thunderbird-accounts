@@ -708,3 +708,12 @@ CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS = True
 # Allow list entries (and user's created from those entries) with ``is_test_account=True``
 # become stale and are removed in a cron job after this many hours
 TEST_ALLOW_LIST_ENTRIES_STALE_TIME_IN_MINS = 5
+
+# Waffle flag constants
+# These still have to be created on each environment to be True.
+
+# POST OIDC's token introspect route to see if a token is actually active.
+WAFFLE_FLAG_INTROSPECT_TOKEN_PER_REQUEST = 'auth-introspect-token-per-request'
+
+# Allow auth middleware to try and refresh an inactive access token with an active refresh token during non-get requests
+WAFFLE_FLAG_ALLOW_POST_REAUTH = 'auth-allow-post-reauth'
