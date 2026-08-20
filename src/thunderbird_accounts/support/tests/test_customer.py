@@ -9,10 +9,11 @@ from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from thunderbird_accounts.authentication.models import AllowListEntry, User
+from thunderbird_accounts.core.tests.utils import build_stalwart_account
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.subscription.models import Plan, Subscription, Transaction
-from thunderbird_accounts.support.customer import get_customer_support_data, support_customer_api
+from thunderbird_accounts.support.customer import _get_stalwart_data, get_customer_support_data, support_customer_api
 
 SUPPORT_CUSTOMER_VIEW_PERMISSIONS = [
     'authentication.view_user',
@@ -107,6 +108,34 @@ class SupportCustomerLookupTestCase(TestCase):
         payload = get_customer_support_data('pending@example.com', self.create_full_viewer())
 
         self.assertIsNone(payload['subscription'])
+
+    @patch('thunderbird_accounts.support.customer.MailClient')
+    def test_typed_stalwart_account_preserves_quota_and_app_password_state(self, mock_mail_client_cls):
+        mock_mail_client_cls.return_value.get_account.return_value = build_stalwart_account(
+            email_address=f'paid@{settings.PRIMARY_EMAIL_DOMAIN}',
+            quota=12_000,
+            used_quota=3_000,
+            credentials={
+                'desktop-password': {
+                    '@type': 'AppPassword',
+                    'description': 'Desktop',
+                    'secret': '********',
+                    'permissions': {'@type': 'Inherit'},
+                    'allowedIps': {},
+                }
+            },
+        )
+
+        stalwart_data = _get_stalwart_data(f'paid@{settings.PRIMARY_EMAIL_DOMAIN}', True)
+
+        self.assertEqual(
+            stalwart_data,
+            {
+                'used_bytes': 3_000,
+                'limit_bytes': 12_000,
+                'app_password_set': True,
+            },
+        )
 
     @patch('thunderbird_accounts.support.customer.MailClient')
     @override_settings(PADDLE_VENDOR_SITE='https://vendors.paddle.com', PUBLIC_BASE_URL='https://accounts.example.test')

@@ -2,6 +2,7 @@ interface SettingsApiResponse {
   success: boolean;
   message?: string;
   error?: string;
+  app_password?: string;
 }
 
 export const setAppPassword = async (name: string, password: string): Promise<SettingsApiResponse> => {

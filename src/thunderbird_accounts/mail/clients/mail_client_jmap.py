@@ -23,6 +23,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from django.conf import settings
 from dns import rdatatype, zone
 from pydantic import BaseModel, ValidationError
+from redis import Redis
 
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
 from thunderbird_accounts.mail.clients.mail_client_interface import (
@@ -31,6 +32,7 @@ from thunderbird_accounts.mail.clients.mail_client_interface import (
     DNSRecordStatus,
     DomainVerificationErrors,
 )
+from thunderbird_accounts.mail.dkim import dkim_signatures_to_dns_records
 from thunderbird_accounts.mail.dns import enrich_dns_records_with_status
 from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
@@ -188,6 +190,39 @@ class MailClientUserJMAP(BaseJMAP):
             sentry_sdk.capture_exception(ex)
             raise InvalidJMapResponseError(ex) from ex
 
+    def get_app_passwords(self) -> list[AppPassword]:
+        """Return the app passwords owned by the authenticated user."""
+        self.preflight_check()
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name=StalwartMethods.get(StalwartMethods.APP_PASSWORD),
+                        arguments={'accountId': self.account_id},
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+
+        if not response.method_responses:
+            raise RuntimeError('Stalwart JMAP response did not include x:AppPassword/get')
+
+        method_response = response.method_responses[0]
+        if method_response.name == 'error':
+            raise self._handle_jmap_error(method_response.arguments, AppPasswordSetError)
+
+        try:
+            return [AppPassword(**credential) for credential in method_response.arguments.get('list', [])]
+        except ValidationError as ex:
+            logging.warning('[MailClientUserJMAP.get_app_passwords]: Failed pydantic validation!')
+            sentry_sdk.capture_exception(ex)
+            raise InvalidJMapResponseError(ex) from ex
+
     def save_app_password(self, label: str) -> SaveAppPasswordReturn:
         """Create an app password with a given label and return the pkid and secret the server generates."""
         self.preflight_check()
@@ -224,13 +259,19 @@ class MailClientUserJMAP(BaseJMAP):
 
         self._debug_dump('set_app_password', response.method_responses[0].arguments)
 
-        data = response.method_responses[0].arguments.get('created', {}).get(temp_id, {})
+        method_response = response.method_responses[0]
+        error = method_response.arguments.get('notCreated')
+        if error:
+            raise self._handle_jmap_error(error.get(temp_id, {}), AppPasswordSetError)
+
+        data = method_response.arguments.get('created', {}).get(temp_id, {})
 
         return self.SaveAppPasswordReturn(id=data.get('id'), secret=data.get('secret'))
 
-    def delete_app_password(self, app_password_pkid: str):
-        """Removes an app password by the pkid."""
+    def delete_app_password(self, app_password_pkid: str | list[str]):
+        """Remove one or more app passwords by their Stalwart ids."""
         self.preflight_check()
+        app_password_pkids = [app_password_pkid] if isinstance(app_password_pkid, str) else app_password_pkid
 
         response = self.client.request(
             JMapRequest(
@@ -241,7 +282,7 @@ class MailClientUserJMAP(BaseJMAP):
                 method_calls=[
                     Invocation(
                         name=StalwartMethods.destroy(StalwartMethods.APP_PASSWORD),
-                        arguments={'accountId': self.account_id, 'destroy': [app_password_pkid]},
+                        arguments={'accountId': self.account_id, 'destroy': app_password_pkids},
                         method_call_id='0',
                     ),
                 ],
@@ -256,10 +297,33 @@ class MailClientUserJMAP(BaseJMAP):
         if error:
             error_obj = list(error.values())[0]
             raise self._handle_jmap_error(error_obj, AppPasswordSetError)
-        elif len(data) == 0:
-            raise ValueError('Response has no pkid!')
+        if set(data) != set(app_password_pkids):
+            raise ValueError('Response does not include every requested app password id')
 
-        return data[0] == app_password_pkid
+        return True
+
+    def replace_app_password(self, label: str) -> SaveAppPasswordReturn:
+        """Create a replacement and remove existing app passwords with the exact label."""
+        existing_ids = [
+            credential.id
+            for credential in self.get_app_passwords()
+            if credential.id and credential.description == label
+        ]
+        created = self.save_app_password(label)
+
+        if not existing_ids:
+            return created
+
+        try:
+            self.delete_app_password(existing_ids)
+        except Exception:
+            try:
+                self.delete_app_password(created.id)
+            except Exception as cleanup_error:
+                sentry_sdk.capture_exception(cleanup_error)
+            raise
+
+        return created
 
 
 class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
@@ -297,6 +361,18 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         )
         self.account_id = None
         self.primary_domain_id = None
+
+    def get_telemetry(self):
+        """Return the session fetched while establishing the admin connection."""
+        return self.client.get_session()
+
+    def _alias_update_lock(self, principal_id: str):
+        redis_client = Redis.from_url(settings.CACHES['default']['LOCATION'])
+        return redis_client.lock(
+            f'stalwart:alias-update:{principal_id.lower()}',
+            timeout=settings.STALWART_ALIAS_UPDATE_LOCK_TIMEOUT,
+            blocking_timeout=settings.STALWART_ALIAS_UPDATE_LOCK_BLOCKING_TIMEOUT,
+        )
 
     def _get_domain_ids_by_name(self, emails: list[str]) -> dict[str, str]:
         """Return a dictionary keyed by domain name pointing to their domain id."""
@@ -586,7 +662,6 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         return data
 
     def delete_domain(self, domain_name: str) -> None:
-
         # Allow DomainNotFound to raise if the domain is not found
         domain = self.get_domain(domain_name)
         if not domain.id:
@@ -598,6 +673,40 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
     #
     # Account
     #
+
+    def list_principals(self) -> list[dict]:
+        self.preflight_check()
+
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name=StalwartMethods.query(StalwartMethods.ACCOUNT),
+                        arguments={
+                            'accountId': self.account_id,
+                            'limit': 100,
+                            'position': 0,
+                            'calculateTotal': False,
+                        },
+                        method_call_id='0',
+                    ),
+                    Invocation(
+                        name=StalwartMethods.get(StalwartMethods.ACCOUNT),
+                        arguments={
+                            'accountId': self.account_id,
+                            '#ids': {'resultOf': '0', 'name': 'x:Account/query', 'path': '/ids'},
+                        },
+                        method_call_id='1',
+                    ),
+                ],
+            )
+        )
+
+        return response.method_responses[1].arguments.get('list', [])
 
     def get_account(self, principal_id: str) -> stalwart.Account:
         """Retrieve an :any thunderbird_accounts.mail.types.stalwart.Account: from a given
@@ -673,11 +782,12 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
 
         domain_ids_by_domain = self._get_domain_ids_by_name([principal_id, *emails])
 
+        alias_emails = [email for email in emails if email != principal_id]
         aliases = {
             str(idx): stalwart.EmailAlias(
                 enabled=True, name=email.split('@')[0], domain_id=domain_ids_by_domain[email.split('@')[1]]
             )
-            for idx, email in enumerate(emails)
+            for idx, email in enumerate(alias_emails)
         }
         data = stalwart.Account(
             type=stalwart.Account.Types.USER.value,
@@ -832,7 +942,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         self.update_account(principal_id, account)
 
     def update_quota(self, principal_id: str, quota: int) -> None:
-        account = stalwart.AccountUpdate(quotas=stalwart.StorageQuota(max_disk_quota=quota))
+        account = stalwart.AccountUpdate(**{'quotas/maxDiskQuota': quota})
         self.update_account(principal_id, account)
 
     #
@@ -851,25 +961,40 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         if len(emails) == 0:
             return
 
-        # Retrieve a fresh list of our aliases
-        account = self.get_account(principal_id)
+        account_emails = []
+        for email in emails:
+            local_part, domain_name = email.split('@', 1)
+            if local_part:
+                account_emails.append(email)
+            else:
+                self.update_domain(
+                    domain_name,
+                    stalwart.DomainUpdate(catch_all_address=principal_id),
+                )
 
-        domain_ids_by_name = self._get_domain_ids_by_name(emails)
+        if not account_emails:
+            return
 
-        first_id = 0
-        if account.aliases:
-            first_id = int(list(account.aliases.keys())[-1]) + 1
+        with self._alias_update_lock(principal_id):
+            # Retrieve a fresh list of our aliases
+            account = self.get_account(principal_id)
 
-        # We're forming json pointer paths here, in this case `aliases/0: { ... data to update ... }`
-        # if we pass the entire "list" it will simply replace everything.
-        aliases = {
-            f'aliases/{first_id + idx}': stalwart.EmailAlias(
-                name=alias.split('@')[0], domain_id=domain_ids_by_name[alias.split('@')[1]], enabled=True
-            )
-            for idx, alias in enumerate(emails)
-        }
-        account_update = stalwart.AccountUpdate(**aliases)  # ty: ignore[invalid-argument-type]
-        self.update_account(principal_id, account_update)
+            domain_ids_by_name = self._get_domain_ids_by_name(account_emails)
+
+            first_id = 0
+            if account.aliases:
+                first_id = max(map(int, account.aliases.keys())) + 1
+
+            # We're forming json pointer paths here, in this case `aliases/0: { ... data to update ... }`
+            # if we pass the entire "list" it will simply replace everything.
+            aliases = {
+                f'aliases/{first_id + idx}': stalwart.EmailAlias(
+                    name=alias.split('@')[0], domain_id=domain_ids_by_name[alias.split('@')[1]], enabled=True
+                )
+                for idx, alias in enumerate(account_emails)
+            }
+            account_update = stalwart.AccountUpdate(**aliases)  # ty: ignore[invalid-argument-type]
+            self.update_account(principal_id, account_update)
 
     def replace_email_addresses(self, principal_id: str, emails: list[tuple[str, str]]) -> None:
         """Previously we replaced email addresses. That's fine,
@@ -885,28 +1010,43 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         if len(emails) == 0:
             return
 
-        # Retrieve a fresh list of our aliases
-        account = self.get_account(principal_id)
-        domain_ids_by_name = self._get_domain_ids_by_name(emails)
+        account_emails = []
+        for email in emails:
+            local_part, domain_name = email.split('@', 1)
+            if local_part:
+                account_emails.append(email)
+            else:
+                self.update_domain(
+                    domain_name,
+                    stalwart.DomainUpdate(catch_all_address=None),
+                )
 
-        if not account.aliases:
-            return  # EmailNotFound
+        if not account_emails:
+            return
 
-        # Gross double loop to find a match between saved aliases, and aliases to remove / domain_ids
-        ids_to_remove = []
-        for idx, alias in account.aliases.items():
-            for email in emails:
-                local_part, domain_name = email.split('@')
-                domain_id = domain_ids_by_name.get(domain_name)
-                if not domain_id:
-                    continue
-                if alias.name == local_part and alias.domain_id == domain_id:
-                    ids_to_remove.append(idx)
+        with self._alias_update_lock(principal_id):
+            # Retrieve a fresh list of our aliases
+            account = self.get_account(principal_id)
+            domain_ids_by_name = self._get_domain_ids_by_name(account_emails)
 
-        # None out the aliases in question
-        aliases = {f'aliases/{idx}': None for idx in ids_to_remove}
-        account_update = stalwart.AccountUpdate(**aliases)
-        self.update_account(principal_id, account_update)
+            if not account.aliases:
+                return  # EmailNotFound
+
+            # Gross double loop to find a match between saved aliases, and aliases to remove / domain_ids
+            ids_to_remove = []
+            for idx, alias in account.aliases.items():
+                for email in account_emails:
+                    local_part, domain_name = email.split('@')
+                    domain_id = domain_ids_by_name.get(domain_name)
+                    if not domain_id:
+                        continue
+                    if alias.name == local_part and alias.domain_id == domain_id:
+                        ids_to_remove.append(idx)
+
+            # None out the aliases in question
+            aliases = {f'aliases/{idx}': None for idx in ids_to_remove}
+            account_update = stalwart.AccountUpdate(**aliases)
+            self.update_account(principal_id, account_update)
 
     #
     # DKIM
@@ -971,7 +1111,9 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
                 type=dkim_type.value,
                 selector=selector,
                 domain_id=domain_obj.id,
-                stage=stage.value,
+                stage=(
+                    stage.value if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED else DkimSignatureStage.ACTIVE.value
+                ),
                 private_key=stalwart.SecretText(
                     type='Text',
                     secret=private_key.private_bytes(
@@ -1060,11 +1202,14 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             )
         )
 
-        self._debug_dump('get_dkim_signatures', response.method_responses[1].arguments)
+        if not response.method_responses:
+            raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/query')
+        if response.method_responses[0].arguments.get('total') == 0:
+            return []
+        if len(response.method_responses) < 2:
+            raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/get')
 
-        # FIXME: Temp
-        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
-            raise RuntimeError(domain_name)
+        self._debug_dump('get_dkim_signatures', response.method_responses[1].arguments)
 
         dkim_signatures = response.method_responses[1].arguments.get('list', [])
         signatures = [stalwart.DkimSignature(**signature) for signature in dkim_signatures]
@@ -1091,8 +1236,61 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         return self.create_dkim(domain_name, stage=stage, algorithms=missing_algorithms)
 
     def activate_pending_dkim_signatures(self, domain_name: str) -> list[str]:
-        """No-op, work out of scope."""
-        return []
+        if not settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+            return []
+
+        updates = {}
+        for signature in self.get_dkim_signatures(domain_name):
+            if signature.stage != DkimSignatureStage.PENDING.value:
+                continue
+            if not signature.id:
+                raise RuntimeError(f'Pending DKIM signature for {domain_name} did not include an id')
+            updates[signature.id] = {'stage': DkimSignatureStage.ACTIVE.value}
+
+        if not updates:
+            return []
+
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    Invocation(
+                        name=StalwartMethods.set(StalwartMethods.DKIM_SIGNATURE),
+                        arguments={
+                            'accountId': self.account_id,
+                            'update': updates,
+                        },
+                        method_call_id='0',
+                    ),
+                ],
+            )
+        )
+
+        if not response.method_responses:
+            raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/set')
+
+        method_response = response.method_responses[0]
+        if method_response.name == 'error':
+            raise RuntimeError(f'Stalwart JMAP error activating DKIM signatures: {method_response.arguments}')
+        if method_response.name != StalwartMethods.set(StalwartMethods.DKIM_SIGNATURE):
+            raise RuntimeError('Stalwart JMAP response did not include x:DkimSignature/set')
+        if method_response.arguments.get('notUpdated'):
+            raise RuntimeError(
+                f'Stalwart failed to activate DKIM signatures: {method_response.arguments["notUpdated"]}'
+            )
+
+        updated = method_response.arguments.get('updated') or {}
+        return list(updated.keys()) if isinstance(updated, dict) else updated
+
+    def get_dkim_dns_records(self, domain_name: str) -> list[dict[str, str]]:
+        if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
+            signatures = [signature.model_dump(by_alias=True) for signature in self.get_dkim_signatures(domain_name)]
+            return dkim_signatures_to_dns_records(domain_name, signatures)
+
+        return [record.model_dump(exclude_none=True) for record in self._get_dkim_dns_records(domain_name)]
 
     #
     # DNS
