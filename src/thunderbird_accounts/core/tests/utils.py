@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 from requests import Response
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.types import stalwart
 
 
 def oidc_force_login(client: RequestClient | APIClient, user: User, backend=None):
@@ -50,6 +51,30 @@ def build_mail_get_account(return_json: Optional[dict] = None, return_headers: O
     fake_response.headers = return_headers or {}
     fake_response.json = lambda: return_json or default_return
     return fake_response
+
+
+def build_stalwart_account(
+    *,
+    account_id: str = 'account-id',
+    email_address: str = 'user@example.org',
+    aliases: dict[str, stalwart.EmailAlias] | None = None,
+    credentials: dict | None = None,
+    quota: int | None = None,
+    used_quota: int | None = None,
+) -> stalwart.Account:
+    return stalwart.Account(
+        id=account_id,
+        type=stalwart.Account.Types.USER,
+        name=email_address.split('@')[0],
+        email_address=email_address,
+        aliases=aliases or {},
+        credentials=credentials or {},
+        quotas=stalwart.StorageQuota(max_disk_quota=quota),
+        used_disk_quota=used_quota,
+        roles=stalwart.StalwartType(type='User'),
+        permissions=stalwart.StalwartType(type='Inherit'),
+        encryption_at_rest=stalwart.StalwartType(type='Disabled'),
+    )
 
 
 def build_mail_update_account(return_json: Optional[dict] = None, return_headers: Optional[dict] = None):
