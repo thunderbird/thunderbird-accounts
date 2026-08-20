@@ -277,7 +277,10 @@ def get_subscription_plan_info(request: Request, paddle: Client):
         stalwart_client = MailClient()
         account = stalwart_client.get_account(request.user.stalwart_primary_email)
         if isinstance(account, stalwart.Account):
-            quota = account.quotas.max_disk_quota if account.quotas else 0
+            # Stalwart sends "quotas": {} for an unlimited account, which parses to a TRUTHY
+            # StorageQuota() whose max_disk_quota is None -> mailStorage: null -> NaN% in the UI.
+            # Mirror the `is not None` check used for used_disk_quota below.
+            quota = account.quotas.max_disk_quota if account.quotas and account.quotas.max_disk_quota is not None else 0
             used_quota = account.used_disk_quota if account.used_disk_quota is not None else 0
         else:
             quota = account.get('quota', 0)
