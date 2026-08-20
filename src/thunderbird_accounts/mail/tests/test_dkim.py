@@ -131,6 +131,47 @@ class HostedDkimRecordBuilderTestCase(SimpleTestCase):
 
 
 class DkimSignatureConversionTestCase(SimpleTestCase):
+    def test_converts_v016_raw_base64_ed25519_public_key(self):
+        public_key = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8='
+        signature = {
+            'auid': None,
+            'canonicalization': 'relaxed/relaxed',
+            'expire': None,
+            'headers': {
+                'From': True,
+                'To': True,
+                'Date': True,
+                'Subject': True,
+                'Message-ID': True,
+            },
+            'privateKey': {'secret': '****', '@type': 'Text'},
+            'report': True,
+            'thirdParty': None,
+            'thirdPartyHash': None,
+            'domainId': 'domain-1',
+            'memberTenantId': None,
+            'selector': 'tm2',
+            'createdAt': '2026-07-29T22:35:55Z',
+            'nextTransitionAt': None,
+            'stage': 'active',
+            '@type': 'Dkim1Ed25519Sha256',
+            'publicKey': public_key,
+            'id': 'signature-1',
+        }
+
+        records = dkim_signatures_to_dns_records('example.com', [signature])
+
+        self.assertEqual(
+            [
+                {
+                    'type': 'TXT',
+                    'name': 'tm2._domainkey.example.com.',
+                    'content': f'v=DKIM1; k=ed25519; h=sha256; p={public_key}',
+                }
+            ],
+            records,
+        )
+
     def test_converts_ed25519_jmap_signature_to_dns_record(self):
         public_pem, expected_public_key = _ed25519_public_key()
 

@@ -215,7 +215,7 @@ class SecondaryCredential(Credential):
     allowed_ips: Optional[dict] = None
 
 
-class AppPassword(BaseSchema):
+class AppPassword(JMapType):
     """A mix of the above credential objects"""
 
     description: str

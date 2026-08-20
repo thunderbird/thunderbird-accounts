@@ -26,6 +26,7 @@ from thunderbird_accounts.core.utils import get_absolute_url
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.models import Email
+from thunderbird_accounts.mail.types import stalwart
 from thunderbird_accounts.mail.utils import filter_app_passwords
 from thunderbird_accounts.subscription.models import Subscription, Transaction
 
@@ -274,9 +275,22 @@ def _get_stalwart_data(primary_email: str | None, has_active_subscription: bool)
     if has_active_subscription:
         try:
             stalwart_account = MailClient().get_account(primary_email)
-            stalwart_data['used_bytes'] = stalwart_account.get('usedQuota')
-            stalwart_data['limit_bytes'] = stalwart_account.get('quota')
-            stalwart_data['app_password_set'] = bool(filter_app_passwords(stalwart_account.get('secrets', [])))
+            if isinstance(stalwart_account, stalwart.Account):
+                stalwart_data['used_bytes'] = stalwart_account.used_disk_quota
+                stalwart_data['limit_bytes'] = (
+                    stalwart_account.quotas.max_disk_quota if stalwart_account.quotas else None
+                )
+                stalwart_data['app_password_set'] = any(
+                    credential.type == stalwart.Credential.Types.APP_PASSWORD
+                    and not (getattr(credential, 'description', '') or '').startswith(
+                        settings.APPOINTMENT_APP_PASSWORD_PREFIX
+                    )
+                    for credential in (stalwart_account.credentials or {}).values()
+                )
+            else:
+                stalwart_data['used_bytes'] = stalwart_account.get('usedQuota')
+                stalwart_data['limit_bytes'] = stalwart_account.get('quota')
+                stalwart_data['app_password_set'] = bool(filter_app_passwords(stalwart_account.get('secrets', [])))
         except Exception as exc:
             logging.info('Unable to retrieve support customer quota for %s: %s', primary_email, exc)
 

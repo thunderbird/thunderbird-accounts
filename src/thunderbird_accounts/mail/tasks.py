@@ -352,6 +352,15 @@ def create_stalwart_account(
 
     try:
         stalwart_account = stalwart.get_account(username)
+        if isinstance(stalwart_account, dict):
+            stalwart_emails = stalwart_account.get('emails', [])
+            pkid = stalwart_account.get('id')
+        else:
+            stalwart_emails = [stalwart_account.email_address] if stalwart_account.email_address else []
+            stalwart_emails += [
+                alias.full_address for alias in (stalwart_account.aliases or {}).values() if alias.full_address
+            ]
+            pkid = stalwart_account.id
     except AccountNotFoundError:
         pass
     except InvalidJMapResponseError as ex:
@@ -371,18 +380,19 @@ def create_stalwart_account(
         )
 
     if stalwart_account is not None:
-        logging.error(f'[create_stalwart_account] Account [{user.uuid}] already exists in Stalwart!')
-        raise TaskFailed(
-            str('Account already exists in Stalwart'),
-            {
-                'oidc_id': oidc_id,
-                'user_uuid': user.uuid,
-                'stalwart_pkid': stalwart_account.get('id'),
-            },
-        )
-
-    # We need to create this after dkim and domain records exist
-    pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
+        if set(stalwart_emails) != set(emails):
+            logging.error(f'[create_stalwart_account] Account [{user.uuid}] already exists in Stalwart!')
+            raise TaskFailed(
+                str('Account already exists in Stalwart'),
+                {
+                    'oidc_id': oidc_id,
+                    'user_uuid': user.uuid,
+                    'stalwart_pkid': pkid,
+                },
+            )
+    else:
+        # We need to create this after dkim and domain records exist
+        pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
     now = datetime.datetime.now(datetime.UTC)
 
     # Don't create the account if we already have it (this is safe as this object contains no info by itself)

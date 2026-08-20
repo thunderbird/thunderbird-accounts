@@ -4,14 +4,18 @@ from django.utils.html import strip_tags
 from unittest.mock import patch, Mock
 
 from django.conf import settings
-from django.test import SimpleTestCase, TestCase, Client as RequestClient
+from django.contrib.messages.storage.fallback import FallbackStorage
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.test import SimpleTestCase, TestCase, Client as RequestClient, RequestFactory
 from django.urls import reverse
 from pathlib import Path
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.core.views import PUBLIC_VUE_ROUTES
+from thunderbird_accounts.core.tests.utils import build_stalwart_account
+from thunderbird_accounts.core.views import PUBLIC_VUE_ROUTES, home
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 from thunderbird_accounts.mail.models import Account
+from thunderbird_accounts.subscription.models import Subscription
 
 
 class PublicVueRouteSyncTestCase(SimpleTestCase):
@@ -123,6 +127,54 @@ class HomeViewRedirectTestCase(TestCase):
                     response = self.client.get(path)
                     self.assertEqual(response.status_code, 200)
                     self.assertTemplateUsed(response, 'index.html')
+
+
+class HomeViewTypedAccountTestCase(TestCase):
+    @patch('thunderbird_accounts.core.views.MailClient')
+    def test_typed_account_preserves_mail_page_data(self, mock_mail_client_cls):
+        user = User.objects.create(username=f'typed@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='typed-home')
+        Account.objects.create(name=user.username, user=user)
+        Subscription.objects.create(user=user, status=Subscription.StatusValues.ACTIVE)
+        mock_mail_client_cls.return_value.get_account.return_value = build_stalwart_account(
+            email_address=user.username,
+            aliases={
+                '0': {
+                    'enabled': True,
+                    'name': 'typed',
+                    'domainId': 'alias-domain-id',
+                    'fullAddress': 'typed@example.com',
+                }
+            },
+            credentials={
+                'desktop-password': {
+                    '@type': 'AppPassword',
+                    'description': 'Desktop',
+                    'secret': '********',
+                    'permissions': {'@type': 'Inherit'},
+                    'allowedIps': {},
+                },
+                'appointment-password': {
+                    '@type': 'AppPassword',
+                    'description': f'{settings.APPOINTMENT_APP_PASSWORD_PREFIX}{user.username}',
+                    'secret': '********',
+                    'permissions': {'@type': 'Inherit'},
+                    'allowedIps': {},
+                },
+            },
+        )
+        request = RequestFactory().get('/')
+        request.user = user
+        SessionMiddleware(lambda _request: None).process_request(request)
+        request.session.save()
+        request._messages = FallbackStorage(request)
+
+        response = home(request)
+
+        page_data = json.loads(strip_tags(response.context_data['page_load_data_script']))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(page_data['userDisplayName'], None)
+        self.assertEqual(page_data['emailAddresses'], [user.username, 'typed@example.com'])
+        self.assertEqual(page_data['appPasswords'], ['Desktop'])
 
 
 class HomeViewNeedsTosAcceptanceTestCase(TestCase):

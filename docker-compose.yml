@@ -148,7 +148,7 @@ services:
     #entrypoint: bash
     volumes:
       - "./mail/stalwart/etc:/etc/stalwart:Z"
-      - "./mail/stalwart/lib/main.db:/var/lib/stalwart/main.db:Z"
+      - "stalwart_data:/var/lib/stalwart"
     ports:
       - "8443:443"
       - "8180:8080"
@@ -162,8 +162,7 @@ services:
     #  - "110:110"
     #  - "995:995"
     environment:
-      STALWART_RECOVERY_ADMIN: "admin:admin" 
-      # admin@example.com : iKeBFzrCbRRzaAZW
+      STALWART_RECOVERY_ADMIN: "admin:admin"
     networks:
       default:
         aliases:
@@ -230,3 +229,4 @@ volumes:
   db: {}
   kcdb: {}
   cache: {}
+  stalwart_data: {}

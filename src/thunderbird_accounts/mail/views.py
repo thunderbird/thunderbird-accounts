@@ -24,6 +24,7 @@ from django.views.generic import TemplateView
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, MailClient, StaleDNSRecordCode
+from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientUserJMAP
 from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
 from thunderbird_accounts.core.validators import normalize_custom_domain
 from thunderbird_accounts.mail.exceptions import (
@@ -71,6 +72,24 @@ def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: st
     sentry_sdk.capture_exception(exception)
 
 
+def _cleanup_failed_custom_domain_creation(
+    stalwart_client,
+    domain_name: str,
+    *,
+    delete_hosted_dkim_records: bool,
+):
+    try:
+        stalwart_client.delete_domain(domain_name)
+    except Exception as e:
+        logging.error(f'Error deleting remote domain after custom domain creation failed: {e}')
+
+    if delete_hosted_dkim_records:
+        try:
+            mail_tasks.delete_hosted_dkim_dns_records.delay(domain_name)
+        except Exception as e:
+            logging.error(f'Error scheduling hosted DKIM cleanup after custom domain creation failed: {e}')
+
+
 @login_required
 @require_http_methods(['POST'])
 @active_subscription_required(error_message=_('An active subscription is required to set an app password.'))
@@ -85,6 +104,24 @@ def app_password_set(request: HttpRequest):
 
         if not new_password or not label:
             return JsonResponse({'success': False, 'error': str(_('Label and password are required'))}, status=400)
+
+        if settings.STALWART_ADMIN_API_USE_JMAP:
+            access_token = request.session.get('oidc_access_token')
+            if not access_token:
+                return JsonResponse(
+                    {'success': False, 'error': str(_('Your session has expired. Please sign in again.'))},
+                    status=401,
+                )
+
+            canonical_label = request.user.stalwart_primary_email
+            generated = MailClientUserJMAP(canonical_label, access_token).replace_app_password(canonical_label)
+            return JsonResponse(
+                {
+                    'success': True,
+                    'message': str(_('Password set successfully')),
+                    'app_password': generated.secret,
+                }
+            )
 
         stalwart_client = MailClient()
 
@@ -161,8 +198,11 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
             {'success': False, 'error': _('You have reached the maximum number of custom domains')}, status=400
         )
 
+    remote_domain_created = False
+    hosted_dkim_records_requested = False
     try:
         stalwart_client = MailClient()
+        domain_id = None
 
         try:
             domain = stalwart_client.get_domain(domain_name)
@@ -174,24 +214,35 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
         if request.user.is_migrated:
             try:
                 # We need to create a disabled domain
-                stalwart_client.create_domain(domain_name, is_enabled=False)
+                domain_id = stalwart_client.create_domain(domain_name, is_enabled=False)
+                remote_domain_created = True
             except DomainAlreadyExistsError as ex:
                 raise ex
-
-        # FIXME: There may need to be clean up done if create_dkim raises an error.
 
         # If request fails the dkim will hit our general exception catch
         # we want this to happen before the local reference (Domain model) is created
         # so we're not missing any dkim records in the dns record list.
         stalwart_client.create_dkim(domain_name)
         mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
+        hosted_dkim_records_requested = True
 
         try:
-            Domain.objects.create(name=domain_name, user=request.user, stalwart_id=None, stalwart_created_at=None)
+            Domain.objects.create(
+                name=domain_name,
+                user=request.user,
+                stalwart_id=domain_id,
+                stalwart_created_at=None,
+            )
         except IntegrityError:
             raise DomainAlreadyExistsError(domain_name)
 
     except DomainAlreadyExistsError:
+        if remote_domain_created:
+            _cleanup_failed_custom_domain_creation(
+                stalwart_client,
+                domain_name,
+                delete_hosted_dkim_records=hosted_dkim_records_requested,
+            )
         return JsonResponse(
             {
                 'success': False,
@@ -203,6 +254,12 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
         )
 
     except Exception as e:
+        if remote_domain_created:
+            _cleanup_failed_custom_domain_creation(
+                stalwart_client,
+                domain_name,
+                delete_hosted_dkim_records=hosted_dkim_records_requested,
+            )
         logging.error(f'Error creating custom domain: {e}')
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while creating the custom domain. Please try again later.'},
@@ -426,7 +483,7 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
         domains = request.user.domains.filter(name__iexact=domain_name).all()
         # There should only be one here, but just in case...
         for _domain in domains:
-            if _domain.stalwart_id:
+            if _domain.stalwart_id or request.user.is_migrated:
                 try:
                     cleanup_phase = 'delete_stalwart_domain'
                     stalwart_client.delete_domain(_domain.name)
@@ -705,6 +762,10 @@ def appointment_caldav_setup(request: HttpRequest):
     label = f'{settings.APPOINTMENT_APP_PASSWORD_PREFIX}{primary_email}'
 
     try:
+        if settings.STALWART_ADMIN_API_USE_JMAP:
+            generated = MailClientUserJMAP(primary_email, access_token).replace_app_password(label)
+            return JsonResponse({'success': True, 'app_password': generated.secret})
+
         stalwart_client = MailClient()
         email_user = stalwart_client.get_account(primary_email)
 
@@ -794,8 +855,7 @@ class AdminStalwartList(TemplateView):
         context = super().get_context_data(**kwargs)
 
         stalwart = MailClient()
-        response = stalwart._list_principals()
-        data = response.json().get('data', {}).get('items', [])
+        data = stalwart.list_principals()
 
         context.update(
             {

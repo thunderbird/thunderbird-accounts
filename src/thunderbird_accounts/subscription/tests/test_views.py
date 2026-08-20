@@ -1,4 +1,4 @@
-from thunderbird_accounts.subscription.models import Transaction
+from thunderbird_accounts.subscription.models import Plan, Price, Product, Subscription, SubscriptionItem, Transaction
 import json
 from unittest.mock import patch, MagicMock
 
@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.models import AllowListEntry
-from thunderbird_accounts.core.tests.utils import oidc_force_login
+from thunderbird_accounts.core.tests.utils import build_stalwart_account, oidc_force_login
 
 
 class PaddleCheckoutIsDoneTestCase(TestCase):
@@ -287,3 +287,60 @@ class ActiveSubscriptionRequiredViewTestCase(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {'success': False, 'error': 'No active subscription found'})
+
+
+class SubscriptionPlanInfoTypedAccountTestCase(TestCase):
+    @patch('thunderbird_accounts.subscription.views.MailClient')
+    def test_returns_typed_account_storage_values(self, mock_mail_client_cls):
+        product = Product.objects.create(
+            paddle_id='pro_typed',
+            name='Typed Product',
+            description='Typed plan description',
+            product_type=Product.TypeValues.STANDARD,
+            status=Product.StatusValues.ACTIVE,
+        )
+        price = Price.objects.create(
+            paddle_id='pri_typed',
+            paddle_product_id=product.paddle_id,
+            name='Typed Price',
+            amount='1200',
+            currency='USD',
+            price_type=Price.TypeValues.STANDARD,
+            billing_cycle_frequency='1',
+            billing_cycle_interval=Price.IntervalValues.MONTH,
+            product=product,
+        )
+        plan = Plan.objects.create(
+            name='Typed Plan',
+            mail_address_count=5,
+            mail_domain_count=2,
+            mail_storage_bytes=100,
+            send_storage_bytes=200,
+            product=product,
+        )
+        user = User.objects.create(
+            username=f'typed-plan@{settings.PRIMARY_EMAIL_DOMAIN}',
+            oidc_id='typed-plan',
+            plan=plan,
+        )
+        subscription = Subscription.objects.create(user=user, status=Subscription.StatusValues.ACTIVE)
+        SubscriptionItem.objects.create(
+            quantity=1,
+            paddle_price_id=price.paddle_id,
+            paddle_product_id=product.paddle_id,
+            subscription=subscription,
+            price=price,
+            product=product,
+        )
+        mock_mail_client_cls.return_value.get_account.return_value = build_stalwart_account(
+            email_address=user.username,
+            quota=12_000,
+            used_quota=3_000,
+        )
+        oidc_force_login(self.client, user)
+
+        response = self.client.post(reverse('subscription_plan_info'), HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['subscription']['features']['mailStorage'], 12_000)
+        self.assertEqual(response.json()['subscription']['usedQuota'], 3_000)

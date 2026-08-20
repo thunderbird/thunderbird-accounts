@@ -1,9 +1,15 @@
-from django.conf import settings
+import enum
+import logging
 from base64 import b64encode
 from typing import Literal
-from thunderbird_accounts.mail.types.jmap import SessionResource, JMapRequest, Invocation, JMapResponse
-import enum
+from urllib.parse import urlsplit
+
 import requests
+from django.conf import settings
+from pydantic import ValidationError
+
+from thunderbird_accounts.mail.exceptions import InvalidJMapResponseError
+from thunderbird_accounts.mail.types.jmap import Invocation, JMapRequest, JMapResponse, SessionResource
 
 
 class JMAPClient:
@@ -14,7 +20,15 @@ class JMAPClient:
         BASIC = 0
         BEARER = 1
 
-    def __init__(self, base_url: str, username: str, token: str, auth_type: AUTH_TYPES = AUTH_TYPES.BEARER):
+    def __init__(
+        self,
+        base_url: str,
+        username: str,
+        token: str,
+        auth_type: AUTH_TYPES = AUTH_TYPES.BEARER,
+        verify_ssl: bool | str = True,
+        timeout: float | tuple[float, float] = 30,
+    ):
         """Initialize using a base_url, username and bearer token"""
         assert len(base_url) > 0
         assert len(username) > 0
@@ -31,10 +45,19 @@ class JMAPClient:
         self.api_url: str | None = None
         self.account_id: str | None = None
         self.identity_id: str | None = None
-        self.verify_ssl = settings.VERIFY_PRIVATE_LINK_SSL
+        self.verify_ssl = verify_ssl
+        self.timeout = timeout
 
     def _authorization_value(self):
         return f'Bearer {self.token}' if self.auth_type == self.AUTH_TYPES.BEARER else f'Basic {self.token}'
+
+    @staticmethod
+    def _origin(url: str) -> tuple[str, str, int | None]:
+        parsed = urlsplit(url)
+        if parsed.scheme not in {'http', 'https'} or not parsed.hostname:
+            raise ValueError('JMAP apiUrl origin is invalid')
+        default_port = 443 if parsed.scheme == 'https' else 80
+        return parsed.scheme, parsed.hostname, parsed.port or default_port
 
     def get_session(self) -> SessionResource:
         """Return the JMAP Session Resource as a Python dict"""
@@ -48,13 +71,18 @@ class JMAPClient:
                 'Content-Type': 'application/json',
                 'Authorization': self._authorization_value(),
             },
-            allow_redirects=True,
+            allow_redirects=False,
             verify=self.verify_ssl,
+            timeout=self.timeout,
         )
         r.raise_for_status()
-        session = SessionResource(**r.json())
+        try:
+            session = SessionResource.model_validate(r.json())
+        except ValidationError as ex:
+            raise InvalidJMapResponseError(ex) from ex
+        if self._origin(session.api_url) != self._origin(self.base_url):
+            raise ValueError('JMAP apiUrl origin does not match configured base URL')
         self.session = session
-
         if not self.session:
             raise RuntimeError('Failed to get session')
         self.api_url = session.api_url
@@ -101,7 +129,6 @@ class JMAPClient:
     def request(self, request_data: JMapRequest, method: Literal['get', 'post'] = 'post') -> JMapResponse:
         """Make a JMAP POST request to the API, returning the response as a
         Python data structure."""
-
         base_url = self.base_url
 
         # If we're not ignoring the api url then we need to check for it and set it
@@ -110,6 +137,7 @@ class JMAPClient:
                 raise RuntimeError('Session not available')
             base_url = self.api_url
 
+        logging.debug('[jmap_client.request] sending request')
         res = requests.request(
             url=base_url,
             method=method,
@@ -118,9 +146,13 @@ class JMAPClient:
                 'Authorization': self._authorization_value(),
             },
             data=request_data.model_dump_json(exclude_none=True),
+            allow_redirects=False,
             verify=self.verify_ssl,
+            timeout=self.timeout,
         )
         res.raise_for_status()
-        res_data = res.json()
-
-        return JMapResponse(**res_data)
+        logging.debug('[jmap_client.request] received response')
+        try:
+            return JMapResponse.model_validate(res.json())
+        except ValidationError as ex:
+            raise InvalidJMapResponseError(ex) from ex

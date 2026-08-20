@@ -2,6 +2,7 @@ import sentry_sdk
 from cryptography.exceptions import UnsupportedAlgorithm
 from functools import cache
 import base64
+import binascii
 from typing import Any
 
 from cloudflare import Cloudflare
@@ -132,9 +133,22 @@ def _dkim_key_type_and_public_key_value(signature: dict) -> tuple[str, str]:
 
     try:
         public_key_obj = serialization.load_pem_public_key(public_key.encode())
-    except (ValueError, UnsupportedAlgorithm) as ex:
-        sentry_sdk.capture_exception(ex)
-        public_key_obj = None
+    except (ValueError, UnsupportedAlgorithm):
+        try:
+            public_key_bytes = base64.b64decode(public_key, validate=True)
+        except (ValueError, binascii.Error) as ex:
+            sentry_sdk.capture_exception(ex)
+            public_key_obj = None
+        else:
+            try:
+                public_key_obj = serialization.load_der_public_key(public_key_bytes)
+            except (ValueError, UnsupportedAlgorithm) as ex:
+                signature_type = signature.get('@type', '')
+                if 'Ed25519' in signature_type and len(public_key_bytes) == 32:
+                    public_key_obj = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
+                else:
+                    sentry_sdk.capture_exception(ex)
+                    public_key_obj = None
 
     if isinstance(public_key_obj, ed25519.Ed25519PublicKey):
         key_type = 'ed25519'
