@@ -99,7 +99,6 @@ onMounted(async () => {
         :records="activeSessions"
         :column-labels="{
           primary: t('views.mail.views.securitySettings.recordsTableHeaderDevice'),
-          ipAddress: t('views.mail.views.securitySettings.recordsTableHeaderIpAddress'),
           location: t('views.mail.views.securitySettings.recordsTableHeaderLocation'),
           lastAccess: t('views.mail.views.securitySettings.recordsTableHeaderLastActive'),
           actions: t('views.mail.views.securitySettings.recordsTableHeaderActions'),

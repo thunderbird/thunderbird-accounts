@@ -10,7 +10,6 @@ type SecurityAccessRecord = {
 
 type ColumnLabels = {
   primary: string;
-  ipAddress: string;
   location: string;
   lastAccess: string;
   actions: string;
@@ -33,7 +32,6 @@ defineSlots<{
       <thead>
         <tr>
           <th scope="col">{{ columnLabels.primary }}</th>
-          <th scope="col">{{ columnLabels.ipAddress }}</th>
           <th scope="col">{{ columnLabels.location }}</th>
           <th scope="col">{{ columnLabels.lastAccess }}</th>
           <th scope="col">{{ columnLabels.actions }}</th>
@@ -42,8 +40,7 @@ defineSlots<{
       <tbody>
         <tr v-for="record in records" :key="record.id">
           <td>{{ record.label }}</td>
-          <td>{{ record.ipAddress }}</td>
-          <td>{{ record.location }}</td>
+          <td><span :title="record.ipAddress">{{ record.location }}</span></td>
           <td>{{ record.lastAccess }}</td>
           <td class="action-cell">
             <slot name="action" :record="record" />

@@ -307,7 +307,6 @@
           "signOutConfirmation": "Are you sure you want to sign out of the selected device?",
           "errorSigningOutSession": "We couldn’t sign out of that session. Please try again.",
           "recordsTableHeaderDevice": "Device – App",
-          "recordsTableHeaderIpAddress": "IP address",
           "recordsTableHeaderLocation": "Location",
           "recordsTableHeaderLastActive": "Last active",
           "recordsTableHeaderActions": "Actions",
