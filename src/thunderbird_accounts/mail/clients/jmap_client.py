@@ -86,11 +86,18 @@ class JMAPClient:
             session = SessionResource.model_validate(r.json())
         except ValidationError as ex:
             raise InvalidJMapResponseError(ex) from ex
+        return self._accept_session(session)
+
+    def _accept_session(self, session: SessionResource) -> SessionResource:
+        """Validate and store a fetched session.
+
+        Split out of get_session() so the origin check has exactly one home: any test double or
+        future cache that populates a session must come through here, rather than reimplementing
+        the assignment and silently bypassing the pin.
+        """
         if self._origin(session.api_url) != self._origin(self.base_url):
             raise JMapOriginMismatchError(session.api_url, self.base_url)
         self.session = session
-        if not self.session:
-            raise RuntimeError('Failed to get session')
         self.api_url = session.api_url
         return session
 

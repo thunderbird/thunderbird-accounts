@@ -152,12 +152,10 @@ class MockJMapClient(JMAPClient):
             return self.session
 
         fixture_data = self.retrieve_fixture(Path('fixtures') / 'jmap_get_session.json')
-        session = SessionResource(**fixture_data)
-        self.session = session
-        if not self.session:
-            raise RuntimeError('Failed to get session')
-        self.api_url = session.api_url
-        return session
+        # Stub only the HTTP fetch; everything after it, including the origin check, must run
+        # exactly as it does in production. Previously this reimplemented the assignment, so the
+        # ~17 tests built on this double exercised UNPINNED behaviour and CI carried no signal.
+        return self._accept_session(SessionResource(**fixture_data))
 
     def request(self, request_data: JMapRequest, method: Literal['get', 'post'] = 'post') -> JMapResponse:
         raise NotImplementedError('Monkeypatch me!')
@@ -172,7 +170,7 @@ def build_admin_client() -> MailClientAdminJMAP:
     """
 
     def _mock_user_client(self, *args, **kwargs) -> MockJMapClient:
-        client = MockJMapClient('http://stalwart.local', 'admin', 'admin')
+        client = MockJMapClient('https://stalwart.local', 'admin', 'admin')
         client.get_session()
         return client
 
@@ -210,7 +208,7 @@ def v016_dkim_signature(*, stage: str = 'active') -> dict:
 
 def build_user_client() -> MailClientUserJMAP:
     def _mock_user_client(self, *args, **kwargs) -> MockJMapClient:
-        client = MockJMapClient('http://stalwart.local', 'user@example.org', 'user-token')
+        client = MockJMapClient('https://stalwart.local', 'user@example.org', 'user-token')
         client.get_session()
         return client
 
