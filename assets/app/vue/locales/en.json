@@ -313,6 +313,7 @@
           "recordsTableHeaderActions": "Actions",
           "ipGeolocationAttribution": "IP Geolocation by DB-IP",
           "noRecentDevices": "No recent devices signed in to your account.",
+          "thisIsYou": "This is you",
           "signOut": "Sign out",
           "connectedApps": "Connected Apps",
           "connectedAppsDescription": "Review apps that can continue accessing your account. Removing access disconnects every instance of that app.",

@@ -107,7 +107,9 @@ onMounted(async () => {
         :attribution="t('views.mail.views.securitySettings.ipGeolocationAttribution')"
       >
         <template #action="{ record }">
-          <span v-if="record.isCurrent" class="current-session-label">This is you</span>
+          <span v-if="record.isCurrent" class="current-session-label">
+            {{ t('views.mail.views.securitySettings.thisIsYou') }}
+          </span>
           <link-button v-else @click="signOut(record.id)">
             {{ t('views.mail.views.securitySettings.signOut') }}
           </link-button>
