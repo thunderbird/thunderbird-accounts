@@ -103,7 +103,6 @@ onMounted(async () => {
           lastAccess: t('views.mail.views.securitySettings.recordsTableHeaderLastAccess'),
           actions: t('views.mail.views.securitySettings.recordsTableHeaderActions'),
         }"
-        :attribution="t('views.mail.views.securitySettings.ipGeolocationAttribution')"
       >
         <template #action="{ record }">
           <link-button @click="removeAccess(record.id)">

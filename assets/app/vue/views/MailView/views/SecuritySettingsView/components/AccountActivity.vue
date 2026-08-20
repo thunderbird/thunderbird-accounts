@@ -103,7 +103,6 @@ onMounted(async () => {
           lastAccess: t('views.mail.views.securitySettings.recordsTableHeaderLastActive'),
           actions: t('views.mail.views.securitySettings.recordsTableHeaderActions'),
         }"
-        :attribution="t('views.mail.views.securitySettings.ipGeolocationAttribution')"
       >
         <template #action="{ record }">
           <span v-if="record.isCurrent" class="current-session-label">

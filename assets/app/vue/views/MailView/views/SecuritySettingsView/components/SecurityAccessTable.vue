@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+
 type SecurityAccessRecord = {
   id: string;
   label: string;
@@ -18,7 +22,6 @@ type ColumnLabels = {
 defineProps<{
   records: SecurityAccessRecord[];
   columnLabels: ColumnLabels;
-  attribution: string;
 }>();
 
 defineSlots<{
@@ -51,7 +54,7 @@ defineSlots<{
   </div>
   <p class="location-attribution">
     <a href="https://db-ip.com" rel="noopener noreferrer" target="_blank">
-      {{ attribution }}
+      {{ t('views.mail.views.securitySettings.ipGeolocationAttribution') }}
     </a>
   </p>
 </template>
