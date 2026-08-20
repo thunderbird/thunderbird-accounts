@@ -181,6 +181,22 @@ class EmailNotValidError(RuntimeError):
         return f'EmailNotValidError: {self.email}, {self.error_message}'
 
 
+class JMapOriginMismatchError(StalwartError):
+    """The JMAP session advertised an apiUrl on a different origin than the configured base URL.
+
+    Subclasses StalwartError (and so RuntimeError) deliberately: callers that already degrade
+    gracefully on Stalwart being unreachable should treat this the same way, rather than 500.
+    """
+
+    def __init__(self, advertised: str, configured: str):
+        self.advertised = advertised
+        self.configured = configured
+        super().__init__(
+            f'JMAP apiUrl origin does not match configured base URL '
+            f'(advertised: {advertised}, configured: {configured})'
+        )
+
+
 class InvalidJMapResponseError(RuntimeError):
     """This is a generic pydantic response error. You should not get this, if you do there's a developer problem."""
 

@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, call, patch
 from django.test import SimpleTestCase, override_settings
 
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
+from thunderbird_accounts.mail.exceptions import JMapOriginMismatchError, StalwartError
 from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientAdminJMAP, MailClientUserJMAP
 from thunderbird_accounts.mail.exceptions import AppPasswordSetError
 from thunderbird_accounts.mail.tests.test_clients.test_legacy import (
@@ -65,7 +66,7 @@ class TestJMAPClientTransport(SimpleTestCase):
 
     @patch('thunderbird_accounts.mail.clients.jmap_client.requests.request')
     @patch('thunderbird_accounts.mail.clients.jmap_client.requests.get')
-    def test_authenticated_requests_do_not_follow_redirects(self, get_mock: MagicMock, request_mock: MagicMock):
+    def test_api_requests_do_not_follow_redirects(self, get_mock: MagicMock, request_mock: MagicMock):
         get_mock.return_value = self._response(self.session_data)
         request_mock.return_value = self._response(
             {
@@ -78,7 +79,10 @@ class TestJMAPClientTransport(SimpleTestCase):
         client.get_session()
         client.request(self._request_data())
 
-        self.assertIs(get_mock.call_args.kwargs['allow_redirects'], False)
+        # The session resource is fetched "following any redirects" per RFC 8620 2.2, and
+        # Stalwart v0.16 always 307s /.well-known/jmap. The API resource must NOT follow, since
+        # a 307/308 replays the POST body at the new host.
+        self.assertIs(get_mock.call_args.kwargs['allow_redirects'], True)
         self.assertIs(request_mock.call_args.kwargs['allow_redirects'], False)
 
     @patch('thunderbird_accounts.mail.clients.jmap_client.requests.get')
@@ -87,7 +91,7 @@ class TestJMAPClientTransport(SimpleTestCase):
         get_mock.return_value = self._response(self.session_data)
         client = JMAPClient('https://stalwart.local', 'admin', 'token')
 
-        with self.assertRaisesRegex(ValueError, 'apiUrl origin'):
+        with self.assertRaisesRegex(JMapOriginMismatchError, 'apiUrl origin'):
             client.get_session()
 
     @patch('builtins.open')
@@ -901,3 +905,22 @@ class TestProductionInterfaceParity(SimpleTestCase):
             ],
         )
         self.mail_client._get_dkim_dns_records.assert_called_once_with('example.com')
+
+
+class TestOriginMismatchIsRecoverable(SimpleTestCase):
+    """The origin mismatch must be catchable by the handlers that already degrade gracefully.
+
+    It is the one new failure guaranteed to fire against a Stalwart whose advertised apiUrl has
+    not been corrected, so it must not be the one failure that escapes as a 500.
+    """
+
+    def test_is_a_stalwart_error(self):
+        err = JMapOriginMismatchError('https://public.example/jmap/', 'https://internal.example')
+        self.assertIsInstance(err, StalwartError)
+        self.assertIsInstance(err, RuntimeError)
+
+    def test_message_names_both_origins(self):
+        """An operator reading Sentry must be able to tell which end to fix."""
+        err = JMapOriginMismatchError('https://public.example/jmap/', 'https://internal.example')
+        self.assertIn('https://public.example/jmap/', str(err))
+        self.assertIn('https://internal.example', str(err))
