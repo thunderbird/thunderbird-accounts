@@ -6,6 +6,7 @@ import CardContainer from '@/components/CardContainer.vue';
 import { onUnmounted, ref } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { PADDLE_TRANSACTION_STORAGE_KEY } from '@/defines';
+import { useAuthFetch } from '@/composables/useFetch';
 
 const { t } = useI18n();
 
@@ -75,7 +76,7 @@ onUnmounted(() => {
  */
 const areWeDoneHere = async () => {
   try {
-    const response = await fetch('/api/v1/subscription/paddle/tx/is-done/', {
+    const { response } = await useAuthFetch('/api/v1/subscription/paddle/tx/is-done/', {
       mode: 'same-origin',
       credentials: 'include',
       method: 'POST',
@@ -83,7 +84,7 @@ const areWeDoneHere = async () => {
         'X-CSRFToken': csrfToken,
       },
     });
-    const data = await response.json();
+    const data = await response.value.json();
     const { status } = data;
 
     // For some reason PaddleJS has paid's constant as undefined. Hmmm...
@@ -191,7 +192,7 @@ const onPaddleEvent = async (evt: PaddleEventData) => {
     }
 
     if (backendNeedsUpdate) {
-      await fetch('/api/v1/subscription/paddle/tx/set/', {
+      await useAuthFetch('/api/v1/subscription/paddle/tx/set/', {
         mode: 'same-origin',
         credentials: 'include',
         method: 'PUT',
@@ -233,7 +234,7 @@ const onPaddleEvent = async (evt: PaddleEventData) => {
  * module.
  */
 const setupPaddle = async () => {
-  const response = await fetch('/api/v1/subscription/paddle/info/', {
+  const { response } = await useAuthFetch('/api/v1/subscription/paddle/info/', {
     mode: 'same-origin',
     credentials: 'include',
     method: 'POST',
@@ -248,7 +249,7 @@ const setupPaddle = async () => {
     paddle_token: paddleToken,
     signed_user_id: signedUserId,
     discount_id: discountId,
-  } = await response.json();
+  } = await response.value.json();
 
   if (paddlePlanInfo.length === 0) {
     planSystemError.value = true;
