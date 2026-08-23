@@ -22,7 +22,7 @@ export default {
 
 <template>
   <header>
-    <h1 class="title">
+    <h2 class="title">
       <template v-if="isVerifyEmailAction">
         {{ $t('infoVerifyEmailTitle') }}
       </template>
@@ -35,7 +35,7 @@ export default {
       <template v-else>
         {{ message?.summary }}
       </template>
-    </h1>
+    </h2>
     <p class="text" v-if="isVerifyEmailAction">{{ $t('infoVerifyEmailText') }}</p>
     <p class="text" v-else-if="isAccountUpdated">{{ $t('infoAccountUpdatedText') }}</p>
   </header>
@@ -69,20 +69,6 @@ header {
   flex-direction: column;
   gap: 0.75rem;
   margin: 0 0 2rem 0;
-
-  .title {
-    font-size: 2.25rem;
-    font-family: metropolis;
-    font-weight: normal;
-    font-weight: 300;
-
-    font-stretch: normal;
-
-    font-style: normal;
-    letter-spacing: -0.36px;
-    line-height: 1.2;
-    color: var(--colour-primary-default);
-  }
 
   .text {
     font-size: 1rem;

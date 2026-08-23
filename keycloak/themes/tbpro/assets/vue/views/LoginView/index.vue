@@ -157,16 +157,6 @@ export default {
   margin-bottom: 1.5rem;
 }
 
-h2 {
-  font-size: 2.25rem;
-  font-family: metropolis;
-  font-weight: normal;
-  letter-spacing: -0.36px;
-  line-height: 1.2;
-  color: var(--colour-primary-default);
-  margin: 0 0 1.5rem 0;
-}
-
 form {
   margin-block-end: 2.625rem;
 }
