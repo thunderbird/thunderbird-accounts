@@ -19,7 +19,10 @@ from thunderbird_accounts.authentication.middleware import (
     AccountsOIDCBackend,
     refresh_user_access_token,
     OIDCRefreshSession,
-    EXIT_STATE_KEY, OIDC_ACCESS_TOKEN_KEY, OIDC_REFRESH_TOKEN_KEY, OIDC_ID_TOKEN_EXP_KEY,
+    EXIT_STATE_KEY,
+    OIDC_ACCESS_TOKEN_KEY,
+    OIDC_REFRESH_TOKEN_KEY,
+    OIDC_ID_TOKEN_EXP_KEY,
 )
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.models import AllowListEntry
@@ -160,7 +163,7 @@ class OIDCRefreshSessionTestCase(TestCase):
             # Access token check
             SimpleNamespace(raise_for_status=lambda: None, json=lambda: {'active': False}),
             # Refreshing access token
-            AssertionError('This request should not happen!')
+            AssertionError('This request should not happen!'),
         ]
 
         request = self.factory.post('/')
