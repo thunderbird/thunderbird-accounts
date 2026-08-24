@@ -586,7 +586,6 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         return data
 
     def delete_domain(self, domain_name: str) -> None:
-
         # Allow DomainNotFound to raise if the domain is not found
         domain = self.get_domain(domain_name)
         if not domain.id:
