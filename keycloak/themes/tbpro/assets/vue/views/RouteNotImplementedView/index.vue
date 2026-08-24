@@ -14,18 +14,7 @@ export default {
 </script>
 
 <template>
-  <h1>{{ $t('routeNotImplementedTitle') }}</h1>
+  <h2>{{ $t('routeNotImplementedTitle') }}</h2>
   <p>{{ $t('routeNotImplementedText1') }}</p>
   <p>{{ $t('routeNotImplementedText2') }}</p>
 </template>
-
-<style scoped>
-h1 {
-  font-size: 1.5rem;
-  font-family: metropolis;
-  font-weight: normal;
-  line-height: 1.1;
-  color: var(--colour-primary-default);
-  margin: 0 0 1.5rem 0;
-}
-</style>

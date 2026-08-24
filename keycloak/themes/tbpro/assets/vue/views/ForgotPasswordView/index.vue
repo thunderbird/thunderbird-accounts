@@ -65,15 +65,6 @@ export default {
 </template>
 
 <style scoped>
-h2 {
-  font-size: 1.5rem;
-  font-family: metropolis;
-  font-weight: normal;
-  line-height: 1.1;
-  color: var(--colour-primary-default);
-  margin: 0 0 1.5rem 0;
-}
-
 .form-elements {
   display: flex;
   flex-direction: column;
