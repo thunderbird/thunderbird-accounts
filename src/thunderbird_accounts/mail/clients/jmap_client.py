@@ -41,7 +41,9 @@ class JMAPClient:
         if self.session:
             return self.session
         r = requests.get(
-            self.base_url if settings.STALWART_JMAP_API_IGNORE_API_URL else f'{self.base_url}/.well-known/jmap',
+            f'{self.base_url}/session'
+            if settings.STALWART_JMAP_API_IGNORE_API_URL
+            else f'{self.base_url}/.well-known/jmap',
             headers={
                 'Content-Type': 'application/json',
                 'Authorization': self._authorization_value(),
