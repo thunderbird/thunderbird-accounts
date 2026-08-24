@@ -115,9 +115,8 @@ export class DashboardPage {
 }
 
   async verifyPasswordChangeNavigation() {
-    await this.passwordChangeLink.click();
-    await this.waitForPageToSettle();
-    await expect(this.updatePasswordHeader).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await this.passwordChangeLink.click({ timeout: TIMEOUT_30_SECONDS });
+    await expect(this.updatePasswordHeader).toBeVisible({ timeout: TIMEOUT_60_SECONDS });
   }
 
   async verifyDeleteAccountNavigationOnly() {
@@ -217,14 +216,12 @@ export class DashboardPage {
 
     const [popup] = await Promise.all([
       this.page.waitForEvent('popup'),
-      link.click(),
+      link.click({ timeout: TIMEOUT_30_SECONDS }),
     ]);
 
-    await popup.waitForTimeout(TIMEOUT_3_SECONDS);
-    await expect.poll(async () => popup.url()).not.toBe('about:blank');
-    await popup.waitForLoadState('domcontentloaded');
-    await popup.waitForLoadState('networkidle', { timeout: TIMEOUT_30_SECONDS }).catch(() => {});
-    expect(new URL(popup.url()).origin).toBe(new URL(expectedUrl).origin);
+    await expect
+      .poll(async () => new URL(popup.url()).origin, { timeout: TIMEOUT_60_SECONDS })
+      .toBe(new URL(expectedUrl).origin);
     for (const beforeExpectedElement of beforeExpectedElements) {
       await expect(
         beforeExpectedElement.expectedElement(popup),

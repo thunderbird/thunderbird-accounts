@@ -71,13 +71,11 @@ test.describe('sign up form on browser', {
 
     await signUpPage.confirmPlan();
     await signUpPage.userNameInput?.fill(testUsername);
-    await signUpPage.submitForm();
-
-    // Make sure we're still on the username step
-    await expect(signUpPage.stepId).toHaveValue('step-username');
 
     const errorText = page.getByText('This username is not valid. Try another one.');
     await expect(errorText).toBeVisible();
+    await expect(signUpPage.submitButton).toBeDisabled();
+    await expect(signUpPage.stepId).toHaveValue('step-username');
   });
 
   test('step password fails with password length below minimum', async ({ page }) => {
