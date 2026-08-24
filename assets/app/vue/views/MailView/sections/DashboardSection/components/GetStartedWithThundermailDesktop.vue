@@ -32,7 +32,10 @@ const showConnectNow = isWaffleFlagActive(WAFFLE_FLAG.SHOW_CONNECT_NOW);
 async function handleConnectClick() {
   isConnecting.value = true;
   error.value = null;
-  isTooltipVisible.value = true;
+
+  setTimeout(() => {
+    isTooltipVisible.value = true;
+  }, 3000);
 
   try {
     // The API on TB Desktop side requires a token to be passed
