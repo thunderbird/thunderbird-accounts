@@ -55,6 +55,8 @@ export IMPORT_FILES_LOCATIONS="${CONFIG_FILE}"
 export IMPORT_VARSUBSTITUTION_ENABLED=true
 # Only ever add/overwrite the managed step-up flow; never delete other (built-in) flows.
 export IMPORT_MANAGED_AUTHENTICATIONFLOW=no-delete
+# Only Stalwart is declared under clients; preserve every other realm client.
+export IMPORT_MANAGED_CLIENT=no-delete
 # Reconcile on every start, not just when the file changes: config-cli otherwise stores a
 # file checksum on the realm and skips, so manual drift would never be repaired. Disabling
 # the cache makes each start re-assert the flow. The reconcile is idempotent and adds ~1s
