@@ -24,6 +24,22 @@ attributes:
 # Bind the realm's browser login to the step-up flow defined below.
 browserFlow: browser-mfa-stepup
 
+# Keycloak 26.6.2+ requires the client performing token introspection to be in the
+# access token's audience.
+clients:
+  - clientId: stalwart
+    protocolMappers:
+      - name: stalwart audience
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          included.client.audience: stalwart
+          id.token.claim: "false"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
+
 # Bind forgot-password to the reset flow defined below. The built-in "reset credentials"
 # flow runs the reset-otp authenticator, which ENROLLS a new authenticator app instead of
 # validating the existing one — possession of the reset email alone would bypass the
