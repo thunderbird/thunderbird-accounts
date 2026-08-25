@@ -167,7 +167,10 @@ jobs:
         shell: bash
         run: |
           cp .env.example .env
-          mkdir -p mail/etc && cp config.toml.example mail/etc/config.toml
+          mkdir -p mail/stalwart_legacy/etc
+          cp config.toml.example mail/stalwart_legacy/etc/config.toml
+          mkdir -p mail/stalwart/etc
+          cp mail/stalwart/etc/config.json.example mail/stalwart/etc/config.json
           append_env_if_set() {
             local key="$1"
             local value="${!key}"

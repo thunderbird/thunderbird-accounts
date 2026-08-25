@@ -211,6 +211,8 @@
           "cancel": "Cancel",
           "passwordsDoNotMatch": "Passwords do not match",
           "passwordSetSuccessfully": "App password saved",
+          "generatedPasswordDescription": "Copy this generated app password now. It will not be shown again.",
+          "copyGeneratedPassword": "Copy app password",
           "anErrorOccurred": "An error occurred",
           "anErrorOccurredWhileChangingPassword": "An error occurred while changing the password",
           "anErrorOccurredWhileChangingDisplayName": "An error occurred while changing the display name",

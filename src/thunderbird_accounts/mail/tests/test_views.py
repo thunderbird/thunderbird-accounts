@@ -7,6 +7,7 @@ import requests
 from unittest.mock import patch, Mock
 
 from django.conf import settings
+from django.db import IntegrityError
 from django.test import TestCase, Client as RequestClient, override_settings, RequestFactory
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -16,11 +17,47 @@ from thunderbird_accounts.core.tests.utils import oidc_force_login
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, StaleDNSRecordCode
 from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.mail.views import (
+    AdminStalwartList,
     _is_transient_backend_error,
     create_custom_domain,
     get_dns_records,
     remove_custom_domain,
 )
+
+
+class AdminStalwartListTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(
+            username=f'admin@{settings.PRIMARY_EMAIL_DOMAIN}',
+            oidc_id='admin-oidc-id',
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.client.force_login(self.user)
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_uses_public_principal_list_with_jmap_client(self, mock_mail_client_cls):
+        mail_client = Mock(spec=['list_principals'])
+        mail_client.list_principals.return_value = [
+            {
+                'id': 'account-id',
+                'name': 'person',
+                'type': 'User',
+            }
+        ]
+        mock_mail_client_cls.return_value = mail_client
+
+        request = RequestFactory().get(reverse('admin_stalwart_list'))
+        request.user = self.user
+        view = AdminStalwartList()
+        view.setup(request)
+
+        context = view.get_context_data()
+
+        self.assertEqual(context['items'][0]['name'], 'person')
+        mail_client.list_principals.assert_called_once_with()
 
 
 class AppPasswordApiTestCase(TestCase):
@@ -57,6 +94,39 @@ class AppPasswordApiTestCase(TestCase):
         mock_instance.delete_app_password.assert_called_once_with(self.primary_email, existing_app_password)
         mock_save_app_password.assert_called_once_with(self.primary_email, 'new-password')
         mock_instance.save_app_password.assert_called_once_with(self.primary_email, new_hash)
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClientUserJMAP', create=True)
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_jmap_success_returns_user_scoped_server_generated_password(self, mock_mail_client_cls, mock_user_jmap_cls):
+        self.account.verified_archive_folder = True
+        self.account.save()
+        session = self.client.session
+        session['oidc_access_token'] = 'user-access-token'
+        session.save()
+
+        mock_user_jmap = Mock()
+        mock_user_jmap.replace_app_password.return_value = Mock(id='new-id', secret='server-generated-password')
+        mock_user_jmap_cls.return_value = mock_user_jmap
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'name': 'untrusted-label', 'password': 'client-chosen-password'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {
+                'success': True,
+                'message': 'Password set successfully',
+                'app_password': 'server-generated-password',
+            },
+        )
+        mock_user_jmap_cls.assert_called_once_with(self.primary_email, 'user-access-token')
+        mock_user_jmap.replace_app_password.assert_called_once_with(self.primary_email)
+        mock_mail_client_cls.assert_not_called()
 
     def test_name_and_password_are_required(self):
         response = self.client.post(
@@ -213,6 +283,74 @@ class CreateCustomDomainTestCase(TestCase):
         mock_instance.get_domain.assert_called_once_with('example.com')
         mock_instance.create_dkim.assert_called_once_with('example.com')
         mock_publish_hosted_dkim.assert_called_once_with('example.com')
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_migrated_add_persists_disabled_stalwart_domain_id(
+        self,
+        mock_mail_client_cls,
+        mock_publish_hosted_dkim,
+    ):
+        mock_instance = Mock()
+        mock_instance.get_domain.side_effect = DomainNotFoundError('example.com')
+        mock_instance.create_domain.return_value = 'domain-id'
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = create_custom_domain(self.create_request('example.com'))
+
+        self.assertEqual(response.status_code, 200)
+        domain = Domain.objects.get(name='example.com', user=self.user)
+        self.assertEqual(domain.stalwart_id, 'domain-id')
+        mock_instance.create_domain.assert_called_once_with('example.com', is_enabled=False)
+        mock_instance.create_dkim.assert_called_once_with('example.com')
+        mock_publish_hosted_dkim.assert_called_once_with('example.com')
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_migrated_add_removes_remote_domain_when_dkim_creation_fails(
+        self,
+        mock_mail_client_cls,
+        mock_publish_hosted_dkim,
+    ):
+        mock_instance = Mock()
+        mock_instance.get_domain.side_effect = DomainNotFoundError('example.com')
+        mock_instance.create_domain.return_value = 'domain-id'
+        mock_instance.create_dkim.side_effect = RuntimeError('DKIM creation failed')
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = create_custom_domain(self.create_request('example.com'))
+
+        self.assertEqual(response.status_code, 500)
+        mock_instance.delete_domain.assert_called_once_with('example.com')
+        mock_publish_hosted_dkim.assert_not_called()
+        self.assertFalse(Domain.objects.exists())
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.Domain.objects.create', side_effect=IntegrityError)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_migrated_add_cleans_up_after_local_persistence_failure(
+        self,
+        mock_mail_client_cls,
+        mock_publish_hosted_dkim,
+        mock_delete_hosted_dkim,
+        _mock_domain_create,
+    ):
+        mock_instance = Mock()
+        mock_instance.get_domain.side_effect = DomainNotFoundError('example.com')
+        mock_instance.create_domain.return_value = 'domain-id'
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = create_custom_domain(self.create_request('example.com'))
+
+        self.assertEqual(response.status_code, 400)
+        mock_instance.delete_domain.assert_called_once_with('example.com')
+        mock_publish_hosted_dkim.assert_called_once_with('example.com')
+        mock_delete_hosted_dkim.assert_called_once_with('example.com')
+        self.assertFalse(Domain.objects.exists())
 
 
 @override_settings(HOSTED_DKIM_DOMAIN='dkim.example.net', HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'])
@@ -769,6 +907,21 @@ class RemoveCustomDomainTestCase(TestCase):
         mock_instance.delete_domain.assert_not_called()
         mock_instance.delete_dkim.assert_called_once_with(self.domain.name)
         mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
+        self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_migrated_pending_domain_without_stalwart_id_deletes_remote_domain(self, mock_mail_client_cls):
+        self.domain.stalwart_id = None
+        self.domain.status = Domain.DomainStatus.PENDING
+        self.domain.save()
+        mock_instance = Mock()
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self._delete_domain()
+
+        self.assertEqual(response.status_code, 200)
+        mock_instance.delete_domain.assert_called_once_with(self.domain.name)
         self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
 
     @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
@@ -1495,6 +1648,38 @@ class AppointmentCalDAVSetupTestCase(TestCase):
         mock_instance.delete_app_password.assert_not_called()
         mock_save_app_password.assert_called_once_with(label, 'random-base64-password')
         mock_instance.save_app_password.assert_called_once_with(self.user.stalwart_primary_email, new_hash)
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123', STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClientUserJMAP', create=True)
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
+    def test_jmap_success_returns_user_scoped_server_generated_password(
+        self, mock_backend_cls, mock_mail_client_cls, mock_user_jmap_cls
+    ):
+        mock_backend = Mock()
+        mock_backend.get_user_from_access_token.return_value = self.user
+        mock_backend_cls.return_value = mock_backend
+
+        mock_user_jmap = Mock()
+        mock_user_jmap.replace_app_password.return_value = Mock(id='new-id', secret='server-generated-password')
+        mock_user_jmap_cls.return_value = mock_user_jmap
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {'success': True, 'app_password': 'server-generated-password'},
+        )
+        mock_user_jmap_cls.assert_called_once_with(self.user.stalwart_primary_email, self.access_token)
+        mock_user_jmap.replace_app_password.assert_called_once_with(
+            f'{settings.APPOINTMENT_APP_PASSWORD_PREFIX}{self.user.stalwart_primary_email}'
+        )
+        mock_mail_client_cls.assert_not_called()
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
     @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')

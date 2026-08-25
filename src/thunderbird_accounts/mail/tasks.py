@@ -353,10 +353,15 @@ def create_stalwart_account(
     # Lookup the account first, this shouldn't normally happen but if it does we shouldn't explode.
     try:
         stalwart_account = stalwart.get_account(username)
-        stalwart_emails = stalwart_account.get('emails', [])
-
-        # link the stalwart account
-        pkid = stalwart_account.get('id')
+        if isinstance(stalwart_account, dict):
+            stalwart_emails = stalwart_account.get('emails', [])
+            pkid = stalwart_account.get('id')
+        else:
+            stalwart_emails = [stalwart_account.email_address] if stalwart_account.email_address else []
+            stalwart_emails += [
+                alias.full_address for alias in (stalwart_account.aliases or {}).values() if alias.full_address
+            ]
+            pkid = stalwart_account.id
 
         # Check the aliases
         if emails != stalwart_emails:
