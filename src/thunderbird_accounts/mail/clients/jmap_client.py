@@ -1,9 +1,8 @@
-import logging
+from django.conf import settings
 from base64 import b64encode
 from typing import Literal
 from thunderbird_accounts.mail.types.jmap import SessionResource, JMapRequest, Invocation, JMapResponse
 import enum
-import json
 import requests
 
 
@@ -32,7 +31,7 @@ class JMAPClient:
         self.api_url: str | None = None
         self.account_id: str | None = None
         self.identity_id: str | None = None
-        self.verify_ssl = False
+        self.verify_ssl = settings.VERIFY_PRIVATE_LINK_SSL
 
     def _authorization_value(self):
         return f'Bearer {self.token}' if self.auth_type == self.AUTH_TYPES.BEARER else f'Basic {self.token}'
@@ -42,7 +41,9 @@ class JMAPClient:
         if self.session:
             return self.session
         r = requests.get(
-            f'{self.base_url}/.well-known/jmap',
+            f'{self.base_url}/session'
+            if settings.STALWART_JMAP_API_IGNORE_API_URL
+            else f'{self.base_url}/.well-known/jmap',
             headers={
                 'Content-Type': 'application/json',
                 'Authorization': self._authorization_value(),
@@ -53,8 +54,7 @@ class JMAPClient:
         r.raise_for_status()
         session = SessionResource(**r.json())
         self.session = session
-        with open('./d_get_session.json', 'w') as fh:
-            fh.write(json.dumps(session.model_dump(), indent=2))
+
         if not self.session:
             raise RuntimeError('Failed to get session')
         self.api_url = session.api_url
@@ -101,11 +101,17 @@ class JMAPClient:
     def request(self, request_data: JMapRequest, method: Literal['get', 'post'] = 'post') -> JMapResponse:
         """Make a JMAP POST request to the API, returning the response as a
         Python data structure."""
-        if not self.api_url:
-            raise RuntimeError('Session not available')
-        logging.debug(f'[jmap_client.request] sending -> {(request_data.model_dump_json(exclude_none=True))}')
+
+        base_url = self.base_url
+
+        # If we're not ignoring the api url then we need to check for it and set it
+        if not settings.STALWART_JMAP_API_IGNORE_API_URL:
+            if not self.api_url:
+                raise RuntimeError('Session not available')
+            base_url = self.api_url
+
         res = requests.request(
-            url=self.api_url,
+            url=base_url,
             method=method,
             headers={
                 'Content-Type': 'application/json',
@@ -116,5 +122,5 @@ class JMAPClient:
         )
         res.raise_for_status()
         res_data = res.json()
-        logging.debug(f'[jmap_client.request] received -> {res_data}')
+
         return JMapResponse(**res_data)
