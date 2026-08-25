@@ -367,8 +367,17 @@ def create_stalwart_account(
         if emails != stalwart_emails:
             # Diff of new emails
             new_emails = set(emails) - set(stalwart_emails)
-            # Diff of the old emails
-            old_emails = set(stalwart_emails) - set(emails)
+            # Diff of the old emails. Scope the DELETE to addresses in ALLOWED_EMAIL_DOMAINS --
+            # the only ones this task owns. `emails` is just the canonical set, so an unscoped
+            # diff also sweeps up custom-domain aliases the user added via the mail UI, removing
+            # them from Stalwart while their local Email row survives. Previously unreachable
+            # (get_account always returned a dict, so stalwart_emails was always empty); the
+            # typed branch above makes it live.
+            old_emails = {
+                addr
+                for addr in set(stalwart_emails) - set(emails)
+                if addr.rsplit('@', 1)[-1] in settings.ALLOWED_EMAIL_DOMAINS
+            }
 
             stalwart.save_email_addresses(username, list(new_emails))
             stalwart.delete_email_addresses(username, list(old_emails))

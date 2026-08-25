@@ -58,7 +58,16 @@ class BaseJMAP(ABC):
     def _get_user_client(
         self, username, user_token, auth_type: JMAPClient.AUTH_TYPES = JMAPClient.AUTH_TYPES.BEARER
     ) -> JMAPClient:
-        client = JMAPClient(settings.STALWART_JMAP_API_URL, username, user_token, auth_type)
+        client = JMAPClient(
+            settings.STALWART_JMAP_API_URL,
+            username,
+            user_token,
+            auth_type,
+            # Same knob the legacy client uses for this backend. tb-dev reaches Stalwart at an
+            # in-cluster Service DNS name while Stalwart serves the PUBLIC mail-host cert, so
+            # verification must be switchable per environment rather than hardcoded either way.
+            verify_ssl=settings.VERIFY_PRIVATE_LINK_SSL,
+        )
         # Make sure we retrieve the session
         client.get_session()
         return client
