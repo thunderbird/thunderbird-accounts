@@ -1,13 +1,18 @@
 <script setup>
 import { PrimaryButton } from '@thunderbirdops/services-ui';
-import { useTemplateRef } from 'vue';
+import { ref, useTemplateRef } from 'vue';
 const formAction = window._page.currentView?.formAction;
 const logoutForm = useTemplateRef('logout-form');
+// @submit and @keyup.enter can both fire for one Enter keypress; keep the POST single-shot (#1231).
+const isSubmitting = ref(false);
 
 const sessionCode = window._page.currentView?.sessionCode;
 const clientUrl = window._page.currentView?.clientUrl;
 const onSubmit = () => {
-  logoutForm?.value?.submit();
+  if (isSubmitting.value) return;
+  if (!logoutForm.value?.checkValidity()) return;
+  isSubmitting.value = true;
+  logoutForm.value.submit();
 };
 </script>
 
@@ -25,7 +30,8 @@ export default {
     <div class="buttons">
       <input type="hidden" name="session_code" :value="sessionCode">
 
-      <primary-button data-testid="submit-btn" name="confirmLogout" id="kc-logout" class="submit" @click="onSubmit">
+      <primary-button data-testid="submit-btn" name="confirmLogout" id="kc-logout" class="submit" @click="onSubmit"
+                      :disabled="isSubmitting">
         {{ $t('doLogout') }}
       </primary-button>
 

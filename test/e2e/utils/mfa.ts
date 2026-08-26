@@ -66,7 +66,11 @@ export const signInWithPassword = async (page: Page) => {
   await page.goto(ACCTS_HUB_URL);
   await page.getByTestId('username-input').fill(ACCTS_OIDC_EMAIL);
   await page.getByTestId('password-input').fill(ACCTS_OIDC_PWORD);
-  await page.getByTestId('submit-btn').click();
+  // A focused button receives a synthetic click before its keyup bubbles to the form.
+  // This is the double-submit path guarded by the login theme (#1231).
+  const submitButton = page.getByTestId('submit-btn');
+  await submitButton.focus();
+  await submitButton.press('Enter');
 };
 
 // Sets up an authenticator app via the management UI and leaves the auto-chained

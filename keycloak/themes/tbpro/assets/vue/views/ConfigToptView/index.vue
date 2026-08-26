@@ -10,6 +10,8 @@ import { computed, ref, useTemplateRef } from "vue";
 import { i18n } from '@kc/composables/i18n.js';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
 const isManualMode = ref(false);
+// @submit and @keyup.enter can both fire for one Enter keypress; keep the POST single-shot (#1231).
+const isSubmitting = ref(false);
 const formAction = window._page.currentView?.formAction;
 const settingsForm = useTemplateRef('settings-form');
 const cancelForm = useTemplateRef('cancel-form');
@@ -67,7 +69,10 @@ const otpManualUrl = computed(() => {
 });
 
 const onSubmit = () => {
-  settingsForm?.value?.submit();
+  if (isSubmitting.value) return;
+  if (!settingsForm.value?.checkValidity()) return;
+  isSubmitting.value = true;
+  settingsForm.value.submit();
 };
 const onCancel = () => {
   cancelForm?.value?.cancel();
@@ -94,10 +99,11 @@ const copyLink = async () => {
 };
 
 const onNext = () => {
-  totpStep.value += 1;
-  if (totpStep.value >= 3) {
+  if (totpStep.value >= 2) {
     onSubmit();
+    return;
   }
+  totpStep.value += 1;
 };
 const onPrevious = () => {
   totpStep.value -= 1;
@@ -183,7 +189,7 @@ export default {
       </div>
       <div class="buttons">
         <primary-button data-testid="submit-btn" id="saveTOTPBtn" :value="$t('doSubmit')" class="submit"
-                        @click="onNext">{{
+                        @click="onNext" :disabled="isSubmitting">{{
             $t('doSubmit')
           }}
         </primary-button>
