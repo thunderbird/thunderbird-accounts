@@ -1,16 +1,21 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/adorsys/keycloak-config-cli/main/src/main/resources/keycloak-config-cli-import-schema.json
-# keycloak-config-cli: remember-me session and MFA step-up configuration for the tbpro realm.
+# keycloak-config-cli: audience mapping
 #
-# This file is the single source of truth for the remember-me session timeouts and the
-# browser MFA step-up flow used by keycloak-mfa-rest. It is applied on every Keycloak
-# start (local + stage/prod) from scripts/entry-keycloak.sh, replacing the old
-# ensure_keycloak_mfa_flow management command. config-cli reconciles declaratively: it
-# applies only the properties declared here and leaves every other realm resource
-# untouched (see IMPORT_MANAGED_* and the no-delete strategy in apply-mfa-config.sh).
+# Recent changes in Keycloak (26.6.2+) require clients that use another client's token to be in the `aud` claim of that token.
+# This is a simple change, but we have to apply it for quite a few clients. The `roles` scope which is a default scope automatically resolves their own audience value,
+# so we just need to focus on additional audiences.
 #
-# A separate top-level flow (browser-mfa-stepup) is bound rather than mutating the
-# built-in "browser" flow, so the original stays intact as a fallback (rebind browserFlow
-# to "browser" to revert).
+# A rough map looks like:
+# - desktop : stalwart
+# - desktop : thunderbird-send-backend
+# - ext-fairemail : stalwart
+# - mobile-android-k9mail : stalwart
+# - mobile-android-thunderbird : stalwart
+# - mobile-ios-thunderbird : stalwart
+# - thunderbird-accounts : stalwart
+# - thunderbird-accounts : thunderbird-accounts
+# - thunderbird-appointment-frontend : thunderbird-appointment-backend
+# - thunderbird-stormbox : stalwart
 realm: tbpro
 
 # Keycloak 26.6.2+ requires the client performing token introspection to be in the
@@ -25,7 +30,7 @@ clients:
         consentRequired: false
         config:
           included.client.audience: stalwart
-          id.token.claim: "true"
+          id.token.claim: "true" # tb-accounts (app) uses the id token here
           lightweight.claim: "false"
           access.token.claim: "true"
           introspection.token.claim: "true"
