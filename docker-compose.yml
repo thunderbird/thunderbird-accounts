@@ -198,7 +198,7 @@ services:
       KC_TBPRO_CONTACT: "http://localhost:8087/contact"
       KC_TBPRO_PRIMARY_DOMAIN: "example.org"
       # keycloak-mfa-rest: allow the accounts OIDC client's user tokens to self-manage MFA.
-      KC_SPI_REALM_RESTAPI_EXTENSION_MFA_AUTHORIZED_CLIENTS: "tb-accounts"
+      KC_SPI_REALM_RESTAPI_EXTENSION_MFA_AUTHORIZED_CLIENTS: "thunderbird-accounts"
       # keycloak-mfa-rest step-up gate: sensitive mutations on an account with MFA already
       # in place need a token at this acr with auth_time no older than this window. Keep
       # the window aligned with accounts' MFA_RECENT_AUTH_SECONDS (600) so the accounts
