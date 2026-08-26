@@ -12,11 +12,18 @@ const OtpCredentialModel = ref(selectedOtpCredential);
 const loginForm = useTemplateRef('login-form');
 const tryAnotherWayForm = useTemplateRef('try-another-way-form');
 
+const isSubmitting = ref(false);
+
 const onSubmit = () => {
-  loginForm?.value?.submit();
+  if (isSubmitting.value) return;
+  if (!loginForm.value?.checkValidity()) return;
+  isSubmitting.value = true;
+  loginForm.value.submit();
 };
 
 const onTryAnotherWay = () => {
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
   tryAnotherWayForm?.value?.cancel();
 };
 
@@ -49,7 +56,7 @@ export default {
         </text-input>
       </div>
       <div class="buttons">
-        <primary-button class="submit" @click="onSubmit" data-testid="submit-btn">{{ $t('doLogIn') }}</primary-button>
+        <primary-button class="submit" @click="onSubmit" :disabled="isSubmitting" data-testid="submit-btn">{{ $t('doLogIn') }}</primary-button>
       </div>
     </form>
 

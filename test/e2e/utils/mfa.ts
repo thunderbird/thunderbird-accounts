@@ -109,7 +109,11 @@ export const completeOtpChallenge = async (page: Page, manualSecret: string, las
   for (let attempt = 0; attempt < 3; attempt++) {
     await expect(otpInput).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     await otpInput.fill(code);
-    await page.getByTestId('submit-btn').click();
+    if (attempt === 0) {
+      await otpInput.press('Enter');
+    } else {
+      await page.getByTestId('submit-btn').click();
+    }
     try {
       await page.waitForURL((url) => !url.pathname.startsWith('/realms/'), { timeout: 10_000 });
       return code;
