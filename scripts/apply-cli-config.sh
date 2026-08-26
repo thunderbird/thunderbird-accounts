@@ -1,16 +1,21 @@
 #!/bin/bash
 #
-# Reconcile the tbpro realm's remember-me settings and MFA step-up flow with
+# Reconcile the tbpro realm's remember-me settings and cli step-up flow with
 # keycloak-config-cli.
 #
 # Runs in the background from entry-keycloak.sh on every Keycloak start (local + deploy):
-# waits for the server to report ready, then applies keycloak/config-cli/tbpro-mfa-stepup.yaml
+# waits for the server to report ready, then applies keycloak/config-cli/$1.yaml
 # declaratively. Fail-soft — it never blocks Keycloak from serving (a failed reconcile just
 # logs and exits 0).
 
 set -uo pipefail
 
-CONFIG_FILE='/opt/keycloak/config-cli/tbpro-mfa-stepup.yaml'
+if [[ -z "$1" ]]; then
+    echo 'This script requires a yaml filename (without the extension)'
+    exit 1
+fi
+
+CONFIG_FILE="/opt/keycloak/config-cli/$1.yaml"
 CONFIG_CLI_JAR='/opt/keycloak/keycloak-config-cli.jar'
 # Management interface (health/metrics) — enabled everywhere via KC_HEALTH_ENABLED=true.
 HEALTH_PORT="${KC_HTTP_MANAGEMENT_PORT:-9000}"
@@ -34,13 +39,13 @@ for i in $(seq 1 300); do
     sleep 2
 done
 if ! kc_ready; then
-    echo 'apply-mfa-config: Keycloak did not become ready within 10 minutes; skipping MFA flow reconcile.'
+    echo 'apply-cli-config: Keycloak did not become ready within 10 minutes; skipping cli flow reconcile.'
     exit 0
 fi
-echo "apply-mfa-config: Keycloak ready after ~$((i * 2))s; reconciling."
+echo "apply-cli-config: Keycloak ready after ~$((i * 2))s; reconciling."
 
 if [[ -z "${KEYCLOAK_ADMIN_CLIENT_SECRET:-}" ]]; then
-    echo 'apply-mfa-config: KEYCLOAK_ADMIN_CLIENT_SECRET unset; skipping MFA flow reconcile.'
+    echo 'apply-cli-config: KEYCLOAK_ADMIN_CLIENT_SECRET unset; skipping cli flow reconcile.'
     exit 0
 fi
 
@@ -76,4 +81,4 @@ JDBC_JARS=(/opt/keycloak/lib/lib/main/org.postgresql.postgresql-*.jar)
 
 java -cp "${JDBC_JARS[0]}" "${SCRIPT_DIR}/PgAdvisoryLockRun.java" \
     java -jar "${CONFIG_CLI_JAR}" \
-    || echo 'apply-mfa-config: keycloak-config-cli failed (non-fatal).'
+    || echo 'apply-cli-config: keycloak-config-cli failed (non-fatal).'

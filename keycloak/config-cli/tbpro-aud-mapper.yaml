@@ -1,0 +1,71 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/adorsys/keycloak-config-cli/main/src/main/resources/keycloak-config-cli-import-schema.json
+# keycloak-config-cli: remember-me session and MFA step-up configuration for the tbpro realm.
+#
+# This file is the single source of truth for the remember-me session timeouts and the
+# browser MFA step-up flow used by keycloak-mfa-rest. It is applied on every Keycloak
+# start (local + stage/prod) from scripts/entry-keycloak.sh, replacing the old
+# ensure_keycloak_mfa_flow management command. config-cli reconciles declaratively: it
+# applies only the properties declared here and leaves every other realm resource
+# untouched (see IMPORT_MANAGED_* and the no-delete strategy in apply-mfa-config.sh).
+#
+# A separate top-level flow (browser-mfa-stepup) is bound rather than mutating the
+# built-in "browser" flow, so the original stays intact as a fallback (rebind browserFlow
+# to "browser" to revert).
+realm: tbpro
+
+# Keycloak 26.6.2+ requires the client performing token introspection to be in the
+# access token's audience.
+clients:
+  - clientId: thunderbird-accounts
+    protocolMappers:
+      - &scope_stalwart_audience
+        name: stalwart audience
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          included.client.audience: stalwart
+          id.token.claim: "true"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
+  - clientId: desktop
+    protocolMappers:
+      - *scope_stalwart_audience
+      - name: thunderbird send backend audience
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          included.client.audience: thunderbird-send-backend
+          id.token.claim: "true"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
+  - clientId: ext-fairemail
+    protocolMappers:
+      - *scope_stalwart_audience
+  - clientId: mobile-android-k9mail
+    protocolMappers:
+      - *scope_stalwart_audience
+  - clientId: mobile-android-thunderbird
+    protocolMappers:
+      - *scope_stalwart_audience
+  - clientId: mobile-ios-thunderbird
+    protocolMappers:
+      - *scope_stalwart_audience
+  - clientId: thunderbird-stormbox
+    protocolMappers:
+      - *scope_stalwart_audience
+  - clientId: thunderbird-appointment-frontend
+    protocolMappers:
+      - name: appointment backend audience
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          included.client.audience: thunderbird-appointment-backend
+          id.token.claim: "true"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
