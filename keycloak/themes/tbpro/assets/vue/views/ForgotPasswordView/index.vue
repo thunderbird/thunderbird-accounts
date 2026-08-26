@@ -8,8 +8,15 @@ const loginUrl = window._page.currentView?.loginUrl;
 const username = window._page.currentView?.attemptedUserName;
 const resetPasswordForm = useTemplateRef('reset-password-form');
 
+// Enter can reach onSubmit twice: the form's implicit submission fires @submit.prevent and
+// the bubbling keyup fires @keyup.enter. Guard so only one POST goes out (#1133). The flag is
+// set after checkValidity so a failed validation leaves the form usable.
+const isSubmitting = ref(false);
+
 const onSubmit = () => {
+  if (isSubmitting.value) return;
   if (resetPasswordForm.value.checkValidity()) {
+    isSubmitting.value = true;
     resetPasswordForm?.value?.submit();
   }
 };
@@ -59,7 +66,7 @@ export default {
         <primary-button variant="outline" :href="loginUrl" data-testid="back-url">{{ $t('backToLogin') }}</primary-button>
       </template>
 
-      <primary-button class="submit" @click="onSubmit" data-testid="submit">{{ $t('doSubmit') }}</primary-button>
+      <primary-button class="submit" @click="onSubmit" :disabled="isSubmitting" data-testid="submit">{{ $t('doSubmit') }}</primary-button>
     </div>
   </form>
 </template>

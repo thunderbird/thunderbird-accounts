@@ -1,6 +1,6 @@
 <script setup>
 import { TextInput, PrimaryButton, LinkButton } from "@thunderbirdops/services-ui";
-import { computed, useTemplateRef } from "vue";
+import { computed, ref, useTemplateRef } from "vue";
 import CancelForm from '@kc/vue/components/CancelForm.vue';
 
 const formAction = window._page.currentView?.formAction;
@@ -11,11 +11,24 @@ const showTryAnotherWay = window._page.currentView?.showTryAnotherWay === 'true'
 const loginForm = useTemplateRef('login-form');
 const tryAnotherWayForm = useTemplateRef('try-another-way-form');
 
+// Enter can reach onSubmit twice: the form's implicit submission fires @submit.prevent and
+// the bubbling keyup fires @keyup.enter. Both call form.submit(); here the first POST spends a
+// single-use recovery code and the second hits a spent session_code, so Keycloak restarts the
+// login flow and the retry costs a second code (#1133).
+const isSubmitting = ref(false);
+
 const onSubmit = () => {
-  loginForm?.value?.submit();
+  if (isSubmitting.value) return;
+  // Native submit() skips constraint validation, so check it here as the other views do.
+  if (!loginForm.value?.checkValidity()) return;
+  isSubmitting.value = true;
+  loginForm.value.submit();
 };
 
 const onTryAnotherWay = () => {
+  // Posts to the same action as the login form, so it shares the guard.
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
   tryAnotherWayForm?.value?.cancel();
 };
 
@@ -42,7 +55,7 @@ export default {
         </text-input>
       </div>
       <div class="buttons">
-        <primary-button class="submit" @click="onSubmit" data-testid="submit-btn">{{ $t('doLogIn') }}</primary-button>
+        <primary-button class="submit" @click="onSubmit" :disabled="isSubmitting" data-testid="submit-btn">{{ $t('doLogIn') }}</primary-button>
       </div>
     </form>
 
