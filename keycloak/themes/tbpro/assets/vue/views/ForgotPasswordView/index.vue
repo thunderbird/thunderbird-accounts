@@ -8,9 +8,6 @@ const loginUrl = window._page.currentView?.loginUrl;
 const username = window._page.currentView?.attemptedUserName;
 const resetPasswordForm = useTemplateRef('reset-password-form');
 
-// Enter can reach onSubmit twice: the form's implicit submission fires @submit.prevent and
-// the bubbling keyup fires @keyup.enter. Guard so only one POST goes out (#1133). The flag is
-// set after checkValidity so a failed validation leaves the form usable.
 const isSubmitting = ref(false);
 
 const onSubmit = () => {

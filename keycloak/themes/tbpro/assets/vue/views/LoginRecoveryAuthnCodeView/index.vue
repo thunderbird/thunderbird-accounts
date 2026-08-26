@@ -11,22 +11,16 @@ const showTryAnotherWay = window._page.currentView?.showTryAnotherWay === 'true'
 const loginForm = useTemplateRef('login-form');
 const tryAnotherWayForm = useTemplateRef('try-another-way-form');
 
-// Enter can reach onSubmit twice: the form's implicit submission fires @submit.prevent and
-// the bubbling keyup fires @keyup.enter. Both call form.submit(); here the first POST spends a
-// single-use recovery code and the second hits a spent session_code, so Keycloak restarts the
-// login flow and the retry costs a second code (#1133).
 const isSubmitting = ref(false);
 
 const onSubmit = () => {
   if (isSubmitting.value) return;
-  // Native submit() skips constraint validation, so check it here as the other views do.
   if (!loginForm.value?.checkValidity()) return;
   isSubmitting.value = true;
   loginForm.value.submit();
 };
 
 const onTryAnotherWay = () => {
-  // Posts to the same action as the login form, so it shares the guard.
   if (isSubmitting.value) return;
   isSubmitting.value = true;
   tryAnotherWayForm?.value?.cancel();

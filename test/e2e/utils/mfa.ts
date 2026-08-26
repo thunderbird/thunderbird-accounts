@@ -109,8 +109,6 @@ export const completeOtpChallenge = async (page: Page, manualSecret: string, las
   for (let attempt = 0; attempt < 3; attempt++) {
     await expect(otpInput).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     await otpInput.fill(code);
-    // Submit the first attempt with Enter: that is the input path that used to fire
-    // form.submit() twice and bounce the user back to the start of sign-in (#1133).
     if (attempt === 0) {
       await otpInput.press('Enter');
     } else {
