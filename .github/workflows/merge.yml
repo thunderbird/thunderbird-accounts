@@ -150,7 +150,7 @@ jobs:
         run: |
           cd $PULUMI_DIR
           source ./venv/bin/activate
-          curl -fsSL https://get.pulumi.com | sh
+          curl -fsSL https://get.pulumi.com | sh -s -- --version 3.259.0
           pip install -Ur requirements.txt
 
       # Produce the accounts container image (only when accounts/IaC changed).
