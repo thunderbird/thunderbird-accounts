@@ -24,6 +24,7 @@ from thunderbird_accounts.mail.exceptions import (
     DomainNotFoundError,
     HostedDkimDeleteRetry,
     HostedDkimPublishRetry,
+    InvalidJMapResponseError,
 )
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.core.types import TaskReturnStatus
@@ -317,6 +318,9 @@ def create_stalwart_account(
     but is still required. App Passwords can be set now, or later.
 
     Note: Email should be Thundermail address. Stalwart does not need your recovery email."""
+
+    user = User.objects.get(oidc_id=oidc_id)
+
     stalwart = MailClient()
     domain = email.split('@')[1]
 
@@ -326,11 +330,7 @@ def create_stalwart_account(
 
         raise TaskFailed(
             str(error),
-            {
-                'oidc_id': oidc_id,
-                'username': username,
-                'email': email,
-            },
+            {'oidc_id': oidc_id, 'user_uuid': user.uuid},
         )
 
     emails = [
@@ -347,33 +347,35 @@ def create_stalwart_account(
         _domain = alias.split('@')[1]
         _stalwart_check_or_create_domain_entry(stalwart, _domain)
 
-    # Lookup the account first, this shouldn't normally happen but if it does we shouldn't explode.
+    # Lookup the account first, this shouldn't happen but if we have a left-over account then it's a problem.
     try:
         stalwart_account = stalwart.get_account(username)
-        stalwart_emails = stalwart_account.get('emails', [])
-
-        # link the stalwart account
-        pkid = stalwart_account.get('id')
-
-        # Check the aliases
-        if emails != stalwart_emails:
-            # Diff of new emails
-            new_emails = set(emails) - set(stalwart_emails)
-            # Diff of the old emails
-            old_emails = set(stalwart_emails) - set(emails)
-
-            stalwart.save_email_addresses(username, list(new_emails))
-            stalwart.delete_email_addresses(username, list(old_emails))
+        logging.error(f'[create_stalwart_account] Account [{user.uuid}] already exists in Stalwart!')
+        raise TaskFailed(
+            str('Account already exists in Stalwart'),
+            {
+                'oidc_id': oidc_id,
+                'user_uuid': user.uuid,
+                'stalwart_pkid': stalwart_account.get('id'),
+            },
+        )
+    except InvalidJMapResponseError as ex:
+        # Cover any jmap response errors, these also require manual fixing (re-running activate sub features)
+        sentry_sdk.capture_exception(ex)
+        raise TaskFailed(
+            str(ex.validation_error),
+            {'oidc_id': oidc_id, 'user_uuid': user.uuid},
+        )
     except AccountNotFoundError:
-        # We need to create this after dkim and domain records exist
-        pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
+        pass
 
-    user = User.objects.get(oidc_id=oidc_id)
+    # We need to create this after dkim and domain records exist
+    pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
     now = datetime.datetime.now(datetime.UTC)
 
-    # Don't create the account if we already have it
+    # Don't create the account if we already have it (this is safe as this object contains no info by itself)
     # Also create their account objects
-    account, _created = Account.objects.update_or_create(
+    account, account_was_created = Account.objects.update_or_create(
         name=user.username,
         defaults={
             'active': True,
@@ -390,6 +392,13 @@ def create_stalwart_account(
             'stalwart_created_at': now,
         },
     )
+
+    if not account_was_created:
+        # Something is wrong, why wasn't this removed? Let's bug sentry about it.
+        logging.error(
+            f'[create_stalwart_account] Account reference [{account.uuid}] already existed. '
+            'It should probably not exist.'
+        )
 
     # Edge-case: don't override an existing stalwart_created_at timestamp
     if not account.stalwart_created_at:
@@ -419,7 +428,6 @@ def create_stalwart_account(
     return {
         'oidc_id': oidc_id,
         'stalwart_pkid': pkid,
-        'username': username,
-        'email': email,
+        'user_uuid': user.uuid,
         'task_status': TaskReturnStatus.SUCCESS,
     }
