@@ -267,7 +267,7 @@ def is_address_taken(email_address: str) -> bool:
             # It exists? That's a problem.
             return True
         except (AccountNotFoundError, InvalidJMapResponseError):
-            pass # all okay
+            pass  # all okay
 
     return False
 
