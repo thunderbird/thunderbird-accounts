@@ -1,3 +1,6 @@
+from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.settings import WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART
+import waffle
 import logging
 import uuid
 import sentry_sdk
@@ -9,7 +12,7 @@ from django.contrib.auth.hashers import make_password, identify_hasher
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 
-from thunderbird_accounts.mail.exceptions import EmailNotValidError
+from thunderbird_accounts.mail.exceptions import EmailNotValidError, AccountNotFoundError, InvalidJMapResponseError
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.mail import tasks
@@ -255,6 +258,16 @@ def is_address_taken(email_address: str) -> bool:
     aliases = Email.objects.filter(address__iexact=email_address).exists()
     if aliases:
         return True
+
+    # If this switch is enabled then check stalwart if this address is taken as well
+    if waffle.switch_is_active(WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART):
+        stalwart = MailClient()
+        try:
+            stalwart.get_account(email_address)
+            # It exists? That's a problem.
+            return True
+        except (AccountNotFoundError, InvalidJMapResponseError):
+            pass # all okay
 
     return False
 

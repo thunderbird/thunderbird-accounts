@@ -723,3 +723,7 @@ WAFFLE_FLAG_ALLOW_POST_REAUTH = 'auth-allow-post-reauth'
 
 # Show the sitewide "we're under increased traffic" banner
 WAFFLE_SWITCH_INCREASED_TRAFFIC_BANNER = 'increased-traffic-banner'
+
+# During the is_address_taken function lastly check Stalwart for the address that is being requested,
+# and error if that address exists in Stalwart.
+WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART = 'is-address-taken-lookup-stalwart'
