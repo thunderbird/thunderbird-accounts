@@ -146,12 +146,12 @@ def delete_user_data(user) -> list[str]:
             sentry_sdk.capture_exception(ex)
             errors.append(f'Keycloak: {ex}')
 
-        if user.stalwart_primary_email:
-            try:
-                MailClient().delete_account(user.stalwart_primary_email)
-            except Exception as ex:
-                sentry_sdk.capture_exception(ex)
-                errors.append(f'Stalwart: {ex}')
+    if user.stalwart_primary_email:
+        try:
+            MailClient().delete_account(user.stalwart_primary_email)
+        except Exception as ex:
+            sentry_sdk.capture_exception(ex)
+            errors.append(f'Stalwart: {ex}')
 
     if errors:
         logging.error(f'Errors during user data deletion for {user.username}: {errors}')
