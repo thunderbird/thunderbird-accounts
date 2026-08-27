@@ -1,11 +1,13 @@
-from unittest.mock import patch
-
+import uuid
 from django.conf import settings
 from django.test import TestCase
+from unittest.mock import Mock, patch
+from thunderbird_accounts.mail.models import Email
+from waffle.testutils import override_switch
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
-from thunderbird_accounts.mail.utils import create_stalwart_account, validate_email
+from thunderbird_accounts.mail.utils import create_stalwart_account, validate_email, is_address_taken
 
 
 class ValidateEmailTestCase(TestCase):
@@ -129,3 +131,64 @@ class CreateStalwartAccountTestCase(TestCase):
         create_stalwart_account(user)
 
         self.assertIsNone(mock_task.delay.call_args.kwargs['full_name'])
+
+
+class IsAddressTakenTestCase(TestCase):
+    def _form_email(self, local_part: str) -> str:
+        return f'{local_part}@{settings.PRIMARY_EMAIL_DOMAIN}'
+
+    @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, False)
+    def test_success(self):
+        """If no one is using the address then it's not 'taken'."""
+        thundermail_address = self._form_email(str(uuid.uuid4()))
+
+        with self.assertRaises(User.DoesNotExist):
+            User.objects.get(username=thundermail_address)
+
+        self.assertFalse(is_address_taken(thundermail_address))
+
+    @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, False)
+    def test_fail_due_to_user(self):
+        """Ensure that if a user is using that address, that it will be 'taken'."""
+        thundermail_address = self._form_email(str(uuid.uuid4()))
+
+        self.assertFalse(is_address_taken(thundermail_address))
+
+        # Now the address cannot be reused
+        User.objects.create(username=thundermail_address)
+        self.assertTrue(is_address_taken(thundermail_address))
+
+    @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, False)
+    def test_fail_due_to_email_alias(self):
+        """Ensure that if an email alias exists of that address, that it will be 'taken'."""
+        thundermail_address = self._form_email(str(uuid.uuid4()))
+
+        with self.assertRaises(User.DoesNotExist):
+            User.objects.get(username=thundermail_address)
+
+        self.assertFalse(is_address_taken(thundermail_address))
+
+        # Create an email alias
+        Email.objects.create(address=thundermail_address)
+
+        self.assertTrue(is_address_taken(thundermail_address))
+
+    def test_fail_due_to_stalwart(self):
+        """Same as the other fail tests but we test both with the
+        waffle switch off (return false) and switch on (return true)"""
+        with patch('thunderbird_accounts.mail.utils.MailClient', Mock()) as mail_client_mock:
+            instance_mock = Mock()
+            instance_mock.get_account.return_value = {'id': 1}
+            mail_client_mock.return_value = instance_mock
+
+            thundermail_address = self._form_email(str(uuid.uuid4()))
+
+            with self.assertRaises(User.DoesNotExist):
+                User.objects.get(username=thundermail_address)
+            with self.assertRaises(Email.DoesNotExist):
+                Email.objects.get(address=thundermail_address)
+
+            with override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, False):
+                self.assertFalse(is_address_taken(thundermail_address))
+            with override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, True):
+                self.assertTrue(is_address_taken(thundermail_address))
