@@ -10,12 +10,16 @@ const rememberMe = window._page.currentView?.rememberMe;
 const forgotPasswordUrl = window._page.currentView?.forgotPasswordUrl;
 const supportUrl = window._page.currentView?.supportUrl;
 const loginForm = useTemplateRef('login-form');
+// @submit and @keyup.enter can both fire for one Enter keypress; keep the POST single-shot (#1231).
+const isSubmitting = ref(false);
 const message = window._page?.message;
 const tbProPrimaryDomain = window._page.currentView?.tbProPrimaryDomain;
 
 const onSubmit = () => {
+  if (isSubmitting.value) return;
   if (loginForm.value.checkValidity()) {
-    loginForm?.value?.submit();
+    isSubmitting.value = true;
+    loginForm.value.submit();
   }
 };
 
@@ -129,7 +133,7 @@ export default {
     ></checkbox-input>
 
     <div class="buttons">
-      <brand-button data-testid="submit-btn" class="submit" @click="onSubmit">
+      <brand-button data-testid="submit-btn" class="submit" @click="onSubmit" :disabled="isSubmitting">
         {{ $t('doLogIn') }}
 
         <template #iconRight>

@@ -37,8 +37,11 @@ const recoveryEmailError = computed(() => {
 });
 
 const registerForm = useTemplateRef('register-form');
+// @submit and @keyup.enter can both fire for one Enter keypress; keep the POST single-shot (#1231).
+const isSubmitting = ref(false);
 
 const onSubmit = () => {
+  if (isSubmitting.value) return;
   // Do some basic password/confirm password checking, due to how we inject the i18n between kc and accounts 
   // we'll need to just grab it from the html. 
   const invalidPasswordConfirmMessage = document.getElementById('invalidPasswordConfirmMessage')?.innerText;
@@ -54,7 +57,8 @@ const onSubmit = () => {
   }
 
   if (registerForm.value.checkValidity()) {
-    registerForm?.value?.submit();
+    isSubmitting.value = true;
+    registerForm.value.submit();
   }
 };
 
@@ -141,7 +145,7 @@ export default {
       <slot name="form-extras"/>
     </div>
     <div class="buttons">
-      <brand-button data-testid="submit-button" class="submit" @click="onSubmit">
+      <brand-button data-testid="submit-button" class="submit" @click="onSubmit" :disabled="isSubmitting">
         {{ $t('doRegister') }}
 
         <template #iconRight>

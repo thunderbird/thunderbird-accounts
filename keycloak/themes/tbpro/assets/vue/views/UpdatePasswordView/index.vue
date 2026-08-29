@@ -1,8 +1,10 @@
 <script setup>
 import { TextInput, PrimaryButton, CheckboxInput } from "@thunderbirdops/services-ui";
-import { computed, useTemplateRef } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 const formAction = window._page.currentView?.formAction;
 const updatePasswordForm = useTemplateRef('update-password-form');
+// @submit and @keyup.enter can both fire for one Enter keypress; keep the POST single-shot (#1231).
+const isSubmitting = ref(false);
 const errors = window._page.currentView?.errors;
 const passwordError = computed(() => {
   return errors.value?.password === '' ? null : errors.value?.password;
@@ -12,7 +14,10 @@ const passwordConfirmError = computed(() => {
 });
 
 const onSubmit = () => {
-  updatePasswordForm?.value?.submit();
+  if (isSubmitting.value) return;
+  if (!updatePasswordForm.value?.checkValidity()) return;
+  isSubmitting.value = true;
+  updatePasswordForm.value.submit();
 };
 </script>
 
@@ -32,7 +37,7 @@ export default {
       <checkbox-input data-testid="logout-all-sessions-input" id="logout-sessions" name="logout-sessions" :label="$t('logoutOtherSessions')"></checkbox-input>
       </div>
     <div class="buttons">
-      <primary-button data-testid="submit-btn" class="submit" @click="onSubmit">{{ $t('doSubmit') }}</primary-button>
+      <primary-button data-testid="submit-btn" class="submit" @click="onSubmit" :disabled="isSubmitting">{{ $t('doSubmit') }}</primary-button>
     </div>
   </form>
   <template v-if="loginUrl">

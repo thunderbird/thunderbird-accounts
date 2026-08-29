@@ -1,6 +1,6 @@
 <script setup>
 import { PrimaryButton } from '@thunderbirdops/services-ui';
-import { computed, useTemplateRef } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 import CancelForm from '@kc/vue/components/CancelForm.vue';
 
 const formAction = window._page.currentView?.formAction;
@@ -10,9 +10,14 @@ const submitText = window._page.currentView?.submitText;
 
 const verifyEmailForm = useTemplateRef('verify-email-form');
 const cancelForm = useTemplateRef('cancel-form');
+// @submit and @keyup.enter can both fire for one Enter keypress; keep the POST single-shot (#1231).
+const isSubmitting = ref(false);
 
 const onSubmit = () => {
-  verifyEmailForm?.value?.submit();
+  if (isSubmitting.value) return;
+  if (!verifyEmailForm.value?.checkValidity()) return;
+  isSubmitting.value = true;
+  verifyEmailForm.value.submit();
 };
 
 const onCancel = () => {
@@ -34,7 +39,8 @@ export default {
         @submit.prevent="onSubmit" @keyup.enter="onSubmit" v-if="showForm">
     <p>{{ verifyEmailInstruction }}</p>
     <div class="buttons">
-      <primary-button data-testid="submit-btn" id="submit" class="submit" @click="onSubmit" :value="submitText">{{
+      <primary-button data-testid="submit-btn" id="submit" class="submit" @click="onSubmit" :value="submitText"
+                      :disabled="isSubmitting">{{
           submitText
         }}
       </primary-button>
