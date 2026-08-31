@@ -25,19 +25,18 @@ export const validateEmailAlias = ({
 }: EmailAliasValidationOptions): EmailAliasValidationMessageKey | null => {
   const isSharedDomain = allowedDomains.includes(selectedDomain);
   const isUsedCatchAll = existingCatchAlls.some((catchAll) => catchAll.endsWith(`@${selectedDomain}`));
+  const isCatchAllRequest = !value || value === '*';
 
   if (EMAIL_ALIAS_FORBIDDEN_SYMBOLS.some((symbol) => value.includes(symbol))) {
     return EMAIL_ALIAS_VALIDATION_MESSAGES.PLUS_SYMBOL;
   }
 
-  // If we're a shared domain or a domain that already has a catch all we'll want to error out on min length.
-  if ((isUsedCatchAll || isSharedDomain) && (!value || value.length < EMAIL_ALIAS_MIN_LENGTH)) {
-    return EMAIL_ALIAS_VALIDATION_MESSAGES.MIN_LENGTH;
+  if (isCatchAllRequest) {
+    return isSharedDomain || isUsedCatchAll ? EMAIL_ALIAS_VALIDATION_MESSAGES.MIN_LENGTH : null;
   }
 
-  // Catch-all domain for #446
-  if (!isUsedCatchAll && (!value || value === '*')) {
-    return null;
+  if (isSharedDomain && value.length < EMAIL_ALIAS_MIN_LENGTH) {
+    return EMAIL_ALIAS_VALIDATION_MESSAGES.MIN_LENGTH;
   }
 
   if (value.length > EMAIL_ALIAS_MAX_LENGTH) {

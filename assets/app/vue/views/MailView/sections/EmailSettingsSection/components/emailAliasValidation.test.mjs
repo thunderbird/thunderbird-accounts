@@ -29,3 +29,27 @@ test('email alias validation blocks catch-all aliases on domains with an existin
     })
   ).toBe(EMAIL_ALIAS_VALIDATION_MESSAGES.MIN_LENGTH);
 });
+
+test('shared domains enforce the minimum local-part length', () => {
+  expect(validateEmailAlias({ ...sharedDomainOptions, value: 'ab' })).toBe(
+    EMAIL_ALIAS_VALIDATION_MESSAGES.MIN_LENGTH
+  );
+  expect(validateEmailAlias({ ...sharedDomainOptions, value: 'abc' })).toBe(null);
+});
+
+test('custom domains allow short aliases regardless of catch-all state', () => {
+  const customDomainOptions = {
+    selectedDomain: 'my-domain.com',
+    allowedDomains: ['example.org'],
+  };
+
+  // No catch-all set
+  expect(
+    validateEmailAlias({ ...customDomainOptions, value: 'ab', existingCatchAlls: [] })
+  ).toBe(null);
+
+  // Catch-all already set for this domain
+  expect(
+    validateEmailAlias({ ...customDomainOptions, value: 'ab', existingCatchAlls: ['@my-domain.com'] })
+  ).toBe(null);
+});
