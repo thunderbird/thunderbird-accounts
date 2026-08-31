@@ -6,6 +6,7 @@
 # so we just need to focus on additional audiences.
 #
 # A rough map looks like:
+# - stalwart : stalwart
 # - desktop : stalwart
 # - desktop : thunderbird-send-backend
 # - ext-fairemail : stalwart
@@ -60,6 +61,10 @@ clients:
     protocolMappers:
       - *scope_stalwart_audience
   - clientId: thunderbird-stormbox
+    protocolMappers:
+      - *scope_stalwart_audience
+  # stalwart: stalwart is needed for mail authentication via user sso, as it normally returns aud: account. 
+  - clientId: stalwart
     protocolMappers:
       - *scope_stalwart_audience
   - clientId: thunderbird-appointment-frontend
