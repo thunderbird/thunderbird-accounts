@@ -349,7 +349,7 @@ resources:
       transit_encryption_mode: required
       transit_encryption_enabled: True
       apply_immediately: True
-  
+
   tb:fargate:AutoscalingFargateCluster:
     accounts:
       cluster: {}
@@ -360,8 +360,10 @@ resources:
         celery-stage:
           <<: *ACCOUNTS_TASK_DEFINITION
           family: accounts-stage-celery
-          cpu: 512
-          memory: 1024
+          # ECS task size constraints:
+          # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size
+          cpu: 1024
+          memory: 2048
           container_definitions:
             - <<: *ACCOUNTS_CONTAINER_DEFINITION
               name: celery
@@ -541,7 +543,7 @@ resources:
           protocol: HTTP
           target_type: ip
           ip_address_type: ipv4
-      
+
       load_balancers:
         flower:
           enable_cross_zone_load_balancing: yes
@@ -598,7 +600,7 @@ resources:
                 description: Allow local TLS traffic only
                 cidr_blocks:
                   - 10.11.0.0/16
-      
+
       listeners:
         flower:  # Load balancer to attach to
           flower:  # Target to route traffic to
@@ -632,7 +634,7 @@ resources:
           - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/*
         flower-stage:
           - arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/*
-      
+
       ssm_params: {}
 
       autoscalers:
