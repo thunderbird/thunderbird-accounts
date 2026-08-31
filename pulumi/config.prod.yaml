@@ -3,7 +3,7 @@
 ### Special variables used throughout this file
 
 # Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.16.12
+.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:v1.17.0
 
 # Update this value to update all containers based on this Keycloak image
 .keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-99bdead307c8c58ee9c8990041fe1b6db60de211
@@ -340,7 +340,7 @@ resources:
     bastion:
       ami: ami-081f88da93d42baeb
       ssh_keypair_name: accounts-prod
-      source_cidrs: 
+      source_cidrs:
         - 10.10.0.0/16
 
   tb:elasticache:ElastiCacheReplicaGroup:
@@ -361,8 +361,10 @@ resources:
         celery-prod:
           <<: *ACCOUNTS_TASK_DEFINITION
           family: accounts-prod-celery
-          cpu: 512
-          memory: 1024
+          # ECS task size constraints:
+          # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size
+          cpu: 2048
+          memory: 4096
           container_definitions:
             - <<: *ACCOUNTS_CONTAINER_DEFINITION
               name: celery
