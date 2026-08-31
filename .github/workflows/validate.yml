@@ -167,7 +167,7 @@ jobs:
         shell: bash
         run: |
           cp .env.example .env
-          mkdir -p mail/etc && cp config.toml.example mail/etc/config.toml
+          python3 bootstrap.py
           append_env_if_set() {
             local key="$1"
             local value="${!key}"
