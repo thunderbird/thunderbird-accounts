@@ -34,7 +34,7 @@ RUN rm -rf /app/keycloak/assets/*
 
 # release source — download a pinned, checksummed jar from GitHub Releases.
 # NOTE: requires the keycloak-mfa-rest v* release to exist before this image can build.
-FROM quay.io/keycloak/keycloak:26.7.2 AS mfa-release
+FROM quay.io/keycloak/keycloak:26.7.3 AS mfa-release
 ARG KEYCLOAK_MFA_REST_VERSION=v0.1.1
 ARG KEYCLOAK_MFA_REST_SHA256=d40092a89671d08089a590e75622e1b525de7efc73ac5edfe2bec8e8cb704b5d
 ADD --chown=keycloak:keycloak \
@@ -45,7 +45,7 @@ RUN if [ -n "${KEYCLOAK_MFA_REST_SHA256}" ]; then \
     fi
 
 # local source — copy a jar built in a container into keycloak/providers/ (gitignored).
-FROM quay.io/keycloak/keycloak:26.7.2 AS mfa-local
+FROM quay.io/keycloak/keycloak:26.7.3 AS mfa-local
 COPY --chown=keycloak:keycloak keycloak/providers/keycloak-mfa-rest.jar /opt/keycloak/providers/keycloak-mfa-rest.jar
 
 # Select the provider source; defaults to the released jar. BuildKit only builds the
