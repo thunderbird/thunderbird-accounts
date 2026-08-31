@@ -8,6 +8,7 @@ from waffle.models import Flag
 import uuid
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import SuspiciousOperation
 from urllib.parse import quote
 from django.test import Client as RequestClient, override_settings
@@ -23,6 +24,7 @@ from thunderbird_accounts.authentication.models import AllowListEntry
 @patch('thunderbird_accounts.authentication.clients.KeycloakClient.import_user')
 class SignUpTestcase(APITestCase):
     def setUp(self):
+        cache.clear()
         self.client = RequestClient()
         self.wait_list = ['hello@example.com', 'hello2@example.com']
         for entry in self.wait_list:
@@ -61,6 +63,40 @@ class SignUpTestcase(APITestCase):
 
         self.assertEqual(response.status_code, 200, msg=assert_fail_msg)
         self.assertEqual(response.json(), {'success': True}, msg=assert_fail_msg)
+
+    def test_success_stores_display_name(self, mock_import_user: MagicMock):
+        """The name entered during sign-up is stored on the local user and forwarded to Keycloak."""
+
+        mock_import_user.return_value = 1
+
+        response = self.client.post(
+            '/api/v1/auth/sign-up/',
+            self.make_sign_up_data(email=self.wait_list[0], name='Ada Lovelace'),
+        )
+        assert_fail_msg = self.get_messages(response)
+
+        self.assertEqual(response.status_code, 200, msg=assert_fail_msg)
+
+        user = User.objects.get(email=self.wait_list[0])
+        self.assertEqual(user.display_name, 'Ada Lovelace')
+        self.assertEqual(mock_import_user.call_args.kwargs['name'], 'Ada Lovelace')
+
+    def test_success_without_name_falls_back_to_username(self, mock_import_user: MagicMock):
+        """When no name is provided the display name falls back to the username and Keycloak gets no name."""
+
+        mock_import_user.return_value = 1
+
+        response = self.client.post(
+            '/api/v1/auth/sign-up/',
+            self.make_sign_up_data(email=self.wait_list[0]),
+        )
+        assert_fail_msg = self.get_messages(response)
+
+        self.assertEqual(response.status_code, 200, msg=assert_fail_msg)
+
+        user = User.objects.get(email=self.wait_list[0])
+        self.assertEqual(user.display_name, user.username)
+        self.assertIsNone(mock_import_user.call_args.kwargs['name'])
 
     def test_success_with_zoneinfo_null(self, mock_import_user: MagicMock):
         """Test that an unauthenticated user can sign-up if they're in the allow list."""

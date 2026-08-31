@@ -242,7 +242,7 @@ class AccountsOIDCBackendTestCase(TestCase):
 
         self.assertEqual(user.email, claims.get('email'))
         self.assertEqual(user.username, claims.get('preferred_username'))
-        self.assertEqual(user.display_name, claims.get('preferred_username'))
+        self.assertEqual(user.display_name, claims.get('name'))
         self.assertEqual(user.get_full_name(), claims.get('name'))
         self.assertEqual(user.oidc_id, claims.get('sub'))
         self.assertEqual(user.language, claims.get('locale'))

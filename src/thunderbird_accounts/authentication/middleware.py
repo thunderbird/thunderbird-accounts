@@ -172,7 +172,7 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         user.last_name = claims.get('family_name', '')
         user.timezone = claims.get('zoneinfo', 'UTC')
         user.avatar_url = claims.get('picture')
-        user.display_name = claims.get('preferred_username')
+        user.display_name = claims.get('name') or claims.get('preferred_username')
         user.username = claims.get('preferred_username')
 
         # Non-standard, only adjust the value if it comes not undefined / null
