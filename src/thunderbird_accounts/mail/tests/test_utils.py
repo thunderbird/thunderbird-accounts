@@ -1,8 +1,11 @@
+from unittest.mock import patch
+
+from django.conf import settings
 from django.test import TestCase
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
-from thunderbird_accounts.mail.utils import validate_email
+from thunderbird_accounts.mail.utils import create_stalwart_account, validate_email
 
 
 class ValidateEmailTestCase(TestCase):
@@ -99,3 +102,38 @@ class ValidateEmailTestCase(TestCase):
         """The overridden minimum is still enforced."""
         with self.assertRaises(EmailNotValidError):
             validate_email(self._email(''), min_length=1)
+
+
+class CreateStalwartAccountTestCase(TestCase):
+    """create_stalwart_account should seed the Stalwart description with the user's display name."""
+
+    def _make_user(self, **kwargs):
+        defaults = {
+            'username': f'jane@{settings.PRIMARY_EMAIL_DOMAIN}',
+            'oidc_id': 'abc123',
+        }
+        return User.objects.create(**{**defaults, **kwargs})
+
+    @patch('thunderbird_accounts.mail.utils.tasks.create_stalwart_account')
+    def test_passes_display_name_as_full_name(self, mock_task):
+        user = self._make_user(display_name='Jane Doe')
+
+        create_stalwart_account(user)
+
+        self.assertEqual(mock_task.delay.call_args.kwargs['full_name'], 'Jane Doe')
+
+    @patch('thunderbird_accounts.mail.utils.tasks.create_stalwart_account')
+    def test_falls_back_to_full_name_when_display_name_is_the_username(self, mock_task):
+        user = self._make_user(display_name=f'jane@{settings.PRIMARY_EMAIL_DOMAIN}', first_name='Jane', last_name='Doe')
+
+        create_stalwart_account(user)
+
+        self.assertEqual(mock_task.delay.call_args.kwargs['full_name'], 'Jane Doe')
+
+    @patch('thunderbird_accounts.mail.utils.tasks.create_stalwart_account')
+    def test_no_full_name_when_nothing_useful_is_set(self, mock_task):
+        user = self._make_user(display_name=f'jane@{settings.PRIMARY_EMAIL_DOMAIN}')
+
+        create_stalwart_account(user)
+
+        self.assertIsNone(mock_task.delay.call_args.kwargs['full_name'])

@@ -86,6 +86,7 @@ class TestActivationSubscriptionFeatures(TestCase):
                     oidc_id=self.user.oidc_id,
                     username=self.user.username,
                     email=self.user.username,
+                    full_name=None,
                     app_password=None,
                     quota=self.plan.mail_storage_bytes,
                 )
