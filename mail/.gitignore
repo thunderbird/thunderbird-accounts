@@ -1,4 +1,5 @@
 stalwart_legacy/data/*
 stalwart_legacy/logs/*
+stalwart_legacy/etc/config.toml
 stalwart/lib/main.db
 stalwart/etc/config.json
