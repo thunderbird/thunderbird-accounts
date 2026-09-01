@@ -34,6 +34,9 @@
         "customDomains": "{count} Custom Domains",
         "sendStorage": "{size} of Send Storage"
       }
+    },
+    "trafficBanner": {
+      "message": "We're currently experiencing an increase in application traffic. Thank you for your patience."
     }
   },
   "views": {

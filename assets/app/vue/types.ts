@@ -18,6 +18,10 @@ export enum WAFFLE_FLAG {
   CUSTOM_DOMAINS_REVAMP = 'custom-domains-revamp'
 };
 
+export enum WAFFLE_SWITCH {
+  INCREASED_TRAFFIC_BANNER = 'increased-traffic-banner'
+};
+
 export enum TELEMETRY_EVENTS {
   SIGN_UP_SUPPORT = 'accounts.sign-up.support', 
   SIGN_UP_ERROR = 'accounts.sign-up.error',

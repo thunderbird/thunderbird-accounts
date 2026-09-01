@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import HeaderBar from '@/components/HeaderBar.vue';
+import TrafficBanner from '@/components/TrafficBanner.vue';
 import FooterBar from '@/components/FooterBar.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { SERVER_MESSAGE_LEVEL } from '@/types';
@@ -40,6 +41,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <traffic-banner />
   <div class="page-container" v-if="route?.meta?.useAppTemplate ?? true">
     <header-bar />
 
