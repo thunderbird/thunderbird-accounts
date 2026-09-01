@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { PrimaryButton } from '@thunderbirdops/services-ui';
+import { PrimaryButton, VisualDivider } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 import { signOutAllSessions } from '@/views/MailView/views/SecuritySettingsView/api';
 
@@ -36,7 +36,7 @@ const logoutFromAllSessions = () => signOutAllSessions();
         </div>
       </div>
   
-      <div class="divider"></div>
+      <visual-divider/>
 
       <div>
         <strong>{{ t('views.dashboard.privacyAndDataCard.connectedApps') }}</strong>
@@ -47,7 +47,7 @@ const logoutFromAllSessions = () => signOutAllSessions();
         </primary-button>
       </div>
 
-      <div class="divider"></div>
+      <visual-divider type="horizontal" />
   
       <div>
         <strong>{{ t('views.dashboard.privacyAndDataCard.deleteAccount') }}</strong>
@@ -120,12 +120,6 @@ const logoutFromAllSessions = () => signOutAllSessions();
       color: var(--text-icon-highlight);
       white-space: nowrap;
     }
-  }
-
-  .divider {
-    width: 100%;
-    height: 1px;
-    background-color: var(--colour-neutral-border);
   }
 
   .manage-active-sessions-button,
