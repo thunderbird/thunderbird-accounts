@@ -123,16 +123,8 @@ class CreateStalwartAccountTestCase(TestCase):
         self.assertEqual(mock_task.delay.call_args.kwargs['full_name'], 'Jane Doe')
 
     @patch('thunderbird_accounts.mail.utils.tasks.create_stalwart_account')
-    def test_falls_back_to_full_name_when_display_name_is_the_username(self, mock_task):
-        user = self._make_user(display_name=f'jane@{settings.PRIMARY_EMAIL_DOMAIN}', first_name='Jane', last_name='Doe')
-
-        create_stalwart_account(user)
-
-        self.assertEqual(mock_task.delay.call_args.kwargs['full_name'], 'Jane Doe')
-
-    @patch('thunderbird_accounts.mail.utils.tasks.create_stalwart_account')
-    def test_no_full_name_when_nothing_useful_is_set(self, mock_task):
-        user = self._make_user(display_name=f'jane@{settings.PRIMARY_EMAIL_DOMAIN}')
+    def test_no_full_name_when_display_name_is_empty(self, mock_task):
+        user = self._make_user(display_name='')
 
         create_stalwart_account(user)
 
