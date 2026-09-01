@@ -6,13 +6,14 @@ import sentry_sdk
 import waffle
 from celery import shared_task
 from django.conf import settings
-from django.db import transaction
+from django.db import OperationalError, transaction
 from django.db.models import Exists, OuterRef, QuerySet
 from django.utils import timezone
 
 from thunderbird_accounts.authentication.models import User, AllowListEntry
 from thunderbird_accounts.authentication.utils import delete_user_data
-from thunderbird_accounts.celery.exceptions import TaskFailed
+from thunderbird_accounts.celery.base import DatabaseTask, PatientExternalServiceTask
+from thunderbird_accounts.celery.exceptions import RetryableExternalServiceError, TaskFailed
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.subscription.models import Subscription
 
@@ -58,7 +59,7 @@ def get_stale_incomplete_signup_users(cutoff_hours: int) -> QuerySet[User]:
     )
 
 
-@shared_task(bind=True)
+@shared_task(base=PatientExternalServiceTask, bind=True)
 def tag_abandoned_cart_in_mailchimp(self):
     """Tag abandoned sign-up users with abandoned_cart in Mailchimp."""
     if not settings.USE_MAILCHIMP:
@@ -118,6 +119,8 @@ def tag_abandoned_cart_in_mailchimp(self):
                 language=language,
                 error_context={'user_uuid': str(user.uuid)},
             )
+        except (OperationalError, RetryableExternalServiceError):
+            raise
         except TaskFailed as ex:
             errors += 1
             if is_permanent_recovery_email_rejection(ex):
@@ -160,7 +163,7 @@ def tag_abandoned_cart_in_mailchimp(self):
     return result
 
 
-@shared_task(bind=True)
+@shared_task(base=DatabaseTask, bind=True)
 def purge_incomplete_signups(self):
     """Delete abandoned sign-up users older than INCOMPLETE_SIGNUP_PURGE_HOURS.
 
@@ -215,6 +218,8 @@ def purge_incomplete_signups(self):
         except User.DoesNotExist:
             skipped += 1
             continue
+        except OperationalError:
+            raise
         except Exception as ex:
             errors += 1
             sentry_sdk.capture_exception(ex)
@@ -256,7 +261,7 @@ def purge_incomplete_signups(self):
     return result
 
 
-@shared_task(bind=True)
+@shared_task(base=DatabaseTask, bind=True)
 def purge_stale_test_allow_list_entries(self):
     entries = AllowListEntry.objects.filter(
         is_test_entry=True,

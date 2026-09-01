@@ -6,8 +6,10 @@ import sentry_sdk
 from celery import shared_task
 from django.conf import settings
 from django.core.cache import cache
+from django.db import OperationalError
 
 from thunderbird_accounts.authentication.clients import KeycloakClient
+from thunderbird_accounts.celery.base import DatabaseTask
 from thunderbird_accounts.telemetry.client import capture, hash_id, shutdown, submit_event
 
 logger = logging.getLogger(__name__)
@@ -108,7 +110,7 @@ def _process_stalwart_event(event):
     return True
 
 
-@shared_task(**settings.POSTHOG_TASK_KWARGS)
+@shared_task(base=DatabaseTask, **settings.POSTHOG_TASK_KWARGS)
 def process_stalwart_events(self, events):
     """Process a batch of Stalwart webhook events: resolve users and forward to PostHog."""
     if not settings.POSTHOG_API_KEY:
@@ -127,6 +129,8 @@ def process_stalwart_events(self, events):
 
         if submitted:
             shutdown()
+    except OperationalError:
+        raise
     except Exception as exc:
         _retry_or_report(self, exc, 'Failed to process Stalwart events')
 
@@ -191,7 +195,7 @@ def _fetch_keycloak_events(client, date_from):
     return all_events
 
 
-@shared_task(**settings.POSTHOG_TASK_KWARGS)
+@shared_task(base=DatabaseTask, **settings.POSTHOG_TASK_KWARGS)
 def poll_keycloak_events(self):
     """Poll the Keycloak Admin API for recent user events and submit them to PostHog.
 
