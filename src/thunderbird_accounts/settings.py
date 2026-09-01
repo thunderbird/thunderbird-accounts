@@ -717,3 +717,6 @@ WAFFLE_FLAG_INTROSPECT_TOKEN_PER_REQUEST = 'auth-introspect-token-per-request'
 
 # Allow auth middleware to try and refresh an inactive access token with an active refresh token during non-get requests
 WAFFLE_FLAG_ALLOW_POST_REAUTH = 'auth-allow-post-reauth'
+
+# Show the sitewide "we're under increased traffic" banner
+WAFFLE_SWITCH_INCREASED_TRAFFIC_BANNER = 'increased-traffic-banner'
