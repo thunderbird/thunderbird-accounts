@@ -418,6 +418,32 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
             self.assertEqual(mock_stalwart_pkid, task_results.get('stalwart_pkid'))
 
+    def test_fail_if_account_lookup_raises_unexpected_error(self):
+        """If get_account blows up with something other than AccountNotFoundError we should fail the
+        task rather than continuing on and risk creating a duplicate account."""
+        with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
+            username_and_email = f'test_user@{settings.PRIMARY_EMAIL_DOMAIN}'
+            oidc_id = '1234'
+            quota = settings.ONE_GIGABYTE_IN_BYTES * 100
+
+            instance_mock = Mock()
+            instance_mock.get_account.side_effect = RuntimeError('stalwart is on fire')
+            mail_client_mock.return_value = instance_mock
+
+            user = User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
+
+            with self.assertRaises(TaskFailed) as ex:
+                tasks.create_stalwart_account.run(
+                    oidc_id=oidc_id, username=username_and_email, email=username_and_email, quota=quota
+                )
+            task_results = ex.exception.other
+
+            instance_mock.get_account.assert_called_with(username_and_email)
+            instance_mock.create_account.assert_not_called()
+
+            self.assertEqual(user.uuid, task_results.get('user_uuid'))
+            self.assertEqual(oidc_id, task_results.get('oidc_id'))
+
     def test_creating_with_not_primary_domain(self):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
             # Username is the app password login, and email is the primary email address

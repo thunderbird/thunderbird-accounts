@@ -2,12 +2,16 @@ import uuid
 from django.conf import settings
 from django.test import TestCase
 from unittest.mock import Mock, patch
-from thunderbird_accounts.mail.models import Email
 from waffle.testutils import override_switch
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.mail.exceptions import EmailNotValidError
+from thunderbird_accounts.mail.models import Email
 from thunderbird_accounts.mail.utils import create_stalwart_account, validate_email, is_address_taken
+from thunderbird_accounts.mail.exceptions import (
+    EmailNotValidError,
+    AccountNotFoundError,
+    InvalidJMapResponseError,
+)
 
 
 class ValidateEmailTestCase(TestCase):
@@ -192,3 +196,40 @@ class IsAddressTakenTestCase(TestCase):
                 self.assertFalse(is_address_taken(thundermail_address))
             with override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, True):
                 self.assertTrue(is_address_taken(thundermail_address))
+
+    @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, True)
+    def test_check_remote_false_skips_stalwart_lookup(self):
+        """Even with the switch on, ``check_remote=False`` must not hit Stalwart."""
+        with patch('thunderbird_accounts.mail.utils.MailClient', Mock()) as mail_client_mock:
+            instance_mock = Mock()
+            instance_mock.get_account.return_value = {'id': 1}
+            mail_client_mock.return_value = instance_mock
+
+            thundermail_address = self._form_email(str(uuid.uuid4()))
+
+            self.assertFalse(is_address_taken(thundermail_address, check_remote=False))
+            instance_mock.get_account.assert_not_called()
+
+    @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, True)
+    def test_stalwart_account_not_found_is_not_taken(self):
+        """A clean AccountNotFoundError from Stalwart means the address is free."""
+        with patch('thunderbird_accounts.mail.utils.MailClient', Mock()) as mail_client_mock:
+            instance_mock = Mock()
+            instance_mock.get_account.side_effect = AccountNotFoundError('nope')
+            mail_client_mock.return_value = instance_mock
+
+            thundermail_address = self._form_email(str(uuid.uuid4()))
+
+            self.assertFalse(is_address_taken(thundermail_address))
+
+    @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, True)
+    def test_stalwart_invalid_jmap_response_is_treated_as_taken(self):
+        """If we can't parse Stalwart's response we can't prove the address is free, so treat it as taken."""
+        with patch('thunderbird_accounts.mail.utils.MailClient', Mock()) as mail_client_mock:
+            instance_mock = Mock()
+            instance_mock.get_account.side_effect = InvalidJMapResponseError(None)
+            mail_client_mock.return_value = instance_mock
+
+            thundermail_address = self._form_email(str(uuid.uuid4()))
+
+            self.assertTrue(is_address_taken(thundermail_address))
