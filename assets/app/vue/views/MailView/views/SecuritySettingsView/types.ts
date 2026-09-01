@@ -32,3 +32,12 @@ export interface ConnectedApp {
   } | null;
   last_access?: number | null;
 }
+
+export interface DisplayConnectedApp {
+  id: string;
+  clientId: string;
+  label: string;
+  ipAddress: string;
+  location: string;
+  lastAccess: string;
+}
