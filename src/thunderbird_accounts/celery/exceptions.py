@@ -1,6 +1,10 @@
 from typing import Optional
 
 
+class RetryableExternalServiceError(Exception):
+    """Raised when an external service operation should be retried later."""
+
+
 class TaskFailed(Exception):
     """Raised when a needs to fail intentionally (an unrecoverable error for example.)
     Celery only seems to treat exceptions as failed tasks.
