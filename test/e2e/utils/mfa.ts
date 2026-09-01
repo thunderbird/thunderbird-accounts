@@ -13,7 +13,7 @@ export const enableMfaFeatureFlag = async (page: Page) => {
   await page.route('**/wafflejs', (route) =>
     route.fulfill({
       contentType: 'application/javascript',
-      body: `window.waffle = { flag_is_active: (name) => name === '${MFA_WAFFLE_FLAG}' };`,
+      body: `window.waffle = { flag_is_active: (name) => name === '${MFA_WAFFLE_FLAG}', switch_is_active: () => false };`,
     }),
   );
 };
