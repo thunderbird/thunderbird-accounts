@@ -564,7 +564,9 @@ class ActiveSessionsTestcase(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_account_client.return_value.get_active_sessions.assert_called_once_with('test-user-access-token')
-        mock_enrich_sessions_with_geoip.assert_called_once_with(mock_account_client.return_value.get_active_sessions.return_value)
+        mock_enrich_sessions_with_geoip.assert_called_once_with(
+            mock_account_client.return_value.get_active_sessions.return_value
+        )
         self.assertEqual(response.json()[0]['id'], 'session-id')
         self.assertEqual(response.json()[0]['location']['city'], 'Mountain View')
 
@@ -709,13 +711,8 @@ class ActiveSessionsTestcase(APITestCase):
             'session-id',
         )
 
-    @patch('thunderbird_accounts.authentication.api.sentry_sdk.capture_exception')
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
-    def test_sign_out_session_reports_keycloak_failure_to_sentry(
-        self,
-        mock_account_client: MagicMock,
-        mock_capture_exception: MagicMock,
-    ):
+    def test_sign_out_session_returns_generic_server_error(self, mock_account_client: MagicMock):
         error = RuntimeError('keycloak delete failed')
         mock_account_client.return_value.sign_out_session.side_effect = error
 
@@ -725,5 +722,76 @@ class ActiveSessionsTestcase(APITestCase):
             format='json',
         )
 
-        self.assertEqual(response.status_code, 400)
-        mock_capture_exception.assert_called_once_with(error)
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json(), {'detail': 'Internal server error'})
+
+
+class ConnectedAppsTestcase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create(
+            oidc_id=str(uuid.uuid4()),
+            recovery_email=f'{uuid.uuid4()}@example.com',
+            username=f'{uuid.uuid4()}@example.org',
+        )
+        self.client.force_authenticate(self.user)
+        session = self.client.session
+        session['oidc_access_token'] = 'test-user-access-token'
+        session.save()
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
+    def test_get_connected_apps_uses_user_access_token(
+        self,
+        mock_enrich_sessions_with_geoip,
+        mock_account_client: MagicMock,
+    ):
+        connected_apps = [
+            {
+                'client_id': 'thunderbird-desktop',
+                'session_id': 'session-id',
+                'app_name': 'Mozilla Thunderbird',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+            }
+        ]
+        mock_account_client.return_value.get_connected_apps.return_value = connected_apps
+        mock_enrich_sessions_with_geoip.return_value = [
+            {**connected_apps[0], 'location': {'city': 'Toronto', 'country_code': 'CA'}}
+        ]
+
+        response = self.client.get(reverse('api_get_connected_apps'))
+
+        self.assertEqual(response.status_code, 200)
+        mock_account_client.return_value.get_connected_apps.assert_called_once_with('test-user-access-token')
+        mock_enrich_sessions_with_geoip.assert_called_once_with(connected_apps)
+        self.assertEqual(response.json()[0]['app_name'], 'Mozilla Thunderbird')
+        self.assertEqual(response.json()[0]['location']['city'], 'Toronto')
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_revoke_connected_app_uses_user_access_token(self, mock_account_client: MagicMock):
+        response = self.client.post(
+            reverse('api_revoke_connected_app'),
+            data={'client_id': 'thunderbird-desktop'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_account_client.return_value.revoke_connected_app.assert_called_once_with(
+            'test-user-access-token',
+            'thunderbird-desktop',
+        )
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_revoke_connected_app_returns_generic_server_error(self, mock_account_client: MagicMock):
+        error = RuntimeError('keycloak revoke failed')
+        mock_account_client.return_value.revoke_connected_app.side_effect = error
+
+        response = self.client.post(
+            reverse('api_revoke_connected_app'),
+            data={'client_id': 'thunderbird-desktop'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json(), {'detail': 'Internal server error'})

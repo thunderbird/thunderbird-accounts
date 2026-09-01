@@ -2,7 +2,7 @@ import enum
 import json
 import datetime
 from typing import Optional, TypedDict
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 import requests
 import sentry_sdk
@@ -64,6 +64,14 @@ class ActiveSessionResponse(TypedDict, total=False):
     last_access: int
     ip_address: str
     device_info: dict
+
+
+class ConnectedAppResponse(TypedDict, total=False):
+    client_id: str
+    session_id: str | None
+    app_name: str
+    last_access: int | None
+    ip_address: str | None
 
 
 class KeycloakClient:
@@ -446,6 +454,20 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
         self.request(f'account/sessions/{session_id}', user_access_token, RequestMethods.DELETE)
         return {'success': True}
 
+    def get_connected_apps(self, user_access_token: str) -> list[ConnectedAppResponse]:
+        applications_response = self.request('account/applications', user_access_token, RequestMethods.GET)
+        devices_response = self.request('account/sessions/devices', user_access_token, RequestMethods.GET)
+        return self._normalize_connected_apps(applications_response.json(), devices_response.json())
+
+    def revoke_connected_app(self, user_access_token: str, client_id: str) -> dict:
+        encoded_client_id = quote(client_id, safe='')
+        self.request(
+            f'account/applications/{encoded_client_id}/consent',
+            user_access_token,
+            RequestMethods.DELETE,
+        )
+        return {'success': True}
+
     def logout_other_sessions(self, user_access_token: str) -> bool:
         """Sign the user out of all sessions except the one this token belongs to.
 
@@ -493,6 +515,79 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
             'device_info': device_info,
             'is_current': bool(session.get('current')),
         }
+
+    def _normalize_connected_apps(self, applications: list[dict], devices: list[dict]) -> list[ConnectedAppResponse]:
+        offline_apps = {
+            app['clientId']: app.get('clientName')
+            for app in applications
+            if app.get('offlineAccess') and app.get('clientId')
+        }
+        connected_apps = []
+        matched_client_ids = set()
+        seen_sessions = set()
+
+        for device in devices:
+            for session in device.get('sessions') or []:
+                session_id = session.get('id')
+                ip_address = session.get('ipAddress') or device.get('ipAddress')
+                last_access = session.get('lastAccess') or device.get('lastAccess')
+
+                for client_id, session_client_name in self._session_clients(session):
+                    if client_id not in offline_apps:
+                        continue
+
+                    session_key = (client_id, session_id or device.get('id') or (ip_address, last_access))
+                    if session_key in seen_sessions:
+                        continue
+
+                    seen_sessions.add(session_key)
+                    matched_client_ids.add(client_id)
+                    connected_apps.append(
+                        {
+                            'client_id': client_id,
+                            'session_id': session_id,
+                            'app_name': offline_apps[client_id] or session_client_name or client_id,
+                            'ip_address': ip_address,
+                            'last_access': last_access,
+                        }
+                    )
+
+        # offlineAccess is the authoritative signal. Keep the app visible even if
+        # Keycloak does not return usable device metadata for its offline session.
+        for client_id, app_name in offline_apps.items():
+            if client_id not in matched_client_ids:
+                connected_apps.append({'client_id': client_id, 'app_name': app_name or client_id})
+
+        return connected_apps
+
+    def _session_clients(self, session: dict) -> list[tuple[str, str | None]]:
+        clients = session.get('clients') or []
+        normalized_clients = []
+
+        if isinstance(clients, dict):
+            for client_id, client in clients.items():
+                if isinstance(client, str):
+                    normalized_clients.append((client_id, client))
+                elif isinstance(client, dict):
+                    normalized_clients.append(
+                        (
+                            client.get('clientId') or client_id,
+                            client.get('clientName') or client.get('name'),
+                        )
+                    )
+        elif isinstance(clients, list):
+            for client in clients:
+                if isinstance(client, str):
+                    normalized_clients.append((client, client))
+                elif isinstance(client, dict) and client.get('clientId'):
+                    normalized_clients.append(
+                        (
+                            client['clientId'],
+                            client.get('clientName') or client.get('name'),
+                        )
+                    )
+
+        return normalized_clients
 
     def _device_info(self, device: dict, session: dict | None = None) -> dict:
         app = self._app_name(device, session)

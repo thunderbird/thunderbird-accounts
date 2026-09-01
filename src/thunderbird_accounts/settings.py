@@ -277,6 +277,7 @@ PASSWORD_HASHERS = [
 ]
 
 REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'thunderbird_accounts.core.exceptions.drf_exception_handler',
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
