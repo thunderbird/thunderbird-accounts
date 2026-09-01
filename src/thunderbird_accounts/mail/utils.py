@@ -90,7 +90,12 @@ def create_stalwart_account(user, app_password: Optional[str] = None) -> bool:
         mail_quota = user.plan.mail_storage_bytes
 
     tasks.create_stalwart_account.delay(
-        oidc_id=user.oidc_id, username=user.username, email=user.username, app_password=app_password, quota=mail_quota
+        oidc_id=user.oidc_id,
+        username=user.username,
+        email=user.username,
+        full_name=user.display_name or None,
+        app_password=app_password,
+        quota=mail_quota,
     )
 
     return True

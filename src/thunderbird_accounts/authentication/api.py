@@ -235,6 +235,9 @@ def sign_up(request: Request):
     timezone = data.get('zoneinfo') or 'UTC'
     locale = data.get('locale') or 'en'
 
+    # Display name is optional
+    display_name = (data.get('name') or '').strip()
+
     partial_username = data.get('partialUsername')
     username = f'{partial_username}@{settings.PRIMARY_EMAIL_DOMAIN}'
 
@@ -276,7 +279,7 @@ def sign_up(request: Request):
         username=username,
         email=email,
         recovery_email=email,
-        display_name=username,
+        display_name=display_name or username,
         language=locale,
         timezone=timezone,
     )
@@ -288,6 +291,7 @@ def sign_up(request: Request):
             username,
             email,
             timezone=timezone,
+            name=display_name or None,
             password=data.get('password'),
             send_action_email=KeycloakRequiredAction.VERIFY_EMAIL,
             verified_email=False,
