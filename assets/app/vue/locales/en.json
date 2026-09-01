@@ -556,6 +556,7 @@
       "verification": {
         "title": "Your payment is being processed.",
         "text": "This step can take up to 48 hours to complete.",
+        "refreshNote": "This page will refresh automatically in 15 seconds.",
         "help": "Need help? Contact {0}.",
         "support": "support"
       }
