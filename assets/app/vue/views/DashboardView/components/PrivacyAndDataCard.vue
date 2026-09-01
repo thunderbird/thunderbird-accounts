@@ -8,7 +8,8 @@ import { signOutAllSessions } from '@/views/MailView/views/SecuritySettingsView/
 const { t } = useI18n();
 const router = useRouter();
 
-const goToActiveSessions = () => router.push('/mail/security-settings');
+const goToActiveSessions = () => router.push('/mail/security-settings#current-sign-ins');
+const goToConnectedApps = () => router.push('/mail/security-settings#connected-apps');
 const goToContact = () => router.push('/contact');
 const logoutFromAllSessions = () => signOutAllSessions();
 </script>
@@ -35,6 +36,17 @@ const logoutFromAllSessions = () => signOutAllSessions();
         </div>
       </div>
   
+      <div class="divider"></div>
+
+      <div>
+        <strong>{{ t('views.dashboard.privacyAndDataCard.connectedApps') }}</strong>
+        <p>{{ t('views.dashboard.privacyAndDataCard.connectedAppsText') }}</p>
+
+        <primary-button variant="outline" size="small" class="manage-connected-apps-button" @click="goToConnectedApps">
+          {{ t('views.dashboard.privacyAndDataCard.manageConnectedAppsButtonLabel') }}
+        </primary-button>
+      </div>
+
       <div class="divider"></div>
   
       <div>
@@ -116,7 +128,8 @@ const logoutFromAllSessions = () => signOutAllSessions();
     background-color: var(--colour-neutral-border);
   }
 
-  .manage-active-sessions-button {
+  .manage-active-sessions-button,
+  .manage-connected-apps-button {
     --button-outline-border: linear-gradient(to bottom, #58c9ff 131%, var(--text-icons-highlight-blue) 85%, #175fb6 -8%);
     width: 12.125rem;
     height: 2.75rem;

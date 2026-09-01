@@ -18,3 +18,17 @@ export interface ActiveSession {
   last_access: number;
   is_current?: boolean;
 }
+
+export interface ConnectedApp {
+  client_id: string;
+  session_id?: string | null;
+  app_name: string;
+  ip_address?: string | null;
+  location?: {
+    city?: string | null;
+    state?: string | null;
+    country_code?: string | null;
+    continent?: string | null;
+  } | null;
+  last_access?: number | null;
+}
