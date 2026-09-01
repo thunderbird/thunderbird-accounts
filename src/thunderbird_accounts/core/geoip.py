@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 # Expected to be provided by the container built by Dockerfile
 GEOIP_CITY_MMDB_PATH = Path('/app/data/dbip-city-lite.mmdb')
 
+
 def lookup_ip_location(ip_address: str) -> dict | None:
     if not GEOIP_CITY_MMDB_PATH.exists():
         return None
@@ -40,6 +41,9 @@ def enrich_sessions_with_geoip(sessions: list[dict]) -> list[dict]:
     locations_by_ip = {}
     for session in sessions:
         ip_address = session.get('ip_address')
+        if not ip_address:
+            session['location'] = None
+            continue
         if ip_address not in locations_by_ip:
             locations_by_ip[ip_address] = lookup_ip_location(ip_address)
         session['location'] = locations_by_ip[ip_address]
