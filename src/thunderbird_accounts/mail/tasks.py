@@ -8,6 +8,9 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.celery.base import PatientExternalServiceTask
+from thunderbird_accounts.celery.exceptions import TaskFailed
+from thunderbird_accounts.celery.retry import retry_transient_external_service_errors
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.dkim import (
     CloudflareDNSClient,
@@ -23,7 +26,6 @@ from thunderbird_accounts.mail.exceptions import (
     HostedDkimPublishRetry,
 )
 from thunderbird_accounts.mail.models import Account, Email
-from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.core.types import TaskReturnStatus
 
 # Allow self-healing from problems accessing our DNS provider with generous retry policy.
@@ -93,7 +95,8 @@ def _base_email_address_to_stalwart_account(fn_name, username, emails):
     }
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=PatientExternalServiceTask, bind=True)
+@retry_transient_external_service_errors
 def add_email_addresses_to_stalwart_account(self, username: str, emails: list[str]):
     try:
         return _base_email_address_to_stalwart_account('save_email_addresses', username, emails)
@@ -109,7 +112,8 @@ def add_email_addresses_to_stalwart_account(self, username: str, emails: list[st
     )
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=PatientExternalServiceTask, bind=True)
+@retry_transient_external_service_errors
 def replace_email_addresses_on_stalwart_account(self, username: str, emails: list[tuple[str, str]]):
     try:
         return _base_email_address_to_stalwart_account('replace_email_addresses', username, emails)
@@ -127,7 +131,8 @@ def replace_email_addresses_on_stalwart_account(self, username: str, emails: lis
     )
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=PatientExternalServiceTask, bind=True)
+@retry_transient_external_service_errors
 def delete_email_addresses_from_stalwart_account(self, username: str, emails: list[str]):
     try:
         return _base_email_address_to_stalwart_account('delete_email_addresses', username, emails)
@@ -145,7 +150,8 @@ def delete_email_addresses_from_stalwart_account(self, username: str, emails: li
     )
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=PatientExternalServiceTask, bind=True)
+@retry_transient_external_service_errors
 def update_quota_on_stalwart_account(self, username: str, quota: Optional[int]):
     """Updates the quota value on a stalwart account.
     This will cause the account's storage to be tracked by stalwart."""
@@ -174,11 +180,8 @@ def update_quota_on_stalwart_account(self, username: str, quota: Optional[int]):
 
 
 @shared_task(
+    base=PatientExternalServiceTask,
     bind=True,
-    autoretry_for=(HostedDkimPublishRetry,),
-    retry_backoff=True,
-    retry_backoff_max=60 * 60,  # 1 hour
-    retry_jitter=True,
     max_retries=HOSTED_DKIM_PUBLISH_MAX_RETRIES,
 )
 def publish_hosted_dkim_dns_records(self, domain_name: str):
@@ -247,14 +250,7 @@ def publish_hosted_dkim_dns_records(self, domain_name: str):
     }
 
 
-@shared_task(
-    bind=True,
-    autoretry_for=(HostedDkimDeleteRetry,),
-    retry_backoff=True,
-    retry_backoff_max=60 * 60,  # 1 hour
-    retry_jitter=True,
-    max_retries=24,
-)
+@shared_task(base=PatientExternalServiceTask, bind=True)
 def delete_hosted_dkim_dns_records(self, domain_name: str):
     phase = 'initialize'
     hosted_records = []
@@ -304,7 +300,8 @@ def delete_hosted_dkim_dns_records(self, domain_name: str):
     }
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=PatientExternalServiceTask, bind=True)
+@retry_transient_external_service_errors
 def create_stalwart_account(
     self,
     oidc_id: str,

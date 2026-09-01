@@ -5,6 +5,7 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import freezegun
+from celery.exceptions import Retry
 from waffle.testutils import override_switch
 
 from django.conf import settings
@@ -19,7 +20,7 @@ from thunderbird_accounts.authentication.tasks import (
     purge_stale_test_allow_list_entries,
     PURGE_INCOMPLETE_SIGNUPS_SWITCH,
 )
-from thunderbird_accounts.celery.exceptions import TaskFailed
+from thunderbird_accounts.celery.exceptions import RetryableExternalServiceError, TaskFailed
 from thunderbird_accounts.subscription.models import Subscription
 
 
@@ -227,22 +228,19 @@ class TagAbandonedCartInMailchimpTaskTestCase(TestCase):
         self.assertEqual(self.user.recovery_email_rejected_at, FROZEN_NOW)
         self.assertEqual(self.user.recovery_email_rejection_reason, 'mailchimp error')
 
-    def test_does_not_mark_transient_mailchimp_error(self, mock_client_cls):
-        mock_client_cls.return_value.add_or_tag_member.side_effect = TaskFailed(
-            'mailchimp error',
-            {
-                'user_uuid': str(self.user.uuid),
-                'error_status_code': 500,
-                'error_msg_title': 'InternalServerError',
-                'error_msg_detail': 'A deep, internal error has occurred.',
-            },
+    def test_retries_transient_mailchimp_error(self, mock_client_cls):
+        mock_client_cls.return_value.add_or_tag_member.side_effect = RetryableExternalServiceError(
+            'mailchimp unavailable'
         )
 
-        tag_abandoned_cart_in_mailchimp.apply().get()
+        with patch.object(tag_abandoned_cart_in_mailchimp, 'retry', side_effect=Retry()) as retry:
+            with self.assertRaises(Retry):
+                tag_abandoned_cart_in_mailchimp.run()
 
         self.user.refresh_from_db()
         self.assertIsNone(self.user.recovery_email_rejected_at)
         self.assertIsNone(self.user.recovery_email_rejection_reason)
+        self.assertIsInstance(retry.call_args.kwargs['exc'], RetryableExternalServiceError)
 
     def test_clears_recovery_email_rejection_when_recovery_email_changes(self, mock_client_cls):
         self.user.recovery_email_rejected_at = timezone.now()

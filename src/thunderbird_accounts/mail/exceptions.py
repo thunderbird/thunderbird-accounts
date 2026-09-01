@@ -1,6 +1,8 @@
 from pydantic import ValidationError
 from typing import Optional
 
+from thunderbird_accounts.celery.exceptions import RetryableExternalServiceError
+
 
 class StalwartError(RuntimeError):
     """Generic error"""
@@ -126,7 +128,7 @@ class FailedToReloadStalwart(StalwartError):
         return f'FailedToReloadStalwart: {self.domain}{context}'
 
 
-class HostedDkimPublishRetry(Exception):
+class HostedDkimPublishRetry(RetryableExternalServiceError):
     """Raise when hosted DKIM publication should be retried."""
 
     domain: str
@@ -146,7 +148,7 @@ class HostedDkimPublishRetry(Exception):
         return f'HostedDkimPublishRetry: {self.phase} failed for {self.domain}: {self.reason}'
 
 
-class HostedDkimDeleteRetry(Exception):
+class HostedDkimDeleteRetry(RetryableExternalServiceError):
     """Raise when hosted DKIM deletion should be retried."""
 
     domain: str

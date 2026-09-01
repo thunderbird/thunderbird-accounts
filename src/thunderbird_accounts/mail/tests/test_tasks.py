@@ -1,10 +1,12 @@
-from thunderbird_accounts.celery.exceptions import TaskFailed
 from unittest.mock import patch, Mock, call
 
+import requests
+from celery.exceptions import Retry
 from django.conf import settings
 from django.test import TestCase, override_settings
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.celery.exceptions import RetryableExternalServiceError, TaskFailed
 from thunderbird_accounts.mail import tasks
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError, HostedDkimDeleteRetry, HostedDkimPublishRetry
 from thunderbird_accounts.mail.models import Account, Email
@@ -59,6 +61,19 @@ class UpdateQuotaOnStalwartAccountTestCase(TaskTestCase):
 
             self.assertEqual(results['task_status'], 'success')
             self.assertEqual(results['quota'], 0)
+
+    @patch('thunderbird_accounts.mail.tasks.MailClient')
+    def test_retries_connection_errors(self, mail_client_mock):
+        mail_client_mock.return_value.update_quota.side_effect = requests.ConnectionError('stalwart unavailable')
+
+        with patch.object(tasks.update_quota_on_stalwart_account, 'retry', side_effect=Retry()) as retry:
+            with self.assertRaises(Retry):
+                tasks.update_quota_on_stalwart_account.run(
+                    username=f'test_user@{settings.PRIMARY_EMAIL_DOMAIN}',
+                    quota=settings.ONE_GIGABYTE_IN_BYTES,
+                )
+
+        self.assertIsInstance(retry.call_args.kwargs['exc'], RetryableExternalServiceError)
 
 
 class PublishHostedDkimDNSRecordsTestCase(TaskTestCase):

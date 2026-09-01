@@ -8,6 +8,7 @@ from django.conf import settings
 from requests.exceptions import JSONDecodeError
 
 from thunderbird_accounts.celery.exceptions import TaskFailed
+from thunderbird_accounts.celery.retry import raise_retryable_external_service_error
 
 
 def _get_response_error_details(ex: requests.exceptions.RequestException) -> dict:
@@ -101,6 +102,8 @@ class MailchimpClient:
             # Error details reference: https://mailchimp.com/developer/marketing/docs/errors/#error-glossary
             error_details = _get_response_error_details(ex)
             sentry_sdk.set_context('mailchimp_error', error_details)
+
+            raise_retryable_external_service_error(ex)
             sentry_sdk.capture_exception(ex)
 
             raise TaskFailed(

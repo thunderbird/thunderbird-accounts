@@ -3,19 +3,26 @@ import json
 import datetime
 import logging
 
+import requests
 import sentry_sdk
 from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.signing import Signer, BadSignature
+from django.db import OperationalError
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.celery.base import DatabaseTask, PatientExternalServiceTask
+from thunderbird_accounts.celery.exceptions import TaskFailed
+from thunderbird_accounts.celery.retry import (
+    raise_retryable_external_service_error,
+    retry_transient_external_service_errors,
+)
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product, Plan
 from thunderbird_accounts.subscription.utils import activate_subscription_features
 from thunderbird_accounts.subscription.decorators import inject_paddle, init_paddle
 from thunderbird_accounts.core.types import TaskReturnStatus
-from thunderbird_accounts.celery.exceptions import TaskFailed
 
 try:
     from paddle_billing import Client
@@ -24,7 +31,8 @@ except ImportError:
     Client = None
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=PatientExternalServiceTask, bind=True)
+@retry_transient_external_service_errors
 def dev_only_paddle_fake_webhook(self, transaction_id: str, user_uuid: str):
     """A task that only runs in dev mode. This will simulate the paddle webhook after a checkout has been completed."""
     if not settings.IS_DEV:
@@ -80,7 +88,7 @@ def dev_only_paddle_fake_webhook(self, transaction_id: str, user_uuid: str):
                 break
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=DatabaseTask, bind=True)
 def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datetime, is_create_event: bool):
     """Handles transaction.created and transaction.updated events.
     Docs: https://developer.paddle.com/webhooks/transactions/transaction-created
@@ -186,7 +194,7 @@ def paddle_transaction_event(self, event_data: dict, occurred_at: datetime.datet
     }
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=DatabaseTask, bind=True)
 def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.datetime, is_create_event: bool):
     """Handles subscription.created events.
     Docs: https://developer.paddle.com/webhooks/subscriptions/subscription-created
@@ -382,7 +390,7 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
     }
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=DatabaseTask, bind=True)
 def paddle_product_event(self, event_data: dict, occurred_at: datetime.datetime, is_create_event: bool):
     """Handles product.created and product.updated events.
     Docs: https://developer.paddle.com/webhooks/products/product-created
@@ -447,7 +455,7 @@ def paddle_product_event(self, event_data: dict, occurred_at: datetime.datetime,
     }
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=DatabaseTask, bind=True)
 def update_thundermail_quota(self, plan_uuid):
     """Since Stalwart only checks the db we have to manually propagate a plan change across the user's accounts."""
     try:
@@ -489,7 +497,7 @@ def update_thundermail_quota(self, plan_uuid):
     }
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=PatientExternalServiceTask, bind=True)
 def add_subscriber_to_mailchimp_list(self, user_uuid):
     """Adds a user's thundermail address to the primary tbpro mailing list.
     This mailing list contains automations to trigger welcome emails and such."""
@@ -543,7 +551,7 @@ def add_subscriber_to_mailchimp_list(self, user_uuid):
     }
 
 
-@shared_task(bind=True, retry_backoff=True, retry_backoff_max=60 * 60, max_retries=10)
+@shared_task(base=PatientExternalServiceTask, bind=True)
 @inject_paddle
 def retrieve_and_update_localized_subscription_price(self, subscription_uuid, paddle: Client):
     """Since Stalwart only checks the db we have to manually propagate a plan change across the user's accounts."""
@@ -609,6 +617,18 @@ def retrieve_and_update_localized_subscription_price(self, subscription_uuid, pa
         if paddle_discount_type:
             subscription.discount_type = paddle_discount_type
         subscription.save()
+    except requests.RequestException as ex:
+        raise_retryable_external_service_error(ex)
+        sentry_sdk.capture_exception(ex)
+        logging.exception(ex)
+
+        return {
+            'subscription_uuid': subscription_uuid,
+            'task_status': TaskReturnStatus.FAILED,
+            'reason': 'Failed to retrieve and store discount / localized prices.',
+        }
+    except OperationalError:
+        raise
     except Exception as ex:
         sentry_sdk.capture_exception(ex)
         logging.exception(ex)
