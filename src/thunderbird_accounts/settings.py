@@ -568,6 +568,9 @@ if CELERY_RESULT_BACKEND.startswith('rediss://'):
 CELERY_RESULT_EXPIRES = 3600
 # If true, immediately run tasks instead of queueing them
 CELERY_TASK_ALWAYS_EAGER = os.getenv('CELERY_EAGER', False) == 'True'
+CELERY_DATABASE_TASK_RETRY_BACKOFF_MAX = int(os.getenv('CELERY_DATABASE_TASK_RETRY_BACKOFF_MAX', '300'))
+CELERY_PATIENT_TASK_RETRY_BACKOFF_MAX = int(os.getenv('CELERY_PATIENT_TASK_RETRY_BACKOFF_MAX', '3600'))
+CELERY_PATIENT_TASK_MAX_RETRIES = int(os.getenv('CELERY_PATIENT_TASK_MAX_RETRIES', '24'))
 
 # Celery Beat — use redbeat for distributed locking across multiple workers.
 CELERY_BEAT_SCHEDULER = 'redbeat.RedBeatScheduler'
