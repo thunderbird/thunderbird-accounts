@@ -4,11 +4,11 @@ import { useI18n } from 'vue-i18n';
 const { t } = useI18n();
 
 onMounted(() => {
-  // After 5 seconds reload the page, if the payment came through they'll see the Mail view.
+  // After 15 seconds reload the page, if the payment came through they'll see the Mail view.
   // This is controlled by a beforeEach hook in router.ts.
   window.setTimeout(() => {
     window.location.reload();
-  }, 5000);
+  }, 15000);
 });
 </script>
 
@@ -16,6 +16,7 @@ onMounted(() => {
   <section class="pending-container">
     <h1 class="title">{{ t('views.subscribe.verification.title') }}</h1>
     <h3>{{ t('views.subscribe.verification.text') }}</h3>
+    <p>{{ t('views.subscribe.verification.refreshNote') }}</p>
     <i18n-t keypath="views.subscribe.verification.help" tag="p">
       <a href="/contact/">{{ t('views.subscribe.verification.support') }}</a>
     </i18n-t>
