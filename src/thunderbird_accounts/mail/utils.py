@@ -242,9 +242,13 @@ def is_allowed_domain(email_address: str) -> bool:
     return any([email_address.endswith(f'@{domain}') for domain in settings.ALLOWED_EMAIL_DOMAINS])
 
 
-def is_address_taken(email_address: str) -> bool:
+def is_address_taken(email_address: str, check_remote: bool = True) -> bool:
     """Checks an email address (thundermail address or custom alias, not recovery email!) against known
-    user's recovery email, thundermail address or custom aliases."""
+    user's recovery email, thundermail address or custom aliases.
+
+    If ``check_remote`` is True (and the ``is-address-taken-lookup-stalwart`` switch is active) this also
+    queries Stalwart for the address."""
+
     from thunderbird_accounts.authentication.models import User
     from thunderbird_accounts.mail.models import Email
     from django.db.models import Q
@@ -260,7 +264,7 @@ def is_address_taken(email_address: str) -> bool:
         return True
 
     # If this switch is enabled then check stalwart if this address is taken as well
-    if waffle.switch_is_active(WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART):
+    if check_remote and waffle.switch_is_active(WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART):
         stalwart = MailClient()
         try:
             stalwart.get_account(email_address)

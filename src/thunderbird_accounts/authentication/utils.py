@@ -84,15 +84,21 @@ def get_user_by_contact_email(email: str):
     return User.objects.filter(Q(email__iexact=email) | Q(recovery_email__iexact=email)).first()
 
 
-def can_register_with_username(username: str):
+def can_register_with_username(username: str, check_remote: bool = True):
     """Can a user register with this username.
     This checks primary username and any mirrored aliases for our allowed domains
 
-    This does not check is_email_reserved, as we generally use a different error for that check."""
+    This does not check is_email_reserved, as we generally use a different error for that check.
+
+    ``check_remote`` is passed through to ``is_address_taken`` - set it to False for hot paths like the
+    debounced username-availability check to skip the remote Stalwart lookup."""
     from thunderbird_accounts.mail.utils import is_address_taken
 
     username_checks = (
-        [is_address_taken(f'{username}@{alt_domain}') for alt_domain in settings.ALLOWED_EMAIL_DOMAINS]
+        [
+            is_address_taken(f'{username}@{alt_domain}', check_remote=check_remote)
+            for alt_domain in settings.ALLOWED_EMAIL_DOMAINS
+        ]
         if len(settings.ALLOWED_EMAIL_DOMAINS) > 0
         else []
     )
