@@ -24,7 +24,7 @@ describe('TrafficBanner', () => {
     const banner = wrapper.find('[data-testid="traffic-banner"]');
     expect(banner.exists()).toBe(true);
     expect(banner.text()).toBe(
-      "We're currently experiencing an increase in application traffic. Thank you for your patience.",
+      "We're currently experiencing high demand. You may notice slower performance or occasional errors. Thank you for your patience.",
     );
   });
 

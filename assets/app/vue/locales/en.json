@@ -36,7 +36,7 @@
       }
     },
     "trafficBanner": {
-      "message": "We're currently experiencing an increase in application traffic. Thank you for your patience."
+      "message": "We're currently experiencing high demand. You may notice slower performance or occasional errors. Thank you for your patience."
     }
   },
   "views": {
