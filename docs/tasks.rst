@@ -49,7 +49,7 @@ these base classes:
    Retries on OperationalError.
 
  - **PatientExternalServiceTask**: For connections with third parties where we can tolerate more
-   downtime or flakines son their end. Automatically retries on ``OperationalError`` and ``RetryableExternalServiceError``.
+   downtime or flakiness on their end. Automatically retries on ``OperationalError`` and ``RetryableExternalServiceError``.
 
 Using a task
 ===============
