@@ -41,8 +41,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <traffic-banner />
   <div class="page-container" v-if="route?.meta?.useAppTemplate ?? true">
+    <traffic-banner />
     <header-bar />
 
     <section class="server-messages" v-if="serverMessages !== null">
