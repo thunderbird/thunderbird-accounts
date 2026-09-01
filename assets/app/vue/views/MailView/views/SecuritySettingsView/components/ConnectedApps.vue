@@ -7,19 +7,10 @@ import DetailsSummary from '@/components/DetailsSummary.vue';
 import SecurityAccessTable from './SecurityAccessTable.vue';
 
 import { getConnectedApps, revokeConnectedApp } from '../api';
-import type { ConnectedApp } from '../types';
+import type { ConnectedApp, DisplayConnectedApp } from '../types';
 import { formatDate, formatSessionLocation } from '../formatters';
 
 const { t, locale } = useI18n();
-
-type DisplayConnectedApp = {
-  id: string;
-  clientId: string;
-  label: string;
-  ipAddress: string;
-  location: string;
-  lastAccess: string;
-};
 
 const connectedApps = ref<DisplayConnectedApp[]>([]);
 const loading = ref(true);
