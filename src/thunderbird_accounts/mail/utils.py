@@ -270,8 +270,11 @@ def is_address_taken(email_address: str, check_remote: bool = True) -> bool:
             stalwart.get_account(email_address)
             # It exists? That's a problem.
             return True
-        except (AccountNotFoundError, InvalidJMapResponseError):
+        except AccountNotFoundError:
             pass  # all okay
+        except InvalidJMapResponseError:
+            # We couldn't parse Stalwart's response, so we can't say the address is free so treat as taken.
+            return True
 
     return False
 

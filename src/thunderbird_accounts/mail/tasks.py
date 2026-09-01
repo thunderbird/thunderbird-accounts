@@ -348,8 +348,29 @@ def create_stalwart_account(
         _stalwart_check_or_create_domain_entry(stalwart, _domain)
 
     # Lookup the account first, this shouldn't happen but if we have a left-over account then it's a problem.
+    stalwart_account = None
+
     try:
         stalwart_account = stalwart.get_account(username)
+    except AccountNotFoundError:
+        pass
+    except InvalidJMapResponseError as ex:
+        # Cover any jmap response errors, these also require manual fixing (re-running activate sub features)
+        sentry_sdk.capture_exception(ex)
+        raise TaskFailed(
+            str(ex.validation_error),
+            {'oidc_id': oidc_id, 'user_uuid': user.uuid},
+        )
+    except Exception as ex:
+        # Any other error means we couldn't confirm the account is absent. Fail the task rather than
+        # continuing on and risk creating a duplicate / linking an orphaned account.
+        sentry_sdk.capture_exception(ex)
+        raise TaskFailed(
+            str(ex),
+            {'oidc_id': oidc_id, 'user_uuid': user.uuid},
+        )
+
+    if stalwart_account is not None:
         logging.error(f'[create_stalwart_account] Account [{user.uuid}] already exists in Stalwart!')
         raise TaskFailed(
             str('Account already exists in Stalwart'),
@@ -359,15 +380,6 @@ def create_stalwart_account(
                 'stalwart_pkid': stalwart_account.get('id'),
             },
         )
-    except InvalidJMapResponseError as ex:
-        # Cover any jmap response errors, these also require manual fixing (re-running activate sub features)
-        sentry_sdk.capture_exception(ex)
-        raise TaskFailed(
-            str(ex.validation_error),
-            {'oidc_id': oidc_id, 'user_uuid': user.uuid},
-        )
-    except AccountNotFoundError:
-        pass
 
     # We need to create this after dkim and domain records exist
     pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
