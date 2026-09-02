@@ -1,3 +1,4 @@
+from thunderbird_accounts.mail.exceptions import InvalidJMapResponseError, AccountNotFoundError
 from thunderbird_accounts.authentication.utils import KeycloakRequiredAction
 import zoneinfo
 
@@ -161,21 +162,25 @@ class CustomUserChangeForm(CustomUserFormBase):
         if len(self.errors) > 0:
             return
 
+        oidc_id = self.cleaned_data.get('oidc_id')
         username = self.cleaned_data.get('username')
-        full_name = f'{self.cleaned_data.get("first_name")} {self.cleaned_data.get("last_name")}'.strip()
+        display_name = (self.cleaned_data.get('display_name') or '').strip()
+        is_active = self.cleaned_data.get('is_active')
 
         # Update the user on keycloak's end
         keycloak = KeycloakClient()
         try:
+            if not oidc_id:
+                raise UpdateUserError('[Accounts Error] No oidc_id found, cannot update Keycloak.', username)
             keycloak.update_user(
-                self.cleaned_data.get('oidc_id'),
+                oidc_id,
                 username=username,
                 email=self.cleaned_data.get('recovery_email'),
-                enabled=self.cleaned_data.get('is_active'),
+                enabled=is_active,
                 timezone=self.cleaned_data.get('timezone'),
                 locale=self.cleaned_data.get('language'),
-                first_name=self.cleaned_data.get('first_name'),
-                last_name=self.cleaned_data.get('last_name'),
+                first_name=display_name,
+                last_name=None,
             )
         except (ValueError, InvalidDomainError) as ex:
             self.add_error('username', str(ex))
@@ -197,10 +202,23 @@ class CustomUserChangeForm(CustomUserFormBase):
                 if old_username != username:
                     new_primary_email_address = username
 
-                if old_full_name != full_name:
-                    new_full_name = full_name
+                if old_full_name != display_name:
+                    new_full_name = display_name
 
-                if new_primary_email_address or new_full_name:
+                # If we've deactivated a user then ALL app passwords must be removed.
+                if old_username and not is_active:
+                    try:
+                        stalwart_account = stalwart.get_account(old_username)
+                        for secret in stalwart_account.get('secrets', []):
+                            stalwart.delete_app_password(old_username, secret)
+                    except (AccountNotFoundError, InvalidJMapResponseError) as ex:
+                        raise RuntimeError(
+                            'Could not remove app passwords! Please login to Stalwart admin panel, '
+                            'find the user and save their account with an empty list of app passwords.'
+                        ) from ex
+
+                # Update that user with any updated user information
+                if old_username and (new_primary_email_address or new_full_name):
                     stalwart.update_individual(
                         old_username, primary_email_address=new_primary_email_address, full_name=new_full_name
                     )
