@@ -38,7 +38,18 @@ An example of this would be:
 
       return
 
-This task takes in a user email and sends them a 'Hello World' email sometime in the future. The timing of when this is sent out depends on what queue a task is in, how full that queue is, and if a worker is scheduled to work on that queue.
+This task takes in a user email and sends them a 'Hello World' email sometime in the future.
+The timing of when this is sent out depends on what queue a task is in, how full that queue is,
+and if a worker is scheduled to work on that queue.
+
+Consider having new tasks automatically retry failed operations by having it inherit from one of
+these base classes:
+
+ - **DatabaseTask**: Typically for database access that we expect to complete within five minutes.
+   Retries on OperationalError.
+
+ - **PatientExternalServiceTask**: For connections with third parties where we can tolerate more
+   downtime or flakiness on their end. Automatically retries on ``OperationalError`` and ``RetryableExternalServiceError``.
 
 Using a task
 ===============
