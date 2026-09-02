@@ -1,4 +1,3 @@
-from typing import Optional
 from thunderbird_accounts.mail.exceptions import InvalidJMapResponseError, AccountNotFoundError
 from thunderbird_accounts.authentication.utils import KeycloakRequiredAction
 import zoneinfo
