@@ -195,6 +195,14 @@ resources:
           accepter:
             allow_remote_vpc_dns_resolution: True
           auto_accept: True
+        # mzla-eks-workloads01 <-> Flower (platform-infrastructure#1098).
+        # PLACEHOLDER pcx ID -- fill in once that PR's peering connection
+        # exists. Do not merge/apply until then.
+        mzla-workloads:
+          vpc_peering_connection_id: pcx-PENDING-see-platform-infrastructure-1098
+          accepter:
+            allow_remote_vpc_dns_resolution: True
+          auto_accept: True
 
       peering_connections:
         mailstrom-prod:
@@ -210,6 +218,9 @@ resources:
       additional_routes:
         - destination_cidr_block: 10.130.0.0/16  # mzla-tb-prod
           vpc_peering_connection_id: pcx-03ce1cff6e3eab734
+        # PLACEHOLDER -- see peering_accepters.mzla-workloads above (#1098).
+        - destination_cidr_block: 10.110.0.0/16  # mzla-eks-workloads01
+          vpc_peering_connection_id: pcx-PENDING-see-platform-infrastructure-1098
 
   # The __main.py__ here is very specific in the following way:
   # For each ECS cluster you eventually define, you **must** have one entry by the same exact name in the
@@ -609,6 +620,14 @@ resources:
                 description: Allow local TLS traffic only
                 cidr_blocks:
                   - 10.10.0.0/16
+              # workloads01's private subnets only, not the whole VPC (#1098).
+              - from_port: 443
+                to_port: 443
+                protocol: tcp
+                description: Allow TLS from mzla-eks-workloads01 private subnets
+                cidr_blocks:
+                  - 10.110.64.0/18
+                  - 10.110.128.0/18
 
       listeners:
         flower:  # Load balancer to attach to
