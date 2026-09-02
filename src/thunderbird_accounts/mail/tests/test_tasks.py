@@ -279,6 +279,7 @@ class DeleteHostedDkimDNSRecordsTestCase(TaskTestCase):
         set_sentry_context_mock.assert_called_once_with('hosted_dkim_delete_retry', cm.exception.context)
 
 
+@override_settings(USE_MAILCHIMP=False)
 class CreateStalwartAccountTestCase(TaskTestCase):
     def test_success(self):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
@@ -295,7 +296,7 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             instance_mock.get_account.side_effect = AccountNotFoundError(username_and_email)
             mail_client_mock.return_value = instance_mock
 
-            User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
+            user = User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
 
             # Run sync so can look at the task results
             task_results = tasks.create_stalwart_account.run(
@@ -316,8 +317,7 @@ class CreateStalwartAccountTestCase(TaskTestCase):
                 [username_and_email, email_alias], username_and_email, None, None, quota
             )
 
-            self.assertEqual(username_and_email, task_results.get('email'))
-            self.assertEqual(username_and_email, task_results.get('username'))
+            self.assertEqual(user.uuid, task_results.get('user_uuid'))
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
             self.assertEqual(mock_stalwart_pkid, task_results.get('stalwart_pkid'))
 
@@ -369,8 +369,7 @@ class CreateStalwartAccountTestCase(TaskTestCase):
                 [username_and_email, email_alias], username_and_email, None, None, quota
             )
 
-            self.assertEqual(username_and_email, task_results.get('email'))
-            self.assertEqual(username_and_email, task_results.get('username'))
+            self.assertEqual(user.uuid, task_results.get('user_uuid'))
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
             self.assertEqual(mock_stalwart_pkid, task_results.get('stalwart_pkid'))
 
@@ -386,7 +385,7 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             self.assertEqual(Email.EmailType.PRIMARY.value, email.type)
             self.assertEqual(Email.EmailType.ALIAS.value, alias.type)
 
-    def test_success_account_already_exists_on_stalwart(self):
+    def test_fail_if_account_already_exists_on_stalwart(self):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
             mock_stalwart_pkid = 1
 
@@ -401,26 +400,49 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             instance_mock.create_account.side_effect = AccountNotFoundError(username_and_email)
             mail_client_mock.return_value = instance_mock
 
-            User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
+            user = User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
 
             # Run sync so can look at the task results
-            task_results = tasks.create_stalwart_account.run(
-                oidc_id=oidc_id, username=username_and_email, email=username_and_email, quota=quota
-            )
-
-            self.assertEqual(
-                'success', task_results.get('task_status'), msg=f'Failed due to {task_results.get("reason")}'
-            )
+            with self.assertRaises(TaskFailed) as ex:
+                tasks.create_stalwart_account.run(
+                    oidc_id=oidc_id, username=username_and_email, email=username_and_email, quota=quota
+                )
+            task_results = ex.exception.other
 
             mail_client_mock.assert_called_once()
             instance_mock.get_account.assert_called_with(username_and_email)
-            instance_mock.save_email_addresses.assert_called_once()
-            instance_mock.delete_email_addresses.assert_called_once()
+            instance_mock.save_email_addresses.assert_not_called()
+            instance_mock.delete_email_addresses.assert_not_called()
 
-            self.assertEqual(username_and_email, task_results.get('email'))
-            self.assertEqual(username_and_email, task_results.get('username'))
+            self.assertEqual(user.uuid, task_results.get('user_uuid'))
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
             self.assertEqual(mock_stalwart_pkid, task_results.get('stalwart_pkid'))
+
+    def test_fail_if_account_lookup_raises_unexpected_error(self):
+        """If get_account blows up with something other than AccountNotFoundError we should fail the
+        task rather than continuing on and risk creating a duplicate account."""
+        with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
+            username_and_email = f'test_user@{settings.PRIMARY_EMAIL_DOMAIN}'
+            oidc_id = '1234'
+            quota = settings.ONE_GIGABYTE_IN_BYTES * 100
+
+            instance_mock = Mock()
+            instance_mock.get_account.side_effect = RuntimeError('stalwart is on fire')
+            mail_client_mock.return_value = instance_mock
+
+            user = User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
+
+            with self.assertRaises(TaskFailed) as ex:
+                tasks.create_stalwart_account.run(
+                    oidc_id=oidc_id, username=username_and_email, email=username_and_email, quota=quota
+                )
+            task_results = ex.exception.other
+
+            instance_mock.get_account.assert_called_with(username_and_email)
+            instance_mock.create_account.assert_not_called()
+
+            self.assertEqual(user.uuid, task_results.get('user_uuid'))
+            self.assertEqual(oidc_id, task_results.get('oidc_id'))
 
     def test_creating_with_not_primary_domain(self):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
@@ -429,6 +451,8 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             username_and_email = f'test_user@{domain}'
             oidc_id = '1234'
             quota = settings.ONE_GIGABYTE_IN_BYTES * 100
+
+            user = User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
 
             instance_mock = Mock()
             mail_client_mock.return_value = instance_mock
@@ -450,6 +474,5 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             instance_mock.save_email_addresses.assert_not_called()
             instance_mock.delete_email_addresses.assert_not_called()
 
-            self.assertEqual(username_and_email, task_results.get('email'))
-            self.assertEqual(username_and_email, task_results.get('username'))
+            self.assertEqual(user.uuid, task_results.get('user_uuid'))
             self.assertEqual(oidc_id, task_results.get('oidc_id'))

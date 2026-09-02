@@ -18,4 +18,7 @@ Please use constants to avoid mistakes.
 | purge-incomplete-signups    | switch | When active, purge_incomplete_signups will delete stale users. When inactive (default) it will move stale users into the "Users to Purge" group. |
 +-----------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------------------+
 | increased-traffic-banner    | switch | When active, displays a sitewide banner telling users the site is under heavy load. Hidden by default.                                           |
-+-----------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------------------+
++----------------------------------+--------+---------------------------------------------------------------------------------------------------------------------------------------------------+
+| is-address-taken-lookup-stalwart | switch | During the is_address_taken function lastly check Stalwart for the address that is being requested, and error if that address exists in Stalwart. |
++----------------------------------+--------+---------------------------------------------------------------------------------------------------------------------------------------------------+
+
