@@ -99,7 +99,7 @@ class ImportUserError(KeycloakError):
 
 
 class UpdateUserError(KeycloakError):
-    username: str
+    username: Optional[str] = '<Not Available>'
     error: str
 
     def __init__(self, error, username: Optional[str] = None, *args, **kwargs):

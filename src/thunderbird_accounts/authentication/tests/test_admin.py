@@ -1,3 +1,4 @@
+from thunderbird_accounts.mail.exceptions import AccountNotFoundError
 from unittest.mock import MagicMock, patch
 
 from django.conf import settings
@@ -169,6 +170,7 @@ class AdminCreateUserTestCase(TestCase):
         self.assertEqual(mock_requests.call_args_list[0][0][0], 'users')
 
 
+@patch('thunderbird_accounts.mail.clients.MailClient._get_principal')
 @patch('thunderbird_accounts.mail.clients.MailClient._update_principal')
 @patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')
 class AdminUpdateUserTestcase(TestCase):
@@ -179,20 +181,64 @@ class AdminUpdateUserTestcase(TestCase):
         self.subdomain = settings.PRIMARY_EMAIL_DOMAIN
         # Create a test user so we can update it later
         self.user = User.objects.create(
-            oidc_id=FAKE_OIDC_UUID, username=f'internaltest@{self.subdomain}', email='test@example.com'
+            oidc_id=FAKE_OIDC_UUID, username=f'internaltest@{self.subdomain}', email='test@example.com', is_active=True
         )
         self.user.save()
         self.user.refresh_from_db()
 
-    def _build_form(self, form_data):
+    def _build_form(self, form_data: dict):
         user_admin = CustomUserAdmin(User, AdminSite())
         fake_request = HttpRequest()
 
+        # Without defaults the form's cleaned_data returns defaults as None/False which is not good for is_active tests.
+        # Technically this should be a QueryDict in for format of the data below, but it works as-is.
+        """
+        <QueryDict: {'csrfmiddlewaretoken': ['r08cDG9pwAfdLo7yShYfslnCQiLKs6IkgBWL32KX7ufvyxd4TKgw2AIvFHbBWvVB'], 
+        'username': ['admin@example.org'], 
+        'oidc_id': ['5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2'], 
+        'plan': ['4b4ae350-b9a3-46e6-a7d6-2d93685efbeb'], 
+        'timezone': ['America/Vancouver'], 
+        'first_name': ['Admin'], 
+        'last_name': ['Example'], 
+        'recovery_email': [''], 
+        'last_login_0': ['2026-09-02'], 
+        'last_login_1': ['16:37:45'], 
+        'date_joined_0': ['2026-08-26'], 
+        'date_joined_1': ['21:37:20'], 
+        'initial-date_joined_0': ['2026-08-26'], 
+        'initial-date_joined_1': ['21:37:20'], 
+        'is_active': ['on'], 
+        'is_staff': ['on'], 
+        'is_superuser': ['on'], 
+        '_save': ['Save']}>
+        """
+        form_data_with_defaults = {
+            'csrfmiddlewaretoken': 'blah',
+            'username': f'internaltest@{self.subdomain}',
+            'oidc_id': 'abc123',
+            'plan': None,
+            'timezone': 'Etc/UTC',
+            'first_name': 'My name',
+            'last_name': None,
+            'display_name': 'My name',
+            'recovery_email': f'internaltest_recovery@{self.subdomain}',
+            'is_active': True,
+            'is_staff': False,
+            'is_superuser': False,
+            'date_joined_0': '2026-09-02',
+            'date_joined_1': '00:00:00',
+            'initial-date-joined_0': '2026-09-02',
+            'initial-date_joined_1': '00:00:00',
+            **form_data,
+        }
+
         # Pass it an existing user and change=True for the update form
         # We also need ot pass it to the form as well (under instance)
-        return user_admin.get_form(fake_request, self.user, change=True)(form_data, instance=self.user)
+        return user_admin.get_form(fake_request, self.user, change=True)(form_data_with_defaults, instance=self.user)
 
-    def test_failed_invalid_timezone(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
+    def test_failed_invalid_timezone(
+        self, mock_requests: MagicMock, mock_update_principal: MagicMock, mock_get_principal: MagicMock
+    ):
         form_data = {
             'username': f'frog@{self.subdomain}',
             'recovery_email': 'frog@example.com',
@@ -215,7 +261,9 @@ class AdminUpdateUserTestcase(TestCase):
 
         self.assertEqual(mock_update_principal.call_count, 0)
 
-    def test_failed_empty_username(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
+    def test_failed_empty_username(
+        self, mock_requests: MagicMock, mock_update_principal: MagicMock, mock_get_principal: MagicMock
+    ):
         form_data = {
             'username': '',
             'recovery_email': self.user.email,
@@ -238,7 +286,9 @@ class AdminUpdateUserTestcase(TestCase):
 
         self.assertEqual(mock_update_principal.call_count, 0)
 
-    def test_failed_empty_email(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
+    def test_failed_empty_email(
+        self, mock_requests: MagicMock, mock_update_principal: MagicMock, mock_get_principal: MagicMock
+    ):
         form_data = {
             'username': self.user.username,
             'recovery_email': '',
@@ -261,7 +311,7 @@ class AdminUpdateUserTestcase(TestCase):
 
         self.assertEqual(mock_update_principal.call_count, 0)
 
-    def test_success(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
+    def test_success(self, mock_requests: MagicMock, mock_update_principal: MagicMock, mock_get_principal: MagicMock):
         account = Account.objects.create(name='internaltest', user=self.user)
         Email.objects.create(
             address=self.user.username,
@@ -286,6 +336,9 @@ class AdminUpdateUserTestcase(TestCase):
 
         # Set the json output to an empty object
         mock_update_principal.return_value.json.return_value = {}
+        mock_get_principal.return_value.json.return_value = {
+            'data': {'username': form_data.get('username'), 'type': 'individual', 'secrets': ['$app$whatever$']}
+        }
 
         form = self._build_form(form_data)
         user = form.save(True)
@@ -304,12 +357,17 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertEqual(mock_requests.call_args[0][0], f'users/{self.user.oidc_id}')
         self.assertEqual(mock_requests.call_args[0][1], RequestMethods.PUT)
 
-        # 2. Updating stalwart
+        # 2. No get stalwart account
+        self.assertEqual(mock_get_principal.call_count, 0)
+
+        # 3. Updating stalwart
         self.assertEqual(mock_update_principal.call_count, 1)
         self.assertEqual(mock_update_principal.call_args[0][0], old_username)
         self.assertEqual(mock_update_principal.call_args[0][1][0].get('value'), form_data.get('username'))
 
-    def test_success_without_stalwart_account(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
+    def test_success_without_stalwart_account(
+        self, mock_requests: MagicMock, mock_update_principal: MagicMock, mock_get_principal: MagicMock
+    ):
         form_data = {
             'username': f'frog@{self.subdomain}',
             'recovery_email': 'frog@example.com',
@@ -325,6 +383,7 @@ class AdminUpdateUserTestcase(TestCase):
 
         # Set the json output to an empty object
         mock_update_principal.return_value.json.return_value = {}
+        mock_get_principal.side_effect = AccountNotFoundError(form_data.get('username'))
 
         form = self._build_form(form_data)
 
@@ -347,7 +406,9 @@ class AdminUpdateUserTestcase(TestCase):
         # 2. No update to stalwart
         self.assertEqual(mock_update_principal.call_count, 0)
 
-    def test_success_without_username_update(self, mock_requests: MagicMock, mock_update_principal: MagicMock):
+    def test_success_without_username_update(
+        self, mock_requests: MagicMock, mock_update_principal: MagicMock, mock_get_principal: MagicMock
+    ):
         account = Account.objects.create(name='internaltest', user=self.user)
         Email.objects.create(
             address=self.user.username,
@@ -370,6 +431,9 @@ class AdminUpdateUserTestcase(TestCase):
 
         # Set the json output to an empty object
         mock_update_principal.return_value.json.return_value = {}
+        mock_get_principal.return_value.json.return_value = {
+            'data': {'username': form_data.get('username'), 'type': 'individual', 'secrets': ['$app$whatever$']}
+        }
 
         form = self._build_form(form_data)
 
@@ -389,8 +453,72 @@ class AdminUpdateUserTestcase(TestCase):
         self.assertEqual(mock_requests.call_args[0][0], f'users/{self.user.oidc_id}')
         self.assertEqual(mock_requests.call_args[0][1], RequestMethods.PUT)
 
-        # 2. No update to stalwart
+        # 2. No get stalwart account
+        self.assertEqual(mock_get_principal.call_count, 0)
+
+        # 3. No update to stalwart
         self.assertEqual(mock_update_principal.call_count, 0)
+
+    def test_success_disable_account(
+        self, mock_requests: MagicMock, mock_update_principal: MagicMock, mock_get_principal: MagicMock
+    ):
+        account = Account.objects.create(name=f'internaltest@{self.subdomain}', user=self.user)
+        Email.objects.create(
+            address=self.user.username,
+            type=Email.EmailType.PRIMARY,
+            account=account,
+        )
+
+        form_data = {
+            'username': f'internaltest@{self.subdomain}',
+            'recovery_email': 'frog@example.com',
+            'timezone': 'America/Toronto',
+            'oidc_id': self.user.oidc_id,
+            'is_active': False,
+            # This is dumb, the fields are split into 2 and are populated via existing data
+            # But we need to provide it as form data otherwise it'll error out.
+            'date_joined_0': self.user.date_joined.date(),
+            'date_joined_1': self.user.date_joined.time(),
+        }
+
+        mock_requests.return_value = build_keycloak_success_response()
+
+        # Set the json output to an empty object
+        mock_update_principal.return_value.json.return_value = {}
+        app_password_secret = '$app$whatever$'
+        mock_get_principal.return_value.json.return_value = {
+            'data': {'username': form_data.get('username'), 'type': 'individual', 'secrets': [app_password_secret]}
+        }
+
+        form = self._build_form(form_data)
+
+        user = form.save(True)
+
+        # We should have a user, they should have a pk (saved to db), and our fake oidc id
+        self.assertIsNotNone(user)
+        self.assertIsNotNone(user.pk)
+        self.assertEqual(user.oidc_id, FAKE_OIDC_UUID)
+
+        # 1. Retrieving existing user data
+        # 2. Updating the user
+        self.assertEqual(mock_requests.call_count, 2)
+
+        # Ensure that our endpoint calls line up with our expectations above
+        # ...yes it has that many tuples
+        self.assertEqual(mock_requests.call_args[0][0], f'users/{self.user.oidc_id}')
+        self.assertEqual(mock_requests.call_args[0][1], RequestMethods.PUT)
+
+        # 2. Get stalwart account
+        self.assertEqual(mock_get_principal.call_count, 1)
+        self.assertEqual(mock_get_principal.call_args[0][0], form_data.get('username'))
+
+        # 3. 1 Update to the app passwords
+        self.assertEqual(mock_update_principal.call_count, 1)
+        self.assertEqual(mock_update_principal.call_args[0][0], form_data.get('username'))
+        self.assertEqual(
+            mock_update_principal.call_args[0][1],
+            [{'action': 'removeItem', 'field': 'secrets', 'value': app_password_secret}],
+        )
 
 
 @patch('thunderbird_accounts.mail.clients.MailClient._delete_principal')
