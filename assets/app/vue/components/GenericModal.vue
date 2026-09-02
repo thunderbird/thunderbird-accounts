@@ -41,8 +41,11 @@ defineExpose({
 
 <style scoped>
 dialog {
+  /* Distance between the top of the viewport and the top of the modal. */
+  --modal-inset-block-start: 1rem;
+
   position: fixed;
-  top: 144px;
+  top: var(--modal-inset-block-start);
   left: 50%;
   transform: translate(-50%, 0);
   margin: 0;
@@ -53,8 +56,20 @@ dialog {
   padding: 2rem 1rem 1.5rem;
   width: 640px;
   max-width: 90vw;
-  max-height: 90vh;
-  overflow: auto;
+
+  /*
+   * The modal is offset from the top of the viewport, so its height budget is
+   * whatever is left below that offset (minus a matching gap at the bottom).
+   * Sizing it against the full viewport instead let the modal extend past the
+   * bottom of the screen without ever overflowing, so its content could not be
+   * scrolled to and the page behind it stays scroll-locked while it is open.
+   * `dvh` accounts for the dynamic browser chrome on mobile Safari; the `vh`
+   * declaration above it is the fallback for browsers without `dvh`.
+   */
+  max-height: calc(100vh - var(--modal-inset-block-start) * 2);
+  max-height: calc(100dvh - var(--modal-inset-block-start) * 2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 
   &::backdrop {
     background-color: var(--colour-neutral-900);
@@ -97,6 +112,12 @@ dialog {
       margin-block: 1.5rem 1.75rem;
       text-align: center;
     }
+  }
+}
+
+@media (min-width: 768px) {
+  dialog {
+    --modal-inset-block-start: 144px;
   }
 }
 </style>
