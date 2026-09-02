@@ -71,14 +71,20 @@ dialog {
   max-height: calc(100vh - var(--modal-inset-block-start) * 2);
   max-height: calc(100dvh - var(--modal-inset-block-start) * 2);
 
+  overflow: hidden;
+
   /*
    * Scrolling lives on .modal-scroll-area rather than the dialog so that the
    * close button, which is positioned against the dialog, stays put instead of
    * scrolling out of view along with the content.
+   *
+   * Scoped to [open] so it does not override the user-agent
+   * `dialog:not([open]) { display: none }` rule and render closed modals.
    */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  &[open] {
+    display: flex;
+    flex-direction: column;
+  }
 
   &::backdrop {
     background-color: var(--colour-neutral-900);
