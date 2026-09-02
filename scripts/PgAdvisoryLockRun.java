@@ -1,5 +1,5 @@
 // Run a command while holding a Postgres session-level advisory lock, serializing
-// keycloak-config-cli imports across replicas (see apply-mfa-config.sh for the deploy-race
+// keycloak-config-cli imports across replicas (see apply-cli-config.sh for the deploy-race
 // background). Runs source-file style on the Keycloak image's bundled Java — no compile
 // step, no dependencies beyond Keycloak's own bundled Postgres JDBC driver:
 //

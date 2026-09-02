@@ -5,7 +5,7 @@
 # start (local + stage/prod) from scripts/entry-keycloak.sh, replacing the old
 # ensure_keycloak_mfa_flow management command. config-cli reconciles declaratively: it
 # applies only the properties declared here and leaves every other realm resource
-# untouched (see IMPORT_MANAGED_* and the no-delete strategy in apply-mfa-config.sh).
+# untouched (see IMPORT_MANAGED_* and the no-delete strategy in apply-cli-config.sh).
 #
 # A separate top-level flow (browser-mfa-stepup) is bound rather than mutating the
 # built-in "browser" flow, so the original stays intact as a fallback (rebind browserFlow

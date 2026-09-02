@@ -59,7 +59,7 @@ COPY --from=build /app/keycloak/themes/tbpro /opt/keycloak/themes/tbpro
 
 # keycloak-config-cli: declarative reconciler for the managed tbpro realm configuration.
 # config-cli 6.5.1 is built against Keycloak 26.5.5 and runs on the image's bundled Java 21.
-# apply-mfa-config.sh invokes it after startup.
+# apply-cli-config.sh invokes it after startup.
 COPY --from=adorsys/keycloak-config-cli:6.5.1-26.5.5 /app/keycloak-config-cli.jar /opt/keycloak/keycloak-config-cli.jar
 COPY --chown=keycloak:keycloak keycloak/config-cli /opt/keycloak/config-cli
 
