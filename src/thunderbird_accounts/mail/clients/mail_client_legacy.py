@@ -21,6 +21,23 @@ from thunderbird_accounts.mail.exceptions import (
 )
 
 
+class StalwartPrincipalField(StrEnum):
+    TYPE = 'type'
+    NAME = 'name'
+    DESCRIPTION = 'description'
+    QUOTA = 'quota'
+    SECRETS = 'secrets'
+    EMAILS = 'emails'
+    URLS = 'urls'
+    MEMBER_OF = 'memberOf'
+    ROLES = 'roles'
+    LISTS = 'lists'
+    MEMBERS = 'members'
+    ENABLED_PERMISSIONS = 'enabledPermissions'
+    DISABLED_PERMISSIONS = 'disabledPermissions'
+    EXTERNAL_MEMBERS = 'externalMembers'
+
+
 class StalwartErrors(StrEnum):
     """Errors defined in Stalwart's management api
     https://github.com/stalwartlabs/stalwart/blob/4d819a1041b0adfce3757df50929764afa10e27b/crates/http/src/management/mod.rs#L58
@@ -154,17 +171,17 @@ class MailClientLegacy(MailClientInterface):
             raise TypeError('Principal object must contain type AND name.')
 
         principal_data = {
-            'quota': 0,
-            'secrets': [],
-            'emails': [],
-            'urls': [],
-            'memberOf': [],
-            'roles': [],
-            'lists': [],
-            'members': [],
-            'enabledPermissions': [],
-            'disabledPermissions': [],
-            'externalMembers': [],
+            StalwartPrincipalField.QUOTA: 0,
+            StalwartPrincipalField.SECRETS: [],
+            StalwartPrincipalField.EMAILS: [],
+            StalwartPrincipalField.URLS: [],
+            StalwartPrincipalField.MEMBER_OF: [],
+            StalwartPrincipalField.ROLES: [],
+            StalwartPrincipalField.LISTS: [],
+            StalwartPrincipalField.MEMBERS: [],
+            StalwartPrincipalField.ENABLED_PERMISSIONS: [],
+            StalwartPrincipalField.DISABLED_PERMISSIONS: [],
+            StalwartPrincipalField.EXTERNAL_MEMBERS: [],
             **principal_data,
         }
 
@@ -182,20 +199,20 @@ class MailClientLegacy(MailClientInterface):
 
     def _update_principal(self, principal_id: str, update_data: list[dict]):
         patch_schema = {
-            'type': ('set',),
-            'name': ('set',),
-            'description': ('set',),
-            'quota': ('set',),
-            'secrets': ('addItem', 'removeItem'),
-            'emails': ('addItem', 'removeItem'),
-            'urls': ('addItem', 'removeItem'),
-            'memberOf': ('addItem', 'removeItem'),
-            'roles': ('addItem', 'removeItem'),
-            'lists': ('addItem', 'removeItem'),
-            'members': ('addItem', 'removeItem'),
-            'enabledPermissions': ('addItem', 'removeItem'),
-            'disabledPermissions': ('addItem', 'removeItem'),
-            'externalMembers': ('addItem', 'removeItem'),
+            StalwartPrincipalField.TYPE: ('set',),
+            StalwartPrincipalField.NAME: ('set',),
+            StalwartPrincipalField.DESCRIPTION: ('set',),
+            StalwartPrincipalField.QUOTA: ('set',),
+            StalwartPrincipalField.SECRETS: ('addItem', 'removeItem'),
+            StalwartPrincipalField.EMAILS: ('addItem', 'removeItem'),
+            StalwartPrincipalField.URLS: ('addItem', 'removeItem'),
+            StalwartPrincipalField.MEMBER_OF: ('addItem', 'removeItem'),
+            StalwartPrincipalField.ROLES: ('addItem', 'removeItem'),
+            StalwartPrincipalField.LISTS: ('addItem', 'removeItem'),
+            StalwartPrincipalField.MEMBERS: ('addItem', 'removeItem'),
+            StalwartPrincipalField.ENABLED_PERMISSIONS: ('addItem', 'removeItem'),
+            StalwartPrincipalField.DISABLED_PERMISSIONS: ('addItem', 'removeItem'),
+            StalwartPrincipalField.EXTERNAL_MEMBERS: ('addItem', 'removeItem'),
         }
 
         # TODO: Look into bringing in pydantic to handle schema validation
@@ -412,16 +429,16 @@ class MailClientLegacy(MailClientInterface):
         quota: Optional[int] = None,
     ):
         data = {
-            'type': 'individual',
-            'name': principal_id,
-            'description': full_name,
-            'emails': emails,
-            'roles': ['user'],
+            StalwartPrincipalField.TYPE: 'individual',
+            StalwartPrincipalField.NAME: principal_id,
+            StalwartPrincipalField.DESCRIPTION: full_name,
+            StalwartPrincipalField.EMAILS: emails,
+            StalwartPrincipalField.ROLES: ['user'],
         }
         if quota:
-            data['quota'] = quota
+            data[StalwartPrincipalField.QUOTA] = quota
         if app_password:
-            data['secrets'] = [app_password]
+            data[StalwartPrincipalField.SECRETS] = [app_password]
         response = self._create_principal(data)
         data = response.json()
 
@@ -449,7 +466,7 @@ class MailClientLegacy(MailClientInterface):
     def delete_app_password(self, principal_id: str, secret: str):
         response = self._update_principal(
             principal_id,
-            [{'action': 'removeItem', 'field': 'secrets', 'value': secret}],
+            [{'action': 'removeItem', 'field': StalwartPrincipalField.SECRETS, 'value': secret}],
         )
         # Returns data: null on success...
         data = response.json()
@@ -462,7 +479,7 @@ class MailClientLegacy(MailClientInterface):
     def save_app_password(self, principal_id: str, secret: str):
         response = self._update_principal(
             principal_id,
-            [{'action': 'addItem', 'field': 'secrets', 'value': secret}],
+            [{'action': 'addItem', 'field': StalwartPrincipalField.SECRETS, 'value': secret}],
         )
         # Returns data: null on success...
         data = response.json()
@@ -480,7 +497,7 @@ class MailClientLegacy(MailClientInterface):
 
         response = self._update_principal(
             principal_id,
-            [{'action': 'addItem', 'field': 'emails', 'value': email} for email in emails],
+            [{'action': 'addItem', 'field': StalwartPrincipalField.EMAILS, 'value': email} for email in emails],
         )
         # Returns data: null on success...
         data = response.json()
@@ -495,8 +512,8 @@ class MailClientLegacy(MailClientInterface):
 
         actions = []
         for old_email, email in emails:
-            actions.append({'action': 'removeItem', 'field': 'emails', 'value': old_email})
-            actions.append({'action': 'addItem', 'field': 'emails', 'value': email})
+            actions.append({'action': 'removeItem', 'field': StalwartPrincipalField.EMAILS, 'value': old_email})
+            actions.append({'action': 'addItem', 'field': StalwartPrincipalField.EMAILS, 'value': email})
 
         response = self._update_principal(principal_id, actions)
         # Returns data: null on success...
@@ -515,7 +532,7 @@ class MailClientLegacy(MailClientInterface):
 
         response = self._update_principal(
             principal_id,
-            [{'action': 'removeItem', 'field': 'emails', 'value': email} for email in emails],
+            [{'action': 'removeItem', 'field': StalwartPrincipalField.EMAILS, 'value': email} for email in emails],
         )
         # Returns data: null on success...
         data = response.json()
@@ -536,11 +553,11 @@ class MailClientLegacy(MailClientInterface):
         update_data = []
         if primary_email_address:
             update_data.append(
-                {'action': 'set', 'field': 'name', 'value': primary_email_address},
+                {'action': 'set', 'field': StalwartPrincipalField.NAME, 'value': primary_email_address},
             )
         if full_name:
             update_data.append(
-                {'action': 'set', 'field': 'description', 'value': full_name},
+                {'action': 'set', 'field': StalwartPrincipalField.DESCRIPTION, 'value': full_name},
             )
 
         if len(update_data) == 0:
@@ -558,7 +575,7 @@ class MailClientLegacy(MailClientInterface):
 
     def update_quota(self, principal_id: str, quota: int):
         update_data = [
-            {'action': 'set', 'field': 'quota', 'value': quota},
+            {'action': 'set', 'field': StalwartPrincipalField.QUOTA, 'value': quota},
         ]
         response = self._update_principal(principal_id, update_data)
 
@@ -579,7 +596,12 @@ class MailClientLegacy(MailClientInterface):
 
         api_key_name = 'tb-accounts-api-key'
         secret = get_random_string(32)
-        data = {'type': 'apiKey', 'name': api_key_name, 'secrets': [secret], 'roles': ['admin']}
+        data = {
+            StalwartPrincipalField.TYPE: 'apiKey',
+            StalwartPrincipalField.NAME: api_key_name,
+            StalwartPrincipalField.SECRETS: [secret],
+            StalwartPrincipalField.ROLES: ['admin'],
+        }
 
         response = self._create_principal(data)
         data = response.json()
@@ -596,9 +618,9 @@ class MailClientLegacy(MailClientInterface):
 
     def create_domain(self, domain, description='', **kwargs):
         data = {
-            'type': 'domain',
-            'name': domain,
-            'description': description,
+            StalwartPrincipalField.TYPE: 'domain',
+            StalwartPrincipalField.NAME: domain,
+            StalwartPrincipalField.DESCRIPTION: description,
         }
         response = self._create_principal(data)
         data = response.json()
