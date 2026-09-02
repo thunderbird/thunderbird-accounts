@@ -31,10 +31,12 @@ defineExpose({
       <ph-x size="24" />
     </button>
 
-    <div class="modal-content">
-      <h2>{{ title }}</h2>
+    <div class="modal-scroll-area">
+      <div class="modal-content">
+        <h2>{{ title }}</h2>
 
-      <slot />
+        <slot />
+      </div>
     </div>
   </dialog>
 </template>
@@ -68,18 +70,32 @@ dialog {
    */
   max-height: calc(100vh - var(--modal-inset-block-start) * 2);
   max-height: calc(100dvh - var(--modal-inset-block-start) * 2);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+
+  /*
+   * Scrolling lives on .modal-scroll-area rather than the dialog so that the
+   * close button, which is positioned against the dialog, stays put instead of
+   * scrolling out of view along with the content.
+   */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 
   &::backdrop {
     background-color: var(--colour-neutral-900);
     opacity: 0.5;
   }
 
+  .modal-scroll-area {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .close-button {
     position: absolute;
     top: 1rem;
     right: 1rem;
+    z-index: 1;
     background-color: rgba(0, 0, 0, 0.05);
     color: rgba(0, 0, 0, 0.5);
     box-shadow: inset 2px 2px 4px 0 rgba(0, 0, 0, 0.05);
