@@ -43,9 +43,7 @@ defineExpose({
 
 <style scoped>
 dialog {
-  /* Distance between the top of the viewport and the top of the modal. */
   --modal-inset-block-start: 1rem;
-
   position: fixed;
   top: var(--modal-inset-block-start);
   left: 50%;
@@ -58,29 +56,10 @@ dialog {
   padding: 2rem 1rem 1.5rem;
   width: 640px;
   max-width: 90vw;
-
-  /*
-   * The modal is offset from the top of the viewport, so its height budget is
-   * whatever is left below that offset (minus a matching gap at the bottom).
-   * Sizing it against the full viewport instead let the modal extend past the
-   * bottom of the screen without ever overflowing, so its content could not be
-   * scrolled to and the page behind it stays scroll-locked while it is open.
-   * `dvh` accounts for the dynamic browser chrome on mobile Safari; the `vh`
-   * declaration above it is the fallback for browsers without `dvh`.
-   */
   max-height: calc(100vh - var(--modal-inset-block-start) * 2);
   max-height: calc(100dvh - var(--modal-inset-block-start) * 2);
-
   overflow: hidden;
 
-  /*
-   * Scrolling lives on .modal-scroll-area rather than the dialog so that the
-   * close button, which is positioned against the dialog, stays put instead of
-   * scrolling out of view along with the content.
-   *
-   * Scoped to [open] so it does not override the user-agent
-   * `dialog:not([open]) { display: none }` rule and render closed modals.
-   */
   &[open] {
     display: flex;
     flex-direction: column;
