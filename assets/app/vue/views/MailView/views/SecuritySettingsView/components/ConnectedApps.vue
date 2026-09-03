@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhPlugsConnected } from '@phosphor-icons/vue';
 import { DangerButton, LinkButton, ModalDialog, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
@@ -12,7 +12,26 @@ import { formatDate, formatSessionLocation } from '../formatters';
 
 const { t, locale } = useI18n();
 
-const connectedApps = ref<DisplayConnectedApp[]>([]);
+const connectedAppsData = ref<ConnectedApp[]>([]);
+const connectedApps = computed<DisplayConnectedApp[]>(() =>
+  [...connectedAppsData.value]
+    .sort((a, b) => (b.last_access || 0) - (a.last_access || 0))
+    .map((app) => ({
+      id: `${app.client_id}:${app.session_id ?? 'offline'}`,
+      clientId: app.client_id,
+      label: app.app_name || t('views.mail.views.securitySettings.unknownApp'),
+      ipAddress: app.ip_address || t('views.mail.views.securitySettings.unknownIpAddress'),
+      location: formatSessionLocation(
+        app.location,
+        locale.value,
+        t('views.mail.views.securitySettings.unknownLocation')
+      ),
+      lastAccess:
+        typeof app.last_access === 'number' && Number.isFinite(app.last_access)
+          ? formatDate(new Date(app.last_access), locale.value, t)
+          : t('views.mail.views.securitySettings.unknownLastAccess'),
+    }))
+);
 const loading = ref(true);
 const errorMessage = ref<string | null>(null);
 const appPendingRemoval = ref<DisplayConnectedApp | null>(null);
@@ -38,7 +57,7 @@ const removeAccess = async () => {
 
   try {
     await revokeConnectedApp(app.clientId);
-    connectedApps.value = connectedApps.value.filter((connectedApp) => connectedApp.clientId !== app.clientId);
+    connectedAppsData.value = connectedAppsData.value.filter((connectedApp) => connectedApp.client_id !== app.clientId);
   } catch (error) {
     console.log(error);
     errorMessage.value = t('views.mail.views.securitySettings.errorRemovingAccess');
@@ -47,24 +66,7 @@ const removeAccess = async () => {
 
 onMounted(async () => {
   try {
-    const data = await getConnectedApps();
-    const sortedData = [...data].sort((a, b) => (b.last_access || 0) - (a.last_access || 0));
-
-    connectedApps.value = sortedData.map((app: ConnectedApp, index) => ({
-      id: `${app.client_id}:${app.session_id || index}`,
-      clientId: app.client_id,
-      label: app.app_name || t('views.mail.views.securitySettings.unknownApp'),
-      ipAddress: app.ip_address || t('views.mail.views.securitySettings.unknownIpAddress'),
-      location: formatSessionLocation(
-        app.location,
-        locale.value,
-        t('views.mail.views.securitySettings.unknownLocation')
-      ),
-      lastAccess:
-        typeof app.last_access === 'number' && Number.isFinite(app.last_access)
-          ? formatDate(new Date(app.last_access), locale.value, t)
-          : t('views.mail.views.securitySettings.unknownLastAccess'),
-    }));
+    connectedAppsData.value = await getConnectedApps();
   } catch (error) {
     console.log(error);
     errorMessage.value = t('views.mail.views.securitySettings.errorLoadingConnectedApps');
