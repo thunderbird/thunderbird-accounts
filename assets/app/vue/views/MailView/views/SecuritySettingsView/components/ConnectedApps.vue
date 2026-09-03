@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhPlugsConnected } from '@phosphor-icons/vue';
-import { LinkButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
+import { DangerButton, LinkButton, ModalDialog, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import DetailsSummary from '@/components/DetailsSummary.vue';
 import SecurityAccessTable from './SecurityAccessTable.vue';
 
@@ -15,16 +15,26 @@ const { t, locale } = useI18n();
 const connectedApps = ref<DisplayConnectedApp[]>([]);
 const loading = ref(true);
 const errorMessage = ref<string | null>(null);
+const appPendingRemoval = ref<DisplayConnectedApp | null>(null);
+const removeAccessModal = useTemplateRef<InstanceType<typeof ModalDialog>>('removeAccessModal');
 
-const removeAccess = async (id: string) => {
+const confirmRemoveAccess = (id: string) => {
   const app = connectedApps.value.find((connectedApp) => connectedApp.id === id);
   if (!app) {
     return;
   }
 
-  if (!window.confirm(t('views.mail.views.securitySettings.removeAccessConfirmation', { app: app.label }))) {
+  appPendingRemoval.value = app;
+  removeAccessModal.value?.show();
+};
+
+const removeAccess = async () => {
+  const app = appPendingRemoval.value;
+  if (!app) {
     return;
   }
+
+  removeAccessModal.value?.hide();
 
   try {
     await revokeConnectedApp(app.clientId);
@@ -96,7 +106,7 @@ onMounted(async () => {
         }"
       >
         <template #action="{ record }">
-          <link-button @click="removeAccess(record.id)">
+          <link-button @click="confirmRemoveAccess(record.id)">
             {{ t('views.mail.views.securitySettings.removeAccess') }}
           </link-button>
         </template>
@@ -107,6 +117,29 @@ onMounted(async () => {
       <p class="connected-apps-description empty">{{ t('views.mail.views.securitySettings.noConnectedApps') }}</p>
     </template>
   </details-summary>
+
+  <modal-dialog ref="removeAccessModal" @closed="appPendingRemoval = null">
+    <template #header>
+      <h2 id="title">
+        {{
+          t('views.mail.views.securitySettings.removeAccessConfirmation', {
+            app: appPendingRemoval?.label,
+          })
+        }}
+      </h2>
+    </template>
+
+    <p>{{ t('views.mail.views.securitySettings.removeAccessConfirmationDescription') }}</p>
+
+    <template #actions>
+      <link-button @click="removeAccessModal?.hide()">
+        {{ t('views.mail.views.securitySettings.cancel') }}
+      </link-button>
+      <danger-button @click="removeAccess">
+        {{ t('views.mail.views.securitySettings.removeAccess') }}
+      </danger-button>
+    </template>
+  </modal-dialog>
 </template>
 
 <style scoped>
