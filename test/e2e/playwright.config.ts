@@ -44,7 +44,7 @@ export default defineConfig({
   // Individual test timeout - a single test will time out if it is still running after this time (ms)
   timeout: 150 * 1000, // 2.5 minutes
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: [['html']],
+  reporter: [['line'], ['html', { outputFolder: './playwright-report' }]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
