@@ -609,6 +609,13 @@ resources:
                 description: Allow local TLS traffic only
                 cidr_blocks:
                   - 10.10.0.0/16
+              - from_port: 443
+                to_port: 443
+                protocol: tcp
+                description: Allow TLS from mzla-eks-workloads01 private subnets
+                cidr_blocks:
+                  - 10.110.64.0/18
+                  - 10.110.128.0/18
 
       listeners:
         flower:  # Load balancer to attach to
