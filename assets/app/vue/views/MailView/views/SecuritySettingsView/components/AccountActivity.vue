@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhDevices } from '@phosphor-icons/vue';
 import DetailsSummary from '@/components/DetailsSummary.vue';
-import { LinkButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
+import { DangerButton, LinkButton, ModalDialog, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import SecurityAccessTable from './SecurityAccessTable.vue';
 
 // API
@@ -26,25 +26,39 @@ type DisplaySession = {
   lastAccess: string;
 };
 
-const isRenderableSession = (session: ActiveSession) => (
-  Boolean(session.id)
-  && Boolean(session.ip_address)
-  && Number.isFinite(session.last_access)
-);
+const isRenderableSession = (session: ActiveSession) =>
+  Boolean(session.id) && Boolean(session.ip_address) && Number.isFinite(session.last_access);
 
 const activeSessions = ref<DisplaySession[]>([]);
 const loading = ref(true);
 const errorMessage = ref(null);
+const sessionPendingSignOut = ref<DisplaySession | null>(null);
+const signOutModal = useTemplateRef<InstanceType<typeof ModalDialog>>('signOutModal');
 
-const signOut = async (id: string) => {
-  if (window.confirm(t('views.mail.views.securitySettings.signOutConfirmation'))) {
-    try {
-      await signOutSession(id);
-      activeSessions.value = activeSessions.value.filter((session) => session.id !== id);
-    } catch (error) {
-      console.log(error);
-      errorMessage.value = t('views.mail.views.securitySettings.errorSigningOutSession');
-    }
+const confirmSignOut = (id: string) => {
+  const session = activeSessions.value.find((activeSession) => activeSession.id === id);
+  if (!session) {
+    return;
+  }
+
+  sessionPendingSignOut.value = session;
+  signOutModal.value?.show();
+};
+
+const signOut = async () => {
+  const session = sessionPendingSignOut.value;
+  if (!session) {
+    return;
+  }
+
+  signOutModal.value?.hide();
+
+  try {
+    await signOutSession(session.id);
+    activeSessions.value = activeSessions.value.filter((activeSession) => activeSession.id !== session.id);
+  } catch (error) {
+    console.log(error);
+    errorMessage.value = t('views.mail.views.securitySettings.errorSigningOutSession');
   }
 };
 
@@ -61,7 +75,11 @@ onMounted(async () => {
       label: formatDeviceInfo(session.device_info, t('views.mail.views.securitySettings.unknownDevice')),
       ipAddress: session.ip_address,
       isCurrent: Boolean(session.is_current),
-      location: formatSessionLocation(session.location, locale.value, t('views.mail.views.securitySettings.unknownLocation')),
+      location: formatSessionLocation(
+        session.location,
+        locale.value,
+        t('views.mail.views.securitySettings.unknownLocation')
+      ),
       lastAccess: formatDate(new Date(session.last_access), locale.value, t),
     }));
   } catch (error) {
@@ -93,8 +111,10 @@ onMounted(async () => {
     </template>
 
     <template v-else-if="activeSessions.length > 0">
-      <p class="account-activity-description">{{ t('views.mail.views.securitySettings.accountActivityDescription') }}</p>
-  
+      <p class="account-activity-description">
+        {{ t('views.mail.views.securitySettings.accountActivityDescription') }}
+      </p>
+
       <security-access-table
         :records="activeSessions"
         :column-labels="{
@@ -108,7 +128,7 @@ onMounted(async () => {
           <span v-if="record.isCurrent" class="current-session-label">
             {{ t('views.mail.views.securitySettings.thisIsYou') }}
           </span>
-          <link-button v-else @click="signOut(record.id)">
+          <link-button v-else @click="confirmSignOut(record.id)">
             {{ t('views.mail.views.securitySettings.signOut') }}
           </link-button>
         </template>
@@ -118,6 +138,29 @@ onMounted(async () => {
       <p class="account-activity-description empty">{{ t('views.mail.views.securitySettings.noRecentDevices') }}</p>
     </template>
   </details-summary>
+
+  <modal-dialog ref="signOutModal" @closed="sessionPendingSignOut = null">
+    <template #header>
+      <h2 id="title">
+        {{
+          t('views.mail.views.securitySettings.signOutConfirmation', {
+            device: sessionPendingSignOut?.label,
+          })
+        }}
+      </h2>
+    </template>
+
+    <p>{{ t('views.mail.views.securitySettings.signOutConfirmationDescription') }}</p>
+
+    <template #actions>
+      <link-button @click="signOutModal?.hide()">
+        {{ t('views.mail.views.securitySettings.cancel') }}
+      </link-button>
+      <danger-button @click="signOut">
+        {{ t('views.mail.views.securitySettings.signOut') }}
+      </danger-button>
+    </template>
+  </modal-dialog>
 </template>
 
 <style scoped>
