@@ -390,9 +390,9 @@ if AUTH_SCHEME == 'oidc':
     OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
     OIDC_STORE_ACCESS_TOKEN = True  # Needed to talk to jmap
     OIDC_STORE_REFRESH_TOKEN = True  # Needed to refresh existing sessions. Custom for #498
+    OIDC_STORE_ID_TOKEN = False  # The access token is the canonical source for the Keycloak session id.
+    OIDC_USE_NONCE = True  # Require standard OIDC nonce generation and validation.
     ALLOW_LOGOUT_GET_METHOD = True
-    OIDC_STORE_ID_TOKEN = True # Needed to store the ID token in the session for session verification
-    OIDC_USE_NONCE = False # Needed for .verify_token() check on the OIDC backend for session verification
 
     def oidc_logout(request):
         return f'{os.getenv("OIDC_URL_LOGOUT")}?client_id={OIDC_RP_CLIENT_ID}'
