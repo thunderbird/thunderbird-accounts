@@ -570,19 +570,17 @@ class ActiveSessionsTestcase(APITestCase):
         self.assertEqual(response.json()[0]['id'], 'session-id')
         self.assertEqual(response.json()[0]['location']['city'], 'Mountain View')
 
-    @patch('thunderbird_accounts.authentication.api.AccountsOIDCBackend')
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
     @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
-    def test_get_active_sessions_marks_only_current_id_token_session(
+    def test_get_active_sessions_uses_access_token_session_id_instead_of_id_token(
         self,
         mock_enrich_sessions_with_geoip,
         mock_account_client: MagicMock,
-        mock_oidc_backend: MagicMock,
     ):
         session = self.client.session
         session['oidc_id_token'] = 'test-id-token'
+        session['oidc_access_token'] = jwt.encode({'sid': 'chrome-session-id'}, key='', algorithm='none')
         session.save()
-        mock_oidc_backend.return_value.verify_token.return_value = {'sid': 'firefox-session-id'}
         mock_account_client.return_value.get_active_sessions.return_value = [
             {
                 'id': 'firefox-session-id',
@@ -607,14 +605,14 @@ class ActiveSessionsTestcase(APITestCase):
         self.assertEqual(
             {session['id']: session['is_current'] for session in response.json()},
             {
-                'firefox-session-id': True,
-                'chrome-session-id': False,
+                'firefox-session-id': False,
+                'chrome-session-id': True,
             },
         )
 
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
     @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
-    def test_get_active_sessions_falls_back_to_access_token_session_id(
+    def test_get_active_sessions_marks_only_current_access_token_session(
         self,
         mock_enrich_sessions_with_geoip,
         mock_account_client: MagicMock,
@@ -687,17 +685,12 @@ class ActiveSessionsTestcase(APITestCase):
             },
         )
 
-    @patch('thunderbird_accounts.authentication.api.AccountsOIDCBackend')
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
-    def test_sign_out_session_uses_user_access_token(
-        self,
-        mock_account_client: MagicMock,
-        mock_oidc_backend: MagicMock,
-    ):
+    def test_sign_out_session_keeps_django_session_when_signing_out_other_session(self, mock_account_client: MagicMock):
+        access_token = jwt.encode({'sid': 'current-session-id'}, key='', algorithm='none')
         session = self.client.session
-        session['oidc_id_token'] = 'test-id-token'
+        session['oidc_access_token'] = access_token
         session.save()
-        mock_oidc_backend.return_value.verify_token.return_value = {'sid': 'other-session-id'}
 
         response = self.client.post(
             reverse('api_sign_out_session'),
@@ -707,9 +700,32 @@ class ActiveSessionsTestcase(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_account_client.return_value.sign_out_session.assert_called_once_with(
-            'test-user-access-token',
+            access_token,
             'session-id',
         )
+        self.assertEqual(self.client.session['oidc_access_token'], access_token)
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_sign_out_session_flushes_django_session_when_signing_out_current_session(
+        self, mock_account_client: MagicMock
+    ):
+        access_token = jwt.encode({'sid': 'session-id'}, key='', algorithm='none')
+        session = self.client.session
+        session['oidc_access_token'] = access_token
+        session.save()
+
+        response = self.client.post(
+            reverse('api_sign_out_session'),
+            data={'session_id': 'session-id'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_account_client.return_value.sign_out_session.assert_called_once_with(
+            access_token,
+            'session-id',
+        )
+        self.assertNotIn('oidc_access_token', self.client.session)
 
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
     def test_sign_out_session_returns_generic_server_error(self, mock_account_client: MagicMock):

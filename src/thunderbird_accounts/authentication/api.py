@@ -39,7 +39,6 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
 
-from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.serializers import UserProfileSerializer
 from thunderbird_accounts.authentication.clients import KeycloakAccountClient, KeycloakClient
 from thunderbird_accounts.core.geoip import enrich_sessions_with_geoip
@@ -79,16 +78,7 @@ def _session_id_from_access_token(request: Request) -> str | None:
 
 
 def mark_current_session(request: Request, sessions: list[dict]) -> list[dict]:
-    oidc_id_token = request.session.get('oidc_id_token')
-    current_session_id = None
-
-    if oidc_id_token:
-        try:
-            current_session_id = AccountsOIDCBackend().verify_token(oidc_id_token).get('sid')
-        except Exception:
-            logging.exception('Error determining current Keycloak session')
-
-    current_session_id = current_session_id or _session_id_from_access_token(request)
+    current_session_id = _session_id_from_access_token(request)
 
     if not current_session_id:
         for session in sessions:
@@ -421,16 +411,9 @@ def sign_out_session(request: Request):
     keycloak_client = KeycloakAccountClient()
     keycloak_client.sign_out_session(user_access_token, session_id)
 
-    oidc_id_token = request.session.get('oidc_id_token')
-    if oidc_id_token:
-        # Verify if the request's keycloak session_id matches the one in the ID token.
-        auth_backend = AccountsOIDCBackend()
-        payload = auth_backend.verify_token(oidc_id_token)
-        keycloak_session_id = payload.get('sid')
-
-        if keycloak_session_id == session_id:
-            # If so, delete current session data and cookie from Django as well.
-            request.session.flush()
+    if _session_id_from_access_token(request) == session_id:
+        # Delete current session data and cookie from Django as well.
+        request.session.flush()
 
     return Response({'success': True})
 
