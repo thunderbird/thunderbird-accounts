@@ -86,7 +86,7 @@ During the server side (via the introspect token call) or via the JWT itself you
       "aud": "account",
       "sub": "5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2",
       "typ": "Bearer",
-      "azp": "tb-accounts",
+      "azp": "thunderbird-accounts",
       "sid": "db22f187-3a97-4621-a7ac-ef5039d46358",
       "acr": "1",
       "allowed-origins": [

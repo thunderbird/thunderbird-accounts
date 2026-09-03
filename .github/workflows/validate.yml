@@ -62,7 +62,7 @@ jobs:
               - 'Dockerfile.keycloak'
               - 'keycloak/**'
               - 'scripts/entry-keycloak.sh'
-              - 'scripts/apply-mfa-config.sh'
+              - 'scripts/apply-cli-config.sh'
               - 'scripts/PgAdvisoryLockRun.java'
               - 'test/e2e/**'
             iac-changed:

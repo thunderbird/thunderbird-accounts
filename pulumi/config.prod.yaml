@@ -710,7 +710,7 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-database-user-sSptNx
               - name: KC_BOOTSTRAP_ADMIN_PASSWORD
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/keycloak-admin-password-AnRwXP
-              # keycloak-config-cli (scripts/apply-mfa-config.sh) authenticates as the same admin
+              # keycloak-config-cli (scripts/apply-cli-config.sh) authenticates as the same admin
               # service-account client the accounts app uses, to reconcile the MFA step-up flow.
               - *SECRET_KEYCLOAK_ADMIN_CLIENT_ID
               - *SECRET_KEYCLOAK_ADMIN_CLIENT_SECRET
@@ -755,6 +755,9 @@ resources:
               # session settings change.
               - name: MFA_L1_LOA_MAX_AGE
                 value: "7776000"
+              # Until #1229 is tested and resolved we don't want the hardened aud check for tokens 
+              - name: KC_SPI_LOGIN_PROTOCOL__OPENID_CONNECT__ALLOW_TOKEN_INTROSPECTION_WITHOUT_AUDIENCE_CHECK
+                value: 'true'
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
