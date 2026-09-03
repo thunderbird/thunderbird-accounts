@@ -3,7 +3,6 @@ import { ACCTS_HUB_URL, ACCTS_SIGN_UP_URL, TIMEOUT_10_SECONDS } from '../const/c
 
 export class TbAcctsSignUpPage {
   readonly page: Page;
-  readonly testPlatform: string;
   readonly stepId: Locator;
   readonly formTitle: Locator;
   readonly formSubtitle: Locator;
@@ -17,9 +16,8 @@ export class TbAcctsSignUpPage {
   readonly zoneInfoInput: Locator;
   readonly submitButton: Locator;
 
-  constructor(page: Page, testPlatform: string = 'desktop') {
+  constructor(page: Page) {
     this.page = page;
-    this.testPlatform = testPlatform;
     this.stepId = this.page.getByTestId('step-id');
     this.formTitle = this.page.getByTestId('title');
     this.formSubtitle = this.page.getByTestId('subtitle');
@@ -99,21 +97,14 @@ export class TbAcctsSignUpPage {
    * Advances from the confirm plan step to the username step.
    */
   async confirmPlan() {
-    await expect.poll(async () => {
-      return await this.stepId.inputValue();
-    }).toBe('step-confirm-plan');
+    await expect(this.stepId).toHaveValue('step-confirm-plan');
 
     await this.submitForm();
 
-    await expect.poll(
-      async () => {
-        return await this.stepId.inputValue();
-      },
-      {
-        timeout: TIMEOUT_10_SECONDS,
-        message: 'waiting for the next step (username) to appear',
-      }
-    ).toBe('step-username');
+    await expect(
+      this.stepId,
+      'waiting for the next step (username) to appear',
+    ).toHaveValue('step-username', { timeout: TIMEOUT_10_SECONDS });
   }
 
   /**
@@ -136,28 +127,18 @@ export class TbAcctsSignUpPage {
     }
     
     // we expect to be on the next step; need time for the next page/step to load (will timeout if fails)
-    await expect.poll(
-      async () => {
-        return await this.stepId.inputValue();
-      },
-      {
-        timeout: TIMEOUT_10_SECONDS,
-        message: 'waiting for the next step (password) to appear',
-      }
-    ).toBe('step-password');
+    await expect(
+      this.stepId,
+      'waiting for the next step (password) to appear',
+    ).toHaveValue('step-password', { timeout: TIMEOUT_10_SECONDS });
 
     await this.passwordInput?.fill(password);
     await this.passwordConfirmInput?.fill(passwordConfirm);
   }
 
   async submitForm() { 
-    // when clicking on android it won't click it unless we force it; but force doesn't work on ios
     console.log(`clicking '${await this.submitButton.innerText()}' button`);
-
-    if (this.testPlatform.includes('android')) {
-      await this.submitButton.click({ force: true, clickCount: 1 });
-    } else {
-      await this.submitButton.click();
-    }
+    await expect(this.submitButton).toBeEnabled({ timeout: TIMEOUT_10_SECONDS });
+    await this.submitButton.click();
   }
 }

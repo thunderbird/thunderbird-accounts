@@ -16,7 +16,7 @@ let signUpPage: TbAcctsSignUpPage;
 // be sure to re-enable these tests once 986 is resolved
 //test.skip(true, 'Temporarily disabled due to issue 986');
 
-test.beforeEach(async ({ page }, testInfo) => {
+test.beforeEach(async ({ page }) => {
   console.log('inside authenticate setup, about to call navigate and sign in');
   // Perform authentication steps
   await navigateToAccountsHubAndSignIn(page);
@@ -24,7 +24,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   // End of authentication steps, save the auth
   await page.context().storageState({ path: authFile });
 
-  signUpPage = new TbAcctsSignUpPage(page, testInfo.project.name);
+  signUpPage = new TbAcctsSignUpPage(page);
   // We need to land on a page that we can stay on to retrieve a csrftoken.
   await page.goto(ACCTS_CONTACT_URL);
 
@@ -138,4 +138,3 @@ test.describe('sign up form on browser', {
     );
   });
 });
-
