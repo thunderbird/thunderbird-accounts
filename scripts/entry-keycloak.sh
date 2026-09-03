@@ -22,8 +22,6 @@ KC_PID=$!
 # Forward termination so container stop stays graceful.
 trap 'kill -TERM "$KC_PID" 2>/dev/null' TERM INT
 
-/bin/bash "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-mfa-stepup" &
-/bin/bash "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-aud-mapper" &
-
+/bin/bash "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-mfa-stepup" && "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-aud-mapper" &
 
 wait "$KC_PID"
