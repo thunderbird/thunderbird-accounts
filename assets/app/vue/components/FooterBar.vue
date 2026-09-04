@@ -86,14 +86,13 @@ nav {
   display: flex;
   flex-direction: column;
   align-items: start;
-  gap: 0.75rem;
+  gap: 1.75rem;
 
   .top-row {
     display: flex;
     flex-direction: column;
     align-items: start;
     width: 100%;
-    height: 61px;
 
     img {
       margin-block-end: 2rem;
@@ -139,6 +138,7 @@ nav {
       flex-direction: row;
       align-items: center;
       justify-content: space-between;
+      height: 61px;
 
       img {
         margin-block-end: 0;
