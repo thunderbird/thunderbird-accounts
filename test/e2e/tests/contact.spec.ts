@@ -2,7 +2,7 @@ import path from 'path';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { ContactPage } from '../pages/contact-page';
 import { ensureWeAreSignedIn, navigateToAccountsHubAndSignIn, overridePageData } from '../utils/utils';
-import { isMobileIOSProject, isMobileProject } from '../utils/test-project';
+import { isMobileAndroidProject, isMobileIOSProject, isMobileProject } from '../utils/test-project';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -164,7 +164,9 @@ test.beforeEach(async ({ page }, testInfo) => {
 
   if (isMobileProject(testInfo.project.name)) {
     // Mobile BrowserStack projects cannot reuse the desktop storage state.
-    await navigateToAccountsHubAndSignIn(page);
+    await navigateToAccountsHubAndSignIn(page, {
+      isMobileAndroid: isMobileAndroidProject(testInfo.project.name),
+    });
   } else {
     // Check the desktop setup authentication in case its session expired.
     await ensureWeAreSignedIn(page);

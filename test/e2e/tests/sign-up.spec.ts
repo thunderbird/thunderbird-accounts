@@ -20,7 +20,9 @@ let signUpPage: TbAcctsSignUpPage;
 test.beforeEach(async ({ page }, testInfo) => {
   console.log('inside authenticate setup, about to call navigate and sign in');
   // Perform authentication steps
-  await navigateToAccountsHubAndSignIn(page);
+  await navigateToAccountsHubAndSignIn(page, {
+    isMobileAndroid: isMobileAndroidProject(testInfo.project.name),
+  });
 
   // End of authentication steps, save the auth
   await page.context().storageState({ path: authFile });

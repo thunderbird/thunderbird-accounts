@@ -55,17 +55,154 @@ export const waitForVueApp = async (page: Page) => {
     await page.waitForSelector('[data-testid=vue-app]');
 }
 
+type AuthenticationState = 'loading' | 'sign-in-ready' | 'terms-of-service' | 'signed-in';
+
+type AuthenticationSnapshot = {
+    state: AuthenticationState;
+    isSignedIn: boolean;
+    isTermsOfServiceVisible: boolean;
+    isSignInHeaderVisible: boolean;
+    isEmailInputVisible: boolean;
+    isPasswordInputVisible: boolean;
+    isSignInButtonVisible: boolean;
+    isSignInButtonEnabled: boolean;
+};
+
+const getAuthenticationSnapshot = async (
+    tbAcctsSignInPage: TBAcctsOIDCPage,
+    tbAcctsHubPage: TBAcctsHubPage,
+): Promise<AuthenticationSnapshot> => {
+    const [
+        isSignedIn,
+        isTermsOfServiceVisible,
+        isSignInHeaderVisible,
+        isEmailInputVisible,
+        isPasswordInputVisible,
+        isSignInButtonVisible,
+        isSignInButtonEnabled,
+    ] = await Promise.all([
+        tbAcctsHubPage.userAvatar.isVisible().catch(() => false),
+        tbAcctsHubPage.acceptTOSButton.isVisible().catch(() => false),
+        tbAcctsSignInPage.signInHeaderText.isVisible().catch(() => false),
+        tbAcctsSignInPage.emailInput.isVisible().catch(() => false),
+        tbAcctsSignInPage.passwordInput.isVisible().catch(() => false),
+        tbAcctsSignInPage.signInButton.isVisible().catch(() => false),
+        tbAcctsSignInPage.signInButton.isEnabled().catch(() => false),
+    ]);
+
+    let state: AuthenticationState = 'loading';
+    if (isSignedIn) {
+        state = 'signed-in';
+    } else if (isTermsOfServiceVisible) {
+        state = 'terms-of-service';
+    } else if (
+        isSignInHeaderVisible
+        && isEmailInputVisible
+        && isPasswordInputVisible
+        && isSignInButtonVisible
+        && isSignInButtonEnabled
+    ) {
+        state = 'sign-in-ready';
+    }
+
+    return {
+        state,
+        isSignedIn,
+        isTermsOfServiceVisible,
+        isSignInHeaderVisible,
+        isEmailInputVisible,
+        isPasswordInputVisible,
+        isSignInButtonVisible,
+        isSignInButtonEnabled,
+    };
+};
+
+const sanitizeUrlForDiagnostics = (url: string) => {
+    try {
+        const sanitizedUrl = new URL(url);
+        sanitizedUrl.search = '';
+        sanitizedUrl.hash = '';
+        return sanitizedUrl.toString();
+    } catch {
+        return url.split(/[?#]/, 1)[0];
+    }
+};
+
+const waitForAuthenticationState = async (
+    page: Page,
+    tbAcctsSignInPage: TBAcctsOIDCPage,
+    tbAcctsHubPage: TBAcctsHubPage,
+    expectedStates: AuthenticationState[],
+    message: string,
+) => {
+    const authenticationResult: { state: AuthenticationState } = { state: 'loading' };
+
+    try {
+        await expect.poll(
+            async () => {
+                const snapshot = await getAuthenticationSnapshot(tbAcctsSignInPage, tbAcctsHubPage);
+                authenticationResult.state = snapshot.state;
+                return authenticationResult.state;
+            },
+            { timeout: TIMEOUT_60_SECONDS, message },
+        ).toMatch(new RegExp(`^(${expectedStates.join('|')})$`));
+    } catch (error) {
+        const [pageTitle, finalSnapshot] = await Promise.all([
+            page.title().catch(() => '<unavailable>'),
+            getAuthenticationSnapshot(tbAcctsSignInPage, tbAcctsHubPage).catch(() => null),
+        ]);
+
+        // The expected UI can appear between expect.poll's final sample and
+        // this diagnostic snapshot, especially on slower BrowserStack devices.
+        if (finalSnapshot && expectedStates.includes(finalSnapshot.state)) {
+            return finalSnapshot.state;
+        }
+
+        const stateSummary = finalSnapshot
+            ? `state='${finalSnapshot.state}', avatar=${finalSnapshot.isSignedIn}, `
+                + `terms=${finalSnapshot.isTermsOfServiceVisible}, `
+                + `sign-in header=${finalSnapshot.isSignInHeaderVisible}, `
+                + `email input=${finalSnapshot.isEmailInputVisible}, `
+                + `password input=${finalSnapshot.isPasswordInputVisible}, `
+                + `button visible=${finalSnapshot.isSignInButtonVisible}, `
+                + `button enabled=${finalSnapshot.isSignInButtonEnabled}`
+            : 'state unavailable';
+        throw new Error(
+            `Authentication did not settle in one of the expected states (${expectedStates.join(', ')}). `
+            + `Final URL: ${sanitizeUrlForDiagnostics(page.url())}. `
+            + `Page title: '${pageTitle}'. Final authentication UI: ${stateSummary}.`,
+            { cause: error },
+        );
+    }
+
+    return authenticationResult.state;
+};
+
+type SignInOptions = {
+    username?: string | null;
+    password?: string | null;
+    isMobileAndroid?: boolean;
+};
+
 /**
  * Navigate to TB Accounts Hub (at the ACCTS_HUB_URL in the test/e2e/.env file). If already signed
  * in then just exit; otherwise if not currently signed in then sign in using the credentials
- * provided in the .env file. When singing in to the local stack we use a local sign in page and
+ * provided in the .env file. When signing in to the local stack we use a local sign in page and
  * aren't redirected to TB Accounts OIDC to sign in.
  * 
- * If username or password aren't provided the env values will be used.
+ * If username or password aren't provided the env values will be used. Set
+ * isMobileAndroid only for Android projects that require the proven hit-test workaround.
  */
-export const navigateToAccountsHubAndSignIn = async (page: Page, username: string | null = null, password: string | null = null) => {
+export const navigateToAccountsHubAndSignIn = async (
+    page: Page,
+    {
+        username = null,
+        password = null,
+        isMobileAndroid = false,
+    }: SignInOptions = {},
+) => {
     console.log(`navigating to accounts hub ${ACCTS_TARGET_ENV} (${ACCTS_HUB_URL})`);   
-    const tbAcctsSignInPage = new TBAcctsOIDCPage(page);
+    const tbAcctsSignInPage = new TBAcctsOIDCPage(page, isMobileAndroid);
     const tbAcctsHubPage = new TBAcctsHubPage(page);
     
     await page.goto(`${ACCTS_HUB_URL}`, {
@@ -73,23 +210,44 @@ export const navigateToAccountsHubAndSignIn = async (page: Page, username: strin
         timeout: TIMEOUT_60_SECONDS,
     });
     await waitForVueApp(page);
-    
-    // if we are already signed in then we can skip this
-    if (await tbAcctsSignInPage.signInHeaderText.isVisible() && await tbAcctsSignInPage.signInButton.isEnabled()) {
+
+    // Wait for a complete state instead of taking a point-in-time visibility
+    // snapshot while Accounts or Keycloak may still be rendering or redirecting.
+    let authenticationState = await waitForAuthenticationState(
+        page,
+        tbAcctsSignInPage,
+        tbAcctsHubPage,
+        ['signed-in', 'terms-of-service', 'sign-in-ready'],
+        'waiting for the initial authentication state',
+    );
+
+    if (authenticationState === 'sign-in-ready') {
         await tbAcctsSignInPage.signIn(username, password);
+        authenticationState = await waitForAuthenticationState(
+            page,
+            tbAcctsSignInPage,
+            tbAcctsHubPage,
+            ['signed-in', 'terms-of-service'],
+            'waiting for sign-in to complete',
+        );
     }
 
-    await waitForVueApp(page);
-
-    // if tests are running on a new local stack (or new account) the terms of service page might be
-    // displayed; if so we need to accept the terms of service and then continue
-    if (await tbAcctsHubPage.acceptTOSButton.isVisible()) {
+    // New local stacks or accounts can require policy acceptance before the
+    // normal signed-in hub is available.
+    if (authenticationState === 'terms-of-service') {
         console.log('accepting the TB Pro ToS');
-        await tbAcctsHubPage.acceptTOSButton.click();
+        await expect(tbAcctsHubPage.acceptTOSButton).toBeEnabled({ timeout: TIMEOUT_30_SECONDS });
+        await tbAcctsHubPage.acceptTOSButton.click({ timeout: TIMEOUT_30_SECONDS });
+        await waitForAuthenticationState(
+            page,
+            tbAcctsSignInPage,
+            tbAcctsHubPage,
+            ['signed-in'],
+            'waiting for the signed-in hub after accepting the terms of service',
+        );
     }
 
-    // Confirm the signed-in hub actually rendered by waiting for the banner's
-    // UserAvatar (the stable signed-in signal after the nav overhaul in #695).
+    // The banner avatar is the stable signed-in signal after the nav overhaul in #695.
     await expect(tbAcctsHubPage.userAvatar).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
 }
 
