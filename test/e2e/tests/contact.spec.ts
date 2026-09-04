@@ -1,11 +1,14 @@
 import path from 'path';
-import { test, expect, type Page } from '@playwright/test';
-import { ContactPage } from '../../pages/contact-page';
-import { ensureWeAreSignedIn, overridePageData } from '../../utils/utils';
+import { test, expect, type Locator, type Page } from '@playwright/test';
+import { ContactPage } from '../pages/contact-page';
+import { ensureWeAreSignedIn, navigateToAccountsHubAndSignIn, overridePageData } from '../utils/utils';
+import { isMobileAndroidProject, isMobileIOSProject, isMobileProject } from '../utils/test-project';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
   PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
+  PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
+  PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
   ACCTS_OIDC_EMAIL,
   ACCTS_OIDC_RECOVERY_EMAIL,
   PRIMARY_THUNDERMAIL_EMAIL,
@@ -13,7 +16,7 @@ import {
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
   ACCTS_TARGET_ENV,
-} from '../../const/constants';
+} from '../const/constants';
 
 let contactPage: ContactPage;
 
@@ -39,6 +42,20 @@ const verifyFormPostData = async (postData: string | null) => {
   expect(postData).toContain(TEST_DESC);
 };
 
+const expectInputToHaveValue = async (
+  input: Locator,
+  expectedValue: string,
+  projectName: string,
+) => {
+  if (isMobileIOSProject(projectName)) {
+    // locator.toHaveValue is not supported in iOS BrowserStack.
+    await expect.poll(async () => input.inputValue()).toBe(expectedValue);
+    return;
+  }
+
+  await expect(input).toHaveValue(expectedValue);
+};
+
 const fakeBeingOnAllowList = async (page: Page) => {
   // fake having our user on the allow list so we can actually submit the contact form
   // only needed when running on local dev stack as our stage/prod test accounts are on allow list
@@ -52,7 +69,7 @@ const fakeBeingOnAllowList = async (page: Page) => {
 };
 
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, testInfo) => {
   contactPage = new ContactPage(page);
 
   // mock the /contact/fields endpoint to return predictable values for the form
@@ -145,14 +162,26 @@ test.beforeEach(async ({ page }) => {
     });
   });
 
-  // we should be signed into TB Accounts already via our auth setup but check in case session expired
-  await ensureWeAreSignedIn(page);
+  if (isMobileProject(testInfo.project.name)) {
+    // Mobile BrowserStack projects cannot reuse the desktop storage state.
+    await navigateToAccountsHubAndSignIn(page, {
+      isMobileAndroid: isMobileAndroidProject(testInfo.project.name),
+    });
+  } else {
+    // Check the desktop setup authentication in case its session expired.
+    await ensureWeAreSignedIn(page);
+  }
 });
 
-test.describe('contact support form on desktop browser', {
-  tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
+test.describe('contact support form on browser', {
+  tag: [
+    PLAYWRIGHT_TAG_E2E_SUITE,
+    PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
+    PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
+    PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
+  ],
 }, () => {
-  test('contact form pre-fills primary thundermail email when signed in with active subscription', async ({ page }) => {
+  test('contact form pre-fills primary thundermail email when signed in with active subscription', async ({ page }, testInfo) => {
     const activeSubscriptionPageData = {
       hasActiveSubscription: true,
       userEmail: PRIMARY_THUNDERMAIL_EMAIL,
@@ -163,10 +192,10 @@ test.describe('contact support form on desktop browser', {
     await contactPage.navigateToContactPage();
     await contactPage.verifyFormDisplayed();
 
-    await expect(contactPage.emailInput).toHaveValue(PRIMARY_THUNDERMAIL_EMAIL);
+    await expectInputToHaveValue(contactPage.emailInput, PRIMARY_THUNDERMAIL_EMAIL, testInfo.project.name);
   });
 
-  test('contact form pre-fills recovery email when signed in without active subscription', async ({ page }) => {
+  test('contact form pre-fills recovery email when signed in without active subscription', async ({ page }, testInfo) => {
     const inactiveSubscriptionPageData = {
       hasActiveSubscription: false,
       userEmail: PRIMARY_THUNDERMAIL_EMAIL,
@@ -177,12 +206,15 @@ test.describe('contact support form on desktop browser', {
     await contactPage.navigateToContactPage();
     await contactPage.verifyFormDisplayed();
 
-    await expect(contactPage.emailInput).toHaveValue(ACCTS_OIDC_RECOVERY_EMAIL);
+    await expectInputToHaveValue(contactPage.emailInput, ACCTS_OIDC_RECOVERY_EMAIL, testInfo.project.name);
   });
 
-  test('contact form displayed correctly when not signed in', async ({ page }) => {
+  test('contact form displayed correctly when not signed in', async ({ page }, testInfo) => {
     // clear authentication state for this test
     await page.context().clearCookies();
+    if (isMobileProject(testInfo.project.name)) {
+      await page.reload();
+    }
     await page.waitForTimeout(TIMEOUT_5_SECONDS);
     await contactPage.navigateToContactPage();
 
@@ -279,7 +311,7 @@ test.describe('contact support form on desktop browser', {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           success: false,
           error: 'Failed to submit contact form. Please try again.'
         }),
@@ -343,7 +375,7 @@ test.describe('contact support form on desktop browser', {
     );
 
     // upload a test file
-    const testFilePath = path.join(__dirname, '../../test-files/test-attachment.txt');
+    const testFilePath = path.join(__dirname, '../test-files/test-attachment.txt');
     await contactPage.uploadFile(testFilePath);
 
     // submit the form
@@ -357,7 +389,7 @@ test.describe('contact support form on desktop browser', {
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     // Upload a test file
-    const testFilePath = path.join(__dirname, '../../test-files/test-attachment.txt');
+    const testFilePath = path.join(__dirname, '../test-files/test-attachment.txt');
     await contactPage.uploadFile(testFilePath);
 
     // Check that the file appears in the attachment list

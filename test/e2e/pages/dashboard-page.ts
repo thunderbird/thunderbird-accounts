@@ -22,6 +22,7 @@ interface ServiceUrls {
 }
 
 type PopupPageAssertion = {
+  serviceName: string;
   link: Locator;
   expectedUrl: string;
   expectedElementName: string;
@@ -135,11 +136,10 @@ export class DashboardPage {
     });
   }
 
-  async verifyServiceAppsLoadAfterNavigation() {
+  async verifyAppointmentAppLoadsAfterNavigation() {
     const serviceUrls = await this.getConfiguredServiceUrls();
-    // Thundermail is an internal Accounts route and reuses the current page, while
-    // Appointment and Send are configured external services that open in popups.
     await this.verifyPopupServiceAppLoads({
+      serviceName: 'Appointment',
       link: this.appointmentLink,
       expectedUrl: serviceUrls.appointment,
       beforeExpectedElements: [{
@@ -149,7 +149,12 @@ export class DashboardPage {
       expectedElementName: 'Copy booking link',
       expectedElement: page => page.getByRole('button', { name: /copy booking link/i }),
     });
+  }
+
+  async verifySendAppLoadsAfterNavigation() {
+    const serviceUrls = await this.getConfiguredServiceUrls();
     await this.verifyPopupServiceAppLoads({
+      serviceName: 'Send',
       link: this.sendLink,
       expectedUrl: serviceUrls.send,
       beforeExpectedElements: [{
@@ -167,10 +172,15 @@ export class DashboardPage {
       this.manageSubscriptionButton.click(),
     ]);
 
-    await expect.poll(async () => popup.url()).not.toBe('about:blank');
-    expect(new URL(popup.url()).protocol).toMatch(/^https?:$/);
-    expect(new URL(popup.url()).host).toContain(PADDLE_HOST);
-    await popup.close();
+    try {
+      await expect.poll(async () => popup.url()).not.toBe('about:blank');
+      expect(new URL(popup.url()).protocol).toMatch(/^https?:$/);
+      expect(new URL(popup.url()).host).toContain(PADDLE_HOST);
+    } finally {
+      if (!popup.isClosed()) {
+        await popup.close().catch(() => {});
+      }
+    }
   }
 
   async verifyUserMenuControls() {
@@ -203,6 +213,7 @@ export class DashboardPage {
   }
 
   private async verifyPopupServiceAppLoads({
+    serviceName,
     link,
     expectedUrl,
     beforeExpectedElements = [],
@@ -219,19 +230,81 @@ export class DashboardPage {
       link.click({ timeout: TIMEOUT_30_SECONDS }),
     ]);
 
-    await expect
-      .poll(async () => new URL(popup.url()).origin, { timeout: TIMEOUT_60_SECONDS })
-      .toBe(new URL(expectedUrl).origin);
-    for (const beforeExpectedElement of beforeExpectedElements) {
-      await expect(
-        beforeExpectedElement.expectedElement(popup),
-        `${beforeExpectedElement.expectedElementName} should be visible after navigating to ${expectedUrl}`,
-      ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
+    const expectedOrigin = new URL(expectedUrl).origin;
+
+    try {
+      try {
+        await expect
+          .poll(
+            async () => ({
+              isExpectedOrigin: this.getUrlOrigin(popup.url()) === expectedOrigin,
+              isAuthenticatedSignalVisible: await expectedElement(popup).isVisible().catch(() => false),
+            }),
+            {
+              timeout: TIMEOUT_60_SECONDS,
+              message: `waiting for ${serviceName} authentication to complete`,
+            },
+          )
+          .toEqual({
+            isExpectedOrigin: true,
+            isAuthenticatedSignalVisible: true,
+          });
+      } catch (error) {
+        const actualUrl = popup.isClosed() ? '<popup closed>' : this.sanitizeUrlForDiagnostics(popup.url());
+        const pageTitle = popup.isClosed()
+          ? '<unavailable>'
+          : await popup.title().catch(() => '<unavailable>');
+        const visibleHeadings = popup.isClosed()
+          ? []
+          : await popup.locator('h1:visible, h2:visible, h3:visible').allInnerTexts().catch(() => []);
+        const headingSummary = visibleHeadings
+          .map(heading => heading.replace(/\s+/g, ' ').trim())
+          .filter(Boolean)
+          .slice(0, 3)
+          .join(' | ') || '<none>';
+
+        throw new Error(
+          `${serviceName} authentication did not complete. `
+          + `Expected ${this.sanitizeUrlForDiagnostics(expectedUrl)} with visible `
+          + `'${expectedElementName}', but the popup finished at ${actualUrl}. `
+          + `Page title: '${pageTitle}'. Visible headings: '${headingSummary}'.`,
+          { cause: error },
+        );
+      }
+
+      console.log(
+        `${serviceName} authenticated popup settled at ${this.sanitizeUrlForDiagnostics(popup.url())}`,
+      );
+
+      for (const beforeExpectedElement of beforeExpectedElements) {
+        await expect(
+          beforeExpectedElement.expectedElement(popup),
+          `${beforeExpectedElement.expectedElementName} should be visible after navigating to ${expectedUrl}`,
+        ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
+      }
+    } finally {
+      if (!popup.isClosed()) {
+        await popup.close().catch(() => {});
+      }
     }
-    await expect(
-      expectedElement(popup),
-      `${expectedElementName} should be visible after navigating to ${expectedUrl}`,
-    ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
-    await popup.close();
+  }
+
+  private getUrlOrigin(url: string): string | null {
+    try {
+      return new URL(url).origin;
+    } catch {
+      return null;
+    }
+  }
+
+  private sanitizeUrlForDiagnostics(url: string): string {
+    try {
+      const sanitizedUrl = new URL(url);
+      sanitizedUrl.search = '';
+      sanitizedUrl.hash = '';
+      return sanitizedUrl.toString();
+    } catch {
+      return url.split(/[?#]/, 1)[0];
+    }
   }
 }

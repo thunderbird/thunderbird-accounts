@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { TbAcctsSignUpPage } from '../../pages/tb-accts-signup-page';
-import { authFile, isAllowListEnabled, navigateToAccountsHubAndSignIn, waitForVueApp } from '../../utils/utils';
+import { TbAcctsSignUpPage } from '../pages/tb-accts-signup-page';
+import { authFile, isAllowListEnabled, navigateToAccountsHubAndSignIn, waitForVueApp } from '../utils/utils';
+import { isMobileAndroidProject } from '../utils/test-project';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -9,7 +10,7 @@ import {
   ACCTS_CONTACT_URL,
   PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
   PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
-} from '../../const/constants';
+} from '../const/constants';
 
 let signUpPage: TbAcctsSignUpPage;
 
@@ -19,12 +20,17 @@ let signUpPage: TbAcctsSignUpPage;
 test.beforeEach(async ({ page }, testInfo) => {
   console.log('inside authenticate setup, about to call navigate and sign in');
   // Perform authentication steps
-  await navigateToAccountsHubAndSignIn(page);
+  await navigateToAccountsHubAndSignIn(page, {
+    isMobileAndroid: isMobileAndroidProject(testInfo.project.name),
+  });
 
   // End of authentication steps, save the auth
   await page.context().storageState({ path: authFile });
 
-  signUpPage = new TbAcctsSignUpPage(page, testInfo.project.name);
+  signUpPage = new TbAcctsSignUpPage(
+    page,
+    isMobileAndroidProject(testInfo.project.name),
+  );
   // We need to land on a page that we can stay on to retrieve a csrftoken.
   await page.goto(ACCTS_CONTACT_URL);
 
@@ -35,7 +41,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 test.describe('sign up form on browser', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY, PLAYWRIGHT_TAG_E2E_SUITE_MOBILE, PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY],
 }, () => {
-  test('form successfully submits', async ({ page }) => {    
+  test('form successfully submits', async ({ page }) => {
     const testUsername: string = crypto.randomUUID().replaceAll('-', '');
     const testEmail: string = `${testUsername}@example.com`;
     const testPassword: string = 'this-is-my-password-and-it-is-long';
@@ -138,4 +144,3 @@ test.describe('sign up form on browser', {
     );
   });
 });
-
