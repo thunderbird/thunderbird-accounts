@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 import { MailPage } from '../pages/mail-page';
 import { ensureWeAreSignedIn, navigateToAccountsHubAndSignIn } from '../utils/utils';
-import { isMobileProject } from '../utils/test-project';
+import { isMobileAndroidProject, isMobileProject } from '../utils/test-project';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -17,7 +17,9 @@ test.beforeEach(async ({ page }, testInfo) => {
   mailPage = new MailPage(page);
   if (isMobileProject(testInfo.project.name)) {
     // BrowserStack mobile projects cannot reuse the desktop setup's storage state.
-    await navigateToAccountsHubAndSignIn(page);
+    await navigateToAccountsHubAndSignIn(page, {
+      isMobileAndroid: isMobileAndroidProject(testInfo.project.name),
+    });
   } else {
     // Desktop projects load saved auth, but refresh it if the session has expired.
     await ensureWeAreSignedIn(page);

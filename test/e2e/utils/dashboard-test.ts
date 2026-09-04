@@ -1,7 +1,7 @@
 import { test as base } from '@playwright/test';
 import { ACCTS_TARGET_ENV } from '../const/constants';
 import { DashboardPage } from '../pages/dashboard-page';
-import { isMobileProject } from './test-project';
+import { isMobileAndroidProject, isMobileProject } from './test-project';
 import { ensureWeAreSignedIn, navigateToAccountsHubAndSignIn } from './utils';
 
 type DashboardFixtures = {
@@ -13,7 +13,9 @@ export const dashboardTest = base.extend<DashboardFixtures>({
     if (isMobileProject(testInfo.project.name)) {
       // Mobile projects cannot reuse the desktop setup's storage state, so each
       // isolated dashboard test signs in through the browser before navigating.
-      await navigateToAccountsHubAndSignIn(page);
+      await navigateToAccountsHubAndSignIn(page, {
+        isMobileAndroid: isMobileAndroidProject(testInfo.project.name),
+      });
     } else {
       // Desktop projects start with saved auth and refresh it only if it expired.
       await ensureWeAreSignedIn(page);
