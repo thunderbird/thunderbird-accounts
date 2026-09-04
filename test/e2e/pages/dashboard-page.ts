@@ -136,10 +136,8 @@ export class DashboardPage {
     });
   }
 
-  async verifyServiceAppsLoadAfterNavigation() {
+  async verifyAppointmentAppLoadsAfterNavigation() {
     const serviceUrls = await this.getConfiguredServiceUrls();
-    // Thundermail is an internal Accounts route and reuses the current page, while
-    // Appointment and Send are configured external services that open in popups.
     await this.verifyPopupServiceAppLoads({
       serviceName: 'Appointment',
       link: this.appointmentLink,
@@ -151,6 +149,10 @@ export class DashboardPage {
       expectedElementName: 'Copy booking link',
       expectedElement: page => page.getByRole('button', { name: /copy booking link/i }),
     });
+  }
+
+  async verifySendAppLoadsAfterNavigation() {
+    const serviceUrls = await this.getConfiguredServiceUrls();
     await this.verifyPopupServiceAppLoads({
       serviceName: 'Send',
       link: this.sendLink,
@@ -170,10 +172,15 @@ export class DashboardPage {
       this.manageSubscriptionButton.click(),
     ]);
 
-    await expect.poll(async () => popup.url()).not.toBe('about:blank');
-    expect(new URL(popup.url()).protocol).toMatch(/^https?:$/);
-    expect(new URL(popup.url()).host).toContain(PADDLE_HOST);
-    await popup.close();
+    try {
+      await expect.poll(async () => popup.url()).not.toBe('about:blank');
+      expect(new URL(popup.url()).protocol).toMatch(/^https?:$/);
+      expect(new URL(popup.url()).host).toContain(PADDLE_HOST);
+    } finally {
+      if (!popup.isClosed()) {
+        await popup.close().catch(() => {});
+      }
+    }
   }
 
   async verifyUserMenuControls() {
