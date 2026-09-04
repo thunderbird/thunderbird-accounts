@@ -26,6 +26,10 @@ const connectedApps = computed<DisplayConnectedApp[]>(() =>
         locale.value,
         t('views.mail.views.securitySettings.unknownLocation')
       ),
+      accessGiven:
+        typeof app.access_given === 'number' && Number.isFinite(app.access_given)
+          ? formatDate(new Date(app.access_given), locale.value, t)
+          : t('views.mail.views.securitySettings.unknownAccessGiven'),
       lastAccess:
         typeof app.last_access === 'number' && Number.isFinite(app.last_access)
           ? formatDate(new Date(app.last_access), locale.value, t)
@@ -103,6 +107,7 @@ onMounted(async () => {
         :column-labels="{
           primary: t('views.mail.views.securitySettings.recordsTableHeaderApp'),
           location: t('views.mail.views.securitySettings.recordsTableHeaderLocation'),
+          accessGiven: t('views.mail.views.securitySettings.recordsTableHeaderAccessGiven'),
           lastAccess: t('views.mail.views.securitySettings.recordsTableHeaderLastAccess'),
           actions: t('views.mail.views.securitySettings.recordsTableHeaderActions'),
         }"

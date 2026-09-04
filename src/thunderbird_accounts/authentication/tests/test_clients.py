@@ -17,6 +17,7 @@ class KeycloakAccountClientTestCase(TestCase):
                 {
                     'id': 'session-id',
                     'ipAddress': '203.0.113.11',
+                    'started': 1710000000,
                     'lastAccess': 1710000000100,
                     'browser': 'Firefox',
                     'current': True,
@@ -60,6 +61,7 @@ class KeycloakAccountClientTestCase(TestCase):
             [
                 {
                     'id': 'session-id',
+                    'access_given': 1710000000000,
                     'last_access': 1710000000100,
                     'ip_address': '203.0.113.11',
                     'device_info': {
@@ -125,6 +127,7 @@ class KeycloakAccountClientTestCase(TestCase):
                     'clientId': 'thunderbird-desktop',
                     'clientName': 'Mozilla Thunderbird',
                     'offlineAccess': True,
+                    'consent': {'createdDate': 1700000000000},
                 },
                 {'clientId': 'tb-accounts', 'clientName': 'Thunderbird Accounts', 'offlineAccess': False},
             ]
@@ -137,6 +140,7 @@ class KeycloakAccountClientTestCase(TestCase):
                     'sessions': [
                         {
                             'id': 'home-session',
+                            'started': 1710000000,
                             'clients': {'thunderbird-desktop': 'Thunderbird'},
                         }
                     ],
@@ -174,6 +178,7 @@ class KeycloakAccountClientTestCase(TestCase):
                     'client_id': 'thunderbird-desktop',
                     'session_id': 'home-session',
                     'app_name': 'Mozilla Thunderbird',
+                    'access_given': 1710000000000,
                     'ip_address': '203.0.113.10',
                     'last_access': 1710000000000,
                 },
@@ -181,6 +186,7 @@ class KeycloakAccountClientTestCase(TestCase):
                     'client_id': 'thunderbird-desktop',
                     'session_id': 'work-session',
                     'app_name': 'Mozilla Thunderbird',
+                    'access_given': 1700000000000,
                     'ip_address': '203.0.113.11',
                     'last_access': 1710000000100,
                 },
@@ -201,7 +207,10 @@ class KeycloakAccountClientTestCase(TestCase):
 
             result = client.get_connected_apps(self.USER_TOKEN)
 
-        self.assertEqual(result, [{'client_id': 'one-password', 'app_name': '1Password'}])
+        self.assertEqual(
+            result,
+            [{'client_id': 'one-password', 'app_name': '1Password', 'access_given': None}],
+        )
 
     def test_revoke_connected_app_deletes_client_consent(self):
         client = KeycloakAccountClient()
@@ -214,6 +223,7 @@ class KeycloakAccountClientTestCase(TestCase):
         self.assertEqual(user_token, self.USER_TOKEN)
         self.assertEqual(method, RequestMethods.DELETE)
         self.assertEqual(result, {'success': True})
+
     def test_sign_out_session_deletes_account_session(self):
         client = KeycloakAccountClient()
 
