@@ -40,16 +40,14 @@ const isSubscribePage = computed(() => currentRoute.path.startsWith('/subscribe'
 const navItems = computed(() => isThundermail.value ? navItemsMail : navItemsAccounts);
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
-const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).href;
+const thunderbirdLogoSrc = new URL('@/assets/svg/thunderbird-logo.svg', import.meta.url).href;
 </script>
 
 <template>
   <standard-footer contributeToThisSiteUrl="https://github.com/thunderbird/thunderbird-accounts">
     <template #default>
       <nav>
-        <router-link to="/mail">
-          <img :src="logoSrc" alt="Thundermail" />
-        </router-link>
+        <img :src="thunderbirdLogoSrc" alt="Thunderbird" />
         <ul>
           <template v-if="isAuthenticated && !isSubscribePage">
             <li v-for="navItem in navItems" :key="navItem.route">
