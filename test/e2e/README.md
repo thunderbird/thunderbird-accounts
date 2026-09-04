@@ -2,6 +2,25 @@
 
 Guide for running the Thunderbird Accounts E2E tests.
 
+## Test Organization
+
+All test specifications are stored together in `tests/`. Tests that support both desktop and mobile use the same
+source and are selected for each run with Playwright tags:
+
+- `@e2e-suite` for regular desktop runs
+- `@e2e-mobile-suite` for regular mobile runs
+- `@e2e-prod-desktop-nightly` for nightly desktop runs
+- `@e2e-prod-mobile-nightly` for nightly mobile runs
+
+Apply both desktop and mobile tags when a test should run on both form factors. Omit a platform's tags when that
+test should not run there.
+
+When a test requires different behavior by platform, use the shared project-name helpers in
+`utils/test-project.ts`. `isMobileProject()` identifies all mobile projects, while
+`isMobileAndroidProject()` and `isMobileIOSProject()` are available for operating-system-specific behavior.
+Desktop projects can reuse the authentication state created by `tests/auth.desktop.setup.ts`; mobile projects
+sign in directly because they cannot reuse that desktop storage state.
+
 ## Installation
 
 First install the E2E suite (includes Playwright):
