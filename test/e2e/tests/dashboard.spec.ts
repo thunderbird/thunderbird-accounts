@@ -1,18 +1,27 @@
 import { test } from '@playwright/test';
-import { DashboardPage } from '../../pages/dashboard-page';
-import { navigateToAccountsHubAndSignIn } from '../../utils/utils';
+import { DashboardPage } from '../pages/dashboard-page';
+import { ensureWeAreSignedIn, navigateToAccountsHubAndSignIn } from '../utils/utils';
+import { isMobileProject } from '../utils/test-project';
 
 import {
+  PLAYWRIGHT_TAG_E2E_SUITE,
+  PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
   PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
   PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
   ACCTS_TARGET_ENV,
-} from '../../const/constants';
+} from '../const/constants';
 
 let dashboardPage: DashboardPage;
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, testInfo) => {
   dashboardPage = new DashboardPage(page);
-  await navigateToAccountsHubAndSignIn(page);
+  if (isMobileProject(testInfo.project.name)) {
+    // BrowserStack mobile projects cannot reuse the desktop setup's storage state.
+    await navigateToAccountsHubAndSignIn(page);
+  } else {
+    // Desktop projects load saved auth, but refresh it if the session has expired.
+    await ensureWeAreSignedIn(page);
+  }
 });
 
 /**
@@ -24,8 +33,13 @@ test.beforeEach(async ({ page }) => {
  * prod already have a TB Pro subscription setup. In future we will add a subscribe step so
  * we can run on new local stacks that aren't subscribed yet (issue 771).
  */
-test.describe('dashboard controls on mobile browser', {
-  tag: [PLAYWRIGHT_TAG_E2E_SUITE_MOBILE, PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY],
+test.describe('dashboard controls on browser', {
+  tag: [
+    PLAYWRIGHT_TAG_E2E_SUITE,
+    PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
+    PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
+    PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
+  ],
 }, () => {
   test('all visible dashboard controls work as expected', async () => {
     test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack until we automate tb subsrcibe step');

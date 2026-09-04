@@ -1,11 +1,11 @@
 import { test } from '@playwright/test';
-import { DashboardPage } from '../../pages/dashboard-page';
-import { ensureWeAreSignedIn } from '../../utils/utils';
+import { DashboardPage } from '../pages/dashboard-page';
+import { ensureWeAreSignedIn } from '../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_DEPLOYMENT_ANALYSIS,
   ACCTS_TARGET_ENV,
-} from '../../const/constants';
+} from '../const/constants';
 
 let dashboardPage: DashboardPage;
 

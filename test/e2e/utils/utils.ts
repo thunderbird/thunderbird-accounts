@@ -8,6 +8,7 @@ import {
     ACCTS_TARGET_ENV,
     ACCTS_HUB_URL,
     TIMEOUT_30_SECONDS,
+    TIMEOUT_60_SECONDS,
 } from "../const/constants";
 
 export const authFile = path.join(__dirname, '../test-results/.auth/user.json');
@@ -67,7 +68,10 @@ export const navigateToAccountsHubAndSignIn = async (page: Page, username: strin
     const tbAcctsSignInPage = new TBAcctsOIDCPage(page);
     const tbAcctsHubPage = new TBAcctsHubPage(page);
     
-    await page.goto(`${ACCTS_HUB_URL}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${ACCTS_HUB_URL}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: TIMEOUT_60_SECONDS,
+    });
     await waitForVueApp(page);
     
     // if we are already signed in then we can skip this

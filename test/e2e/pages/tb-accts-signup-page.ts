@@ -3,6 +3,7 @@ import { ACCTS_HUB_URL, ACCTS_SIGN_UP_URL, TIMEOUT_10_SECONDS } from '../const/c
 
 export class TbAcctsSignUpPage {
   readonly page: Page;
+  readonly isMobileAndroid: boolean;
   readonly stepId: Locator;
   readonly formTitle: Locator;
   readonly formSubtitle: Locator;
@@ -16,8 +17,9 @@ export class TbAcctsSignUpPage {
   readonly zoneInfoInput: Locator;
   readonly submitButton: Locator;
 
-  constructor(page: Page) {
+  constructor(page: Page, isMobileAndroid: boolean) {
     this.page = page;
+    this.isMobileAndroid = isMobileAndroid;
     this.stepId = this.page.getByTestId('step-id');
     this.formTitle = this.page.getByTestId('title');
     this.formSubtitle = this.page.getByTestId('subtitle');
@@ -139,6 +141,14 @@ export class TbAcctsSignUpPage {
   async submitForm() { 
     console.log(`clicking '${await this.submitButton.innerText()}' button`);
     await expect(this.submitButton).toBeEnabled({ timeout: TIMEOUT_10_SECONDS });
-    await this.submitButton.click();
+
+    if (this.isMobileAndroid) {
+      // On real BrowserStack Android devices, a password input can intercept the
+      // enabled button's pointer coordinates after the virtual keyboard scrolls
+      // the form. Force only the click after confirming application readiness.
+      await this.submitButton.click({ force: true });
+    } else {
+      await this.submitButton.click();
+    }
   }
 }
