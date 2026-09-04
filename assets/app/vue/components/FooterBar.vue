@@ -4,8 +4,6 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { StandardFooter } from '@thunderbirdops/services-ui';
 import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL } from '@/defines';
-import { isWaffleFlagActive } from '@/utils';
-import { WAFFLE_FLAG } from '@/types';
 
 const { t } = useI18n();
 
@@ -13,31 +11,16 @@ const isAuthenticated = ref(window._page?.isAuthenticated);
 
 type NavItem = { route: string; i18nKey: string };
 
-const navItemsAccounts: NavItem[] = [
-  // Manage MFA is rolling out behind the multi-factor-authentication waffle flag
-  ...(isWaffleFlagActive(WAFFLE_FLAG.MULTI_FACTOR_AUTHENTICATION)
-    ? [{ route: '/manage-mfa', i18nKey: 'manageMfa' }]
-    : []),
-  // TODO: Expose Privacy & Data here once it's ready.
-  // {
-  //   route: '/privacy-and-data',
-  //   i18nKey: 'privacyAndData',
-  // },
-];
-
-const navItemsMail: NavItem[] = [
-  // TODO: Uncomment when implementing security settings
-  // {
-  //   route: '/mail/security-settings',
-  //   i18nKey: 'securitySettings',
-  // },
+const navItems: NavItem[] = [
+  {
+    route: '/dashboard',
+    i18nKey: 'account',
+  },
 ];
 
 const currentRoute = useRoute();
 
-const isThundermail = computed(() => currentRoute.path.startsWith('/mail'));
 const isSubscribePage = computed(() => currentRoute.path.startsWith('/subscribe'));
-const navItems = computed(() => isThundermail.value ? navItemsMail : navItemsAccounts);
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const thunderbirdLogoSrc = new URL('@/assets/svg/thunderbird-logo.svg', import.meta.url).href;
