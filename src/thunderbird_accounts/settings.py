@@ -277,6 +277,7 @@ PASSWORD_HASHERS = [
 ]
 
 REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'thunderbird_accounts.core.exceptions.drf_exception_handler',
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
@@ -389,6 +390,8 @@ if AUTH_SCHEME == 'oidc':
     OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
     OIDC_STORE_ACCESS_TOKEN = True  # Needed to talk to jmap
     OIDC_STORE_REFRESH_TOKEN = True  # Needed to refresh existing sessions. Custom for #498
+    OIDC_STORE_ID_TOKEN = False  # The access token is the canonical source for the Keycloak session id.
+    OIDC_USE_NONCE = True  # Require standard OIDC nonce generation and validation.
     ALLOW_LOGOUT_GET_METHOD = True
 
     def oidc_logout(request):
@@ -433,6 +436,8 @@ else:
     OIDC_OP_TOKEN_ENDPOINT = None
     OIDC_OP_USER_ENDPOINT = None
     OIDC_OP_JWKS_ENDPOINT = None
+    OIDC_STORE_ID_TOKEN = None
+    OIDC_USE_NONCE = None
 
 STALWART_ARCHIVES_FOLDER_NAME = 'Archives'
 STALWART_BASE_JMAP_URL = os.getenv('STALWART_BASE_JMAP_URL')

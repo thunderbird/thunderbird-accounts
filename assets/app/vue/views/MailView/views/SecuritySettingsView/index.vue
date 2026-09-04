@@ -6,7 +6,9 @@ import CardContainer from '@/components/CardContainer.vue';
 
 // Local components
 import AccountActivity from './components/AccountActivity.vue';
+import ConnectedApps from './components/ConnectedApps.vue';
 import AllowList from './components/AllowList.vue';
+import WelcomeHeader from '../../sections/DashboardSection/components/WelcomeHeader.vue';
 
 const { t } = useI18n();
 </script>
@@ -19,11 +21,14 @@ export default {
 
 <template>
   <div class="security-settings-view">
+    <welcome-header />
+
     <card-container
       class="security-settings-card"
       :title="t('views.mail.views.securitySettings.securitySettings')"
     >
       <account-activity />
+      <connected-apps />
       <allow-list />
     </card-container>
   </div>
