@@ -15,6 +15,7 @@ export interface ActiveSession {
     country_code?: string | null;
     continent?: string | null;
   } | null;
+  access_given?: number | null;
   last_access: number;
   is_current?: boolean;
 }
@@ -30,6 +31,7 @@ export interface ConnectedApp {
     country_code?: string | null;
     continent?: string | null;
   } | null;
+  access_given?: number | null;
   last_access?: number | null;
 }
 
@@ -39,5 +41,6 @@ export interface DisplayConnectedApp {
   label: string;
   ipAddress: string;
   location: string;
+  accessGiven: string;
   lastAccess: string;
 }

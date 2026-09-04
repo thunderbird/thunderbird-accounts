@@ -23,6 +23,7 @@ type DisplaySession = {
   ipAddress: string;
   isCurrent: boolean;
   location: string;
+  accessGiven: string;
   lastAccess: string;
 };
 
@@ -80,6 +81,10 @@ onMounted(async () => {
         locale.value,
         t('views.mail.views.securitySettings.unknownLocation')
       ),
+      accessGiven:
+        typeof session.access_given === 'number' && Number.isFinite(session.access_given)
+          ? formatDate(new Date(session.access_given), locale.value, t)
+          : t('views.mail.views.securitySettings.unknownAccessGiven'),
       lastAccess: formatDate(new Date(session.last_access), locale.value, t),
     }));
   } catch (error) {
@@ -120,6 +125,7 @@ onMounted(async () => {
         :column-labels="{
           primary: t('views.mail.views.securitySettings.recordsTableHeaderDevice'),
           location: t('views.mail.views.securitySettings.recordsTableHeaderLocation'),
+          accessGiven: t('views.mail.views.securitySettings.recordsTableHeaderAccessGiven'),
           lastAccess: t('views.mail.views.securitySettings.recordsTableHeaderLastActive'),
           actions: t('views.mail.views.securitySettings.recordsTableHeaderActions'),
         }"
