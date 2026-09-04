@@ -589,6 +589,9 @@
     "creativeCommonsLinkText": "Creative Commons license",
     "mzlaLinkText": "MZLA Technologies Corporation",
     "privacyPolicy": "Privacy Policy",
-    "legal": "Legal"
+    "legal": "Legal",
+    "status": "Status",
+    "needHelp": "Need help? Visit Support",
+    "ideas": "Ideas?"
   }
 }
