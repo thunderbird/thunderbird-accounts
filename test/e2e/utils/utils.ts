@@ -1,7 +1,7 @@
 // utility functions that may be used by any tests
 import { TBAcctsOIDCPage } from "../pages/tb-accts-oidc-page";
 import { TBAcctsHubPage } from "../pages/tb-accts-hub-page";
-import { expect, type Page, Browser, request } from '@playwright/test';
+import { expect, type Locator, type Page, Browser, request } from '@playwright/test';
 import path from 'path';
 
 import {
@@ -128,24 +128,84 @@ const sanitizeUrlForDiagnostics = (url: string) => {
     }
 };
 
+const waitForBrowserStackAndroidAuthenticationState = async (
+    tbAcctsSignInPage: TBAcctsOIDCPage,
+    tbAcctsHubPage: TBAcctsHubPage,
+    expectedStates: AuthenticationState[],
+    message: string,
+) => {
+    const stateLocators: Array<{ state: AuthenticationState; locator: Locator }> = [];
+    if (expectedStates.includes('signed-in')) {
+        stateLocators.push({ state: 'signed-in', locator: tbAcctsHubPage.userAvatar });
+    }
+    if (expectedStates.includes('terms-of-service')) {
+        stateLocators.push({ state: 'terms-of-service', locator: tbAcctsHubPage.acceptTOSButton });
+    }
+    if (expectedStates.includes('sign-in-ready')) {
+        // Detailed field and button readiness is checked by TBAcctsOIDCPage.signIn().
+        stateLocators.push({ state: 'sign-in-ready', locator: tbAcctsSignInPage.signInHeaderText });
+    }
+
+    expect(stateLocators, 'expected at least one authentication state locator').not.toHaveLength(0);
+    const combinedStateLocator = stateLocators
+        .slice(1)
+        .reduce(
+            (combinedLocator, stateLocator) => combinedLocator.or(stateLocator.locator),
+            stateLocators[0].locator,
+        );
+    const deadline = Date.now() + TIMEOUT_60_SECONDS;
+
+    while (Date.now() < deadline) {
+        await expect(combinedStateLocator, message).toBeVisible({
+            timeout: Math.max(1, deadline - Date.now()),
+        });
+
+        // The combined locator performs the retrying remote wait once. These
+        // one-time checks only identify which of the expected states appeared.
+        for (const stateLocator of stateLocators) {
+            if (await stateLocator.locator.isVisible().catch(() => false)) {
+                return stateLocator.state;
+            }
+        }
+        // Navigation may replace the winning element between the combined wait
+        // and identification. In that narrow case, wait on the combined signal again.
+    }
+
+    return 'loading';
+};
+
 const waitForAuthenticationState = async (
     page: Page,
     tbAcctsSignInPage: TBAcctsOIDCPage,
     tbAcctsHubPage: TBAcctsHubPage,
     expectedStates: AuthenticationState[],
     message: string,
+    isBrowserStackAndroid: boolean = false,
 ) => {
     const authenticationResult: { state: AuthenticationState } = { state: 'loading' };
 
     try {
-        await expect.poll(
-            async () => {
-                const snapshot = await getAuthenticationSnapshot(tbAcctsSignInPage, tbAcctsHubPage);
-                authenticationResult.state = snapshot.state;
-                return authenticationResult.state;
-            },
-            { timeout: TIMEOUT_60_SECONDS, message },
-        ).toMatch(new RegExp(`^(${expectedStates.join('|')})$`));
+        if (isBrowserStackAndroid) {
+            authenticationResult.state = await waitForBrowserStackAndroidAuthenticationState(
+                tbAcctsSignInPage,
+                tbAcctsHubPage,
+                expectedStates,
+                message,
+            );
+            expect(authenticationResult.state, message).toMatch(
+                new RegExp(`^(${expectedStates.join('|')})$`),
+            );
+        } else {
+            // Keep the established desktop and emulated-device polling behavior.
+            await expect.poll(
+                async () => {
+                    const snapshot = await getAuthenticationSnapshot(tbAcctsSignInPage, tbAcctsHubPage);
+                    authenticationResult.state = snapshot.state;
+                    return authenticationResult.state;
+                },
+                { timeout: TIMEOUT_60_SECONDS, message },
+            ).toMatch(new RegExp(`^(${expectedStates.join('|')})$`));
+        }
     } catch (error) {
         const [pageTitle, finalSnapshot] = await Promise.all([
             page.title().catch(() => '<unavailable>'),
@@ -225,6 +285,7 @@ export const navigateToAccountsHubAndSignIn = async (
         tbAcctsHubPage,
         ['signed-in', 'terms-of-service', 'sign-in-ready'],
         'waiting for the initial authentication state',
+        isBrowserStackAndroid,
     );
 
     if (authenticationState === 'sign-in-ready') {
@@ -235,6 +296,7 @@ export const navigateToAccountsHubAndSignIn = async (
             tbAcctsHubPage,
             ['signed-in', 'terms-of-service'],
             'waiting for sign-in to complete',
+            isBrowserStackAndroid,
         );
     }
 
@@ -250,6 +312,7 @@ export const navigateToAccountsHubAndSignIn = async (
             tbAcctsHubPage,
             ['signed-in'],
             'waiting for the signed-in hub after accepting the terms of service',
+            isBrowserStackAndroid,
         );
     }
 
