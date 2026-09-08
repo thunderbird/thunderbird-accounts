@@ -34,19 +34,18 @@
 </script>
 <noscript>
   {% block noscript %}
-  <style>
-    .center {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-  </style>
-  <div class="center">
-    {% translate 'website' as link_text %}
-    {% set website = '<a href="https://tb.pro/">{{ link_text }}</a>'}
-    <h2>{% translate 'This site requires Javascript.' %}</h2>
-    <p>{% translate 'Please visit our {{ website }} for more information.' %}</p>
-  </div>
+    <style>
+      .center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+    </style>
+    <div class="center">
+      {% translate 'website' as link_text %}
+      <h1>{% translate 'This site requires Javascript.' %}</h2>
+      <p>{% blocktranslate %}Please visit our <a href="https://tb.pro/">{{ link_text }}</a> for more information.{% endblocktranslate %}</p>
+    </div>
   {% endblock %}
 </noscript>
 {% block app_container %}
