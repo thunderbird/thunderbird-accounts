@@ -39,7 +39,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
 <template>
   <header>
     <router-link to="/mail">
-      <img :src="logoSrc" alt="Thundermail" />
+      <img :src="logoSrc" alt="Thunderbird Accounts" />
     </router-link>
 
     <template v-if="isAuthenticated">
