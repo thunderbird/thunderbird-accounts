@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Completing login</title>
+  </head>
+  <body>
+    {{ redirect_url|json_script:"oidc-callback-redirect-url" }}
+    <script>
+      const redirectUrl = JSON.parse(document.getElementById('oidc-callback-redirect-url').textContent);
+      window.location.replace(redirectUrl);
+    </script>
+  </body>
+</html>
