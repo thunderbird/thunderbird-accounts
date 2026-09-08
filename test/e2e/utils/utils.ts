@@ -182,6 +182,7 @@ type SignInOptions = {
     username?: string | null;
     password?: string | null;
     isMobileAndroid?: boolean;
+    isBrowserStackAndroid?: boolean;
 };
 
 /**
@@ -191,7 +192,7 @@ type SignInOptions = {
  * aren't redirected to TB Accounts OIDC to sign in.
  * 
  * If username or password aren't provided the env values will be used. Set
- * isMobileAndroid only for Android projects that require the proven hit-test workaround.
+ * Android project flags select the platform-specific submission workaround.
  */
 export const navigateToAccountsHubAndSignIn = async (
     page: Page,
@@ -199,10 +200,15 @@ export const navigateToAccountsHubAndSignIn = async (
         username = null,
         password = null,
         isMobileAndroid = false,
+        isBrowserStackAndroid = false,
     }: SignInOptions = {},
 ) => {
     console.log(`navigating to accounts hub ${ACCTS_TARGET_ENV} (${ACCTS_HUB_URL})`);   
-    const tbAcctsSignInPage = new TBAcctsOIDCPage(page, isMobileAndroid);
+    const tbAcctsSignInPage = new TBAcctsOIDCPage(
+        page,
+        isMobileAndroid,
+        isBrowserStackAndroid,
+    );
     const tbAcctsHubPage = new TBAcctsHubPage(page);
     
     await page.goto(`${ACCTS_HUB_URL}`, {

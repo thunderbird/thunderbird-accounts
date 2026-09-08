@@ -4,6 +4,7 @@ import { ACCTS_OIDC_EMAIL, ACCTS_OIDC_PWORD, TIMEOUT_30_SECONDS } from '../const
 export class TBAcctsOIDCPage {
   readonly page: Page;
   readonly isMobileAndroid: boolean;
+  readonly isBrowserStackAndroid: boolean;
   readonly signInHeaderText: Locator;
   readonly userAvatar: Locator;
   readonly emailInput: Locator;
@@ -13,9 +14,14 @@ export class TBAcctsOIDCPage {
   readonly localDevpasswordInput: Locator;
   readonly loginDialogContinueBtn: Locator;
 
-  constructor(page: Page, isMobileAndroid: boolean = false) {
+  constructor(
+    page: Page,
+    isMobileAndroid: boolean = false,
+    isBrowserStackAndroid: boolean = false,
+  ) {
     this.page = page;
     this.isMobileAndroid = isMobileAndroid;
+    this.isBrowserStackAndroid = isBrowserStackAndroid;
     this.signInHeaderText = this.page.getByText('Sign in to your account');
     this.userAvatar = this.page.getByTestId('avatar-default');
     this.emailInput = this.page.getByTestId('username-input');
@@ -50,10 +56,13 @@ export class TBAcctsOIDCPage {
     await expect(this.signInButton).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     await expect(this.signInButton).toBeEnabled({ timeout: TIMEOUT_30_SECONDS });
 
-    if (this.isMobileAndroid) {
-      // On real BrowserStack Android devices, the sign-in heading or input
-      // wrappers can intercept the enabled button's pointer coordinates after
-      // the virtual keyboard scrolls the form. Force only this proven case.
+    if (this.isBrowserStackAndroid) {
+      // A forced button click can intermittently be a no-op on real BrowserStack
+      // Android devices. Submit through the login form's supported Enter handler,
+      // avoiding the device's unreliable pointer hit testing.
+      await this.passwordInput.press('Enter', { timeout: TIMEOUT_30_SECONDS });
+    } else if (this.isMobileAndroid) {
+      // Keep the existing forced click for the working local Android viewport.
       await this.signInButton.click({ force: true });
     } else {
       await this.signInButton.click({ timeout: TIMEOUT_30_SECONDS });

@@ -9,6 +9,11 @@ export const isMobileAndroidProject = (projectName: string) => {
   return normalizedProjectName.includes('android') || normalizedProjectName.includes('pixel');
 };
 
+/** Identify real BrowserStack Android projects without matching local Pixel emulation. */
+export const isBrowserStackAndroidProject = (projectName: string) => (
+  normalizeProjectName(projectName).includes('android')
+);
+
 /** Identify current or future BrowserStack iOS projects without affecting desktop Safari. */
 export const isMobileIOSProject = (projectName: string) => {
   const normalizedProjectName = normalizeProjectName(projectName);

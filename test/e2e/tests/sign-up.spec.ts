@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { TbAcctsSignUpPage } from '../pages/tb-accts-signup-page';
 import { authFile, isAllowListEnabled, navigateToAccountsHubAndSignIn, waitForVueApp } from '../utils/utils';
-import { isMobileAndroidProject } from '../utils/test-project';
+import {
+  isBrowserStackAndroidProject,
+  isMobileAndroidProject,
+} from '../utils/test-project';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -22,6 +25,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   // Perform authentication steps
   await navigateToAccountsHubAndSignIn(page, {
     isMobileAndroid: isMobileAndroidProject(testInfo.project.name),
+    isBrowserStackAndroid: isBrowserStackAndroidProject(testInfo.project.name),
   });
 
   // End of authentication steps, save the auth
