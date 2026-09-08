@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <noscript>
+      <meta http-equiv="refresh" content="0; url={{ redirect_url }}">
+    </noscript>
+    <title>Logging you in</title>
+  </head>
+  <body>
+    <noscript>
+      <p><a href="{{ redirect_url }}">Continue to complete your login</a>.</p>
+    </noscript>
+    {{ redirect_url|json_script:"oidc-callback-redirect-url" }}
+    <script>
+      const redirectUrl = JSON.parse(document.getElementById('oidc-callback-redirect-url').textContent);
+      window.location.replace(redirectUrl);
+    </script>
+  </body>
+</html>

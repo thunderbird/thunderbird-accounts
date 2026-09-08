@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import HttpRequest, HttpResponseRedirect
+from django.template.response import TemplateResponse
 from django.urls import reverse
 from urllib.parse import quote
 from django.conf import settings
@@ -28,9 +29,25 @@ DISCOUNT_ID_PATTERN = re.compile(r'^dsc_[a-z0-9]{26}$')
 logger = logging.getLogger(__name__)
 
 
+@method_decorator(never_cache, name='dispatch')
 class RecoverableOIDCAuthenticationCallbackView(OIDCAuthenticationCallbackView):
-    """Restart login when a stale or already-used OIDC callback is revisited."""
+    """Keep successful or stale OIDC callbacks out of the user's browser history."""
 
+    # The parent's `.get()` will call this.
+    # Display a small HTML page that redirects via the frontend so
+    # we can remove /oidc/callback from the browser history.
+    def login_success(self):
+        redirect_response = super().login_success()
+        response = TemplateResponse(
+            self.request,
+            'authentication/oidc_callback_success.html',
+            {'redirect_url': redirect_response.url},
+        )
+        # For increased security/privacy, don't pass along the referrer when redirecting.
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        return response
+
+    # The parent class will dispatch GET handling here.
     def get(self, request):
         state = request.GET.get('state')
         if (
