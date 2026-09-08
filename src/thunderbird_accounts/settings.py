@@ -380,6 +380,7 @@ AUTH_SCHEME = os.getenv('AUTH_SCHEME', 'password')
 
 if AUTH_SCHEME == 'oidc':
     AUTHENTICATION_BACKENDS = ['thunderbird_accounts.authentication.middleware.AccountsOIDCBackend']
+    OIDC_CALLBACK_CLASS = 'thunderbird_accounts.authentication.views.RecoverableOIDCAuthenticationCallbackView'
     OIDC_RP_CLIENT_ID = os.getenv('OIDC_CLIENT_ID')
     OIDC_RP_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET')
     OIDC_RP_SIGN_ALGO = os.getenv('OIDC_SIGN_ALGO')

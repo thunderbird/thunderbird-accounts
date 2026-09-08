@@ -1,4 +1,5 @@
 import csv
+import logging
 import re
 
 from django.contrib import messages
@@ -17,13 +18,31 @@ from django.utils.translation import ngettext
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 from django.views.generic import TemplateView
-from mozilla_django_oidc.views import OIDCAuthenticationRequestView
+from mozilla_django_oidc.views import OIDCAuthenticationCallbackView, OIDCAuthenticationRequestView
 
 from thunderbird_accounts.authentication.mfa import MFA_REAUTH_PENDING_SESSION_KEY
 from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction
 from thunderbird_accounts.core.utils import get_absolute_url
 
 DISCOUNT_ID_PATTERN = re.compile(r'^dsc_[a-z0-9]{26}$')
+logger = logging.getLogger(__name__)
+
+
+class RecoverableOIDCAuthenticationCallbackView(OIDCAuthenticationCallbackView):
+    """Restart login when a stale or already-used OIDC callback is revisited."""
+
+    def get(self, request):
+        state = request.GET.get('state')
+        if (
+            request.GET.get('code')
+            and state
+            and 'oidc_states' in request.session
+            and state not in request.session['oidc_states']
+        ):
+            logger.warning('OIDC callback state was not found in the session; starting a fresh login flow')
+            return HttpResponseRedirect(reverse(settings.LOGIN_URL))
+
+        return super().get(request)
 
 
 @login_required
