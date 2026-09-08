@@ -70,8 +70,11 @@ export class DashboardPage {
     this.sendLink = this.page.locator('.service-icon-link').filter({ hasText: 'Send' });
     this.manageSubscriptionButton = this.page.getByRole('button', { name: 'Manage Subscription' });
     this.userAvatar = this.page.getByRole('banner').locator('.avatar');
-    this.supportLink = this.page.getByRole('link', { name: 'Support' });
-    this.logoutLink = this.page.getByRole('link', { name: 'Logout' });
+
+    // Scope menu links to the user menu dropdown
+    const userMenuDropdown = this.page.getByRole('banner').locator('.user-menu .dropdown');
+    this.supportLink = userMenuDropdown.getByRole('link', { name: 'Support', exact: true });
+    this.logoutLink = userMenuDropdown.getByRole('link', { name: 'Logout', exact: true });
     this.contactHeader = this.page.getByRole('heading', { name: 'Submit a request' });
   }
 
