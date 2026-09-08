@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.contrib.messages import get_messages
 from django.test import Client as RequestClient, TestCase
@@ -6,6 +7,30 @@ from django.utils.crypto import get_random_string
 
 from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.core.tests.utils import oidc_force_login
+
+
+class RecoverableOIDCAuthenticationCallbackViewTestCase(TestCase):
+    def test_unknown_state_starts_a_fresh_login_flow(self):
+        session = self.client.session
+        session['oidc_states'] = {
+            'expected-state': {
+                'nonce': 'expected-nonce',
+                'code_verifier': None,
+                'added_on': 0,
+            }
+        }
+        session.save()
+
+        with self.assertLogs('thunderbird_accounts.authentication.views', level='WARNING') as logs:
+            response = self.client.get(
+                reverse('oidc_authentication_callback'),
+                {'code': 'unused-code', 'state': 'unknown-state'},
+            )
+
+        self.assertRedirects(response, reverse(settings.LOGIN_URL), fetch_redirect_response=False)
+        self.assertIn('starting a fresh login flow', logs.output[0])
+        self.assertNotIn('unknown-state', logs.output[0])
+        self.assertEqual(list(get_messages(response.wsgi_request)), [])
 
 
 class BulkImportAllowListTestCase(TestCase):
