@@ -8,7 +8,7 @@ export interface ActiveSession {
     app?: string | null;
     is_mobile?: boolean | null;
   } | null;
-  ip_address: string;
+  ip_address: string | null;
   location?: {
     city?: string | null;
     state?: string | null;
