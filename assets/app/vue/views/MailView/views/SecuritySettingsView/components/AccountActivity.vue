@@ -55,7 +55,7 @@ const signOut = async () => {
     await signOutSession(session.id);
     activeSessions.value = activeSessions.value.filter((activeSession) => activeSession.id !== session.id);
   } catch (error) {
-    console.log(error);
+    console.log('sign out failed:', error);
     errorMessage.value = t('views.mail.views.securitySettings.errorSigningOutSession');
   }
 };
