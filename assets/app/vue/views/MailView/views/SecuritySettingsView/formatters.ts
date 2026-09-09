@@ -22,7 +22,6 @@ export const formatDate = (date: Date, locale: string, t: ComposerTranslation): 
   const timeString = date.toLocaleString(locale, {
     hour: 'numeric',
     minute: '2-digit',
-    hour12: true
   });
 
   if (dateToCheck.getTime() === today.getTime()) {
