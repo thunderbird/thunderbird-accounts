@@ -1,16 +1,22 @@
 # Manage mapping IPs to place names
 import logging
 from pathlib import Path
+from typing import TypeVar
 
 import maxminddb
 
+from thunderbird_accounts.core.types import GeoIPLocation, GeoIPSession
+
 logger = logging.getLogger(__name__)
+
+GeoIPSessionT = TypeVar('GeoIPSessionT', bound=GeoIPSession)
 
 # Expected to be provided by the container built by Dockerfile
 GEOIP_CITY_MMDB_PATH = Path('/app/data/dbip-city-lite.mmdb')
 
 
-def lookup_ip_location(ip_address: str) -> dict | None:
+def lookup_ip_location(ip_address: str) -> GeoIPLocation | None:
+    """Given IP address, return a location string to represent it."""
     if not GEOIP_CITY_MMDB_PATH.exists():
         return None
 
@@ -36,9 +42,9 @@ def lookup_ip_location(ip_address: str) -> dict | None:
         'continent': continent.get('code'),
     }
 
-
-def enrich_sessions_with_geoip(sessions: list[dict]) -> list[dict]:
-    locations_by_ip = {}
+def enrich_sessions_with_geoip(sessions: list[GeoIPSessionT]) -> list[GeoIPSessionT]:
+    """Add human-friendly locations based on IP address"""
+    locations_by_ip: dict[str, GeoIPLocation | None] = {}
     for session in sessions:
         ip_address = session.get('ip_address')
         if not ip_address:

@@ -31,6 +31,7 @@ from thunderbird_accounts.authentication.mfa import (
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.utils import KeycloakRequiredAction
 from thunderbird_accounts.mail.utils import is_allowed_domain
+from thunderbird_accounts.core.types import GeoIPSession
 from thunderbird_accounts.core.utils import get_absolute_url
 
 
@@ -59,21 +60,19 @@ class RecoveryCodesResponse(TypedDict, total=False):
     remaining: int
 
 
-class ActiveSessionResponse(TypedDict, total=False):
+class ActiveSessionResponse(GeoIPSession, total=False):
     id: str
     access_given: int
     last_access: int
-    ip_address: str
     device_info: dict
 
 
-class ConnectedAppResponse(TypedDict, total=False):
+class ConnectedAppResponse(GeoIPSession, total=False):
     client_id: str
     session_id: str | None
     app_name: str
     access_given: int | None
     last_access: int | None
-    ip_address: str | None
 
 
 class KeycloakClient:
