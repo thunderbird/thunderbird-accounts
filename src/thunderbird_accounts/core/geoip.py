@@ -42,6 +42,7 @@ def lookup_ip_location(ip_address: str) -> GeoIPLocation | None:
         'continent': continent.get('code'),
     }
 
+
 def enrich_sessions_with_geoip(sessions: list[GeoIPSessionT]) -> list[GeoIPSessionT]:
     """Add human-friendly locations based on IP address"""
     locations_by_ip: dict[str, GeoIPLocation | None] = {}

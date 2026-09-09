@@ -27,9 +27,6 @@ type DisplaySession = {
   lastAccess: string;
 };
 
-const isRenderableSession = (session: ActiveSession) =>
-  Boolean(session.id) && Boolean(session.ip_address) && Number.isFinite(session.last_access);
-
 const activeSessions = ref<DisplaySession[]>([]);
 const loading = ref(true);
 const errorMessage = ref(null);
@@ -67,14 +64,12 @@ onMounted(async () => {
   try {
     const data = await getActiveSessions();
 
-    const sortedData = data
-      .filter(isRenderableSession)
-      .sort((a: ActiveSession, b: ActiveSession) => b.last_access - a.last_access);
+    const sortedData = data.sort((a: ActiveSession, b: ActiveSession) => b.last_access - a.last_access);
 
     activeSessions.value = sortedData.map((session: ActiveSession) => ({
       id: session.id,
       label: formatDeviceInfo(session.device_info, t('views.mail.views.securitySettings.unknownDevice')),
-      ipAddress: session.ip_address,
+      ipAddress: session.ip_address || t('views.mail.views.securitySettings.unknownIpAddress'),
       isCurrent: Boolean(session.is_current),
       location: formatSessionLocation(
         session.location,
