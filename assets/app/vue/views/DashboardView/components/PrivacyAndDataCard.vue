@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
 import { PrimaryButton, VisualDivider } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 import { signOutAllSessions } from '@/views/MailView/views/SecuritySettingsView/api';
 
 const { t } = useI18n();
-const router = useRouter();
 
-const goToActiveSessions = () => router.push('/mail/security-settings#current-sign-ins');
-const goToConnectedApps = () => router.push('/mail/security-settings#connected-apps');
-const goToContact = () => router.push('/contact');
 const logoutFromAllSessions = () => signOutAllSessions();
 </script>
 
@@ -24,9 +19,11 @@ const logoutFromAllSessions = () => signOutAllSessions();
         <p>{{ t('views.dashboard.privacyAndDataCard.activeSessionsText') }}</p>
     
         <div class="active-sessions-actions">
-          <primary-button variant="outline" size="small" class="manage-active-sessions-button" @click="goToActiveSessions">
-            {{ t('views.dashboard.privacyAndDataCard.manageActiveSessionsButtonLabel') }}
-          </primary-button>
+          <router-link v-slot="{ href, navigate }" custom to="/mail/security-settings#current-sign-ins">
+            <primary-button :href="href" variant="outline" size="small" class="manage-active-sessions-button" @click="navigate">
+              {{ t('views.dashboard.privacyAndDataCard.manageActiveSessionsButtonLabel') }}
+            </primary-button>
+          </router-link>
 
           <div class="link-text">
             <a href="/logout/" @click.prevent="logoutFromAllSessions">
@@ -42,9 +39,11 @@ const logoutFromAllSessions = () => signOutAllSessions();
         <strong>{{ t('views.dashboard.privacyAndDataCard.connectedApps') }}</strong>
         <p>{{ t('views.dashboard.privacyAndDataCard.connectedAppsText') }}</p>
 
-        <primary-button variant="outline" size="small" class="manage-connected-apps-button" @click="goToConnectedApps">
-          {{ t('views.dashboard.privacyAndDataCard.manageConnectedAppsButtonLabel') }}
-        </primary-button>
+        <router-link v-slot="{ href, navigate }" custom to="/mail/security-settings#connected-apps">
+          <primary-button :href="href" variant="outline" size="small" class="manage-connected-apps-button" @click="navigate">
+            {{ t('views.dashboard.privacyAndDataCard.manageConnectedAppsButtonLabel') }}
+          </primary-button>
+        </router-link>
       </div>
 
       <visual-divider type="horizontal" />
@@ -53,9 +52,11 @@ const logoutFromAllSessions = () => signOutAllSessions();
         <strong>{{ t('views.dashboard.privacyAndDataCard.deleteAccount') }}</strong>
         <p>{{ t('views.dashboard.privacyAndDataCard.deleteAccountText') }}</p>
 
-        <primary-button variant="outline" size="small" class="delete-account-button" @click="goToContact">
-          {{ t('views.dashboard.privacyAndDataCard.deleteAccountButtonLabel') }}
-        </primary-button>
+        <router-link v-slot="{ href, navigate }" custom to="/contact">
+          <primary-button :href="href" variant="outline" size="small" class="delete-account-button" @click="navigate">
+            {{ t('views.dashboard.privacyAndDataCard.deleteAccountButtonLabel') }}
+          </primary-button>
+        </router-link>
       </div>
     </div>
   </card-container>
