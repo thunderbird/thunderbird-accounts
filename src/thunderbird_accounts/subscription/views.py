@@ -21,6 +21,7 @@ from rest_framework.request import Request
 
 from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.exceptions import AccountNotFoundError
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks
 from thunderbird_accounts.subscription.decorators import active_subscription_required, inject_paddle
@@ -277,6 +278,10 @@ def get_subscription_plan_info(request: Request, paddle: Client):
         account = stalwart_client.get_account(request.user.stalwart_primary_email)
         quota = account.get('quota', 0)
         used_quota = account.get('usedQuota', 0)
+    except AccountNotFoundError:
+        # Expected when the Stalwart account is gone but the user's session is still active (e.g. offboarding)
+        logging.warning(f'Quota lookup failed, account not found: {request.user.stalwart_primary_email}')
+        return JsonResponse({'success': False, 'error': 'User not found'}, status=404)
     except Exception as e:
         logging.error(f'Error getting used quota: {e}')
         return JsonResponse({'success': False, 'error': 'Error getting mail storage used quota'}, status=500)
