@@ -1,4 +1,4 @@
-from thunderbird_accounts.subscription.models import Transaction
+from thunderbird_accounts.subscription.models import Plan, Price, Product, Subscription, SubscriptionItem, Transaction
 import json
 from unittest.mock import patch, MagicMock
 
@@ -9,6 +9,7 @@ from django.urls import reverse
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.models import AllowListEntry
 from thunderbird_accounts.core.tests.utils import oidc_force_login
+from thunderbird_accounts.mail.exceptions import AccountNotFoundError
 
 
 class PaddleCheckoutIsDoneTestCase(TestCase):
@@ -287,3 +288,24 @@ class ActiveSubscriptionRequiredViewTestCase(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {'success': False, 'error': 'No active subscription found'})
+
+    def test_subscription_plan_info_account_not_found(self):
+        plan = Plan.objects.create(name='Test Plan')
+        self.user.plan = plan
+        self.user.save()
+        product = Product.objects.create(
+            name='Test Product', product_type=Product.TypeValues.STANDARD, status=Product.StatusValues.ACTIVE
+        )
+        price = Price.objects.create(
+            name='Test Price', amount='1000', currency='USD', price_type=Price.TypeValues.STANDARD, product=product
+        )
+        subscription = Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
+        SubscriptionItem.objects.create(subscription=subscription, product=product, price=price)
+
+        with patch('thunderbird_accounts.subscription.views.MailClient') as mail_client_mock:
+            mail_client_mock.return_value.get_account.side_effect = AccountNotFoundError('test@example.com')
+
+            response = self.client.post(reverse('subscription_plan_info'), HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {'success': False, 'error': 'User not found'})
