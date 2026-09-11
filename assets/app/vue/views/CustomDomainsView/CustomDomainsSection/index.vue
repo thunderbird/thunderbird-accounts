@@ -87,13 +87,13 @@ export default {
 
       <div class="custom-domains-list" v-if="customDomains.length > 0">
         <div class="custom-domain-item" v-for="domain in customDomains" :key="domain.name">
-          <ph-globe size="20" />
+          <ph-globe size="20" aria-hidden="true" />
           <p>{{ domain.name }}</p>
 
           <template v-if="domain.status === DOMAIN_STATUS.VERIFIED">
             <base-badge :type="BaseBadgeTypes.Verified">
               <template #icon>
-                <ph-check-circle size="16" weight="fill" />
+                <ph-check-circle size="16" weight="fill" aria-hidden="true" />
               </template>
               {{ t('views.mail.sections.customDomains.verified') }}
             </base-badge>
@@ -124,8 +124,8 @@ export default {
         <p>{{ errorMessage }}</p>
 
         <template #cta>
-          <button @click="errorMessage = null">
-            <ph-x size="24" />
+          <button @click="errorMessage = null" :aria-label="t('views.mail.sections.customDomains.dismissNotice')">
+            <ph-x size="24" aria-hidden="true" />
           </button>
         </template>
       </notice-bar>

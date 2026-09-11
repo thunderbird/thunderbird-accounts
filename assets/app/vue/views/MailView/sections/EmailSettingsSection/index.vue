@@ -38,7 +38,7 @@ export default {
         default-open
       >
         <template #icon>
-          <ph-sliders size="24" />
+          <ph-sliders size="24" aria-hidden="true" />
         </template>
 
         <email-aliases />
