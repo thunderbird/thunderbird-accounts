@@ -402,7 +402,7 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
     try:
         account = Account.objects.get(user=request.user)
     except Account.DoesNotExist:
-        logging.error(f'Account not found for user {request.user.uuid}')
+        logging.info(f'remove_custom_domain: Account not found for user {request.user.uuid}')
         return JsonResponse(
             {'success': False, 'error': _('There was an error retrieving your mail account.')},
             status=404,
