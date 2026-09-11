@@ -281,7 +281,7 @@ def get_subscription_plan_info(request: Request, paddle: Client):
     except AccountNotFoundError:
         # Expected when the Stalwart account is gone but the user's session is still active (e.g. offboarding)
         logging.warning(f'Quota lookup failed, account not found: {request.user.stalwart_primary_email}')
-        return JsonResponse({'success': False, 'error': 'User not found'}, status=404)
+        return JsonResponse({'success': False, 'error': 'Subscription plan information is not available at this moment.'}, status=404)
     except Exception as e:
         logging.error(f'Error getting used quota: {e}')
         return JsonResponse({'success': False, 'error': 'Error getting mail storage used quota'}, status=500)
