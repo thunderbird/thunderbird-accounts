@@ -88,7 +88,7 @@ onMounted(async () => {
     default-open
   >
     <template #icon>
-      <ph-plugs-connected size="24" />
+      <ph-plugs-connected size="24" aria-hidden="true" />
     </template>
 
     <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">
