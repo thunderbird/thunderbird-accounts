@@ -8,7 +8,7 @@ import SecurityAccessTable from './SecurityAccessTable.vue';
 
 import { getConnectedApps, revokeConnectedApp } from '../api';
 import type { ConnectedApp, DisplayConnectedApp } from '../types';
-import { formatDate, formatSessionLocation } from '../formatters';
+import { formatSessionLocation } from '../formatters';
 
 const { t, locale } = useI18n();
 
@@ -28,12 +28,12 @@ const connectedApps = computed<DisplayConnectedApp[]>(() =>
       ),
       accessGiven:
         typeof app.access_given === 'number' && Number.isFinite(app.access_given)
-          ? formatDate(new Date(app.access_given), locale.value, t)
-          : t('views.mail.views.securitySettings.unknownAccessGiven'),
+          ? new Date(app.access_given)
+          : null,
       lastAccess:
         typeof app.last_access === 'number' && Number.isFinite(app.last_access)
-          ? formatDate(new Date(app.last_access), locale.value, t)
-          : t('views.mail.views.securitySettings.unknownLastAccess'),
+          ? new Date(app.last_access)
+          : null,
     }))
 );
 const loading = ref(true);

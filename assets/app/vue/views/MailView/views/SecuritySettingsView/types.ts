@@ -41,6 +41,6 @@ export interface DisplayConnectedApp {
   label: string;
   ipAddress: string;
   location: string;
-  accessGiven: string;
-  lastAccess: string;
+  accessGiven: Date | null;
+  lastAccess: Date | null;
 }
