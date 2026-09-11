@@ -25,7 +25,7 @@ In `thunderbird/thunderbird-accounts`, path `test/e2e/`:
 
 - **Playwright + TypeScript.** `@playwright/test` **`1.59.1`**, `browserstack-node-sdk` `1.52.3` (`test/e2e/package.json`, `name: "e2e"`).
 - `playwright.config.ts`: `testDir: ./tests`, `retries: process.env.CI ? 1 : 0`, `trace: 'off'` (comment: *traces can contain sensitive info*), `projects: [...]` for major browsers.
-- Structure: `tests/` (e.g. `tests/common/sign-up.spec.ts`), `pages/` page-objects incl. **`pages/tb-accts-oidc-page.ts`** (OIDC flows already modeled), `tb-accts-hub-page.ts`, `dashboard-page.ts`, `mail-page.ts`; `const/constants.ts`, `const/types.ts`, `const/mocks/paddle.ts`; env templates **`.env.dev.example` / `.env.stage.example` / `.env.prod.example`**.
+- Structure: `tests/` (e.g. `tests/sign-up.spec.ts`), `pages/` page-objects incl. **`pages/tb-accts-oidc-page.ts`** (OIDC flows already modeled), `tb-accts-hub-page.ts`, `dashboard-page.ts`, `mail-page.ts`; `const/constants.ts`, `const/types.ts`, `const/mocks/paddle.ts`; env templates **`.env.dev.example` / `.env.stage.example` / `.env.prod.example`**.
 - Tests are selected by **`--grep <tag>` + `--project <browser>`**. Existing tags: `e2e-suite`, `e2e-mobile-suite`, `e2e-prod-desktop-nightly`, `prod-mobile-nightly`. A **local (non-BrowserStack)** path already works: `npm run e2e-test` = `npx playwright test --grep e2e-suite --project=firefox`.
 - Today the CI/nightly suites run on **BrowserStack** (`browserstack-node-sdk`, `browserstack-*.yml`). **The gate must NOT use BrowserStack** — it runs **headless chromium locally in the container**.
 

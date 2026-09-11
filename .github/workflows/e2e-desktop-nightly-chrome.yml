@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd ./test/e2e
-          npm install
+          npm ci
 
       - name: BrowserStack Env Setup
         uses: browserstack/github-actions/setup-env@master
@@ -55,3 +55,10 @@ jobs:
           cd ./test/e2e
           cp .env.prod.example .env
           npm run prod-nightly-tests-browserstack-desktop-chromium
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && !cancelled() }}
+        with:
+          name: playwright-report
+          path: test/e2e/playwright-report/
+          retention-days: 7

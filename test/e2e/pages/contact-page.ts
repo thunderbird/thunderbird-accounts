@@ -1,5 +1,5 @@
 import { type Page, type Locator, expect } from '@playwright/test';
-import { ACCTS_CONTACT_URL, TIMEOUT_2_SECONDS } from '../const/constants';
+import { ACCTS_CONTACT_URL, TIMEOUT_2_SECONDS, TIMEOUT_60_SECONDS } from '../const/constants';
 
 export class ContactPage {
   readonly page: Page;
@@ -39,7 +39,10 @@ export class ContactPage {
   }
 
   async navigateToContactPage() {
-    await this.page.goto(ACCTS_CONTACT_URL);
+    await this.page.goto(ACCTS_CONTACT_URL, {
+      waitUntil: 'domcontentloaded',
+      timeout: TIMEOUT_60_SECONDS,
+    });
     await this.waitForFormFieldsToLoad();
   }
 
