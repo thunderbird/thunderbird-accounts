@@ -41,6 +41,9 @@
     },
     "trafficBanner": {
       "message": "We're currently experiencing high demand. Pages may load slowly, and some features may not work. Thank you for your patience."
+    },
+    "genericModal": {
+      "close": "Close dialog"
     }
   },
   "views": {
@@ -231,7 +234,8 @@
           "displayNameRequired": "Display name is required",
           "emailAliasesArticleTitle": "Setting Up Email Aliases",
           "emailAliasesCatchAllArticleTitle": "Setting Up a Catch-All Alias",
-          "emailAliasSupportText": "For help with aliases, see {emailAliasesSupportLink}. For catch-all aliases, see {emailAliasesCatchAllSupportLink}."
+          "emailAliasSupportText": "For help with aliases, see {emailAliasesSupportLink}. For catch-all aliases, see {emailAliasesCatchAllSupportLink}.",
+          "aliasActions": "Alias actions"
         },
         "customDomains": {
           "customDomains": "Custom domains",
@@ -296,7 +300,9 @@
             "readGreetingError": "We could not verify that the domain records connect to Thundermail",
             "autodiscoverRecordFound": "The autodiscover DNS record must be removed.",
             "autodiscoverSrvRecordFound": "The _autodiscover._tcp DNS record must be removed."
-          }
+          },
+          "dismissNotice": "Dismiss",
+          "domainActions": "Domain actions"
         },
         "securitySettings": {
           "securitySettings": "Security settings",
@@ -359,7 +365,8 @@
           "addToAllowList": "Add to allow list",
           "save": "Save",
           "removedSuccessfully": "Removed {email} from allow list",
-          "undo": "Undo"
+          "undo": "Undo",
+          "removeFromAllowList": "Remove from allow list"
         },
         "signUp": {
           "continue": "Continue",

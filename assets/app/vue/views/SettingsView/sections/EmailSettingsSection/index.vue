@@ -33,7 +33,7 @@ export default {
         :title="t('views.mail.sections.emailSettings.emailAliases')"
       >
         <template #icon>
-          <email-aliases-icon />
+          <email-aliases-icon aria-hidden="true" />
         </template>
 
         <email-aliases />

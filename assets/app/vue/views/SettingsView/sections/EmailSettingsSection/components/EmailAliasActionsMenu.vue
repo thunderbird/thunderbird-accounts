@@ -60,8 +60,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="actions-menu" ref="menuRef">
-    <button class="kebab-menu-button" @click="toggleMenu">
-      <ph-dots-three-vertical size="20" />
+    <button class="kebab-menu-button" @click="toggleMenu" :aria-label="t('views.mail.sections.emailSettings.aliasActions')">
+      <ph-dots-three-vertical size="20" aria-hidden="true" />
     </button>
 
     <div v-if="showMenu" class="dropdown">

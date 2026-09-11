@@ -88,7 +88,7 @@ const incomingServerDetails = computed(() =>
         <template #footer v-if="showFooter">
           <template v-if="incomingServerSelectedTab === INCOMING_SERVER_TABS.IMAP">
             <div class="what-is-container">
-              <ph-info size="24" weight="fill" />
+              <ph-info size="24" weight="fill" aria-hidden="true" />
               <span>{{ t('views.mail.sections.dashboard.whatIsImap') }}</span>
   
               <tool-tip :alt="t('views.mail.sections.dashboard.whatIsImap')">
@@ -102,7 +102,7 @@ const incomingServerDetails = computed(() =>
           </template>
           <template v-else>
             <div class="what-is-container">
-              <ph-info size="24" weight="fill" />
+              <ph-info size="24" weight="fill" aria-hidden="true" />
               <span>{{ t('views.mail.sections.dashboard.whatIsJmap') }}</span>
   
               <tool-tip :alt="t('views.mail.sections.dashboard.whatIsJmap')">
@@ -135,7 +135,7 @@ const incomingServerDetails = computed(() =>
   
         <template #footer v-if="showFooter">
           <div class="what-is-container">
-            <ph-info size="24" weight="fill" />
+            <ph-info size="24" weight="fill" aria-hidden="true" />
             <span>{{ t('views.mail.sections.dashboard.whatIsSmtp') }}</span>
   
             <tool-tip :alt="t('views.mail.sections.dashboard.whatIsSmtp')">

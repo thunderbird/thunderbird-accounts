@@ -101,7 +101,7 @@ onMounted(loadMfaMethods);
                   {{ methodData.set ? t('views.manageMfa.states.set') : t('views.manageMfa.states.notSet') }}
 
                   <template #icon v-if="methodData.set">
-                    <ph-check-circle size="16" weight="fill" />
+                    <ph-check-circle size="16" weight="fill" aria-hidden="true" />
                   </template>
                 </base-badge>
               </loading-skeleton>

@@ -64,7 +64,7 @@ export default {
         class="qr-code-details-summary"
       >
         <template #icon>
-          <ph-qr-code :size="20" />
+          <ph-qr-code :size="20" aria-hidden="true" />
         </template>
         <img
           class="qr-code"
@@ -79,7 +79,7 @@ export default {
       :description="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.downloadDescription')"
     >
       <template #icon>
-        <ph-download-simple :size="20" />
+        <ph-download-simple :size="20" aria-hidden="true" />
       </template>
       <template #action>
         <primary-button
@@ -100,14 +100,14 @@ export default {
       :description="t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.iosDescription')"
     >
       <template #icon>
-        <ph-lifebuoy :size="20" />
+        <ph-lifebuoy :size="20" aria-hidden="true" />
       </template>
       <template #action>
         <link-button size="small" :href="IOS_SUPPORT_URL" target="_blank" class="ios-help-button">
           {{ t('views.mail.sections.dashboard.getStartedWithThundermail.mobilePanel.iosSupportButtonLabel') }}
 
           <template #iconRight>
-            <ph-arrow-right :size="16" />
+            <ph-arrow-right :size="16" aria-hidden="true" />
           </template>
         </link-button>
       </template>

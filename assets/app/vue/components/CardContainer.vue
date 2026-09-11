@@ -37,8 +37,8 @@ defineEmits<{
         :title="isPinned ? t('components.cardContainer.unpin') : t('components.cardContainer.pin')"
         @click="$emit('togglePinned')"
       >
-        <ph-push-pin v-if="isPinned" size="20" />
-        <ph-push-pin-simple v-else size="20" />
+        <ph-push-pin v-if="isPinned" size="20" aria-hidden="true" />
+        <ph-push-pin-simple v-else size="20" aria-hidden="true" />
       </button>
     </header>
 
