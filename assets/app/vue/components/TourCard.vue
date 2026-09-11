@@ -38,7 +38,7 @@ const isWelcome = computed(() => props.variant === 'welcome');
     <header v-if="!isWelcome">
       <p>{{ t('views.mail.ftue.step', { step: currentStep, total: totalSteps }) }}</p>
       <button class="close-button" :aria-label="t('views.mail.ftue.close')" @click="emit('close')">
-        <ph-x-circle size="24" />
+        <ph-x-circle size="24" aria-hidden="true" />
       </button>
     </header>
 
