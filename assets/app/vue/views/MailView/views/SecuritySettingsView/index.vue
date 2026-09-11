@@ -29,7 +29,7 @@ export default {
     >
       <account-activity />
       <connected-apps />
-      <allow-list />
+      <allow-list v-if="false" />
     </card-container>
   </div>
 </template>
