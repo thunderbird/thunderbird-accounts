@@ -305,7 +305,10 @@ class ActiveSubscriptionRequiredViewTestCase(TestCase):
         with patch('thunderbird_accounts.subscription.views.MailClient') as mail_client_mock:
             mail_client_mock.return_value.get_account.side_effect = AccountNotFoundError('test@example.com')
 
-            response = self.client.post(reverse('subscription_plan_info'), HTTP_ACCEPT='application/json')
+            with self.assertLogs(level='WARNING') as logs:
+                response = self.client.post(reverse('subscription_plan_info'), HTTP_ACCEPT='application/json')
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {'success': False, 'error': 'User not found'})
+        self.assertTrue(any(record.levelname == 'WARNING' for record in logs.records))
+        self.assertFalse(any(record.levelname == 'ERROR' for record in logs.records))
