@@ -13,7 +13,7 @@ import { getActiveSessions, signOutSession } from '../api';
 import type { ActiveSession } from '../types';
 
 // Utils
-import { formatDate, formatDeviceInfo, formatSessionLocation } from '../formatters';
+import { formatDeviceInfo, formatSessionLocation } from '../formatters';
 
 const { t, locale } = useI18n();
 
@@ -23,8 +23,8 @@ type DisplaySession = {
   ipAddress: string;
   isCurrent: boolean;
   location: string;
-  accessGiven: string;
-  lastAccess: string;
+  accessGiven: Date | null;
+  lastAccess: Date | null;
 };
 
 const activeSessions = ref<DisplaySession[]>([]);
@@ -78,9 +78,9 @@ onMounted(async () => {
       ),
       accessGiven:
         typeof session.access_given === 'number' && Number.isFinite(session.access_given)
-          ? formatDate(new Date(session.access_given), locale.value, t)
-          : t('views.mail.views.securitySettings.unknownAccessGiven'),
-      lastAccess: formatDate(new Date(session.last_access), locale.value, t),
+          ? new Date(session.access_given)
+          : null,
+      lastAccess: new Date(session.last_access),
     }));
   } catch (error) {
     console.log(error);

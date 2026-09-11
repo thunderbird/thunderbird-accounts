@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import { formatDate } from '../formatters';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 type SecurityAccessRecord = {
   id: string;
   label: string;
   ipAddress: string;
   location: string;
-  accessGiven: string;
-  lastAccess: string;
+  accessGiven: Date | null;
+  lastAccess: Date | null;
   isCurrent?: boolean;
 };
 
@@ -49,8 +50,18 @@ defineSlots<{
           <td>
             <span :title="record.ipAddress">{{ record.location }}</span>
           </td>
-          <td>{{ record.accessGiven }}</td>
-          <td>{{ record.lastAccess }}</td>
+          <td>
+            <time v-if="record.accessGiven" :datetime="record.accessGiven.toISOString()">
+              {{ formatDate(record.accessGiven, locale, t) }}
+            </time>
+            <template v-else>{{ t('views.mail.views.securitySettings.unknownAccessGiven') }}</template>
+          </td>
+          <td>
+            <time v-if="record.lastAccess" :datetime="record.lastAccess.toISOString()">
+              {{ formatDate(record.lastAccess, locale, t) }}
+            </time>
+            <template v-else>{{ t('views.mail.views.securitySettings.unknownLastAccess') }}</template>
+          </td>
           <td class="action-cell">
             <slot name="action" :record="record" />
           </td>
