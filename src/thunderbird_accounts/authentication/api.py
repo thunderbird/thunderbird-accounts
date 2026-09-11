@@ -1,5 +1,6 @@
 from django.db import IntegrityError
 from thunderbird_accounts.authentication.models import AllowListEntry
+from thunderbird_accounts.authentication.utils import mark_current_session
 from thunderbird_accounts.mail.utils import validate_email
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
 from thunderbird_accounts.authentication.permissions import CanCreateTestAllowListEntries
@@ -9,7 +10,6 @@ import logging
 
 from django.conf import settings
 from mozilla_django_oidc.contrib.drf import OIDCAuthentication
-import jwt
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -65,30 +65,6 @@ class TotpConfirmThrottle(UserRateThrottle):
 class RecoveryCodesRegenerateThrottle(UserRateThrottle):
     scope = 'recovery_codes_regenerate'
 
-
-def _session_id_from_access_token(request: Request) -> str | None:
-    access_token = request.session.get('oidc_access_token')
-    if not access_token:
-        return None
-
-    try:
-        return jwt.decode(access_token, options={'verify_signature': False}).get('sid')
-    except (jwt.PyJWTError, TypeError):
-        return None
-
-
-def mark_current_session(request: Request, sessions: list[dict]) -> list[dict]:
-    current_session_id = _session_id_from_access_token(request)
-
-    if not current_session_id:
-        for session in sessions:
-            session['is_current'] = False
-        return sessions
-
-    for session in sessions:
-        session['is_current'] = session.get('id') == current_session_id
-
-    return sessions
 
 
 @api_view(['POST'])
