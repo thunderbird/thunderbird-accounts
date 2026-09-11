@@ -1,4 +1,7 @@
 {
+  "cookiesDisabled": {
+    "message": "Thundermail requires essential cookies in order to authenticate your session across our services. Please enable cookies to continue."
+  },
   "navigationLinks": {
     "account": "Account",
     "dashboard": "Dashboard",
