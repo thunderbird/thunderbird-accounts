@@ -17,3 +17,23 @@ export const NOT_INTERESTED_SURVEY_LINK = 'https://www.surveymonkey.com/r/HYYMDB
 export const TBPRO_WAIT_LIST = 'https://tb.pro/waitlist/';
 export const CAPTURE_TELEMETRY = true;
 export const PADDLE_TRANSACTION_STORAGE_KEY = 'accounts/subscribe/paddleTransactionId';
+
+export function appointmentUrlForHostname(hostname = globalThis.location?.hostname): string {
+  if (hostname === 'accounts.tb.pro') {
+    return 'https://appointment.tb.pro';
+  }
+  return 'https://appointment-stage.tb.pro';
+}
+
+export function sendUrlForHostname(hostname = globalThis.location?.hostname): string {
+  if (hostname === 'accounts.tb.pro') {
+    return 'https://send.tb.pro';
+  }
+  return 'https://send-stage.tb.pro';
+}
+
+export const APPOINTMENT_URL =
+  import.meta.env.VITE_APPOINTMENT_URL || appointmentUrlForHostname();
+
+export const SEND_URL =
+  import.meta.env.VITE_SEND_URL || sendUrlForHostname();

@@ -1,6 +1,7 @@
 {
   "navigationLinks": {
     "account": "Account",
+    "settings": "Settings",
     "dashboard": "Dashboard",
     "privacyAndData": "Privacy & Data",
     "manageEmails": "Manage Emails",
