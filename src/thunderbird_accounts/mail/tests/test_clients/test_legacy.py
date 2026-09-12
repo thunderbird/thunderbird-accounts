@@ -478,7 +478,8 @@ class TestMailClientDeleteDkim(TestCase):
         success_get_response = requests.Response()
         success_get_response.status_code = 200
         success_get_response._content = bytes(
-            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}'}]}}), 'utf-8'
+            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}', 'domain': self.domain}]}}),
+            'utf-8',
         )
 
         requests_get_mock.return_value = success_get_response
@@ -496,6 +497,68 @@ class TestMailClientDeleteDkim(TestCase):
         self.assertEqual(self.domain, call_args[1].get('params', {}).get('filter'))
 
         requests_post_mock.assert_called_once()
+        self.assertEqual(
+            requests_post_mock.call_args.kwargs['json'],
+            [{'type': 'clear', 'prefix': f'signature.rsa-{self.domain}.'}],
+        )
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_only_deletes_signers_for_exact_domain(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
+        """A substring/prefix collision in Stalwart must not delete another domain's signers."""
+        domain = 'example.com.au'
+        success_get_response = requests.Response()
+        success_get_response.status_code = 200
+        success_get_response._content = bytes(
+            json.dumps(
+                {
+                    'data': {
+                        'total': 4,
+                        'items': [
+                            {
+                                '_id': 'rsa-example.com',
+                                'domain': 'example.com',
+                                'au.domain': domain,
+                            },
+                            {'_id': 'ed25519-example.com', 'domain': 'example.com'},
+                            {'_id': f'rsa-{domain}', 'domain': domain},
+                            {'_id': f'ed25519-{domain}', 'domain': domain},
+                        ],
+                    }
+                }
+            ),
+            'utf-8',
+        )
+        requests_get_mock.return_value = success_get_response
+
+        success_post_response = requests.Response()
+        success_post_response.status_code = 200
+        requests_post_mock.return_value = success_post_response
+
+        response = self.mail_client.delete_dkim(domain)
+
+        self.assertIs(response, success_post_response)
+        self.assertEqual(
+            requests_post_mock.call_args.kwargs['json'],
+            [
+                {'type': 'clear', 'prefix': f'signature.ed25519-{domain}.'},
+                {'type': 'clear', 'prefix': f'signature.rsa-{domain}.'},
+            ],
+        )
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_does_not_delete_unexpected_signer_id(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
+        success_get_response = requests.Response()
+        success_get_response.status_code = 200
+        success_get_response._content = bytes(
+            json.dumps({'data': {'total': 1, 'items': [{'_id': 'rsa-other.com', 'domain': self.domain}]}}),
+            'utf-8',
+        )
+        requests_get_mock.return_value = success_get_response
+
+        self.assertIsNone(self.mail_client.delete_dkim(self.domain))
+        requests_post_mock.assert_not_called()
 
     @patch('requests.get')
     @patch('requests.post')
@@ -541,7 +604,8 @@ class TestMailClientDeleteDkim(TestCase):
         success_get_response = requests.Response()
         success_get_response.status_code = 200
         success_get_response._content = bytes(
-            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}'}]}}), 'utf-8'
+            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}', 'domain': self.domain}]}}),
+            'utf-8',
         )
 
         requests_get_mock.return_value = success_get_response

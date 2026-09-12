@@ -389,10 +389,20 @@ class MailClientLegacy(MailClientInterface):
         if not response_data or not response_data.get('total'):
             return None
 
-        # Dict comprehension to remove any duplicate _ids (there shouldn't be any, but I have trust issues.)
-        dkim_ids = {r.get('_id'): True for r in response_data.get('items', [])}
+        # Stalwart's filter is a substring match, and v0.15 may group a longer
+        # signer ID under an ID that is its prefix. Only delete the default
+        # signer IDs create_dkim() generates for this exact domain.
+        expected_dkim_ids = {f'{algorithm.lower()}-{domain}' for algorithm in settings.STALWART_DKIM_ALGOS}
+        dkim_ids = {
+            record.get('_id')
+            for record in response_data.get('items', [])
+            if record.get('domain') == domain and record.get('_id') in expected_dkim_ids
+        }
 
-        data = [{'type': 'clear', 'prefix': f'signature.{d}.'} for d in dkim_ids.keys()]
+        if not dkim_ids:
+            return None
+
+        data = [{'type': 'clear', 'prefix': f'signature.{dkim_id}.'} for dkim_id in sorted(dkim_ids)]
         response = requests.post(
             f'{self.api_url}/settings',
             json=data,
