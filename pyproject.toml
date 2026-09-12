@@ -42,6 +42,7 @@ dependencies = [
     "sqlparse>=0.6.0", # CVE fixes
     "django-waffle>=5.0.0",
     "pydantic[email,timezone]>=2.13.4",
+    "maxminddb>=3.1.1",
 ]
 description = "Accounts hub for Thunderbird Pro Services."
 readme = "README.md"

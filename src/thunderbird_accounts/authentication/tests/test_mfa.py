@@ -60,6 +60,9 @@ class MfaApiTestCase(TestCase):
         self.mfa_provider_patcher = patch('thunderbird_accounts.authentication.mfa_management.KeycloakMfaClient')
         self.mock_mfa_client = self.mfa_provider_patcher.start()
         self.addCleanup(self.mfa_provider_patcher.stop)
+        self.account_client_patcher = patch('thunderbird_accounts.authentication.mfa_management.KeycloakAccountClient')
+        self.mock_account_client = self.account_client_patcher.start()
+        self.addCleanup(self.account_client_patcher.stop)
 
     @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
     def test_get_mfa_methods_returns_keycloak_totp_credentials(self, mock_keycloak_client: Mock):
@@ -242,7 +245,7 @@ class MfaApiTestCase(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.mock_mfa_client.return_value.logout_other_sessions.assert_called_once_with('test-user-access-token')
+        self.mock_account_client.return_value.logout_other_sessions.assert_called_once_with('test-user-access-token')
 
     @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
     def test_confirm_totp_setup_without_logout_flag_skips_account_api(self, mock_keycloak_client: Mock):
@@ -257,7 +260,7 @@ class MfaApiTestCase(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.mock_mfa_client.return_value.logout_other_sessions.assert_not_called()
+        self.mock_account_client.return_value.logout_other_sessions.assert_not_called()
 
     @patch('thunderbird_accounts.authentication.mfa_management.KeycloakClient')
     def test_confirm_totp_setup_succeeds_when_logout_fails(self, mock_keycloak_client: Mock):
@@ -265,7 +268,7 @@ class MfaApiTestCase(TestCase):
         cache.set(make_pending_totp_cache_key(self.user.pk), {'secret': 'rawsecretvalue123456'})
         self.mock_mfa_client.return_value.register_totp_credential.return_value = {'success': True}
         mock_keycloak_client.return_value.get_totp_credentials.return_value = [{'id': 'new-credential-id'}]
-        self.mock_mfa_client.return_value.logout_other_sessions.side_effect = RequestException('boom')
+        self.mock_account_client.return_value.logout_other_sessions.side_effect = RequestException('boom')
 
         response = self.client.post(
             reverse('api_confirm_totp_setup'),

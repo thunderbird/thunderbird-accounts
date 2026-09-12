@@ -1,9 +1,23 @@
 from django.http import HttpRequest
 from enum import StrEnum
+from typing import TypedDict
+
 from django.contrib.sessions.backends.base import SessionBase
 from django.http.request import HttpRequest as DjangoHttpRequest
 
 from thunderbird_accounts.authentication.models import User
+
+
+class GeoIPLocation(TypedDict):
+    city: str | None
+    state: str | None
+    country_code: str | None
+    continent: str | None
+
+
+class GeoIPSession(TypedDict, total=False):
+    ip_address: str | None
+    location: GeoIPLocation | None
 
 
 class AccountsHttpRequest(DjangoHttpRequest):
