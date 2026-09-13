@@ -13,7 +13,7 @@ type NavItem = { route: string; i18nKey: string };
 
 const navItems: NavItem[] = [
   {
-    route: '/mail/security-settings',
+    route: '/settings',
     i18nKey: 'settings',
   },
   {

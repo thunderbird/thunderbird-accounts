@@ -73,7 +73,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
       </nav>
 
       <div class="header-actions">
-        <router-link v-slot="{ href, navigate }" to="/mail/security-settings" custom>
+        <router-link v-slot="{ href, navigate }" to="/settings" custom>
           <icon-button :href="href" :aria-label="t('navigationLinks.securitySettings')" @click="navigate">
             <settings-icon aria-hidden="true" />
           </icon-button>
