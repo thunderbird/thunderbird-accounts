@@ -120,14 +120,14 @@ onMounted(async () => {
         :column-labels="{
           primary: t('views.mail.views.securitySettings.recordsTableHeaderDevice'),
           location: t('views.mail.views.securitySettings.recordsTableHeaderLocation'),
-          accessGiven: t('views.mail.views.securitySettings.recordsTableHeaderAccessGiven'),
+          accessGiven: t('views.mail.views.securitySettings.recordsTableHeaderSignedIn'),
           lastAccess: t('views.mail.views.securitySettings.recordsTableHeaderLastActive'),
           actions: t('views.mail.views.securitySettings.recordsTableHeaderActions'),
         }"
       >
         <template #action="{ record }">
           <span v-if="record.isCurrent" class="current-session-label">
-            {{ t('views.mail.views.securitySettings.thisIsYou') }}
+            {{ t('views.mail.views.securitySettings.currentSession') }}
           </span>
           <link-button v-else @click="confirmSignOut(record.id)">
             {{ t('views.mail.views.securitySettings.signOut') }}
