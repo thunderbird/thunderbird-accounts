@@ -19,7 +19,7 @@ const logoutFromAllSessions = () => signOutAllSessions();
         <p>{{ t('views.dashboard.privacyAndDataCard.activeSessionsText') }}</p>
     
         <div class="active-sessions-actions">
-          <router-link v-slot="{ href, navigate }" custom to="/mail/security-settings#current-sign-ins">
+          <router-link v-slot="{ href, navigate }" custom to="/settings#current-sign-ins">
             <primary-button :href="href" variant="outline" size="small" class="manage-active-sessions-button" @click="navigate">
               {{ t('views.dashboard.privacyAndDataCard.manageActiveSessionsButtonLabel') }}
             </primary-button>
@@ -39,7 +39,7 @@ const logoutFromAllSessions = () => signOutAllSessions();
         <strong>{{ t('views.dashboard.privacyAndDataCard.connectedApps') }}</strong>
         <p>{{ t('views.dashboard.privacyAndDataCard.connectedAppsText') }}</p>
 
-        <router-link v-slot="{ href, navigate }" custom to="/mail/security-settings#connected-apps">
+        <router-link v-slot="{ href, navigate }" custom to="/settings#connected-apps">
           <primary-button :href="href" variant="outline" size="small" class="manage-connected-apps-button" @click="navigate">
             {{ t('views.dashboard.privacyAndDataCard.manageConnectedAppsButtonLabel') }}
           </primary-button>

@@ -137,8 +137,8 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     component: MailView,
   },
   {
-    path: '/mail/security-settings',
-    name: 'mail-security-settings',
+    path: '/settings',
+    name: 'settings',
     component: SecuritySettingsView,
   },
   ...(showCustomDomains ? [{
