@@ -319,7 +319,7 @@
           "unknownDevice": "Unknown Device",
           "unknownLocation": "Unknown location",
           "signOutConfirmation": "Sign out of {device}?",
-          "signOutConfirmationDescription": "This will end the session on this device.",
+          "signOutConfirmationDescription": "This will end the session and sign you out on this device.",
           "errorSigningOutSession": "We couldn’t sign out of that session. Please try again.",
           "recordsTableHeaderDevice": "Browser or Device",
           "recordsTableHeaderLocation": "Location",
