@@ -41,6 +41,13 @@
     }
   },
   "views": {
+    "settings": {
+      "accountAccess": "Account access",
+      "accountAccessDescription": "Review where this account is signed in and which apps have ongoing access.",
+      "manageAccountAccess": "Manage account access",
+      "loading": "Loading...",
+      "unavailable": "Unavailable"
+    },
     "dashboard": {
       "accountCard": {
         "myAccount": "My Account",
