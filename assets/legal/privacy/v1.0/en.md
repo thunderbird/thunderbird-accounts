@@ -1,6 +1,6 @@
 # MZLA Privacy Statement
 
-Effective date: Februrary 10, 2026
+Effective date: February 10, 2026
 
 Welcome to the MZLA Privacy Statement, which applies to all MZLA websites and online services, including Thunderbird Pro Services. This is where we describe how we handle your “Personal Data,” which is information that is directly linked or can be linked to you. It applies to the Personal Data that MZLA Technologies Corporation and its affiliates (Mozilla Foundation and Mozilla Corporation) process as the “Data Controller” when you use our online services, interact with MZLA’s websites, or participate in events or activities such as user surveys and focus groups (collectively, the “Services”).
 
@@ -15,7 +15,7 @@ Depending on how you use the Services, we may collect Personal Data from you dir
 * **Demographic Information:** In some cases, such as when you choose to participate in surveys or focus groups, you may optionally provide us with ethnicity, gender, or similar demographic details.  
 * **Feedback Data:** This consists of information you submit through surveys, reviews, or interactive features.  
 * **Payment Information:** For paid subscriptions and financial contributions, we collect details like name, billing address, and transaction specifics. Payments are processed by a third-party processor and MZLA does not collect or store your payment card or account details.  
-* **Profile Information:** We collect information to enable you create a user profile for your Thunderbird account, which may include a photo, additional email addresses, job title, or biography.  
+* **Profile Information:** We collect information to enable you to create a user profile for your Thunderbird account, which may include a photo, additional email addresses, job title, or biography.  
 * **Sales and Marketing Data:** This includes information provided voluntarily by you for promotional communications, such as name, email address, and company name.  
 * **Support Data:** When you seek customer support, we collect details like code, text, or multimedia files.
 
@@ -23,7 +23,7 @@ Depending on how you use the Services, we may collect Personal Data from you dir
 
 * **Buttons, Tools, and Content from Other Companies:** Our website may contain links or buttons that lead to social media sites like Mastodon and Bluesky and other third-party services like FundraiseUp. Our Services may also contain links or buttons that lead to third-party services like Zoom that may be integrated with the Services. Use of these features may result in data collection. Engaging with these buttons, tools, or content may automatically send certain browser information to these companies. Please review the privacy statements of these companies for more information.  
 * **Essential Cookies and Similar Tracking Technologies:** We use cookies and similar technologies to provide essential functionality like storing settings and recognizing you while using our Services.  
-* **Non-essential Cookies:** Depending on your jurisdiction, we may use online analytics products that use cookies to help us analyze how de-identified users use our Services and to enhance your experience when you use the Services. In some jurisdictions, we only use non-essential cookies after obtaining your consent. See this section for more details and control options.  
+* **Non-essential Cookies:** Depending on your jurisdiction, we may use online analytics products that use cookies to help us analyze how de-identified users use our Services and to enhance your experience when you use the Services. In some jurisdictions, we only use non-essential cookies after obtaining your consent. See [this section](#what-are-your-cookie-choices-and-controls) for more details and control options.  
 * **Email Marketing Interactions:** Our emails may have web beacons that offer information on your device type, email client, email reception, opens, and link clicks.  
 * **Geolocation Information:** Depending on the Service's functionality, we collect regional geolocation data in order to improve our Services, such as by troubleshooting and improving email deliverability in certain areas.  
 * **Service Usage Information:** We collect data about your interactions with the Services, such as IP address, device information, session details, date and time of requests, device type and ID, operating system and application version, and performance of specific features or Services.  
@@ -150,7 +150,7 @@ Our emails to users may contain a pixel tag, which is a small, clear image that 
 
 The length of time a cookie will stay on your browser or device depends on whether it is a “persistent” or “session” cookie. Session cookies will only stay on your device until you stop browsing. Persistent cookies stay until they expire or are deleted. The expiration time or retention period applicable to persistent cookies depends on the purpose of the cookie collection and tool used. You may be able to delete cookie data. For more information, see [below](#what-are-your-cookie-choices-and-controls).
 
-#### What are cookies and similar technologies? {#what-are-your-cookie-choices-and-controls}
+#### What are cookies and similar technologies?
 
 We use cookies and similar technologies, such as local storage, and mobile analytics, to operate and provide our Services. Our marketing communications may also contain web beacons set by our vendors.
 
@@ -171,7 +171,7 @@ The table below provides additional information about how we use different types
 | Required Cookies | MZLA uses required cookies to perform essential website functions and to provide the services. For example, cookies are used to log you in, save your language preferences, improve performance, route traffic between web servers, detect the size of your screen, determine page load times, improve user experience, and for audience measurement. These cookies are necessary for our websites to work. |
 | Analytics | We allow third parties to use analytics cookies to understand how visitors use our websites so we can make them better. For example, cookies are used to gather information about the pages our users visit most often and how many clicks it takes for a user to accomplish a task.  |
 
-#### What are your cookie choices and controls?
+#### What are your cookie choices and controls? {#what-are-your-cookie-choices-and-controls}
 
 You can control the cookies you encounter on the web using a variety of widely-available tools. For example:
 
@@ -223,7 +223,7 @@ Under California Civil Code section 1798.83, also known as the “Shine the Ligh
 
 #### Removal of Content
 
-California residents under the age of 18 who are registered users of online sites, services, or applications have a right under California Business and Professions Code Section 22581 to remove, or request and obtain removal of, content or information they have publicly posted. To remove content or information you have publicly posted,, please submit a detailed description of the specific content or information you wish to have removed via our [privacy request form](https://support.tb.pro/hc/en-us/requests/new?ticket_form_id=48877196243347). . Please be aware that your request does not guarantee complete or comprehensive removal of content or information posted online and that the law may not permit or require removal in certain circumstances.
+California residents under the age of 18 who are registered users of online sites, services, or applications have a right under California Business and Professions Code Section 22581 to remove, or request and obtain removal of, content or information they have publicly posted. To remove content or information you have publicly posted, please submit a detailed description of the specific content or information you wish to have removed via our [privacy request form](https://support.tb.pro/hc/en-us/requests/new?ticket_form_id=48877196243347). Please be aware that your request does not guarantee complete or comprehensive removal of content or information posted online and that the law may not permit or require removal in certain circumstances.
 
 We value the trust you place in us and are committed to handling your personal information with care and respect. If you have any questions or concerns about our privacy practices, please [contact us](#contact-us).
 
