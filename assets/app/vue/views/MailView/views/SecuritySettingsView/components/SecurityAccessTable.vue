@@ -77,11 +77,6 @@ defineSlots<{
       </tbody>
     </table>
   </div>
-  <p class="location-attribution">
-    <a href="https://db-ip.com" rel="noopener noreferrer" target="_blank">
-      {{ t('views.mail.views.securitySettings.ipGeolocationAttribution') }}
-    </a>
-  </p>
 </template>
 
 <style scoped>
@@ -127,17 +122,6 @@ td {
 
 .action-cell {
   white-space: nowrap;
-}
-
-.location-attribution {
-  font-size: 0.6875rem;
-  line-height: 1.3;
-  margin-block-start: -0.5rem;
-  margin-block-end: 0;
-
-  a {
-    color: var(--colour-ti-muted);
-  }
 }
 
 :deep(button.base.link.filled) {
