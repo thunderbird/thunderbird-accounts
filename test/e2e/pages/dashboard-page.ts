@@ -56,7 +56,7 @@ export class DashboardPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.myAccountHeading = this.page.getByRole('heading', { name: 'My Account' });
+    this.myAccountHeading = this.page.getByRole('heading', { name: 'Account settings' });
     this.myAccountCard = this.page.locator('.my-account-card');
     this.privacyAndDataHeading = this.page.getByRole('heading', { name: 'Privacy & Data' });
     this.thunderbirdAppsHeading = this.page.getByRole('heading', { name: 'Thunderbird Apps' });

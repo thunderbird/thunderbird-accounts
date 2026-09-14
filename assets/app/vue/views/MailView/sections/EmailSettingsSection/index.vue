@@ -9,7 +9,6 @@ import DetailsSummary from '@/components/DetailsSummary.vue';
 
 // Local components
 import AppPasswordSide from './components/AppPasswordSide.vue';
-import UserInfoSide from './components/UserInfoSide.vue';
 import EmailAliases from './components/EmailAliases.vue';
 import ViewServerSettings from './components/ViewServerSettings.vue';
 
@@ -28,7 +27,6 @@ export default {
   <section id="email-settings">
     <card-container :title="t('views.mail.sections.emailSettings.emailSettings')">
       <div class="email-settings-content">
-        <user-info-side/>
         <app-password-side :app-passwords="appPasswords" />
       </div>
 
@@ -51,9 +49,6 @@ export default {
 
 <style scoped>
 .email-settings-content {
-  display: grid;
-  grid-template-columns: 1fr;
-  column-gap: 2rem;
   margin-block-end: 2.25rem;
   color: var(--colour-ti-secondary);
 }
@@ -61,12 +56,6 @@ export default {
 .email-aliases-details-summary {
   position: relative;
   margin-block-end: 2.25rem;
-}
-
-@media (min-width: 768px) {
-  .email-settings-content {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 @media (min-width: 1280px) {

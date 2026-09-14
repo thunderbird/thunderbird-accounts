@@ -1,23 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
-import { VisualDivider, PrimaryButton } from '@thunderbirdops/services-ui';
+import { VisualDivider } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
+import DisplayName from './DisplayName.vue';
 import { isWaffleFlagActive } from '@/utils';
 import { getMfaMethods, MfaReauthenticationRequiredError } from '@/views/ManageMfaView/api';
 import { WAFFLE_FLAG } from '@/types';
 
 const { t } = useI18n();
-const router = useRouter();
 
-// The user's username is their primary email address
-const username = computed(() => window._page?.username);
+// From Stalwart, primary email is always the first email address in the list
+const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
 
 const showMfa = isWaffleFlagActive(WAFFLE_FLAG.MULTI_FACTOR_AUTHENTICATION);
 const hasMfa = ref(false);
-
-const goToManageMfa = () => router.push('/manage-mfa');
 
 // Fetch MFA status when the card mounts so it always reflects current state (an SPA
 // navigation back from Manage MFA shows fresh status without a full page reload).
@@ -38,13 +35,18 @@ onMounted(async () => {
 
 <template>
   <card-container class="my-account-card">
-    <h2>{{ t('views.dashboard.accountCard.myAccount') }}</h2>
+    <h2>{{ t('views.dashboard.accountCard.accountSettings') }}</h2>
+    <p class="account-settings-description">{{ t('views.dashboard.accountCard.accountSettingsDescription') }}</p>
 
     <div class="my-account-card-details">
       <div class="my-account-card-field">
         <strong>{{ t('views.dashboard.accountCard.email') }}</strong>
-        <p>{{ username }}</p>
+        <p>{{ primaryEmail }}</p>
       </div>
+
+      <visual-divider />
+
+      <display-name />
 
       <visual-divider />
 
@@ -65,33 +67,11 @@ onMounted(async () => {
             <p>{{ hasMfa ? t('views.dashboard.accountCard.on') : t('views.dashboard.accountCard.off') }}</p>
           </div>
 
-          <primary-button variant="outline" size="small" @click="goToManageMfa">
+          <router-link to="/manage-mfa" class="fake-button-link">
             {{ t('views.dashboard.accountCard.manage') }}
-          </primary-button>
+          </router-link>
         </div>
       </template>
-
-      <!-- <visual-divider /> -->
-
-      <!-- TODO: Uncomment when implementing recovery email -->
-      <!-- <div class="my-account-card-field">
-        <strong>{{ t('views.dashboard.accountCard.recoveryEmailAddress') }}</strong>
-        <div class="my-account-card-field-with-link-button">
-          <base-badge :type="BaseBadgeTypes.Set">{{ t('views.dashboard.accountCard.set') }}</base-badge>
-          <link-button>{{ t('views.dashboard.accountCard.change') }}</link-button>
-        </div>
-      </div> -->
-
-      <!-- <visual-divider /> -->
-
-      <!-- TODO: Uncomment when implementing recovery phone number -->
-      <!-- <div class="my-account-card-field">
-        <strong>{{ t('views.dashboard.accountCard.recoveryPhoneNumber') }}</strong>
-        <div class="my-account-card-field-with-link-button">
-          <base-badge :type="BaseBadgeTypes.Set">{{ t('views.dashboard.accountCard.set') }}</base-badge>
-          <link-button>{{ t('views.dashboard.accountCard.change') }}</link-button>
-        </div>
-      </div> -->
     </div>
   </card-container>
 </template>
@@ -107,7 +87,14 @@ onMounted(async () => {
     font-size: 1.5rem;
     line-height: 1.2;
     color: var(--colour-ti-highlight);
-    margin-block-end: 1rem;
+    margin-block-end: 0.25rem;
+  }
+
+  p.account-settings-description {
+    font-size: 0.875rem;
+    line-height: 1.23;
+    color: var(--colour-ti-secondary);
+    margin-block-end: 1.5rem;
   }
 
   .my-account-card-details {
@@ -127,7 +114,7 @@ onMounted(async () => {
 
       &.with-outline-button {
         flex-direction: row;
-        align-items: center;
+        align-items: end;
         justify-content: space-between;
       }
 

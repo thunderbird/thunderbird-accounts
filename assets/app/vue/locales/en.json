@@ -43,17 +43,25 @@
   "views": {
     "dashboard": {
       "accountCard": {
-        "myAccount": "My Account",
+        "accountSettings": "Account settings",
+        "accountSettingsDescription": "Manage your default account settings.",
         "email": "Email",
         "password": "Password",
         "mfa": "Multi-Factor Authentication",
         "manage": "Manage",
         "recoveryEmailAddress": "Recovery Email Address",
         "recoveryPhoneNumber": "Recovery Phone Number",
-        "change": "change",
+        "change": "Change",
         "set": "Set",
         "on": "On",
-        "off": "Off"
+        "off": "Off",
+        "displayName": "Display name",
+        "newDisplayName": "New display name",
+        "save": "Save",
+        "saving": "Saving...",
+        "cancel": "Cancel",
+        "anErrorOccurred": "An error occurred",
+        "anErrorOccurredWhileChangingDisplayName": "An error occurred while changing the display name"
       },
       "privacyAndDataCard": {
         "privacyAndData": "Privacy & Data",
@@ -172,12 +180,9 @@
         },
         "emailSettings": {
           "emailSettings": "Email Settings",
-          "primaryEmail": "Primary email",
-          "displayName": "Display name",
           "appPassword": "App Password",
           "appPasswords": "App Passwords",
           "close": "Close",
-          "change": "change",
           "set": "Set",
           "notSet": "Not set",
           "changePasswordDescription": "Use this separate password to connect apps that can't use your regular Thundermail sign-in.",
@@ -218,8 +223,6 @@
           "passwordSetSuccessfully": "App password saved",
           "anErrorOccurred": "An error occurred",
           "anErrorOccurredWhileChangingPassword": "An error occurred while changing the password",
-          "anErrorOccurredWhileChangingDisplayName": "An error occurred while changing the display name",
-          "newDisplayName": "New display name",
           "displayNamePlaceholder": "Enter your display name",
           "displayNameRequired": "Display name is required",
           "emailAliasesArticleTitle": "Setting Up Email Aliases",

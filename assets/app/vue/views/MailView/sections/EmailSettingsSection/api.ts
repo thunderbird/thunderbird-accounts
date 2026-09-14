@@ -19,19 +19,6 @@ export const setAppPassword = async (name: string, password: string): Promise<Se
   return await response.value.json();
 };
 
-export const setDisplayName = async (displayName: string): Promise<SettingsApiResponse> => {
-  const { response } = await useAuthFetch('/api/v1/mail/display-name/set/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': window._page.csrfToken,
-    },
-    body: JSON.stringify({ 'display-name': displayName }),
-  });
-
-  return await response.value.json();
-};
-
 export const addEmailAlias = async (emailAlias: string, domain: string) => {
   const { response } = await useAuthFetch(`/email-aliases/add`, {
     method: 'POST',
