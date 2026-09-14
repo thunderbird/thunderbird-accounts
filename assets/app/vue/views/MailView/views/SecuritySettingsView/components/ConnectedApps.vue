@@ -72,7 +72,7 @@ onMounted(async () => {
   try {
     connectedAppsData.value = await getConnectedApps();
   } catch (error) {
-    console.log(error);
+    console.log('calling getConnectedApps failed:', error);
     errorMessage.value = t('views.mail.views.securitySettings.errorLoadingConnectedApps');
   } finally {
     loading.value = false;
