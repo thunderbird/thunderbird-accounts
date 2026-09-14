@@ -76,10 +76,8 @@ def get_user_profile(request: Request):
 
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
 def get_active_sessions(request: Request):
-    if not request.user.is_authenticated:
-        raise NotAuthenticated()
-
     user_access_token = get_user_access_token(request)
     if not user_access_token:
         raise NotAuthenticated('OIDC session has expired')
@@ -92,10 +90,8 @@ def get_active_sessions(request: Request):
 
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
 def get_connected_apps(request: Request):
-    if not request.user.is_authenticated:
-        raise NotAuthenticated()
-
     user_access_token = get_user_access_token(request)
     if not user_access_token:
         raise NotAuthenticated('OIDC session has expired')
@@ -370,10 +366,8 @@ def sign_up(request: Request):
 
 @api_view(['POST'])
 @authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
 def sign_out_session(request: Request):
-    if not request.user.is_authenticated:
-        raise NotAuthenticated()
-
     session_id = request.data.get('session_id')
 
     if not session_id:
@@ -396,10 +390,8 @@ def sign_out_session(request: Request):
 
 @api_view(['POST'])
 @authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
 def revoke_connected_app(request: Request):
-    if not request.user.is_authenticated:
-        raise NotAuthenticated()
-
     client_id = request.data.get('client_id')
     if not client_id:
         raise ValidationError('client_id is required')
