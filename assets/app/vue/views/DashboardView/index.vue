@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { VisualDivider } from '@thunderbirdops/services-ui';
-import YourServices from '@/components/YourServices.vue';
+import ThunderbirdApps from '@/components/ThunderbirdApps.vue';
 import AccountCard from './components/AccountCard.vue';
 import PrivacyAndDataCard from './components/PrivacyAndDataCard.vue';
 import YourCurrentSubscription from './components/YourCurrentSubscription.vue';
@@ -26,7 +26,7 @@ export default {
     <visual-divider type="vertical" class="hidden-sm" />
 
     <div class="dashboard-view-cards">
-      <your-services />
+      <thunderbird-apps />
       <your-current-subscription />
     </div>
   </div>
