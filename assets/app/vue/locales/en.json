@@ -19,8 +19,9 @@
     "needSupportCard": {
       "needSupport": "Need Support?"
     },
-    "yourServices": {
-      "yourServices": "Manage Your Services"
+    "thunderbirdApps": {
+      "heading": "Thunderbird Apps",
+      "paragraph": "Send email, share large files, and manage appointments."
     },
     "userMenu": {
       "myAccount": "My Account",
