@@ -324,7 +324,7 @@
           "noRecentDevices": "No recent devices signed in to your account.",
           "currentSession": "Current session",
           "signOut": "Sign out",
-          "connectedApps": "Connected Apps",
+          "connectedApps": "Connected apps",
           "connectedAppsDescription": "Review apps with ongoing access to this account. Removing access disconnects the app on all devices.",
           "loadingConnectedApps": "Loading connected apps...",
           "errorLoadingConnectedApps": "We couldn’t load your connected apps. Please try again.",
