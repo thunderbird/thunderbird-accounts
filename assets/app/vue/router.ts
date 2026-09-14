@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 
 // Accounts Routes
 import DashboardView from '@/views/DashboardView/index.vue';
+import SettingsView from '@/views/SettingsView/index.vue';
 import ManageMfaView from '@/views/ManageMfaView/index.vue';
 import PrivacyAndDataView from '@/views/PrivacyAndDataView.vue';
 import SubscribeView from '@/views/SubscribeView/index.vue';
@@ -139,6 +140,11 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
   {
     path: '/settings',
     name: 'settings',
+    component: SettingsView,
+  },
+  {
+    path: '/settings/security',
+    name: 'settings-security',
     component: SecuritySettingsView,
   },
   ...(showCustomDomains ? [{
