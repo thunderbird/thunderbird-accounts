@@ -323,7 +323,7 @@
           "recordsTableHeaderSignedIn": "Signed In",
           "recordsTableHeaderLastActive": "Last active",
           "recordsTableHeaderActions": "Actions",
-          "ipGeolocationAttribution": "IP Geolocation by DB-IP",
+          "ipGeolocationAttribution": "Locations are approximate. IP geolocation provided by {provider}.",
           "noRecentDevices": "No recent devices signed in to your account.",
           "currentSession": "Current session",
           "signOut": "Sign out",

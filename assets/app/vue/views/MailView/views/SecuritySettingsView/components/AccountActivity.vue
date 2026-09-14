@@ -134,6 +134,15 @@ onMounted(async () => {
           </link-button>
         </template>
       </security-access-table>
+      <i18n-t
+        keypath="views.mail.views.securitySettings.ipGeolocationAttribution"
+        tag="p"
+        class="location-attribution"
+      >
+        <template #provider>
+          <a href="https://db-ip.com" rel="noopener noreferrer" target="_blank">DB-IP</a>
+        </template>
+      </i18n-t>
     </template>
     <template v-else>
       <p class="account-activity-description empty">{{ t('views.mail.views.securitySettings.noRecentDevices') }}</p>
@@ -182,5 +191,17 @@ onMounted(async () => {
 .current-session-label {
   color: var(--colour-ti-muted);
   font-size: 0.75rem;
+}
+
+.location-attribution {
+  color: var(--colour-ti-muted);
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  margin-block-start: -0.5rem;
+  margin-block-end: 0;
+
+  a {
+    color: var(--colour-ti-muted);
+  }
 }
 </style>
