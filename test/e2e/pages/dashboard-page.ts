@@ -39,7 +39,7 @@ export class DashboardPage {
   readonly myAccountHeading: Locator;
   readonly myAccountCard: Locator;
   readonly privacyAndDataHeading: Locator;
-  readonly manageYourServicesHeading: Locator;
+  readonly thunderbirdAppsHeading: Locator;
   readonly currentSubscriptionHeading: Locator;
   readonly currentSubscriptionSection: Locator;
   readonly passwordChangeLink: Locator;
@@ -59,7 +59,7 @@ export class DashboardPage {
     this.myAccountHeading = this.page.getByRole('heading', { name: 'My Account' });
     this.myAccountCard = this.page.locator('.my-account-card');
     this.privacyAndDataHeading = this.page.getByRole('heading', { name: 'Privacy & Data' });
-    this.manageYourServicesHeading = this.page.getByRole('heading', { name: 'Manage Your Services' });
+    this.thunderbirdAppsHeading = this.page.getByRole('heading', { name: 'Thunderbird Apps' });
     this.currentSubscriptionHeading = this.page.getByRole('heading', { name: 'Your Current Subscription' });
     this.currentSubscriptionSection = this.page.locator('section').filter({ has: this.currentSubscriptionHeading });
     this.passwordChangeLink = this.page.locator('a[href="/reset-password/"]');
@@ -90,7 +90,7 @@ export class DashboardPage {
     // just verify we are signed in and header appears
     await expect(this.myAccountHeading).toBeVisible( { timeout: TIMEOUT_30_SECONDS });
     await expect(this.privacyAndDataHeading).toBeVisible();
-    await expect(this.manageYourServicesHeading).toBeVisible();
+    await expect(this.thunderbirdAppsHeading).toBeVisible();
   }
 
   async verifyDashboardDisplayed() {
