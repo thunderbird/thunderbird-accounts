@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhPlugsConnected } from '@phosphor-icons/vue';
+import { PhLink } from '@phosphor-icons/vue';
 import { DangerButton, LinkButton, ModalDialog, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import DetailsSummary from '@/components/DetailsSummary.vue';
 import SecurityAccessTable from './SecurityAccessTable.vue';
@@ -88,7 +88,7 @@ onMounted(async () => {
     default-open
   >
     <template #icon>
-      <ph-plugs-connected size="24" aria-hidden="true" />
+      <ph-link size="24" aria-hidden="true" />
     </template>
 
     <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">
