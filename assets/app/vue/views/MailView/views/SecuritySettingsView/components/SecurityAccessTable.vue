@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import { formatTimeAgoIntl } from '@vueuse/core';
 import { formatDate } from '../formatters';
 
 const { t, locale } = useI18n();
@@ -57,8 +58,15 @@ defineSlots<{
             <template v-else>{{ t('views.mail.views.securitySettings.unknownAccessGiven') }}</template>
           </td>
           <td>
-            <time v-if="record.lastAccess" :datetime="record.lastAccess.toISOString()">
-              {{ formatDate(record.lastAccess, locale, t) }}
+            <time
+              v-if="record.lastAccess"
+              :datetime="record.lastAccess.toISOString()"
+              :title="record.lastAccess.toLocaleString(locale, { dateStyle: 'full', timeStyle: 'long' })"
+            >
+              {{ formatTimeAgoIntl(record.lastAccess, {
+                locale,
+                relativeTimeFormatOptions: { numeric: 'auto', style: 'short' },
+              }) }}
             </time>
             <template v-else>{{ t('views.mail.views.securitySettings.unknownLastAccess') }}</template>
           </td>

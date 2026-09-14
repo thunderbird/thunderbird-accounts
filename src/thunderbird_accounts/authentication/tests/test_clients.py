@@ -18,7 +18,7 @@ class KeycloakAccountClientTestCase(TestCase):
                     'id': 'session-id',
                     'ipAddress': '203.0.113.11',
                     'started': 1710000000,
-                    'lastAccess': 1710000000100,
+                    'lastAccess': 1710000100,
                     'browser': 'Firefox',
                     'current': True,
                     'clients': [{'clientId': 'thunderbird-desktop', 'clientName': 'Thunderbird'}],
@@ -29,7 +29,7 @@ class KeycloakAccountClientTestCase(TestCase):
                 {
                     'id': 'device-id',
                     'ipAddress': '203.0.113.10',
-                    'lastAccess': 1710000000000,
+                    'lastAccess': 1710000000,
                     'os': 'macOS',
                     'osVersion': '14.5',
                     'device': 'Mac',
@@ -39,7 +39,7 @@ class KeycloakAccountClientTestCase(TestCase):
                         {
                             'id': 'session-id',
                             'ipAddress': '203.0.113.11',
-                            'lastAccess': 1710000000100,
+                            'lastAccess': 1710000100,
                             'current': True,
                             'clients': {'thunderbird-desktop': 'Thunderbird'},
                         }
@@ -62,7 +62,7 @@ class KeycloakAccountClientTestCase(TestCase):
                 {
                     'id': 'session-id',
                     'access_given': 1710000000000,
-                    'last_access': 1710000000100,
+                    'last_access': 1710000100000,
                     'ip_address': '203.0.113.11',
                     'device_info': {
                         'device': 'Mac',
@@ -86,7 +86,7 @@ class KeycloakAccountClientTestCase(TestCase):
                 {
                     'id': 'online-session-id',
                     'ipAddress': '203.0.113.10',
-                    'lastAccess': 1710000000200,
+                    'lastAccess': 1710000200,
                     'browser': 'Firefox',
                     'clients': [{'clientId': 'tb-accounts', 'clientName': 'Thunderbird Accounts'}],
                 }
@@ -99,11 +99,11 @@ class KeycloakAccountClientTestCase(TestCase):
                     'device': 'Other',
                     'mobile': False,
                     'sessions': [
-                        {'id': 'online-session-id', 'lastAccess': 1710000000100},
-                        {'id': 'online-session-id', 'lastAccess': 1710000000150},
+                        {'id': 'online-session-id', 'lastAccess': 1710000100},
+                        {'id': 'online-session-id', 'lastAccess': 1710000150},
                         {
                             'id': 'offline-session-id',
-                            'lastAccess': 1710000000300,
+                            'lastAccess': 1710000300,
                             'clients': [{'clientId': 'thunderbird-desktop', 'clientName': 'Thunderbird'}],
                         },
                     ],
@@ -114,7 +114,7 @@ class KeycloakAccountClientTestCase(TestCase):
             result = client.get_active_sessions(self.USER_TOKEN)
 
         self.assertEqual([session['id'] for session in result], ['online-session-id'])
-        self.assertEqual(result[0]['last_access'], 1710000000200)
+        self.assertEqual(result[0]['last_access'], 1710000200000)
         self.assertEqual(result[0]['device_info']['app'], 'Thunderbird Accounts')
 
     def test_get_connected_apps_returns_each_matching_session(self):
@@ -136,7 +136,7 @@ class KeycloakAccountClientTestCase(TestCase):
                 {
                     'id': 'home-device',
                     'ipAddress': '203.0.113.10',
-                    'lastAccess': 1710000000000,
+                    'lastAccess': 1710000000,
                     'sessions': [
                         {
                             'id': 'home-session',
@@ -151,7 +151,7 @@ class KeycloakAccountClientTestCase(TestCase):
                         {
                             'id': 'work-session',
                             'ipAddress': '203.0.113.11',
-                            'lastAccess': 1710000000100,
+                            'lastAccess': 1710000100,
                             'clients': [
                                 {'clientId': 'thunderbird-desktop', 'clientName': 'Thunderbird'},
                                 {'clientId': 'tb-accounts', 'clientName': 'Thunderbird Accounts'},
@@ -188,7 +188,7 @@ class KeycloakAccountClientTestCase(TestCase):
                     'app_name': 'Mozilla Thunderbird',
                     'access_given': 1700000000000,
                     'ip_address': '203.0.113.11',
-                    'last_access': 1710000000100,
+                    'last_access': 1710000100000,
                 },
             ],
         )

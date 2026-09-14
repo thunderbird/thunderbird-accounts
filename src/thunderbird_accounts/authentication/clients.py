@@ -509,9 +509,11 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
         return active_sessions
 
     def _active_session_response(self, session: dict, device_info: dict) -> ActiveSessionResponse:
+        # Keycloak session timestamps are seconds; our API returns milliseconds.
+        last_access = session.get('lastAccess')
         response: ActiveSessionResponse = {
             'id': session['id'],
-            'last_access': session.get('lastAccess'),
+            'last_access': last_access * 1000 if last_access is not None else None,
             'ip_address': session.get('ipAddress'),
             'device_info': device_info,
             'is_current': bool(session.get('current')),
@@ -562,7 +564,7 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
                             'app_name': app['name'] or session_client_name or client_id,
                             'access_given': access_given,
                             'ip_address': ip_address,
-                            'last_access': last_access,
+                            'last_access': last_access * 1000 if last_access is not None else None,
                         }
                     )
 
