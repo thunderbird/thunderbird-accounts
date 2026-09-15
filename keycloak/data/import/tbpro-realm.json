@@ -86,6 +86,14 @@
       "clientRole" : false,
       "containerId" : "801d55d9-d82c-44f3-8582-f440ad1dcc26",
       "attributes" : { }
+    }, {
+      "id" : "7d3f6b2e-9c41-4a58-b0e2-5f1c8a9d2e01",
+      "name" : "thundermail-access",
+      "description" : "Granted by accounts once the Stalwart mailbox exists; required by the browser flow's mail-access-gate.",
+      "composite" : false,
+      "clientRole" : false,
+      "containerId" : "801d55d9-d82c-44f3-8582-f440ad1dcc26",
+      "attributes" : { }
     } ],
     "client" : {
       "stalwart" : [ ],
@@ -717,7 +725,7 @@
     "authenticationFlowBindingOverrides" : { },
     "fullScopeAllowed" : true,
     "nodeReRegistrationTimeout" : -1,
-    "defaultClientScopes" : [ "web-origins", "acr", "profile", "roles", "basic", "email", "tbpro" ],
+    "defaultClientScopes" : [ "web-origins", "acr", "profile", "roles", "basic", "email", "tbpro", "pre-provisioning-login" ],
     "optionalClientScopes" : [ "address", "phone", "offline_access", "organization", "microprofile-jwt" ]
   }, {
     "id" : "c0ffee00-0000-4000-8000-000000000abc",
@@ -851,6 +859,16 @@
     "optionalClientScopes" : [ "address", "phone", "organization", "offline_access", "microprofile-jwt" ]
   } ],
   "clientScopes" : [ {
+    "id" : "2b8e4f6a-1d37-4c95-a8f0-6e2d9b7c3a44",
+    "name" : "pre-provisioning-login",
+    "description" : "Exempts a client from the browser flow's mail-access-gate. Default scope on tb-accounts only.",
+    "protocol" : "openid-connect",
+    "attributes" : {
+      "include.in.token.scope" : "false",
+      "display.on.consent.screen" : "false"
+    },
+    "protocolMappers" : [ ]
+  }, {
     "id" : "b5d5c80c-b743-4df6-bf7f-0b30e33cb6ca",
     "name" : "profile",
     "description" : "OpenID Connect built-in scope: profile",

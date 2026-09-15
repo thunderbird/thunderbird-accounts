@@ -10,6 +10,14 @@
 # A separate top-level flow (browser-mfa-stepup) is bound rather than mutating the
 # built-in "browser" flow, so the original stays intact as a fallback (rebind browserFlow
 # to "browser" to revert).
+#
+# Thundermail provisioning gate: after authentication, `mail-access-gate` denies any client
+# without the `pre-provisioning-login` client scope when the user lacks the
+# `thundermail-access` realm role, which accounts grants once the Stalwart mailbox exists.
+# TBPRO_MAIL_GATE sets the subflow requirement: CONDITIONAL (on) or DISABLED (off). The role
+# and scope are created per environment with the Admin API; declaring `roles` or
+# `clientScopes` here would switch config-cli to managed mode and delete undeclared ones.
+# A missing role or scope evaluates to false, i.e. the gate is skipped.
 realm: tbpro
 
 # "Keep me signed in" sessions last 90 days (seconds). MFA_L1_LOA_MAX_AGE below must be
@@ -62,6 +70,19 @@ authenticatorConfig:
     config:
       loa-condition-level: "2"
       loa-max-age: "0"
+  # Both negated: deny only when the client lacks the scope AND the user lacks the role. The
+  # scope is a default scope of the accounts client only, never optional anywhere.
+  - alias: "mail access gate client scope"
+    config:
+      client_scope: pre-provisioning-login
+      negate: "true"
+  - alias: "mail access gate user role"
+    config:
+      condUserRole: thundermail-access
+      negate: "true"
+  - alias: "mail access gate deny"
+    config:
+      denyErrorMessage: thundermailNotProvisioned
 
 # Execution order within each (sub)flow matters — config-cli builds them in array order.
 authenticationFlows:
@@ -69,6 +90,22 @@ authenticationFlows:
     description: Browser flow with MFA step-up (LoA) for keycloak-mfa-rest
     providerId: basic-flow
     topLevel: true
+    builtIn: false
+    authenticationExecutions:
+      # Keycloak ignores ALTERNATIVE siblings of a REQUIRED/CONDITIONAL execution, so the
+      # alternatives live in a REQUIRED subflow and the gate follows it.
+      - flowAlias: authenticate
+        requirement: REQUIRED
+        authenticatorFlow: true
+      - flowAlias: mail-access-gate
+        requirement: "$(env:TBPRO_MAIL_GATE)"
+        authenticatorFlow: true
+
+  # Brokered logins do not return to this flow; the realm has no identity providers.
+  - alias: authenticate
+    description: cookie / identity provider / username+password with LoA step-up
+    providerId: basic-flow
+    topLevel: false
     builtIn: false
     authenticationExecutions:
       - authenticator: auth-cookie
@@ -80,6 +117,25 @@ authenticationFlows:
       - flowAlias: stepup-forms
         requirement: ALTERNATIVE
         authenticatorFlow: true
+
+  - alias: mail-access-gate
+    description: Deny login until accounts has provisioned the Thundermail mailbox
+    providerId: basic-flow
+    topLevel: false
+    builtIn: false
+    authenticationExecutions:
+      - authenticator: conditional-client-scope
+        authenticatorConfig: "mail access gate client scope"
+        requirement: REQUIRED
+        authenticatorFlow: false
+      - authenticator: conditional-user-role
+        authenticatorConfig: "mail access gate user role"
+        requirement: REQUIRED
+        authenticatorFlow: false
+      - authenticator: deny-access-authenticator
+        authenticatorConfig: "mail access gate deny"
+        requirement: REQUIRED
+        authenticatorFlow: false
 
   - alias: stepup-forms
     description: username/password + LoA step-up

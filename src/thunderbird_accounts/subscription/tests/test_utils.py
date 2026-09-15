@@ -1,6 +1,7 @@
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 from thunderbird_accounts.subscription.utils import activate_subscription_features
 import datetime
+from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.subscription.models import Plan, Product, Subscription, Transaction, SubscriptionItem, Price
 from django.conf import settings
 from thunderbird_accounts.authentication.models import User
@@ -71,22 +72,36 @@ class TestActivationSubscriptionFeatures(TestCase):
         """Test a fresh user without a stalwart account goes through our create_stalwart_account task"""
         _active_sub_item = self._create_subscription(user=self.user)
 
-        with patch(
-            'thunderbird_accounts.mail.tasks.update_quota_on_stalwart_account', Mock()
-        ) as update_quota_on_stalwart_account_mock:
-            with patch(
-                'thunderbird_accounts.mail.tasks.create_stalwart_account', Mock()
-            ) as create_stalwart_account_mock:
-                create_stalwart_account_mock.delay = Mock()
-                update_quota_on_stalwart_account_mock.delay = Mock()
-                activate_subscription_features(user=self.user, plan=self.plan)
+        with (
+            patch('thunderbird_accounts.mail.tasks.update_quota_on_stalwart_account.delay') as update_quota_mock,
+            patch('thunderbird_accounts.mail.tasks.create_stalwart_account.delay') as create_stalwart_account_mock,
+            patch('thunderbird_accounts.subscription.utils.grant_mail_access_role.delay') as grant_role_mock,
+        ):
+            activate_subscription_features(user=self.user, plan=self.plan)
 
-                update_quota_on_stalwart_account_mock.assert_not_called()
-                create_stalwart_account_mock.delay.assert_called_once_with(
-                    oidc_id=self.user.oidc_id,
-                    username=self.user.username,
-                    email=self.user.username,
-                    full_name=None,
-                    app_password=None,
-                    quota=self.plan.mail_storage_bytes,
-                )
+            update_quota_mock.assert_not_called()
+            create_stalwart_account_mock.assert_called_once_with(
+                oidc_id=self.user.oidc_id,
+                username=self.user.username,
+                email=self.user.username,
+                full_name=None,
+                app_password=None,
+                quota=self.plan.mail_storage_bytes,
+            )
+            # The mailbox does not exist yet; only the provisioning task may grant the gate role.
+            grant_role_mock.assert_not_called()
+
+    def test_existing_stalwart_account_updates_quota_and_regrants_mail_access(self):
+        _active_sub_item = self._create_subscription(user=self.user)
+        Account.objects.create(name=self.user.username, user=self.user, stalwart_id='42', quota=1)
+
+        with (
+            patch('thunderbird_accounts.mail.tasks.update_quota_on_stalwart_account.delay') as update_quota_mock,
+            patch('thunderbird_accounts.mail.tasks.create_stalwart_account.delay') as create_stalwart_account_mock,
+            patch('thunderbird_accounts.subscription.utils.grant_mail_access_role.delay') as grant_role_mock,
+        ):
+            activate_subscription_features(user=self.user, plan=self.plan)
+
+            create_stalwart_account_mock.assert_not_called()
+            update_quota_mock.assert_called_with(username=self.user.username, quota=self.plan.mail_storage_bytes)
+            grant_role_mock.assert_called_once_with(oidc_id=self.user.oidc_id)

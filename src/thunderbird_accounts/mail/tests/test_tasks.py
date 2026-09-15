@@ -5,6 +5,7 @@ from celery.exceptions import Retry
 from django.conf import settings
 from django.test import TestCase, override_settings
 
+from thunderbird_accounts.authentication.exceptions import RoleMappingError
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.celery.exceptions import RetryableExternalServiceError, TaskFailed
 from thunderbird_accounts.mail import tasks
@@ -280,8 +281,53 @@ class DeleteHostedDkimDNSRecordsTestCase(TaskTestCase):
 
 
 @override_settings(USE_MAILCHIMP=False)
+class GrantMailAccessRoleTestCase(TaskTestCase):
+    """Pins the Keycloak role grant that opens the gated browser flow for a provisioned user."""
+
+    def _role_mapping_error(self, cause: requests.RequestException) -> RoleMappingError:
+        error = RoleMappingError(error='boom', role_name=settings.KEYCLOAK_MAIL_ACCESS_ROLE, oidc_id='1234')
+        error.__cause__ = cause
+        return error
+
+    @patch('thunderbird_accounts.authentication.clients.KeycloakClient')
+    def test_grants_configured_role(self, keycloak_client_mock):
+        results = tasks.grant_mail_access_role.run(oidc_id='1234')
+
+        keycloak_client_mock.return_value.grant_realm_role.assert_called_once_with(
+            '1234', settings.KEYCLOAK_MAIL_ACCESS_ROLE
+        )
+        self.assertEqual(results['task_status'], 'success')
+
+    @patch('thunderbird_accounts.authentication.clients.KeycloakClient')
+    def test_fails_on_permanent_keycloak_error(self, keycloak_client_mock):
+        response = requests.Response()
+        response.status_code = 404
+        keycloak_client_mock.return_value.grant_realm_role.side_effect = self._role_mapping_error(
+            requests.HTTPError(response=response)
+        )
+
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.grant_mail_access_role.run(oidc_id='1234')
+
+        self.assertEqual(ex.exception.other['oidc_id'], '1234')
+        self.assertEqual(ex.exception.other['role_name'], settings.KEYCLOAK_MAIL_ACCESS_ROLE)
+
+    @patch('thunderbird_accounts.authentication.clients.KeycloakClient')
+    def test_retries_transient_keycloak_error(self, keycloak_client_mock):
+        keycloak_client_mock.return_value.grant_realm_role.side_effect = self._role_mapping_error(
+            requests.ConnectionError('keycloak unavailable')
+        )
+
+        with patch.object(tasks.grant_mail_access_role, 'retry', side_effect=Retry()) as retry:
+            with self.assertRaises(Retry):
+                tasks.grant_mail_access_role.run(oidc_id='1234')
+
+        self.assertIsInstance(retry.call_args.kwargs['exc'], RetryableExternalServiceError)
+
+
+@patch.object(tasks.grant_mail_access_role, 'delay')
 class CreateStalwartAccountTestCase(TaskTestCase):
-    def test_success(self):
+    def test_success(self, grant_role_mock):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
             mock_stalwart_pkid = 1
 
@@ -297,6 +343,14 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             mail_client_mock.return_value = instance_mock
 
             user = User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
+
+            def assert_mailbox_linked(*args, **kwargs):
+                """The role unlocks mail clients, so the Stalwart link must exist before it is queued."""
+                account = Account.objects.get(name=username_and_email)
+                self.assertEqual(str(mock_stalwart_pkid), account.stalwart_id)
+                self.assertTrue(Email.objects.filter(address=username_and_email, account=account).exists())
+
+            grant_role_mock.side_effect = assert_mailbox_linked
 
             # Run sync so can look at the task results
             task_results = tasks.create_stalwart_account.run(
@@ -321,7 +375,28 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
             self.assertEqual(mock_stalwart_pkid, task_results.get('stalwart_pkid'))
 
-    def test_success_with_existing_account_and_email(self):
+            grant_role_mock.assert_called_once_with(oidc_id)
+
+    def test_no_grant_when_stalwart_creation_fails(self, grant_role_mock):
+        with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
+            username_and_email = f'test_user@{settings.PRIMARY_EMAIL_DOMAIN}'
+            oidc_id = '1234'
+
+            instance_mock = Mock()
+            instance_mock.get_account.side_effect = AccountNotFoundError(username_and_email)
+            instance_mock.create_account.side_effect = RuntimeError('stalwart rejected the principal')
+            mail_client_mock.return_value = instance_mock
+            User.objects.create(oidc_id=oidc_id, username=username_and_email, email=username_and_email)
+
+            with self.assertRaises(RuntimeError):
+                tasks.create_stalwart_account.run(
+                    oidc_id=oidc_id, username=username_and_email, email=username_and_email
+                )
+
+            grant_role_mock.assert_not_called()
+            self.assertFalse(Account.objects.filter(name=username_and_email).exists())
+
+    def test_success_with_existing_account_and_email(self, grant_role_mock):
         """
         In case they have the reference to the stalwart account, but no actual data on stalwart's end,
         we need to make sure the stalwart account was created correctly,
@@ -385,7 +460,9 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             self.assertEqual(Email.EmailType.PRIMARY.value, email.type)
             self.assertEqual(Email.EmailType.ALIAS.value, alias.type)
 
-    def test_fail_if_account_already_exists_on_stalwart(self):
+            grant_role_mock.assert_called_once_with(oidc_id)
+
+    def test_fail_if_account_already_exists_on_stalwart(self, grant_role_mock):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
             mock_stalwart_pkid = 1
 
@@ -418,7 +495,9 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
             self.assertEqual(mock_stalwart_pkid, task_results.get('stalwart_pkid'))
 
-    def test_fail_if_account_lookup_raises_unexpected_error(self):
+            grant_role_mock.assert_not_called()
+
+    def test_fail_if_account_lookup_raises_unexpected_error(self, grant_role_mock):
         """If get_account blows up with something other than AccountNotFoundError we should fail the
         task rather than continuing on and risk creating a duplicate account."""
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
@@ -444,7 +523,7 @@ class CreateStalwartAccountTestCase(TaskTestCase):
             self.assertEqual(user.uuid, task_results.get('user_uuid'))
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
 
-    def test_creating_with_not_primary_domain(self):
+    def test_creating_with_not_primary_domain(self, grant_role_mock):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
             # Username is the app password login, and email is the primary email address
             domain = settings.ALLOWED_EMAIL_DOMAINS[1]

@@ -2,6 +2,7 @@ import datetime
 import logging
 from typing import Optional
 
+import requests
 import sentry_sdk
 from celery import shared_task
 from django.conf import settings
@@ -10,7 +11,10 @@ from django.core.exceptions import ImproperlyConfigured
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.celery.base import PatientExternalServiceTask
 from thunderbird_accounts.celery.exceptions import TaskFailed
-from thunderbird_accounts.celery.retry import retry_transient_external_service_errors
+from thunderbird_accounts.celery.retry import (
+    raise_retryable_external_service_error,
+    retry_transient_external_service_errors,
+)
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.dkim import (
     CloudflareDNSClient,
@@ -303,6 +307,40 @@ def delete_hosted_dkim_dns_records(self, domain_name: str):
 
 @shared_task(base=PatientExternalServiceTask, bind=True)
 @retry_transient_external_service_errors
+def grant_mail_access_role(self, oidc_id: str):
+    """Grant the Keycloak role that lets the user's mail clients through the provisioning gate.
+    Only enqueue once the Stalwart principal exists. A separate task so a Keycloak failure
+    retries the grant alone rather than re-running create_stalwart_account."""
+    # Circular import: authentication.clients -> mail.utils -> mail.tasks.
+    from thunderbird_accounts.authentication.clients import KeycloakClient
+    from thunderbird_accounts.authentication.exceptions import RoleMappingError
+
+    role_name = settings.KEYCLOAK_MAIL_ACCESS_ROLE
+
+    try:
+        KeycloakClient().grant_realm_role(oidc_id, role_name)
+    except RoleMappingError as ex:
+        if isinstance(ex.__cause__, requests.RequestException):
+            raise_retryable_external_service_error(ex.__cause__)
+
+        logging.error(f'[grant_mail_access_role] Error granting {role_name} to {oidc_id}: {ex}')
+        raise TaskFailed(
+            str(ex),
+            {
+                'oidc_id': oidc_id,
+                'role_name': role_name,
+            },
+        )
+
+    return {
+        'oidc_id': oidc_id,
+        'role_name': role_name,
+        'task_status': TaskReturnStatus.SUCCESS,
+    }
+
+
+@shared_task(base=PatientExternalServiceTask, bind=True)
+@retry_transient_external_service_errors
 def create_stalwart_account(
     self,
     oidc_id: str,
@@ -432,6 +470,8 @@ def create_stalwart_account(
                 'account_id': account.uuid,
             },
         )
+
+    grant_mail_access_role.delay(oidc_id)
 
     # Fire off the task to add folks to the mailing list (so we can send them a welcome email)
     if settings.USE_MAILCHIMP:

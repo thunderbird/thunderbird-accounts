@@ -214,6 +214,9 @@ services:
       KEYCLOAK_ADMIN_CLIENT_ID: "${KEYCLOAK_ADMIN_CLIENT_ID:-tb-accounts-admin}"
       KEYCLOAK_ADMIN_CLIENT_SECRET: "${KEYCLOAK_ADMIN_CLIENT_SECRET:-}"
       MFA_L1_LOA_MAX_AGE: "7776000"
+      # Thundermail provisioning gate (see keycloak/config-cli/tbpro-mfa-stepup.yaml); the
+      # realm import provides the role, scope and tb-accounts exemption. DISABLED turns it off.
+      TBPRO_MAIL_GATE: "CONDITIONAL"
     volumes:
       - "./keycloak/themes:/opt/keycloak/themes:z"
       - "./keycloak/data/export:/opt/keycloak/data/export:z"
