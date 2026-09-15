@@ -63,15 +63,11 @@
         "anErrorOccurred": "An error occurred",
         "anErrorOccurredWhileChangingDisplayName": "An error occurred while changing the display name"
       },
-      "privacyAndDataCard": {
-        "privacyAndData": "Privacy & Data",
-        "manageDevices": "Manage Devices",
-        "manageDevicesText": "See which devices are signed in. Use the button below to log out of selected devices, or log out of all devices using the link.",
-        "manageDevicesButtonLabel": "Manage devices",
-        "logoutFromAllDevicesButtonLabel": "Log out from all devices",
-        "deleteAccount": "Delete Account",
-        "deleteAccountText": "To permanently delete your Thundermail account and unsubscribe from the service, please reach out to our support team who will be able to assist you. Once your account is deleted, you will not be able to reactivate it or access your data.",
-        "deleteAccountButtonLabel": "Delete account and all data"
+      "accountDeletionCard": {
+        "heading": "Account deletion",
+        "subheading": "Permanently delete your account and associated data.",
+        "description": "To delete your Thundermail account and unsubscribe from the service, contact our support team. Once deleted, your account can’t be restored and you’ll lose access to your data.",
+        "buttonLabel": "Contact support"
       },
       "yourCurrentSubscription": {
         "yourCurrentSubscription": "Current Subscription",

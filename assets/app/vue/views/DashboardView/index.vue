@@ -2,7 +2,7 @@
 import { VisualDivider } from '@thunderbirdops/services-ui';
 import ThunderbirdApps from '@/components/ThunderbirdApps.vue';
 import AccountCard from './components/AccountCard.vue';
-import PrivacyAndDataCard from './components/PrivacyAndDataCard.vue';
+import AccountDeletionCard from './components/AccountDeletionCard.vue';
 import YourCurrentSubscription from './components/YourCurrentSubscription.vue';
 import { PADDLE_TRANSACTION_STORAGE_KEY } from '@/defines';
 
@@ -20,7 +20,7 @@ export default {
   <div class="dashboard-view">
     <div class="dashboard-view-cards">
       <account-card />
-      <privacy-and-data-card />
+      <account-deletion-card />
     </div>
 
     <visual-divider type="vertical" class="hidden-sm" />
