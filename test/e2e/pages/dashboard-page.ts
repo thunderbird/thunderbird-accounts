@@ -279,7 +279,7 @@ export class DashboardPage {
     await expect(this.getStartedSection).toContainText('Need Help?');
 
     const appPasswordLink = this.getStartedSection.getByRole('link', { name: 'app password' });
-    await expect(appPasswordLink).toHaveAttribute('href', '/dashboard');
+    await expect(appPasswordLink).toHaveAttribute('href', '#app-password-container');
 
     const supportLink = this.getStartedSection.getByRole('link', { name: 'Visit Support Article' });
     await expect(supportLink).toHaveAttribute('href', /support\.tb\.pro/);
