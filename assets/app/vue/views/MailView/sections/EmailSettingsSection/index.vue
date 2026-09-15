@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhSliders } from '@phosphor-icons/vue';
 
@@ -8,13 +7,10 @@ import CardContainer from '@/components/CardContainer.vue';
 import DetailsSummary from '@/components/DetailsSummary.vue';
 
 // Local components
-import AppPassword from '@/views/DashboardView/components/AppPassword.vue';
 import EmailAliases from './components/EmailAliases.vue';
 import ViewServerSettings from './components/ViewServerSettings.vue';
 
 const { t } = useI18n();
-
-const appPasswords = ref<string[]>(window._page?.appPasswords || []);
 </script>
 
 <script lang="ts">
@@ -26,10 +22,6 @@ export default {
 <template>
   <section id="email-settings">
     <card-container :title="t('views.mail.sections.emailSettings.emailSettings')">
-      <div class="email-settings-content">
-        <app-password :app-passwords="appPasswords" />
-      </div>
-
       <details-summary
         class="email-aliases-details-summary"
         :title="t('views.mail.sections.emailSettings.emailAliases')"
@@ -48,11 +40,6 @@ export default {
 </template>
 
 <style scoped>
-.email-settings-content {
-  margin-block-end: 2.25rem;
-  color: var(--colour-ti-secondary);
-}
-
 .email-aliases-details-summary {
   position: relative;
   margin-block-end: 2.25rem;
