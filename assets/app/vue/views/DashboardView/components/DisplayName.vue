@@ -93,7 +93,7 @@ const onCancelSetDisplayName = () => {
 <style scoped>
 .display-name-container {
   display: flex;
-  align-items: center;
+  align-items: end;
   justify-content: space-between;
 
   strong {
@@ -118,13 +118,7 @@ const onCancelSetDisplayName = () => {
 
 .fake-button-link {
   color: var(--colour-service-primary);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
   border: 0;
-  border-radius: var(--border-radius);
-  font-family: Inter, 'sans-serif';
   font-size: var(--txt-input);
   font-weight: 400;
   line-height: 1;

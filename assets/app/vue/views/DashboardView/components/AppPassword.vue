@@ -16,11 +16,8 @@ import { setAppPassword } from '../api';
 
 const { t } = useI18n();
 
-const props = defineProps<{
-  appPasswords?: string[];
-}>();
-
-const accountHasAppPasswords = ref(props.appPasswords.length > 0);
+const appPasswords = ref<string[]>(window._page?.appPasswords || []);
+const accountHasAppPasswords = ref(appPasswords.value.length > 0);
 const showPasswordForm = ref(false);
 const appPassword = ref<string>(null);
 const appPasswordConfirm = ref<string>(null);
@@ -229,6 +226,10 @@ const onCancelSetPassword = () => {
 
   .app-password-set-indicator-container {
     margin-bottom: 1rem;
+
+    strong {
+      margin-block-end: 0.5rem;
+    }
   }
 
   .success-message {

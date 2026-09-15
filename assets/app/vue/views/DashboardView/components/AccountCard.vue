@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { VisualDivider } from '@thunderbirdops/services-ui';
+import { BaseBadge, BaseBadgeTypes, VisualDivider } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 import DisplayName from './DisplayName.vue';
 import AppPassword from './AppPassword.vue';
@@ -13,8 +13,6 @@ const { t } = useI18n();
 
 // From Stalwart, primary email is always the first email address in the list
 const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
-
-const appPasswords = ref<string[]>(window._page?.appPasswords || []);
 
 const showMfa = isWaffleFlagActive(WAFFLE_FLAG.MULTI_FACTOR_AUTHENTICATION);
 const hasMfa = ref(false);
@@ -53,21 +51,27 @@ onMounted(async () => {
 
       <visual-divider />
 
-      <div class="my-account-card-field">
-        <strong>{{ t('views.dashboard.accountCard.password') }}</strong>
-        <div class="my-account-card-field-with-link-button">
-          <p>*********</p>
-          <a class="fake-button-link" href="/reset-password/">{{ t('views.dashboard.accountCard.change') }}</a>
+      <div class="my-account-card-field with-outline-button">
+        <div>
+          <strong>{{ t('views.dashboard.accountCard.password') }}</strong>
+          <p>&lowast;&lowast;&lowast;&lowast;&lowast;&lowast;&lowast;&lowast;&lowast;&lowast;&lowast;</p>
         </div>
+
+        <a class="fake-button-link" href="/reset-password/">{{ t('views.dashboard.accountCard.change') }}</a>
       </div>
 
       <template v-if="showMfa">
         <visual-divider />
 
-        <div class="my-account-card-field with-outline-button">
+        <div class="my-account-card-field with-outline-button with-badge">
           <div>
             <strong>{{ t('views.dashboard.accountCard.mfa') }}</strong>
-            <p>{{ hasMfa ? t('views.dashboard.accountCard.on') : t('views.dashboard.accountCard.off') }}</p>
+            <template v-if="hasMfa">
+              <base-badge :type="BaseBadgeTypes.Set">{{ t('views.dashboard.accountCard.enabled') }}</base-badge>
+            </template>
+            <template v-else>
+              <base-badge :type="BaseBadgeTypes.NotSet">{{ t('views.dashboard.accountCard.notSet') }}</base-badge>
+            </template>
           </div>
 
           <router-link to="/manage-mfa" class="fake-button-link">
@@ -78,7 +82,7 @@ onMounted(async () => {
 
       <visual-divider />
 
-      <app-password :app-passwords="appPasswords" />
+      <app-password />
     </div>
   </card-container>
 </template>
@@ -107,7 +111,6 @@ onMounted(async () => {
   .my-account-card-details {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
     width: 100%;
 
     .my-account-card-field {
@@ -123,19 +126,29 @@ onMounted(async () => {
         flex-direction: row;
         align-items: end;
         justify-content: space-between;
+
+        strong {
+          display: block;
+          margin-block-end: 0.25rem;
+        }
       }
 
-      .my-account-card-field-with-link-button {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-
-        button {
-          padding: 0;
+      &.with-badge {
+        strong {
+          margin-block-end: 0.5rem;
         }
+      }
+
+      button {
+        padding: 0;
       }
     }
   }
+}
+
+:deep(.divider) {
+  margin-block-start: 0.875rem;
+  margin-block-end: 1rem;
 }
 
 @media (min-width: 1024px) {

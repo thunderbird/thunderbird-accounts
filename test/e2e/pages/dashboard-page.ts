@@ -60,7 +60,7 @@ export class DashboardPage {
     this.page = page;
     this.myAccountHeading = this.page.getByRole('heading', { name: 'Account settings' });
     this.myAccountCard = this.page.locator('.my-account-card');
-    this.displayNameSection = this.myAccountCard.locator('.display-name-container');
+    this.displayNameSection = this.myAccountCard.locator('.my-account-card-field').filter({ hasText: 'Display name' });
     this.appPasswordSection = this.myAccountCard.locator('#app-password-container');
     this.privacyAndDataHeading = this.page.getByRole('heading', { name: 'Privacy & Data' });
     this.thunderbirdAppsHeading = this.page.getByRole('heading', { name: 'Thunderbird Apps' });
