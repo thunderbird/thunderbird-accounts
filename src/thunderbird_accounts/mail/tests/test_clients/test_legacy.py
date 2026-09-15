@@ -499,52 +499,63 @@ class TestMailClientDeleteDkim(TestCase):
         requests_post_mock.assert_called_once()
         self.assertEqual(
             requests_post_mock.call_args.kwargs['json'],
-            [{'type': 'clear', 'prefix': f'signature.rsa-{self.domain}.'}],
+            [{'type': 'delete', 'keys': self.signer_keys(f'rsa-{self.domain}')}],
         )
+
+    @staticmethod
+    def signer_keys(signer_id):
+        # Independent fixture for the complete v0.15 generated signer schema.
+        return [
+            f'signature.{signer_id}.{key}'
+            for key in (
+                'private-key',
+                'domain',
+                'selector',
+                'algorithm',
+                'canonicalization',
+                'headers.0',
+                'headers.1',
+                'headers.2',
+                'headers.3',
+                'headers.4',
+                'report',
+            )
+        ]
 
     @patch('requests.get')
     @patch('requests.post')
     def test_only_deletes_signers_for_exact_domain(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
-        """A substring/prefix collision in Stalwart must not delete another domain's signers."""
-        domain = 'example.com.au'
+        """Both collision directions must use exact keys, never a prefix clear."""
+        domains = ('example.com', 'example.com.au')
+        items = [
+            {'_id': f'{algorithm}-{domain}', 'domain': domain} for domain in domains for algorithm in ('ed25519', 'rsa')
+        ]
+        # v0.15 groups the longer ID's settings under the shorter ID as well.
+        items[0]['au.domain'] = domains[1]
+        items[1]['au.domain'] = domains[1]
         success_get_response = requests.Response()
         success_get_response.status_code = 200
-        success_get_response._content = bytes(
-            json.dumps(
-                {
-                    'data': {
-                        'total': 4,
-                        'items': [
-                            {
-                                '_id': 'rsa-example.com',
-                                'domain': 'example.com',
-                                'au.domain': domain,
-                            },
-                            {'_id': 'ed25519-example.com', 'domain': 'example.com'},
-                            {'_id': f'rsa-{domain}', 'domain': domain},
-                            {'_id': f'ed25519-{domain}', 'domain': domain},
-                        ],
-                    }
-                }
-            ),
-            'utf-8',
-        )
+        success_get_response._content = json.dumps({'data': {'total': 4, 'items': items}}).encode()
         requests_get_mock.return_value = success_get_response
-
         success_post_response = requests.Response()
         success_post_response.status_code = 200
         requests_post_mock.return_value = success_post_response
 
-        response = self.mail_client.delete_dkim(domain)
-
-        self.assertIs(response, success_post_response)
-        self.assertEqual(
-            requests_post_mock.call_args.kwargs['json'],
-            [
-                {'type': 'clear', 'prefix': f'signature.ed25519-{domain}.'},
-                {'type': 'clear', 'prefix': f'signature.rsa-{domain}.'},
-            ],
-        )
+        for domain in domains:
+            with self.subTest(domain=domain):
+                requests_post_mock.reset_mock()
+                response = self.mail_client.delete_dkim(domain)
+                self.assertIs(response, success_post_response)
+                requests_post_mock.assert_called_once()
+                self.assertEqual(
+                    requests_post_mock.call_args.kwargs['json'],
+                    [
+                        {
+                            'type': 'delete',
+                            'keys': self.signer_keys(f'ed25519-{domain}') + self.signer_keys(f'rsa-{domain}'),
+                        }
+                    ],
+                )
 
     @patch('requests.get')
     @patch('requests.post')
