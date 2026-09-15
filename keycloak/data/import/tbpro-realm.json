@@ -258,7 +258,7 @@
         "attributes" : { }
       } ],
       "security-admin-console" : [ ],
-      "tb-accounts" : [ ],
+      "thunderbird-accounts" : [ ],
       "admin-cli" : [ ],
       "account-console" : [ ],
       "broker" : [ {
@@ -665,7 +665,7 @@
     "optionalClientScopes" : [ "address", "phone", "offline_access", "organization", "microprofile-jwt" ]
   }, {
     "id" : "a3399033-2b8f-4ab8-ba4f-0f6874df49a9",
-    "clientId" : "tb-accounts",
+    "clientId" : "thunderbird-accounts",
     "name" : "Thunderbird Accounts",
     "description" : "",
     "rootUrl" : "http://localhost:8087/",

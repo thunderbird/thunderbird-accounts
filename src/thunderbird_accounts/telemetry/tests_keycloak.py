@@ -16,7 +16,7 @@ _EVENT_COUNTER = 0
 def _make_keycloak_event(
     event_type,
     user_id='fake-user-uuid',
-    client_id='tb-accounts',
+    client_id='thunderbird-accounts',
     event_id=None,
     details=None,
     include_client_id=True,

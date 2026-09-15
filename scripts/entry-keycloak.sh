@@ -10,7 +10,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Start Keycloak in the background so we can reconcile the managed realm configuration once
-# it's ready, then hand the foreground back to it. apply-mfa-config.sh runs
+# it's ready, then hand the foreground back to it. apply-cli-config.sh runs
 # keycloak-config-cli against the realm and is fail-soft.
 if [[ "$KC_DEV" == "yes" ]]; then
     /bin/bash /opt/keycloak/bin/kc.sh start-dev --import-realm &
@@ -22,6 +22,6 @@ KC_PID=$!
 # Forward termination so container stop stays graceful.
 trap 'kill -TERM "$KC_PID" 2>/dev/null' TERM INT
 
-/bin/bash "$SCRIPT_DIR/apply-mfa-config.sh" &
+/bin/bash "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-mfa-stepup" && "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-aud-mapper" &
 
 wait "$KC_PID"

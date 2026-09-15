@@ -701,7 +701,7 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-database-user-erIzAS
               - name: KC_BOOTSTRAP_ADMIN_PASSWORD
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/keycloak-admin-password-hpVuxn
-              # keycloak-config-cli (scripts/apply-mfa-config.sh) authenticates as the same admin
+              # keycloak-config-cli (scripts/apply-cli-config.sh) authenticates as the same admin
               # service-account client the accounts app uses, to reconcile the MFA step-up flow.
               - *SECRET_KEYCLOAK_ADMIN_CLIENT_ID
               - *SECRET_KEYCLOAK_ADMIN_CLIENT_SECRET

@@ -69,7 +69,7 @@ jobs:
               - 'package.json'
               - 'package-lock.json'
               - 'scripts/entry-keycloak.sh'
-              - 'scripts/apply-mfa-config.sh'
+              - 'scripts/apply-cli-config.sh'
 
       - name: Get version from pyproject.toml
         id: read-version
