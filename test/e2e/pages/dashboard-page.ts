@@ -9,7 +9,6 @@ import {
   DASHBOARD_CURRENT_SUBSCRIPTION_SEND_STORAGE,
   PADDLE_HOST,
   TIMEOUT_2_SECONDS,
-  TIMEOUT_3_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
   TIMEOUT_60_SECONDS,
@@ -17,6 +16,7 @@ import {
 import { waitForVueApp } from '../utils/utils';
 
 interface ServiceUrls {
+  mail: string;
   appointment: string;
   send: string;
 }
@@ -24,8 +24,8 @@ interface ServiceUrls {
 type PopupPageAssertion = {
   link: Locator;
   expectedUrl: string;
-  expectedElementName: string;
-  expectedElement: (page: Page) => Locator;
+  expectedElementName?: string;
+  expectedElement?: (page: Page) => Locator;
   beforeExpectedElements?: Array<{
     expectedElementName: string;
     expectedElement: (page: Page) => Locator;
@@ -60,7 +60,7 @@ export class DashboardPage {
     this.page = page;
     this.myAccountHeading = this.page.getByRole('heading', { name: 'Account settings' });
     this.myAccountCard = this.page.locator('.my-account-card');
-    this.displayNameSection = this.myAccountCard.locator('.my-account-card-field').filter({ hasText: 'Display name' });
+    this.displayNameSection = this.myAccountCard.locator('.display-name-container');
     this.appPasswordSection = this.myAccountCard.locator('#app-password-container');
     this.privacyAndDataHeading = this.page.getByRole('heading', { name: 'Privacy & Data' });
     this.thunderbirdAppsHeading = this.page.getByRole('heading', { name: 'Thunderbird Apps' });
@@ -69,7 +69,7 @@ export class DashboardPage {
     this.passwordChangeLink = this.page.locator('a[href="/reset-password/"]');
     this.updatePasswordHeader = this.page.getByRole('heading', { name: 'Update password' });
     this.deleteAccountLink = this.page.getByRole('link', { name: 'Delete account and all data' });
-    this.thundermailLink = this.page.locator('.service-icon-link[href="/mail"]').filter({ hasText: 'Thundermail' });
+    this.thundermailLink = this.page.locator('.service-icon-link').filter({ hasText: 'Mail' });
     this.appointmentLink = this.page.locator('.service-icon-link').filter({ hasText: 'Appointment' });
     this.sendLink = this.page.locator('.service-icon-link').filter({ hasText: 'Send' });
     this.manageSubscriptionButton = this.page.getByRole('button', { name: 'Manage Subscription' });
@@ -134,21 +134,13 @@ export class DashboardPage {
     await this.verifyContactScreenDisplayed();
   }
 
-  async verifyThundermailNavigation() {
-    await this.thundermailLink.scrollIntoViewIfNeeded();
-    await this.thundermailLink.click();
-    await this.page.waitForTimeout(TIMEOUT_3_SECONDS);
-    await this.waitForPageToSettle();
-    await expect.poll(async () => new URL(this.page.url()).pathname).toBe('/mail');
-    await expect(this.page.getByRole('heading', { name: 'Get started with Thundermail' })).toBeVisible({
-      timeout: TIMEOUT_30_SECONDS,
-    });
-  }
-
   async verifyServiceAppsLoadAfterNavigation() {
     const serviceUrls = await this.getConfiguredServiceUrls();
-    // Thundermail is an internal Accounts route and reuses the current page, while
-    // Appointment and Send are configured external services that open in popups.
+    // Mail, Appointment and Send are all configured external services that open in popups.
+    await this.verifyPopupServiceAppLoads({
+      link: this.thundermailLink,
+      expectedUrl: serviceUrls.mail,
+    });
     await this.verifyPopupServiceAppLoads({
       link: this.appointmentLink,
       expectedUrl: serviceUrls.appointment,
@@ -227,6 +219,7 @@ export class DashboardPage {
 
   private async getConfiguredServiceUrls(): Promise<ServiceUrls> {
     return await this.page.evaluate(() => ({
+      mail: (window as any)._page?.webmailUrl,
       appointment: (window as any)._page?.tbProAppointmentUrl,
       send: (window as any)._page?.tbProSendUrl,
     }));
@@ -258,10 +251,12 @@ export class DashboardPage {
         `${beforeExpectedElement.expectedElementName} should be visible after navigating to ${expectedUrl}`,
       ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
     }
-    await expect(
-      expectedElement(popup),
-      `${expectedElementName} should be visible after navigating to ${expectedUrl}`,
-    ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
+    if (expectedElement) {
+      await expect(
+        expectedElement(popup),
+        `${expectedElementName} should be visible after navigating to ${expectedUrl}`,
+      ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
+    }
     await popup.close();
   }
 }

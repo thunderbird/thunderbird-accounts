@@ -40,9 +40,6 @@ test.describe('dashboard controls on desktop browser', {
     await dashboardPage.verifyDeleteAccountNavigationOnly();
     await dashboardPage.navigateToDashboard();
 
-    await dashboardPage.verifyThundermailNavigation();
-    await dashboardPage.navigateToDashboard();
-
     await dashboardPage.verifyServiceAppsLoadAfterNavigation();
     await dashboardPage.verifyManageSubscriptionOpensPortal();
     await dashboardPage.verifyUserMenuControls();
