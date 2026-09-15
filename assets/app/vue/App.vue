@@ -4,10 +4,18 @@ import TrafficBanner from '@/components/TrafficBanner.vue';
 import FooterBar from '@/components/FooterBar.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { SERVER_MESSAGE_LEVEL } from '@/types';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
+import { isStorageBlocked } from '@/utils';
 
+const { t } = useI18n();
 const serverMessages = ref(window._page?.serverMessages ?? []);
+
+// When the browser blocks cookies/storage the user cannot authenticate, so
+// tell them to enable cookies instead of leaving the app quietly broken.
+// Checked once at setup; no reactivity needed.
+const cookiesBlocked = isStorageBlocked();
 const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
   switch (level) {
     case SERVER_MESSAGE_LEVEL.ERROR:
@@ -41,11 +49,24 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- Rendered outside the app-template branch so a cookie-blocked user sees it
+       everywhere, including unauthenticated routes (sign-up, error, 404) that
+       use the bare router-view below. -->
+  <section class="server-messages cookies-blocked" v-if="cookiesBlocked">
+    <notice-bar
+      class="server-message"
+      data-testid="cookies-disabled-notice"
+      :type="NoticeBarTypes.Critical"
+    >
+      {{ t('cookiesDisabled.message') }}
+    </notice-bar>
+  </section>
+
   <div class="page-container" v-if="route?.meta?.useAppTemplate ?? true">
     <traffic-banner />
     <header-bar />
 
-    <section class="server-messages" v-if="serverMessages !== null">
+    <section class="server-messages" v-if="serverMessages.length">
       <template v-for="message in serverMessages" :key="message.message">
         <notice-bar
           class="server-message"

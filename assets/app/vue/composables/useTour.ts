@@ -1,4 +1,5 @@
 import { ref, computed, watch, nextTick } from 'vue';
+import { safeGetStorageItem, safeSetStorageItem } from '@/utils';
 
 export const FTUE_STEPS = {
   INITIAL: 0,
@@ -25,13 +26,12 @@ interface StepConfig {
 const FTUE_STORAGE_KEY = 'tb_accounts_ftue_completed';
 const TOUR_CARD_SELECTOR = '[data-tour-card]';
 
-// Get the initial state of the FTUE from localStorage or return true if not available
+// Get the initial state of the FTUE from localStorage or return true if not
+// available. safeGetStorageItem never throws: when the browser blocks storage
+// the localStorage getter itself raises a SecurityError, and this runs at
+// bundle-boot module scope, so an unguarded read would crash the whole app.
 const getInitialState = () => {
-  if (typeof localStorage !== 'undefined') {
-    return localStorage.getItem(FTUE_STORAGE_KEY) !== 'true';
-  }
-
-  return true;
+  return safeGetStorageItem(FTUE_STORAGE_KEY) !== 'true';
 };
 
 const currentStep = ref<FtueStepId>(FTUE_STEPS.INITIAL);
@@ -58,9 +58,7 @@ watch(showFTUE, (value) => {
 
   document.removeEventListener('keydown', onEscapeKey);
 
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(FTUE_STORAGE_KEY, 'true');
-  }
+  safeSetStorageItem(FTUE_STORAGE_KEY, 'true');
 }, { immediate: true });
 
 export const useTour = () => {

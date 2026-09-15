@@ -5,9 +5,12 @@ import AccountCard from './components/AccountCard.vue';
 import PrivacyAndDataCard from './components/PrivacyAndDataCard.vue';
 import YourCurrentSubscription from './components/YourCurrentSubscription.vue';
 import { PADDLE_TRANSACTION_STORAGE_KEY } from '@/defines';
+import { safeRemoveStorageItem } from '@/utils';
 
 // Just in case, attempt to empty the stored Paddle transaction id here too.
-window.localStorage?.removeItem(PADDLE_TRANSACTION_STORAGE_KEY);
+// safeRemoveStorageItem never throws: optional chaining does not help when the
+// browser blocks storage, because the window.localStorage getter itself throws.
+safeRemoveStorageItem(PADDLE_TRANSACTION_STORAGE_KEY);
 </script>
 
 <script lang="ts">
