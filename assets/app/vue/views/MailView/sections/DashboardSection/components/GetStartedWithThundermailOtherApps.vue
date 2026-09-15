@@ -15,7 +15,7 @@ const { t } = useI18n();
     <action-card :title="t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.title')">
       <i18n-t keypath="views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.description" tag="p">
         <template #appPassword>
-          <a href="#app-password-container" class="app-password-link">{{ t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.appPassword') }}</a>
+          <router-link to="/dashboard" class="app-password-link">{{ t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.appPassword') }}</router-link>
         </template>
       </i18n-t>
     </action-card>

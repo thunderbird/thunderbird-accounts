@@ -6,7 +6,6 @@ import {
   BaseBadgeTypes,
   NoticeBar,
   NoticeBarTypes,
-  LinkButton,
   PrimaryButton,
   TextInput,
   ToolTip,
@@ -17,11 +16,8 @@ import { setAppPassword } from '../api';
 
 const { t } = useI18n();
 
-const props = defineProps<{
-  appPasswords?: string[];
-}>();
-
-const accountHasAppPasswords = ref(props.appPasswords.length > 0);
+const appPasswords = ref<string[]>(window._page?.appPasswords || []);
+const accountHasAppPasswords = ref(appPasswords.value.length > 0);
 const showPasswordForm = ref(false);
 const appPassword = ref<string>(null);
 const appPasswordConfirm = ref<string>(null);
@@ -36,7 +32,7 @@ const resetPasswordForm = () => {
   appPassword.value = null;
   appPasswordConfirm.value = null;
   showPasswordForm.value = false;
-}
+};
 
 const onSetPasswordSubmit = async () => {
   if (isSubmitting.value) return;
@@ -60,7 +56,7 @@ const onSetPasswordSubmit = async () => {
 
       successMessage.value = t('views.mail.sections.emailSettings.passwordSetSuccessfully');
 
-      window._page.appPasswords = [...window?._page?.appPasswords ?? [], label];
+      window._page.appPasswords = [...(window?._page?.appPasswords ?? []), label];
       accountHasAppPasswords.value = window._page.appPasswords.length > 0;
     } else {
       errorMessage.value = data.error || t('views.mail.sections.emailSettings.anErrorOccurred');
@@ -79,9 +75,7 @@ const onCancelSetPassword = () => {
 </script>
 
 <template>
-  <div id="app-password-container" class="app-password-side-container">
-    <div id="tour-target-app-passwords" />
-
+  <div id="app-password-container" class="app-password-details">
     <div class="app-password-set-indicator-container">
       <strong>{{ t('views.mail.sections.emailSettings.appPassword') }}:</strong>
       <template v-if="accountHasAppPasswords">
@@ -113,7 +107,9 @@ const onCancelSetPassword = () => {
           <tool-tip :alt="t('views.mail.sections.emailSettings.createPasswordTooltip')">
             <i18n-t keypath="views.mail.sections.emailSettings.createPasswordTooltip" tag="span">
               <template #supportUrl>
-                <a :href="APP_PASSWORD_SUPPORT_URL" target="_blank">{{ t('views.mail.sections.emailSettings.appPasswordArticleTitle') }}</a>
+                <a :href="APP_PASSWORD_SUPPORT_URL" target="_blank">{{
+                  t('views.mail.sections.emailSettings.appPasswordArticleTitle')
+                }}</a>
               </template>
             </i18n-t>
           </tool-tip>
@@ -124,8 +120,11 @@ const onCancelSetPassword = () => {
     <notice-bar :type="NoticeBarTypes.Success" v-if="successMessage" class="success-message">
       {{ successMessage }}
       <template v-slot:cta>
-        <button class="close-button" @click="successMessage = null"
-          :aria-label="$t('views.mail.sections.emailSettings.close')">
+        <button
+          class="close-button"
+          @click="successMessage = null"
+          :aria-label="$t('views.mail.sections.emailSettings.close')"
+        >
           <ph-x size="24" />
         </button>
       </template>
@@ -135,53 +134,64 @@ const onCancelSetPassword = () => {
       <form ref="appPasswordFormRef" @submit.prevent="onSetPasswordSubmit">
         <input type="hidden" name="name" :value="userEmail" />
 
-        <text-input v-model="appPassword" name="password" type="password"
-          data-testid="app-passwords-add-password-input">
+        <text-input
+          v-model="appPassword"
+          name="password"
+          type="password"
+          data-testid="app-passwords-add-password-input"
+        >
           {{ t('views.mail.sections.emailSettings.newPassword') }}:
         </text-input>
 
-        <text-input v-model="appPasswordConfirm" name="password-confirm" type="password"
-          data-testid="app-passwords-add-password-confirm-input">
+        <text-input
+          v-model="appPasswordConfirm"
+          name="password-confirm"
+          type="password"
+          data-testid="app-passwords-add-password-confirm-input"
+        >
           {{ t('views.mail.sections.emailSettings.confirmPassword') }}:
         </text-input>
 
         <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">
           {{ errorMessage }}
           <template v-slot:cta>
-            <button class="close-button" @click="errorMessage = null"
-              :aria-label="$t('views.mail.sections.emailSettings.close')">
+            <button
+              class="close-button"
+              @click="errorMessage = null"
+              :aria-label="$t('views.mail.sections.emailSettings.close')"
+            >
               <ph-x size="24" />
             </button>
           </template>
         </notice-bar>
 
         <div class="set-password-buttons-container">
-          <primary-button type="button" @click="onSetPasswordSubmit" :disabled="isSubmitting" data-testid="app-passwords-add-btn">
+          <primary-button variant="outline" @click="onCancelSetPassword" :disabled="isSubmitting"
+            >{{ t('views.mail.sections.emailSettings.cancel') }}
+          </primary-button>
+          <primary-button @click="onSetPasswordSubmit" :disabled="isSubmitting" data-testid="app-passwords-add-btn">
             {{
               isSubmitting ? t('views.mail.sections.emailSettings.saving') : t('views.mail.sections.emailSettings.save')
             }}
           </primary-button>
-          <link-button type="button" @click="onCancelSetPassword" :disabled="isSubmitting">{{
-            t('views.mail.sections.emailSettings.cancel') }}
-          </link-button>
         </div>
       </form>
     </template>
     <template v-else-if="appPasswords.length > 0">
       <primary-button variant="outline" @click="showPasswordForm = true">{{
         t('views.mail.sections.emailSettings.changePasswordButtonLabel')
-        }}</primary-button>
+      }}</primary-button>
     </template>
     <template v-else>
       <primary-button variant="outline" @click="showPasswordForm = true">{{
         t('views.mail.sections.emailSettings.createPasswordButtonLabel')
-        }}</primary-button>
+      }}</primary-button>
     </template>
   </div>
 </template>
 
 <style scoped>
-.app-password-side-container {
+.app-password-details {
   p {
     display: flex;
     align-items: center;
@@ -216,6 +226,10 @@ const onCancelSetPassword = () => {
 
   .app-password-set-indicator-container {
     margin-bottom: 1rem;
+
+    strong {
+      margin-block-end: 0.5rem;
+    }
   }
 
   .success-message {

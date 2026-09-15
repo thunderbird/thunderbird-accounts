@@ -38,6 +38,8 @@ export class DashboardPage {
   readonly page: Page;
   readonly myAccountHeading: Locator;
   readonly myAccountCard: Locator;
+  readonly displayNameSection: Locator;
+  readonly appPasswordSection: Locator;
   readonly privacyAndDataHeading: Locator;
   readonly thunderbirdAppsHeading: Locator;
   readonly currentSubscriptionHeading: Locator;
@@ -56,11 +58,13 @@ export class DashboardPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.myAccountHeading = this.page.getByRole('heading', { name: 'My Account' });
+    this.myAccountHeading = this.page.getByRole('heading', { name: 'Account settings' });
     this.myAccountCard = this.page.locator('.my-account-card');
+    this.displayNameSection = this.myAccountCard.locator('.my-account-card-field').filter({ hasText: 'Display name' });
+    this.appPasswordSection = this.myAccountCard.locator('#app-password-container');
     this.privacyAndDataHeading = this.page.getByRole('heading', { name: 'Privacy & Data' });
     this.thunderbirdAppsHeading = this.page.getByRole('heading', { name: 'Thunderbird Apps' });
-    this.currentSubscriptionHeading = this.page.getByRole('heading', { name: 'Your Current Subscription' });
+    this.currentSubscriptionHeading = this.page.getByRole('heading', { name: 'Current Subscription' });
     this.currentSubscriptionSection = this.page.locator('section').filter({ has: this.currentSubscriptionHeading });
     this.passwordChangeLink = this.page.locator('a[href="/reset-password/"]');
     this.updatePasswordHeader = this.page.getByRole('heading', { name: 'Update password' });
@@ -115,6 +119,9 @@ export class DashboardPage {
     await expect(this.appointmentLink).toBeVisible();
     await expect(this.sendLink).toBeVisible();
     await expect(this.manageSubscriptionButton).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+
+    await this.verifyDisplayNameFormOpensAndCancels();
+    await this.verifyAppPasswordFormOpensAndCancels();
 }
 
   async verifyPasswordChangeNavigation() {
@@ -184,6 +191,26 @@ export class DashboardPage {
 
     await this.supportLink.click();
     await this.verifyContactScreenDisplayed();
+  }
+
+  private async verifyDisplayNameFormOpensAndCancels() {
+    await expect(this.displayNameSection).toContainText('Display name');
+    await this.displayNameSection.getByRole('button', { name: 'Change' }).click();
+    await expect(this.displayNameSection.getByTestId('display-name-input')).toBeVisible();
+    await expect(this.displayNameSection.getByRole('button', { name: 'Save' })).toBeVisible();
+    await this.displayNameSection.getByRole('button', { name: 'Cancel' }).click();
+    await expect(this.displayNameSection.getByTestId('display-name-input')).not.toBeVisible();
+  }
+
+  private async verifyAppPasswordFormOpensAndCancels() {
+    await expect(this.appPasswordSection).toContainText('App Password');
+    await expect(this.appPasswordSection).toContainText(/Set|Not set/);
+    await this.appPasswordSection.getByRole('button', { name: /^(Create|Change) app password$/ }).click();
+    await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-input')).toBeVisible();
+    await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-confirm-input')).toBeVisible();
+    await expect(this.appPasswordSection.getByRole('button', { name: 'Save' })).toBeVisible();
+    await this.appPasswordSection.getByRole('button', { name: 'Cancel' }).click();
+    await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-input')).not.toBeVisible();
   }
 
   private async verifyContactScreenDisplayed() {

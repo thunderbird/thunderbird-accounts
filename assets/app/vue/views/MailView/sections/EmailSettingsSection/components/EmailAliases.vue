@@ -257,7 +257,7 @@ const onDeleteAliasError = (error: string) => {
     }
   }
 
-  /* Stolen from AppPasswordSide, this should really be in tooltip itself though. */
+  /* Stolen from AppPassword, this should really be in tooltip itself though. */
   .info-tooltip-trigger {
     position: relative;
     display: inline-flex;
