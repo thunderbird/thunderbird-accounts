@@ -68,7 +68,7 @@ export default {
         <brand-button form-action="submit" data-testid="submit-button" class="submit" :disabled="submitDisabled"
           @click.prevent="onSubmit()">
           <template #iconRight>
-            <ph-arrow-right size="20" />
+            <ph-arrow-right size="20" aria-hidden="true" />
           </template>
           {{ submitTitle || $t('views.mail.views.signUp.continue') }}
         </brand-button>

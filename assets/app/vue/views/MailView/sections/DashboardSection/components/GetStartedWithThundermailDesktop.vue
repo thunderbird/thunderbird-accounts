@@ -72,7 +72,7 @@ export default {
         <p class="error-message" v-if="error">{{ error }}</p>
 
         <template #icon>
-          <ph-arrow-square-out :size="20" />
+          <ph-arrow-square-out :size="20" aria-hidden="true" />
         </template>
         <template #action>
           <div class="connect-action" ref="connectAction">
@@ -116,7 +116,7 @@ export default {
       :description="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.downloadDescription')"
     >
       <template #icon>
-        <ph-download-simple :size="20" />
+        <ph-download-simple :size="20" aria-hidden="true" />
       </template>
       <template #action>
         <primary-button

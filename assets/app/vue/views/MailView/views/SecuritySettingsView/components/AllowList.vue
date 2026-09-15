@@ -47,7 +47,7 @@ const onShowMore = () => {
 <template>
   <details-summary :title="t('views.mail.views.securitySettings.allowList')" :expandable="false" default-open>
     <template #icon>
-      <ph-shield-check size="24" />
+      <ph-shield-check size="24" aria-hidden="true" />
     </template>
 
     <p>{{ t('views.mail.views.securitySettings.allowListDescription') }}</p>
@@ -66,8 +66,8 @@ const onShowMore = () => {
       <div class="allow-list-item" v-for="item in allowListItems" :key="item.id">
         <p>{{ item.email }}</p>
 
-        <button class="remove-from-allow-list-button" @click="onRemoveFromAllowList(item.id)" v-show="isManagingAllowList">
-          <ph-x size="16" />
+        <button class="remove-from-allow-list-button" @click="onRemoveFromAllowList(item.id)" v-show="isManagingAllowList" :aria-label="t('views.mail.views.securitySettings.removeFromAllowList')">
+          <ph-x size="16" aria-hidden="true" />
         </button>
       </div>
 

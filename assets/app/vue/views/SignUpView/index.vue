@@ -78,7 +78,7 @@ export default {
 
             <template #cta>
               <button :title="t('views.error.dismiss')" class="close-button" @click="errorMessage = null">
-                <ph-x size="16" />
+                <ph-x size="16" aria-hidden="true" />
               </button>
             </template>
           </notice-bar>

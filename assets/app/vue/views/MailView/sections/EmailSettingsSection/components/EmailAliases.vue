@@ -109,7 +109,7 @@ const onDeleteAliasError = (error: string) => {
           }) }}
           <aside aria-labelledby="catch-all-tooltip" class="info-tooltip-trigger" tabindex="0"
             v-if="catchAlls.length >= customDomains.length">
-            <ph-info size="13" />
+            <ph-info size="13" aria-hidden="true" />
             <tool-tip id="catch-all-tooltip" :alt="t('views.mail.sections.emailSettings.catchAllTooltip')">
               <i18n-t keypath="views.mail.sections.emailSettings.catchAllTooltip" tag="span">
                 <template #supportUrl>
@@ -158,8 +158,8 @@ const onDeleteAliasError = (error: string) => {
       <p>{{ errorMessage }}</p>
 
       <template #cta>
-        <button @click="errorMessage = null">
-          <ph-x size="16" />
+        <button @click="errorMessage = null" :aria-label="t('views.mail.sections.emailSettings.close')">
+          <ph-x size="16" aria-hidden="true" />
         </button>
       </template>
     </notice-bar>

@@ -23,7 +23,7 @@ const { t } = useI18n();
     <!-- Manual Configuration -->
     <action-card :title="t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.manualConfigurationTitle')">
       <template #icon>
-        <ph-gear :size="20" />
+        <ph-gear :size="20" aria-hidden="true" />
       </template>
 
       <server-settings-card is-manual-configuration-section :show-footer=false />
@@ -35,14 +35,14 @@ const { t } = useI18n();
       :description="t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.needHelpDescription')"
     >
       <template #icon>
-        <ph-lifebuoy :size="20" />
+        <ph-lifebuoy :size="20" aria-hidden="true" />
       </template>
       <template #action>
         <link-button size="small" :href="OTHER_APPS_SUPPORT_URL" target="_blank" class="need-help-button">
           {{ t('views.mail.sections.dashboard.getStartedWithThundermail.otherAppsPanel.needHelpButtonLabel') }}
 
           <template #iconRight>
-            <ph-arrow-right :size="16" />
+            <ph-arrow-right :size="16" aria-hidden="true" />
           </template>
         </link-button>
       </template>

@@ -42,7 +42,7 @@ const signOut = (id: number) => {
 <template>
   <details-summary :title="t('views.mail.views.securitySettings.accountActivity')" :expandable="false" default-open>
     <template #icon>
-      <ph-devices size="24" />
+      <ph-devices size="24" aria-hidden="true" />
     </template>
 
     <template v-if="accountActivityRecords.length > 0">

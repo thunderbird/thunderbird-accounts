@@ -42,26 +42,26 @@ const copyValue = async (value: string | number) => {
 
     <div class="server-detail-item">
       <div class="server-detail-item-label">
-        <ph-database size="16" />
+        <ph-database size="16" aria-hidden="true" />
         <strong>{{ t('views.mail.sections.dashboard.server') }}</strong>
       </div>
       <div class="server-detail-item-value">
         <span>{{ details.server }}</span>
         <button type="button" class="copy-btn" @click="copyValue(details.server)" :aria-label="t('views.mail.sections.dashboard.copyServer')">
-          <ph-copy-simple size="12" />
+          <ph-copy-simple size="12" aria-hidden="true" />
         </button>
       </div>
     </div>
 
     <div class="server-detail-item">
       <div class="server-detail-item-label">
-        <ph-shield-check size="16" />
+        <ph-shield-check size="16" aria-hidden="true" />
         <strong>{{ t('views.mail.sections.dashboard.port') }}</strong>
       </div>
       <div class="server-detail-item-value">
         <span>{{ details.port }}</span>
         <button type="button" class="copy-btn" @click="copyValue(details.port)" :aria-label="t('views.mail.sections.dashboard.copyPort')">
-          <ph-copy-simple size="12" />
+          <ph-copy-simple size="12" aria-hidden="true" />
         </button>
       </div>
     </div>

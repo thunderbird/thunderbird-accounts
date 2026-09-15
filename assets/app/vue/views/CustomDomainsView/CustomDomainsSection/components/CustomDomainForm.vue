@@ -663,8 +663,8 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
       <p>{{ t('views.mail.sections.customDomains.verifyStepInfoDescription') }}</p>
 
       <template #cta>
-        <button class="close-button" @click="showNoticeBar = false">
-          <ph-x size="24" />
+        <button class="close-button" @click="showNoticeBar = false" :aria-label="t('views.mail.sections.customDomains.dismissNotice')">
+          <ph-x size="24" aria-hidden="true" />
         </button>
       </template>
     </notice-bar> -->
