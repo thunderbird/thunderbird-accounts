@@ -15,17 +15,20 @@
     "prod-nightly-tests-mobile-browserstack-android-chrome": "npx browserstack-node-sdk playwright test --grep prod-mobile-nightly --project=android-chrome --browserstack.buildName 'TB Accounts Nightly Tests Android Chrome' --browserstack.config 'browserstack-mobile-nightly.yml'",
     "prod-nightly-tests-mobile-browserstack-ios-safari": "npx browserstack-node-sdk playwright test --grep prod-mobile-nightly --project=ios-safari --browserstack.buildName 'TB Accounts Nightly Tests iOS Safari' --browserstack.config 'browserstack-mobile-nightly.yml'",
     "deployment-analysis-e2e": "npx playwright test --grep deployment-analysis --project=firefox",
-    "deployment-analysis-e2e-headed": "npx playwright test --grep deployment-analysis --project=firefox --headed",
-    "postinstall": "npm update browserstack-node-sdk"
+    "deployment-analysis-e2e-headed": "npx playwright test --grep deployment-analysis --project=firefox --headed"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
+  "overrides": {
+    "js-yaml@^3": "3.15.2",
+    "js-yaml@^4": "4.3.2"
+  },
   "devDependencies": {
     "@playwright/test": "1.59.1",
     "@types/node": "^24.10.1",
-    "browserstack-node-sdk": "1.52.3",
+    "browserstack-node-sdk": "1.70.1",
     "dotenv": "16.6.1",
     "form-data": ">=4.0.4",
     "tmp": ">=0.2.4"
