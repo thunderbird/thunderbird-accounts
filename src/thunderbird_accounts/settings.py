@@ -584,6 +584,11 @@ INCOMPLETE_SIGNUP_PURGE_HOURS = int(os.getenv('INCOMPLETE_SIGNUP_PURGE_HOURS', '
 
 KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS = int(os.getenv('KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS', '900'))
 
+# Thundermail provisioning gate (keycloak/config-cli/tbpro-mfa-stepup.yaml): the realm role
+# granted once the Stalwart mailbox exists, and the client scope exempting the accounts client.
+KEYCLOAK_MAIL_ACCESS_ROLE = 'thundermail-access'
+KEYCLOAK_PRE_PROVISIONING_SCOPE = 'pre-provisioning-login'
+
 POSTHOG_API_KEY = os.getenv('POSTHOG_API_KEY')
 POSTHOG_HOST = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com')
 POSTHOG_NO_SUBSCRIPTION_STATUS = 'none'

@@ -150,6 +150,23 @@ class DeleteUserError(KeycloakError):
         return f'DeleteUserError: {self.error} for {self.oidc_id}'
 
 
+class RoleMappingError(KeycloakError):
+    """Realm role lookup or mapping failed; ``__cause__`` is the original ``RequestException``."""
+
+    oidc_id: Optional[str]
+    role_name: str
+    error: str
+
+    def __init__(self, error, role_name: str, oidc_id: Optional[str] = None, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.role_name = role_name
+        self.oidc_id = oidc_id
+        self.error = error
+
+    def __str__(self):
+        return f'RoleMappingError: {self.error} for role {self.role_name} <keycloak-id:{self.oidc_id}>'
+
+
 class SendExecuteActionsEmailError(KeycloakError):
     oidc_id: Optional[str] = None
     action: str

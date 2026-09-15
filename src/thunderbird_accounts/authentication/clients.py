@@ -2,7 +2,7 @@ import enum
 import json
 import datetime
 from typing import Optional, TypedDict
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 import requests
 import sentry_sdk
@@ -17,6 +17,7 @@ from thunderbird_accounts.authentication.exceptions import (
     MfaCredentialError,
     MfaSessionExpiredError,
     MfaStepUpRequiredError,
+    RoleMappingError,
     SendExecuteActionsEmailError,
     UpdateUserError,
     DeleteUserError,
@@ -92,7 +93,8 @@ class KeycloakClient:
         """Handles authenticated requests to the keycloak api
         Endpoint should not have a leading slash to prevent urljoin from trimming the admin API base URL.
         :raises RequestException: On non-200 responses. You can access the response object from the exception."""
-        if not self.access_token:
+        token_was_cached = bool(self.access_token)
+        if not token_was_cached:
             self.access_token = self._get_access_token()
 
         # TODO: Consider raising a value error instead of fixing
@@ -101,18 +103,27 @@ class KeycloakClient:
 
         url = urljoin(settings.KEYCLOAK_API_ENDPOINT, endpoint)
 
-        response = requests.request(
-            method=method.value,
-            url=url,
-            params=params,
-            json=json_data,
-            data=data,
-            headers={
-                'Accept': 'application/json',
-                'Content-Type': content_type,
-                'Authorization': f'Bearer {self.access_token}',
-            },
-        )
+        def send():
+            return requests.request(
+                method=method.value,
+                url=url,
+                params=params,
+                json=json_data,
+                data=data,
+                headers={
+                    'Accept': 'application/json',
+                    'Content-Type': content_type,
+                    'Authorization': f'Bearer {self.access_token}',
+                },
+            )
+
+        response = send()
+
+        # The service-account token is cached for the client's lifetime and outlives its
+        # expiry during long-running commands; re-authenticate once and replay the request.
+        if response.status_code == 401 and token_was_cached:
+            self.access_token = self._get_access_token()
+            response = send()
 
         response.raise_for_status()
         return response
@@ -176,6 +187,70 @@ class KeycloakClient:
             )
 
         return True
+
+    def _role_request(
+        self,
+        endpoint: str,
+        method: RequestMethods,
+        role_name: str,
+        oidc_id: Optional[str] = None,
+        **kwargs,
+    ) -> requests.Response:
+        """Admin API request whose failure is reported as a RoleMappingError (cause preserved).
+
+        :raises RoleMappingError: If the request fails."""
+        try:
+            return self.request(endpoint, method, **kwargs)
+        except RequestException as exc:
+            sentry_sdk.capture_exception(exc)
+            if exc.response is not None:
+                error = f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
+            else:
+                error = f'Error<{exc}>: No response!'
+            raise RoleMappingError(error=error, role_name=role_name, oidc_id=oidc_id) from exc
+
+    def get_realm_role(self, role_name: str) -> dict:
+        """Return the realm role representation; 404 raises RoleMappingError."""
+        return self._role_request(f'roles/{quote(role_name, safe="")}', RequestMethods.GET, role_name).json()
+
+    def get_realm_role_member_ids(self, role_name: str, page_size: int = 100) -> set[str]:
+        """Return the ids of every user the realm role is mapped onto directly."""
+        member_ids: set[str] = set()
+        first = 0
+        while True:
+            page = self._role_request(
+                f'roles/{quote(role_name, safe="")}/users',
+                RequestMethods.GET,
+                role_name,
+                params={'first': first, 'max': page_size, 'briefRepresentation': 'true'},
+            ).json()
+            member_ids.update(user['id'] for user in page)
+            if len(page) < page_size:
+                return member_ids
+            first += page_size
+
+    def grant_realm_role(self, oidc_id: str, role_name: str, role: Optional[dict] = None) -> None:
+        """Map the realm role onto the user; repeating an existing mapping is a no-op in Keycloak.
+        ``role`` (from get_realm_role) skips the lookup when granting in bulk."""
+        role = role or self.get_realm_role(role_name)
+        self._role_request(
+            f'users/{oidc_id}/role-mappings/realm',
+            RequestMethods.POST,
+            role_name,
+            oidc_id,
+            json_data=[{'id': role['id'], 'name': role['name']}],
+        )
+
+    def get_client_default_scope_names(self, client_id: str) -> Optional[list[str]]:
+        """Return the default client scope names of the client with this ``clientId``, or None
+        when no such client exists.
+
+        :raises RequestException: If a lookup fails."""
+        clients = self.request('clients', RequestMethods.GET, params={'clientId': client_id}).json()
+        if not clients:
+            return None
+        scopes = self.request(f'clients/{clients[0]["id"]}/default-client-scopes', RequestMethods.GET).json()
+        return [scope['name'] for scope in scopes]
 
     def update_user_plan_info(
         self,
