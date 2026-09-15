@@ -64,7 +64,7 @@ export class DashboardPage {
     this.appPasswordSection = this.myAccountCard.locator('#app-password-container');
     this.privacyAndDataHeading = this.page.getByRole('heading', { name: 'Privacy & Data' });
     this.thunderbirdAppsHeading = this.page.getByRole('heading', { name: 'Thunderbird Apps' });
-    this.currentSubscriptionHeading = this.page.getByRole('heading', { name: 'Your Current Subscription' });
+    this.currentSubscriptionHeading = this.page.getByRole('heading', { name: 'Current Subscription' });
     this.currentSubscriptionSection = this.page.locator('section').filter({ has: this.currentSubscriptionHeading });
     this.passwordChangeLink = this.page.locator('a[href="/reset-password/"]');
     this.updatePasswordHeader = this.page.getByRole('heading', { name: 'Update password' });
