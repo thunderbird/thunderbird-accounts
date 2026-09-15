@@ -79,8 +79,6 @@ const onCancelSetPassword = () => {
 
 <template>
   <div id="app-password-container" class="app-password-details">
-    <div id="tour-target-app-passwords" />
-
     <div class="app-password-set-indicator-container">
       <strong>{{ t('views.mail.sections.emailSettings.appPassword') }}:</strong>
       <template v-if="accountHasAppPasswords">

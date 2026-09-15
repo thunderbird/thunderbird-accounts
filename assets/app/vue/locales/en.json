@@ -389,15 +389,13 @@
         "done": "Done",
         "step": "Step {step} of {total}",
         "nextStep": "Next: {step}",
-        "appPassword": "App Password",
         "emailAliases": "Email aliases",
         "customDomains": "Custom domains",
         "yourAccount": "Your account",
         "step1Text": "Connect your new email address to start sending and receiving messages. Use Thunderbird or any email app you prefer.",
-        "step2Text": "Create an app password for email, calendar, and other apps that need a separate sign-in.",
-        "step3Text": "Claim any additional email aliases you would like to use.",
-        "step4Text": "Add custom domains to create email aliases for any need.",
-        "step5Text": "Go to 'Your Account' to view account details, manage billing, or cancel your service.",
+        "step2Text": "Claim any additional email aliases you would like to use.",
+        "step3Text": "Add custom domains to create email aliases for any need.",
+        "step4Text": "Go to 'Your Account' to view account details, manage billing, or cancel your service.",
         "close": "Close tour"
       },
       "webmailAlpha": {
