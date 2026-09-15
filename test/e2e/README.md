@@ -8,7 +8,7 @@ First install the E2E suite (includes Playwright):
 
 ```bash
 cd test/e2e
-npm install
+npm ci
 ```
 
 Next install the Playwright browsers (Playwright uses it's own bundled browers) still in `test/e2e`:
