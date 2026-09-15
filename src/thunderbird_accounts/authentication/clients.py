@@ -1,6 +1,7 @@
 import enum
 import json
 import datetime
+import logging
 from typing import Optional, TypedDict
 from urllib.parse import quote, urljoin
 
@@ -207,6 +208,7 @@ class KeycloakClient:
                 error = f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
             else:
                 error = f'Error<{exc}>: No response!'
+            logging.warning(f'[KeycloakClient] {method.value.upper()} {endpoint} for role {role_name} failed: {error}')
             raise RoleMappingError(error=error, role_name=role_name, oidc_id=oidc_id) from exc
 
     def get_realm_role(self, role_name: str) -> dict:
