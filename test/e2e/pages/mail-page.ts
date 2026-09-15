@@ -32,8 +32,6 @@ export class MailPage {
   readonly emailSettingsSection: Locator;
   readonly customDomainsSection: Locator;
   readonly serverSettingsAccordion: Locator;
-  readonly displayNameSection: Locator;
-  readonly appPasswordSection: Locator;
   readonly emailAliasesSection: Locator;
   readonly subscriptionErrorText: Locator;
 
@@ -46,8 +44,6 @@ export class MailPage {
     this.emailSettingsSection = this.page.locator('section#email-settings');
     this.customDomainsSection = this.page.locator('section#custom-domains');
     this.serverSettingsAccordion = this.emailSettingsSection.locator('.accordion').filter({ hasText: 'View server settings' });
-    this.displayNameSection = this.emailSettingsSection.locator('.display-name-content');
-    this.appPasswordSection = this.emailSettingsSection.locator('#app-password-container');
     this.emailAliasesSection = this.emailSettingsSection.locator('.email-aliases-content');
     this.subscriptionErrorText = this.page.getByText('Failed to load subscription information');
   }
@@ -91,11 +87,7 @@ export class MailPage {
   async verifyEmailSettingsComponents() {
     await this.emailSettingsSection.scrollIntoViewIfNeeded();
     await expect(this.emailSettingsSection.getByRole('heading', { name: 'Email Settings' })).toBeVisible();
-    await expect(this.emailSettingsSection).toContainText('Primary email');
-    await expect(this.emailSettingsSection).toContainText(PRIMARY_THUNDERMAIL_EMAIL);
 
-    await this.verifyDisplayNameFormOpensAndCancels();
-    await this.verifyAppPasswordFormOpensAndCancels();
     await this.verifyEmailAliasFormOpensAndCancels();
     await this.verifyCanAddAndDeleteEmailAlias();
     await this.verifyServerSettings();
@@ -163,33 +155,13 @@ export class MailPage {
     await expect(this.getStartedSection).toContainText('Need Help?');
 
     const appPasswordLink = this.getStartedSection.getByRole('link', { name: 'app password' });
-    await expect(appPasswordLink).toHaveAttribute('href', '#app-password-container');
+    await expect(appPasswordLink).toHaveAttribute('href', '/dashboard');
 
     const supportLink = this.getStartedSection.getByRole('link', { name: 'Visit Support Article' });
     await expect(supportLink).toHaveAttribute('href', /support\.tb\.pro/);
     await expect(supportLink).toHaveAttribute('target', '_blank');
 
     await this.verifyOtherAppsManualConfigurationServerSettings();
-  }
-
-  private async verifyDisplayNameFormOpensAndCancels() {
-    await expect(this.displayNameSection).toContainText('Display name');
-    await this.displayNameSection.getByRole('button', { name: 'change' }).click();
-    await expect(this.displayNameSection.getByTestId('display-name-input')).toBeVisible();
-    await expect(this.displayNameSection.getByRole('button', { name: 'Save' })).toBeVisible();
-    await this.displayNameSection.getByRole('button', { name: 'Cancel' }).click();
-    await expect(this.displayNameSection.getByTestId('display-name-input')).not.toBeVisible();
-  }
-
-  private async verifyAppPasswordFormOpensAndCancels() {
-    await expect(this.appPasswordSection).toContainText('App Password');
-    await expect(this.appPasswordSection).toContainText(/Set|Not set/);
-    await this.appPasswordSection.getByRole('button', { name: /^(Create|Change) app password$/ }).click();
-    await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-input')).toBeVisible();
-    await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-confirm-input')).toBeVisible();
-    await expect(this.appPasswordSection.getByRole('button', { name: 'Save' })).toBeVisible();
-    await this.appPasswordSection.getByRole('button', { name: 'Cancel' }).click();
-    await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-input')).not.toBeVisible();
   }
 
   private async verifyEmailAliasFormOpensAndCancels() {
