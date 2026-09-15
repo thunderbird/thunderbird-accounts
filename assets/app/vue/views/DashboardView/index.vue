@@ -22,17 +22,22 @@ export default {
 <template>
   <div class="dashboard-view">
     <div class="dashboard-view-cards">
-      <get-started-with-thundermail
-        :is-pinned="isGetStartedPinned"
-        @toggle-pinned="isGetStartedPinned = !isGetStartedPinned"
-      />
+      <div id="get-started-pinned-slot" class="teleport-target" />
       <account-card />
       <account-deletion-card />
+      <div id="get-started-unpinned-slot" class="teleport-target" />
     </div>
     <div class="dashboard-view-cards">
       <thunderbird-apps />
       <your-current-subscription />
     </div>
+
+    <Teleport defer :to="isGetStartedPinned ? '#get-started-pinned-slot' : '#get-started-unpinned-slot'">
+      <get-started-with-thundermail
+        :is-pinned="isGetStartedPinned"
+        @toggle-pinned="isGetStartedPinned = !isGetStartedPinned"
+      />
+    </Teleport>
   </div>
 </template>
 
@@ -52,6 +57,10 @@ export default {
     max-width: none;
     width: 100%;
   }
+}
+
+.teleport-target {
+  display: contents;
 }
 
 @media (min-width: 768px) {
