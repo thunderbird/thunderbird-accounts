@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import ThunderbirdApps from '@/components/ThunderbirdApps.vue';
+import GetStartedWithThundermail from './components/GetStartedWithThundermail.vue';
 import AccountCard from './components/AccountCard.vue';
 import AccountDeletionCard from './components/AccountDeletionCard.vue';
 import YourCurrentSubscription from './components/YourCurrentSubscription.vue';
@@ -7,6 +9,8 @@ import { PADDLE_TRANSACTION_STORAGE_KEY } from '@/defines';
 
 // Just in case, attempt to empty the stored Paddle transaction id here too.
 window.localStorage?.removeItem(PADDLE_TRANSACTION_STORAGE_KEY);
+
+const isGetStartedPinned = ref(true);
 </script>
 
 <script lang="ts">
@@ -18,6 +22,10 @@ export default {
 <template>
   <div class="dashboard-view">
     <div class="dashboard-view-cards">
+      <get-started-with-thundermail
+        :is-pinned="isGetStartedPinned"
+        @toggle-pinned="isGetStartedPinned = !isGetStartedPinned"
+      />
       <account-card />
       <account-deletion-card />
     </div>

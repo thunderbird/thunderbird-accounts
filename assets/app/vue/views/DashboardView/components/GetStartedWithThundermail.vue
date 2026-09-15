@@ -40,9 +40,6 @@ const tabs = computed<SegmentedControlTab[]>(() => [
     icon: PhGlobe,
   },
 ]);
-
-// https://vite.dev/guide/assets.html#new-url-url-import-meta-url
-const thunderbirdClientImage = new URL('@/assets/png/thundermail-dashboard-client.png', import.meta.url).href;
 </script>
 
 <script lang="ts">
@@ -80,8 +77,6 @@ export default {
           <get-started-with-thundermail-other-apps />
         </template>
       </segmented-control-slider>
-
-      <img class="thunderbird-client-image" :src="thunderbirdClientImage" alt="" />
     </div>
   </card-container>
 </template>
