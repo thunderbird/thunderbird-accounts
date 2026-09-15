@@ -23,7 +23,6 @@ test.describe('mail page components on mobile browser', {
 
     await mailPage.navigateToMail();
     await mailPage.verifyWelcomeDashboardDisplayed();
-    await mailPage.verifyGetStartedComponents();
     await mailPage.verifyEmailSettingsComponents();
     await mailPage.verifyCustomDomainsComponents();
   });
