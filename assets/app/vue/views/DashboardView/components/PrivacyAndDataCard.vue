@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { LinkButton } from '@thunderbirdops/services-ui';
+import { PrimaryButton } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 
 const { t } = useI18n();
@@ -10,30 +10,15 @@ const { t } = useI18n();
   <card-container class="privacy-and-data-card">
     <h2>{{ t('views.dashboard.privacyAndDataCard.privacyAndData') }}</h2>
 
-    <div class="privacy-and-data-card-details">
-      <!-- TODO: Uncomment when implementing device management -->
-      <!-- <div>
-        <strong>{{ t('views.dashboard.privacyAndDataCard.manageDevices') }}</strong>
-        <p>{{ t('views.dashboard.privacyAndDataCard.manageDevicesText') }}</p>
-    
-        <div class="manage-devices-buttons">
-          <primary-button variant="outline">{{ t('views.dashboard.privacyAndDataCard.manageDevicesButtonLabel') }}</primary-button>
-          <link-button>{{ t('views.dashboard.privacyAndDataCard.logoutFromAllDevicesButtonLabel') }}</link-button>
-        </div>
-      </div>
-  
-      <visual-divider /> -->
-  
-      <div>
-        <strong>{{ t('views.dashboard.privacyAndDataCard.deleteAccount') }}</strong>
-        <p>{{ t('views.dashboard.privacyAndDataCard.deleteAccountText') }}</p>
+    <div>
+      <strong>{{ t('views.dashboard.privacyAndDataCard.deleteAccount') }}</strong>
+      <p>{{ t('views.dashboard.privacyAndDataCard.deleteAccountText') }}</p>
 
-        <a href="/contact/">
-          <link-button size="small" class="delete-account-button">
-            {{ t('views.dashboard.privacyAndDataCard.deleteAccountButtonLabel') }}
-          </link-button>
-        </a>
-      </div>
+      <router-link v-slot="{ href, navigate }" custom to="/contact">
+        <primary-button :href="href" variant="outline" size="small" class="delete-account-button" @click="navigate">
+          {{ t('views.dashboard.privacyAndDataCard.deleteAccountButtonLabel') }}
+        </primary-button>
+      </router-link>
     </div>
   </card-container>
 </template>
@@ -42,12 +27,6 @@ const { t } = useI18n();
 .privacy-and-data-card {
   min-width: unset;
   color: var(--colour-ti-secondary);
-
-  .privacy-and-data-card-details {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-  }
 
   h2 {
     font-family: metropolis;
@@ -70,14 +49,20 @@ const { t } = useI18n();
     line-height: 1.32;
   }
 
-  .manage-devices-buttons {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
   .delete-account-button {
-    padding-inline: 0;
+    --button-outline-border: var(--critical-default);
+    width: 13.625rem;
+    height: 2.75rem;
+    flex-grow: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 1.125rem 1rem;
+    border-radius: 8px;
+    border: solid 1px var(--critical-default);
+    background-color: var(--surface-base);
   }
 }
 

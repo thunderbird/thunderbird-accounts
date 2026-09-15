@@ -6,6 +6,7 @@ import CardContainer from '@/components/CardContainer.vue';
 
 // Local components
 import AccountActivity from './components/AccountActivity.vue';
+import ConnectedApps from './components/ConnectedApps.vue';
 import AllowList from './components/AllowList.vue';
 
 const { t } = useI18n();
@@ -24,7 +25,8 @@ export default {
       :title="t('views.mail.views.securitySettings.securitySettings')"
     >
       <account-activity />
-      <allow-list />
+      <connected-apps />
+      <allow-list v-if="false" />
     </card-container>
   </div>
 </template>
