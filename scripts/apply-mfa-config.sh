@@ -65,6 +65,15 @@ export IMPORT_CACHE_ENABLED=false
 # Level-1 LoA window; must cover the realm's longest SSO session — the 90-day
 # remember-me lifespan (see the config file).
 export MFA_L1_LOA_MAX_AGE="${MFA_L1_LOA_MAX_AGE:-7776000}"
+# Thundermail provisioning gate requirement: CONDITIONAL (on) or DISABLED (off, default).
+case "${TBPRO_MAIL_GATE:-}" in
+    CONDITIONAL|DISABLED) ;;
+    *)
+        [[ -n "${TBPRO_MAIL_GATE:-}" ]] && echo "apply-mfa-config: invalid TBPRO_MAIL_GATE '${TBPRO_MAIL_GATE}'; disabling the gate."
+        TBPRO_MAIL_GATE=DISABLED
+        ;;
+esac
+export TBPRO_MAIL_GATE
 
 # Serialize the import across replicas with a Postgres advisory lock on Keycloak's own
 # database: during a multi-replica deploy the imports can race which causes conflicts.

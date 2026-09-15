@@ -762,6 +762,11 @@ resources:
               # session settings change.
               - name: MFA_L1_LOA_MAX_AGE
                 value: "7776000"
+              # Thundermail provisioning gate (keycloak/config-cli/tbpro-mfa-stepup.yaml). Goes live
+              # on the first Keycloak deploy after the realm role/scope exist; run
+              # `backfill_mail_access_role` first. DISABLED turns it off.
+              - name: TBPRO_MAIL_GATE
+                value: "CONDITIONAL"
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
