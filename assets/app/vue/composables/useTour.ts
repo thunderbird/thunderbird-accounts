@@ -2,10 +2,9 @@ import { ref, computed, watch, nextTick } from 'vue';
 
 export const FTUE_STEPS = {
   INITIAL: 0,
-  CONNECT_EMAIL: 1,
-  EMAIL_ALIASES: 2,
-  CUSTOM_DOMAINS: 3,
-  FINAL: 4,
+  EMAIL_ALIASES: 1,
+  CUSTOM_DOMAINS: 2,
+  FINAL: 3,
 } as const;
 
 type FtueStepId = typeof FTUE_STEPS[keyof typeof FTUE_STEPS];
@@ -71,30 +70,23 @@ export const useTour = () => {
       variant: 'welcome',
       nextLabelKey: 'views.mail.ftue.letsGo',
     },
-    [FTUE_STEPS.CONNECT_EMAIL]: {
-      targetId: 'connect-email',
-      teleportTarget: '#tour-target-connect-email',
-      textKey: 'views.mail.ftue.step1Text',
-      subtitleNextStepKey: 'views.mail.ftue.emailAliases',
-      showBack: false,
-    },
     [FTUE_STEPS.EMAIL_ALIASES]: {
       targetId: 'email-aliases',
       teleportTarget: '#tour-target-email-aliases',
-      textKey: 'views.mail.ftue.step2Text',
+      textKey: 'views.mail.ftue.step1Text',
       subtitleNextStepKey: 'views.mail.ftue.customDomains',
-      showBack: true,
+      showBack: false,
     },
     [FTUE_STEPS.CUSTOM_DOMAINS]: {
       targetId: 'custom-domains',
       teleportTarget: '#tour-target-custom-domains',
-      textKey: 'views.mail.ftue.step3Text',
+      textKey: 'views.mail.ftue.step2Text',
       subtitleNextStepKey: 'views.mail.ftue.yourAccount',
       showBack: true,
     },
     [FTUE_STEPS.FINAL]: {
       teleportTarget: '#tour-target-header',
-      textKey: 'views.mail.ftue.step4Text',
+      textKey: 'views.mail.ftue.step3Text',
       showBack: true,
       variant: 'header',
       nextLabelKey: 'views.mail.ftue.done',
