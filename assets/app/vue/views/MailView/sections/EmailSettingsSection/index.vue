@@ -8,7 +8,7 @@ import CardContainer from '@/components/CardContainer.vue';
 import DetailsSummary from '@/components/DetailsSummary.vue';
 
 // Local components
-import AppPasswordSide from './components/AppPasswordSide.vue';
+import AppPassword from '@/views/DashboardView/components/AppPassword.vue';
 import EmailAliases from './components/EmailAliases.vue';
 import ViewServerSettings from './components/ViewServerSettings.vue';
 
@@ -27,7 +27,7 @@ export default {
   <section id="email-settings">
     <card-container :title="t('views.mail.sections.emailSettings.emailSettings')">
       <div class="email-settings-content">
-        <app-password-side :app-passwords="appPasswords" />
+        <app-password :app-passwords="appPasswords" />
       </div>
 
       <details-summary

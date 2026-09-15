@@ -185,7 +185,7 @@
           "close": "Close",
           "set": "Set",
           "notSet": "Not set",
-          "changePasswordDescription": "Use this separate password to connect apps that can't use your regular Thundermail sign-in.",
+          "changePasswordDescription": "Create an app password to log in to any standard email client.",
           "changePasswordDescriptionTwo": "Misplaced it? Create a new one.",
           "createPasswordDescriptionTwo": "Once set, it can't be viewed or recovered.",
           "appPasswordArticleTitle": "Create an App Password",

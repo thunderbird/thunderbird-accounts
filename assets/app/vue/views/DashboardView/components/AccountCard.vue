@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { VisualDivider } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 import DisplayName from './DisplayName.vue';
+import AppPassword from './AppPassword.vue';
 import { isWaffleFlagActive } from '@/utils';
 import { getMfaMethods, MfaReauthenticationRequiredError } from '@/views/ManageMfaView/api';
 import { WAFFLE_FLAG } from '@/types';
@@ -12,6 +13,8 @@ const { t } = useI18n();
 
 // From Stalwart, primary email is always the first email address in the list
 const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
+
+const appPasswords = ref<string[]>(window._page?.appPasswords || []);
 
 const showMfa = isWaffleFlagActive(WAFFLE_FLAG.MULTI_FACTOR_AUTHENTICATION);
 const hasMfa = ref(false);
@@ -72,6 +75,10 @@ onMounted(async () => {
           </router-link>
         </div>
       </template>
+
+      <visual-divider />
+
+      <app-password :app-passwords="appPasswords" />
     </div>
   </card-container>
 </template>

@@ -6,6 +6,19 @@ interface SettingsApiResponse {
   error?: string;
 }
 
+export const setAppPassword = async (name: string, password: string): Promise<SettingsApiResponse> => {
+  const { response } = await useAuthFetch('/api/v1/mail/app-passwords/set/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': window._page.csrfToken,
+    },
+    body: JSON.stringify({ name, password }),
+  });
+
+  return await response.value.json();
+};
+
 export const setDisplayName = async (displayName: string): Promise<SettingsApiResponse> => {
   const { response } = await useAuthFetch('/api/v1/mail/display-name/set/', {
     method: 'POST',
