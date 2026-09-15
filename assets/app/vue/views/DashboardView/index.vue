@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { VisualDivider } from '@thunderbirdops/services-ui';
 import ThunderbirdApps from '@/components/ThunderbirdApps.vue';
 import AccountCard from './components/AccountCard.vue';
 import AccountDeletionCard from './components/AccountDeletionCard.vue';
@@ -22,9 +21,6 @@ export default {
       <account-card />
       <account-deletion-card />
     </div>
-
-    <visual-divider type="vertical" class="hidden-sm" />
-
     <div class="dashboard-view-cards">
       <thunderbird-apps />
       <your-current-subscription />
@@ -33,10 +29,6 @@ export default {
 </template>
 
 <style scoped>
-.hidden-sm {
-  display: none;
-}
-
 .dashboard-view {
   display: flex;
   justify-content: center;
@@ -68,17 +60,6 @@ export default {
 @media (min-width: 1024px) {
   .dashboard-view {
     gap: 2rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .hidden-sm {
-    display: block;
-  }
-
-  .divider {
-    align-self: stretch;
-    height: auto;
   }
 }
 </style>
