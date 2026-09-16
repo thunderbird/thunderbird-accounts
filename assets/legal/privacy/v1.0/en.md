@@ -119,8 +119,8 @@ Contact us via our [contact form](https://www.thunderbird.net/contact/) or by ma
 
 MZLA Technologies Corporation   
 Attn: Mozilla \- Privacy   
-149 New Montgomery St, 4th Floor  
-San Francisco, CA 94105   
+447 Sutter Street, Suite 405  
+San Francisco, CA 94108  
 USA
 
 If you’re in the UK or EEA, you can also contact our Data Protection Officer at dpo@mozilla.com, or by mail at:
