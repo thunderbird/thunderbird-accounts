@@ -218,10 +218,7 @@ class SecondaryCredential(Credential):
 class AppPassword(JMapType):
     """A mix of the above credential objects"""
 
-    # Optional on purpose: these are required only by OUR convention, not by Stalwart. A
-    # credential created outside Accounts (admin CLI, another client) can omit either, and a
-    # required field aborts the whole get_app_passwords list -- locking the user out of setting
-    # a new app password because of one unrelated credential.
+    # Optional: a required field here aborts the whole get_app_passwords list over one credential.
     description: Optional[str] = None
     secret: Optional[str] = None  # Server set
     created_at: Optional[datetime] = None

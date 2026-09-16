@@ -182,11 +182,7 @@ class EmailNotValidError(RuntimeError):
 
 
 class JMapOriginMismatchError(StalwartError):
-    """The JMAP session advertised an apiUrl on a different origin than the configured base URL.
-
-    Subclasses StalwartError (and so RuntimeError) deliberately: callers that already degrade
-    gracefully on Stalwart being unreachable should treat this the same way, rather than 500.
-    """
+    """The JMAP session advertised an apiUrl on a different origin than the configured base URL."""
 
     def __init__(self, advertised: str, configured: str):
         self.advertised = advertised

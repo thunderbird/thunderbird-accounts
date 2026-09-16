@@ -79,9 +79,6 @@ class TestJMAPClientTransport(SimpleTestCase):
         client.get_session()
         client.request(self._request_data())
 
-        # The session resource is fetched "following any redirects" per RFC 8620 2.2, and
-        # Stalwart v0.16 always 307s /.well-known/jmap. The API resource must NOT follow, since
-        # a 307/308 replays the POST body at the new host.
         self.assertIs(get_mock.call_args.kwargs['allow_redirects'], True)
         self.assertIs(request_mock.call_args.kwargs['allow_redirects'], False)
 
@@ -152,9 +149,6 @@ class MockJMapClient(JMAPClient):
             return self.session
 
         fixture_data = self.retrieve_fixture(Path('fixtures') / 'jmap_get_session.json')
-        # Stub only the HTTP fetch; everything after it, including the origin check, must run
-        # exactly as it does in production. Previously this reimplemented the assignment, so the
-        # ~17 tests built on this double exercised UNPINNED behaviour and CI carried no signal.
         return self._accept_session(SessionResource(**fixture_data))
 
     def request(self, request_data: JMapRequest, method: Literal['get', 'post'] = 'post') -> JMapResponse:
@@ -918,7 +912,6 @@ class TestOriginMismatchIsRecoverable(SimpleTestCase):
         self.assertIsInstance(err, RuntimeError)
 
     def test_message_names_both_origins(self):
-        """An operator reading Sentry must be able to tell which end to fix."""
         err = JMapOriginMismatchError('https://public.example/jmap/', 'https://internal.example')
         self.assertIn('https://public.example/jmap/', str(err))
         self.assertIn('https://internal.example', str(err))
