@@ -46,8 +46,7 @@ class TinyJMAPClient:
         )
         r.raise_for_status()
         self.session = session = r.json()
-        # Same pin as JMAPClient: this client carries the USER's access token, and apiUrl is
-        # server-supplied, so an advertised URL on another origin would send that token off-host.
+        # Validate API URL matches our hostname
         if JMAPClient._origin(session['apiUrl']) != JMAPClient._origin(self.hostname):
             raise JMapOriginMismatchError(session['apiUrl'], self.hostname)
         self.api_url = session['apiUrl']
