@@ -92,7 +92,7 @@ header {
   row-gap: 2rem;
   column-gap: 1.6875rem;
   align-items: end;
-  margin-block-end: 2.625rem;
+  margin-block-end: 2.5rem;
 }
 
 .welcome-container {

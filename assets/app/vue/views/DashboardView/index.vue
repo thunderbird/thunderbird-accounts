@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import ThunderbirdApps from '@/components/ThunderbirdApps.vue';
+import WelcomeHeader from './components/WelcomeHeader.vue';
 import GetStartedWithThundermail from './components/GetStartedWithThundermail.vue';
 import AccountCard from './components/AccountCard.vue';
 import AccountDeletionCard from './components/AccountDeletionCard.vue';
@@ -21,6 +22,8 @@ export default {
 
 <template>
   <div class="dashboard-view">
+    <welcome-header />
+
     <div class="dashboard-view-cards">
       <div id="get-started-pinned-slot" class="teleport-target" />
       <account-card />

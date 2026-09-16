@@ -7,7 +7,6 @@ import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { WAFFLE_FLAG } from '@/types';
 import { isWaffleFlagActive } from '@/utils';
 
-import WelcomeHeader from './sections/DashboardSection/components/WelcomeHeader.vue';
 import EmailSettingsSection from './sections/EmailSettingsSection/index.vue';
 import CustomDomainsSection from './sections/CustomDomainsSection/index.vue';
 
@@ -38,10 +37,6 @@ export default {
         </template>
       </i18n-t>
     </notice-bar>
-
-    <section id="dashboard">
-      <welcome-header />
-    </section>
 
     <email-settings-section />
     <custom-domains-section v-if="!isCustomDomainsRevampActive" />
