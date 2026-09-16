@@ -40,7 +40,7 @@ export class DashboardPage {
   readonly myAccountCard: Locator;
   readonly displayNameSection: Locator;
   readonly appPasswordSection: Locator;
-  readonly privacyAndDataHeading: Locator;
+  readonly accountDeletionHeading: Locator;
   readonly thunderbirdAppsHeading: Locator;
   readonly currentSubscriptionHeading: Locator;
   readonly currentSubscriptionSection: Locator;
@@ -62,7 +62,7 @@ export class DashboardPage {
     this.myAccountCard = this.page.locator('.my-account-card');
     this.displayNameSection = this.myAccountCard.locator('.display-name-container');
     this.appPasswordSection = this.myAccountCard.locator('#app-password-container');
-    this.privacyAndDataHeading = this.page.getByRole('heading', { name: 'Privacy & Data' });
+    this.accountDeletionHeading = this.page.getByRole('heading', { name: 'Account Deletion' });
     this.thunderbirdAppsHeading = this.page.getByRole('heading', { name: 'Thunderbird Apps' });
     this.currentSubscriptionHeading = this.page.getByRole('heading', { name: 'Current Subscription' });
     this.currentSubscriptionSection = this.page.locator('section').filter({ has: this.currentSubscriptionHeading });
@@ -93,7 +93,7 @@ export class DashboardPage {
   async verifyDashboardSignedIn() {
     // just verify we are signed in and header appears
     await expect(this.myAccountHeading).toBeVisible( { timeout: TIMEOUT_30_SECONDS });
-    await expect(this.privacyAndDataHeading).toBeVisible();
+    await expect(this.accountDeletionHeading).toBeVisible();
     await expect(this.thunderbirdAppsHeading).toBeVisible();
   }
 
