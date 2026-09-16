@@ -13,6 +13,7 @@ import {
   JMAP_PORT,
   JMAP_TLS,
   PADDLE_HOST,
+  PRIMARY_THUNDERMAIL_EMAIL,
   SMTP_PORT,
   SMTP_TLS,
   TIMEOUT_2_SECONDS,
@@ -47,6 +48,9 @@ export class DashboardPage {
   readonly page: Page;
   readonly myAccountHeading: Locator;
   readonly myAccountCard: Locator;
+  readonly welcomeContainer: Locator;
+  readonly planInfoContainer: Locator;
+  readonly subscriptionErrorText: Locator;
   readonly displayNameSection: Locator;
   readonly appPasswordSection: Locator;
   readonly accountDeletionHeading: Locator;
@@ -71,6 +75,9 @@ export class DashboardPage {
     this.page = page;
     this.myAccountHeading = this.page.getByRole('heading', { name: 'Account settings' });
     this.myAccountCard = this.page.locator('.my-account-card');
+    this.welcomeContainer = this.page.locator('.welcome-container');
+    this.planInfoContainer = this.page.locator('.plan-info-container');
+    this.subscriptionErrorText = this.page.getByText('Failed to load subscription information');
     this.displayNameSection = this.myAccountCard.locator('.display-name-container');
     this.appPasswordSection = this.myAccountCard.locator('#app-password-container');
     this.accountDeletionHeading = this.page.getByRole('heading', { name: 'Account Deletion' });
@@ -110,7 +117,26 @@ export class DashboardPage {
     await expect(this.thunderbirdAppsHeading).toBeVisible();
   }
 
+  async verifyWelcomeHeaderDisplayed() {
+    await expect(this.welcomeContainer.getByText('Welcome')).toBeVisible();
+    await expect(this.welcomeContainer).toContainText(PRIMARY_THUNDERMAIL_EMAIL);
+
+    const userDisplayName = await this.page.evaluate(() => (window as any)._page?.userDisplayName || '');
+    await expect(this.welcomeContainer.locator('.name')).toBeVisible();
+    if (userDisplayName) {
+      await expect(this.welcomeContainer.locator('.name')).toContainText(userDisplayName);
+    }
+
+    await expect(this.subscriptionErrorText).not.toBeVisible();
+    await expect(this.planInfoContainer.locator('.plan-name')).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await expect(this.planInfoContainer.locator('.plan-storage')).toContainText(
+      new RegExp(`of\\s+${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE)}`),
+    );
+  }
+
   async verifyDashboardDisplayed() {
+    await this.verifyWelcomeHeaderDisplayed();
+
     await expect(this.myAccountCard).toContainText(ACCTS_OIDC_EMAIL);
     await expect(this.currentSubscriptionHeading).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     await expect(this.currentSubscriptionSection).toContainText(DASHBOARD_CURRENT_SUBSCRIPTION_PRICE);

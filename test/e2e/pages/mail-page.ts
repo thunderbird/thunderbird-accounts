@@ -4,7 +4,6 @@ import {
   ACCTS_HUB_URL,
   DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS,
   DASHBOARD_CURRENT_SUBSCRIPTION_EMAIL_ADDRESSES,
-  DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE,
   IMAP_PORT,
   IMAP_TLS,
   JMAP_PORT,
@@ -15,7 +14,6 @@ import {
   TIMEOUT_1_SECOND,
   TIMEOUT_2_SECONDS,
   TIMEOUT_5_SECONDS,
-  TIMEOUT_30_SECONDS,
 } from '../const/constants';
 import { waitForVueApp } from '../utils/utils';
 
@@ -26,24 +24,18 @@ const TEST_EMAIL_ALIAS_LOCAL_PART_PREFIX = 'testalias';
 export class MailPage {
   readonly page: Page;
   readonly mailView: Locator;
-  readonly welcomeContainer: Locator;
-  readonly planInfoContainer: Locator;
   readonly emailSettingsSection: Locator;
   readonly customDomainsSection: Locator;
   readonly serverSettingsAccordion: Locator;
   readonly emailAliasesSection: Locator;
-  readonly subscriptionErrorText: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.mailView = this.page.locator('.mail-view');
-    this.welcomeContainer = this.page.locator('.welcome-container');
-    this.planInfoContainer = this.page.locator('.plan-info-container');
     this.emailSettingsSection = this.page.locator('section#email-settings');
     this.customDomainsSection = this.page.locator('section#custom-domains');
     this.serverSettingsAccordion = this.emailSettingsSection.locator('.accordion').filter({ hasText: 'View server settings' });
     this.emailAliasesSection = this.emailSettingsSection.locator('.email-aliases-content');
-    this.subscriptionErrorText = this.page.getByText('Failed to load subscription information');
   }
 
   async navigateToMail() {
@@ -51,24 +43,6 @@ export class MailPage {
     await this.waitForPageToSettle();
     await expect.poll(async () => new URL(this.page.url()).pathname).toBe('/mail');
     await this.dismissQuickTourIfVisible();
-  }
-
-  async verifyWelcomeDashboardDisplayed() {
-    await expect(this.mailView).toBeVisible();
-    await expect(this.welcomeContainer.getByText('Welcome')).toBeVisible();
-    await expect(this.welcomeContainer).toContainText(PRIMARY_THUNDERMAIL_EMAIL);
-
-    const userDisplayName = await this.page.evaluate(() => (window as any)._page?.userDisplayName || '');
-    await expect(this.welcomeContainer.locator('.name')).toBeVisible();
-    if (userDisplayName) {
-      await expect(this.welcomeContainer.locator('.name')).toContainText(userDisplayName);
-    }
-
-    await expect(this.subscriptionErrorText).not.toBeVisible();
-    await expect(this.planInfoContainer.locator('.plan-name')).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-    await expect(this.planInfoContainer.locator('.plan-storage')).toContainText(
-      new RegExp(`of\\s+${this.escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE)}`),
-    );
   }
 
   async verifyEmailSettingsComponents() {
