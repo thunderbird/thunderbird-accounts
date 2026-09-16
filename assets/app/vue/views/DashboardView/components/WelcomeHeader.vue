@@ -56,7 +56,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <header>
+  <div class="welcome-header">
     <div class="welcome-container">
       <p class="welcome">{{ t('views.mail.sections.dashboard.welcomeHeader.welcome') }},</p>
       <p class="name">{{ userDisplayName }}</p>
@@ -81,11 +81,11 @@ onMounted(async () => {
         </div>
       </template>
     </div>
-  </header>
+  </div>
 </template>
 
 <style scoped>
-header {
+.welcome-header {
   display: grid;
   grid-template-columns: 1fr;
   grid-auto-flow: row;
@@ -165,10 +165,19 @@ header {
   }
 }
 
+@media (min-width: 768px) {
+  .welcome-header {
+    width: 100%;
+    max-width: 568px;
+    margin-inline: auto;
+  }
+}
+
 @media (min-width: 1024px) {
-  header {
+  .welcome-header {
     grid-template-columns: 1fr 1fr;
     width: 968px;
+    max-width: none;
     margin-inline: auto;
   }
 }

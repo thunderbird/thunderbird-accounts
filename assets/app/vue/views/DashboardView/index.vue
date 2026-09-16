@@ -24,15 +24,17 @@ export default {
   <div class="dashboard-view">
     <welcome-header />
 
-    <div class="dashboard-view-cards">
-      <div id="get-started-pinned-slot" class="teleport-target" />
-      <account-card />
-      <account-deletion-card />
-      <div id="get-started-unpinned-slot" class="teleport-target" />
-    </div>
-    <div class="dashboard-view-cards">
-      <thunderbird-apps />
-      <your-current-subscription />
+    <div class="dashboard-view-content">
+      <div class="dashboard-view-cards">
+        <div id="get-started-pinned-slot" class="teleport-target" />
+        <account-card />
+        <account-deletion-card />
+        <div id="get-started-unpinned-slot" class="teleport-target" />
+      </div>
+      <div class="dashboard-view-cards">
+        <thunderbird-apps />
+        <your-current-subscription />
+      </div>
     </div>
 
     <Teleport defer :to="isGetStartedPinned ? '#get-started-pinned-slot' : '#get-started-unpinned-slot'">
@@ -47,10 +49,15 @@ export default {
 <style scoped>
 .dashboard-view {
   display: flex;
+  flex-direction: column;
+}
+
+.dashboard-view-content {
+  display: grid;
+  grid-template-columns: 1fr;
   justify-content: center;
+  justify-items: center;
   gap: 2rem;
-  flex-wrap: wrap;
-  align-items: stretch;
 
   .dashboard-view-cards {
     display: flex;
@@ -67,19 +74,22 @@ export default {
 }
 
 @media (min-width: 768px) {
-  .dashboard-view {
-    gap: 4rem;
-
+  .dashboard-view-content {
     .dashboard-view-cards {
       max-width: 568px;
-      width: auto;
     }
   }
 }
 
 @media (min-width: 1024px) {
-  .dashboard-view {
+  .dashboard-view-content {
+    grid-template-columns: 591px 345px;
+    justify-items: stretch;
     gap: 2rem;
+
+    .dashboard-view-cards {
+      max-width: none;
+    }
   }
 }
 </style>
