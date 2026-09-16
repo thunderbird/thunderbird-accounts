@@ -144,21 +144,54 @@ approving the preview, apply the same two targets without ``--yes``:
 5. Verify or roll back
 ----------------------
 
-Wait for Pulumi and ECS steady state. Confirm all desired tasks and targets are
-healthy, old targets drained, the running image matches staging, reconciliation
-completed, and realm discovery, login, MFA, introspection, and mail
-authentication work. A final targeted preview should report no changes.
+Verification
+~~~~~~~~~~~~
 
-For rollback, use the exact ECR image reference recorded before promotion, not
-a Keycloak version tag or ``latest``, and repeat the production steps:
+A fresh MFA login followed by sending **and reading** a test message is the
+minimum functional user journey. Sending alone tests SMTP but not IMAP or
+delivery. This journey is not sufficient by itself; also verify the rollout,
+image, logs, and Pulumi state:
 
-#. Create and merge a rollback PR that changes only ``.keycloak_image`` back to
-   the previous reference.
-#. Update a clean checkout to merged ``main``.
-#. Rerun the Section 4 preview with the same two targets. Expect one task
-   definition replacement and one service update back to the previous image.
+#. Confirm the update succeeded in the `Pulumi production stack
+   <https://app.pulumi.com/thunderbird/accounts/prod>`__.
+#. Open the `production Keycloak ECS service
+   <https://eu-central-1.console.aws.amazon.com/ecs/v2/clusters/accounts-prod-fargate-keycloak/services/accounts-prod-fargate-keycloak/health?region=eu-central-1>`__
+   and wait for the deployment to complete. Confirm the desired number of tasks
+   and load-balancer targets are healthy, the old tasks have drained, and the
+   new task definition uses the same image selected from staging.
+#. Check the `Keycloak CloudWatch log group
+   <https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#logsV2:log-groups/log-group/accounts-prod-fargate-keycloak-fargate-logs>`__
+   for every new task. Confirm Keycloak started, config reconciliation
+   completed, and there are no unexplained errors.
+#. Confirm `realm discovery
+   <https://auth.tb.pro/realms/tbpro/.well-known/openid-configuration>`__
+   and `Accounts health <https://accounts.tb.pro/health>`__ return successfully.
+#. In a private browser window, sign in through `Accounts
+   <https://accounts.tb.pro/>`__ using the dedicated test account. Complete the
+   MFA challenge, confirm the custom theme renders, and open Manage MFA to
+   verify the configured methods load without changing them.
+#. Obtain mail authentication through that session, send a test message to the
+   same account, and read the delivered message. This exercises OIDC token
+   issuance, Stalwart introspection, SMTP authentication, delivery, and IMAP
+   authentication.
+#. Rerun the exact targeted Section 4 ``pulumi preview``. It must report no
+   changes.
+
+Rollback
+~~~~~~~~
+
+Rollback does not happen in ECR. The previous image remains there; the
+``.keycloak_image`` anchor determines which image Pulumi deploys.
+
+#. Copy the previous full image reference from the production promotion PR's
+   ``pulumi/config.prod.yaml`` diff.
+#. Change only ``.keycloak_image`` back to that reference and merge the rollback
+   PR.
+#. From a clean checkout of merged ``main``, rerun the Section 4 preview with
+   the same two targets. Expect one task-definition replacement and one service
+   update back to the previous image.
 #. Run the Section 4 ``pulumi up``, wait for ECS steady state, and repeat every
-   verification above.
+   verification step above.
 #. Run a final targeted preview and confirm that it reports no changes.
 
 An image rollback does not reverse a database migration. Never deploy an older
