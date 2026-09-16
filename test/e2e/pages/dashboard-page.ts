@@ -68,7 +68,7 @@ export class DashboardPage {
     this.currentSubscriptionSection = this.page.locator('section').filter({ has: this.currentSubscriptionHeading });
     this.passwordChangeLink = this.page.locator('a[href="/reset-password/"]');
     this.updatePasswordHeader = this.page.getByRole('heading', { name: 'Update password' });
-    this.deleteAccountLink = this.page.getByRole('link', { name: 'Delete account and all data' });
+    this.deleteAccountLink = this.page.getByRole('link', { name: 'Contact support' });
     this.thundermailLink = this.page.locator('.service-icon-link').filter({ hasText: 'Mail' });
     this.appointmentLink = this.page.locator('.service-icon-link').filter({ hasText: 'Appointment' });
     this.sendLink = this.page.locator('.service-icon-link').filter({ hasText: 'Send' });
