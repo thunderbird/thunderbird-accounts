@@ -75,6 +75,7 @@ export default {
           v-if="tab.icon"
           :is="tab.icon"
           :size="16"
+          class="tab-icon"
           aria-hidden="true"
         />
         <span>{{ tab.label }}</span>
@@ -149,6 +150,10 @@ export default {
   }
 }
 
+.tab-icon {
+  flex-shrink: 0;
+}
+
 .tab-panel {
   margin-block-start: 0.625rem;
 
@@ -156,6 +161,12 @@ export default {
     outline: 2px solid var(--colour-primary-default);
     outline-offset: 2px;
     border-radius: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-button {
+    transition: none;
   }
 }
 </style>
