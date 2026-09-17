@@ -1,6 +1,5 @@
 from django.db import IntegrityError
 from thunderbird_accounts.authentication.models import AllowListEntry
-from thunderbird_accounts.authentication.utils import mark_current_session
 from thunderbird_accounts.mail.utils import validate_email
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
 from thunderbird_accounts.authentication.permissions import CanCreateTestAllowListEntries
@@ -27,6 +26,8 @@ from thunderbird_accounts.authentication.mfa_management import (
     mfa_management_error_response,
 )
 from thunderbird_accounts.authentication.utils import (
+    _session_id_from_access_token,
+    mark_current_session,
     is_email_in_allow_list,
     KeycloakRequiredAction,
     is_email_reserved,
