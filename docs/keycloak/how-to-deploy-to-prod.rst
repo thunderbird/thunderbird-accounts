@@ -103,7 +103,7 @@ Prepare and authenticate the Pulumi environment:
 .. code-block:: shell
 
    cd pulumi
-   uv venv --python 3.12 --seed venv
+   uv venv --python 3.13 --seed venv
    uv pip install --python venv/bin/python -r requirements.txt
    source venv/bin/activate
    export AWS_REGION=eu-central-1 AWS_DEFAULT_REGION=eu-central-1
@@ -162,7 +162,10 @@ image, logs, and Pulumi state:
 #. Check the `Keycloak CloudWatch log group
    <https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#logsV2:log-groups/log-group/accounts-prod-fargate-keycloak-fargate-logs>`__
    for every new task. Confirm Keycloak started, config reconciliation
-   completed, and there are no unexplained errors.
+   completed, and there are no unexplained errors. JGroups ``failed sending
+   graceful close`` and Infinispan timeout errors confined to the minutes when
+   old tasks leave the cluster are expected rolling-deploy noise; errors that
+   continue after steady state are not.
 #. Confirm `realm discovery
    <https://auth.tb.pro/realms/tbpro/.well-known/openid-configuration>`__
    and `Accounts health <https://accounts.tb.pro/health>`__ return successfully.
@@ -174,8 +177,11 @@ image, logs, and Pulumi state:
    same account, and read the delivered message. This exercises OIDC token
    issuance, Stalwart introspection, SMTP authentication, delivery, and IMAP
    authentication.
-#. Rerun the exact targeted Section 4 ``pulumi preview``. It must report no
-   changes.
+#. Rerun the exact targeted Section 4 ``pulumi preview``. The only acceptable
+   diff is the service's ``taskDefinition`` shown as the new revision replaced
+   by the unversioned family name; that is the provider normalising the value.
+   Any task-definition replacement or other change means the stack has not
+   converged.
 
 Rollback
 ~~~~~~~~
@@ -192,7 +198,8 @@ Rollback does not happen in ECR. The previous image remains there; the
    update back to the previous image.
 #. Run the Section 4 ``pulumi up``, wait for ECS steady state, and repeat every
    verification step above.
-#. Run a final targeted preview and confirm that it reports no changes.
+#. Run a final targeted preview and confirm that it shows only the
+   ``taskDefinition`` revision-to-family diff described above.
 
 An image rollback does not reverse a database migration. Never deploy an older
 Keycloak image across a migrated database unless Keycloak's migration guidance
