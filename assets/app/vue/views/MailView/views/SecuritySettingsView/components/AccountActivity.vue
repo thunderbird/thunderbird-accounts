@@ -189,7 +189,7 @@ onMounted(async () => {
 }
 
 .current-session-label {
-  color: var(--colour-ti-muted);
+  color: var(--colour-ti-secondary);
   font-size: 0.75rem;
 }
 
