@@ -67,7 +67,6 @@ class RecoveryCodesRegenerateThrottle(UserRateThrottle):
     scope = 'recovery_codes_regenerate'
 
 
-
 @api_view(['POST'])
 def get_user_profile(request: Request):
     if not request.user:

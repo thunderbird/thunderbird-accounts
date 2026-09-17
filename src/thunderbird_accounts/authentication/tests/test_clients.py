@@ -123,6 +123,8 @@ class KeycloakClientTokenRefreshTestCase(SimpleTestCase):
 
         self.assertEqual(mock_get_token.call_count, 1)
         self.assertEqual(mock_request.call_count, 1)
+
+
 class KeycloakAccountClientTestCase(TestCase):
     USER_TOKEN = 'user-access-token'
 

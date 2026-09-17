@@ -167,6 +167,7 @@ def delete_user_data(user) -> list[str]:
     user.delete()
     return errors
 
+
 def _session_id_from_access_token(request: Request) -> str | None:
     access_token = request.session.get('oidc_access_token')
     if not access_token:
