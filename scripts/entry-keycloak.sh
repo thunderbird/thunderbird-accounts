@@ -1,27 +1,43 @@
 #!/bin/bash
 
-# Usage:
-#   Running this script with the default options will launch the backend in an environment-ready
-#   mode. To run in development mode instead, run with KC_DEV=yes.
+set -euo pipefail
 
-# Resolve our own location so we can invoke the sibling reconcile script regardless of the
-# image's WORKDIR (the Keycloak base image runs with WORKDIR=/, so these scripts land at
-# /scripts, not /opt/keycloak/scripts).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BOOTSTRAP_HTTP_PORT="${KC_BOOTSTRAP_HTTP_PORT:-18080}"
+BOOTSTRAP_MANAGEMENT_PORT="${KC_BOOTSTRAP_HTTP_MANAGEMENT_PORT:-19000}"
 
-# Start Keycloak in the background so we can reconcile the managed realm configuration once
-# it's ready, then hand the foreground back to it. apply-mfa-config.sh runs
-# keycloak-config-cli against the realm and is fail-soft.
-if [[ "$KC_DEV" == "yes" ]]; then
-    /bin/bash /opt/keycloak/bin/kc.sh start-dev --import-realm &
+stop_bootstrap() {
+    kill -TERM "$KC_PID" 2>/dev/null || true
+    wait "$KC_PID" 2>/dev/null || true
+}
+
+# Bootstrap on internal-only ports so the load balancer cannot route to this task until
+# reconciliation and its integrity check succeed.
+if [[ "${KC_DEV:-}" == 'yes' ]]; then
+    KC_HTTP_PORT="$BOOTSTRAP_HTTP_PORT" \
+    KC_HTTP_MANAGEMENT_PORT="$BOOTSTRAP_MANAGEMENT_PORT" \
+        /bin/bash /opt/keycloak/bin/kc.sh start-dev --import-realm &
 else
-    /bin/bash /opt/keycloak/bin/kc.sh start --http-enabled=true --proxy-headers forwarded &
+    KC_HTTP_PORT="$BOOTSTRAP_HTTP_PORT" \
+    KC_HTTP_MANAGEMENT_PORT="$BOOTSTRAP_MANAGEMENT_PORT" \
+        /bin/bash /opt/keycloak/bin/kc.sh start --http-enabled=true --proxy-headers forwarded &
 fi
 KC_PID=$!
+trap stop_bootstrap TERM INT
 
-# Forward termination so container stop stays graceful.
-trap 'kill -TERM "$KC_PID" 2>/dev/null' TERM INT
+if ! KC_HTTP_PORT="$BOOTSTRAP_HTTP_PORT" \
+    KC_HTTP_MANAGEMENT_PORT="$BOOTSTRAP_MANAGEMENT_PORT" \
+    KEYCLOAK_BOOTSTRAP_PID="$KC_PID" \
+    /bin/bash "$SCRIPT_DIR/apply-mfa-config.sh"; then
+    stop_bootstrap
+    exit 1
+fi
 
-/bin/bash "$SCRIPT_DIR/apply-mfa-config.sh" &
+stop_bootstrap
+trap - TERM INT
 
-wait "$KC_PID"
+if [[ "${KC_DEV:-}" == 'yes' ]]; then
+    exec /bin/bash /opt/keycloak/bin/kc.sh start-dev --import-realm
+fi
+
+exec /bin/bash /opt/keycloak/bin/kc.sh start --http-enabled=true --proxy-headers forwarded
