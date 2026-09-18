@@ -22,8 +22,6 @@ test.describe('mail page components on mobile browser', {
     test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack until we automate subscribe step');
 
     await mailPage.navigateToMail();
-    await mailPage.verifyWelcomeDashboardDisplayed();
-    await mailPage.verifyGetStartedComponents();
     await mailPage.verifyEmailSettingsComponents();
     await mailPage.verifyCustomDomainsComponents();
   });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTour, FTUE_STEPS } from '@/composables/useTour';
 import TourCard from '@/components/TourCard.vue';
@@ -7,8 +7,6 @@ import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { WAFFLE_FLAG } from '@/types';
 import { isWaffleFlagActive } from '@/utils';
 
-import WelcomeHeader from './sections/DashboardSection/components/WelcomeHeader.vue';
-import GetStartedWithThundermail from './sections/DashboardSection/components/GetStartedWithThundermail.vue';
 import EmailSettingsSection from './sections/EmailSettingsSection/index.vue';
 import CustomDomainsSection from './sections/CustomDomainsSection/index.vue';
 
@@ -17,7 +15,6 @@ import CustomDomainsSection from './sections/CustomDomainsSection/index.vue';
 
 const { t } = useI18n();
 const tour = useTour();
-const isGetStartedPinned = ref(true);
 const webmailUrl = window._page?.webmailUrl;
 
 const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
@@ -41,22 +38,8 @@ export default {
       </i18n-t>
     </notice-bar>
 
-    <section id="dashboard">
-      <welcome-header />
-      <div id="get-started-pinned-slot" class="teleport-target" />
-    </section>
-
     <email-settings-section />
     <custom-domains-section v-if="!isCustomDomainsRevampActive" />
-
-    <div id="get-started-unpinned-slot" class="teleport-target" />
-
-    <Teleport defer :to="isGetStartedPinned ? '#get-started-pinned-slot' : '#get-started-unpinned-slot'">
-      <get-started-with-thundermail
-        :is-pinned="isGetStartedPinned"
-        @toggle-pinned="isGetStartedPinned = !isGetStartedPinned"
-      />
-    </Teleport>
 
     <!-- TODO: Uncomment when implementing security settings -->
     <!-- <security-settings-section /> -->
@@ -100,10 +83,6 @@ export default {
 
 .mail-view :deep(:not(:first-child) section) {
   margin-block-end: 2rem;
-}
-
-.teleport-target {
-  display: contents;
 }
 
 .webmail-notice {

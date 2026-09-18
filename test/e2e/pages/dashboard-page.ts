@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import {
+  ACCTS_HOST,
   ACCTS_HUB_URL,
   ACCTS_OIDC_EMAIL,
   DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS,
@@ -7,7 +8,14 @@ import {
   DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE,
   DASHBOARD_CURRENT_SUBSCRIPTION_PRICE,
   DASHBOARD_CURRENT_SUBSCRIPTION_SEND_STORAGE,
+  IMAP_PORT,
+  IMAP_TLS,
+  JMAP_PORT,
+  JMAP_TLS,
   PADDLE_HOST,
+  PRIMARY_THUNDERMAIL_EMAIL,
+  SMTP_PORT,
+  SMTP_TLS,
   TIMEOUT_2_SECONDS,
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
@@ -33,17 +41,24 @@ type PopupPageAssertion = {
 };
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const hasTls = (tls: string) => Boolean(tls && tls !== 'None' && tls !== 'undefined');
+const formatPort = (port: number, tls: string) => `${port}${hasTls(tls) ? ' (SSL/TLS)' : ''}`;
 
 export class DashboardPage {
   readonly page: Page;
   readonly myAccountHeading: Locator;
   readonly myAccountCard: Locator;
+  readonly welcomeContainer: Locator;
+  readonly planInfoContainer: Locator;
+  readonly subscriptionErrorText: Locator;
   readonly displayNameSection: Locator;
   readonly appPasswordSection: Locator;
   readonly accountDeletionHeading: Locator;
   readonly thunderbirdAppsHeading: Locator;
   readonly currentSubscriptionHeading: Locator;
   readonly currentSubscriptionSection: Locator;
+  readonly getStartedHeading: Locator;
+  readonly getStartedSection: Locator;
   readonly passwordChangeLink: Locator;
   readonly updatePasswordHeader: Locator;
   readonly deleteAccountLink: Locator;
@@ -60,12 +75,17 @@ export class DashboardPage {
     this.page = page;
     this.myAccountHeading = this.page.getByRole('heading', { name: 'Account settings' });
     this.myAccountCard = this.page.locator('.my-account-card');
+    this.welcomeContainer = this.page.locator('.welcome-container');
+    this.planInfoContainer = this.page.locator('.plan-info-container');
+    this.subscriptionErrorText = this.page.getByText('Failed to load subscription information');
     this.displayNameSection = this.myAccountCard.locator('.display-name-container');
     this.appPasswordSection = this.myAccountCard.locator('#app-password-container');
     this.accountDeletionHeading = this.page.getByRole('heading', { name: 'Account Deletion' });
     this.thunderbirdAppsHeading = this.page.getByRole('heading', { name: 'Thunderbird Apps' });
     this.currentSubscriptionHeading = this.page.getByRole('heading', { name: 'Current Subscription' });
     this.currentSubscriptionSection = this.page.locator('section').filter({ has: this.currentSubscriptionHeading });
+    this.getStartedHeading = this.page.getByRole('heading', { name: 'Get started with Thundermail' });
+    this.getStartedSection = this.page.locator('section').filter({ has: this.getStartedHeading });
     this.passwordChangeLink = this.page.locator('a[href="/reset-password/"]');
     this.updatePasswordHeader = this.page.getByRole('heading', { name: 'Update password' });
     this.deleteAccountLink = this.page.getByRole('link', { name: 'Contact support' });
@@ -97,7 +117,26 @@ export class DashboardPage {
     await expect(this.thunderbirdAppsHeading).toBeVisible();
   }
 
+  async verifyWelcomeHeaderDisplayed() {
+    await expect(this.welcomeContainer.getByText('Welcome')).toBeVisible();
+    await expect(this.welcomeContainer).toContainText(PRIMARY_THUNDERMAIL_EMAIL);
+
+    const userDisplayName = await this.page.evaluate(() => (window as any)._page?.userDisplayName || '');
+    await expect(this.welcomeContainer.locator('.name')).toBeVisible();
+    if (userDisplayName) {
+      await expect(this.welcomeContainer.locator('.name')).toContainText(userDisplayName);
+    }
+
+    await expect(this.subscriptionErrorText).not.toBeVisible();
+    await expect(this.planInfoContainer.locator('.plan-name')).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await expect(this.planInfoContainer.locator('.plan-storage')).toContainText(
+      new RegExp(`of\\s+${escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE)}`),
+    );
+  }
+
   async verifyDashboardDisplayed() {
+    await this.verifyWelcomeHeaderDisplayed();
+
     await expect(this.myAccountCard).toContainText(ACCTS_OIDC_EMAIL);
     await expect(this.currentSubscriptionHeading).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
     await expect(this.currentSubscriptionSection).toContainText(DASHBOARD_CURRENT_SUBSCRIPTION_PRICE);
@@ -123,6 +162,17 @@ export class DashboardPage {
     await this.verifyDisplayNameFormOpensAndCancels();
     await this.verifyAppPasswordFormOpensAndCancels();
 }
+
+  async verifyGetStartedComponents() {
+    await this.getStartedSection.scrollIntoViewIfNeeded();
+    await expect(this.getStartedHeading).toBeVisible();
+    await expect(this.getStartedSection).toContainText('Connect your new email address to start sending and receiving.');
+
+    await this.verifyPinToggle();
+    await this.verifyDesktopSetupTab();
+    await this.verifyMobileSetupTab();
+    await this.verifyOtherAppsSetupTab();
+  }
 
   async verifyPasswordChangeNavigation() {
     await this.passwordChangeLink.click({ timeout: TIMEOUT_30_SECONDS });
@@ -203,6 +253,93 @@ export class DashboardPage {
     await expect(this.appPasswordSection.getByRole('button', { name: 'Save' })).toBeVisible();
     await this.appPasswordSection.getByRole('button', { name: 'Cancel' }).click();
     await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-input')).not.toBeVisible();
+  }
+
+  private async verifyPinToggle() {
+    const unpinButton = this.getStartedSection.getByRole('button', { name: 'Unpin' });
+    await expect(unpinButton).toBeVisible();
+    await unpinButton.click();
+    await expect(this.getStartedSection.getByRole('button', { name: 'Pin' })).toBeVisible();
+    await this.getStartedSection.getByRole('button', { name: 'Pin' }).click();
+    await expect(unpinButton).toBeVisible();
+  }
+
+  private async verifyDesktopSetupTab() {
+    await this.getStartedSection.getByRole('tab', { name: 'Desktop' }).click();
+    await expect(this.getStartedSection.getByRole('tab', { name: 'Desktop' })).toHaveAttribute('aria-selected', 'true');
+    await expect(this.getStartedSection).toContainText(/Automatic Configuration|Connect Thunderbird Desktop/);
+    await expect(this.getStartedSection).toContainText('Download Thunderbird Desktop');
+
+    const downloadLink = this.getStartedSection.getByRole('link', { name: 'Download' });
+    await expect(downloadLink).toBeVisible();
+    await expect(downloadLink).toHaveAttribute('href', /thunderbird\.net\/thunderbird\/all/);
+    await expect(downloadLink).toHaveAttribute('target', '_blank');
+  }
+
+  private async verifyMobileSetupTab() {
+    await this.getStartedSection.getByRole('tab', { name: 'Mobile' }).click();
+    await expect(this.getStartedSection.getByRole('tab', { name: 'Mobile' })).toHaveAttribute('aria-selected', 'true');
+    await expect(this.getStartedSection).toContainText('Scan QR Code');
+    await expect(this.getStartedSection).toContainText('Download Thunderbird for Android');
+    await expect(this.getStartedSection).toContainText('Need iOS Help?');
+
+    const scanQrCodeButton = this.getStartedSection.getByRole('button', { name: 'Scan QR Code' });
+    await expect(scanQrCodeButton).toBeVisible();
+    await scanQrCodeButton.click();
+    await expect(this.getStartedSection.getByRole('img', { name: /QR Code/i })).toBeVisible();
+
+    const downloadLink = this.getStartedSection.getByRole('link', { name: 'Download' });
+    await expect(downloadLink).toHaveAttribute('href', /play\.google\.com\/store\/apps\/details/);
+    await expect(downloadLink).toHaveAttribute('target', '_blank');
+
+    const supportLink = this.getStartedSection.getByRole('link', { name: 'Visit Support Article' });
+    await expect(supportLink).toHaveAttribute('href', /support\.tb\.pro/);
+    await expect(supportLink).toHaveAttribute('target', '_blank');
+  }
+
+  private async verifyOtherAppsSetupTab() {
+    await this.getStartedSection.getByRole('tab', { name: 'Other Apps' }).click();
+    await expect(this.getStartedSection.getByRole('tab', { name: 'Other Apps' })).toHaveAttribute('aria-selected', 'true');
+    await expect(this.getStartedSection).toContainText('Automatic Configuration');
+    await expect(this.getStartedSection).toContainText('Manual Configuration');
+    await expect(this.getStartedSection).toContainText('Need Help?');
+
+    const appPasswordLink = this.getStartedSection.getByRole('link', { name: 'app password' });
+    await expect(appPasswordLink).toHaveAttribute('href', '#app-password-container');
+
+    const supportLink = this.getStartedSection.getByRole('link', { name: 'Visit Support Article' });
+    await expect(supportLink).toHaveAttribute('href', /support\.tb\.pro/);
+    await expect(supportLink).toHaveAttribute('target', '_blank');
+
+    await this.verifyServerSettingsValues(this.getStartedSection);
+  }
+
+  private async verifyServerSettingsValues(container: Locator) {
+    const incomingServerCard = container.locator('.server-settings-card').filter({ hasText: 'Incoming server' });
+    const outgoingServerCard = container.locator('.server-settings-card').filter({ hasText: 'Outgoing server' });
+
+    await incomingServerCard.getByRole('button', { name: 'IMAP' }).click();
+    await this.verifyServerCardValues(incomingServerCard, ACCTS_HOST, formatPort(IMAP_PORT, IMAP_TLS));
+
+    await incomingServerCard.getByRole('button', { name: 'JMAP' }).click();
+    await this.verifyServerCardValues(incomingServerCard, ACCTS_HOST, formatPort(JMAP_PORT, JMAP_TLS));
+
+    await outgoingServerCard.getByRole('button', { name: 'SMTP' }).click();
+    await this.verifyServerCardValues(outgoingServerCard, ACCTS_HOST, formatPort(SMTP_PORT, SMTP_TLS));
+  }
+
+  private async verifyServerCardValues(serverCard: Locator, expectedServer: string, expectedPort: string) {
+    const serverValue = serverCard
+      .locator('.server-detail-item')
+      .filter({ hasText: 'SERVER:' })
+      .locator('.server-detail-item-value span');
+    const portValue = serverCard
+      .locator('.server-detail-item')
+      .filter({ hasText: 'PORT:' })
+      .locator('.server-detail-item-value span');
+
+    await expect(serverValue).toHaveText(expectedServer);
+    await expect(portValue).toContainText(expectedPort);
   }
 
   private async verifyContactScreenDisplayed() {

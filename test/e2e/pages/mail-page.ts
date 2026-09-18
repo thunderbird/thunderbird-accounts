@@ -4,7 +4,6 @@ import {
   ACCTS_HUB_URL,
   DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS,
   DASHBOARD_CURRENT_SUBSCRIPTION_EMAIL_ADDRESSES,
-  DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE,
   IMAP_PORT,
   IMAP_TLS,
   JMAP_PORT,
@@ -15,7 +14,6 @@ import {
   TIMEOUT_1_SECOND,
   TIMEOUT_2_SECONDS,
   TIMEOUT_5_SECONDS,
-  TIMEOUT_30_SECONDS,
 } from '../const/constants';
 import { waitForVueApp } from '../utils/utils';
 
@@ -26,26 +24,18 @@ const TEST_EMAIL_ALIAS_LOCAL_PART_PREFIX = 'testalias';
 export class MailPage {
   readonly page: Page;
   readonly mailView: Locator;
-  readonly welcomeContainer: Locator;
-  readonly planInfoContainer: Locator;
-  readonly getStartedSection: Locator;
   readonly emailSettingsSection: Locator;
   readonly customDomainsSection: Locator;
   readonly serverSettingsAccordion: Locator;
   readonly emailAliasesSection: Locator;
-  readonly subscriptionErrorText: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.mailView = this.page.locator('.mail-view');
-    this.welcomeContainer = this.page.locator('.welcome-container');
-    this.planInfoContainer = this.page.locator('.plan-info-container');
-    this.getStartedSection = this.page.locator('#connect-email');
     this.emailSettingsSection = this.page.locator('section#email-settings');
     this.customDomainsSection = this.page.locator('section#custom-domains');
     this.serverSettingsAccordion = this.emailSettingsSection.locator('.accordion').filter({ hasText: 'View server settings' });
     this.emailAliasesSection = this.emailSettingsSection.locator('.email-aliases-content');
-    this.subscriptionErrorText = this.page.getByText('Failed to load subscription information');
   }
 
   async navigateToMail() {
@@ -53,35 +43,6 @@ export class MailPage {
     await this.waitForPageToSettle();
     await expect.poll(async () => new URL(this.page.url()).pathname).toBe('/mail');
     await this.dismissQuickTourIfVisible();
-  }
-
-  async verifyWelcomeDashboardDisplayed() {
-    await expect(this.mailView).toBeVisible();
-    await expect(this.welcomeContainer.getByText('Welcome')).toBeVisible();
-    await expect(this.welcomeContainer).toContainText(PRIMARY_THUNDERMAIL_EMAIL);
-
-    const userDisplayName = await this.page.evaluate(() => (window as any)._page?.userDisplayName || '');
-    await expect(this.welcomeContainer.locator('.name')).toBeVisible();
-    if (userDisplayName) {
-      await expect(this.welcomeContainer.locator('.name')).toContainText(userDisplayName);
-    }
-
-    await expect(this.subscriptionErrorText).not.toBeVisible();
-    await expect(this.planInfoContainer.locator('.plan-name')).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
-    await expect(this.planInfoContainer.locator('.plan-storage')).toContainText(
-      new RegExp(`of\\s+${this.escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_MAIL_STORAGE)}`),
-    );
-  }
-
-  async verifyGetStartedComponents() {
-    await this.getStartedSection.scrollIntoViewIfNeeded();
-    await expect(this.getStartedSection.getByRole('heading', { name: 'Get started with Thundermail' })).toBeVisible();
-    await expect(this.getStartedSection).toContainText('Connect your new email address to start sending and receiving.');
-
-    await this.verifyPinToggle();
-    await this.verifyDesktopSetupTab();
-    await this.verifyMobileSetupTab();
-    await this.verifyOtherAppsSetupTab();
   }
 
   async verifyEmailSettingsComponents() {
@@ -103,65 +64,6 @@ export class MailPage {
 
     await this.verifyCustomDomainActionMenuIfPresent();
     await this.verifyAddDomainFormCanOpen();
-  }
-
-  private async verifyPinToggle() {
-    const unpinButton = this.getStartedSection.getByRole('button', { name: 'Unpin' });
-    await expect(unpinButton).toBeVisible();
-    await unpinButton.click();
-    await expect(this.getStartedSection.getByRole('button', { name: 'Pin' })).toBeVisible();
-    await this.getStartedSection.getByRole('button', { name: 'Pin' }).click();
-    await expect(unpinButton).toBeVisible();
-  }
-
-  private async verifyDesktopSetupTab() {
-    await this.getStartedSection.getByRole('tab', { name: 'Desktop' }).click();
-    await expect(this.getStartedSection.getByRole('tab', { name: 'Desktop' })).toHaveAttribute('aria-selected', 'true');
-    await expect(this.getStartedSection).toContainText(/Automatic Configuration|Connect Thunderbird Desktop/);
-    await expect(this.getStartedSection).toContainText('Download Thunderbird Desktop');
-
-    const downloadLink = this.getStartedSection.getByRole('link', { name: 'Download' });
-    await expect(downloadLink).toBeVisible();
-    await expect(downloadLink).toHaveAttribute('href', /thunderbird\.net\/thunderbird\/all/);
-    await expect(downloadLink).toHaveAttribute('target', '_blank');
-  }
-
-  private async verifyMobileSetupTab() {
-    await this.getStartedSection.getByRole('tab', { name: 'Mobile' }).click();
-    await expect(this.getStartedSection.getByRole('tab', { name: 'Mobile' })).toHaveAttribute('aria-selected', 'true');
-    await expect(this.getStartedSection).toContainText('Scan QR Code');
-    await expect(this.getStartedSection).toContainText('Download Thunderbird for Android');
-    await expect(this.getStartedSection).toContainText('Need iOS Help?');
-
-    const scanQrCodeButton = this.getStartedSection.getByRole('button', { name: 'Scan QR Code' });
-    await expect(scanQrCodeButton).toBeVisible();
-    await scanQrCodeButton.click();
-    await expect(this.getStartedSection.getByRole('img', { name: /QR Code/i })).toBeVisible();
-
-    const downloadLink = this.getStartedSection.getByRole('link', { name: 'Download' });
-    await expect(downloadLink).toHaveAttribute('href', /play\.google\.com\/store\/apps\/details/);
-    await expect(downloadLink).toHaveAttribute('target', '_blank');
-
-    const supportLink = this.getStartedSection.getByRole('link', { name: 'Visit Support Article' });
-    await expect(supportLink).toHaveAttribute('href', /support\.tb\.pro/);
-    await expect(supportLink).toHaveAttribute('target', '_blank');
-  }
-
-  private async verifyOtherAppsSetupTab() {
-    await this.getStartedSection.getByRole('tab', { name: 'Other Apps' }).click();
-    await expect(this.getStartedSection.getByRole('tab', { name: 'Other Apps' })).toHaveAttribute('aria-selected', 'true');
-    await expect(this.getStartedSection).toContainText('Automatic Configuration');
-    await expect(this.getStartedSection).toContainText('Manual Configuration');
-    await expect(this.getStartedSection).toContainText('Need Help?');
-
-    const appPasswordLink = this.getStartedSection.getByRole('link', { name: 'app password' });
-    await expect(appPasswordLink).toHaveAttribute('href', '/dashboard');
-
-    const supportLink = this.getStartedSection.getByRole('link', { name: 'Visit Support Article' });
-    await expect(supportLink).toHaveAttribute('href', /support\.tb\.pro/);
-    await expect(supportLink).toHaveAttribute('target', '_blank');
-
-    await this.verifyOtherAppsManualConfigurationServerSettings();
   }
 
   private async verifyEmailAliasFormOpensAndCancels() {
@@ -262,10 +164,6 @@ export class MailPage {
     await expect(this.serverSettingsAccordion).toContainText('Incoming server');
     await expect(this.serverSettingsAccordion).toContainText('Outgoing server');
     await this.verifyServerSettingsValues(this.serverSettingsAccordion);
-  }
-
-  private async verifyOtherAppsManualConfigurationServerSettings() {
-    await this.verifyServerSettingsValues(this.getStartedSection);
   }
 
   private async verifyServerSettingsValues(container: Locator) {

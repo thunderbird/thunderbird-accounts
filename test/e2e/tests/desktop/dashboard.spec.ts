@@ -33,6 +33,7 @@ test.describe('dashboard controls on desktop browser', {
     await dashboardPage.navigateToDashboard();
     await dashboardPage.verifyDashboardSignedIn();
     await dashboardPage.verifyDashboardDisplayed();
+    await dashboardPage.verifyGetStartedComponents();
 
     await dashboardPage.verifyPasswordChangeNavigation();
     await dashboardPage.navigateToDashboard();

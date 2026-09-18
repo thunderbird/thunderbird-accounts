@@ -21,8 +21,6 @@ test.describe('mail page components on desktop browser', {
   test('all visible mail page components work as expected', async () => {
     test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack until we automate subscribe step');
     await mailPage.navigateToMail();
-    await mailPage.verifyWelcomeDashboardDisplayed();
-    await mailPage.verifyGetStartedComponents();
     await mailPage.verifyEmailSettingsComponents();
     await mailPage.verifyCustomDomainsComponents();
   });

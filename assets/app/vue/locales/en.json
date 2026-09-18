@@ -388,10 +388,9 @@
         "emailAliases": "Email aliases",
         "customDomains": "Custom domains",
         "yourAccount": "Your account",
-        "step1Text": "Connect your new email address to start sending and receiving messages. Use Thunderbird or any email app you prefer.",
-        "step2Text": "Claim any additional email aliases you would like to use.",
-        "step3Text": "Add custom domains to create email aliases for any need.",
-        "step4Text": "Go to 'Your Account' to view account details, manage billing, or cancel your service.",
+        "step1Text": "Claim any additional email aliases you would like to use.",
+        "step2Text": "Add custom domains to create email aliases for any need.",
+        "step3Text": "Go to 'Your Account' to view account details, manage billing, or cancel your service.",
         "close": "Close tour"
       },
       "webmailAlpha": {
