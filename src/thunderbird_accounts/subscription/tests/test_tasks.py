@@ -16,7 +16,6 @@ from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription import tasks, models
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.mail import models as mail_models
-from thunderbird_accounts.core.exceptions import UnexpectedBehaviour
 from thunderbird_accounts.core.tests.utils import (
     build_keycloak_success_response,
     build_mail_get_account,
@@ -37,16 +36,18 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
     def test_empty_webhook(self):
         """Ensure a webhook that doesn't have any POST data errors out with an unexpected behaviour error."""
         with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()):
-            with self.assertRaises(UnexpectedBehaviour) as ex:
-                self.client.post('http://testserver/api/v1/subscription/paddle/webhook/')
-                self.assertEqual(ex.message, 'Paddle webhook is empty')
+            with self.assertLogs('thunderbird_accounts.core.exceptions', level='ERROR') as logs:
+                response = self.client.post('http://testserver/api/v1/subscription/paddle/webhook/')
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(logs.records[0].exc_info[1].message, 'Paddle webhook is empty')
 
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
     def test_empty_occurred_at(self):
         """Ensure a webhook will raise an unexpected behaviour error if there's occurred at."""
         with patch('thunderbird_accounts.subscription.tasks.paddle_transaction_event', Mock()):
-            with self.assertRaises(UnexpectedBehaviour) as ex:
-                self.client.post(
+            with self.assertLogs('thunderbird_accounts.core.exceptions', level='ERROR') as logs:
+                response = self.client.post(
                     'http://testserver/api/v1/subscription/paddle/webhook/',
                     {
                         'event_type': 'transaction.created',
@@ -54,7 +55,9 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
                     },
                     content_type='application/json',
                 )
-                self.assertEqual(ex.message, 'Paddle webhook is missing occurred at')
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(logs.records[0].exc_info[1].message, 'Paddle webhook is missing occurred at')
 
     @patch('thunderbird_accounts.authentication.permissions.IsValidPaddleWebhook.authenticate', skip_permission)
     def test_success(self):

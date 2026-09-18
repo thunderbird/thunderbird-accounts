@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase, override_settings
 from django.urls import path
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import ValidationError
@@ -27,7 +27,7 @@ urlpatterns = [
 
 
 @override_settings(ROOT_URLCONF=__name__)
-class DrfExceptionHandlerTestCase(SimpleTestCase):
+class DrfExceptionHandlerTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
 
