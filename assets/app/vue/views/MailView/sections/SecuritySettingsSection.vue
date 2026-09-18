@@ -16,7 +16,7 @@ const { t } = useI18n();
           <strong>{{ t('views.mail.sections.securitySettings.accountActivity') }}</strong>
           <p>{{ t('views.mail.sections.securitySettings.accountActivityDescriptionOne') }}</p>
           <p>{{ t('views.mail.sections.securitySettings.accountActivityDescriptionTwo') }}</p>
-          <router-link to="/mail/security-settings">
+          <router-link to="/settings">
             <primary-button variant="outline">{{ t('views.mail.sections.securitySettings.viewActivity') }}</primary-button>
           </router-link>
         </div>
@@ -24,7 +24,7 @@ const { t } = useI18n();
         <div class="security-settings-right">
           <strong>{{ t('views.mail.sections.securitySettings.allowList') }}</strong>
           <p>{{ t('views.mail.sections.securitySettings.allowListDescription') }}</p>
-          <router-link to="/mail/security-settings">
+          <router-link to="/settings">
             <primary-button variant="outline">{{ t('views.mail.sections.securitySettings.manageAllowList') }}</primary-button>
           </router-link>
         </div>

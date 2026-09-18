@@ -1,13 +1,32 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { WAFFLE_FLAG } from '@/types';
 import { isWaffleFlagActive } from '@/utils';
-import { BrandButton } from '@thunderbirdops/services-ui';
+import { APPOINTMENT_URL, SEND_URL } from '@/defines';
+import { AppDrawer, AppointmentIcon, BrandButton, IconButton, MailIcon, SendIcon, SettingsIcon } from '@thunderbirdops/services-ui';
+import type { AppDrawerApp } from '@thunderbirdops/services-ui';
 import UserMenu from '@/components/UserMenu.vue';
 
 const { t } = useI18n();
+const router = useRouter();
+
+const apps: AppDrawerApp[] = [
+  { id: 'mail', name: 'Thundermail', icon: MailIcon, current: true },
+  {
+    id: 'appointment',
+    name: 'Appointment',
+    icon: AppointmentIcon,
+    href: APPOINTMENT_URL,
+  },
+  {
+    id: 'send',
+    name: 'Send',
+    icon: SendIcon,
+    href: SEND_URL,
+  },
+];
 
 const isAuthenticated = ref(window._page?.isAuthenticated);
 const avatarUsername = ref(window._page?.userDisplayName || window._page?.userEmail);
@@ -29,6 +48,7 @@ const needsTosAcceptance = ref(window._page?.needsTosAcceptance);
 const needsSubscription = ref(
   window._page?.isAwaitingPaymentVerification || !window._page?.hasActiveSubscription,
 );
+const showSettings = computed(() => isWaffleFlagActive(WAFFLE_FLAG.SETTINGS_PAGE));
 const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
 const showNav = computed(() => !needsTosAcceptance.value && !needsSubscription.value && isCustomDomainsRevampActive.value);
 
@@ -53,7 +73,15 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
         </ul>
       </nav>
 
-      <user-menu :username="avatarUsername" />
+      <div class="header-actions">
+        <router-link v-if="showSettings" v-slot="{ href, navigate }" to="/settings" custom>
+          <icon-button :href="href" :aria-label="t('navigationLinks.securitySettings')" @click="navigate">
+            <settings-icon aria-hidden="true" />
+          </icon-button>
+        </router-link>
+        <app-drawer :apps="apps" @select="router.push('/mail')" />
+        <user-menu :username="avatarUsername" />
+      </div>
     </template>
 
     <template v-else>
@@ -94,6 +122,17 @@ header {
 
   nav.desktop {
     display: none;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    > .icon-only,
+    :deep(.app-drawer__button) {
+      color: #eeeef0;
+    }
   }
 
   .login-button-link {

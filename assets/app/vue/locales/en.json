@@ -1,6 +1,7 @@
 {
   "navigationLinks": {
     "account": "Account",
+    "settings": "Settings",
     "dashboard": "Dashboard",
     "privacyAndData": "Privacy & Data",
     "manageEmails": "Manage Emails",
@@ -41,6 +42,13 @@
     }
   },
   "views": {
+    "settings": {
+      "accountAccess": "Account access",
+      "accountAccessDescription": "Review where this account is signed in and which apps have ongoing access.",
+      "manageAccountAccess": "Manage account access",
+      "loading": "Loading...",
+      "unavailable": "Unavailable"
+    },
     "dashboard": {
       "accountCard": {
         "accountSettings": "Account settings",
@@ -292,7 +300,7 @@
         },
         "securitySettings": {
           "securitySettings": "Security Settings",
-          "accountActivity": "Account Activity",
+          "accountActivity": "Current sign-ins",
           "accountActivityDescriptionOne": "Many email apps can configure your account automatically. Enter your email address and password to get started.",
           "accountActivityDescriptionTwo": "If setup doesn’t work, try connecting manually using server settings.",
           "viewActivity": "View activity",
@@ -304,14 +312,43 @@
       "views": {
         "securitySettings": {
           "securitySettings": "Security Settings",
-          "accountActivity": "Account Activity",
-          "accountActivityDescription": "Recent devices signed in to your account.",
-          "recordsTableHeaderDevice": "Device – App",
+          "accountActivity": "Current sign-ins",
+          "accountActivityDescription": "Apps and devices current signed in",
+          "loadingActiveSessions": "Loading active sessions...",
+          "errorLoadingActiveSessions": "We couldn’t load your active sessions. Please try again.",
+          "unknownDevice": "Unknown Device",
+          "unknownLocation": "Unknown location",
+          "signOutConfirmation": "Sign out of {device}?",
+          "signOutConfirmationDescription": "This will end the session and sign you out on this device.",
+          "errorSigningOutSession": "We couldn’t sign out of that session. Please try again.",
+          "recordsTableHeaderDevice": "Browser or Device",
           "recordsTableHeaderLocation": "Location",
+          "recordsTableHeaderAccessGiven": "Access Given",
+          "recordsTableHeaderSignedIn": "Signed In",
           "recordsTableHeaderLastActive": "Last active",
           "recordsTableHeaderActions": "Actions",
+          "ipGeolocationAttribution": "Locations are approximate. IP geolocation provided by {provider}.",
           "noRecentDevices": "No recent devices signed in to your account.",
+          "currentSession": "Current session",
           "signOut": "Sign out",
+          "connectedApps": "Connected apps",
+          "connectedAppsDescription": "Review apps with ongoing access to this account. Removing access disconnects the app on all devices.",
+          "loadingConnectedApps": "Loading connected apps...",
+          "errorLoadingConnectedApps": "We couldn’t load your connected apps. Please try again.",
+          "removeAccessConfirmation": "Remove access for {app}?",
+          "removeAccessConfirmationDescription": "This will disconnect this app at all locations.",
+          "errorRemovingAccess": "We couldn’t remove access for that app. Please try again.",
+          "recordsTableHeaderApp": "App or Device",
+          "recordsTableHeaderLastAccess": "Last Access",
+          "noConnectedApps": "No currently connected apps",
+          "removeAccess": "Remove access",
+          "cancel": "Cancel",
+          "unknownApp": "Unknown app",
+          "unknownIpAddress": "Unknown",
+          "unknownAccessGiven": "Unknown",
+          "unknownLastAccess": "Unknown",
+          "todayAt": "Today at {time}",
+          "yesterdayAt": "Yesterday at {time}",
           "allowList": "Allow List",
           "allowListDescription": "Ensure important senders aren’t marked as spam. Emails on your allow list skip junk filtering, but may still be rejected if they’re flagged or improperly formatted.",
           "manageAllowList": "Manage allow list",
