@@ -1,11 +1,13 @@
 import path from 'path';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import { ContactPage } from '../../pages/contact-page';
-import { ensureWeAreSignedIn, overridePageData } from '../../utils/utils';
+import { ensureWeAreSignedIn, navigateToAccountsHubAndSignIn, overridePageData } from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
   PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
+  PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
+  PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
   ACCTS_OIDC_EMAIL,
   ACCTS_OIDC_RECOVERY_EMAIL,
   PRIMARY_THUNDERMAIL_EMAIL,
@@ -23,6 +25,8 @@ const TEST_NAME = 'Automated E2E Test';
 const TEST_SUBJECT = 'Test Subject';
 const TEST_DESC = 'Issue created by automated E2E test'
 
+const usesSavedAuth = (testInfo: TestInfo) => Boolean(testInfo.project.use.storageState);
+
 const verifyFormPostData = async (postData: string | null) => {
   // verify the data captured in the submit form post is as expected
   expect(postData).toContain('email');
@@ -39,7 +43,13 @@ const verifyFormPostData = async (postData: string | null) => {
   expect(postData).toContain(TEST_DESC);
 };
 
-const fakeBeingOnAllowList = async (page: Page) => {
+const fakeBeingOnAllowListForLocalDev = async (page: Page) => {
+  // Both desktop and the local Playwright mobile viewport run against the local dev stack, where
+  // the test account is not on the allow list. Stage and production test accounts are allow-listed.
+  if (ACCTS_TARGET_ENV !== 'dev') {
+    return;
+  }
+
   // fake having our user on the allow list so we can actually submit the contact form
   // only needed when running on local dev stack as our stage/prod test accounts are on allow list
   await page.route('*/**/api/v1/contact/check-email-is-on-allow-list/', async (route) => {
@@ -52,7 +62,7 @@ const fakeBeingOnAllowList = async (page: Page) => {
 };
 
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, testInfo) => {
   contactPage = new ContactPage(page);
 
   // mock the /contact/fields endpoint to return predictable values for the form
@@ -145,12 +155,22 @@ test.beforeEach(async ({ page }) => {
     });
   });
 
-  // we should be signed into TB Accounts already via our auth setup but check in case session expired
-  await ensureWeAreSignedIn(page);
+  if (usesSavedAuth(testInfo)) {
+    // Desktop projects load the browser context saved by auth.desktop.setup.ts.
+    await ensureWeAreSignedIn(page);
+  } else {
+    // Mobile projects cannot load saved browser context, so each test must sign in independently.
+    await navigateToAccountsHubAndSignIn(page);
+  }
 });
 
-test.describe('contact support form on desktop browser', {
-  tag: [PLAYWRIGHT_TAG_E2E_SUITE, PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY],
+test.describe('contact support form on browser', {
+  tag: [
+    PLAYWRIGHT_TAG_E2E_SUITE,
+    PLAYWRIGHT_TAG_E2E_PROD_DESKTOP_NIGHTLY,
+    PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
+    PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
+  ],
 }, () => {
   test('contact form pre-fills primary thundermail email when signed in with active subscription', async ({ page }) => {
     const activeSubscriptionPageData = {
@@ -163,7 +183,9 @@ test.describe('contact support form on desktop browser', {
     await contactPage.navigateToContactPage();
     await contactPage.verifyFormDisplayed();
 
-    await expect(contactPage.emailInput).toHaveValue(PRIMARY_THUNDERMAIL_EMAIL);
+    // locator.toHaveValue is not supported in BrowserStack iOS, so use inputValue on all platforms.
+    const emailValue = await contactPage.emailInput.inputValue();
+    expect(emailValue).toBe(PRIMARY_THUNDERMAIL_EMAIL);
   });
 
   test('contact form pre-fills recovery email when signed in without active subscription', async ({ page }) => {
@@ -177,12 +199,15 @@ test.describe('contact support form on desktop browser', {
     await contactPage.navigateToContactPage();
     await contactPage.verifyFormDisplayed();
 
-    await expect(contactPage.emailInput).toHaveValue(ACCTS_OIDC_RECOVERY_EMAIL);
+    // Keep this assertion compatible with BrowserStack iOS; see the active-subscription test above.
+    const emailValue = await contactPage.emailInput.inputValue();
+    expect(emailValue).toBe(ACCTS_OIDC_RECOVERY_EMAIL);
   });
 
   test('contact form displayed correctly when not signed in', async ({ page }) => {
     // clear authentication state for this test
     await page.context().clearCookies();
+    await page.reload();
     await page.waitForTimeout(TIMEOUT_5_SECONDS);
     await contactPage.navigateToContactPage();
 
@@ -195,10 +220,7 @@ test.describe('contact support form on desktop browser', {
   });
 
   test('able to submit contact form successfully', async ({ page }) => {
-    // we need our user to be on the allow list so we can submit
-    if (ACCTS_TARGET_ENV == 'dev') {
-      await fakeBeingOnAllowList(page);
-    }
+    await fakeBeingOnAllowListForLocalDev(page);
 
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
@@ -266,10 +288,7 @@ test.describe('contact support form on desktop browser', {
   });
 
   test('error handling works correctly', async ({ page }) => {
-    // we need our user to be on the allow list so we can submit
-    if (ACCTS_TARGET_ENV == 'dev') {
-      await fakeBeingOnAllowList(page);
-    }
+    await fakeBeingOnAllowListForLocalDev(page);
 
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
@@ -304,10 +323,7 @@ test.describe('contact support form on desktop browser', {
   });
 
   test('able to submit contact form with attachments', async ({ page }) => {
-    // we need our user to be on the allow list so we can submit
-    if (ACCTS_TARGET_ENV == 'dev') {
-      await fakeBeingOnAllowList(page);
-    }
+    await fakeBeingOnAllowListForLocalDev(page);
 
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
