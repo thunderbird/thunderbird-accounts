@@ -224,11 +224,14 @@ jobs:
       - name: Run E2E tests against local stack
         id: e2e
         working-directory: test/e2e
+        env:
+          GENERATE_PLAYWRIGHT_HTML_REPORT: 'true'
         run: |
           cp .env.dev.example .env
           npm run e2e-test
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
         if: ${{ always() && !cancelled() }}
         with:
           name: playwright-report
