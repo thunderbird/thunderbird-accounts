@@ -83,9 +83,13 @@ export default {
 
 @media (min-width: 1024px) {
   .dashboard-view-content {
-    grid-template-columns: 591px 345px;
+    /* Resolves to px at max-width 968px */
+    grid-template-columns: minmax(0, 591fr) minmax(0, 345fr);
     justify-items: stretch;
     gap: 2rem;
+    max-width: 968px;
+    width: 100%;
+    margin-inline: auto;
 
     .dashboard-view-cards {
       max-width: none;

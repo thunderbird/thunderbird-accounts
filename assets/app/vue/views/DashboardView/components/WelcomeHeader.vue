@@ -176,8 +176,8 @@ onMounted(async () => {
 @media (min-width: 1024px) {
   .welcome-header {
     grid-template-columns: 1fr 1fr;
-    width: 968px;
-    max-width: none;
+    width: 100%;
+    max-width: 968px;
     margin-inline: auto;
   }
 }
