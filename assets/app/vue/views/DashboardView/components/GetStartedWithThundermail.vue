@@ -36,7 +36,7 @@ const tabs = computed<SegmentedControlTab[]>(() => [
   },
   {
     id: SETUP_TABS.OTHER,
-    label: t('views.mail.sections.dashboard.getStartedWithThundermail.tabs.otherApps'),
+    label: t('views.mail.sections.dashboard.getStartedWithThundermail.tabs.other'),
     icon: PhGlobe,
   },
 ]);

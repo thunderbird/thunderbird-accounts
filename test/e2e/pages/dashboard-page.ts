@@ -298,8 +298,8 @@ export class DashboardPage {
   }
 
   private async verifyOtherAppsSetupTab() {
-    await this.getStartedSection.getByRole('tab', { name: 'Other Apps' }).click();
-    await expect(this.getStartedSection.getByRole('tab', { name: 'Other Apps' })).toHaveAttribute('aria-selected', 'true');
+    await this.getStartedSection.getByRole('tab', { name: 'Other' }).click();
+    await expect(this.getStartedSection.getByRole('tab', { name: 'Other' })).toHaveAttribute('aria-selected', 'true');
     await expect(this.getStartedSection).toContainText('Automatic Configuration');
     await expect(this.getStartedSection).toContainText('Manual Configuration');
     await expect(this.getStartedSection).toContainText('Need Help?');

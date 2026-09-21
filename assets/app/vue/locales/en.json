@@ -117,7 +117,7 @@
             "tabs": {
               "desktop": "Desktop",
               "mobile": "Mobile",
-              "otherApps": "Other Apps"
+              "other": "Other"
             },
             "desktopPanel": {
               "connectTitle": "Connect Thunderbird Desktop",
