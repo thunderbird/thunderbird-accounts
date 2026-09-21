@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 
 // Accounts Routes
 import DashboardView from '@/views/DashboardView/index.vue';
+import SettingsView from '@/views/SettingsView/index.vue';
 import ManageMfaView from '@/views/ManageMfaView/index.vue';
 import PrivacyAndDataView from '@/views/PrivacyAndDataView.vue';
 import SubscribeView from '@/views/SubscribeView/index.vue';
@@ -25,6 +26,8 @@ import { isWaffleFlagActive } from '@/utils';
 // Manage MFA rolls out dark: only register its route when the multi-factor-authentication
 // waffle flag is active, so /manage-mfa falls through to the 404 route until it's enabled.
 const showMfa = isWaffleFlagActive(WAFFLE_FLAG.MULTI_FACTOR_AUTHENTICATION);
+
+const showSettings = isWaffleFlagActive(WAFFLE_FLAG.SETTINGS_PAGE);
 
 const showCustomDomains = isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP);
 
@@ -136,11 +139,16 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     name: 'mail',
     component: MailView,
   },
-  {
-    path: '/mail/security-settings',
-    name: 'mail-security-settings',
-    component: SecuritySettingsView,
+  ...(showSettings ? [{
+    path: '/settings',
+    name: 'settings',
+    component: SettingsView,
   },
+  {
+    path: '/settings/security',
+    name: 'settings-security',
+    component: SecuritySettingsView,
+  }] : []),
   ...(showCustomDomains ? [{
     path: '/custom-domains',
     name: 'custom-domains',

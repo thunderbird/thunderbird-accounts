@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
+import { WAFFLE_FLAG } from '@/types';
+import { isWaffleFlagActive } from '@/utils';
 import { StandardFooter } from '@thunderbirdops/services-ui';
 import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL, STATUS_PAGE_URL, IDEAS_PAGE_URL } from '@/defines';
 
@@ -11,12 +13,16 @@ const isAuthenticated = ref(window._page?.isAuthenticated);
 
 type NavItem = { route: string; i18nKey: string };
 
-const navItems: NavItem[] = [
+const navItems = computed<NavItem[]>(() => [
+  ...(isWaffleFlagActive(WAFFLE_FLAG.SETTINGS_PAGE) ? [{
+    route: '/settings',
+    i18nKey: 'settings',
+  }] : []),
   {
     route: '/dashboard',
     i18nKey: 'account',
   },
-];
+]);
 
 const currentRoute = useRoute();
 
@@ -32,7 +38,7 @@ const thunderbirdLogoSrc = new URL('@/assets/svg/thunderbird-logo.svg', import.m
       <nav>
         <div class="top-row">
           <img :src="thunderbirdLogoSrc" alt="Thunderbird" />
-          <ul>
+          <ul class="footer-links">
             <template v-if="isAuthenticated && !isSubscribePage">
               <li v-for="navItem in navItems" :key="navItem.route">
                 <router-link :to="navItem.route">
@@ -111,6 +117,17 @@ nav {
     /* FIXME: This should be a var but we don't have a background
     for the footer in light mode yet so it is not readable if not white-ish */
     color: white;
+  }
+
+  .footer-links {
+    height: 3.813rem;
+    align-self: stretch;
+    flex-grow: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0;
   }
 
   .default-links {

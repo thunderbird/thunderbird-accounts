@@ -1,4 +1,12 @@
 :root {
+    --critical-default: #991b1b;
+    --neutral-0: var(--colour-neutral-base);
+    --surface-base: var(--colour-neutral-base);
+    --surface-border-intense: var(--colour-neutral-border-intense);
+    --surface-lower: var(--colour-neutral-lower);
+    --text-icon-highlight: var(--colour-ti-highlight);
+    --text-icons-highlight-blue: var(--colour-ti-highlight);
+
     /* Z-index definitions */
     --z-index-base: 1;
     --z-index-header-dropdown: 10;

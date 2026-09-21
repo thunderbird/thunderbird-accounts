@@ -105,7 +105,6 @@ function toggle() {
         font-size: 1rem;
         font-weight: 500;
         line-height: 1.2;
-        text-transform: capitalize;
         color: var(--colour-ti-base);
       }
     }
