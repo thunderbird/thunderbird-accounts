@@ -15,17 +15,17 @@ const tbProMailUrl = window._page?.webmailUrl;
 const apps: AppDrawerApp[] = [
   { id: 'mail', name: 'Mail', icon: MailIcon, href: tbProMailUrl },
   {
-    id: 'appointment',
-    name: 'Appointment',
-    icon: AppointmentIcon,
-    href: APPOINTMENT_URL,
-  },
-  {
     id: 'send',
     name: 'Send',
     icon: SendIcon,
     href: SEND_URL,
   },
+  {
+    id: 'appointment',
+    name: 'Appointment',
+    icon: AppointmentIcon,
+    href: APPOINTMENT_URL,
+  }
 ];
 
 const isAuthenticated = ref(window._page?.isAuthenticated);
