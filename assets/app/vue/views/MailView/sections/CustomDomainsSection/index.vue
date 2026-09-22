@@ -8,7 +8,7 @@ import { DOMAIN_STATUS, STEP } from './types';
 import type { CustomDomain, DomainVerificationResult } from './types';
 
 // Shared components
-import CardContainer from '@/components/CardContainer.vue';
+import DetailsSummary from '@/components/DetailsSummary.vue';
 
 // Local components
 import CustomDomainForm from './components/CustomDomainForm.vue';
@@ -76,81 +76,98 @@ export default {
 </script>
 
 <template>
-  <section id="custom-domains">
-    <card-container
-      :title="t('views.mail.sections.customDomains.customDomains')"
-      :subtitle="customDomainsDescription"
-    >
-      <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: maxCustomDomains }) }}</strong>
+  <details-summary
+    class="custom-domains-details-summary"
+    :title="t('views.mail.sections.customDomains.customDomains')"
+  >
+    <template #icon>
+      <ph-globe size="24" />
+    </template>
 
-      <div class="custom-domains-list" v-if="customDomains.length > 0">
-        <div class="custom-domain-item" v-for="domain in customDomains" :key="domain.name">
-          <ph-globe size="20" />
-          <p>{{ domain.name }}</p>
+    <div class="custom-domains-header-row">
+      <p>{{ customDomainsDescription }}</p>
+      <span class="domains-added">{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: maxCustomDomains }) }}</span>
+    </div>
 
-          <template v-if="domain.status === DOMAIN_STATUS.VERIFIED">
-            <base-badge :type="BaseBadgeTypes.Verified">
-              <template #icon>
-                <ph-check-circle size="16" weight="fill" />
-              </template>
-              {{ t('views.mail.sections.customDomains.verified') }}
-            </base-badge>
-          </template>
-          <template v-else-if="domain.status === DOMAIN_STATUS.FAILED">
-            <base-badge :type="BaseBadgeTypes.NotSet">{{ t('views.mail.sections.customDomains.failed') }}</base-badge>
-          </template>
-          <template v-else>
-            <base-badge :type="BaseBadgeTypes.Pending">{{ t('views.mail.sections.customDomains.pending') }}</base-badge>
-          </template>
+    <div class="custom-domains-list" v-if="customDomains.length > 0">
+      <div class="custom-domain-item" v-for="domain in customDomains" :key="domain.name">
+        <ph-globe size="20" />
+        <p>{{ domain.name }}</p>
 
-          <template v-if="domain.emailsCount > 0">
-            <base-badge :type="BaseBadgeTypes.Emails">{{ t('views.mail.sections.customDomains.emailsCount', domain.emailsCount) }}</base-badge>
-          </template>
-
-          <actions-menu
-            :domain="domain"
-            @custom-domain-removed="handleCustomDomainRemoved"
-            @custom-domain-verified="handleCustomDomainVerified"
-            @custom-domain-error="handleCustomDomainError"
-            @custom-domain-view-dns-records="handleCustomDomainViewDnsRecords"
-            @custom-domain-verification-result="handleCustomDomainVerificationResult"
-          />
-        </div>
-      </div>
-
-      <notice-bar :type="NoticeBarTypes.Critical" class="verify-step-notice-bar" v-if="errorMessage">
-        <p>{{ errorMessage }}</p>
-
-        <template #cta>
-          <button @click="errorMessage = null">
-            <ph-x size="24" />
-          </button>
+        <template v-if="domain.status === DOMAIN_STATUS.VERIFIED">
+          <base-badge :type="BaseBadgeTypes.Verified">
+            <template #icon>
+              <ph-check-circle size="16" weight="fill" />
+            </template>
+            {{ t('views.mail.sections.customDomains.verified') }}
+          </base-badge>
         </template>
-      </notice-bar>
+        <template v-else-if="domain.status === DOMAIN_STATUS.FAILED">
+          <base-badge :type="BaseBadgeTypes.NotSet">{{ t('views.mail.sections.customDomains.failed') }}</base-badge>
+        </template>
+        <template v-else>
+          <base-badge :type="BaseBadgeTypes.Pending">{{ t('views.mail.sections.customDomains.pending') }}</base-badge>
+        </template>
 
-      <custom-domain-form
-        ref="customDomainFormRef"
-        @step-change="handleStepChange"
-        @custom-domain-added="handleCustomDomainAdded"
-        @custom-domain-verified="handleCustomDomainVerified"
-        :last-domain-removed="lastDomainRemoved"
-        :custom-domains="customDomains"
-      />
-    </card-container>
-  </section>
+        <template v-if="domain.emailsCount > 0">
+          <base-badge :type="BaseBadgeTypes.Emails">{{ t('views.mail.sections.customDomains.emailsCount', domain.emailsCount) }}</base-badge>
+        </template>
+
+        <actions-menu
+          :domain="domain"
+          @custom-domain-removed="handleCustomDomainRemoved"
+          @custom-domain-verified="handleCustomDomainVerified"
+          @custom-domain-error="handleCustomDomainError"
+          @custom-domain-view-dns-records="handleCustomDomainViewDnsRecords"
+          @custom-domain-verification-result="handleCustomDomainVerificationResult"
+        />
+      </div>
+    </div>
+
+    <notice-bar :type="NoticeBarTypes.Critical" class="verify-step-notice-bar" v-if="errorMessage">
+      <p>{{ errorMessage }}</p>
+
+      <template #cta>
+        <button @click="errorMessage = null">
+          <ph-x size="24" />
+        </button>
+      </template>
+    </notice-bar>
+
+    <custom-domain-form
+      ref="customDomainFormRef"
+      @step-change="handleStepChange"
+      @custom-domain-added="handleCustomDomainAdded"
+      @custom-domain-verified="handleCustomDomainVerified"
+      :last-domain-removed="lastDomainRemoved"
+      :custom-domains="customDomains"
+    />
+  </details-summary>
 </template>
 
 <style scoped>
-section#custom-domains {
+.custom-domains-details-summary {
+  margin-block-end: 2rem;
   color: var(--colour-ti-secondary);
 
-  strong {
-    display: block;
-    font-family: Inter;
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: 0.48px;
+  .custom-domains-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
     margin-block-end: 1rem;
+
+    p {
+      margin-block-end: 0;
+    }
+
+    .domains-added {
+      font-style: italic;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      color: var(--colour-ti-muted);
+    }
   }
 
   .notice-bar {

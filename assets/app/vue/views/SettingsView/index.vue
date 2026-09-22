@@ -9,7 +9,6 @@ import { WAFFLE_FLAG } from '@/types';
 import { isWaffleFlagActive } from '@/utils';
 import { getActiveSessions, getConnectedApps } from '@/views/MailView/views/SecuritySettingsView/api';
 import EmailSettingsSection from '@/views/MailView/sections/EmailSettingsSection/index.vue';
-import CustomDomainsSection from '@/views/MailView/sections/CustomDomainsSection/index.vue';
 
 defineOptions({ name: 'SettingsView' });
 
@@ -19,7 +18,6 @@ const sessionCount = ref<number | null>(null);
 const appCount = ref<number | null>(null);
 
 const showSecuritySettings = computed(() => isWaffleFlagActive(WAFFLE_FLAG.ACTIVE_LOGINS));
-const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
 
 onMounted(async () => {
   if (!showSecuritySettings.value) {
@@ -40,7 +38,6 @@ onMounted(async () => {
 <template>
   <div class="settings-view">
     <email-settings-section />
-    <custom-domains-section v-if="!isCustomDomainsRevampActive" />
 
     <card-container v-if="showSecuritySettings" :title="t('views.mail.views.securitySettings.securitySettings')">
       <details-summary :title="t('views.settings.accountAccess')" :expandable="false" default-open>
@@ -80,10 +77,7 @@ onMounted(async () => {
 .settings-view {
   display: flex;
   flex-direction: column;
-}
-
-.settings-view :deep(:not(:first-child) section) {
-  margin-block-end: 2rem;
+  gap: 2rem;
 }
 
 .account-access {
