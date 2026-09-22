@@ -34,7 +34,7 @@ const avatarUsername = ref(window._page?.userDisplayName || window._page?.userEm
 
 const navItems = [
   {
-    route: '/mail',
+    route: '/dashboard',
     i18nKey: 'dashboard',
   },
   {
@@ -58,7 +58,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
 
 <template>
   <header>
-    <router-link to="/mail">
+    <router-link to="/dashboard">
       <img :src="logoSrc" alt="Thunderbird Accounts" />
     </router-link>
 
@@ -79,7 +79,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
             <settings-icon aria-hidden="true" />
           </icon-button>
         </router-link>
-        <app-drawer :apps="apps" @select="router.push('/mail')" />
+        <app-drawer :apps="apps" />
         <user-menu :username="avatarUsername" />
       </div>
     </template>
