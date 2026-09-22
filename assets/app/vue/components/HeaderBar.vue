@@ -11,9 +11,10 @@ import UserMenu from '@/components/UserMenu.vue';
 
 const { t } = useI18n();
 const router = useRouter();
+const tbProMailUrl = window._page?.webmailUrl;
 
 const apps: AppDrawerApp[] = [
-  { id: 'mail', name: 'Thundermail', icon: MailIcon, current: true },
+  { id: 'mail', name: 'Mail', icon: MailIcon, href: tbProMailUrl },
   {
     id: 'appointment',
     name: 'Appointment',
