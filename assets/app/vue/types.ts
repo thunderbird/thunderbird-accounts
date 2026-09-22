@@ -16,7 +16,7 @@ export enum WAFFLE_FLAG {
   MULTI_FACTOR_AUTHENTICATION = 'multi-factor-authentication',
   SHOW_CONNECT_NOW = 'show-connect-now',
   CUSTOM_DOMAINS_REVAMP = 'custom-domains-revamp',
-  SETTINGS_PAGE = 'settings-page'
+  ACTIVE_LOGINS = 'active-logins'
 };
 
 export enum WAFFLE_SWITCH {

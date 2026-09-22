@@ -13,7 +13,7 @@ Please use constants to avoid mistakes.
 +-----------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------------------+
 | multi-factor-authentication | flag   | Displays the Multi-factor Authentication link and pages on the dashboard.                                                                        |
 +-----------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------------------+
-| settings-page               | flag   | Displays Settings links in the header and footer and registers /settings and /settings/security.                                                |
+| active-logins                | flag   | Displays the Security Settings card on /settings/security.                                                                                      |
 +-----------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------------------+
 | show-connect-now            | flag   | Displays the 'Connect now' button in the Mail dashboard that triggers Thunderbird Desktop                                                        |
 +-----------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------------------+

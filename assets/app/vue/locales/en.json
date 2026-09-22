@@ -429,10 +429,6 @@
         "step2Text": "Add custom domains to create email aliases for any need.",
         "step3Text": "Go to 'Your Account' to view account details, manage billing, or cancel your service.",
         "close": "Close tour"
-      },
-      "webmailAlpha": {
-        "notice": "Webmail (early alpha) is now available. {checkItOut}.",
-        "checkItOut": "Check it out here"
       }
     },
     "manageMfa": {

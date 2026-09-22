@@ -27,9 +27,8 @@ import { isWaffleFlagActive } from '@/utils';
 // waffle flag is active, so /manage-mfa falls through to the 404 route until it's enabled.
 const showMfa = isWaffleFlagActive(WAFFLE_FLAG.MULTI_FACTOR_AUTHENTICATION);
 
-const showSettings = isWaffleFlagActive(WAFFLE_FLAG.SETTINGS_PAGE);
-
 const showCustomDomains = isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP);
+const showSecuritySettings = isWaffleFlagActive(WAFFLE_FLAG.ACTIVE_LOGINS);
 
 // Keep public routes in sync with PUBLIC_VUE_ROUTES in src/thunderbird_accounts/core/views.py.
 // If the page template is marked as error page, only show the error page.
@@ -139,12 +138,12 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     name: 'mail',
     component: MailView,
   },
-  ...(showSettings ? [{
+  {
     path: '/settings',
     name: 'settings',
     component: SettingsView,
   },
-  {
+  ...(showSecuritySettings ? [{
     path: '/settings/security',
     name: 'settings-security',
     component: SecuritySettingsView,
