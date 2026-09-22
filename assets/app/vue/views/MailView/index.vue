@@ -3,7 +3,6 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTour, FTUE_STEPS } from '@/composables/useTour';
 import TourCard from '@/components/TourCard.vue';
-import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { WAFFLE_FLAG } from '@/types';
 import { isWaffleFlagActive } from '@/utils';
 
@@ -15,7 +14,6 @@ import CustomDomainsSection from './sections/CustomDomainsSection/index.vue';
 
 const { t } = useI18n();
 const tour = useTour();
-const webmailUrl = window._page?.webmailUrl;
 
 const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
 </script>
@@ -28,16 +26,6 @@ export default {
 
 <template>
   <div class="mail-view">
-    <notice-bar :type="NoticeBarTypes.Info" class="webmail-notice">
-      <i18n-t keypath="views.mail.webmailAlpha.notice">
-        <template #checkItOut>
-          <a :href="webmailUrl" target="_blank" rel="noopener noreferrer">
-            {{ t('views.mail.webmailAlpha.checkItOut') }}
-          </a>
-        </template>
-      </i18n-t>
-    </notice-bar>
-
     <email-settings-section />
     <custom-domains-section v-if="!isCustomDomainsRevampActive" />
 
@@ -83,11 +71,5 @@ export default {
 
 .mail-view :deep(:not(:first-child) section) {
   margin-block-end: 2rem;
-}
-
-.webmail-notice {
-  max-width: 968px;
-  width: 100%;
-  margin: 0 auto 2rem;
 }
 </style>

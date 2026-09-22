@@ -2,8 +2,6 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
-import { WAFFLE_FLAG } from '@/types';
-import { isWaffleFlagActive } from '@/utils';
 import { StandardFooter } from '@thunderbirdops/services-ui';
 import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL, STATUS_PAGE_URL, IDEAS_PAGE_URL } from '@/defines';
 
@@ -14,10 +12,10 @@ const isAuthenticated = ref(window._page?.isAuthenticated);
 type NavItem = { route: string; i18nKey: string };
 
 const navItems = computed<NavItem[]>(() => [
-  ...(isWaffleFlagActive(WAFFLE_FLAG.SETTINGS_PAGE) ? [{
+  {
     route: '/settings',
     i18nKey: 'settings',
-  }] : []),
+  },
   {
     route: '/dashboard',
     i18nKey: 'account',
