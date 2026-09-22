@@ -42,7 +42,7 @@ export default {
 <style scoped>
 .email-aliases-details-summary {
   position: relative;
-  margin-block-end: 2.25rem;
+  margin-block-end: 2rem;
 }
 
 @media (min-width: 1280px) {
