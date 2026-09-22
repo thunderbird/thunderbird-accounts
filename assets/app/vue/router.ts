@@ -9,7 +9,6 @@ import SubscribeView from '@/views/SubscribeView/index.vue';
 import TosPrivacyView from '@/views/TosPrivacyView/index.vue';
 
 // Thundermail Routes
-import MailView from '@/views/MailView/index.vue';
 import SecuritySettingsView from '@/views/SecuritySettingsView/index.vue';
 import CustomDomainsView from '@/views/CustomDomainsView/index.vue';
 
@@ -46,7 +45,7 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
   // Root path
   {
     path: '/',
-    redirect: '/mail'
+    redirect: '/dashboard'
   },
   // Accounts Routes
   {
@@ -133,11 +132,6 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     component: TosPrivacyView,
   },
   // Thundermail Routes
-  {
-    path: '/mail',
-    name: 'mail',
-    component: MailView,
-  },
   {
     path: '/settings',
     name: 'settings',
@@ -257,7 +251,7 @@ router.beforeEach((to, _from) => {
   }
 
   if (!needsSubscription && routeName === 'subscribe') {
-    return { name: 'mail' };
+    return { name: 'dashboard' };
   }
 
   return true;
