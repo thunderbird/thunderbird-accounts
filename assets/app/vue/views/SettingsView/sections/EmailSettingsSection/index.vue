@@ -11,7 +11,7 @@ import DetailsSummary from '@/components/DetailsSummary.vue';
 // Local components
 import EmailAliases from './components/EmailAliases.vue';
 import ViewServerSettings from './components/ViewServerSettings.vue';
-import CustomDomainsSection from '../CustomDomainsSection/index.vue';
+import CustomDomainsSection from './CustomDomainsSection/index.vue';
 
 const { t } = useI18n();
 

@@ -9,7 +9,7 @@ import EmailAliasActionsMenu from './EmailAliasActionsMenu.vue';
 import EmailAliasForm from './EmailAliasForm.vue';
 
 // Types
-import { DOMAIN_STATUS } from '../../CustomDomainsSection/types';
+import { DOMAIN_STATUS } from '../CustomDomainsSection/types';
 import { EmailAlias } from '../types';
 
 // API
