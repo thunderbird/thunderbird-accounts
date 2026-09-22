@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { MailPage } from '../../pages/mail-page';
+import { EmailSettingsPage } from '../../pages/email-settings-page';
 import { navigateToAccountsHubAndSignIn } from '../../utils/utils';
 
 import {
@@ -8,21 +8,21 @@ import {
   ACCTS_TARGET_ENV,
 } from '../../const/constants';
 
-let mailPage: MailPage;
+let emailSettingsPage: EmailSettingsPage;
 
 test.beforeEach(async ({ page }) => {
-  mailPage = new MailPage(page);
+  emailSettingsPage = new EmailSettingsPage(page);
   await navigateToAccountsHubAndSignIn(page);
 });
 
-test.describe('mail page components on mobile browser', {
+test.describe('email settings page components on mobile browser', {
   tag: [PLAYWRIGHT_TAG_E2E_SUITE_MOBILE, PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY],
 }, () => {
-  test('all visible mail page components work as expected', async () => {
+  test('all visible email settings page components work as expected', async () => {
     test.skip(ACCTS_TARGET_ENV == 'dev', 'Skipping this test when running on local dev stack until we automate subscribe step');
 
-    await mailPage.navigateToMail();
-    await mailPage.verifyEmailSettingsComponents();
-    await mailPage.verifyCustomDomainsComponents();
+    await emailSettingsPage.navigateToEmailSettings();
+    await emailSettingsPage.verifyEmailSettingsComponents();
+    await emailSettingsPage.verifyCustomDomainsComponents();
   });
 });

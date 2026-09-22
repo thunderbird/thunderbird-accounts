@@ -21,9 +21,8 @@ const hasTls = (tls: string) => Boolean(tls && tls !== 'None' && tls !== 'undefi
 const formatPort = (port: number, tls: string) => `${port}${hasTls(tls) ? ' (SSL/TLS)' : ''}`;
 const TEST_EMAIL_ALIAS_LOCAL_PART_PREFIX = 'testalias';
 
-export class MailPage {
+export class EmailSettingsPage {
   readonly page: Page;
-  readonly mailView: Locator;
   readonly emailSettingsSection: Locator;
   readonly customDomainsSection: Locator;
   readonly serverSettingsAccordion: Locator;
@@ -31,18 +30,16 @@ export class MailPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.mailView = this.page.locator('.mail-view');
     this.emailSettingsSection = this.page.locator('section#email-settings');
-    this.customDomainsSection = this.page.locator('section#custom-domains');
-    this.serverSettingsAccordion = this.emailSettingsSection.locator('.accordion').filter({ hasText: 'View server settings' });
+    this.customDomainsSection = this.emailSettingsSection.locator('.custom-domains-details-summary');
+    this.serverSettingsAccordion = this.emailSettingsSection.locator('.accordion').filter({ hasText: 'Server settings' });
     this.emailAliasesSection = this.emailSettingsSection.locator('.email-aliases-content');
   }
 
-  async navigateToMail() {
-    await this.page.goto(`${ACCTS_HUB_URL}/mail`);
+  async navigateToEmailSettings() {
+    await this.page.goto(`${ACCTS_HUB_URL}/settings`);
     await this.waitForPageToSettle();
-    await expect.poll(async () => new URL(this.page.url()).pathname).toBe('/mail');
-    await this.dismissQuickTourIfVisible();
+    await expect.poll(async () => new URL(this.page.url()).pathname).toBe('/settings');
   }
 
   async verifyEmailSettingsComponents() {
@@ -55,10 +52,13 @@ export class MailPage {
   }
 
   async verifyCustomDomainsComponents() {
-    await this.customDomainsSection.scrollIntoViewIfNeeded();
-    await expect(this.customDomainsSection.getByRole('heading', { name: 'Custom Domains' })).toBeVisible();
+    const customDomainsHeader = this.customDomainsSection.getByRole('button', { name: 'Custom Domains' });
+    await customDomainsHeader.scrollIntoViewIfNeeded();
+    await expect(customDomainsHeader).toBeVisible();
+    await customDomainsHeader.click();
+
     await expect(this.customDomainsSection).toContainText('Use your own domain to create personalized email addresses.');
-    await expect(this.customDomainsSection.locator('strong')).toContainText(
+    await expect(this.customDomainsSection.locator('.domains-added')).toContainText(
       new RegExp(`/\\s*${this.escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS)}\\s+domains added`),
     );
 
@@ -67,8 +67,12 @@ export class MailPage {
   }
 
   private async verifyEmailAliasFormOpensAndCancels() {
+    const emailAliasesHeader = this.emailSettingsSection.getByRole('button', { name: 'Email aliases' });
+    await emailAliasesHeader.scrollIntoViewIfNeeded();
+    await expect(emailAliasesHeader).toBeVisible();
+    await emailAliasesHeader.click();
+
     await this.emailAliasesSection.scrollIntoViewIfNeeded();
-    await expect(this.emailSettingsSection.getByRole('button', { name: 'Email aliases' })).toBeVisible();
     await expect(this.emailAliasesSection).toContainText(PRIMARY_THUNDERMAIL_EMAIL);
     await expect(this.emailAliasesSection.locator('.email-aliases-count-text').filter({ hasText: 'aliases used' })).toContainText(
       new RegExp(`of\\s+${this.escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_EMAIL_ADDRESSES)}\\s+aliases used`),
@@ -160,7 +164,7 @@ export class MailPage {
 
   private async verifyServerSettings() {
     await this.serverSettingsAccordion.scrollIntoViewIfNeeded();
-    await this.serverSettingsAccordion.getByRole('button', { name: 'View server settings' }).click();
+    await this.serverSettingsAccordion.getByRole('button', { name: 'Server settings' }).click();
     await expect(this.serverSettingsAccordion).toContainText('Incoming server');
     await expect(this.serverSettingsAccordion).toContainText('Outgoing server');
     await this.verifyServerSettingsValues(this.serverSettingsAccordion);
@@ -206,7 +210,7 @@ export class MailPage {
     await expect(this.customDomainsSection.getByRole('button', { name: 'View DNS records' })).toBeVisible();
     await expect(this.customDomainsSection.getByRole('button', { name: /Verify|Re-verify/ })).toBeVisible();
     await expect(this.customDomainsSection.getByRole('button', { name: 'Delete' })).toBeVisible();
-    await this.customDomainsSection.getByRole('heading', { name: 'Custom Domains' }).click();
+    await this.customDomainsSection.locator('.custom-domains-header-row').click();
   }
 
   private async verifyAddDomainFormCanOpen() {
@@ -224,14 +228,6 @@ export class MailPage {
     await waitForVueApp(this.page);
     await this.page.waitForLoadState('networkidle', { timeout: TIMEOUT_5_SECONDS }).catch(() => {});
     await this.page.waitForTimeout(TIMEOUT_2_SECONDS);
-  }
-
-  private async dismissQuickTourIfVisible() {
-    const quickTour = this.page.locator('[data-tour-card]');
-    if (await quickTour.isVisible()) {
-      await quickTour.getByRole('button', { name: 'Skip' }).click();
-      await expect(quickTour).not.toBeVisible();
-    }
   }
 
   private escapeRegExp(value: string) {

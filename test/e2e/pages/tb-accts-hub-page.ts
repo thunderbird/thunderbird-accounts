@@ -7,9 +7,8 @@ export class TBAcctsHubPage {
 
   constructor(page: Page) {
     this.page = page;
-    // After sign-in the hub lands on /mail. The banner contains the UserAvatar
-    // rendered by UserMenu.vue, which always carries class `.avatar` in both
-    // of its render modes (router-link on /mail, button elsewhere). Scoping to
+    // After sign-in the hub lands on /dashboard. The banner contains the UserAvatar
+    // rendered by UserMenu.vue, which always carries class `.avatar`. Scoping to
     // the banner keeps this stable if we later land on a different view.
     this.userAvatar = this.page.getByRole('banner').locator('.avatar');
     this.acceptTOSButton = this.page.getByRole('button', { name: 'Accept policies and continue' });
