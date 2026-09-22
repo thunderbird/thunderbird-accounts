@@ -44,10 +44,4 @@ export default {
   position: relative;
   margin-block-end: 2rem;
 }
-
-@media (min-width: 1280px) {
-  .email-aliases-details-summary :deep(.tour-card) {
-    right: -1.5rem;
-  }
-}
 </style>

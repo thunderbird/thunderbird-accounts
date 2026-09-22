@@ -1,12 +1,3 @@
-<script setup lang="ts">
-import { useI18n } from 'vue-i18n';
-import { useTour, FTUE_STEPS } from '@/composables/useTour';
-import TourCard from '@/components/TourCard.vue';
-
-const { t } = useI18n();
-const tour = useTour();
-</script>
-
 <script lang="ts">
 export default {
   name: 'MailView',
@@ -14,36 +5,7 @@ export default {
 </script>
 
 <template>
-  <div class="mail-view">
-    <div id="tour-target-header" />
-
-    <Teleport
-      v-if="tour.showFTUE.value && tour.currentStepConfig.value?.teleportTarget"
-      :to="tour.currentStepConfig.value.teleportTarget"
-      defer
-    >
-      <tour-card
-        data-tour-card
-        :title="tour.currentStepConfig.value.titleKey
-          ? t(tour.currentStepConfig.value.titleKey)
-          : undefined"
-        :text="t(tour.currentStepConfig.value.textKey)"
-        :subtitle="tour.currentStepConfig.value.subtitleNextStepKey
-          ? t('views.mail.ftue.nextStep', { step: t(tour.currentStepConfig.value.subtitleNextStepKey) })
-          : undefined"
-        :current-step="tour.currentStep.value"
-        :total-steps="FTUE_STEPS.FINAL"
-        :show-back="tour.currentStepConfig.value.showBack"
-        :variant="tour.currentStepConfig.value.variant"
-        :next-label="tour.currentStepConfig.value.nextLabelKey
-          ? t(tour.currentStepConfig.value.nextLabelKey)
-          : undefined"
-        @next="tour.next()"
-        @back="tour.back()"
-        @close="tour.skip()"
-      />
-    </Teleport>
-  </div>
+  <div class="mail-view" />
 </template>
 
 <style scoped>

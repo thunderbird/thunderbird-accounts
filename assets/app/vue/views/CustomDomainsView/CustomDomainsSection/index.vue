@@ -81,8 +81,6 @@ export default {
       :title="t('views.mail.sections.customDomains.customDomains')"
       :subtitle="customDomainsDescription"
     >
-      <div id="tour-target-custom-domains" />
-
       <strong>{{ t('views.mail.sections.customDomains.domainsAdded', { domainCount: customDomains.length, domainLimit: maxCustomDomains }) }}</strong>
 
       <div class="custom-domains-list" v-if="customDomains.length > 0">
