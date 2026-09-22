@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { WAFFLE_FLAG } from '@/types';
 import { isWaffleFlagActive } from '@/utils';
 import { APPOINTMENT_URL, SEND_URL } from '@/defines';
@@ -10,7 +10,6 @@ import type { AppDrawerApp } from '@thunderbirdops/services-ui';
 import UserMenu from '@/components/UserMenu.vue';
 
 const { t } = useI18n();
-const router = useRouter();
 const tbProMailUrl = window._page?.webmailUrl;
 
 const apps: AppDrawerApp[] = [
@@ -75,7 +74,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
 
       <div class="header-actions">
         <router-link v-slot="{ href, navigate }" to="/settings" custom>
-          <icon-button :href="href" :aria-label="t('navigationLinks.securitySettings')" @click="navigate">
+          <icon-button size="large" :href="href" :aria-label="t('navigationLinks.securitySettings')" @click="navigate">
             <settings-icon aria-hidden="true" />
           </icon-button>
         </router-link>
@@ -127,11 +126,24 @@ header {
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.25rem;
 
     > .icon-only,
-    :deep(.app-drawer__button) {
+    :deep(.app-drawer__button),
+    > .user-menu {
+      box-sizing: border-box;
+      width: 3rem;
+      height: 3rem;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: #eeeef0;
+    }
+
+    :deep(.app-drawer__button svg) {
+      width: 1.5rem;
+      height: 1.5rem;
     }
   }
 

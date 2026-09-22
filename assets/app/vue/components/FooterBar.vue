@@ -8,10 +8,15 @@ import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL, STATUS_PAGE_URL, IDEAS_PAGE_U
 const { t } = useI18n();
 
 const isAuthenticated = ref(window._page?.isAuthenticated);
+const webmailUrl = window._page?.webmailUrl;
 
-type NavItem = { route: string; i18nKey: string };
+type NavItem = { route?: string; href?: string; i18nKey: string };
 
 const navItems = computed<NavItem[]>(() => [
+  {
+    href: webmailUrl,
+    i18nKey: 'mail',
+  },
   {
     route: '/settings',
     i18nKey: 'settings',
@@ -38,8 +43,11 @@ const thunderbirdLogoSrc = new URL('@/assets/svg/thunderbird-logo.svg', import.m
           <img :src="thunderbirdLogoSrc" alt="Thunderbird" />
           <ul class="footer-links">
             <template v-if="isAuthenticated && !isSubscribePage">
-              <li v-for="navItem in navItems" :key="navItem.route">
-                <router-link :to="navItem.route">
+              <li v-for="navItem in navItems" :key="navItem.i18nKey">
+                <a v-if="navItem.href" :href="navItem.href" target="_blank" rel="noopener noreferrer">
+                  {{ t(`navigationLinks.${navItem.i18nKey}`) }}
+                </a>
+                <router-link v-else :to="navItem.route">
                   {{ t(`navigationLinks.${navItem.i18nKey}`) }}
                 </router-link>
               </li>
