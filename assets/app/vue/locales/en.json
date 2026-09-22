@@ -162,7 +162,7 @@
               "needHelpButtonLabel": "Visit Support Article"
             }
           },
-          "viewServerSettings": "View server settings",
+          "viewServerSettings": "Server settings",
           "incomingServer": "Incoming server",
           "outgoingServer": "Outgoing server",
           "imap": "IMAP",

@@ -8,6 +8,8 @@ import DetailsSummary from '@/components/DetailsSummary.vue';
 import { WAFFLE_FLAG } from '@/types';
 import { isWaffleFlagActive } from '@/utils';
 import { getActiveSessions, getConnectedApps } from '@/views/MailView/views/SecuritySettingsView/api';
+import EmailSettingsSection from '@/views/MailView/sections/EmailSettingsSection/index.vue';
+import CustomDomainsSection from '@/views/MailView/sections/CustomDomainsSection/index.vue';
 
 defineOptions({ name: 'SettingsView' });
 
@@ -15,8 +17,9 @@ const { t } = useI18n();
 const loading = ref(true);
 const sessionCount = ref<number | null>(null);
 const appCount = ref<number | null>(null);
-  
+
 const showSecuritySettings = computed(() => isWaffleFlagActive(WAFFLE_FLAG.ACTIVE_LOGINS));
+const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
 
 onMounted(async () => {
   if (!showSecuritySettings.value) {
@@ -35,40 +38,54 @@ onMounted(async () => {
 </script>
 
 <template>
-  <card-container v-if="showSecuritySettings" :title="t('views.mail.views.securitySettings.securitySettings')">
-    <details-summary :title="t('views.settings.accountAccess')" :expandable="false" default-open>
-      <template #icon>
-        <ph-devices size="24" aria-hidden="true" />
-      </template>
+  <div class="settings-view">
+    <email-settings-section />
+    <custom-domains-section v-if="!isCustomDomainsRevampActive" />
 
-      <div class="account-access">
-        <p>{{ t('views.settings.accountAccessDescription') }}</p>
+    <card-container v-if="showSecuritySettings" :title="t('views.mail.views.securitySettings.securitySettings')">
+      <details-summary :title="t('views.settings.accountAccess')" :expandable="false" default-open>
+        <template #icon>
+          <ph-devices size="24" aria-hidden="true" />
+        </template>
 
-        <notice-bar v-if="!loading && sessionCount === null" :type="NoticeBarTypes.Critical">
-          <p>{{ t('views.mail.views.securitySettings.errorLoadingActiveSessions') }}</p>
-        </notice-bar>
-        <notice-bar v-if="!loading && appCount === null" :type="NoticeBarTypes.Critical">
-          <p>{{ t('views.mail.views.securitySettings.errorLoadingConnectedApps') }}</p>
-        </notice-bar>
+        <div class="account-access">
+          <p>{{ t('views.settings.accountAccessDescription') }}</p>
 
-        <dl class="access-counts" aria-live="polite" :aria-busy="loading">
-          <dt>{{ t('views.mail.views.securitySettings.accountActivity') }}</dt>
-          <dd>{{ loading ? t('views.settings.loading') : sessionCount ?? t('views.settings.unavailable') }}</dd>
-          <dt>{{ t('views.mail.views.securitySettings.connectedApps') }}</dt>
-          <dd>{{ loading ? t('views.settings.loading') : appCount ?? t('views.settings.unavailable') }}</dd>
-        </dl>
+          <notice-bar v-if="!loading && sessionCount === null" :type="NoticeBarTypes.Critical">
+            <p>{{ t('views.mail.views.securitySettings.errorLoadingActiveSessions') }}</p>
+          </notice-bar>
+          <notice-bar v-if="!loading && appCount === null" :type="NoticeBarTypes.Critical">
+            <p>{{ t('views.mail.views.securitySettings.errorLoadingConnectedApps') }}</p>
+          </notice-bar>
 
-        <router-link v-slot="{ href, navigate }" custom to="/settings/security">
-          <primary-button :href="href" variant="outline" @click="navigate">
-            {{ t('views.settings.manageAccountAccess') }}
-          </primary-button>
-        </router-link>
-      </div>
-    </details-summary>
-  </card-container>
+          <dl class="access-counts" aria-live="polite" :aria-busy="loading">
+            <dt>{{ t('views.mail.views.securitySettings.accountActivity') }}</dt>
+            <dd>{{ loading ? t('views.settings.loading') : sessionCount ?? t('views.settings.unavailable') }}</dd>
+            <dt>{{ t('views.mail.views.securitySettings.connectedApps') }}</dt>
+            <dd>{{ loading ? t('views.settings.loading') : appCount ?? t('views.settings.unavailable') }}</dd>
+          </dl>
+
+          <router-link v-slot="{ href, navigate }" custom to="/settings/security">
+            <primary-button :href="href" variant="outline" @click="navigate">
+              {{ t('views.settings.manageAccountAccess') }}
+            </primary-button>
+          </router-link>
+        </div>
+      </details-summary>
+    </card-container>
+  </div>
 </template>
 
 <style scoped>
+.settings-view {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-view :deep(:not(:first-child) section) {
+  margin-block-end: 2rem;
+}
+
 .account-access {
   display: flex;
   flex-direction: column;
