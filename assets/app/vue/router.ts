@@ -111,6 +111,11 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
       useAppTemplate: false,
     }
   },
+  // The Mail dashboard is no more but keeping this so we don't break potential external links.
+  {
+    path: '/mail',
+    redirect: '/dashboard',
+  },
   {
     path: '/dashboard',
     name: 'dashboard',
