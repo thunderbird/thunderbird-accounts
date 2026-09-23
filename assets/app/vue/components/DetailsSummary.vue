@@ -53,6 +53,10 @@ function toggle() {
       </span>
     </div>
 
+    <div v-if="$slots.description" v-show="isOpen" class="accordion__description">
+      <slot name="description" />
+    </div>
+
     <div v-show="isOpen" class="accordion__panel">
       <slot />
     </div>
@@ -69,7 +73,7 @@ function toggle() {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    background-color: var(--colour-neutral-lower);
+    background-color: var(--colour-neutral-subtle);
     border: 1px solid var(--colour-neutral-border);
     border-radius: 0.5rem;
     padding: 1rem 0.5rem;
@@ -121,6 +125,15 @@ function toggle() {
         transform: rotate(180deg);
       }
     }
+  }
+
+  .accordion__description {
+    border: 1px solid var(--colour-neutral-border);
+    border-top: none;
+    padding: 1rem;
+    background-color: var(--colour-neutral-base);
+    color: var(--colour-ti-secondary);
+    line-height: 1.32;
   }
 
   .accordion__panel {

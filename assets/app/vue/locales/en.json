@@ -8,7 +8,7 @@
     "manageEmails": "Manage Emails",
     "customDomains": "Custom Domains",
     "security": "Security",
-    "securitySettings": "Security Settings",
+    "securitySettings": "Security settings",
     "login": "Login"
   },
   "components": {
@@ -47,9 +47,7 @@
     "settings": {
       "accountAccess": "Account access",
       "accountAccessDescription": "Review where this account is signed in and which apps have ongoing access.",
-      "manageAccountAccess": "Manage account access",
-      "loading": "Loading...",
-      "unavailable": "Unavailable"
+      "manageAccountAccess": "Manage account access"
     },
     "dashboard": {
       "accountCard": {
@@ -301,7 +299,7 @@
           }
         },
         "securitySettings": {
-          "securitySettings": "Security Settings",
+          "securitySettings": "Security settings",
           "accountActivity": "Current sign-ins",
           "accountActivityDescriptionOne": "Many email apps can configure your account automatically. Enter your email address and password to get started.",
           "accountActivityDescriptionTwo": "If setup doesn’t work, try connecting manually using server settings.",
@@ -313,7 +311,7 @@
       },
       "views": {
         "securitySettings": {
-          "securitySettings": "Security Settings",
+          "securitySettings": "Security settings",
           "accountActivity": "Current sign-ins",
           "accountActivityDescription": "Apps and devices current signed in",
           "loadingActiveSessions": "Loading active sessions...",
