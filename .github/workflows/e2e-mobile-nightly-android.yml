@@ -49,8 +49,6 @@ jobs:
           build-name: 'TB Accounts Nightly Tests (Mobile Android): BUILD_INFO'
 
       - name: Prod E2E Tests on Mobile Android
-        # don't send GHA failure email if any of the E2E tests fail, can be annoying (I check the jobs each day in BrowserStack)
-        continue-on-error: true
         run: |
           cd ./test/e2e
           cp .env.prod.example .env

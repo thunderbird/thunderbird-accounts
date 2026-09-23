@@ -218,8 +218,9 @@ If you are running the E2E tests on your local machine against your local develo
 If you pushed to a branch or PR and the resulting Github pull request E2E test job check is failing, you can:
 
 - In your PR scroll down to the 'Checks' section and click on the failed E2E test job
-- In the console view, expand the E2E tests step and read the test failure details
-- Check if a playwright report artifact exists:
-  - In the console view click on `Summary` (top left)
-  - This shows the GHA summary, at the bottom of the page look for an `Artifacts` section and click on `playwright-report` and download the ZIP
-  - Open the ZIP file, expand it, and open the `index.html` file in your browser
+- Expand the E2E test step to review the existing Playwright logs and failure details
+- In the console view click on `Summary` (top left) to see the list of passed, failed, and skipped tests
+- For BrowserStack jobs, expand the E2E test step in GitHub Actions and search its logs for the link to the corresponding BrowserStack session, where you can view the test videos
+- For the local-stack validation job, download the `playwright-report` artifact from the workflow summary, extract it, and open `index.html` in your browser. The artifact is retained for 7 days
+
+We archive the Playwright HTML report only for the validation workflow, where the E2E tests run against the local stack. We cannot archive the HTML report when E2E tests run against stage or production in CI because the report may contain secrets used to sign in to those environments.
