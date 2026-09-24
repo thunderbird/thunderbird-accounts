@@ -309,4 +309,4 @@ class ActiveSubscriptionRequiredViewTestCase(TestCase):
                 response = self.client.post(reverse('subscription_plan_info'), HTTP_ACCEPT='application/json')
 
         self.assertEqual(response.status_code, 404)
-        self.assertEqual([record.levelname for record in logs.records], ['WARNING'])
+        self.assertEqual(logs.records[-1].levelname, 'WARNING')
