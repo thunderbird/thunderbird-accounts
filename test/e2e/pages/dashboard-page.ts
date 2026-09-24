@@ -29,15 +29,7 @@ interface ServiceUrls {
   send: string;
 }
 
-type PopupPageAssertion = {
-  serviceName: string;
-  link: Locator;
-  expectedUrl: string;
-  beforeExpectedElements?: Array<{
-    expectedElementName: string;
-    expectedElement: (page: Page) => Locator;
-  }>;
-} & (
+type PopupExpectedElementAssertion =
   | {
       expectedElementName: string;
       expectedElement: (page: Page) => Locator;
@@ -45,8 +37,17 @@ type PopupPageAssertion = {
   | {
       expectedElementName?: never;
       expectedElement?: never;
-    }
-);
+    };
+
+type PopupPageAssertion = {
+  serviceName: string;
+  link: Locator;
+  expectedUrl: string;
+  additionalExpectedElements?: Array<{
+    expectedElementName: string;
+    expectedElement: (page: Page) => Locator;
+  }>;
+} & PopupExpectedElementAssertion;
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const hasTls = (tls: string) => Boolean(tls && tls !== 'None' && tls !== 'undefined');
@@ -199,12 +200,14 @@ export class DashboardPage {
       serviceName: 'Mail',
       link: this.thundermailLink,
       expectedUrl: serviceUrls.mail,
+      // Mail does not currently expose a stable authenticated-only element for this cross-service check,
+      // so its popup intentionally verifies only that navigation settles on the configured service origin.
     });
     await this.verifyPopupServiceAppLoads({
       serviceName: 'Appointment',
       link: this.appointmentLink,
       expectedUrl: serviceUrls.appointment,
-      beforeExpectedElements: [{
+      additionalExpectedElements: [{
         expectedElementName: 'Need help? Visit support',
         expectedElement: page => page.locator('footer').getByRole('link', { name: /visit support/i }),
       }],
@@ -215,7 +218,7 @@ export class DashboardPage {
       serviceName: 'Send',
       link: this.sendLink,
       expectedUrl: serviceUrls.send,
-      beforeExpectedElements: [{
+      additionalExpectedElements: [{
         expectedElementName: 'Need help? Visit support',
         expectedElement: page => page.locator('footer').getByRole('link', { name: /visit support/i }),
       }],
@@ -377,7 +380,7 @@ export class DashboardPage {
     serviceName,
     link,
     expectedUrl,
-    beforeExpectedElements = [],
+    additionalExpectedElements = [],
     expectedElementName,
     expectedElement,
   }: PopupPageAssertion) {
@@ -447,10 +450,10 @@ export class DashboardPage {
 
       console.log(`${serviceName} popup settled at ${this.sanitizeUrlForDiagnostics(popup.url())}`);
 
-      for (const beforeExpectedElement of beforeExpectedElements) {
+      for (const additionalExpectedElement of additionalExpectedElements) {
         await expect(
-          beforeExpectedElement.expectedElement(popup),
-          `${beforeExpectedElement.expectedElementName} should be visible after navigating to ${expectedUrl}`,
+          additionalExpectedElement.expectedElement(popup),
+          `${additionalExpectedElement.expectedElementName} should be visible after navigating to ${expectedUrl}`,
         ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
       }
     } finally {
