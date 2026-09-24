@@ -33,7 +33,7 @@ from thunderbird_accounts.mail.exceptions import (
     DomainNotFoundError,
     EmailNotValidError,
 )
-from thunderbird_accounts.mail.dns import check_stale_dns_records
+from thunderbird_accounts.mail.dns import check_stale_dns_records, find_custom_domain_denied_string
 from thunderbird_accounts.mail.utils import (
     filter_app_passwords,
     is_address_taken,
@@ -153,6 +153,16 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
     domain_name = normalize_custom_domain(domain_name)
     if not domain_name:
         return JsonResponse({'success': False, 'error': _('Enter a valid domain name.')}, status=400)
+
+    if denied_string := find_custom_domain_denied_string(domain_name):
+        return JsonResponse(
+            {
+                'success': False,
+                'error': _("Sorry, '%(denied_string)s' is not allowed to appear in custom domains.")
+                % {'denied_string': denied_string},
+            },
+            status=400,
+        )
 
     custom_domain_count = request.user.domains.count()
 
