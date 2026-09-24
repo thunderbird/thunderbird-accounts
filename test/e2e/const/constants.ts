@@ -40,7 +40,7 @@ export const TIMEOUT_1_SECOND = 1000;
 export const TIMEOUT_2_SECONDS = 2000;
 export const TIMEOUT_3_SECONDS = 3000;
 export const TIMEOUT_5_SECONDS = 5000;
-export const TIMEOUT_10_SECONDS = 5000;
+export const TIMEOUT_10_SECONDS = 10000;
 export const TIMEOUT_30_SECONDS = 30000;
 export const TIMEOUT_60_SECONDS = 60000;
 

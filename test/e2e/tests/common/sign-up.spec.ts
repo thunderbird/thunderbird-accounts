@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { TbAcctsSignUpPage } from '../../pages/tb-accts-signup-page';
-import { authFile, isAllowListEnabled, navigateToAccountsHubAndSignIn, waitForVueApp } from '../../utils/utils';
+import {
+  authFile,
+  isAllowListEnabled,
+  isMobileAndroidProject,
+  navigateToAccountsHubAndSignIn,
+  waitForVueApp,
+} from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -17,14 +23,16 @@ let signUpPage: TbAcctsSignUpPage;
 //test.skip(true, 'Temporarily disabled due to issue 986');
 
 test.beforeEach(async ({ page }, testInfo) => {
+  const isMobileAndroid = isMobileAndroidProject(testInfo.project.name);
+
   console.log('inside authenticate setup, about to call navigate and sign in');
   // Perform authentication steps
-  await navigateToAccountsHubAndSignIn(page);
+  await navigateToAccountsHubAndSignIn(page, { isMobileAndroid });
 
   // End of authentication steps, save the auth
   await page.context().storageState({ path: authFile });
 
-  signUpPage = new TbAcctsSignUpPage(page, testInfo.project.name);
+  signUpPage = new TbAcctsSignUpPage(page, isMobileAndroid);
   // We need to land on a page that we can stay on to retrieve a csrftoken.
   await page.goto(ACCTS_CONTACT_URL);
 
@@ -138,4 +146,3 @@ test.describe('sign up form on browser', {
     );
   });
 });
-
