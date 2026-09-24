@@ -30,15 +30,23 @@ interface ServiceUrls {
 }
 
 type PopupPageAssertion = {
+  serviceName: string;
   link: Locator;
   expectedUrl: string;
-  expectedElementName?: string;
-  expectedElement?: (page: Page) => Locator;
   beforeExpectedElements?: Array<{
     expectedElementName: string;
     expectedElement: (page: Page) => Locator;
   }>;
-};
+} & (
+  | {
+      expectedElementName: string;
+      expectedElement: (page: Page) => Locator;
+    }
+  | {
+      expectedElementName?: never;
+      expectedElement?: never;
+    }
+);
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const hasTls = (tls: string) => Boolean(tls && tls !== 'None' && tls !== 'undefined');
@@ -188,10 +196,12 @@ export class DashboardPage {
     const serviceUrls = await this.getConfiguredServiceUrls();
     // Mail, Appointment and Send are all configured external services that open in popups.
     await this.verifyPopupServiceAppLoads({
+      serviceName: 'Mail',
       link: this.thundermailLink,
       expectedUrl: serviceUrls.mail,
     });
     await this.verifyPopupServiceAppLoads({
+      serviceName: 'Appointment',
       link: this.appointmentLink,
       expectedUrl: serviceUrls.appointment,
       beforeExpectedElements: [{
@@ -202,6 +212,7 @@ export class DashboardPage {
       expectedElement: page => page.getByRole('button', { name: /copy booking link/i }),
     });
     await this.verifyPopupServiceAppLoads({
+      serviceName: 'Send',
       link: this.sendLink,
       expectedUrl: serviceUrls.send,
       beforeExpectedElements: [{
@@ -363,6 +374,7 @@ export class DashboardPage {
   }
 
   private async verifyPopupServiceAppLoads({
+    serviceName,
     link,
     expectedUrl,
     beforeExpectedElements = [],
@@ -379,21 +391,93 @@ export class DashboardPage {
       link.click({ timeout: TIMEOUT_30_SECONDS }),
     ]);
 
-    await expect
-      .poll(async () => new URL(popup.url()).origin, { timeout: TIMEOUT_60_SECONDS })
-      .toBe(new URL(expectedUrl).origin);
-    for (const beforeExpectedElement of beforeExpectedElements) {
-      await expect(
-        beforeExpectedElement.expectedElement(popup),
-        `${beforeExpectedElement.expectedElementName} should be visible after navigating to ${expectedUrl}`,
-      ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
+    const expectedOrigin = new URL(expectedUrl).origin;
+    const waitDescription = expectedElement ? 'authentication to complete' : 'service navigation to complete';
+
+    try {
+      try {
+        // A service origin can appear briefly before OIDC redirects the popup to a login page.
+        // For services with an authenticated-only control, poll it together with the URL so that
+        // transient navigation cannot pass before the OIDC flow has actually completed.
+        await expect
+          .poll(
+            async () => ({
+              isExpectedOrigin: this.getUrlOrigin(popup.url()) === expectedOrigin,
+              isAuthenticatedSignalVisible: expectedElement
+                ? await expectedElement(popup)
+                    .isVisible()
+                    .catch(() => false)
+                : true,
+            }),
+            {
+              timeout: TIMEOUT_60_SECONDS,
+              message: `waiting for ${serviceName} ${waitDescription}`,
+            }
+          )
+          .toEqual({
+            isExpectedOrigin: true,
+            isAuthenticatedSignalVisible: true,
+          });
+      } catch (error) {
+        const actualUrl = popup.isClosed() ? '<popup closed>' : this.sanitizeUrlForDiagnostics(popup.url());
+        const pageTitle = popup.isClosed() ? '<unavailable>' : await popup.title().catch(() => '<unavailable>');
+        const visibleHeadings = popup.isClosed()
+          ? []
+          : await popup
+              .locator('h1:visible, h2:visible, h3:visible')
+              .allInnerTexts()
+              .catch(() => []);
+        const headingSummary =
+          visibleHeadings
+            .map((heading) => heading.replace(/\s+/g, ' ').trim())
+            .filter(Boolean)
+            .slice(0, 3)
+            .join(' | ') || '<none>';
+        const authenticatedSignal = expectedElementName ? ` and visible '${expectedElementName}'` : '';
+        const failedAction = expectedElement ? 'authentication' : 'navigation';
+
+        throw new Error(
+          `${serviceName} ${failedAction} did not complete. ` +
+            `Expected ${this.sanitizeUrlForDiagnostics(expectedUrl)}${authenticatedSignal}, ` +
+            `but the popup finished at ${actualUrl}. ` +
+            `Page title: '${pageTitle}'. Visible headings: '${headingSummary}'.`,
+          { cause: error }
+        );
+      }
+
+      console.log(`${serviceName} popup settled at ${this.sanitizeUrlForDiagnostics(popup.url())}`);
+
+      for (const beforeExpectedElement of beforeExpectedElements) {
+        await expect(
+          beforeExpectedElement.expectedElement(popup),
+          `${beforeExpectedElement.expectedElementName} should be visible after navigating to ${expectedUrl}`,
+        ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
+      }
+    } finally {
+      // Always close the popup so a failed service check cannot affect the next dashboard action.
+      if (!popup.isClosed()) {
+        await popup.close().catch(() => {});
+      }
     }
-    if (expectedElement) {
-      await expect(
-        expectedElement(popup),
-        `${expectedElementName} should be visible after navigating to ${expectedUrl}`,
-      ).toBeVisible({ timeout: TIMEOUT_60_SECONDS }); // browserstack is super slow
+  }
+
+  private getUrlOrigin(url: string): string | null {
+    try {
+      return new URL(url).origin;
+    } catch {
+      return null;
     }
-    await popup.close();
+  }
+
+  private sanitizeUrlForDiagnostics(url: string): string {
+    try {
+      const sanitizedUrl = new URL(url);
+      // OIDC URLs can contain sensitive values, so diagnostics retain only the origin and path.
+      sanitizedUrl.search = '';
+      sanitizedUrl.hash = '';
+      return sanitizedUrl.toString();
+    } catch {
+      return url.split(/[?#]/, 1)[0];
+    }
   }
 }
