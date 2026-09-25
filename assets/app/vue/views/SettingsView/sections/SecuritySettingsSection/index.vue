@@ -25,11 +25,9 @@ export default {
         <ph-devices size="24" aria-hidden="true" />
       </template>
 
-      <template #description>
-        <p>{{ t('views.settings.accountAccessDescription') }}</p>
-      </template>
-
       <div class="account-access">
+        <p>{{ t('views.settings.accountAccessDescription') }}</p>
+
         <router-link v-slot="{ href, navigate }" custom to="/settings/security">
           <primary-button :href="href" variant="outline" @click="navigate">
             {{ t('views.settings.manageAccountAccess') }}
@@ -43,8 +41,10 @@ export default {
 <style scoped>
 .account-access {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.25rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5rem;
+  color: var(--colour-ti-secondary);
+  line-height: 1.32;
 }
 </style>
