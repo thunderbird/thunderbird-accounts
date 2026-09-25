@@ -20,6 +20,7 @@ from django.contrib.messages import get_messages
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
+    DomainNotFoundError,
 )
 from thunderbird_accounts.mail.utils import decode_app_password, filter_app_passwords
 
@@ -100,6 +101,11 @@ def home(request: HttpRequest):
                 email_addresses = [email_user.email_address]
                 email_addresses += [alias.full_address for alias in email_user.aliases.values()]
         except AccountNotFoundError:
+            app_passwords = []
+            messages.error(request, _('Could not connect to Thundermail, please try again later.'))
+        except DomainNotFoundError as ex:
+            # The primary mail domain is missing from Stalwart, this is a configuration problem.
+            sentry_sdk.capture_exception(ex)
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))
         except requests.ConnectionError as ex:

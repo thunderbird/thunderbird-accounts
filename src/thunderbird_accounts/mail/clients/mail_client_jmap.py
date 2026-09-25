@@ -44,7 +44,7 @@ from thunderbird_accounts.mail.exceptions import (
     JMapError,
 )
 from thunderbird_accounts.mail.types import jmap, stalwart
-from thunderbird_accounts.mail.types.jmap import Invocation, JMapRequest
+from thunderbird_accounts.mail.types.jmap import Invocation, JMapRequest, JMapResponse
 from thunderbird_accounts.mail.types.stalwart import AppPassword, StalwartMethods, StalwartType
 
 
@@ -71,7 +71,10 @@ class BaseJMAP(ABC):
 
     def _get_primary_domain_id(self):
         """We cache the primary domain id at the moment to avoid having to retrieve it many times over.
-        This runs during preflight check so we don't need to call it in here."""
+        This runs during preflight check so we don't need to call it in here.
+
+        A missing primary domain is not an error here, since account creation creates it on demand.
+        Anything that needs the id should go through ``_require_primary_domain_id``."""
         response = self.client.request(
             JMapRequest(
                 using=[
@@ -97,9 +100,37 @@ class BaseJMAP(ABC):
         id_list = response.method_responses[0].arguments.get('ids', [])
 
         if len(id_list) == 0:
+            logging.warning(
+                f'[MailClient._get_primary_domain_id]: Primary domain {settings.PRIMARY_EMAIL_DOMAIN} not found!'
+            )
             return
 
         self.primary_domain_id = id_list[0]
+
+    def _require_primary_domain_id(self) -> str:
+        """Return the cached primary domain id.
+
+        :raises DomainNotFoundError: If the primary domain does not exist within Stalwart."""
+        if not self.primary_domain_id:
+            raise DomainNotFoundError(settings.PRIMARY_EMAIL_DOMAIN)
+        return self.primary_domain_id
+
+    def _account_ids_from_query(self, response: JMapResponse, principal_id: str) -> list[str]:
+        """Return the account ids from an account query made by ``_query_account_by_principal_id``.
+
+        :raises JMapError: If Stalwart answered the query with a method error.
+        :raises AccountNotFoundError: If the query matched no accounts."""
+        if not response.method_responses:
+            raise AccountNotFoundError(principal_id)
+
+        query_response = response.method_responses[0]
+        if query_response.name == 'error':
+            raise self._handle_jmap_error(query_response.arguments, JMapError)
+
+        ids = query_response.arguments.get('ids')
+        if not ids:
+            raise AccountNotFoundError(principal_id)
+        return ids
 
     def _handle_jmap_error(self, error_obj: dict, error: Type[JMapError]) -> JMapError:
         """Pass it the error object, and it will set and return your exception"""
@@ -131,11 +162,12 @@ class BaseJMAP(ABC):
 
         """
         account_name = principal_id.split('@')[0]
+        primary_domain_id = self._require_primary_domain_id()
         return Invocation(
             name=StalwartMethods.query(StalwartMethods.ACCOUNT),
             arguments={
                 'accountId': self.account_id,
-                'filter': {'name': account_name, 'domainId': self.primary_domain_id},
+                'filter': {'name': account_name, 'domainId': primary_domain_id},
                 'limit': 5,
                 'position': 0,
                 'calculateTotal': True,
@@ -626,10 +658,14 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             )
         )
 
-        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
+        self._account_ids_from_query(response, principal_id)
+
+        # The query found the account, but the get can still come back empty (e.g. it was deleted in between.)
+        account_list = response.method_responses[1].arguments.get('list', [])
+        if not account_list:
             raise AccountNotFoundError(principal_id)
 
-        data = response.method_responses[1].arguments.get('list', [])[0]
+        data = account_list[0]
         self._debug_dump('get_account', response.method_responses[1].arguments)
 
         if len(data.get('aliases', {}).values()) > 0:
@@ -744,10 +780,7 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             )
         )
 
-        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
-            raise AccountNotFoundError(principal_id)
-
-        stalwart_pkid = response.method_responses[0].arguments.get('ids', [])[0]
+        stalwart_pkid = self._account_ids_from_query(response, principal_id)[0]
 
         response = self.client.request(
             JMapRequest(
