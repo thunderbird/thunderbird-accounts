@@ -8,7 +8,7 @@
     "manageEmails": "Manage Emails",
     "customDomains": "Custom Domains",
     "security": "Security",
-    "securitySettings": "Security Settings",
+    "securitySettings": "Security settings",
     "login": "Login"
   },
   "components": {
@@ -47,9 +47,7 @@
     "settings": {
       "accountAccess": "Account access",
       "accountAccessDescription": "Review where this account is signed in and which apps have ongoing access.",
-      "manageAccountAccess": "Manage account access",
-      "loading": "Loading...",
-      "unavailable": "Unavailable"
+      "manageAccountAccess": "Manage account access"
     },
     "dashboard": {
       "accountCard": {
@@ -185,7 +183,7 @@
           "copyPort": "Copy server port to clipboard"
         },
         "emailSettings": {
-          "emailSettings": "Email Settings",
+          "emailSettings": "Email settings",
           "appPassword": "App Password",
           "appPasswords": "App Passwords",
           "close": "Close",
@@ -219,7 +217,7 @@
           "nameValidationErrorMaxLength": "Use no more than 40 characters.",
           "nameValidationErrorPlusSymbol": "The + symbol is not allowed.",
           "domain": "Domain",
-          "addEmailAlias": "Add email alias",
+          "addEmailAlias": "Create email alias",
           "newPassword": "New password",
           "confirmPassword": "Confirm password",
           "save": "Save",
@@ -236,14 +234,14 @@
           "emailAliasSupportText": "For help with aliases, see {emailAliasesSupportLink}. For catch-all aliases, see {emailAliasesCatchAllSupportLink}."
         },
         "customDomains": {
-          "customDomains": "Custom Domains",
+          "customDomains": "Custom domains",
           "customDomainsDescriptionInitial": "Use your own domain to create personalized email addresses.",
           "customDomainsDescriptionAdd": "Adding a domain you own to your account allows you to create aliases using your custom domains.",
-          "domainsAdded": "{domainCount} / {domainLimit} domains added",
-          "verified": "Verified",
+          "domainsAdded": "{domainCount} of {domainLimit} custom domains used",
+          "verified": "verified",
           "pending": "Pending",
           "failed": "Failed",
-          "emailsCount": "0 emails | 1 email | {count} emails",
+          "emailsCount": "0 Aliases | 1 Alias | {count} Aliases",
           "addDomain": "Add domain",
           "enterCustomDomain": "Enter custom domain",
           "domainPlaceholder": "example.com",
@@ -301,7 +299,7 @@
           }
         },
         "securitySettings": {
-          "securitySettings": "Security Settings",
+          "securitySettings": "Security settings",
           "accountActivity": "Current sign-ins",
           "accountActivityDescriptionOne": "Many email apps can configure your account automatically. Enter your email address and password to get started.",
           "accountActivityDescriptionTwo": "If setup doesn’t work, try connecting manually using server settings.",
@@ -313,7 +311,7 @@
       },
       "views": {
         "securitySettings": {
-          "securitySettings": "Security Settings",
+          "securitySettings": "Security settings",
           "accountActivity": "Current sign-ins",
           "accountActivityDescription": "Apps and devices current signed in",
           "loadingActiveSessions": "Loading active sessions...",

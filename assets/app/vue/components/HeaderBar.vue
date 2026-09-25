@@ -43,6 +43,7 @@ const navItems = [
 ];
 
 const currentRoute = useRoute();
+const isSettingsActive = computed(() => currentRoute.path.startsWith('/settings'));
 
 const needsTosAcceptance = ref(window._page?.needsTosAcceptance);
 const needsSubscription = ref(
@@ -74,9 +75,15 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
 
       <div class="header-actions">
         <router-link v-slot="{ href, navigate }" to="/settings" custom>
-          <icon-button size="large" :href="href" :aria-label="t('navigationLinks.security')" @click="navigate">
+          <icon-button
+            size="large"
+            :href="href"
+            :class="{ active: isSettingsActive }"
+            :aria-label="t('navigationLinks.security')"
+            @click="navigate"
+          >
             <settings-icon aria-hidden="true" />
-        </icon-button>
+          </icon-button>
         </router-link>
         <app-drawer :apps="apps" />
         <user-menu :username="avatarUsername" />
@@ -169,13 +176,15 @@ header {
       color: white;
       text-decoration: none;
       padding: 0.75rem 1.25rem;
-
-      &.active {
-        background-color: #18181b;
-        border-radius: 0.5rem;
-        box-shadow: inset 0 0.25rem 0.25rem 0 rgba(0, 0, 0, 0.15);
-      }
     }
+  }
+
+  /* Active treatment, shared by the text nav links and the settings icon button */
+  ul a.active,
+  .header-actions > .icon-only.active {
+    background-color: #18181b;
+    border-radius: 0.5rem;
+    box-shadow: inset 0 0.25rem 0.25rem 0 rgba(0, 0, 0, 0.15);
   }
 }
 

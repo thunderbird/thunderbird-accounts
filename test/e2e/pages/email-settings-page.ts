@@ -44,7 +44,7 @@ export class EmailSettingsPage {
 
   async verifyEmailSettingsComponents() {
     await this.emailSettingsSection.scrollIntoViewIfNeeded();
-    await expect(this.emailSettingsSection.getByRole('heading', { name: 'Email Settings' })).toBeVisible();
+    await expect(this.emailSettingsSection.getByRole('heading', { name: 'Email settings' })).toBeVisible();
 
     await this.verifyEmailAliasFormOpensAndCancels();
     await this.verifyCanAddAndDeleteEmailAlias();
@@ -52,14 +52,14 @@ export class EmailSettingsPage {
   }
 
   async verifyCustomDomainsComponents() {
-    const customDomainsHeader = this.customDomainsSection.getByRole('button', { name: 'Custom Domains' });
+    const customDomainsHeader = this.customDomainsSection.getByRole('button', { name: 'Custom domains' });
     await customDomainsHeader.scrollIntoViewIfNeeded();
     await expect(customDomainsHeader).toBeVisible();
     await customDomainsHeader.click();
 
     await expect(this.customDomainsSection).toContainText('Use your own domain to create personalized email addresses.');
     await expect(this.customDomainsSection.locator('.domains-added')).toContainText(
-      new RegExp(`/\\s*${this.escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS)}\\s+domains added`),
+      new RegExp(`of\\s+${this.escapeRegExp(DASHBOARD_CURRENT_SUBSCRIPTION_CUSTOM_DOMAINS)}\\s+custom domains used`),
     );
 
     await this.verifyCustomDomainActionMenuIfPresent();
@@ -82,7 +82,7 @@ export class EmailSettingsPage {
     await expect(primaryAliasRow).toContainText('Primary');
     await expect(primaryAliasRow).toContainText('Subscription');
 
-    const addAliasButton = this.emailAliasesSection.getByRole('button', { name: 'Add email alias' });
+    const addAliasButton = this.emailAliasesSection.getByRole('button', { name: 'Create email alias' });
     if (await addAliasButton.isVisible()) {
       await addAliasButton.click();
       await expect(this.emailAliasesSection.locator('input[name="email-alias"]')).toBeVisible();
@@ -109,7 +109,7 @@ export class EmailSettingsPage {
       return;
     }
 
-    const addAliasButton = this.emailAliasesSection.getByRole('button', { name: 'Add email alias' });
+    const addAliasButton = this.emailAliasesSection.getByRole('button', { name: 'Create email alias' });
     await expect(addAliasButton).toBeVisible();
     await addAliasButton.click();
 
@@ -205,7 +205,7 @@ export class EmailSettingsPage {
     }
 
     const firstDomain = this.customDomainsSection.locator('.custom-domain-item').first();
-    await expect(firstDomain).toContainText(/Verified|Pending|Failed/);
+    await expect(firstDomain).toContainText(/verified|Pending|Failed/);
     await actionButtons.first().click();
     await expect(this.customDomainsSection.getByRole('button', { name: 'View DNS records' })).toBeVisible();
     await expect(this.customDomainsSection.getByRole('button', { name: /Verify|Re-verify/ })).toBeVisible();
