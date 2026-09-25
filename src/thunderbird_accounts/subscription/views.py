@@ -23,6 +23,12 @@ from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.authentication.permissions import IsValidPaddleWebhook
 from thunderbird_accounts.subscription import tasks
+from thunderbird_accounts.subscription.send_client import (
+    SendClientError,
+    SendUserNotFound,
+    get_send_storage_usage,
+    is_send_api_configured,
+)
 from thunderbird_accounts.subscription.decorators import active_subscription_required, inject_paddle
 from thunderbird_accounts.subscription.models import Plan, Price, Subscription, Transaction
 from thunderbird_accounts.core.exceptions import UnexpectedBehaviour
@@ -301,3 +307,25 @@ def get_subscription_plan_info(request: Request, paddle: Client):
     }
 
     return JsonResponse({'success': True, 'subscription': subscription_info})
+
+
+@login_required
+@require_http_methods(['POST'])
+@active_subscription_required(error_message='No active subscription found', status=404)
+def get_send_storage_info(request: Request):
+    """Returns the user's Send storage usage, retrieved from Send's internal API."""
+
+    if not is_send_api_configured():
+        return JsonResponse({'success': False, 'error': 'Send storage information is unavailable'}, status=503)
+
+    try:
+        usage = get_send_storage_usage(request.user.oidc_id)
+    except SendUserNotFound:
+        # The user hasn't used Send yet, so they have nothing stored there
+        plan = request.user.plan
+        usage = {'active': 0, 'limit': (plan.send_storage_bytes if plan else None) or 0}
+    except SendClientError as e:
+        logging.error(f'Error getting Send storage usage: {e}')
+        return JsonResponse({'success': False, 'error': 'Error getting Send storage usage'}, status=502)
+
+    return JsonResponse({'success': True, 'sendStorage': {'used': usage['active'], 'total': usage['limit']}})

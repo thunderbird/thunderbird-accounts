@@ -683,6 +683,9 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not IS_DEV else
 
 TB_PRO_APPOINTMENT_URL: str = os.getenv('TB_PRO_APPOINTMENT_URL')
 TB_PRO_SEND_URL: str = os.getenv('TB_PRO_SEND_URL')
+TB_PRO_SEND_API_URL: str = os.getenv('TB_PRO_SEND_API_URL')
+TB_PRO_SEND_API_KEY: str = os.getenv('TB_PRO_SEND_API_KEY')
+TB_PRO_SEND_API_TIMEOUT: float = float(os.getenv('TB_PRO_SEND_API_TIMEOUT', '5'))
 TB_PRO_WAIT_LIST_URL: str = os.getenv('TB_PRO_WAIT_LIST_URL')
 WEBMAIL_URL: str = os.getenv('WEBMAIL_URL')
 
