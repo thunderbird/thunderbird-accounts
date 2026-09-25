@@ -164,9 +164,13 @@ export class EmailSettingsPage {
 
   private async verifyServerSettings() {
     await this.serverSettingsAccordion.scrollIntoViewIfNeeded();
-    await this.serverSettingsAccordion.getByRole('button', { name: 'Server settings' }).click();
-    await expect(this.serverSettingsAccordion).toContainText('Incoming server');
-    await expect(this.serverSettingsAccordion).toContainText('Outgoing server');
+    const serverSettingsHeader = this.serverSettingsAccordion.getByRole('button', { name: 'Server settings' });
+    if (await serverSettingsHeader.getAttribute('aria-expanded') === 'false') {
+      await serverSettingsHeader.click();
+    }
+    await expect(serverSettingsHeader).toHaveAttribute('aria-expanded', 'true');
+    await expect(this.serverSettingsAccordion.locator('.server-settings-card').filter({ hasText: 'Incoming server' })).toBeVisible();
+    await expect(this.serverSettingsAccordion.locator('.server-settings-card').filter({ hasText: 'Outgoing server' })).toBeVisible();
     await this.verifyServerSettingsValues(this.serverSettingsAccordion);
   }
 
