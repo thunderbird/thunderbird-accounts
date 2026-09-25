@@ -24,9 +24,9 @@ export default {
       class="security-settings-card"
       :title="t('views.mail.views.securitySettings.securitySettings')"
     >
-      <account-activity />
-      <connected-apps />
-      <allow-list v-if="false" />
+      <account-activity class="security-section" />
+      <connected-apps class="security-section" />
+      <allow-list v-if="false" class="security-section" />
     </card-container>
   </div>
 </template>
@@ -38,10 +38,11 @@ export default {
   gap: 2rem;
 
   .security-settings-card {
-    display: flex;
-    flex-direction: column;
-    gap: 2.25rem;
     width: 100%;
+  }
+
+  .security-section:not(:last-child) {
+    margin-block-end: 2.25rem;
   }
 }
 </style>
