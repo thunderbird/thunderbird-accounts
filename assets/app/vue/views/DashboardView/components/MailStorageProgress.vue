@@ -49,7 +49,7 @@ onMounted(async () => {
 
     <template v-if="planInfo">
       <div class="mail-storage-info">
-        <p class="plan-name">{{ planInfo.name }}</p>
+        <p class="plan-name">{{ t('views.mail.sections.dashboard.welcomeHeader.mailStorage') }}</p>
         <p class="plan-storage">
           {{ t('views.mail.sections.dashboard.welcomeHeader.storageOf', { used: usedQuotaFormatted, total: storageQuotaFormatted }) }}
         </p>
@@ -70,7 +70,7 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-block-end: 0.53rem;
+    margin-block-end: 0.375rem;
     flex-wrap: wrap;
 
     .plan-name {

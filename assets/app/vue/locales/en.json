@@ -119,7 +119,10 @@
           "welcomeHeader": {
             "welcome": "Welcome",
             "storageOf": "{used} of {total}",
-            "errorMessage": "Failed to load subscription information"
+            "errorMessage": "Failed to load subscription information",
+            "mailStorage": "Mail storage",
+            "sendStorage": "Send storage",
+            "sendErrorMessage": "Failed to load Send storage information"
           },
           "getStartedWithThundermail": {
             "title": "Get started with Thundermail",
