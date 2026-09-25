@@ -4,6 +4,7 @@ from django.utils.html import strip_tags
 from unittest.mock import patch, Mock
 
 from django.conf import settings
+from django.contrib.messages import get_messages
 from django.test import SimpleTestCase, TestCase, Client as RequestClient
 from django.urls import reverse
 from pathlib import Path
@@ -11,6 +12,7 @@ from pathlib import Path
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.core.views import PUBLIC_VUE_ROUTES
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
+from thunderbird_accounts.mail.exceptions import DomainNotFoundError
 from thunderbird_accounts.mail.models import Account
 
 
@@ -299,3 +301,36 @@ class HomeViewNeedsTosAcceptanceTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         blob = self._retrieve_json_blob(response)
         self.assertFalse(blob.get('needsTosAcceptance'))
+
+
+class HomeViewMailClientErrorsTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(username=f'mailerr@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='mailerr-1')
+        self.account = Account.objects.create(name=f'mailerr@{settings.PRIMARY_EMAIL_DOMAIN}', user=self.user)
+
+    def _login_and_get_home(self, get_account_side_effect):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['oidc_id_token_expiration'] = 9999999999
+        session.save()
+
+        with (
+            patch.object(User, 'has_active_subscription', True),
+            patch('thunderbird_accounts.core.views.MailClient') as mock_mail_client,
+        ):
+            mock_instance = Mock()
+            mock_instance.get_account.side_effect = get_account_side_effect
+            mock_mail_client.return_value = mock_instance
+            return self.client.get('/')
+
+    def test_missing_primary_domain_shows_error_message(self):
+        with patch('thunderbird_accounts.core.views.sentry_sdk') as mock_sentry:
+            response = self._login_and_get_home(DomainNotFoundError(settings.PRIMARY_EMAIL_DOMAIN))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            'Could not connect to Thundermail, please try again later.',
+            [str(message) for message in get_messages(response.wsgi_request)],
+        )
+        mock_sentry.capture_exception.assert_called_once()
