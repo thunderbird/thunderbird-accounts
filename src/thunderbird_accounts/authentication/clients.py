@@ -436,7 +436,7 @@ class KeycloakClient:
             # function call.
             error = ImportUserError.from_request_exception(exc, username=username)
 
-            if not error.is_already_exists:
+            if not error.is_already_exists and not error.is_password_policy_error:
                 sentry_sdk.capture_exception(exc)
 
             raise error

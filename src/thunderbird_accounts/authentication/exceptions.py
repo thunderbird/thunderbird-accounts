@@ -94,6 +94,12 @@ class ImportUserError(KeycloakError):
         error_text = ' '.join(filter(None, [self.error_code, self.error_desc, self.error])).lower()
         return POSTGRES_DUPLICATE_KEY_MARKER in error_text
 
+    @property
+    def is_password_policy_error(self):
+        # Keycloak rejects passwords that fail the realm's password policy with a 400 and an error of
+        # invalidPassword<Policy>Message (e.g. invalidPasswordMinLengthMessage.) These are user input errors.
+        return self.status_code == 400 and (self.error_code or '').startswith('invalidPassword')
+
     def __str__(self):
         return f'ImportUserError: {self.error} for {self.username}'
 
