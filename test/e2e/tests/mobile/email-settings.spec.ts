@@ -1,6 +1,6 @@
 import { test } from '@playwright/test';
 import { EmailSettingsPage } from '../../pages/email-settings-page';
-import { navigateToAccountsHubAndSignIn } from '../../utils/utils';
+import { isMobileAndroidProject, navigateToAccountsHubAndSignIn } from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
@@ -10,9 +10,11 @@ import {
 
 let emailSettingsPage: EmailSettingsPage;
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, testInfo) => {
   emailSettingsPage = new EmailSettingsPage(page);
-  await navigateToAccountsHubAndSignIn(page);
+  await navigateToAccountsHubAndSignIn(page, {
+    isMobileAndroid: isMobileAndroidProject(testInfo.project.name),
+  });
 });
 
 test.describe('email settings page components on mobile browser', {
