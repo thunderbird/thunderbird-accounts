@@ -29,3 +29,8 @@ export interface SubscriptionData {
   autoRenewal: string | null;
   usedQuota: string;
 }
+
+export interface SendStorageData {
+  used: number;
+  total: number;
+}

@@ -61,3 +61,21 @@ export const getSubscriptionPlanInfo = async () => {
 
   return await response.value.json();
 }
+
+export const getSendStorageInfo = async () => {
+  const { response } = await useAuthFetch('/api/v1/subscription/send/storage/', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-CSRFToken': window._page?.csrfToken,
+    },
+  });
+
+  // If we're not getting a application/json response then return the status text
+  if (!response.value.headers.get('content-type')?.includes('application/json')) {
+    throw new Error(response.value.statusText);
+  }
+
+  return await response.value.json();
+}
