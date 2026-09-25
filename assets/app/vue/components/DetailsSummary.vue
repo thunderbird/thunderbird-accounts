@@ -53,7 +53,7 @@ function toggle() {
       </span>
     </div>
 
-    <div v-if="$slots.description" v-show="isOpen" class="accordion__description">
+    <div v-if="$slots.description" class="accordion__description">
       <slot name="description" />
     </div>
 
