@@ -1,10 +1,10 @@
 from unittest.mock import Mock, call, patch
 
 import requests
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 
 from thunderbird_accounts.authentication.clients import KeycloakAccountClient, KeycloakClient, RequestMethods
-from thunderbird_accounts.authentication.exceptions import RoleMappingError
+from thunderbird_accounts.authentication.exceptions import ImportUserError, RoleMappingError
 from thunderbird_accounts.core.tests.utils import build_keycloak_success_response
 
 OIDC_ID = 'd0e5c511-c78e-48be-a9ff-b7d3d8562ce4'
@@ -355,3 +355,40 @@ class KeycloakAccountClientTestCase(TestCase):
         self.assertEqual(user_token, self.USER_TOKEN)
         self.assertEqual(method, RequestMethods.DELETE)
         self.assertEqual(result, {'success': True})
+
+
+PASSWORD_POLICY_ERROR = (
+    b'{"error":"invalidPasswordMinLengthMessage","error_description":"Invalid password: minimum length 12."}'
+)
+
+
+def _keycloak_error(status_code: int, content: bytes) -> requests.HTTPError:
+    response = requests.Response()
+    response.status_code = status_code
+    response._content = content
+    return requests.HTTPError(response=response)
+
+
+@patch('thunderbird_accounts.authentication.clients.sentry_sdk.capture_exception')
+@patch.object(KeycloakClient, 'request')
+@override_settings(ALLOWED_EMAIL_DOMAINS=['example.org'])
+class KeycloakClientImportUserTestCase(SimpleTestCase):
+    def test_password_policy_error_is_not_captured(self, mock_request, mock_capture):
+        mock_request.side_effect = _keycloak_error(400, PASSWORD_POLICY_ERROR)
+
+        with self.assertRaises(ImportUserError) as ctx:
+            KeycloakClient().import_user('user@example.org', 'backup@example.com', password='short', timezone='UTC')
+
+        self.assertTrue(ctx.exception.is_password_policy_error)
+        self.assertEqual(ctx.exception.error_code, 'invalidPasswordMinLengthMessage')
+        self.assertEqual(ctx.exception.error_desc, 'Invalid password: minimum length 12.')
+        mock_capture.assert_not_called()
+
+    def test_other_errors_are_captured(self, mock_request, mock_capture):
+        mock_request.side_effect = _keycloak_error(400, b'{"errorMessage":"Could not create user"}')
+
+        with self.assertRaises(ImportUserError) as ctx:
+            KeycloakClient().import_user('user@example.org', 'backup@example.com', password='password', timezone='UTC')
+
+        self.assertFalse(ctx.exception.is_password_policy_error)
+        mock_capture.assert_called_once()

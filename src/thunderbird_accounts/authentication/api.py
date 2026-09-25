@@ -351,6 +351,8 @@ def sign_up(request: Request):
             logging.info(
                 f'Dupe signup suppressed (status={ex.status_code or "none"}, error={ex.error_code or "unknown"})',
             )
+        elif ex.is_password_policy_error:
+            logging.info(f'Sign up password rejected by Keycloak password policy (error={ex.error_code})')
         else:
             sentry_sdk.capture_exception(ex)
         return Response(
