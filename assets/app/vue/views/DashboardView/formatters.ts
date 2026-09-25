@@ -3,6 +3,7 @@ import type { SubscriptionData } from './types';
 import { i18n } from '@/composables/i18n';
 import { dinero, toDecimal, allocate } from 'dinero.js';
 import * as currencies from 'dinero.js/currencies';
+
 /**
  * Converts bytes to the most appropriate unit (KB, MB, or GB) with the unit label
  * @param bytes - The number of bytes to convert
@@ -33,6 +34,18 @@ export const formatBytes = (bytes: string | null): string | null => {
   // If less than 1 KB, return in bytes
   return `${bytesNum} B`;
 }
+
+/**
+ * Converts used/total storage into a CSS width percentage for a progress bar, capped at 100%
+ * @param used - The used amount
+ * @param total - The total amount
+ * @returns The percentage as a string (e.g., "42%")
+ */
+export const formatStorageProgress = (used: number, total: number): string => {
+  if (!total) return '0%';
+
+  return `${Math.min((used / total) * 100, 100)}%`;
+};
 
 /**
  * Takes in the amount in cents (raw data from Paddle), currency code and billingInterval and outputs the correctly formatted price in monthly interval.
