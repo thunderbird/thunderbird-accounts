@@ -128,8 +128,7 @@ function toggle() {
   }
 
   .accordion__description {
-    border: 1px solid var(--colour-neutral-border);
-    border-top: none;
+    border-inline: 1px solid var(--colour-neutral-border);
     padding: 1rem;
     background-color: var(--colour-neutral-base);
     color: var(--colour-ti-secondary);
