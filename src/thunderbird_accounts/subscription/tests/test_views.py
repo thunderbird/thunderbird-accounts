@@ -1,5 +1,6 @@
-from thunderbird_accounts.subscription.models import Transaction
+from thunderbird_accounts.subscription.models import Plan, Subscription, Transaction
 import json
+import requests
 from unittest.mock import patch, MagicMock
 
 from django.conf import settings
@@ -287,3 +288,97 @@ class ActiveSubscriptionRequiredViewTestCase(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {'success': False, 'error': 'No active subscription found'})
+
+
+@override_settings(TB_PRO_SEND_API_URL='https://send-backend.example.org/', TB_PRO_SEND_API_KEY='test-key')
+class SendStorageInfoViewTestCase(TestCase):
+    def setUp(self):
+        self.client = RequestClient()
+        self.plan = Plan.objects.create(name='Test Plan', send_storage_bytes=10_000_000)
+        self.user = User.objects.create(
+            username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='sub/1234', plan=self.plan
+        )
+        Subscription.objects.create(
+            paddle_id='sub_1234',
+            paddle_customer_id='cus_1234',
+            status=Subscription.StatusValues.ACTIVE,
+            user=self.user,
+        )
+        oidc_force_login(self.client, self.user)
+        self.url = reverse('subscription_send_storage')
+
+    def _mock_response(self, status_code=200, data=None):
+        response = MagicMock()
+        response.status_code = status_code
+        response.ok = 200 <= status_code < 400
+        response.json.return_value = data
+        return response
+
+    def test_requires_active_subscription(self):
+        Subscription.objects.filter(user=self.user).delete()
+
+        response = self.client.post(self.url, HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {'success': False, 'error': 'No active subscription found'})
+
+    def test_returns_send_storage_usage(self):
+        with patch(
+            'thunderbird_accounts.subscription.send_client.requests.get',
+            return_value=self._mock_response(data={'active': 1234, 'limit': 5678}),
+        ) as get_mock:
+            response = self.client.post(self.url, HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'success': True, 'sendStorage': {'used': 1234, 'total': 5678}})
+
+        # The subject is url-encoded and the integration key is sent as a bearer token
+        args, kwargs = get_mock.call_args
+        self.assertEqual(args[0], 'https://send-backend.example.org/api/internal/users/sub%2F1234/storage')
+        self.assertEqual(kwargs['headers']['Authorization'], 'Bearer test-key')
+
+    def test_user_not_found_on_send_falls_back_to_plan_limit(self):
+        with patch(
+            'thunderbird_accounts.subscription.send_client.requests.get',
+            return_value=self._mock_response(status_code=404),
+        ):
+            response = self.client.post(self.url, HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'success': True, 'sendStorage': {'used': 0, 'total': 10_000_000}})
+
+    def test_send_error_response(self):
+        with patch(
+            'thunderbird_accounts.subscription.send_client.requests.get',
+            return_value=self._mock_response(status_code=503),
+        ):
+            response = self.client.post(self.url, HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(response.json(), {'success': False, 'error': 'Error getting Send storage usage'})
+
+    def test_send_connection_error(self):
+        with patch(
+            'thunderbird_accounts.subscription.send_client.requests.get',
+            side_effect=requests.ConnectionError('boom'),
+        ):
+            response = self.client.post(self.url, HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 502)
+
+    def test_send_malformed_response(self):
+        with patch(
+            'thunderbird_accounts.subscription.send_client.requests.get',
+            return_value=self._mock_response(data={'unexpected': True}),
+        ):
+            response = self.client.post(self.url, HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 502)
+
+    @override_settings(TB_PRO_SEND_API_KEY='')
+    def test_send_api_not_configured(self):
+        with patch('thunderbird_accounts.subscription.send_client.requests.get') as get_mock:
+            response = self.client.post(self.url, HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 503)
+        get_mock.assert_not_called()
