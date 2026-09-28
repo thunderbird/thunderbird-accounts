@@ -317,7 +317,7 @@
           "loadingActiveSessions": "Loading active sessions...",
           "errorLoadingActiveSessions": "We couldn’t load your active sessions. Please try again.",
           "unknownDevice": "Unknown Device",
-          "unknownLocation": "Unknown location",
+          "unknownLocation": "unknown location",
           "signOutConfirmation": "Sign out of {device}?",
           "signOutConfirmationDescription": "This will end the session and sign you out on this device.",
           "errorSigningOutSession": "We couldn’t sign out of that session. Please try again.",

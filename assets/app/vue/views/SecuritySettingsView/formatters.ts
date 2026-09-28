@@ -46,7 +46,7 @@ export const formatDeviceInfo = (
 
   const device = deviceInfo.os || deviceInfo.device || unknownDevice;
   const app = deviceInfo.app || deviceInfo.browser;
-  return app ? `${device} - ${app}` : device;
+  return app ? `${app} on ${device}` : device;
 };
 
 export const formatSessionLocation = (
