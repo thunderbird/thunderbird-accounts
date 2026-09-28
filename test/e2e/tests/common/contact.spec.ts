@@ -1,7 +1,12 @@
 import path from 'path';
 import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import { ContactPage } from '../../pages/contact-page';
-import { ensureWeAreSignedIn, navigateToAccountsHubAndSignIn, overridePageData } from '../../utils/utils';
+import {
+  ensureWeAreSignedIn,
+  isMobileAndroidProject,
+  navigateToAccountsHubAndSignIn,
+  overridePageData,
+} from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -160,7 +165,9 @@ test.beforeEach(async ({ page }, testInfo) => {
     await ensureWeAreSignedIn(page);
   } else {
     // Mobile projects cannot load saved browser context, so each test must sign in independently.
-    await navigateToAccountsHubAndSignIn(page);
+    await navigateToAccountsHubAndSignIn(page, {
+      isMobileAndroid: isMobileAndroidProject(testInfo.project.name),
+    });
   }
 });
 

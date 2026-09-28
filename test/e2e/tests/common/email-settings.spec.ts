@@ -1,6 +1,6 @@
 import { test } from '@playwright/test';
 import { EmailSettingsPage } from '../../pages/email-settings-page';
-import { ensureWeAreSignedIn, navigateToAccountsHubAndSignIn } from '../../utils/utils';
+import { isMobileAndroidProject, ensureWeAreSignedIn, navigateToAccountsHubAndSignIn } from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -15,12 +15,11 @@ let emailSettingsPage: EmailSettingsPage;
 test.beforeEach(async ({ page }, testInfo) => {
   emailSettingsPage = new EmailSettingsPage(page);
 
-  const isAndroidMobile = testInfo.project.name === 'Google-Pixel-7-View'
-    || testInfo.project.name === 'android-chrome';
-
-  if (isAndroidMobile) {
+  if (isMobileAndroidProject(testInfo.project.name)) {
     // Android projects cannot load the saved desktop context, so each test signs in separately.
-    await navigateToAccountsHubAndSignIn(page);
+    await navigateToAccountsHubAndSignIn(page, {
+      isMobileAndroid: true,
+    });
   } else {
     // Desktop projects load auth.desktop.setup.ts's context; refresh it if the session expired.
     await ensureWeAreSignedIn(page);

@@ -1,6 +1,6 @@
 import { test } from '@playwright/test';
 import { DashboardPage } from '../../pages/dashboard-page';
-import { ensureWeAreSignedIn, navigateToAccountsHubAndSignIn } from '../../utils/utils';
+import { isMobileAndroidProject, navigateToAccountsHubAndSignIn } from '../../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -13,15 +13,11 @@ import {
 let dashboardPage: DashboardPage;
 
 test.beforeEach(async ({ page }, testInfo) => {
-  dashboardPage = new DashboardPage(page);
-
-  if (testInfo.project.use.storageState) {
-    // Desktop projects load the context saved by auth.desktop.setup.ts; refresh it if the session expired.
-    await ensureWeAreSignedIn(page);
-  } else {
-    // Mobile projects cannot load that context, so each test signs in separately.
-    await navigateToAccountsHubAndSignIn(page);
-  }
+  const isMobileAndroid = isMobileAndroidProject(testInfo.project.name);
+  dashboardPage = new DashboardPage(page, isMobileAndroid);
+  await navigateToAccountsHubAndSignIn(page, {
+    isMobileAndroid,
+  });
 });
 
 /**

@@ -9,3 +9,7 @@ node_modules/
 
 # BrowserStack logging
 /log
+
+# BrowserStack SDK temp files
+browserstackSetupConfig.json
+playwright-browserstack-sdk.config.ts

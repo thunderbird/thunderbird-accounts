@@ -21,7 +21,8 @@ import {
   TIMEOUT_30_SECONDS,
   TIMEOUT_60_SECONDS,
 } from '../const/constants';
-import { waitForVueApp } from '../utils/utils';
+import { TBAcctsOIDCPage } from './tb-accts-oidc-page';
+import { sanitizeUrlForDiagnostics, waitForVueApp } from '../utils/utils';
 
 interface ServiceUrls {
   mail: string;
@@ -49,12 +50,15 @@ type PopupPageAssertion = {
   }>;
 } & PopupExpectedElementAssertion;
 
+type PasswordChangeState = 'loading' | 'reauthentication-required' | 'update-password';
+
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const hasTls = (tls: string) => Boolean(tls && tls !== 'None' && tls !== 'undefined');
 const formatPort = (port: number, tls: string) => `${port}${hasTls(tls) ? ' (SSL/TLS)' : ''}`;
 
 export class DashboardPage {
   readonly page: Page;
+  readonly isMobileAndroid: boolean;
   readonly myAccountHeading: Locator;
   readonly myAccountCard: Locator;
   readonly welcomeContainer: Locator;
@@ -80,8 +84,9 @@ export class DashboardPage {
   readonly logoutLink: Locator;
   readonly contactHeader: Locator;
 
-  constructor(page: Page) {
+  constructor(page: Page, isMobileAndroid: boolean = false) {
     this.page = page;
+    this.isMobileAndroid = isMobileAndroid;
     this.myAccountHeading = this.page.getByRole('heading', { name: 'Account settings' });
     this.myAccountCard = this.page.locator('.my-account-card');
     this.welcomeContainer = this.page.locator('.welcome-container');
@@ -185,6 +190,64 @@ export class DashboardPage {
 
   async verifyPasswordChangeNavigation() {
     await this.passwordChangeLink.click({ timeout: TIMEOUT_30_SECONDS });
+
+    const signInPage = new TBAcctsOIDCPage(this.page, this.isMobileAndroid);
+    const passwordChangeResult: { state: PasswordChangeState } = { state: 'loading' };
+
+    try {
+      await expect.poll(
+        async () => {
+          if (await this.updatePasswordHeader.isVisible().catch(() => false)) {
+            passwordChangeResult.state = 'update-password';
+            return passwordChangeResult.state;
+          }
+
+          const [
+            isSignInHeaderVisible,
+            isEmailInputVisible,
+            isPasswordInputVisible,
+            isSignInButtonVisible,
+          ] = await Promise.all([
+            signInPage.signInHeaderText.isVisible().catch(() => false),
+            signInPage.emailInput.isVisible().catch(() => false),
+            signInPage.passwordInput.isVisible().catch(() => false),
+            signInPage.signInButton.isVisible().catch(() => false),
+          ]);
+
+          // Keycloak can require fresh credentials before a sensitive app-initiated action.
+          // Treat the complete sign-in form as an expected state instead of waiting indefinitely
+          // for the password form that only appears after reauthentication succeeds.
+          if (
+            isSignInHeaderVisible
+            && isEmailInputVisible
+            && isPasswordInputVisible
+            && isSignInButtonVisible
+          ) {
+            passwordChangeResult.state = 'reauthentication-required';
+          }
+
+          return passwordChangeResult.state;
+        },
+        {
+          timeout: TIMEOUT_60_SECONDS,
+          message: 'waiting for the update-password action or its reauthentication challenge',
+        },
+      ).toMatch(/^(reauthentication-required|update-password)$/);
+    } catch (error) {
+      const pageTitle = await this.page.title().catch(() => '<unavailable>');
+      throw new Error(
+        `Password change did not reach an expected Keycloak state. `
+        + `Final URL: ${sanitizeUrlForDiagnostics(this.page.url())}. `
+        + `Page title: '${pageTitle}'.`,
+        { cause: error },
+      );
+    }
+
+    if (passwordChangeResult.state === 'reauthentication-required') {
+      // signIn preserves the Android-only force-click workaround supplied to this page object.
+      await signInPage.signIn();
+    }
+
     await expect(this.updatePasswordHeader).toBeVisible({ timeout: TIMEOUT_60_SECONDS });
   }
 
@@ -422,7 +485,7 @@ export class DashboardPage {
             isAuthenticatedSignalVisible: true,
           });
       } catch (error) {
-        const actualUrl = popup.isClosed() ? '<popup closed>' : this.sanitizeUrlForDiagnostics(popup.url());
+        const actualUrl = popup.isClosed() ? '<popup closed>' : sanitizeUrlForDiagnostics(popup.url());
         const pageTitle = popup.isClosed() ? '<unavailable>' : await popup.title().catch(() => '<unavailable>');
         const visibleHeadings = popup.isClosed()
           ? []
@@ -441,14 +504,14 @@ export class DashboardPage {
 
         throw new Error(
           `${serviceName} ${failedAction} did not complete. ` +
-            `Expected ${this.sanitizeUrlForDiagnostics(expectedUrl)}${authenticatedSignal}, ` +
+            `Expected ${sanitizeUrlForDiagnostics(expectedUrl)}${authenticatedSignal}, ` +
             `but the popup finished at ${actualUrl}. ` +
             `Page title: '${pageTitle}'. Visible headings: '${headingSummary}'.`,
           { cause: error }
         );
       }
 
-      console.log(`${serviceName} popup settled at ${this.sanitizeUrlForDiagnostics(popup.url())}`);
+      console.log(`${serviceName} popup settled at ${sanitizeUrlForDiagnostics(popup.url())}`);
 
       for (const additionalExpectedElement of additionalExpectedElements) {
         await expect(
@@ -469,18 +532,6 @@ export class DashboardPage {
       return new URL(url).origin;
     } catch {
       return null;
-    }
-  }
-
-  private sanitizeUrlForDiagnostics(url: string): string {
-    try {
-      const sanitizedUrl = new URL(url);
-      // OIDC URLs can contain sensitive values, so diagnostics retain only the origin and path.
-      sanitizedUrl.search = '';
-      sanitizedUrl.hash = '';
-      return sanitizedUrl.toString();
-    } catch {
-      return url.split(/[?#]/, 1)[0];
     }
   }
 }

@@ -1,9 +1,9 @@
 import { type Page, type Locator, expect } from '@playwright/test';
-import { ACCTS_HUB_URL, ACCTS_SIGN_UP_URL, TIMEOUT_10_SECONDS } from '../const/constants';
+import { ACCTS_HUB_URL, ACCTS_SIGN_UP_URL, TIMEOUT_10_SECONDS, TIMEOUT_30_SECONDS } from '../const/constants';
 
 export class TbAcctsSignUpPage {
   readonly page: Page;
-  readonly testPlatform: string;
+  readonly isMobileAndroid: boolean;
   readonly stepId: Locator;
   readonly formTitle: Locator;
   readonly formSubtitle: Locator;
@@ -17,9 +17,9 @@ export class TbAcctsSignUpPage {
   readonly zoneInfoInput: Locator;
   readonly submitButton: Locator;
 
-  constructor(page: Page, testPlatform: string = 'desktop') {
+  constructor(page: Page, isMobileAndroid: boolean = false) {
     this.page = page;
-    this.testPlatform = testPlatform;
+    this.isMobileAndroid = isMobileAndroid;
     this.stepId = this.page.getByTestId('step-id');
     this.formTitle = this.page.getByTestId('title');
     this.formSubtitle = this.page.getByTestId('subtitle');
@@ -150,14 +150,20 @@ export class TbAcctsSignUpPage {
     await this.passwordConfirmInput?.fill(passwordConfirm);
   }
 
-  async submitForm() { 
-    // when clicking on android it won't click it unless we force it; but force doesn't work on ios
+  async submitForm() {
+    await expect(this.submitButton).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await expect(this.submitButton).toBeEnabled({ timeout: TIMEOUT_30_SECONDS });
     console.log(`clicking '${await this.submitButton.innerText()}' button`);
 
-    if (this.testPlatform.includes('android')) {
+    if (this.isMobileAndroid) {
+      // BrowserStack Android has historically failed to deliver normal clicks after the virtual
+      // keyboard moves the signup form. Keep the workaround for Android-targeted projects, and
+      // force the click only after proving that validation considers the button visible and enabled.
       await this.submitButton.click({ force: true, clickCount: 1 });
     } else {
-      await this.submitButton.click();
+      // Desktop and iOS retain Playwright's actionability checks so covered or unstable controls
+      // fail at the click with a useful explanation.
+      await this.submitButton.click({ timeout: TIMEOUT_30_SECONDS });
     }
   }
 }
