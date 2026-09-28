@@ -7,6 +7,8 @@ import path from 'path';
 import {
     ACCTS_TARGET_ENV,
     ACCTS_HUB_URL,
+    PLAYWRIGHT_PROJECT_NAME_ANDROID,
+    PLAYWRIGHT_PROJECT_NAME_PIXEL_VIEWPORT,
     TIMEOUT_1_SECOND,
     TIMEOUT_30_SECONDS,
     TIMEOUT_60_SECONDS,
@@ -59,9 +61,11 @@ export const waitForVueApp = async (page: Page) => {
 export const isMobileAndroidProject = (projectName: string) => {
     const normalizedProjectName = projectName.toLowerCase();
 
-    // BrowserStack uses "android-chrome", while the local mobile project is named after
-    // its emulated Pixel device. Keep platform detection in one place for both configurations.
-    return normalizedProjectName.includes('android') || normalizedProjectName.includes('pixel');
+    // Check if the test is running on mobile android using the Playwright testInfo.project.name
+    return (
+        normalizedProjectName.includes(PLAYWRIGHT_PROJECT_NAME_ANDROID) ||
+        normalizedProjectName.includes(PLAYWRIGHT_PROJECT_NAME_PIXEL_VIEWPORT)
+    );
 };
 
 type AuthenticationState = 'loading' | 'sign-in-ready' | 'terms-of-service' | 'signed-in';
