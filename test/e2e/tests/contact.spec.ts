@@ -1,12 +1,12 @@
 import path from 'path';
 import { test, expect, type Page, type TestInfo } from '@playwright/test';
-import { ContactPage } from '../../pages/contact-page';
+import { ContactPage } from '../pages/contact-page';
 import {
   ensureWeAreSignedIn,
   isMobileAndroidProject,
   navigateToAccountsHubAndSignIn,
   overridePageData,
-} from '../../utils/utils';
+} from '../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -20,7 +20,7 @@ import {
   TIMEOUT_5_SECONDS,
   TIMEOUT_30_SECONDS,
   ACCTS_TARGET_ENV,
-} from '../../const/constants';
+} from '../const/constants';
 
 let contactPage: ContactPage;
 
@@ -366,7 +366,7 @@ test.describe('contact support form on browser', {
     );
 
     // upload a test file
-    const testFilePath = path.join(__dirname, '../../test-files/test-attachment.txt');
+    const testFilePath = path.join(__dirname, '../test-files/test-attachment.txt');
     await contactPage.uploadFile(testFilePath);
 
     // submit the form
@@ -380,7 +380,7 @@ test.describe('contact support form on browser', {
     // go to the contact / submit an issue form and wait for it to load
     await contactPage.navigateToContactPage();
     // Upload a test file
-    const testFilePath = path.join(__dirname, '../../test-files/test-attachment.txt');
+    const testFilePath = path.join(__dirname, '../test-files/test-attachment.txt');
     await contactPage.uploadFile(testFilePath);
 
     // Check that the file appears in the attachment list

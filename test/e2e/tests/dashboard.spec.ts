@@ -1,6 +1,6 @@
 import { test } from '@playwright/test';
-import { DashboardPage } from '../../pages/dashboard-page';
-import { isMobileAndroidProject, navigateToAccountsHubAndSignIn } from '../../utils/utils';
+import { DashboardPage } from '../pages/dashboard-page';
+import { isMobileAndroidProject, navigateToAccountsHubAndSignIn } from '../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -8,7 +8,7 @@ import {
   PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
   PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
   ACCTS_TARGET_ENV,
-} from '../../const/constants';
+} from '../const/constants';
 
 let dashboardPage: DashboardPage;
 

@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { TbAcctsSignUpPage } from '../../pages/tb-accts-signup-page';
+import { TbAcctsSignUpPage } from '../pages/tb-accts-signup-page';
 import {
   authFile,
   isAllowListEnabled,
   isMobileAndroidProject,
   navigateToAccountsHubAndSignIn,
   waitForVueApp,
-} from '../../utils/utils';
+} from '../utils/utils';
 
 import {
   PLAYWRIGHT_TAG_E2E_SUITE,
@@ -15,7 +15,7 @@ import {
   ACCTS_CONTACT_URL,
   PLAYWRIGHT_TAG_E2E_SUITE_MOBILE,
   PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY,
-} from '../../const/constants';
+} from '../const/constants';
 
 let signUpPage: TbAcctsSignUpPage;
 
