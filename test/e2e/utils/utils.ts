@@ -144,7 +144,7 @@ const getAuthenticationSnapshot = async (
     };
 };
 
-const sanitizeUrlForDiagnostics = (url: string) => {
+export const sanitizeUrlForDiagnostics = (url: string) => {
     try {
         const sanitizedUrl = new URL(url);
         // Authentication URLs can contain sensitive values; retain only the origin and path.

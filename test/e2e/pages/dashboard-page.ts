@@ -22,7 +22,7 @@ import {
   TIMEOUT_60_SECONDS,
 } from '../const/constants';
 import { TBAcctsOIDCPage } from './tb-accts-oidc-page';
-import { waitForVueApp } from '../utils/utils';
+import { sanitizeUrlForDiagnostics, waitForVueApp } from '../utils/utils';
 
 interface ServiceUrls {
   mail: string;
@@ -237,7 +237,7 @@ export class DashboardPage {
       const pageTitle = await this.page.title().catch(() => '<unavailable>');
       throw new Error(
         `Password change did not reach an expected Keycloak state. `
-        + `Final URL: ${this.sanitizeUrlForDiagnostics(this.page.url())}. `
+        + `Final URL: ${sanitizeUrlForDiagnostics(this.page.url())}. `
         + `Page title: '${pageTitle}'.`,
         { cause: error },
       );
@@ -485,7 +485,7 @@ export class DashboardPage {
             isAuthenticatedSignalVisible: true,
           });
       } catch (error) {
-        const actualUrl = popup.isClosed() ? '<popup closed>' : this.sanitizeUrlForDiagnostics(popup.url());
+        const actualUrl = popup.isClosed() ? '<popup closed>' : sanitizeUrlForDiagnostics(popup.url());
         const pageTitle = popup.isClosed() ? '<unavailable>' : await popup.title().catch(() => '<unavailable>');
         const visibleHeadings = popup.isClosed()
           ? []
@@ -504,14 +504,14 @@ export class DashboardPage {
 
         throw new Error(
           `${serviceName} ${failedAction} did not complete. ` +
-            `Expected ${this.sanitizeUrlForDiagnostics(expectedUrl)}${authenticatedSignal}, ` +
+            `Expected ${sanitizeUrlForDiagnostics(expectedUrl)}${authenticatedSignal}, ` +
             `but the popup finished at ${actualUrl}. ` +
             `Page title: '${pageTitle}'. Visible headings: '${headingSummary}'.`,
           { cause: error }
         );
       }
 
-      console.log(`${serviceName} popup settled at ${this.sanitizeUrlForDiagnostics(popup.url())}`);
+      console.log(`${serviceName} popup settled at ${sanitizeUrlForDiagnostics(popup.url())}`);
 
       for (const additionalExpectedElement of additionalExpectedElements) {
         await expect(
@@ -532,18 +532,6 @@ export class DashboardPage {
       return new URL(url).origin;
     } catch {
       return null;
-    }
-  }
-
-  private sanitizeUrlForDiagnostics(url: string): string {
-    try {
-      const sanitizedUrl = new URL(url);
-      // OIDC URLs can contain sensitive values, so diagnostics retain only the origin and path.
-      sanitizedUrl.search = '';
-      sanitizedUrl.hash = '';
-      return sanitizedUrl.toString();
-    } catch {
-      return url.split(/[?#]/, 1)[0];
     }
   }
 }
