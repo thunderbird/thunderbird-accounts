@@ -747,7 +747,7 @@ class RemoveCustomDomainTestCase(TestCase):
         self.assertEqual(json.loads(response.content.decode()), {'success': True})
         mock_instance.delete_domain.assert_called_once_with(self.domain.name)
         mock_instance.delete_dkim.assert_not_called()
-        mock_delete_hosted_dkim_dns_records.assert_not_called()
+        mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
         self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
 
     @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
