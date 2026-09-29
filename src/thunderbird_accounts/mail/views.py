@@ -426,16 +426,23 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
         domains = request.user.domains.filter(name__iexact=domain_name).all()
         # There should only be one here, but just in case...
         for _domain in domains:
+            stalwart_domain_deleted = False
             if _domain.stalwart_id:
                 try:
                     cleanup_phase = 'delete_stalwart_domain'
                     stalwart_client.delete_domain(_domain.name)
+                    stalwart_domain_deleted = True
                 except DomainNotFoundError as ex:
                     # While it's not in Stalwart we seem to have a local reference,
                     # so try deleting dkim and then local ref
                     _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
 
-            if not request.user.is_migrated:
+            # The JMAP client's delete_domain cascades a DKIM delete; the legacy client's
+            # does not. So DKIM signatures still need an explicit delete unless we just
+            # cascaded one via a successful migrated delete_domain call above (e.g. a domain
+            # that never verified locally, so stalwart_id is unset, still has DKIM
+            # signatures created in Stalwart at add time and needs explicit cleanup here).
+            if not (stalwart_domain_deleted and request.user.is_migrated):
                 cleanup_phase = 'delete_dkim'
                 stalwart_client.delete_dkim(_domain.name)
 
