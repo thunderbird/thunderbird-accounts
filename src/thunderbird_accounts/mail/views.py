@@ -439,8 +439,8 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
                 cleanup_phase = 'delete_dkim'
                 stalwart_client.delete_dkim(_domain.name)
 
-                cleanup_phase = 'delete_hosted_dkim_dns_records'
-                mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
+            cleanup_phase = 'delete_hosted_dkim_dns_records'
+            mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
             break
 
         cleanup_phase = 'delete_local_domain'
