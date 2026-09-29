@@ -28,14 +28,14 @@ HOSTED_DKIM_SETTINGS = dict(
 class OnboardCustomDomainEndToEndTestCase(TestCase):
     """Exercises the full custom-domain onboarding pipeline end to end:
 
-        A) Stalwart domain principal creation — only for a migrated user.
-            - SEE `test_onboarding_when_migrated`'s `create_domain.assert_called_once_with(...)`
-              vs. `test_onboarding_when_not_migrated`'s `create_domain.assert_not_called()`.
-        B) Stalwart DKIM signature creation — for every user, migrated or not.
-            - SEE `mock_view_client.create_dkim.assert_called_once_with` assertion in both tests.
-        C) Publishing the DKIM public key as a Cloudflare TXT record — for every user.
-            - SEE `mock_cloudflare_client_cls.return_value.upsert_txt_record` assertion in
-              `_assert_dkim_published_to_cloudflare`, shared by both tests.
+    A) Stalwart domain principal creation — only for a migrated user.
+        - SEE `test_onboarding_when_migrated`'s `create_domain.assert_called_once_with(...)`
+          vs. `test_onboarding_when_not_migrated`'s `create_domain.assert_not_called()`.
+    B) Stalwart DKIM signature creation — for every user, migrated or not.
+        - SEE `mock_view_client.create_dkim.assert_called_once_with` assertion in both tests.
+    C) Publishing the DKIM public key as a Cloudflare TXT record — for every user.
+        - SEE `mock_cloudflare_client_cls.return_value.upsert_txt_record` assertion in
+          `_assert_dkim_published_to_cloudflare`, shared by both tests.
 
     """
 
