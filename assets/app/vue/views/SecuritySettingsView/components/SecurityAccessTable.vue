@@ -65,7 +65,7 @@ defineSlots<{
             >
               {{ formatTimeAgoIntl(record.lastAccess, {
                 locale,
-                relativeTimeFormatOptions: { numeric: 'auto', style: 'short' },
+                relativeTimeFormatOptions: { numeric: 'auto', style: 'long' },
               }) }}
             </time>
             <template v-else>{{ t('views.mail.views.securitySettings.unknownLastAccess') }}</template>
