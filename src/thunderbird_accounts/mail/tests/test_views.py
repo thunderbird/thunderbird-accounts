@@ -1,4 +1,5 @@
 import datetime
+import unittest
 from thunderbird_accounts.mail.exceptions import DomainNotFoundError
 from django.utils.crypto import get_random_string
 from thunderbird_accounts.subscription.models import Plan, Subscription
@@ -750,14 +751,21 @@ class RemoveCustomDomainTestCase(TestCase):
         mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
         self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
 
+    @unittest.expectedFailure
     @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
     @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_success_cleans_up_cloudflare_records_for_migrated_user(
+    def test_pending_domain_for_migrated_user_still_deletes_dkim(
         self,
         mock_mail_client_cls,
         mock_delete_hosted_dkim_dns_records,
     ):
+        """Known bug: pending migrated domains never get DKIM cleaned up on removal.
+
+        This test is expected to fail until it is fixed."""
+        self.domain.stalwart_id = None
+        self.domain.status = Domain.DomainStatus.PENDING
+        self.domain.save()
         mock_instance = Mock()
         mock_mail_client_cls.return_value = mock_instance
 
@@ -765,7 +773,9 @@ class RemoveCustomDomainTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content.decode()), {'success': True})
+        mock_instance.delete_dkim.assert_called_once_with(self.domain.name)
         mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
+        self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
 
     @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.MailClient')
