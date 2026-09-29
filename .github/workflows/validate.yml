@@ -128,12 +128,17 @@ jobs:
     needs:
       - detect-changes
       - validate-accounts
+    # GitHub never exposes repository secrets to a fork-triggered run, and this job needs them
+    # for local dev stack paddle setup and other secrets inside the E2E tests; so don't run the
+    # tests for fork PRs rather than reporting a failure the contributor cannot act on (see issue #908)
     if: >-
       always() &&
       (needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.e2e-changed == 'true') &&
       needs.detect-changes.result == 'success' &&
       needs.validate-accounts.result != 'failure' &&
-      needs.validate-accounts.result != 'cancelled'
+      needs.validate-accounts.result != 'cancelled' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     environment:
       name: staging
