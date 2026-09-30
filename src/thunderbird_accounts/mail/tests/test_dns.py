@@ -1,4 +1,4 @@
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 from unittest.mock import MagicMock, patch
 import dns.rdatatype as dns_rdatatype
 import dns.resolver as dns_resolver
@@ -12,9 +12,22 @@ from thunderbird_accounts.mail.dns import (
     check_stale_dns_records,
     check_txt_record_status,
     enrich_dns_records_with_status,
+    find_custom_domain_denied_string,
     normalize_dns_query_name,
     txt_tag_value,
 )
+
+
+@override_settings(CUSTOM_DOMAINS_DENY_STRINGS=['thunderbird', 'mozilla'])
+class TestFindCustomDomainDeniedString(SimpleTestCase):
+    def test_returns_first_matching_string(self):
+        self.assertEqual(
+            find_custom_domain_denied_string('mozilla-thunderbird.example'),
+            'thunderbird',
+        )
+
+    def test_returns_none_without_match(self):
+        self.assertIsNone(find_custom_domain_denied_string('example.com'))
 
 
 class TestNormalizeDNSQueryName(SimpleTestCase):

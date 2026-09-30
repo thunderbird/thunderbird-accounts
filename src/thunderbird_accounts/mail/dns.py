@@ -18,6 +18,13 @@ VALID_DMARC_POLICIES = {'none', 'quarantine', 'reject'}
 MAX_SRV_PRIORITY = 65_535
 
 
+def find_custom_domain_denied_string(domain_name: str) -> str | None:
+    return next(
+        (deny_string for deny_string in settings.CUSTOM_DOMAINS_DENY_STRINGS if deny_string in domain_name),
+        None,
+    )
+
+
 def normalize_dns_query_name(name: str, domain_name: str) -> str:
     if name == '@':
         return f'{domain_name.rstrip(".")}.'

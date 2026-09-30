@@ -548,6 +548,7 @@ ALLOWED_EMAIL_DOMAINS: list[str] = (
 
 MIN_CUSTOM_DOMAIN_ALIAS_LENGTH = int(os.getenv('MIN_CUSTOM_DOMAIN_ALIAS_LENGTH', '3'))
 CUSTOM_DOMAINS_DO_VERIFY = os.getenv('CUSTOM_DOMAINS_DO_VERIFY', 'false').lower() == 'true'
+CUSTOM_DOMAINS_DENY_STRINGS = ['thunderbird', 'thundermail', 'mozilla']
 
 # The email domain that will be used for account creation and login
 PRIMARY_EMAIL_DOMAIN = (

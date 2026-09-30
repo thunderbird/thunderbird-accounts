@@ -198,6 +198,29 @@ class CreateCustomDomainTestCase(TestCase):
 
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_rejects_domains_containing_denied_strings(self, mock_mail_client_cls, mock_publish_hosted_dkim):
+        cases = {
+            'MyThunderbirdMail.com': "Sorry, 'thunderbird' is not allowed to appear in custom domains.",
+            'unofficial-thundermail.com': "Sorry, 'thundermail' is not allowed to appear in custom domains.",
+            'ilovemozilla.net': "Sorry, 'mozilla' is not allowed to appear in custom domains.",
+        }
+
+        for domain_name, expected_error in cases.items():
+            with self.subTest(domain_name=domain_name):
+                response = create_custom_domain(self.create_request(domain_name))
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    {'success': False, 'error': expected_error},
+                    json.loads(response.content.decode()),
+                )
+
+        mock_mail_client_cls.assert_not_called()
+        mock_publish_hosted_dkim.assert_not_called()
+        self.assertFalse(Domain.objects.exists())
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
     def test_normalizes_domain_before_creating_it(self, mock_mail_client_cls, mock_publish_hosted_dkim):
         mock_instance = Mock()
         mock_instance.get_domain.side_effect = DomainNotFoundError('example.com')
