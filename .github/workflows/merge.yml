@@ -78,7 +78,7 @@ jobs:
               - 'keycloak/config-cli/**'
               - 'Dockerfile.keycloak'
               - 'scripts/entry-keycloak.sh'
-              - 'scripts/apply-mfa-config.sh'
+              - 'scripts/apply-cli-config.sh'
               - 'scripts/PgAdvisoryLockRun.java'
             iac-changed:
               - 'pulumi/**'
