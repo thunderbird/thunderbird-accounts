@@ -304,6 +304,27 @@ class SignUpTestcase(APITestCase):
         self.assertEqual(response.json()['type'], 'status-409', msg=assert_fail_msg)
         mock_capture_exception.assert_called_once()
 
+    def test_import_password_policy_error_does_not_capture_sentry(self, mock_import_user: MagicMock):
+        mock_import_user.side_effect = ImportUserError(
+            'Error<400>: {"error":"invalidPasswordMinLengthMessage"}',
+            username='hello',
+            error_code='invalidPasswordMinLengthMessage',
+            error_desc='Invalid password: minimum length 12.',
+            status_code=400,
+        )
+
+        with patch('thunderbird_accounts.authentication.api.sentry_sdk.capture_exception') as mock_capture_exception:
+            response = self.client.post(
+                '/api/v1/auth/sign-up/',
+                self.make_sign_up_data(email=self.wait_list[0]),
+            )
+
+        assert_fail_msg = self.get_messages(response)
+        self.assertEqual(response.status_code, 400, msg=assert_fail_msg)
+        self.assertEqual(response.json()['type'], 'invalidPasswordMinLengthMessage', msg=assert_fail_msg)
+        self.assertEqual(response.json()['error'], 'Invalid password: minimum length 12.', msg=assert_fail_msg)
+        mock_capture_exception.assert_not_called()
+
 
 @override_settings(USE_ALLOW_LIST=True)
 class CanISignUpTestcase(APITestCase):
