@@ -277,6 +277,7 @@ PASSWORD_HASHERS = [
 ]
 
 REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'thunderbird_accounts.core.exceptions.drf_exception_handler',
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
@@ -380,6 +381,7 @@ AUTH_SCHEME = os.getenv('AUTH_SCHEME', 'password')
 
 if AUTH_SCHEME == 'oidc':
     AUTHENTICATION_BACKENDS = ['thunderbird_accounts.authentication.middleware.AccountsOIDCBackend']
+    OIDC_CALLBACK_CLASS = 'thunderbird_accounts.authentication.views.RecoverableOIDCAuthenticationCallbackView'
     OIDC_RP_CLIENT_ID = os.getenv('OIDC_CLIENT_ID')
     OIDC_RP_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET')
     OIDC_RP_SIGN_ALGO = os.getenv('OIDC_SIGN_ALGO')
@@ -389,6 +391,8 @@ if AUTH_SCHEME == 'oidc':
     OIDC_OP_JWKS_ENDPOINT = os.getenv('OIDC_URL_JWKS')
     OIDC_STORE_ACCESS_TOKEN = True  # Needed to talk to jmap
     OIDC_STORE_REFRESH_TOKEN = True  # Needed to refresh existing sessions. Custom for #498
+    OIDC_STORE_ID_TOKEN = False  # The access token is the canonical source for the Keycloak session id.
+    OIDC_USE_NONCE = True  # Require standard OIDC nonce generation and validation.
     ALLOW_LOGOUT_GET_METHOD = True
 
     def oidc_logout(request):
@@ -433,6 +437,8 @@ else:
     OIDC_OP_TOKEN_ENDPOINT = None
     OIDC_OP_USER_ENDPOINT = None
     OIDC_OP_JWKS_ENDPOINT = None
+    OIDC_STORE_ID_TOKEN = None
+    OIDC_USE_NONCE = None
 
 STALWART_ARCHIVES_FOLDER_NAME = 'Archives'
 STALWART_BASE_JMAP_URL = os.getenv('STALWART_BASE_JMAP_URL')
@@ -583,6 +589,11 @@ INCOMPLETE_SIGNUP_PURGE_HOURS = int(os.getenv('INCOMPLETE_SIGNUP_PURGE_HOURS', '
 
 KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS = int(os.getenv('KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS', '900'))
 
+# Thundermail provisioning gate (keycloak/config-cli/tbpro-mfa-stepup.yaml): the realm role
+# granted once the Stalwart mailbox exists, and the client scope exempting the accounts client.
+KEYCLOAK_MAIL_ACCESS_ROLE = 'thundermail-access'
+KEYCLOAK_PRE_PROVISIONING_SCOPE = 'pre-provisioning-login'
+
 POSTHOG_API_KEY = os.getenv('POSTHOG_API_KEY')
 POSTHOG_HOST = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com')
 POSTHOG_NO_SUBSCRIPTION_STATUS = 'none'
@@ -723,3 +734,7 @@ WAFFLE_FLAG_ALLOW_POST_REAUTH = 'auth-allow-post-reauth'
 
 # Show the sitewide "we're under increased traffic" banner
 WAFFLE_SWITCH_INCREASED_TRAFFIC_BANNER = 'increased-traffic-banner'
+
+# During the is_address_taken function lastly check Stalwart for the address that is being requested,
+# and error if that address exists in Stalwart.
+WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART = 'is-address-taken-lookup-stalwart'

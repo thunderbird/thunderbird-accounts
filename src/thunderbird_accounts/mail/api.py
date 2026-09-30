@@ -43,7 +43,8 @@ def is_username_available(request: Request):
     except EmailNotValidError as ex:
         raise ValidationError(ex.error_message)
 
-    if not can_register_with_username(username):
+    # Don't check the remote Stalwart lookup here since this call is debounced/polled from the frontend.
+    if not can_register_with_username(username, check_remote=False):
         raise ValidationError(_('This username is already taken. Try another one.'))
 
     return Response(status=200)

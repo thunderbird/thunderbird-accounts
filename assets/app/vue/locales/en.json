@@ -1,11 +1,14 @@
 {
   "navigationLinks": {
+    "mail": "Mail",
+    "account": "Account",
+    "settings": "Settings",
     "dashboard": "Dashboard",
-    "manageMfa": "Manage MFA",
     "privacyAndData": "Privacy & Data",
     "manageEmails": "Manage Emails",
     "customDomains": "Custom Domains",
-    "securitySettings": "Security Settings",
+    "security": "Security",
+    "securitySettings": "Security settings",
     "login": "Login"
   },
   "components": {
@@ -19,8 +22,9 @@
     "needSupportCard": {
       "needSupport": "Need Support?"
     },
-    "yourServices": {
-      "yourServices": "Manage Your Services"
+    "thunderbirdApps": {
+      "heading": "Thunderbird Apps",
+      "paragraph": "Send email, share large files, and manage appointments."
     },
     "userMenu": {
       "myAccount": "My Account",
@@ -40,32 +44,41 @@
     }
   },
   "views": {
+    "settings": {
+      "accountAccess": "Account access",
+      "accountAccessDescription": "Review where this account is signed in and which apps have ongoing access.",
+      "manageAccountAccess": "Manage account access"
+    },
     "dashboard": {
       "accountCard": {
-        "myAccount": "My Account",
+        "accountSettings": "Account settings",
+        "accountSettingsDescription": "Manage your default account settings.",
         "email": "Email",
         "password": "Password",
         "mfa": "Multi-Factor Authentication",
         "manage": "Manage",
         "recoveryEmailAddress": "Recovery Email Address",
         "recoveryPhoneNumber": "Recovery Phone Number",
-        "change": "change",
+        "change": "Change",
         "set": "Set",
-        "on": "On",
-        "off": "Off"
+        "enabled": "Enabled",
+        "notSet": "Not set",
+        "displayName": "Display name",
+        "newDisplayName": "New display name",
+        "save": "Save",
+        "saving": "Saving...",
+        "cancel": "Cancel",
+        "anErrorOccurred": "An error occurred",
+        "anErrorOccurredWhileChangingDisplayName": "An error occurred while changing the display name"
       },
-      "privacyAndDataCard": {
-        "privacyAndData": "Privacy & Data",
-        "manageDevices": "Manage Devices",
-        "manageDevicesText": "See which devices are signed in. Use the button below to log out of selected devices, or log out of all devices using the link.",
-        "manageDevicesButtonLabel": "Manage devices",
-        "logoutFromAllDevicesButtonLabel": "Log out from all devices",
-        "deleteAccount": "Delete Account",
-        "deleteAccountText": "To permanently delete your Thundermail account and unsubscribe from the service, please reach out to our support team who will be able to assist you. Once your account is deleted, you will not be able to reactivate it or access your data.",
-        "deleteAccountButtonLabel": "Delete account and all data"
+      "accountDeletionCard": {
+        "heading": "Account deletion",
+        "subheading": "Permanently delete your account and associated data.",
+        "description": "To delete your Thundermail account and unsubscribe from the service, contact our support team. Once deleted, your account can’t be restored and you’ll lose access to your data.",
+        "buttonLabel": "Contact support"
       },
       "yourCurrentSubscription": {
-        "yourCurrentSubscription": "Your Current Subscription",
+        "yourCurrentSubscription": "Current Subscription",
         "loading": "Loading...",
         "loadingError": "There was a problem retrieving your subscription information. Please try again later.",
         "portalLinkError": "There was a problem retrieving a secure login link for our customer portal. Please try again later.",
@@ -112,7 +125,7 @@
             "tabs": {
               "desktop": "Desktop",
               "mobile": "Mobile",
-              "otherApps": "Other Apps"
+              "other": "Other"
             },
             "desktopPanel": {
               "connectTitle": "Connect Thunderbird Desktop",
@@ -149,7 +162,7 @@
               "needHelpButtonLabel": "Visit Support Article"
             }
           },
-          "viewServerSettings": "View server settings",
+          "viewServerSettings": "Server settings",
           "incomingServer": "Incoming server",
           "outgoingServer": "Outgoing server",
           "imap": "IMAP",
@@ -170,16 +183,13 @@
           "copyPort": "Copy server port to clipboard"
         },
         "emailSettings": {
-          "emailSettings": "Email Settings",
-          "primaryEmail": "Primary email",
-          "displayName": "Display name",
+          "emailSettings": "Email settings",
           "appPassword": "App Password",
           "appPasswords": "App Passwords",
           "close": "Close",
-          "change": "change",
           "set": "Set",
           "notSet": "Not set",
-          "changePasswordDescription": "Use this separate password to connect apps that can't use your regular Thundermail sign-in.",
+          "changePasswordDescription": "Create an app password to log in to any standard email client.",
           "changePasswordDescriptionTwo": "Misplaced it? Create a new one.",
           "createPasswordDescriptionTwo": "Once set, it can't be viewed or recovered.",
           "appPasswordArticleTitle": "Create an App Password",
@@ -207,7 +217,7 @@
           "nameValidationErrorMaxLength": "Use no more than 40 characters.",
           "nameValidationErrorPlusSymbol": "The + symbol is not allowed.",
           "domain": "Domain",
-          "addEmailAlias": "Add email alias",
+          "addEmailAlias": "Create email alias",
           "newPassword": "New password",
           "confirmPassword": "Confirm password",
           "save": "Save",
@@ -217,8 +227,6 @@
           "passwordSetSuccessfully": "App password saved",
           "anErrorOccurred": "An error occurred",
           "anErrorOccurredWhileChangingPassword": "An error occurred while changing the password",
-          "anErrorOccurredWhileChangingDisplayName": "An error occurred while changing the display name",
-          "newDisplayName": "New display name",
           "displayNamePlaceholder": "Enter your display name",
           "displayNameRequired": "Display name is required",
           "emailAliasesArticleTitle": "Setting Up Email Aliases",
@@ -226,14 +234,14 @@
           "emailAliasSupportText": "For help with aliases, see {emailAliasesSupportLink}. For catch-all aliases, see {emailAliasesCatchAllSupportLink}."
         },
         "customDomains": {
-          "customDomains": "Custom Domains",
+          "customDomains": "Custom domains",
           "customDomainsDescriptionInitial": "Use your own domain to create personalized email addresses.",
           "customDomainsDescriptionAdd": "Adding a domain you own to your account allows you to create aliases using your custom domains.",
-          "domainsAdded": "{domainCount} / {domainLimit} domains added",
-          "verified": "Verified",
+          "domainsAdded": "{domainCount} of {domainLimit} custom domains used",
+          "verified": "verified",
           "pending": "Pending",
           "failed": "Failed",
-          "emailsCount": "0 emails | 1 email | {count} emails",
+          "emailsCount": "0 Aliases | 1 Alias | {count} Aliases",
           "addDomain": "Add domain",
           "enterCustomDomain": "Enter custom domain",
           "domainPlaceholder": "example.com",
@@ -291,8 +299,8 @@
           }
         },
         "securitySettings": {
-          "securitySettings": "Security Settings",
-          "accountActivity": "Account Activity",
+          "securitySettings": "Security settings",
+          "accountActivity": "Current sign-ins",
           "accountActivityDescriptionOne": "Many email apps can configure your account automatically. Enter your email address and password to get started.",
           "accountActivityDescriptionTwo": "If setup doesn’t work, try connecting manually using server settings.",
           "viewActivity": "View activity",
@@ -303,15 +311,44 @@
       },
       "views": {
         "securitySettings": {
-          "securitySettings": "Security Settings",
-          "accountActivity": "Account Activity",
-          "accountActivityDescription": "Recent devices signed in to your account.",
-          "recordsTableHeaderDevice": "Device – App",
+          "securitySettings": "Security settings",
+          "accountActivity": "Current sign-ins",
+          "accountActivityDescription": "Apps and devices current signed in",
+          "loadingActiveSessions": "Loading active sessions...",
+          "errorLoadingActiveSessions": "We couldn’t load your active sessions. Please try again.",
+          "unknownDevice": "Unknown Device",
+          "unknownLocation": "unknown location",
+          "signOutConfirmation": "Sign out of {device}?",
+          "signOutConfirmationDescription": "This will end the session and sign you out on this device.",
+          "errorSigningOutSession": "We couldn’t sign out of that session. Please try again.",
+          "recordsTableHeaderDevice": "Browser or Device",
           "recordsTableHeaderLocation": "Location",
+          "recordsTableHeaderAccessGiven": "Access Given",
+          "recordsTableHeaderSignedIn": "Signed In",
           "recordsTableHeaderLastActive": "Last active",
           "recordsTableHeaderActions": "Actions",
+          "ipGeolocationAttribution": "Locations are approximate. IP geolocation provided by {provider}.",
           "noRecentDevices": "No recent devices signed in to your account.",
+          "currentSession": "Current session",
           "signOut": "Sign out",
+          "connectedApps": "Connected apps",
+          "connectedAppsDescription": "Review apps with ongoing access to this account. Removing access disconnects the app on all devices.",
+          "loadingConnectedApps": "Loading connected apps...",
+          "errorLoadingConnectedApps": "We couldn’t load your connected apps. Please try again.",
+          "removeAccessConfirmation": "Remove access for {app}?",
+          "removeAccessConfirmationDescription": "This will disconnect this app at all locations.",
+          "errorRemovingAccess": "We couldn’t remove access for that app. Please try again.",
+          "recordsTableHeaderApp": "App or Device",
+          "recordsTableHeaderLastAccess": "Last Access",
+          "noConnectedApps": "No currently connected apps",
+          "removeAccess": "Remove access",
+          "cancel": "Cancel",
+          "unknownApp": "Unknown app",
+          "unknownIpAddress": "Unknown",
+          "unknownAccessGiven": "Unknown",
+          "unknownLastAccess": "Unknown",
+          "todayAt": "Today at {time}",
+          "yesterdayAt": "Yesterday at {time}",
           "allowList": "Allow List",
           "allowListDescription": "Ensure important senders aren’t marked as spam. Emails on your allow list skip junk filtering, but may still be rejected if they’re flagged or improperly formatted.",
           "manageAllowList": "Manage allow list",
@@ -374,31 +411,6 @@
             "subtitle": "Check your email for instructions to activate your account. If you don’t see it soon, check your spam or junk folder."
           }
         }
-      },
-      "ftue": {
-        "initialWelcomeTitle": "Welcome to Thundermail",
-        "initialWelcomeDescription": "Would you like a quick tour of the dashboard?",
-        "letsGo": "Let's go!",
-        "skip": "Skip",
-        "next": "Next",
-        "back": "Back",
-        "done": "Done",
-        "step": "Step {step} of {total}",
-        "nextStep": "Next: {step}",
-        "appPassword": "App Password",
-        "emailAliases": "Email aliases",
-        "customDomains": "Custom domains",
-        "yourAccount": "Your account",
-        "step1Text": "Connect your new email address to start sending and receiving messages. Use Thunderbird or any email app you prefer.",
-        "step2Text": "Create an app password for email, calendar, and other apps that need a separate sign-in.",
-        "step3Text": "Claim any additional email aliases you would like to use.",
-        "step4Text": "Add custom domains to create email aliases for any need.",
-        "step5Text": "Go to 'Your Account' to view account details, manage billing, or cancel your service.",
-        "close": "Close tour"
-      },
-      "webmailAlpha": {
-        "notice": "Webmail (early alpha) is now available. {checkItOut}.",
-        "checkItOut": "Check it out here"
       }
     },
     "manageMfa": {
@@ -589,6 +601,9 @@
     "creativeCommonsLinkText": "Creative Commons license",
     "mzlaLinkText": "MZLA Technologies Corporation",
     "privacyPolicy": "Privacy Policy",
-    "legal": "Legal"
+    "legal": "Legal",
+    "status": "Status",
+    "needHelp": "Need help? Visit Support",
+    "ideas": "Ideas?"
   }
 }

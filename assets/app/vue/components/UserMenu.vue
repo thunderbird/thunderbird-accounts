@@ -99,7 +99,7 @@ onBeforeUnmount(() => {
   .dropdown {
     position: absolute;
     right: 0;
-    margin-top: 0.5rem;
+    margin-top: 12.5rem;
     background: var(--colour-ti-base);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 0.5rem;

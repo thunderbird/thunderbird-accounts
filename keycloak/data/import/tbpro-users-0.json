@@ -24,7 +24,7 @@
     } ],
     "disableableCredentialTypes" : [ ],
     "requiredActions" : [ ],
-    "realmRoles" : [ "default-roles-stalwart" ],
+    "realmRoles" : [ "default-roles-stalwart", "thundermail-access" ],
     "notBefore" : 0,
     "groups" : [ ]
   } ]

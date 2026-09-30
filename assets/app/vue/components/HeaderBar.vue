@@ -4,17 +4,36 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { WAFFLE_FLAG } from '@/types';
 import { isWaffleFlagActive } from '@/utils';
-import { BrandButton } from '@thunderbirdops/services-ui';
+import { APPOINTMENT_URL, SEND_URL } from '@/defines';
+import { AppDrawer, AppointmentIcon, BrandButton, IconButton, MailIcon, SendIcon, SettingsIcon } from '@thunderbirdops/services-ui';
+import type { AppDrawerApp } from '@thunderbirdops/services-ui';
 import UserMenu from '@/components/UserMenu.vue';
 
 const { t } = useI18n();
+const tbProMailUrl = window._page?.webmailUrl;
+
+const apps: AppDrawerApp[] = [
+  { id: 'mail', name: 'Mail', icon: MailIcon, href: tbProMailUrl },
+  {
+    id: 'send',
+    name: 'Send',
+    icon: SendIcon,
+    href: SEND_URL,
+  },
+  {
+    id: 'appointment',
+    name: 'Appointment',
+    icon: AppointmentIcon,
+    href: APPOINTMENT_URL,
+  }
+];
 
 const isAuthenticated = ref(window._page?.isAuthenticated);
 const avatarUsername = ref(window._page?.userDisplayName || window._page?.userEmail);
 
 const navItems = [
   {
-    route: '/mail',
+    route: '/dashboard',
     i18nKey: 'dashboard',
   },
   {
@@ -24,6 +43,7 @@ const navItems = [
 ];
 
 const currentRoute = useRoute();
+const isSettingsActive = computed(() => currentRoute.path.startsWith('/settings'));
 
 const needsTosAcceptance = ref(window._page?.needsTosAcceptance);
 const needsSubscription = ref(
@@ -38,8 +58,8 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
 
 <template>
   <header>
-    <router-link to="/mail">
-      <img :src="logoSrc" alt="Thundermail" />
+    <router-link to="/dashboard">
+      <img :src="logoSrc" alt="Thunderbird Accounts" />
     </router-link>
 
     <template v-if="isAuthenticated">
@@ -53,7 +73,21 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
         </ul>
       </nav>
 
-      <user-menu :username="avatarUsername" />
+      <div class="header-actions">
+        <router-link v-slot="{ href, navigate }" to="/settings" custom>
+          <icon-button
+            size="large"
+            :href="href"
+            :class="{ active: isSettingsActive }"
+            :aria-label="t('navigationLinks.security')"
+            @click="navigate"
+          >
+            <settings-icon aria-hidden="true" />
+          </icon-button>
+        </router-link>
+        <app-drawer :apps="apps" />
+        <user-menu :username="avatarUsername" />
+      </div>
     </template>
 
     <template v-else>
@@ -96,6 +130,30 @@ header {
     display: none;
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+
+    > .icon-only,
+    :deep(.app-drawer__button),
+    > .user-menu {
+      box-sizing: border-box;
+      width: 3rem;
+      height: 3rem;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #eeeef0;
+    }
+
+    :deep(.app-drawer__button svg) {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
   .login-button-link {
     text-decoration: none;
 
@@ -118,13 +176,15 @@ header {
       color: white;
       text-decoration: none;
       padding: 0.75rem 1.25rem;
-
-      &.active {
-        background-color: #18181b;
-        border-radius: 0.5rem;
-        box-shadow: inset 0 0.25rem 0.25rem 0 rgba(0, 0, 0, 0.15);
-      }
     }
+  }
+
+  /* Active treatment, shared by the text nav links and the settings icon button */
+  ul a.active,
+  .header-actions > .icon-only.active {
+    background-color: #18181b;
+    border-radius: 0.5rem;
+    box-shadow: inset 0 0.25rem 0.25rem 0 rgba(0, 0, 0, 0.15);
   }
 }
 

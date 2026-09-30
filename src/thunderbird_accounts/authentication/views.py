@@ -1,4 +1,5 @@
 import csv
+import logging
 import re
 
 from django.contrib import messages
@@ -9,6 +10,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import HttpRequest, HttpResponseRedirect
+from django.template.response import TemplateResponse
 from django.urls import reverse
 from urllib.parse import quote
 from django.conf import settings
@@ -17,13 +19,47 @@ from django.utils.translation import ngettext
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 from django.views.generic import TemplateView
-from mozilla_django_oidc.views import OIDCAuthenticationRequestView
+from mozilla_django_oidc.views import OIDCAuthenticationCallbackView, OIDCAuthenticationRequestView
 
 from thunderbird_accounts.authentication.mfa import MFA_REAUTH_PENDING_SESSION_KEY
 from thunderbird_accounts.authentication.utils import create_aia_url, KeycloakRequiredAction
 from thunderbird_accounts.core.utils import get_absolute_url
 
 DISCOUNT_ID_PATTERN = re.compile(r'^dsc_[a-z0-9]{26}$')
+logger = logging.getLogger(__name__)
+
+
+@method_decorator(never_cache, name='dispatch')
+class RecoverableOIDCAuthenticationCallbackView(OIDCAuthenticationCallbackView):
+    """Keep successful or stale OIDC callbacks out of the user's browser history."""
+
+    # The parent's `.get()` will call this.
+    # Display a small HTML page that redirects via the frontend so
+    # we can remove /oidc/callback from the browser history.
+    def login_success(self):
+        redirect_response = super().login_success()
+        response = TemplateResponse(
+            self.request,
+            'authentication/oidc_callback_success.html',
+            {'redirect_url': redirect_response.url},
+        )
+        # For increased security/privacy, don't pass along the referrer when redirecting.
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        return response
+
+    # The parent class will dispatch GET handling here.
+    def get(self, request):
+        state = request.GET.get('state')
+        if (
+            request.GET.get('code')
+            and state
+            and 'oidc_states' in request.session
+            and state not in request.session['oidc_states']
+        ):
+            logger.warning('OIDC callback state was not found in the session; starting a fresh login flow')
+            return HttpResponseRedirect(reverse(settings.LOGIN_URL))
+
+        return super().get(request)
 
 
 @login_required

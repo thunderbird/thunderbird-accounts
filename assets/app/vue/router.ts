@@ -2,14 +2,14 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 
 // Accounts Routes
 import DashboardView from '@/views/DashboardView/index.vue';
+import SettingsView from '@/views/SettingsView/index.vue';
 import ManageMfaView from '@/views/ManageMfaView/index.vue';
 import PrivacyAndDataView from '@/views/PrivacyAndDataView.vue';
 import SubscribeView from '@/views/SubscribeView/index.vue';
 import TosPrivacyView from '@/views/TosPrivacyView/index.vue';
 
 // Thundermail Routes
-import MailView from '@/views/MailView/index.vue';
-import SecuritySettingsView from '@/views/MailView/views/SecuritySettingsView/index.vue';
+import SecuritySettingsView from '@/views/SecuritySettingsView/index.vue';
 import CustomDomainsView from '@/views/CustomDomainsView/index.vue';
 
 // Zendesk Contact Form (Support)
@@ -27,6 +27,7 @@ import { isWaffleFlagActive } from '@/utils';
 const showMfa = isWaffleFlagActive(WAFFLE_FLAG.MULTI_FACTOR_AUTHENTICATION);
 
 const showCustomDomains = isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP);
+const showSecuritySettings = isWaffleFlagActive(WAFFLE_FLAG.ACTIVE_LOGINS);
 
 // Keep public routes in sync with PUBLIC_VUE_ROUTES in src/thunderbird_accounts/core/views.py.
 // If the page template is marked as error page, only show the error page.
@@ -44,7 +45,7 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
   // Root path
   {
     path: '/',
-    redirect: '/mail'
+    redirect: '/dashboard'
   },
   // Accounts Routes
   {
@@ -110,6 +111,11 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
       useAppTemplate: false,
     }
   },
+  // The Mail dashboard is no more but keeping this so we don't break potential external links.
+  {
+    path: '/mail',
+    redirect: '/dashboard',
+  },
   {
     path: '/dashboard',
     name: 'dashboard',
@@ -132,15 +138,15 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
   },
   // Thundermail Routes
   {
-    path: '/mail',
-    name: 'mail',
-    component: MailView,
+    path: '/settings',
+    name: 'settings',
+    component: SettingsView,
   },
-  {
-    path: '/mail/security-settings',
-    name: 'mail-security-settings',
+  ...(showSecuritySettings ? [{
+    path: '/settings/security',
+    name: 'settings-security',
     component: SecuritySettingsView,
-  },
+  }] : []),
   ...(showCustomDomains ? [{
     path: '/custom-domains',
     name: 'custom-domains',
@@ -250,7 +256,7 @@ router.beforeEach((to, _from) => {
   }
 
   if (!needsSubscription && routeName === 'subscribe') {
-    return { name: 'mail' };
+    return { name: 'dashboard' };
   }
 
   return true;

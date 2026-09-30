@@ -117,6 +117,7 @@ h2 {
   letter-spacing: 0.39px;
   line-height: 1.2;
   margin-block-end: 1rem;
+  color: var(--colour-ti-secondary);
 }
 
 h3 {

@@ -1,3 +1,6 @@
+from unittest.mock import patch
+
+from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.contrib.messages import get_messages
 from django.test import Client as RequestClient, TestCase
@@ -6,6 +9,63 @@ from django.utils.crypto import get_random_string
 
 from thunderbird_accounts.authentication.models import AllowListEntry, User
 from thunderbird_accounts.core.tests.utils import oidc_force_login
+
+
+class RecoverableOIDCAuthenticationCallbackViewTestCase(TestCase):
+    @patch('mozilla_django_oidc.views.auth.authenticate')
+    def test_success_replaces_callback_history_with_destination(self, authenticate_mock):
+        user = User.objects.create(
+            username='user@example.com',
+            email='user@example.com',
+            oidc_id='user-oidc-id',
+        )
+        oidc_force_login(self.client, user)
+        authenticate_mock.return_value = user
+
+        session = self.client.session
+        session['oidc_states'] = {
+            'expected-state': {
+                'nonce': 'expected-nonce',
+                'code_verifier': None,
+                'added_on': 0,
+            }
+        }
+        session['oidc_login_next'] = '/mail'
+        session.save()
+
+        response = self.client.get(
+            reverse('oidc_authentication_callback'),
+            {'code': 'unused-code', 'state': 'expected-state'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'authentication/oidc_callback_success.html')
+        self.assertEqual(response.context['redirect_url'], '/mail')
+        self.assertContains(response, 'window.location.replace(redirectUrl)')
+        self.assertIn('no-store', response.headers['Cache-Control'])
+        self.assertEqual(response.headers['Referrer-Policy'], 'no-referrer')
+
+    def test_unknown_state_starts_a_fresh_login_flow(self):
+        session = self.client.session
+        session['oidc_states'] = {
+            'expected-state': {
+                'nonce': 'expected-nonce',
+                'code_verifier': None,
+                'added_on': 0,
+            }
+        }
+        session.save()
+
+        with self.assertLogs('thunderbird_accounts.authentication.views', level='WARNING') as logs:
+            response = self.client.get(
+                reverse('oidc_authentication_callback'),
+                {'code': 'unused-code', 'state': 'unknown-state'},
+            )
+
+        self.assertRedirects(response, reverse(settings.LOGIN_URL), fetch_redirect_response=False)
+        self.assertIn('starting a fresh login flow', logs.output[0])
+        self.assertNotIn('unknown-state', logs.output[0])
+        self.assertEqual(list(get_messages(response.wsgi_request)), [])
 
 
 class BulkImportAllowListTestCase(TestCase):

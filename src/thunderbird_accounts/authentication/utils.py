@@ -1,4 +1,5 @@
 import enum
+import jwt
 import logging
 from urllib.parse import quote, urljoin
 
@@ -9,6 +10,7 @@ from django.urls import reverse
 
 from thunderbird_accounts.core.utils import get_absolute_url
 from thunderbird_accounts.authentication.reserved import is_reserved
+from rest_framework.request import Request
 
 
 class KeycloakRequiredAction(enum.StrEnum):
@@ -84,15 +86,21 @@ def get_user_by_contact_email(email: str):
     return User.objects.filter(Q(email__iexact=email) | Q(recovery_email__iexact=email)).first()
 
 
-def can_register_with_username(username: str):
+def can_register_with_username(username: str, check_remote: bool = True):
     """Can a user register with this username.
     This checks primary username and any mirrored aliases for our allowed domains
 
-    This does not check is_email_reserved, as we generally use a different error for that check."""
+    This does not check is_email_reserved, as we generally use a different error for that check.
+
+    ``check_remote`` is passed through to ``is_address_taken`` - set it to False for hot paths like the
+    debounced username-availability check to skip the remote Stalwart lookup."""
     from thunderbird_accounts.mail.utils import is_address_taken
 
     username_checks = (
-        [is_address_taken(f'{username}@{alt_domain}') for alt_domain in settings.ALLOWED_EMAIL_DOMAINS]
+        [
+            is_address_taken(f'{username}@{alt_domain}', check_remote=check_remote)
+            for alt_domain in settings.ALLOWED_EMAIL_DOMAINS
+        ]
         if len(settings.ALLOWED_EMAIL_DOMAINS) > 0
         else []
     )
@@ -146,15 +154,41 @@ def delete_user_data(user) -> list[str]:
             sentry_sdk.capture_exception(ex)
             errors.append(f'Keycloak: {ex}')
 
-        if user.stalwart_primary_email:
-            try:
-                MailClient().delete_account(user.stalwart_primary_email)
-            except Exception as ex:
-                sentry_sdk.capture_exception(ex)
-                errors.append(f'Stalwart: {ex}')
+    if user.stalwart_primary_email:
+        try:
+            MailClient().delete_account(user.stalwart_primary_email)
+        except Exception as ex:
+            sentry_sdk.capture_exception(ex)
+            errors.append(f'Stalwart: {ex}')
 
     if errors:
         logging.error(f'Errors during user data deletion for {user.username}: {errors}')
 
     user.delete()
     return errors
+
+
+def _session_id_from_access_token(request: Request) -> str | None:
+    access_token = request.session.get('oidc_access_token')
+    if not access_token:
+        return None
+
+    try:
+        return jwt.decode(access_token, options={'verify_signature': False}).get('sid')
+    except (jwt.PyJWTError, TypeError):
+        return None
+
+
+def mark_current_session(request: Request, sessions: list[dict]) -> list[dict]:
+    """Modify sessions list to mark current one with is_current key"""
+    current_session_id = _session_id_from_access_token(request)
+
+    if not current_session_id:
+        for session in sessions:
+            session['is_current'] = False
+        return sessions
+
+    for session in sessions:
+        session['is_current'] = session.get('id') == current_session_id
+
+    return sessions

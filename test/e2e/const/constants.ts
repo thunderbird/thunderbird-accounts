@@ -35,12 +35,16 @@ export const PLAYWRIGHT_TAG_E2E_SUITE_MOBILE = '@e2e-mobile-suite';
 export const PLAYWRIGHT_TAG_E2E_PROD_MOBILE_NIGHTLY = '@e2e-prod-mobile-nightly';
 export const PLAYWRIGHT_TAG_DEPLOYMENT_ANALYSIS = '@deployment-analysis';
 
+// playwright project name checks
+export const PLAYWRIGHT_PROJECT_NAME_ANDROID = 'android';
+export const PLAYWRIGHT_PROJECT_NAME_PIXEL_VIEWPORT = 'pixel';
+
 // timeouts
 export const TIMEOUT_1_SECOND = 1000;
 export const TIMEOUT_2_SECONDS = 2000;
 export const TIMEOUT_3_SECONDS = 3000;
 export const TIMEOUT_5_SECONDS = 5000;
-export const TIMEOUT_10_SECONDS = 5000;
+export const TIMEOUT_10_SECONDS = 10000;
 export const TIMEOUT_30_SECONDS = 30000;
 export const TIMEOUT_60_SECONDS = 60000;
 

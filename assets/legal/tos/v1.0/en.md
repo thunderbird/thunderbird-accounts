@@ -2,7 +2,7 @@
 
 Thank you for using Thunderbird Pro Services\! These Terms of Service are a legal agreement between you and MZLA Technologies Corporation (“MZLA”) governing your use of our Services. By creating an account or using the Services, you agree to be bound by these Terms.
 
-Effective date: Februrary 10, 2026
+Effective date: September 14, 2026
 
 ## 1\. Definitions
 
@@ -49,7 +49,7 @@ In some situations, third parties' terms may apply to your use of the Services. 
 
 Your use of the Website and Services must not violate any applicable laws, including copyright or trademark laws, export control or sanctions laws, or other laws in your jurisdiction. You are responsible for making sure that your use of the Services is in compliance with laws and any applicable regulations.
 
-In order to ensure a high quality of service to all our users, we may at our discretion impose bandwidth- or rate-limits on your use of the services.The following conduct is prohibited on the Services:
+In order to ensure a high quality of service to all our users, we may at our discretion impose bandwidth or rate-limits on your use of the services. The following conduct is prohibited on the Services:
 
 * Illegal activities, including the promotion or solicitation of illegal acts.  
 * Malicious activity or content, such as the transmission of viruses, malware, or any other malicious or destructive code, or activity intended to harm or disrupt the hardware, networks, or infrastructure of MZLA or any third parties.  
@@ -59,7 +59,7 @@ In order to ensure a high quality of service to all our users, we may at our dis
 * Automated access to or crawling/scraping of the Services via bots, spiders, crawlers, or any other automated means.  
 * Posting anyone’s personal or confidential information, such as social security numbers, credit card numbers, street addresses, phone numbers, confidential ID numbers, or account passwords, without their permission.  
 * Account hijacking, including any access to or use of another user’s account without their permission.  
-* Child exploitation, including uploading or sharing any content exploits or abuses children.  
+* Child exploitation, including uploading or sharing any content that exploits or abuses children.  
 * Spam, including posting unsolicited promotional or commercial content in comments, sending invitations for the purpose of advertising to the recipients, or posting content or links for the purpose of manipulating search or other algorithms.  
 * Intellectual property infringement, including the infringing use of third party trademarks or the unauthorized and unlawful posting of copyrighted content. We respond to reports of copyright infringement as described in our Copyright Policy.  
 * Fraud or impersonation, including any use of the Services to impersonate or deceive others (but excluding parody).
@@ -96,17 +96,17 @@ To the extent this agreement is not enforceable by applicable law, you grant MZL
 
 ### f. Feedback
 
-We’re always trying to improve our products and Services, and your feedback will help us do that. If you choose to give us any ideas, know-how, algorithms, code contributions, suggestions, enhancement requests, recommendations or any other feedback for our products or Services (collectively, “Feedback”), you acknowledge and agree that MZLA will have a royalty-free, fully paid-up, worldwide, transferable, sub-licensable, irrevocable and perpetual license to implement, use, modify, commercially exploit and/or incorporate the Feedback into our products, services, and documentation.
+We’re always trying to improve our products and Services, and your feedback will help us do that. If you choose to give us any ideas, know-how, algorithms, suggestions, enhancement requests, recommendations or any other feedback for our products or Services (collectively, “Feedback”), you acknowledge and agree that MZLA will have a royalty-free, fully paid-up, worldwide, transferable, sub-licensable, irrevocable and perpetual license to implement, use, modify, commercially exploit and/or incorporate the Feedback into our products, services, and documentation. If you provide code contributions as part of your Feedback, you agree to license the code under the Mozilla Public License 2.0.
 
 You represent that your feedback is your original creation. If your feedback includes any third-party materials, you agree to include complete details of any third-party license or other restriction (including, but not limited to, related patents and trademarks) of which you are personally aware and which are associated with any part of your feedback.
 
-## 6\. Copyright Infringement and DMCA Policy
+## 5\. Copyright Infringement and DMCA Policy
 
 If you believe that content on our website or Services violates your copyright or trademark, please contact us to report the issue in accordance with the information on [this page](https://www.mozilla.org/en-US/about/legal/report-infringement/). There may be legal consequences for sending a false or frivolous takedown notice. Before sending a takedown request, you must consider legal uses such as fair use and licensed uses.
 
 We will terminate the Accounts of Users who repeatedly use the Services to infringe copyright.
 
-## 7\. Intellectual Property Notice
+## 6\. Intellectual Property Notice
 
 ### a. Our Rights to Our Content
 
@@ -150,11 +150,11 @@ It is your responsibility to cancel your Account when you no longer wish to use 
 
 ### b. Upon Cancellation
 
-We will retain and use your information as necessary to comply with our legal obligations, resolve disputes, and enforce our agreements. On termination of your access to the Services for any reason, we  shall have no obligation to maintain any User data or Content in your Account or to provide any data or Content to you or any third party unless required by applicable law. 
+We will retain and use your information as necessary to comply with our legal obligations, resolve disputes, and enforce our agreements. On termination of your access to the Services for any reason, we shall have no obligation to maintain any User data or Content in your Account or to provide any data or Content to you or any third party unless required by applicable law. 
 
 ### c. Our Right to Terminate
 
-MZLA has the right to suspend or terminate your access to all or any part of the Website or Services at any time, with or without notice, effective immediately, if we determine in our sole discretion that (1) you have violated these Terms, any other MZLA policy, or applicable law, or (2) that your continued use of the services poses a risk to MZLA or its users. MZLA reserves the right to refuse service to anyone for any reason at any time.
+MZLA has the right to suspend or terminate your access to all or any part of the Website or Services at any time, with or without notice, effective immediately, if we determine in our sole discretion that (1) you have violated these Terms, any other MZLA policy, or applicable law, or (2) that your continued use of the Services poses a risk to MZLA or its users. MZLA reserves the right to refuse service to anyone for any reason at any time.
 
 ### d. Survival
 
@@ -229,7 +229,7 @@ If any part of this Agreement is held invalid or unenforceable, that portion of 
 
 ### e. Amendments; Complete Agreement
 
-This Agreement may only be modified by a written amendment signed by an authorized representative of MZLA, or by the posting by MZLA of a revised version in accordance with Section 14 (“Changes to These Terms”). These Terms of Service, together with the Privacy Statement, represent the complete and exclusive statement of the agreement between you and us. This Agreement supersedes any proposal or prior agreement oral or written, and any other communications between you and MZLA relating to the subject matter of these terms including any confidentiality or nondisclosure agreements.
+This Agreement may only be modified by a written amendment signed by an authorized representative of MZLA, or by the posting by MZLA of a revised version in accordance with Section 14 (“Changes to These Terms”). These Terms of Service, together with the Privacy Statement, represent the complete and exclusive statement of the agreement between you and us. This Agreement supersedes any proposal or prior agreement, oral or written, and any other communications between you and MZLA relating to the subject matter of these terms including any confidentiality or nondisclosure agreements.
 
 ### f. Questions
 

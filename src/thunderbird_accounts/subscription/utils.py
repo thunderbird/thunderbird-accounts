@@ -1,6 +1,7 @@
 from django.db import transaction as dj_transaction
 from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.tasks import grant_mail_access_role
 from thunderbird_accounts.mail.utils import create_stalwart_account, update_quota_on_stalwart_account
 from thunderbird_accounts.subscription.models import Plan, Price
 
@@ -74,6 +75,9 @@ def activate_subscription_features(user: User, plan: Plan):
         account.save()
 
         update_quota_on_stalwart_account(user, account.quota)
+        # The mailbox exists, so the Keycloak gate role can be (re)granted; repairs a lost mapping.
+        if user.oidc_id:
+            grant_mail_access_role.delay(oidc_id=user.oidc_id)
         return
 
     create_stalwart_account(user, None)

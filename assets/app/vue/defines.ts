@@ -9,6 +9,7 @@ export const DOWNLOAD_THUNDERBIRD_DESKTOP_URL = 'https://www.thunderbird.net/thu
 export const DOWNLOAD_THUNDERBIRD_MOBILE_URL = 'https://play.google.com/store/apps/details?id=net.thunderbird.android&referrer=utm_campaign%3Dmain%26utm_medium%3Dtb_pro%26utm_source%3Dthundermail_dashboard%26utm_content%3Dmobile_download';
 export const IOS_SUPPORT_URL = 'https://support.tb.pro/hc/articles/51053665815827-Setting-Up-Thundermail-on-iOS';
 export const STATUS_PAGE_URL = 'https://status.tb.pro/';
+export const IDEAS_PAGE_URL = 'https://ideas.tb.pro/';
 export const TERMS_OF_SERVICE_URL = 'https://tb.pro/terms/';
 export const PRIVACY_POLICY_URL = 'https://tb.pro/privacy/';
 export const COMMUNITY_SUPPORT_URL = 'https://support.mozilla.org/questions/thunderbird';
@@ -16,3 +17,23 @@ export const NOT_INTERESTED_SURVEY_LINK = 'https://www.surveymonkey.com/r/HYYMDB
 export const TBPRO_WAIT_LIST = 'https://tb.pro/waitlist/';
 export const CAPTURE_TELEMETRY = true;
 export const PADDLE_TRANSACTION_STORAGE_KEY = 'accounts/subscribe/paddleTransactionId';
+
+export function appointmentUrlForHostname(hostname = globalThis.location?.hostname): string {
+  if (hostname === 'accounts.tb.pro') {
+    return 'https://appointment.tb.pro';
+  }
+  return 'https://appointment-stage.tb.pro';
+}
+
+export function sendUrlForHostname(hostname = globalThis.location?.hostname): string {
+  if (hostname === 'accounts.tb.pro') {
+    return 'https://send.tb.pro';
+  }
+  return 'https://send-stage.tb.pro';
+}
+
+export const APPOINTMENT_URL =
+  import.meta.env.VITE_APPOINTMENT_URL || appointmentUrlForHostname();
+
+export const SEND_URL =
+  import.meta.env.VITE_SEND_URL || sendUrlForHostname();

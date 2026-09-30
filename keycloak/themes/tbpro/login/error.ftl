@@ -12,6 +12,10 @@
           actionText: '${kcSanitize(msg("backToApplication"))?no_esc}',
           // </#if>
         // </#if>
+        // Only the Thundermail provisioning gate's deny reason is shown; other summaries stay hidden.
+        // <#if message?has_content && (message.summary == msg("thundermailNotProvisioned"))>
+        errorMessage: '${kcSanitize(message.summary)?js_string?no_esc}',
+        // </#if>
       };
       window._l10n = {
         ...window._l10n,

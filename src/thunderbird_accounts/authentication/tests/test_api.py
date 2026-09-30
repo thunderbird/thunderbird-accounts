@@ -10,6 +10,7 @@ import uuid
 from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import SuspiciousOperation
+import jwt
 from urllib.parse import quote
 from django.test import Client as RequestClient, override_settings
 from rest_framework.test import APITestCase, APIClient
@@ -519,3 +520,294 @@ class WaffleFlagsTestcase(APITestCase):
     def test_returns_401_for_invalid_token(self):
         response = self.client.get(self.url, headers={'authorization': 'Bearer invalid-token'})
         self.assertEqual(401, response.status_code)
+
+
+class ActiveSessionsTestcase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create(
+            oidc_id=str(uuid.uuid4()),
+            recovery_email=f'{uuid.uuid4()}@example.com',
+            username=f'{uuid.uuid4()}@example.org',
+        )
+        self.client.force_authenticate(self.user)
+        session = self.client.session
+        session['oidc_access_token'] = 'test-user-access-token'
+        session.save()
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
+    def test_get_active_sessions_uses_user_access_token(
+        self,
+        mock_enrich_sessions_with_geoip,
+        mock_account_client: MagicMock,
+    ):
+        mock_account_client.return_value.get_active_sessions.return_value = [
+            {
+                'id': 'session-id',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Firefox'},
+            }
+        ]
+        mock_enrich_sessions_with_geoip.return_value = [
+            {
+                'id': 'session-id',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Firefox'},
+                'location': {'city': 'Mountain View', 'state': 'California', 'country_code': 'US'},
+            }
+        ]
+
+        response = self.client.get(reverse('api_get_active_sessions'))
+
+        self.assertEqual(response.status_code, 200)
+        mock_account_client.return_value.get_active_sessions.assert_called_once_with('test-user-access-token')
+        mock_enrich_sessions_with_geoip.assert_called_once_with(
+            mock_account_client.return_value.get_active_sessions.return_value
+        )
+        self.assertEqual(response.json()[0]['id'], 'session-id')
+        self.assertEqual(response.json()[0]['location']['city'], 'Mountain View')
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
+    def test_get_active_sessions_uses_access_token_session_id_instead_of_id_token(
+        self,
+        mock_enrich_sessions_with_geoip,
+        mock_account_client: MagicMock,
+    ):
+        session = self.client.session
+        session['oidc_id_token'] = 'test-id-token'
+        session['oidc_access_token'] = jwt.encode({'sid': 'chrome-session-id'}, key='', algorithm='none')
+        session.save()
+        mock_account_client.return_value.get_active_sessions.return_value = [
+            {
+                'id': 'firefox-session-id',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Firefox'},
+                'is_current': True,
+            },
+            {
+                'id': 'chrome-session-id',
+                'last_access': 1710000000100,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Chrome'},
+                'is_current': True,
+            },
+        ]
+        mock_enrich_sessions_with_geoip.side_effect = lambda sessions: sessions
+
+        response = self.client.get(reverse('api_get_active_sessions'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {session['id']: session['is_current'] for session in response.json()},
+            {
+                'firefox-session-id': False,
+                'chrome-session-id': True,
+            },
+        )
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
+    def test_get_active_sessions_marks_only_current_access_token_session(
+        self,
+        mock_enrich_sessions_with_geoip,
+        mock_account_client: MagicMock,
+    ):
+        session = self.client.session
+        session['oidc_access_token'] = jwt.encode({'sid': 'firefox-session-id'}, key='', algorithm='none')
+        session.save()
+        mock_account_client.return_value.get_active_sessions.return_value = [
+            {
+                'id': 'firefox-session-id',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Firefox'},
+                'is_current': True,
+            },
+            {
+                'id': 'chrome-session-id',
+                'last_access': 1710000000100,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Chrome'},
+                'is_current': True,
+            },
+        ]
+        mock_enrich_sessions_with_geoip.side_effect = lambda sessions: sessions
+
+        response = self.client.get(reverse('api_get_active_sessions'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {session['id']: session['is_current'] for session in response.json()},
+            {
+                'firefox-session-id': True,
+                'chrome-session-id': False,
+            },
+        )
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
+    def test_get_active_sessions_clears_current_flags_without_session_id(
+        self,
+        mock_enrich_sessions_with_geoip,
+        mock_account_client: MagicMock,
+    ):
+        mock_account_client.return_value.get_active_sessions.return_value = [
+            {
+                'id': 'firefox-session-id',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Firefox'},
+                'is_current': True,
+            },
+            {
+                'id': 'chrome-session-id',
+                'last_access': 1710000000100,
+                'ip_address': '203.0.113.10',
+                'device_info': {'os': 'macOS', 'browser': 'Chrome'},
+                'is_current': True,
+            },
+        ]
+        mock_enrich_sessions_with_geoip.side_effect = lambda sessions: sessions
+
+        response = self.client.get(reverse('api_get_active_sessions'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {session['id']: session['is_current'] for session in response.json()},
+            {
+                'firefox-session-id': False,
+                'chrome-session-id': False,
+            },
+        )
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_sign_out_session_keeps_django_session_when_signing_out_other_session(self, mock_account_client: MagicMock):
+        access_token = jwt.encode({'sid': 'current-session-id'}, key='', algorithm='none')
+        session = self.client.session
+        session['oidc_access_token'] = access_token
+        session.save()
+
+        response = self.client.post(
+            reverse('api_sign_out_session'),
+            data={'session_id': 'session-id'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_account_client.return_value.sign_out_session.assert_called_once_with(
+            access_token,
+            'session-id',
+        )
+        self.assertEqual(self.client.session['oidc_access_token'], access_token)
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_sign_out_session_flushes_django_session_when_signing_out_current_session(
+        self, mock_account_client: MagicMock
+    ):
+        access_token = jwt.encode({'sid': 'session-id'}, key='', algorithm='none')
+        session = self.client.session
+        session['oidc_access_token'] = access_token
+        session.save()
+
+        response = self.client.post(
+            reverse('api_sign_out_session'),
+            data={'session_id': 'session-id'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_account_client.return_value.sign_out_session.assert_called_once_with(
+            access_token,
+            'session-id',
+        )
+        self.assertNotIn('oidc_access_token', self.client.session)
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_sign_out_session_returns_generic_server_error(self, mock_account_client: MagicMock):
+        error = RuntimeError('keycloak delete failed')
+        mock_account_client.return_value.sign_out_session.side_effect = error
+
+        response = self.client.post(
+            reverse('api_sign_out_session'),
+            data={'session_id': 'session-id'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json(), {'detail': 'Internal server error'})
+
+
+class ConnectedAppsTestcase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create(
+            oidc_id=str(uuid.uuid4()),
+            recovery_email=f'{uuid.uuid4()}@example.com',
+            username=f'{uuid.uuid4()}@example.org',
+        )
+        self.client.force_authenticate(self.user)
+        session = self.client.session
+        session['oidc_access_token'] = 'test-user-access-token'
+        session.save()
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    @patch('thunderbird_accounts.authentication.api.enrich_sessions_with_geoip')
+    def test_get_connected_apps_uses_user_access_token(
+        self,
+        mock_enrich_sessions_with_geoip,
+        mock_account_client: MagicMock,
+    ):
+        connected_apps = [
+            {
+                'client_id': 'thunderbird-desktop',
+                'session_id': 'session-id',
+                'app_name': 'Mozilla Thunderbird',
+                'last_access': 1710000000000,
+                'ip_address': '203.0.113.10',
+            }
+        ]
+        mock_account_client.return_value.get_connected_apps.return_value = connected_apps
+        mock_enrich_sessions_with_geoip.return_value = [
+            {**connected_apps[0], 'location': {'city': 'Toronto', 'country_code': 'CA'}}
+        ]
+
+        response = self.client.get(reverse('api_get_connected_apps'))
+
+        self.assertEqual(response.status_code, 200)
+        mock_account_client.return_value.get_connected_apps.assert_called_once_with('test-user-access-token')
+        mock_enrich_sessions_with_geoip.assert_called_once_with(connected_apps)
+        self.assertEqual(response.json()[0]['app_name'], 'Mozilla Thunderbird')
+        self.assertEqual(response.json()[0]['location']['city'], 'Toronto')
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_revoke_connected_app_uses_user_access_token(self, mock_account_client: MagicMock):
+        response = self.client.post(
+            reverse('api_revoke_connected_app'),
+            data={'client_id': 'thunderbird-desktop'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_account_client.return_value.revoke_connected_app.assert_called_once_with(
+            'test-user-access-token',
+            'thunderbird-desktop',
+        )
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_revoke_connected_app_returns_generic_server_error(self, mock_account_client: MagicMock):
+        error = RuntimeError('keycloak revoke failed')
+        mock_account_client.return_value.revoke_connected_app.side_effect = error
+
+        response = self.client.post(
+            reverse('api_revoke_connected_app'),
+            data={'client_id': 'thunderbird-desktop'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json(), {'detail': 'Internal server error'})

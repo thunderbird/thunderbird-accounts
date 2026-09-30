@@ -364,5 +364,5 @@ as a (preferably) stand-alone commit labelled `vX.Y.Z` (e.g. `v1.15.0`)
 
 Once that commit has ran through the CI and created a draft release you may publish that release to start the production deployment.
 
-Keycloak theme changes are automatically deployed to stage, but **are not** automatically deployed to production. 
-Please read [the following documentation](https://pro-services-docs.thunderbird.net/en/latest/keycloak/how-to-deploy-to-prod.html) on how to deploy Keycloak theme changes to production.
+Keycloak changes are automatically deployed to stage, but **are not** automatically deployed to production.
+Please read [the following documentation](https://pro-services-docs.thunderbird.net/en/latest/keycloak/how-to-deploy-to-prod.html) on how to deploy Keycloak changes to production.

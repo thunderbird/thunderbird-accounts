@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n';
 import { VisualDivider } from '@thunderbirdops/services-ui';
 import ContactSupportForm from './components/ContactSupportForm.vue';
-import YourServices from '@/components/YourServices.vue';
+import ThunderbirdApps from '@/components/ThunderbirdApps.vue';
 // import NeedSupportCard from '@/components/NeedSupportCard.vue';
 import CardContainer from '@/components/CardContainer.vue';
 
@@ -35,7 +35,7 @@ export default {
     <visual-divider type="vertical" class="hidden-sm" />
 
     <div class="contact-view-right-column">
-      <your-services />
+      <thunderbird-apps />
 
       <!-- TODO: We don't have support links yet -->
       <!-- <need-support-card :support-links="supportLinks" /> -->

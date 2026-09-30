@@ -2,6 +2,7 @@ import datetime
 import logging
 from typing import Optional
 
+import requests
 import sentry_sdk
 from celery import shared_task
 from django.conf import settings
@@ -10,7 +11,10 @@ from django.core.exceptions import ImproperlyConfigured
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.celery.base import PatientExternalServiceTask
 from thunderbird_accounts.celery.exceptions import TaskFailed
-from thunderbird_accounts.celery.retry import retry_transient_external_service_errors
+from thunderbird_accounts.celery.retry import (
+    raise_retryable_external_service_error,
+    retry_transient_external_service_errors,
+)
 from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.dkim import (
     CloudflareDNSClient,
@@ -24,6 +28,7 @@ from thunderbird_accounts.mail.exceptions import (
     DomainNotFoundError,
     HostedDkimDeleteRetry,
     HostedDkimPublishRetry,
+    InvalidJMapResponseError,
 )
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.core.types import TaskReturnStatus
@@ -302,6 +307,40 @@ def delete_hosted_dkim_dns_records(self, domain_name: str):
 
 @shared_task(base=PatientExternalServiceTask, bind=True)
 @retry_transient_external_service_errors
+def grant_mail_access_role(self, oidc_id: str):
+    """Grant the Keycloak role that lets the user's mail clients through the provisioning gate.
+    Only enqueue once the Stalwart principal exists. A separate task so a Keycloak failure
+    retries the grant alone rather than re-running create_stalwart_account."""
+    # Circular import: authentication.clients -> mail.utils -> mail.tasks.
+    from thunderbird_accounts.authentication.clients import KeycloakClient
+    from thunderbird_accounts.authentication.exceptions import RoleMappingError
+
+    role_name = settings.KEYCLOAK_MAIL_ACCESS_ROLE
+
+    try:
+        KeycloakClient().grant_realm_role(oidc_id, role_name)
+    except RoleMappingError as ex:
+        if isinstance(ex.__cause__, requests.RequestException):
+            raise_retryable_external_service_error(ex.__cause__)
+
+        logging.error(f'[grant_mail_access_role] Error granting {role_name} to {oidc_id}: {ex}')
+        raise TaskFailed(
+            str(ex),
+            {
+                'oidc_id': oidc_id,
+                'role_name': role_name,
+            },
+        )
+
+    return {
+        'oidc_id': oidc_id,
+        'role_name': role_name,
+        'task_status': TaskReturnStatus.SUCCESS,
+    }
+
+
+@shared_task(base=PatientExternalServiceTask, bind=True)
+@retry_transient_external_service_errors
 def create_stalwart_account(
     self,
     oidc_id: str,
@@ -317,6 +356,9 @@ def create_stalwart_account(
     but is still required. App Passwords can be set now, or later.
 
     Note: Email should be Thundermail address. Stalwart does not need your recovery email."""
+
+    user = User.objects.get(oidc_id=oidc_id)
+
     stalwart = MailClient()
     domain = email.split('@')[1]
 
@@ -326,11 +368,7 @@ def create_stalwart_account(
 
         raise TaskFailed(
             str(error),
-            {
-                'oidc_id': oidc_id,
-                'username': username,
-                'email': email,
-            },
+            {'oidc_id': oidc_id, 'user_uuid': user.uuid},
         )
 
     emails = [
@@ -347,33 +385,47 @@ def create_stalwart_account(
         _domain = alias.split('@')[1]
         _stalwart_check_or_create_domain_entry(stalwart, _domain)
 
-    # Lookup the account first, this shouldn't normally happen but if it does we shouldn't explode.
+    # Lookup the account first, this shouldn't happen but if we have a left-over account then it's a problem.
+    stalwart_account = None
+
     try:
         stalwart_account = stalwart.get_account(username)
-        stalwart_emails = stalwart_account.get('emails', [])
-
-        # link the stalwart account
-        pkid = stalwart_account.get('id')
-
-        # Check the aliases
-        if emails != stalwart_emails:
-            # Diff of new emails
-            new_emails = set(emails) - set(stalwart_emails)
-            # Diff of the old emails
-            old_emails = set(stalwart_emails) - set(emails)
-
-            stalwart.save_email_addresses(username, list(new_emails))
-            stalwart.delete_email_addresses(username, list(old_emails))
     except AccountNotFoundError:
-        # We need to create this after dkim and domain records exist
-        pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
+        pass
+    except InvalidJMapResponseError as ex:
+        # Cover any jmap response errors, these also require manual fixing (re-running activate sub features)
+        sentry_sdk.capture_exception(ex)
+        raise TaskFailed(
+            str(ex.validation_error),
+            {'oidc_id': oidc_id, 'user_uuid': user.uuid},
+        )
+    except Exception as ex:
+        # Any other error means we couldn't confirm the account is absent. Fail the task rather than
+        # continuing on and risk creating a duplicate / linking an orphaned account.
+        sentry_sdk.capture_exception(ex)
+        raise TaskFailed(
+            str(ex),
+            {'oidc_id': oidc_id, 'user_uuid': user.uuid},
+        )
 
-    user = User.objects.get(oidc_id=oidc_id)
+    if stalwart_account is not None:
+        logging.error(f'[create_stalwart_account] Account [{user.uuid}] already exists in Stalwart!')
+        raise TaskFailed(
+            str('Account already exists in Stalwart'),
+            {
+                'oidc_id': oidc_id,
+                'user_uuid': user.uuid,
+                'stalwart_pkid': stalwart_account.get('id'),
+            },
+        )
+
+    # We need to create this after dkim and domain records exist
+    pkid = stalwart.create_account(emails, username, full_name, app_password, quota)
     now = datetime.datetime.now(datetime.UTC)
 
-    # Don't create the account if we already have it
+    # Don't create the account if we already have it (this is safe as this object contains no info by itself)
     # Also create their account objects
-    account, _created = Account.objects.update_or_create(
+    account, account_was_created = Account.objects.update_or_create(
         name=user.username,
         defaults={
             'active': True,
@@ -390,6 +442,13 @@ def create_stalwart_account(
             'stalwart_created_at': now,
         },
     )
+
+    if not account_was_created:
+        # Something is wrong, why wasn't this removed? Let's bug sentry about it.
+        logging.error(
+            f'[create_stalwart_account] Account reference [{account.uuid}] already existed. '
+            'It should probably not exist.'
+        )
 
     # Edge-case: don't override an existing stalwart_created_at timestamp
     if not account.stalwart_created_at:
@@ -412,6 +471,8 @@ def create_stalwart_account(
             },
         )
 
+    grant_mail_access_role.delay(oidc_id)
+
     # Fire off the task to add folks to the mailing list (so we can send them a welcome email)
     if settings.USE_MAILCHIMP:
         add_subscriber_to_mailchimp_list.delay(str(user.uuid))
@@ -419,7 +480,6 @@ def create_stalwart_account(
     return {
         'oidc_id': oidc_id,
         'stalwart_pkid': pkid,
-        'username': username,
-        'email': email,
+        'user_uuid': user.uuid,
         'task_status': TaskReturnStatus.SUCCESS,
     }

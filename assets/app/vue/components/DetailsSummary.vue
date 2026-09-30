@@ -69,7 +69,7 @@ function toggle() {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    background-color: var(--colour-neutral-lower);
+    background-color: var(--colour-neutral-subtle);
     border: 1px solid var(--colour-neutral-border);
     border-radius: 0.5rem;
     padding: 1rem 0.5rem;
@@ -95,7 +95,7 @@ function toggle() {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        color: #37adf9;
+        color: var(--colour-ti-highlight);
         width: 1.5rem;
         height: 1.5rem;
       }
@@ -105,7 +105,6 @@ function toggle() {
         font-size: 1rem;
         font-weight: 500;
         line-height: 1.2;
-        text-transform: capitalize;
         color: var(--colour-ti-base);
       }
     }

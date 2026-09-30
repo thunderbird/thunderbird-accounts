@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n';
 import { CheckboxInput, TextInput, DangerButton, VisualDivider, LinkButton } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 import NeedSupportCard from '@/components/NeedSupportCard.vue';
-import YourServices from '@/components/YourServices.vue';
+import ThunderbirdApps from '@/components/ThunderbirdApps.vue';
 
 /* TODO: Not in i18n yet as these are TBD */
 const supportLinks = [
@@ -70,7 +70,7 @@ const { t } = useI18n();
     <visual-divider type="vertical" class="hidden-sm" />
 
     <div class="privacy-and-data-right-column">
-      <your-services />
+      <thunderbird-apps />
       <need-support-card :support-links="supportLinks" />
     </div>
   </div>
