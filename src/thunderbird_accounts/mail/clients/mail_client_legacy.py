@@ -21,6 +21,22 @@ from thunderbird_accounts.mail.exceptions import (
 )
 
 
+# Keys written by Stalwart v0.15 create_dkim_key for each generated signer.
+STALWART_DKIM_SIGNER_KEYS = (
+    'private-key',
+    'domain',
+    'selector',
+    'algorithm',
+    'canonicalization',
+    'headers.0',
+    'headers.1',
+    'headers.2',
+    'headers.3',
+    'headers.4',
+    'report',
+)
+
+
 class StalwartErrors(StrEnum):
     """Errors defined in Stalwart's management api
     https://github.com/stalwartlabs/stalwart/blob/4d819a1041b0adfce3757df50929764afa10e27b/crates/http/src/management/mod.rs#L58
@@ -389,10 +405,29 @@ class MailClientLegacy(MailClientInterface):
         if not response_data or not response_data.get('total'):
             return None
 
-        # Dict comprehension to remove any duplicate _ids (there shouldn't be any, but I have trust issues.)
-        dkim_ids = {r.get('_id'): True for r in response_data.get('items', [])}
+        # Stalwart's filter is a substring match, and v0.15 may group a longer
+        # signer ID under an ID that is its prefix. Only delete the default
+        # signer IDs create_dkim() generates for this exact domain.
+        expected_dkim_ids = {f'{algorithm.lower()}-{domain}' for algorithm in settings.STALWART_DKIM_ALGOS}
+        dkim_ids = {
+            record.get('_id')
+            for record in response_data.get('items', [])
+            if record.get('domain') == domain and record.get('_id') in expected_dkim_ids
+        }
 
-        data = [{'type': 'clear', 'prefix': f'signature.{d}.'} for d in dkim_ids.keys()]
+        if not dkim_ids:
+            return None
+
+        # Prefix clearing would also delete example.com.au when deleting example.com.
+        # v0.15 supports deleting exact configuration keys instead.
+        data = [
+            {
+                'type': 'delete',
+                'keys': [
+                    f'signature.{dkim_id}.{key}' for dkim_id in sorted(dkim_ids) for key in STALWART_DKIM_SIGNER_KEYS
+                ],
+            }
+        ]
         response = requests.post(
             f'{self.api_url}/settings',
             json=data,

@@ -478,7 +478,8 @@ class TestMailClientDeleteDkim(TestCase):
         success_get_response = requests.Response()
         success_get_response.status_code = 200
         success_get_response._content = bytes(
-            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}'}]}}), 'utf-8'
+            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}', 'domain': self.domain}]}}),
+            'utf-8',
         )
 
         requests_get_mock.return_value = success_get_response
@@ -496,6 +497,79 @@ class TestMailClientDeleteDkim(TestCase):
         self.assertEqual(self.domain, call_args[1].get('params', {}).get('filter'))
 
         requests_post_mock.assert_called_once()
+        self.assertEqual(
+            requests_post_mock.call_args.kwargs['json'],
+            [{'type': 'delete', 'keys': self.signer_keys(f'rsa-{self.domain}')}],
+        )
+
+    @staticmethod
+    def signer_keys(signer_id):
+        # Independent fixture for the complete v0.15 generated signer schema.
+        return [
+            f'signature.{signer_id}.{key}'
+            for key in (
+                'private-key',
+                'domain',
+                'selector',
+                'algorithm',
+                'canonicalization',
+                'headers.0',
+                'headers.1',
+                'headers.2',
+                'headers.3',
+                'headers.4',
+                'report',
+            )
+        ]
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_only_deletes_signers_for_exact_domain(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
+        """Both collision directions must use exact keys, never a prefix clear."""
+        domains = ('example.com', 'example.com.au')
+        items = [
+            {'_id': f'{algorithm}-{domain}', 'domain': domain} for domain in domains for algorithm in ('ed25519', 'rsa')
+        ]
+        # v0.15 groups the longer ID's settings under the shorter ID as well.
+        items[0]['au.domain'] = domains[1]
+        items[1]['au.domain'] = domains[1]
+        success_get_response = requests.Response()
+        success_get_response.status_code = 200
+        success_get_response._content = json.dumps({'data': {'total': 4, 'items': items}}).encode()
+        requests_get_mock.return_value = success_get_response
+        success_post_response = requests.Response()
+        success_post_response.status_code = 200
+        requests_post_mock.return_value = success_post_response
+
+        for domain in domains:
+            with self.subTest(domain=domain):
+                requests_post_mock.reset_mock()
+                response = self.mail_client.delete_dkim(domain)
+                self.assertIs(response, success_post_response)
+                requests_post_mock.assert_called_once()
+                self.assertEqual(
+                    requests_post_mock.call_args.kwargs['json'],
+                    [
+                        {
+                            'type': 'delete',
+                            'keys': self.signer_keys(f'ed25519-{domain}') + self.signer_keys(f'rsa-{domain}'),
+                        }
+                    ],
+                )
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_does_not_delete_unexpected_signer_id(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
+        success_get_response = requests.Response()
+        success_get_response.status_code = 200
+        success_get_response._content = bytes(
+            json.dumps({'data': {'total': 1, 'items': [{'_id': 'rsa-other.com', 'domain': self.domain}]}}),
+            'utf-8',
+        )
+        requests_get_mock.return_value = success_get_response
+
+        self.assertIsNone(self.mail_client.delete_dkim(self.domain))
+        requests_post_mock.assert_not_called()
 
     @patch('requests.get')
     @patch('requests.post')
@@ -541,7 +615,8 @@ class TestMailClientDeleteDkim(TestCase):
         success_get_response = requests.Response()
         success_get_response.status_code = 200
         success_get_response._content = bytes(
-            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}'}]}}), 'utf-8'
+            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}', 'domain': self.domain}]}}),
+            'utf-8',
         )
 
         requests_get_mock.return_value = success_get_response
