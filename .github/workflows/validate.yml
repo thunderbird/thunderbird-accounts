@@ -204,7 +204,7 @@ jobs:
         working-directory: test/e2e
         run: |
           npm ci
-          npx playwright install --with-deps firefox
+          npx playwright install firefox
 
       - name: Create test plans
         run: |
