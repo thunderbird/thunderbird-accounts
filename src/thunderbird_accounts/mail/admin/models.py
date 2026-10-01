@@ -50,11 +50,12 @@ class DomainAdmin(admin.ModelAdmin):
 
     search_fields = ('name', 'user__username')
     search_help_text = _('Search domains by name or user email.')
-    list_filter = ['created_at', 'updated_at']
+    ordering = ('-created_at',)
+    list_filter = ['status', 'created_at', 'updated_at']
     list_display = (
         'name',
         'status',
         'user',
         'created_at',
-        'updated_at',
+        'last_verification_attempt',
     )
