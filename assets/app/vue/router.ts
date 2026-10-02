@@ -255,7 +255,13 @@ router.beforeEach((to, _from) => {
     return { name: 'subscribe' };
   }
 
+  // The subscribe page reloads once payment is verified so send them to Webmail instead of the dashboard.
   if (!needsSubscription && routeName === 'subscribe') {
+    if (window._page?.webmailUrl) {
+      window.location.href = window._page.webmailUrl;
+      return false;
+    }
+
     return { name: 'dashboard' };
   }
 
