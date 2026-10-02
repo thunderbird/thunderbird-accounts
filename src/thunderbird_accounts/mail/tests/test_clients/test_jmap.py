@@ -7,6 +7,7 @@ from django.test import SimpleTestCase, override_settings
 
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
 from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientAdminJMAP
+from thunderbird_accounts.mail.exceptions import AccountNotFoundError, DomainNotFoundError, JMapError
 from thunderbird_accounts.mail.tests.test_clients.test_legacy import (
     TestMailClientCheckDomainDNS,
 )
@@ -133,3 +134,94 @@ class TestCreateDkim(SimpleTestCase):
 
         self.assertIsNotNone(response_data)
         self.assertEqual(3, requests_mock.call_count)
+
+
+def _jmap_response(*invocations: tuple[str, dict]) -> JMapResponse:
+    return JMapResponse(
+        method_responses=[
+            Invocation(name=name, arguments=arguments, method_call_id=str(idx))
+            for idx, (name, arguments) in enumerate(invocations)
+        ],
+        session_state='a',
+    )
+
+
+PRIMARY_DOMAIN_FOUND = _jmap_response(('x:Domain/query', {'ids': ['domain-1']}))
+PRIMARY_DOMAIN_MISSING = _jmap_response(('x:Domain/query', {'ids': []}))
+
+
+@patch('thunderbird_accounts.mail.tests.test_clients.test_jmap.MockJMapClient.request')
+class TestGetAccount(SimpleTestCase):
+    def setUp(self):
+        self.mail_client = build_admin_client()
+        self.principal_id = 'user@example.org'
+
+    def test_missing_primary_domain_raises_domain_not_found(self, requests_mock: MagicMock):
+        requests_mock.side_effect = [PRIMARY_DOMAIN_MISSING]
+
+        with self.assertRaises(DomainNotFoundError):
+            self.mail_client.get_account(self.principal_id)
+
+        # We shouldn't send an account query with a null domainId
+        self.assertEqual(1, requests_mock.call_count)
+
+    def test_query_method_error_raises_jmap_error(self, requests_mock: MagicMock):
+        error_response = _jmap_response(
+            ('error', {'type': 'invalidArguments', 'description': 'bad filter'}),
+            ('error', {'type': 'invalidResultReference'}),
+        )
+        requests_mock.side_effect = [PRIMARY_DOMAIN_FOUND, error_response]
+
+        with self.assertRaises(JMapError) as ctx:
+            self.mail_client.get_account(self.principal_id)
+
+        self.assertEqual('invalidArguments', ctx.exception.type)
+
+    def test_empty_query_raises_account_not_found(self, requests_mock: MagicMock):
+        empty_response = _jmap_response(
+            ('x:Account/query', {'ids': [], 'total': 0}),
+            ('x:Account/get', {'list': []}),
+        )
+        requests_mock.side_effect = [PRIMARY_DOMAIN_FOUND, empty_response]
+
+        with self.assertRaises(AccountNotFoundError):
+            self.mail_client.get_account(self.principal_id)
+
+    def test_empty_get_raises_account_not_found(self, requests_mock: MagicMock):
+        mismatched_response = _jmap_response(
+            ('x:Account/query', {'ids': ['account-1'], 'total': 1}),
+            ('x:Account/get', {'list': []}),
+        )
+        requests_mock.side_effect = [PRIMARY_DOMAIN_FOUND, mismatched_response]
+
+        with self.assertRaises(AccountNotFoundError):
+            self.mail_client.get_account(self.principal_id)
+
+
+@patch('thunderbird_accounts.mail.tests.test_clients.test_jmap.MockJMapClient.request')
+class TestUpdateAccount(SimpleTestCase):
+    def setUp(self):
+        self.mail_client = build_admin_client()
+        self.principal_id = 'user@example.org'
+
+    def test_missing_primary_domain_raises_domain_not_found(self, requests_mock: MagicMock):
+        requests_mock.side_effect = [PRIMARY_DOMAIN_MISSING]
+
+        with self.assertRaises(DomainNotFoundError):
+            self.mail_client.update_account(self.principal_id, stalwart.AccountUpdate())
+
+        self.assertEqual(1, requests_mock.call_count)
+
+    def test_query_method_error_raises_jmap_error(self, requests_mock: MagicMock):
+        error_response = _jmap_response(('error', {'type': 'invalidArguments'}))
+        requests_mock.side_effect = [PRIMARY_DOMAIN_FOUND, error_response]
+
+        with self.assertRaises(JMapError):
+            self.mail_client.update_account(self.principal_id, stalwart.AccountUpdate())
+
+    def test_empty_query_raises_account_not_found(self, requests_mock: MagicMock):
+        empty_response = _jmap_response(('x:Account/query', {'ids': [], 'total': 0}))
+        requests_mock.side_effect = [PRIMARY_DOMAIN_FOUND, empty_response]
+
+        with self.assertRaises(AccountNotFoundError):
+            self.mail_client.update_account(self.principal_id, stalwart.AccountUpdate())
