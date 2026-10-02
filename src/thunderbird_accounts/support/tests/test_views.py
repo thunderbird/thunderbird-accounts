@@ -5,6 +5,10 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client as RequestClient, TestCase, override_settings
 from django.urls import reverse
 
+from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.subscription.models import Subscription
+from thunderbird_accounts.support.views import get_plan_status_for_zendesk
+
 
 class ZendeskContactFieldsTestCase(TestCase):
     def setUp(self):
@@ -445,3 +449,126 @@ class ZendeskContactSubmitTestCase(TestCase):
         self.assertEqual(sent_fields['name'], 'John Doe')
         self.assertEqual(sent_fields['email'], 'user@example.org')
         instance.update_ticket.assert_called_once()
+
+
+class ZendeskPlanStatusTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(username='plan@example.org', oidc_id='plan-1')
+
+    def add_subscription(self, paddle_id, status):
+        Subscription.objects.create(paddle_id=paddle_id, paddle_customer_id='cus', status=status, user=self.user)
+
+    def test_no_subscription_is_signing_up(self):
+        self.assertEqual(get_plan_status_for_zendesk(self.user), 'tm_plan_signingup')
+
+    def test_active_subscription_is_paid(self):
+        self.add_subscription('sub1', Subscription.StatusValues.ACTIVE)
+        self.assertEqual(get_plan_status_for_zendesk(self.user), 'tm_plan_paid')
+
+    def test_canceled_subscription_is_cancelled(self):
+        self.add_subscription('sub1', Subscription.StatusValues.CANCELED)
+        self.assertEqual(get_plan_status_for_zendesk(self.user), 'tm_plan_cancelled')
+
+    def test_active_wins_over_canceled(self):
+        self.add_subscription('sub1', Subscription.StatusValues.CANCELED)
+        self.add_subscription('sub2', Subscription.StatusValues.ACTIVE)
+        self.assertEqual(get_plan_status_for_zendesk(self.user), 'tm_plan_paid')
+
+    def test_other_statuses_are_signing_up(self):
+        self.add_subscription('sub1', Subscription.StatusValues.PAST_DUE)
+        self.assertEqual(get_plan_status_for_zendesk(self.user), 'tm_plan_signingup')
+
+
+@override_settings(
+    ZENDESK_FORM_ID='42',
+    ZENDESK_FORM_BROWSER_FIELD_ID='1001',
+    ZENDESK_FORM_OS_FIELD_ID='1002',
+    ZENDESK_USER_PLAN_STATUS_FIELD_KEY='tm_plan_status',
+)
+class ZendeskContactSubmitUserTestCase(TestCase):
+    """Tests for the Zendesk user update (external id + plan status) done before ticket creation."""
+
+    def setUp(self):
+        self.client = RequestClient()
+        self.user = User.objects.create(username='known@example.org', oidc_id='known-1')
+        self.url = reverse('contact_submit')
+        self.payload = {
+            'email': 'known@example.org',
+            'name': 'Known User',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+
+    def mock_client(self, mock_client_cls, user_ok=True):
+        instance = Mock()
+        mock_client_cls.return_value = instance
+
+        user_resp = Mock()
+        user_resp.ok = user_ok
+        instance.create_or_update_user.return_value = user_resp
+
+        create_resp = Mock()
+        create_resp.ok = True
+        create_resp.json.return_value = {'request': {'id': 555}}
+        instance.create_ticket.return_value = create_resp
+
+        update_resp = Mock()
+        update_resp.ok = True
+        instance.update_ticket.return_value = update_resp
+        return instance
+
+    def submit(self):
+        return self.client.post(
+            self.url,
+            data={'data': json.dumps(self.payload)},
+            HTTP_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Firefox/120.0',
+        )
+
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_logged_in_user_is_updated_before_ticket_creation(self, mock_client_cls):
+        instance = self.mock_client(mock_client_cls)
+        Subscription.objects.create(
+            paddle_id='sub1', paddle_customer_id='cus', status=Subscription.StatusValues.ACTIVE, user=self.user
+        )
+        self.client.force_login(self.user)
+
+        response = self.submit()
+
+        self.assertEqual(response.status_code, 200)
+        instance.create_or_update_user.assert_called_once_with(
+            {
+                'name': 'Known User',
+                'email': 'known@example.org',
+                'external_id': str(self.user.uuid),
+                'user_fields': {'tm_plan_status': 'tm_plan_paid'},
+            }
+        )
+
+        # The user has to be updated before the ticket is created
+        call_names = [call[0] for call in instance.method_calls]
+        self.assertLess(call_names.index('create_or_update_user'), call_names.index('create_ticket'))
+
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_logged_out_user_is_not_updated(self, mock_client_cls):
+        instance = self.mock_client(mock_client_cls)
+
+        response = self.submit()
+
+        self.assertEqual(response.status_code, 200)
+        instance.create_or_update_user.assert_not_called()
+        instance.create_ticket.assert_called_once()
+
+    @patch('thunderbird_accounts.support.views.sentry_sdk')
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_user_update_failure_does_not_block_ticket(self, mock_client_cls, mock_sentry):
+        instance = self.mock_client(mock_client_cls, user_ok=False)
+        self.client.force_login(self.user)
+
+        response = self.submit()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content.decode()), {'success': True})
+        instance.create_ticket.assert_called_once()
+        mock_sentry.capture_message.assert_called_once()

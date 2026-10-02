@@ -73,6 +73,20 @@ class ZendeskClient(object):
 
         return response
 
+    def create_or_update_user(self, user_fields):
+        """Create or update a Zendesk user (matched on external_id, then email) using the Users API.
+        Ref https://developer.zendesk.com/api-reference/ticketing/users/users/#create-or-update-user"""
+        url = f'{self.base_url}/users/create_or_update.json'
+
+        response = requests.post(
+            url,
+            headers={'Content-Type': 'application/json'},
+            auth=(f'{settings.ZENDESK_USER_EMAIL}/token', settings.ZENDESK_API_TOKEN),
+            json={'user': user_fields},
+        )
+
+        return response
+
     def upload_file(self, uploaded_file):
         """Upload a file to Zendesk and return the upload token."""
         url = f'{self.base_url}/uploads.json'

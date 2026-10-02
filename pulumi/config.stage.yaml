@@ -66,6 +66,7 @@
 .zendesk_form_id: &VAR_ZENDESK_FORM_ID {name: "ZENDESK_FORM_ID", value: "46642378723859"}
 .zendesk_form_browser_field_id: &VAR_ZENDESK_FORM_BROWSER_FIELD_ID {name: "ZENDESK_FORM_BROWSER_FIELD_ID", value: "46642389601427"}
 .zendesk_form_os_field_id: &VAR_ZENDESK_FORM_OS_FIELD_ID {name: "ZENDESK_FORM_OS_FIELD_ID", value: "46642417675539"}
+.zendesk_user_plan_status_field_key: &VAR_ZENDESK_USER_PLAN_STATUS_FIELD_KEY {name: "ZENDESK_USER_PLAN_STATUS_FIELD_KEY", value: "thundermail_plan_status"}
 
 # These variables are also common to our environments, but are pulled from secret stores instead
 .auth_allow_list: &SECRET_AUTH_ALLOW_LIST {name: "AUTH_ALLOW_LIST", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/fxa-allow-list-Rjs24C"}
@@ -431,6 +432,7 @@ resources:
                 - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
+                - *VAR_ZENDESK_USER_PLAN_STATUS_FIELD_KEY
                 - name: TBA_CELERY
                   value: "yes"
                 - name: TBA_FLOWER
@@ -520,6 +522,7 @@ resources:
                 - *VAR_ZENDESK_FORM_ID
                 - *VAR_ZENDESK_FORM_BROWSER_FIELD_ID
                 - *VAR_ZENDESK_FORM_OS_FIELD_ID
+                - *VAR_ZENDESK_USER_PLAN_STATUS_FIELD_KEY
                 - name: TBA_CELERY
                   value: "no"
                 - name: TBA_FLOWER
@@ -966,6 +969,8 @@ resources:
                 value: '46642389601427'
               - name: ZENDESK_FORM_OS_FIELD_ID
                 value: '46642417675539'
+              - name: ZENDESK_USER_PLAN_STATUS_FIELD_KEY
+                value: 'thundermail_plan_status'
               - name: VERIFY_PRIVATE_LINK_SSL
                 value: 'False'
               - *VAR_SENTRY_PROFILE_SAMPLE_RATE

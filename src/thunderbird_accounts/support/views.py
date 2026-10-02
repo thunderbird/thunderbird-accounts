@@ -9,10 +9,23 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_http_methods
 
+from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.subscription.models import Subscription
 from thunderbird_accounts.support.zendesk import ZendeskClient
 
 # Add browser and OS information to hidden custom fields
 from thunderbird_accounts.core.utils import parse_user_agent_info
+
+
+def get_plan_status_for_zendesk(user: User) -> str:
+    """Map a user's subscriptions to the Thundermail plan status values used by the Zendesk user field."""
+    statuses = set(user.subscription_set.values_list('status', flat=True))
+
+    if Subscription.StatusValues.ACTIVE in statuses:
+        return 'tm_plan_paid'
+    if Subscription.StatusValues.CANCELED in statuses:
+        return 'tm_plan_cancelled'
+    return 'tm_plan_signingup'
 
 
 @require_http_methods(['GET'])
@@ -160,6 +173,26 @@ def contact_submit(request: HttpRequest):
                     ),
                 },
                 status=500,
+            )
+
+    # If the submitter is logged in, tell Zendesk who they are (external id) and their plan status before the ticket
+    # gets created, so the ticket's requester is already a known user. Logged out submissions are left alone.
+    if request.user.is_authenticated:
+        user_response = zendesk_client.create_or_update_user(
+            {
+                'name': name,
+                'email': email,
+                'external_id': str(request.user.uuid),
+                'user_fields': {settings.ZENDESK_USER_PLAN_STATUS_FIELD_KEY: get_plan_status_for_zendesk(request.user)},
+            }
+        )
+
+        if not user_response.ok:
+            # Not worth blocking the ticket over, so capture the error and carry on
+            sentry_sdk.capture_message(
+                f'Failed to create or update Zendesk user: {user_response}',
+                level='error',
+                user={'id': str(request.user.uuid)},
             )
 
     # Create ticket with attachment tokens
