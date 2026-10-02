@@ -210,10 +210,7 @@ def get_paddle_portal_link(request: HttpRequest, paddle: Client):
         sentry_sdk.capture_exception(ex)
         messages.error(
             request,
-            _(
-                'There was a problem retrieving a secure login link for our customer portal. '
-                'Please try again later.'
-            ),
+            _('There was a problem retrieving a secure login link for our customer portal. Please try again later.'),
         )
         return HttpResponseRedirect('/dashboard')
 
