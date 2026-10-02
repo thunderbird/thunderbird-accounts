@@ -21,6 +21,7 @@ import ErrorView from '@/views/ErrorView/index.vue';
 import { TBPRO_WAIT_LIST } from './defines';
 import { CAN_I_SIGN_UP_RESPONSES, WAFFLE_FLAG } from './types';
 import { isWaffleFlagActive } from '@/utils';
+import { hasAcceptedTos, hasActiveSubscription } from '@/access';
 
 // Manage MFA rolls out dark: only register its route when the multi-factor-authentication
 // waffle flag is active, so /manage-mfa falls through to the 404 route until it's enabled.
@@ -245,17 +246,21 @@ router.beforeEach((to, _from) => {
     subscription: ['subscribe', 'contact', 'tos-privacy'],
   };
 
-  if (window._page?.needsTosAcceptance && !allowedFor.tos.includes(routeName)) {
+  if (!hasAcceptedTos() && !allowedFor.tos.includes(routeName)) {
     return { name: 'tos-privacy' };
   }
 
-  const needsSubscription = window._page?.isAwaitingPaymentVerification || !window._page?.hasActiveSubscription;
-
-  if (needsSubscription && !allowedFor.subscription.includes(routeName)) {
+  if (!hasActiveSubscription() && !allowedFor.subscription.includes(routeName)) {
     return { name: 'subscribe' };
   }
 
-  if (!needsSubscription && routeName === 'subscribe') {
+  // The subscribe page reloads once payment is verified so send them to Webmail instead of the dashboard.
+  if (hasActiveSubscription() && routeName === 'subscribe') {
+    if (window._page?.webmailUrl) {
+      window.location.href = window._page.webmailUrl;
+      return false;
+    }
+
     return { name: 'dashboard' };
   }
 

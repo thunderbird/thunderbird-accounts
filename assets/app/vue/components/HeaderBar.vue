@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { WAFFLE_FLAG } from '@/types';
 import { isWaffleFlagActive } from '@/utils';
+import { hasAcceptedTos, hasActiveSubscription } from '@/access';
 import { APPOINTMENT_URL, SEND_URL } from '@/defines';
 import { AppDrawer, AppointmentIcon, BrandButton, IconButton, MailIcon, SendIcon, SettingsIcon } from '@thunderbirdops/services-ui';
 import type { AppDrawerApp } from '@thunderbirdops/services-ui';
@@ -45,12 +46,10 @@ const navItems = [
 const currentRoute = useRoute();
 const isSettingsActive = computed(() => currentRoute.path.startsWith('/settings'));
 
-const needsTosAcceptance = ref(window._page?.needsTosAcceptance);
-const needsSubscription = ref(
-  window._page?.isAwaitingPaymentVerification || !window._page?.hasActiveSubscription,
-);
+const hasAccepted = ref(hasAcceptedTos());
+const isSubscribed = ref(hasActiveSubscription());
 const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
-const showNav = computed(() => !needsTosAcceptance.value && !needsSubscription.value && isCustomDomainsRevampActive.value);
+const showNav = computed(() => hasAccepted.value && isSubscribed.value && isCustomDomainsRevampActive.value);
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).href;
@@ -74,7 +73,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
       </nav>
 
       <div class="header-actions">
-        <router-link v-slot="{ href, navigate }" to="/settings" custom>
+        <router-link v-if="isSubscribed" v-slot="{ href, navigate }" to="/settings" custom>
           <icon-button
             size="large"
             :href="href"
@@ -85,7 +84,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
             <settings-icon aria-hidden="true" />
           </icon-button>
         </router-link>
-        <app-drawer :apps="apps" />
+        <app-drawer v-if="isSubscribed" :apps="apps" />
         <user-menu :username="avatarUsername" />
       </div>
     </template>
