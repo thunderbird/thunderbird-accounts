@@ -11,4 +11,4 @@ uv run sphinx-build docs build
 
 echo 'Running python server on http://localhost:8000'
 
-cd build && python -m http.server
+cd build && uv run python -m http.server
