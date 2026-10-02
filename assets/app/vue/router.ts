@@ -249,14 +249,14 @@ router.beforeEach((to, _from) => {
     return { name: 'tos-privacy' };
   }
 
-  const needsSubscription = window._page?.isAwaitingPaymentVerification || !window._page?.hasActiveSubscription;
+  const hasActiveSubscription = !window._page?.isAwaitingPaymentVerification && !!window._page?.hasActiveSubscription;
 
-  if (needsSubscription && !allowedFor.subscription.includes(routeName)) {
+  if (!hasActiveSubscription && !allowedFor.subscription.includes(routeName)) {
     return { name: 'subscribe' };
   }
 
   // The subscribe page reloads once payment is verified so send them to Webmail instead of the dashboard.
-  if (!needsSubscription && routeName === 'subscribe') {
+  if (hasActiveSubscription && routeName === 'subscribe') {
     if (window._page?.webmailUrl) {
       window.location.href = window._page.webmailUrl;
       return false;

@@ -46,11 +46,11 @@ const currentRoute = useRoute();
 const isSettingsActive = computed(() => currentRoute.path.startsWith('/settings'));
 
 const needsTosAcceptance = ref(window._page?.needsTosAcceptance);
-const needsSubscription = ref(
-  window._page?.isAwaitingPaymentVerification || !window._page?.hasActiveSubscription,
+const hasActiveSubscription = ref(
+  !window._page?.isAwaitingPaymentVerification && !!window._page?.hasActiveSubscription,
 );
 const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
-const showNav = computed(() => !needsTosAcceptance.value && !needsSubscription.value && isCustomDomainsRevampActive.value);
+const showNav = computed(() => !needsTosAcceptance.value && hasActiveSubscription.value && isCustomDomainsRevampActive.value);
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).href;
@@ -74,7 +74,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
       </nav>
 
       <div class="header-actions">
-        <router-link v-if="!needsSubscription" v-slot="{ href, navigate }" to="/settings" custom>
+        <router-link v-if="hasActiveSubscription" v-slot="{ href, navigate }" to="/settings" custom>
           <icon-button
             size="large"
             :href="href"
@@ -85,7 +85,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
             <settings-icon aria-hidden="true" />
           </icon-button>
         </router-link>
-        <app-drawer v-if="!needsSubscription" :apps="apps" />
+        <app-drawer v-if="hasActiveSubscription" :apps="apps" />
         <user-menu :username="avatarUsername" />
       </div>
     </template>
