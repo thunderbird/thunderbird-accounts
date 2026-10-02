@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, useTemplateRef, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { UserAvatar } from '@thunderbirdops/services-ui';
+import { getSubscriptionPortalLink } from '@/views/DashboardView/api';
 
 defineProps<{
   username: string;
@@ -9,20 +10,27 @@ defineProps<{
 
 const { t } = useI18n();
 
-const internalMenuItems = computed(() => {
-  const items = [
-    {
-      label: t('components.userMenu.myAccount'),
-      to: '/dashboard',
-    },
-    {
-      label: t('components.userMenu.support'),
-      to: '/contact',
-    },
-  ];
+const accountItem = {
+  label: t('components.userMenu.myAccount'),
+  to: '/dashboard',
+};
 
-  return items;
-});
+const supportItem = {
+  label: t('components.userMenu.support'),
+  to: '/contact',
+};
+
+const manageSubscriptionLabel = computed(() => t('components.userMenu.manageSubscription'));
+
+const openSubscriptionPortal = async () => {
+  showMenu.value = false;
+  try {
+    const { url } = await getSubscriptionPortalLink();
+    window.open(url, '_blank');
+  } catch (error) {
+    console.error('Unable to open the subscription portal', error);
+  }
+};
 
 const externalMenuItems = [
   {
@@ -59,14 +67,12 @@ onBeforeUnmount(() => {
 
     <div v-if="showMenu" class="dropdown">
       <!-- Holds internal links (VueJS routes) -->
-      <router-link
-        v-for="internalItem in internalMenuItems"
-        :key="internalItem.label"
-        :to="internalItem.to"
-        @click="toggleMenu"
-      >
-        {{ internalItem.label }}
-      </router-link>
+      <router-link :to="accountItem.to" @click="toggleMenu">{{ accountItem.label }}</router-link>
+
+      <!-- Opens the Paddle customer portal in a new tab, this is an anchor tag since we are already inside of a button -->
+      <a href="#" @click.prevent="openSubscriptionPortal">{{ manageSubscriptionLabel }}</a>
+
+      <router-link :to="supportItem.to" @click="toggleMenu">{{ supportItem.label }}</router-link>
 
       <!-- Holds external links (primarily Django routes) -->
       <a v-for="externalItem in externalMenuItems" :key="externalItem.label" :href="externalItem.href">
@@ -99,13 +105,13 @@ onBeforeUnmount(() => {
   .dropdown {
     position: absolute;
     right: 0;
-    margin-top: 12.5rem;
+    margin-top: 15.5rem;
     background: var(--colour-ti-base);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 0.5rem;
     box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
     padding: 0.5rem 0;
-    min-width: 150px;
+    min-width: max-content;
     z-index: var(--z-index-header-dropdown);
 
     a {

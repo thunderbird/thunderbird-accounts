@@ -27,9 +27,10 @@
       "paragraph": "Send email, share large files, and manage appointments."
     },
     "userMenu": {
-      "myAccount": "My Account",
+      "myAccount": "Account",
+      "manageSubscription": "Manage subscription",
       "support": "Support",
-      "logout": "Logout"
+      "logout": "Sign out"
     },
     "planCard": {
       "features": {

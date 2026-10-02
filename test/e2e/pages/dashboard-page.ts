@@ -112,7 +112,7 @@ export class DashboardPage {
     // Scope menu links to the user menu dropdown
     const userMenuDropdown = this.page.getByRole('banner').locator('.user-menu .dropdown');
     this.supportLink = userMenuDropdown.getByRole('link', { name: 'Support', exact: true });
-    this.logoutLink = userMenuDropdown.getByRole('link', { name: 'Logout', exact: true });
+    this.logoutLink = userMenuDropdown.getByRole('link', { name: 'Sign out', exact: true });
     this.contactHeader = this.page.getByRole('heading', { name: 'Submit a request' });
   }
 
