@@ -25,6 +25,7 @@ Contents
     feature-flags.rst
     frontend.rst
     mail.rst
+    onboarding.rst
     sign-up.rst
     tasks.rst
 
