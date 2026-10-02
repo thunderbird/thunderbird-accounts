@@ -74,7 +74,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
       </nav>
 
       <div class="header-actions">
-        <router-link v-slot="{ href, navigate }" to="/settings" custom>
+        <router-link v-if="!needsSubscription" v-slot="{ href, navigate }" to="/settings" custom>
           <icon-button
             size="large"
             :href="href"
@@ -85,7 +85,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
             <settings-icon aria-hidden="true" />
           </icon-button>
         </router-link>
-        <app-drawer :apps="apps" />
+        <app-drawer v-if="!needsSubscription" :apps="apps" />
         <user-menu :username="avatarUsername" />
       </div>
     </template>
