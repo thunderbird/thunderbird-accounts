@@ -294,12 +294,6 @@ uv run sphinx-build docs build
 
 We now use django-waffle for feature flags. These are documented [here](https://pro-services-docs.thunderbird.net/en/latest/feature-flags).
 
-Before django-waffle was integrated we used are stored in `localStorage` and read at runtime to toggle UI behavior.
-
-| Key | Values | Description |
-| --- | ------ | ----------- |
-| `feature.show-connect-now` | `true` | Shows the "Connect Now" action card on the desktop panel, which launches Thunderbird Desktop via a custom protocol URL. |
-
 ## Running tests and linting checks
 
 Make sure that the containers are already running.
