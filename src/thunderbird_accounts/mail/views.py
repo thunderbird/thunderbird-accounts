@@ -46,6 +46,8 @@ from thunderbird_accounts.mail import utils
 from thunderbird_accounts.subscription.decorators import active_subscription_required
 from thunderbird_accounts.mail.types import stalwart
 
+EMAIL_ADDRESS_IN_USE_ERROR = _('This email address is already in use. Try another one.')
+
 
 def _critical_errors_from_stale_dns_records(stale_dns_records: list[dict]) -> list[DomainVerificationErrors]:
     stale_record_codes = {record.get('code') for record in stale_dns_records}
@@ -499,8 +501,11 @@ def add_email_alias(request: HttpRequest):
     if (not is_catch_all and not email_alias) or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)
 
-    if (not is_catch_all and not is_custom_domain and is_reserved(email_alias)) or is_address_taken(full_email_alias):
+    if not is_catch_all and not is_custom_domain and is_reserved(email_alias):
         return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
+
+    if is_address_taken(full_email_alias):
+        return JsonResponse({'success': False, 'error': EMAIL_ADDRESS_IN_USE_ERROR}, status=403)
 
     if (
         domain not in request.user.domains.values_list('name', flat=True)
@@ -543,13 +548,13 @@ def add_email_alias(request: HttpRequest):
         if not created:
             logging.info('Alias creation found an existing local email record for the requested address')
             return JsonResponse(
-                {'success': False, 'error': _('This email address is not available.')},
+                {'success': False, 'error': EMAIL_ADDRESS_IN_USE_ERROR},
                 status=400,
             )
     except IntegrityError:
         logging.info('Alias creation hit a local duplicate-address race')
         return JsonResponse(
-            {'success': False, 'error': _('This email address is not available.')},
+            {'success': False, 'error': EMAIL_ADDRESS_IN_USE_ERROR},
             status=400,
         )
     except Exception as e:
