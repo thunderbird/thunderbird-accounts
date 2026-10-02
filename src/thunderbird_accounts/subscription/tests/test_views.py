@@ -278,10 +278,10 @@ class ActiveSubscriptionRequiredViewTestCase(TestCase):
         oidc_force_login(self.client, self.user)
 
     def test_paddle_portal_link_requires_active_subscription(self):
-        response = self.client.post(reverse('paddle_portal'), HTTP_ACCEPT='application/json')
+        response = self.client.get(reverse('paddle_portal'), HTTP_ACCEPT='text/html')
 
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json(), {})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('vue_app'))
 
     def test_subscription_plan_info_requires_active_subscription(self):
         response = self.client.post(reverse('subscription_plan_info'), HTTP_ACCEPT='application/json')

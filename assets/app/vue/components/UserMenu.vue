@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, useTemplateRef, computed } from 'vue';
+import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { UserAvatar } from '@thunderbirdops/services-ui';
-import { getSubscriptionPortalLink } from '@/views/DashboardView/api';
 
 defineProps<{
   username: string;
@@ -18,18 +17,6 @@ const accountItem = {
 const supportItem = {
   label: t('components.userMenu.support'),
   to: '/contact',
-};
-
-const manageSubscriptionLabel = computed(() => t('components.userMenu.manageSubscription'));
-
-const openSubscriptionPortal = async () => {
-  showMenu.value = false;
-  try {
-    const { url } = await getSubscriptionPortalLink();
-    window.open(url, '_blank');
-  } catch (error) {
-    console.error('Unable to open the subscription portal', error);
-  }
 };
 
 const externalMenuItems = [
@@ -69,8 +56,10 @@ onBeforeUnmount(() => {
       <!-- Holds internal links (VueJS routes) -->
       <router-link :to="accountItem.to" @click="toggleMenu">{{ accountItem.label }}</router-link>
 
-      <!-- Opens the Paddle customer portal in a new tab, this is an anchor tag since we are already inside of a button -->
-      <a href="#" @click.prevent="openSubscriptionPortal">{{ manageSubscriptionLabel }}</a>
+      <!-- Server redirects to a freshly created Paddle customer portal session, so this is a plain link (no popup blockers) -->
+      <a href="/api/v1/subscription/paddle/portal/" target="_blank" rel="noopener" @click="toggleMenu">
+        {{ t('components.userMenu.manageSubscription') }}
+      </a>
 
       <router-link :to="supportItem.to" @click="toggleMenu">{{ supportItem.label }}</router-link>
 
