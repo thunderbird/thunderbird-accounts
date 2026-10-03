@@ -5,6 +5,7 @@ import sentry_sdk
 
 from django.db import transaction as dj_transaction
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse, HttpRequest, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
@@ -186,15 +187,34 @@ def paddle_transaction_complete(request: HttpRequest, paddle: Client):
 
 
 @login_required
-@require_http_methods(['POST'])
-@active_subscription_required(response_data={}, status=401)
+@require_http_methods(['GET'])
+@active_subscription_required
 @inject_paddle
-def get_paddle_portal_link(request: Request, paddle: Client):
+def get_paddle_portal_link(request: HttpRequest, paddle: Client):
+    """Redirects to a freshly created Paddle customer portal session.
+
+    This is meant to be navigated to directly (e.g. an ``<a target="_blank">``) rather than fetched, which keeps it
+    working with pop-up blockers. Per Paddle docs, portal links are authenticated and must not be cached or reused,
+    so a new session is created on every request.
+
+    Ref: https://developer.paddle.com/build/customers/integrate-customer-portal/#customer-portal-sessions
+    """
     subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
-    customer_session = paddle.customer_portal_sessions.create(
-        subscription.paddle_customer_id, CreateCustomerPortalSession()
-    )
-    return JsonResponse({'url': customer_session.urls.general.overview})
+
+    try:
+        customer_session = paddle.customer_portal_sessions.create(
+            subscription.paddle_customer_id, CreateCustomerPortalSession()
+        )
+    except Exception as ex:
+        logging.error(f'Unable to create Paddle portal session: {ex}')
+        sentry_sdk.capture_exception(ex)
+        messages.error(
+            request,
+            _('There was a problem retrieving a secure login link for our customer portal. Please try again later.'),
+        )
+        return HttpResponseRedirect('/dashboard')
+
+    return HttpResponseRedirect(customer_session.urls.general.overview)
 
 
 @api_view(['POST'])

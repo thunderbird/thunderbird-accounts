@@ -79,6 +79,7 @@ export class DashboardPage {
   readonly appointmentLink: Locator;
   readonly sendLink: Locator;
   readonly manageSubscriptionButton: Locator;
+  readonly userMenuManageSubscriptionLink: Locator;
   readonly userAvatar: Locator;
   readonly supportLink: Locator;
   readonly logoutLink: Locator;
@@ -106,13 +107,14 @@ export class DashboardPage {
     this.thundermailLink = this.page.locator('.service-icon-link').filter({ hasText: 'Mail' });
     this.appointmentLink = this.page.locator('.service-icon-link').filter({ hasText: 'Appointment' });
     this.sendLink = this.page.locator('.service-icon-link').filter({ hasText: 'Send' });
-    this.manageSubscriptionButton = this.page.getByRole('button', { name: 'Manage Subscription' });
+    this.manageSubscriptionButton = this.page.getByRole('link', { name: 'Manage Subscription' });
     this.userAvatar = this.page.getByRole('banner').locator('.avatar');
 
     // Scope menu links to the user menu dropdown
     const userMenuDropdown = this.page.getByRole('banner').locator('.user-menu .dropdown');
+    this.userMenuManageSubscriptionLink = userMenuDropdown.getByRole('link', { name: 'Manage Subscription', exact: true });
     this.supportLink = userMenuDropdown.getByRole('link', { name: 'Support', exact: true });
-    this.logoutLink = userMenuDropdown.getByRole('link', { name: 'Logout', exact: true });
+    this.logoutLink = userMenuDropdown.getByRole('link', { name: 'Sign out', exact: true });
     this.contactHeader = this.page.getByRole('heading', { name: 'Submit a request' });
   }
 
@@ -307,6 +309,7 @@ export class DashboardPage {
     await expect(this.supportLink).toBeVisible();
     await expect(this.logoutLink).toBeVisible();
     await expect(this.logoutLink).toHaveAttribute('href', '/logout/');
+    await expect(this.userMenuManageSubscriptionLink).toHaveAttribute('href', '/api/v1/subscription/paddle/portal/');
 
     await this.supportLink.click();
     await this.verifyContactScreenDisplayed();

@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { PrimaryButton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import CardContainer from '@/components/CardContainer.vue';
 import type { SubscriptionData } from '../types';
-import { getSubscriptionPlanInfo, getSubscriptionPortalLink } from '../api';
+import { getSubscriptionPlanInfo } from '../api';
 import { formatSubscriptionData } from '../formatters';
 
 const { t, n, d } = useI18n();
@@ -35,15 +35,6 @@ const getSubscriptionInfo = async () => {
     isLoading.value = false;
   }
 }
-
-const navigateToSubscription = async () => {
-  try {
-    const { url } = await getSubscriptionPortalLink(); 
-    window.open(url, '_blank');
-  } catch (error) {
-    errorText.value = error instanceof Error ? error.message : t('views.dashboard.yourCurrentSubscription.portalLinkError');
-  }
-};
 
 onMounted(() => {
   getSubscriptionInfo();
@@ -89,7 +80,8 @@ onMounted(() => {
           <strong>{{ subscription.autoRenewal }}</strong>
         </p>
 
-        <primary-button @click="navigateToSubscription">
+        <!-- The server redirects to a freshly created Paddle portal session -->
+        <primary-button href="/api/v1/subscription/paddle/portal/" target="_blank" rel="noopener">
           {{ t('views.dashboard.yourCurrentSubscription.manageSubscriptionButtonLabel') }}
         </primary-button>
 

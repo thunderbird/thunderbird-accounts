@@ -27,9 +27,10 @@
       "paragraph": "Send email, share large files, and manage appointments."
     },
     "userMenu": {
-      "myAccount": "My Account",
+      "myAccount": "Account",
+      "manageSubscription": "Manage subscription",
       "support": "Support",
-      "logout": "Logout"
+      "logout": "Sign out"
     },
     "planCard": {
       "features": {
@@ -81,7 +82,6 @@
         "yourCurrentSubscription": "Current Subscription",
         "loading": "Loading...",
         "loadingError": "There was a problem retrieving your subscription information. Please try again later.",
-        "portalLinkError": "There was a problem retrieving a secure login link for our customer portal. Please try again later.",
         "mailStorage": "of Mail Storage",
         "sendStorage": "of Send Storage",
         "domains": "Custom Domains",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, useTemplateRef, computed } from 'vue';
+import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { UserAvatar } from '@thunderbirdops/services-ui';
 
@@ -9,20 +9,15 @@ defineProps<{
 
 const { t } = useI18n();
 
-const internalMenuItems = computed(() => {
-  const items = [
-    {
-      label: t('components.userMenu.myAccount'),
-      to: '/dashboard',
-    },
-    {
-      label: t('components.userMenu.support'),
-      to: '/contact',
-    },
-  ];
+const accountItem = {
+  label: t('components.userMenu.myAccount'),
+  to: '/dashboard',
+};
 
-  return items;
-});
+const supportItem = {
+  label: t('components.userMenu.support'),
+  to: '/contact',
+};
 
 const externalMenuItems = [
   {
@@ -59,14 +54,14 @@ onBeforeUnmount(() => {
 
     <div v-if="showMenu" class="dropdown">
       <!-- Holds internal links (VueJS routes) -->
-      <router-link
-        v-for="internalItem in internalMenuItems"
-        :key="internalItem.label"
-        :to="internalItem.to"
-        @click="toggleMenu"
-      >
-        {{ internalItem.label }}
-      </router-link>
+      <router-link :to="accountItem.to" @click="toggleMenu">{{ accountItem.label }}</router-link>
+
+      <!-- Server redirects to a freshly created Paddle customer portal session, so this is a plain link (no popup blockers) -->
+      <a href="/api/v1/subscription/paddle/portal/" target="_blank" rel="noopener" @click="toggleMenu">
+        {{ t('components.userMenu.manageSubscription') }}
+      </a>
+
+      <router-link :to="supportItem.to" @click="toggleMenu">{{ supportItem.label }}</router-link>
 
       <!-- Holds external links (primarily Django routes) -->
       <a v-for="externalItem in externalMenuItems" :key="externalItem.label" :href="externalItem.href">
@@ -99,13 +94,13 @@ onBeforeUnmount(() => {
   .dropdown {
     position: absolute;
     right: 0;
-    margin-top: 12.5rem;
+    margin-top: 15.5rem;
     background: var(--colour-ti-base);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 0.5rem;
     box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
     padding: 0.5rem 0;
-    min-width: 150px;
+    min-width: max-content;
     z-index: var(--z-index-header-dropdown);
 
     a {
