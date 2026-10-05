@@ -10,7 +10,7 @@ const { t } = useI18n();
 <template>
   <details-summary :title="t('views.mail.sections.dashboard.viewServerSettings')" default-open>
     <template #icon>
-      <ph-hard-drives size="24" />
+      <ph-hard-drives size="24" aria-hidden="true" />
     </template>
 
     <server-settings-card

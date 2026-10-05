@@ -27,8 +27,8 @@ defineExpose({
 
 <template>
   <dialog ref="modal">
-    <button class="close-button" @click="handleClose">
-      <ph-x size="24" />
+    <button class="close-button" @click="handleClose" :aria-label="$t('components.genericModal.close')">
+      <ph-x size="24" aria-hidden="true" />
     </button>
 
     <div class="modal-scroll-area">

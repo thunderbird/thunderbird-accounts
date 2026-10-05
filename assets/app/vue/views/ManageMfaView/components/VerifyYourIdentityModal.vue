@@ -41,7 +41,7 @@ defineExpose({
 
     <div class="verify-your-identity-options">
       <div class="verify-option">
-        <span class="icon"><ph-key size="24" /></span>
+        <span class="icon"><ph-key size="24" aria-hidden="true" /></span>
         <span class="content">
           <span class="title">
             {{ t('views.manageMfa.modals.verifyYourIdentity.secondFactor') }}

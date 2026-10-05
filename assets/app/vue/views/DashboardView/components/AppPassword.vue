@@ -92,7 +92,7 @@ const onCancelSetPassword = () => {
       <p>
         {{ t('views.mail.sections.emailSettings.changePasswordDescriptionTwo') }}
         <span class="info-tooltip-trigger">
-          <ph-info size="16" />
+          <ph-info size="16" aria-hidden="true" />
           <tool-tip :alt="t('views.mail.sections.emailSettings.changePasswordTooltip')">
             <span>{{ t('views.mail.sections.emailSettings.changePasswordTooltip') }}</span>
           </tool-tip>
@@ -103,7 +103,7 @@ const onCancelSetPassword = () => {
       <p>
         {{ t('views.mail.sections.emailSettings.createPasswordDescriptionTwo') }}
         <span class="info-tooltip-trigger">
-          <ph-info size="16" />
+          <ph-info size="16" aria-hidden="true" />
           <tool-tip :alt="t('views.mail.sections.emailSettings.createPasswordTooltip')">
             <i18n-t keypath="views.mail.sections.emailSettings.createPasswordTooltip" tag="span">
               <template #supportUrl>
@@ -125,7 +125,7 @@ const onCancelSetPassword = () => {
           @click="successMessage = null"
           :aria-label="$t('views.mail.sections.emailSettings.close')"
         >
-          <ph-x size="24" />
+          <ph-x size="24" aria-hidden="true" />
         </button>
       </template>
     </notice-bar>
@@ -160,7 +160,7 @@ const onCancelSetPassword = () => {
               @click="errorMessage = null"
               :aria-label="$t('views.mail.sections.emailSettings.close')"
             >
-              <ph-x size="24" />
+              <ph-x size="24" aria-hidden="true" />
             </button>
           </template>
         </notice-bar>
