@@ -133,3 +133,16 @@ class TestCreateDkim(SimpleTestCase):
 
         self.assertIsNotNone(response_data)
         self.assertEqual(3, requests_mock.call_count)
+
+
+class TestDeleteDomain(SimpleTestCase):
+    def setUp(self):
+        self.mail_client = build_admin_client()
+
+    @patch.object(MailClientAdminJMAP, '_handle_destroy')
+    @patch.object(MailClientAdminJMAP, 'delete_dkim')
+    @patch.object(MailClientAdminJMAP, 'get_domain', return_value=MagicMock(id='a'))
+    def test_deletes_dkim_signatures(self, mock_get_domain, mock_delete_dkim, mock_handle_destroy):
+        self.mail_client.delete_domain('customdomain.com')
+
+        mock_delete_dkim.assert_called_once_with('customdomain.com')
