@@ -375,6 +375,7 @@ class MailClientLegacy(MailClientInterface):
         Returns None if there's nothing to delete, otherwise returns the delete response.
         """
 
+        # Look up all signature keys
         response = requests.get(
             f'{self.api_url}/settings/list',
             params={'prefix': 'signature'},
@@ -388,9 +389,12 @@ class MailClientLegacy(MailClientInterface):
         if not keys:
             return None
 
+        # Specify the keys to delete in the request body
+        data = [{'type': 'delete', 'keys': [f'signature.{key}' for key in keys]}]
+
         response = requests.post(
             f'{self.api_url}/settings',
-            json=[{'type': 'delete', 'keys': [f'signature.{key}' for key in keys]}],
+            json=data,
             headers=self.authorized_headers,
             verify=settings.VERIFY_PRIVATE_LINK_SSL,
         )
