@@ -327,6 +327,8 @@ jobs:
             pulumi.tbz
           name: Release ${{ steps.create-release-tag.outputs.tag_name }}
           tag_name: ${{ steps.create-release-tag.outputs.tag_name }}
+          # Pin the tag to the commit that was built
+          target_commitish: ${{ github.sha }}
 
   e2e-tests-browserstack-stage:
     name: e2e-tests-browserstack-stage
