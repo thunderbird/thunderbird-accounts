@@ -32,18 +32,6 @@ export const setDisplayName = async (displayName: string): Promise<SettingsApiRe
   return await response.value.json();
 };
 
-export const getSubscriptionPortalLink = async () => {
-  const { response } = await useAuthFetch('/api/v1/subscription/paddle/portal/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': window._page?.csrfToken,
-    },
-  });
-
-  return await response.value.json();
-}
-
 export const getSubscriptionPlanInfo = async () => {
   const { response } = await useAuthFetch('/api/v1/subscription/plan/info/', {
     method: 'POST',
