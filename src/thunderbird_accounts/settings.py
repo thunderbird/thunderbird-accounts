@@ -742,3 +742,6 @@ WAFFLE_SWITCH_INCREASED_TRAFFIC_BANNER = 'increased-traffic-banner'
 # During the is_address_taken function lastly check Stalwart for the address that is being requested,
 # and error if that address exists in Stalwart.
 WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART = 'is-address-taken-lookup-stalwart'
+
+# Show the user's Send storage usage on the dashboard, and allow the endpoint that backs it to be called.
+WAFFLE_FLAG_SEND_STORAGE = 'send-storage'

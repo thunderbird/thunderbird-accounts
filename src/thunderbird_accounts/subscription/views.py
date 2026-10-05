@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import sentry_sdk
+import waffle
 
 from django.db import transaction as dj_transaction
 from django.conf import settings
@@ -339,6 +340,9 @@ def get_subscription_plan_info(request: Request, paddle: Client):
 @active_subscription_required(error_message='No active subscription found', status=404)
 def get_send_storage_info(request: Request):
     """Returns the user's Send storage usage, retrieved from Send's internal API."""
+
+    if not waffle.flag_is_active(request, settings.WAFFLE_FLAG_SEND_STORAGE):
+        return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
 
     if not is_send_api_configured():
         return JsonResponse({'success': False, 'error': 'Send storage information is unavailable'}, status=503)

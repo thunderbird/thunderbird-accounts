@@ -3,8 +3,12 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MailStorageProgress from '@/views/DashboardView/components/MailStorageProgress.vue';
 import SendStorageProgress from '@/views/DashboardView/components/SendStorageProgress.vue';
+import { WAFFLE_FLAG } from '@/types';
+import { isWaffleFlagActive } from '@/utils';
 
 const { t } = useI18n();
+
+const isSendStorageActive = isWaffleFlagActive(WAFFLE_FLAG.SEND_STORAGE);
 
 // From Stalwart, primary email is always the first email address in the list
 const primaryEmail = computed(() => window._page?.emailAddresses?.[0] || '');
@@ -21,7 +25,7 @@ const userDisplayName = computed(() => window._page?.userDisplayName);
 
     <div class="plan-info-container">
       <mail-storage-progress />
-      <send-storage-progress />
+      <send-storage-progress v-if="isSendStorageActive" />
     </div>
   </div>
 </template>

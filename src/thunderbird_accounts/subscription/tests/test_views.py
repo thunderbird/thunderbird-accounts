@@ -6,6 +6,7 @@ from unittest.mock import patch, MagicMock
 from django.conf import settings
 from django.test import TestCase, Client as RequestClient, override_settings
 from django.contrib.messages import get_messages
+from waffle.testutils import override_flag
 from django.urls import reverse
 
 from thunderbird_accounts.authentication.models import User
@@ -362,6 +363,7 @@ class ActiveSubscriptionRequiredViewTestCase(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(logs.records[-1].levelname, 'WARNING')
 
+@override_flag(settings.WAFFLE_FLAG_SEND_STORAGE, active=True)
 @override_settings(TB_PRO_SEND_API_URL='https://send-backend.example.org/', TB_PRO_SEND_API_KEY='test-key')
 class SendStorageInfoViewTestCase(TestCase):
     def setUp(self):
@@ -393,6 +395,14 @@ class SendStorageInfoViewTestCase(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {'success': False, 'error': 'No active subscription found'})
+
+    @override_flag(settings.WAFFLE_FLAG_SEND_STORAGE, active=False)
+    def test_returns_404_when_flag_is_off(self):
+        with patch('thunderbird_accounts.subscription.send_client.requests.get') as mock_get:
+            response = self.client.post(self.url, HTTP_ACCEPT='application/json')
+
+        self.assertEqual(response.status_code, 404)
+        mock_get.assert_not_called()
 
     def test_returns_send_storage_usage(self):
         with patch(
