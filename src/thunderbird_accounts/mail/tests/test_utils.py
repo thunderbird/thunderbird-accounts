@@ -163,6 +163,14 @@ class IsAddressTakenTestCase(TestCase):
         self.assertTrue(is_address_taken(thundermail_address))
 
     @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, False)
+    def test_fail_due_to_user_is_case_insensitive(self):
+        """Keycloak treats usernames case-insensitively, so our pre-check must too."""
+        local_part = str(uuid.uuid4())
+        User.objects.create(username=self._form_email(local_part))
+
+        self.assertTrue(is_address_taken(self._form_email(local_part.upper())))
+
+    @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, False)
     def test_fail_due_to_email_alias(self):
         """Ensure that if an email alias exists of that address, that it will be 'taken'."""
         thundermail_address = self._form_email(str(uuid.uuid4()))
