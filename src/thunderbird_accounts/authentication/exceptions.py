@@ -94,6 +94,10 @@ class ImportUserError(KeycloakError):
         error_text = ' '.join(filter(None, [self.error_code, self.error_desc, self.error])).lower()
         return POSTGRES_DUPLICATE_KEY_MARKER in error_text
 
+    @property
+    def is_password_policy_error(self):
+        return self.status_code == 400 and (self.error_code or '').startswith('invalidPassword')
+
     def __str__(self):
         return f'ImportUserError: {self.error} for {self.username}'
 

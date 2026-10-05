@@ -1,10 +1,10 @@
 from unittest.mock import Mock, call, patch
 
 import requests
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 
 from thunderbird_accounts.authentication.clients import KeycloakAccountClient, KeycloakClient, RequestMethods
-from thunderbird_accounts.authentication.exceptions import RoleMappingError
+from thunderbird_accounts.authentication.exceptions import ImportUserError, RoleMappingError
 from thunderbird_accounts.core.tests.utils import build_keycloak_success_response
 
 OIDC_ID = 'd0e5c511-c78e-48be-a9ff-b7d3d8562ce4'
@@ -355,3 +355,22 @@ class KeycloakAccountClientTestCase(TestCase):
         self.assertEqual(user_token, self.USER_TOKEN)
         self.assertEqual(method, RequestMethods.DELETE)
         self.assertEqual(result, {'success': True})
+
+
+@patch.object(KeycloakClient, 'request')
+@override_settings(ALLOWED_EMAIL_DOMAINS=['example.org'])
+class KeycloakClientImportUserTestCase(SimpleTestCase):
+    def test_password_policy_rejection_is_parsed(self, mock_request):
+        response = requests.Response()
+        response.status_code = 400
+        response._content = (
+            b'{"error":"invalidPasswordMinLengthMessage","error_description":"Invalid password: minimum length 12."}'
+        )
+        mock_request.side_effect = requests.HTTPError(response=response)
+
+        with self.assertRaises(ImportUserError) as ctx:
+            KeycloakClient().import_user('user@example.org', 'backup@example.com', password='short', timezone='UTC')
+
+        self.assertTrue(ctx.exception.is_password_policy_error)
+        self.assertEqual(ctx.exception.error_code, 'invalidPasswordMinLengthMessage')
+        self.assertEqual(ctx.exception.error_desc, 'Invalid password: minimum length 12.')
