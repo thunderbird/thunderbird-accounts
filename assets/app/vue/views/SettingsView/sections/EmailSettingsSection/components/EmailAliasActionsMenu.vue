@@ -45,7 +45,7 @@ const handleDelete = async () => {
       emit('delete-alias-error', response.error);
     }
   } catch (error) {
-    emit('delete-alias-error', error);
+    emit('delete-alias-error', error instanceof Error ? error.message : String(error));
   } finally {
     isDeleting.value = false;
     showMenu.value = false;
