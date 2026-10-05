@@ -19,6 +19,7 @@ const emit = defineEmits<{
 }>();
 
 const showMenu = ref(false);
+const isDeleting = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 
 const { t } = useI18n();
@@ -28,17 +29,25 @@ const toggleMenu = () => {
 };
 
 const handleDelete = async () => {
+  // Guard against double-clicking delete.
+  if (isDeleting.value) {
+    return;
+  }
+
+  isDeleting.value = true;
+
   try {
     const response = await removeEmailAlias(props.alias.email);
-  
+
     if (response.success) {
-      emit('delete-alias-success', props.alias); 
+      emit('delete-alias-success', props.alias);
     } else {
       emit('delete-alias-error', response.error);
     }
   } catch (error) {
     emit('delete-alias-error', error);
   } finally {
+    isDeleting.value = false;
     showMenu.value = false;
   }
 };
@@ -65,7 +74,7 @@ onBeforeUnmount(() => {
     </button>
 
     <div v-if="showMenu" class="dropdown">
-      <button @click="handleDelete" :disabled="alias.isSubscription">
+      <button @click="handleDelete" :disabled="alias.isSubscription || isDeleting">
         {{ t('views.mail.sections.emailSettings.delete') }}
       </button>
     </div>

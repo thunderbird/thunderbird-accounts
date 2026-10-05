@@ -603,7 +603,8 @@ def remove_email_alias(request: HttpRequest):
     try:
         email_obj = Email.objects.get(address__iexact=email_alias, type=Email.EmailType.ALIAS, account=account)
     except Email.DoesNotExist:
-        logging.error(f'Email alias not found for user {request.user.uuid} and email {email_alias}')
+        # Finding the alias is already gone is success, so logging at info level as merely notable.
+        logging.info(f'Email alias not found for user {request.user.uuid} and email {email_alias}')
         return JsonResponse(
             {'success': False, 'error': _('Email alias not found.')},
             status=404,
