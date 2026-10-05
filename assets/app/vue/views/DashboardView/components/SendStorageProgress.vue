@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
+import { LoadingSkeleton, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { formatBytes, formatStorageProgress } from '@/views/DashboardView/formatters';
 
 // Types
@@ -14,6 +14,7 @@ const { t } = useI18n();
 
 const errorMessage = ref<string>(null);
 const sendStorage = ref<SendStorageData | null>(null);
+const isLoading = computed(() => !sendStorage.value && !errorMessage.value);
 
 const storageProgress = computed(() => {
   if (!sendStorage.value) return '0%';
@@ -47,15 +48,17 @@ onMounted(async () => {
       {{ errorMessage }}
     </notice-bar>
 
-    <template v-if="sendStorage">
+    <template v-if="isLoading || sendStorage">
       <div class="send-storage-info">
         <p class="send-storage-name">{{ t('views.mail.sections.dashboard.welcomeHeader.sendStorage') }}</p>
-        <p class="send-storage-used">
+        <p v-if="sendStorage" class="send-storage-used">
           {{ t('views.mail.sections.dashboard.welcomeHeader.storageOf', { used: usedQuotaFormatted, total: storageQuotaFormatted }) }}
         </p>
       </div>
 
-      <div class="send-storage-progress">
+      <loading-skeleton v-if="isLoading" width="100%" height="12px" border-radius="64px" />
+
+      <div v-else class="send-storage-progress">
         <div class="send-storage-progress-fill" :style="{ width: storageProgress }" />
       </div>
     </template>
