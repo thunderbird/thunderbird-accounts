@@ -363,6 +363,7 @@ class ActiveSubscriptionRequiredViewTestCase(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(logs.records[-1].levelname, 'WARNING')
 
+
 @override_flag(settings.WAFFLE_FLAG_SEND_STORAGE, active=True)
 @override_settings(TB_PRO_SEND_API_URL='https://send-backend.example.org/', TB_PRO_SEND_API_KEY='test-key')
 class SendStorageInfoViewTestCase(TestCase):
