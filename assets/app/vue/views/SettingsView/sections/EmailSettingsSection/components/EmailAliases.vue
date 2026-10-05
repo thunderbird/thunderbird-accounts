@@ -76,7 +76,7 @@ const onAddAlias = async (emailAlias: string, domain: string) => {
       errorMessage.value = response.error;
     }
   } catch (error) {
-    errorMessage.value = error as string;
+    errorMessage.value = error instanceof Error ? error.message : String(error);
   } finally {
     isAddingEmailAlias.value = false;
   }
