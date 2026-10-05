@@ -471,17 +471,28 @@ class TestMailClientDeleteDkim(TestCase):
         self.mail_client = MailClient()
         self.domain = 'example.com'
 
+    def _signer_keys(self, domain):
+        return {
+            f'{algorithm}-{domain}.{field}': value
+            for algorithm in ('rsa', 'ed25519')
+            for field, value in (('algorithm', f'{algorithm}-sha256'), ('domain', domain), ('selector', 'tm1'))
+        }
+
+    def _settings_response(self, *domains, status_code=200):
+        items = {}
+        for domain in domains:
+            items.update(self._signer_keys(domain))
+
+        response = requests.Response()
+        response.status_code = status_code
+        response._content = bytes(json.dumps({'data': {'total': len(items), 'items': items}}), 'utf-8')
+        return response
+
     @patch('requests.get')
     @patch('requests.post')
     def test_success(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
-        """The GET and POST should not raise any errors and the function should return not None."""
-        success_get_response = requests.Response()
-        success_get_response.status_code = 200
-        success_get_response._content = bytes(
-            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}'}]}}), 'utf-8'
-        )
-
-        requests_get_mock.return_value = success_get_response
+        """Only the given domain's signers are deleted, not those of domains that contain or extend it."""
+        requests_get_mock.return_value = self._settings_response(self.domain, f'{self.domain}.au', f'my{self.domain}')
 
         success_post_response = requests.Response()
         success_post_response.status_code = 200
@@ -492,44 +503,47 @@ class TestMailClientDeleteDkim(TestCase):
         self.assertIsNotNone(response_data)
 
         requests_get_mock.assert_called_once()
-        call_args = requests_get_mock.call_args
-        self.assertEqual(self.domain, call_args[1].get('params', {}).get('filter'))
+        self.assertEqual({'prefix': 'signature'}, requests_get_mock.call_args[1].get('params'))
 
         requests_post_mock.assert_called_once()
+        [change] = requests_post_mock.call_args[1]['json']
+        self.assertEqual('delete', change['type'])
+        self.assertEqual(sorted(f'signature.{key}' for key in self._signer_keys(self.domain)), sorted(change['keys']))
 
     @patch('requests.get')
     @patch('requests.post')
-    def test_success_not_found(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
-        """The GET should not raise any errors, the POST should not be called, and the function should return None"""
-        success_get_response = requests.Response()
-        success_get_response.status_code = 200
-        success_get_response._content = bytes(json.dumps({'data': {'total': 0, 'items': []}}), 'utf-8')
-
-        requests_get_mock.return_value = success_get_response
+    def test_success_longer_domain(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
+        """Deleting example.com.au leaves example.com's signers alone (#1270)."""
+        longer_domain = f'{self.domain}.au'
+        requests_get_mock.return_value = self._settings_response(self.domain, longer_domain)
 
         success_post_response = requests.Response()
         success_post_response.status_code = 200
 
         requests_post_mock.return_value = success_post_response
 
+        self.mail_client.delete_dkim(longer_domain)
+
+        [change] = requests_post_mock.call_args[1]['json']
+        self.assertEqual(sorted(f'signature.{key}' for key in self._signer_keys(longer_domain)), sorted(change['keys']))
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_success_not_found(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
+        """The GET should not raise any errors, the POST should not be called, and the function should return None"""
+        requests_get_mock.return_value = self._settings_response(f'{self.domain}.au', f'my{self.domain}')
+
         response_data = self.mail_client.delete_dkim(self.domain)
         self.assertIsNone(response_data)
 
         requests_get_mock.assert_called_once()
-        call_args = requests_get_mock.call_args
-        self.assertEqual(self.domain, call_args[1].get('params', {}).get('filter'))
-
         requests_post_mock.assert_not_called()
 
     @patch('requests.get')
     @patch('requests.post')
     def test_internal_server_error_get(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
         """GET raises the 500 error and we should catch it"""
-        success_get_response = requests.Response()
-        success_get_response.status_code = 500
-        success_get_response._content = bytes(json.dumps({'data': {'total': 0, 'items': []}}), 'utf-8')
-
-        requests_get_mock.return_value = success_get_response
+        requests_get_mock.return_value = self._settings_response(status_code=500)
 
         with self.assertRaises(requests.RequestException):
             self.mail_client.delete_dkim(self.domain)
@@ -538,13 +552,7 @@ class TestMailClientDeleteDkim(TestCase):
     @patch('requests.post')
     def test_internal_server_error(self, requests_post_mock: MagicMock, requests_get_mock: MagicMock):
         """GET calls successfully but the POST raises a 500 error and we should catch it"""
-        success_get_response = requests.Response()
-        success_get_response.status_code = 200
-        success_get_response._content = bytes(
-            json.dumps({'data': {'total': 1, 'items': [{'_id': f'rsa-{self.domain}'}]}}), 'utf-8'
-        )
-
-        requests_get_mock.return_value = success_get_response
+        requests_get_mock.return_value = self._settings_response(self.domain)
 
         success_post_response = requests.Response()
         success_post_response.status_code = 500

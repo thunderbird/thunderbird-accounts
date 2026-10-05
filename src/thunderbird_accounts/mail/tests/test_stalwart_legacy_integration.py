@@ -1,6 +1,6 @@
 import os
 import uuid
-from unittest import expectedFailure, skipUnless
+from unittest import skipUnless
 
 import requests
 from django.test import SimpleTestCase
@@ -80,7 +80,6 @@ class DeleteDkimStalwartLegacyTestCase(SimpleTestCase):
             ]
         )
 
-    @expectedFailure
     def test_keeps_signers_of_shorter_domain(self):
         kept = f'thundermail{self.token}.com'
         deleted = f'thundermail{self.token}.com.au'
@@ -90,7 +89,6 @@ class DeleteDkimStalwartLegacyTestCase(SimpleTestCase):
 
         self._assert_signers_left([kept])
 
-    @expectedFailure
     def test_keeps_signers_of_containing_domain(self):
         kept = f'thunder{self.token}mail.com'
         deleted = f'{self.token}mail.com'
@@ -100,7 +98,6 @@ class DeleteDkimStalwartLegacyTestCase(SimpleTestCase):
 
         self._assert_signers_left([kept])
 
-    @expectedFailure
     def test_keeps_signers_of_other_customers(self):
         kept = [f'example{self.token}.com.au', f'myexample{self.token}.com']
         deleted = f'example{self.token}.com'
