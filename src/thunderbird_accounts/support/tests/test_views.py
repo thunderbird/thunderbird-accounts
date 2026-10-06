@@ -541,7 +541,7 @@ class ZendeskContactSubmitUserTestCase(TestCase):
             {
                 'name': 'Known User',
                 'email': 'known@example.org',
-                'external_id': str(self.user.uuid),
+                'external_id': self.user.oidc_id,
                 'user_fields': {'tm_plan_status': 'tm_plan_paid'},
             }
         )
