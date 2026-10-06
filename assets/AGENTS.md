@@ -34,3 +34,8 @@ the second request from being sent.
 ## Accessability
 
 Accessbility best practices must be followed, and any compromises surfaced to the user.
+
+## Shared functionality
+
+A sibling project `services-ui` is used to house shared Vue components. It is likely checked
+out in a sibling repo.
