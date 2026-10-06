@@ -10,3 +10,8 @@ but should log at the info level and return non-found to the frontend.
 
 All plans and implementations must be developed and reviewed with security best practices in
 mind, guarding against OWASP Top Ten other common vulnerabilities.
+
+## Keep views clean
+
+`views.py` files should contain only route functions. Another internal or supporting functions
+should be moved to another layer.
