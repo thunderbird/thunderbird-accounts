@@ -99,3 +99,19 @@ Package imports (e.g. `@journeyapps/wa-sqlite/src/examples/IDBBatchAtomicVFS`)
 follow the same rule — drop the runtime extension when the resolver can
 infer it.
 
+## Patterns
+
+### Feature flags
+
+ * Major features and UI changes should all have a waffle flag enables both frontend and backend functionality for the feature.
+
+### Tunables
+
+- Tunable values go in settings and env, not inline constants.
+
+## Avoid "utils" namespace.
+
+ - Using a "utils" is a namespace of last resort because it's undescriptive. Bias towards creating
+   new files with more descriptive names than dumping more in `utils`
+ 
+
