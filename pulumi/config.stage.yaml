@@ -60,6 +60,8 @@
 .support_contact: &VAR_SUPPORT_CONTACT {name: "SUPPORT_CONTACT", value: "dummy@example.org"}
 .tb_pro_appointment_url: &VAR_TB_PRO_APPOINTMENT_URL {name: "TB_PRO_APPOINTMENT_URL", value: "https://appointment-stage.tb.pro/"}
 .tb_pro_send_url: &VAR_TB_PRO_SEND_URL {name: "TB_PRO_SEND_URL", value: "https://send-stage.tb.pro/"}
+.tb_pro_send_api_url: &VAR_TB_PRO_SEND_API_URL {name: "TB_PRO_SEND_API_URL", value: "https://send-backend-stage.tb.pro"}
+.tb_pro_send_api_timeout: &VAR_TB_PRO_SEND_API_TIMEOUT {name: "TB_PRO_SEND_API_TIMEOUT", value: "5"}
 .tb_pro_wait_list_url: &VAR_TB_PRO_WAIT_LIST_URL {name: "TB_PRO_WAIT_LIST_URL", value: "https://tb.pro/waitlist/"}
 .use_allow_list: &VAR_USE_ALLOW_LIST {name: "USE_ALLOW_LIST", value: "True"}
 .verify_private_link_ssl: &VAR_VERIFY_PRIVATE_LINK_SSL {name: "VERIFY_PRIVATE_LINK_SSL", value: "False"}
@@ -426,6 +428,8 @@ resources:
                 - *VAR_SUPPORT_CONTACT
                 - *VAR_TB_PRO_APPOINTMENT_URL
                 - *VAR_TB_PRO_SEND_URL
+                - *VAR_TB_PRO_SEND_API_URL
+                - *VAR_TB_PRO_SEND_API_TIMEOUT
                 - *VAR_TB_PRO_WAIT_LIST_URL
                 - *VAR_USE_ALLOW_LIST
                 - *VAR_VERIFY_PRIVATE_LINK_SSL
@@ -516,6 +520,8 @@ resources:
                 - *VAR_SUPPORT_CONTACT
                 - *VAR_TB_PRO_APPOINTMENT_URL
                 - *VAR_TB_PRO_SEND_URL
+                - *VAR_TB_PRO_SEND_API_URL
+                - *VAR_TB_PRO_SEND_API_TIMEOUT
                 - *VAR_TB_PRO_WAIT_LIST_URL
                 - *VAR_USE_ALLOW_LIST
                 - *VAR_VERIFY_PRIVATE_LINK_SSL
@@ -955,6 +961,10 @@ resources:
                 value: 'https://appointment-stage.tb.pro/'
               - name: TB_PRO_SEND_URL
                 value: 'https://send-stage.tb.pro/'
+              - name: TB_PRO_SEND_API_URL
+                value: 'https://send-backend-stage.tb.pro'
+              - name: TB_PRO_SEND_API_TIMEOUT
+                value: '5'
               - name: TB_PRO_WAIT_LIST_URL
                 value: 'https://tb.pro/waitlist/'
               - name: WEBMAIL_URL
