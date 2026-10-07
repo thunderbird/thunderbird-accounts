@@ -1,13 +1,17 @@
 import json
 from unittest.mock import Mock, patch
 
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client as RequestClient, TestCase, override_settings
 from django.urls import reverse
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.subscription.models import Subscription
 from thunderbird_accounts.support.views import get_plan_status_for_zendesk
+
+MANAGED_DOMAIN = 'thundermail.example'
 
 
 class ZendeskContactFieldsTestCase(TestCase):
@@ -116,8 +120,10 @@ class ZendeskContactFieldsTestCase(TestCase):
         self.assertEqual(response.status_code, 405)
 
 
+@override_settings(ALLOWED_EMAIL_DOMAINS=[MANAGED_DOMAIN], CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS=False)
 class ZendeskContactSubmitTestCase(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = RequestClient()
 
     @patch('thunderbird_accounts.support.views.ZendeskClient')
@@ -484,11 +490,14 @@ class ZendeskPlanStatusTestCase(TestCase):
     ZENDESK_FORM_BROWSER_FIELD_ID='1001',
     ZENDESK_FORM_OS_FIELD_ID='1002',
     ZENDESK_USER_PLAN_STATUS_FIELD_KEY='tm_plan_status',
+    ALLOWED_EMAIL_DOMAINS=[MANAGED_DOMAIN],
+    CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS=False,
 )
 class ZendeskContactSubmitUserTestCase(TestCase):
     """Tests for the Zendesk user update (external id + plan status) done before ticket creation."""
 
     def setUp(self):
+        cache.clear()
         self.client = RequestClient()
         self.user = User.objects.create(username='known@example.org', oidc_id='known-1')
         self.url = reverse('contact_submit')
@@ -517,6 +526,10 @@ class ZendeskContactSubmitUserTestCase(TestCase):
         update_resp = Mock()
         update_resp.ok = True
         instance.update_ticket.return_value = update_resp
+
+        tags_resp = Mock()
+        tags_resp.ok = True
+        instance.add_ticket_tags.return_value = tags_resp
         return instance
 
     def submit(self):
@@ -551,8 +564,9 @@ class ZendeskContactSubmitUserTestCase(TestCase):
         self.assertLess(call_names.index('create_or_update_user'), call_names.index('create_ticket'))
 
     @patch('thunderbird_accounts.support.views.ZendeskClient')
-    def test_logged_out_user_is_not_updated(self, mock_client_cls):
+    def test_logged_out_external_address_does_not_update_user(self, mock_client_cls):
         instance = self.mock_client(mock_client_cls)
+        self.payload['email'] = 'visitor@external.example'
 
         response = self.submit()
 
@@ -572,3 +586,184 @@ class ZendeskContactSubmitUserTestCase(TestCase):
         self.assertEqual(json.loads(response.content.decode()), {'success': True})
         instance.create_ticket.assert_called_once()
         mock_sentry.capture_message.assert_called_once()
+
+
+@override_settings(
+    ZENDESK_FORM_ID='42',
+    ZENDESK_FORM_BROWSER_FIELD_ID='1001',
+    ZENDESK_FORM_OS_FIELD_ID='1002',
+    ZENDESK_USER_PLAN_STATUS_FIELD_KEY='tm_plan_status',
+    ZENDESK_TAG_IDENTITY_VERIFIED='thundermail_accounts_identity_verified',
+    ZENDESK_TAG_IDENTITY_UNVERIFIED='thundermail_accounts_identity_unverified',
+    ALLOWED_EMAIL_DOMAINS=[MANAGED_DOMAIN],
+    CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS=False,
+)
+class ContactSubmitIdentityTestCase(TestCase):
+    """Managed-domain requester addresses must belong to the signed-in user, and every ticket is tagged
+    with whether the requester address was verified."""
+
+    def setUp(self):
+        cache.clear()
+        self.client = RequestClient()
+        self.url = reverse('contact_submit')
+
+        self.owner = User.objects.create(
+            username=f'owner@{MANAGED_DOMAIN}',
+            email=f'owner@{MANAGED_DOMAIN}',
+            recovery_email='owner-recovery@external.example',
+            oidc_id='owner-1',
+        )
+        owner_account = Account.objects.create(name=self.owner.username, user=self.owner)
+        Email.objects.create(address=self.owner.username, type=Email.EmailType.PRIMARY, account=owner_account)
+        self.owner_alias = f'owner-alias@{MANAGED_DOMAIN}'
+        Email.objects.create(address=self.owner_alias, type=Email.EmailType.ALIAS, account=owner_account)
+
+        self.other = User.objects.create(
+            username=f'other@{MANAGED_DOMAIN}',
+            email=f'other@{MANAGED_DOMAIN}',
+            oidc_id='other-1',
+        )
+        other_account = Account.objects.create(name=self.other.username, user=self.other)
+        Email.objects.create(address=self.other.username, type=Email.EmailType.PRIMARY, account=other_account)
+
+    def mock_client(self, mock_client_cls, tags_ok=True):
+        instance = Mock()
+        mock_client_cls.return_value = instance
+
+        instance.upload_file.return_value = {'success': True, 'upload_token': 'tok123', 'filename': 'test.txt'}
+
+        user_resp = Mock()
+        user_resp.ok = True
+        instance.create_or_update_user.return_value = user_resp
+
+        create_resp = Mock()
+        create_resp.ok = True
+        create_resp.json.return_value = {'request': {'id': 555}}
+        instance.create_ticket.return_value = create_resp
+
+        update_resp = Mock()
+        update_resp.ok = True
+        instance.update_ticket.return_value = update_resp
+
+        tags_resp = Mock()
+        tags_resp.ok = tags_ok
+        tags_resp.status_code = 200 if tags_ok else 500
+        instance.add_ticket_tags.return_value = tags_resp
+        return instance
+
+    def submit(self, email, attachment=None):
+        payload = {
+            'email': email,
+            'name': 'Someone',
+            'fields': [
+                {'id': 11, 'title': 'Subject', 'type': 'subject', 'value': 'Hello', 'required': True},
+                {'id': 12, 'title': 'Description', 'type': 'description', 'value': 'Body', 'required': True},
+            ],
+        }
+        data = {'data': json.dumps(payload)}
+        if attachment is not None:
+            data['attachments'] = attachment
+        return self.client.post(
+            self.url,
+            data=data,
+            HTTP_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Firefox/120.0',
+        )
+
+    def assert_no_zendesk_calls(self, instance):
+        instance.upload_file.assert_not_called()
+        instance.create_or_update_user.assert_not_called()
+        instance.create_ticket.assert_not_called()
+        instance.update_ticket.assert_not_called()
+        instance.add_ticket_tags.assert_not_called()
+
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_logged_out_managed_address_is_rejected_before_any_zendesk_call(self, mock_client_cls):
+        instance = self.mock_client(mock_client_cls)
+        uploaded = SimpleUploadedFile('test.txt', b'hi', content_type='text/plain')
+
+        response = self.submit(self.other.username, attachment=uploaded)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('please sign in', response.json()['detail'])
+        self.assert_no_zendesk_calls(instance)
+
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_logged_in_other_users_managed_address_is_rejected(self, mock_client_cls):
+        instance = self.mock_client(mock_client_cls)
+        self.client.force_login(self.owner)
+
+        response = self.submit(self.other.username)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("isn't on your account", response.json()['detail'])
+        self.assert_no_zendesk_calls(instance)
+
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_logged_in_own_address_is_accepted_as_typed_and_tagged_verified(self, mock_client_cls):
+        instance = self.mock_client(mock_client_cls)
+        self.client.force_login(self.owner)
+        as_typed = f'  Owner@{MANAGED_DOMAIN.title()} '
+
+        response = self.submit(as_typed)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'success': True})
+        # The ownership check is case-insensitive, but Zendesk receives the address as typed (stripped)
+        self.assertEqual(instance.create_ticket.call_args.args[0]['email'], as_typed.strip())
+        instance.add_ticket_tags.assert_called_once_with(555, ['thundermail_accounts_identity_verified'])
+
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_external_address_is_accepted_and_tagged_unverified(self, mock_client_cls):
+        instance = self.mock_client(mock_client_cls)
+        self.client.force_login(self.owner)
+
+        response = self.submit('someone@external.example')
+
+        self.assertEqual(response.status_code, 200)
+        instance.create_ticket.assert_called_once()
+        instance.add_ticket_tags.assert_called_once_with(555, ['thundermail_accounts_identity_unverified'])
+
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_tag_failure_does_not_block_success(self, mock_client_cls):
+        self.mock_client(mock_client_cls, tags_ok=False)
+        self.client.force_login(self.owner)
+
+        with self.assertLogs('thunderbird_accounts.support.views', level='ERROR') as logs:
+            response = self.submit(self.owner.username)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'success': True})
+        self.assertTrue(any('[contact_submit]' in line and '555' in line for line in logs.output))
+
+    @override_settings(CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS=True, USE_ALLOW_LIST=True)
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_allow_list_is_enforced_server_side(self, mock_client_cls):
+        instance = self.mock_client(mock_client_cls)
+
+        response = self.submit('stranger@external.example')
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("isn't linked to a Thundermail account", response.json()['detail'])
+        self.assert_no_zendesk_calls(instance)
+
+    @override_settings(CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS=True, USE_ALLOW_LIST=True)
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_own_alias_bypasses_allow_list(self, mock_client_cls):
+        instance = self.mock_client(mock_client_cls)
+        self.client.force_login(self.owner)
+
+        response = self.submit(self.owner_alias)
+
+        self.assertEqual(response.status_code, 200)
+        instance.create_ticket.assert_called_once()
+
+    @patch('thunderbird_accounts.support.views.ZendeskClient')
+    def test_submissions_are_throttled(self, mock_client_cls):
+        self.mock_client(mock_client_cls)
+
+        for _ in range(5):
+            self.assertEqual(self.submit('someone@external.example').status_code, 200)
+
+        response = self.submit('someone@external.example')
+
+        self.assertEqual(response.status_code, 429)
