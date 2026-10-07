@@ -375,24 +375,23 @@ class MailClientLegacy(MailClientInterface):
         Returns None if there's nothing to delete, otherwise returns the delete response.
         """
 
-        # Look up dkim signatures related to this domain
-        data = {'suffix': 'algorithm', 'prefix': 'signature', 'filter': domain, 'limit': 50, 'page': 1}
+        # Look up all signature keys
         response = requests.get(
-            f'{self.api_url}/settings/group',
-            params=data,
+            f'{self.api_url}/settings/list',
+            params={'prefix': 'signature'},
             headers=self.authorized_headers,
             verify=settings.VERIFY_PRIVATE_LINK_SSL,
         )
         response.raise_for_status()
 
-        response_data = response.json().get('data')
-        if not response_data or not response_data.get('total'):
+        signature_settings = (response.json().get('data') or {}).get('items') or {}
+        keys = self._signature_keys_for_domain(signature_settings, domain)
+        if not keys:
             return None
 
-        # Dict comprehension to remove any duplicate _ids (there shouldn't be any, but I have trust issues.)
-        dkim_ids = {r.get('_id'): True for r in response_data.get('items', [])}
+        # Specify the keys to delete in the request body
+        data = [{'type': 'delete', 'keys': [f'signature.{key}' for key in keys]}]
 
-        data = [{'type': 'clear', 'prefix': f'signature.{d}.'} for d in dkim_ids.keys()]
         response = requests.post(
             f'{self.api_url}/settings',
             json=data,
@@ -402,6 +401,27 @@ class MailClientLegacy(MailClientInterface):
         response.raise_for_status()
 
         return response
+
+    @staticmethod
+    def _signature_keys_for_domain(signature_settings: dict[str, str], domain: str) -> list[str]:
+        signer_ids = [key.removesuffix('.algorithm') for key in signature_settings if key.endswith('.algorithm')]
+        domain_signer_ids = [
+            signer_id
+            for signer_id in signer_ids
+            if signature_settings.get(f'{signer_id}.domain', '').lower() == domain.lower()
+        ]
+
+        keys = []
+        for signer_id in domain_signer_ids:
+            # Signer IDs can share a prefix, e.g. rsa-example.com and rsa-example.com.au
+            longer_ids = [other_id for other_id in signer_ids if other_id.startswith(f'{signer_id}.')]
+            keys += [
+                key
+                for key in signature_settings
+                if key.startswith(f'{signer_id}.')
+                and not any(key.startswith(f'{other_id}.') for other_id in longer_ids)
+            ]
+        return keys
 
     def create_account(
         self,
