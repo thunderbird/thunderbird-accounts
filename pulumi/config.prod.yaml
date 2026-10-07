@@ -330,6 +330,7 @@ resources:
         - stalwart-api-auth-method
         - stalwart-api-auth-key
         - hosted-dkim-cloudflare-api-token
+        - send-api-key
         - stalwart-webhook-secret
         - keycloak-admin-client-id
         - keycloak-admin-client-secret
