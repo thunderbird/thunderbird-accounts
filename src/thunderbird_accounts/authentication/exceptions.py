@@ -98,6 +98,11 @@ class ImportUserError(KeycloakError):
     def is_password_policy_error(self):
         return self.status_code == 400 and (self.error_code or '').startswith('invalidPassword')
 
+    @property
+    def is_validation_error(self):
+        # Keycloak user profile validation failures (e.g. error-username-invalid-character) all share the error- prefix.
+        return self.status_code == 400 and (self.error_desc or '').startswith('error-')
+
     def __str__(self):
         return f'ImportUserError: {self.error} for {self.username}'
 

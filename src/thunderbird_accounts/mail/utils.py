@@ -254,7 +254,7 @@ def is_address_taken(email_address: str, check_remote: bool = True) -> bool:
     from django.db.models import Q
 
     # Make sure a user does not exist with their email address
-    user = User.objects.filter(Q(email=email_address) | Q(username=email_address)).exists()
+    user = User.objects.filter(Q(email__iexact=email_address) | Q(username__iexact=email_address)).exists()
     if user:
         return True
 
