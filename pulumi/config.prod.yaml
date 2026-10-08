@@ -103,6 +103,7 @@
 .stalwart_api_auth_method: &SECRET_STALWART_API_AUTH_METHOD {name: "STALWART_API_AUTH_METHOD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-method-ErlvTR"}
 .stalwart_api_auth_string: &SECRET_STALWART_API_AUTH_STRING {name: "STALWART_API_AUTH_STRING", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-api-auth-key-cnGrUN"}
 .hosted_dkim_cloudflare_api_token: &SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN {name: "HOSTED_DKIM_CLOUDFLARE_API_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/hosted-dkim-cloudflare-api-token-3rY2yV"}
+.tb_pro_send_api_key: &SECRET_TB_PRO_SEND_API_KEY {name: "TB_PRO_SEND_API_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/send-api-key-flELcw"}
 # Shared HMAC secret that Stalwart uses to sign outgoing webhook payloads. Must match the
 # `webhook.posthog.signature-key` value configured in Stalwart's admin API on mailstrom-prod.
 .stalwart_webhook_secret: &SECRET_STALWART_WEBHOOK_SECRET {name: "STALWART_WEBHOOK_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/stalwart-webhook-secret-t8yGzq"}
@@ -165,6 +166,7 @@
     - *SECRET_STALWART_API_AUTH_METHOD
     - *SECRET_STALWART_API_AUTH_STRING
     - *SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN
+    - *SECRET_TB_PRO_SEND_API_KEY
     - *SECRET_ZENDESK_API_TOKEN
     - *SECRET_ZENDESK_SUBDOMAIN
     - *SECRET_ZENDESK_USER_EMAIL
@@ -330,6 +332,7 @@ resources:
         - stalwart-api-auth-method
         - stalwart-api-auth-key
         - hosted-dkim-cloudflare-api-token
+        - send-api-key
         - stalwart-webhook-secret
         - keycloak-admin-client-id
         - keycloak-admin-client-secret
@@ -887,6 +890,7 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/prod/appointment-caldav-secret-eJOI7y
               - *SECRET_POSTHOG_API_KEY
               - *SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN
+              - *SECRET_TB_PRO_SEND_API_KEY
 
             environment:
               - name: TIMES_I_NEED_TO_REDEPLOY_WITHOUT_CHANGING_IMAGE

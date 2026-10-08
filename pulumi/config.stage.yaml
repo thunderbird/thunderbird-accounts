@@ -98,6 +98,7 @@
 .stalwart_api_auth_method: &SECRET_STALWART_API_AUTH_METHOD {name: "STALWART_API_AUTH_METHOD", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-method-OeouRm"}
 .stalwart_api_auth_string: &SECRET_STALWART_API_AUTH_STRING {name: "STALWART_API_AUTH_STRING", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-api-auth-key-9Vlhwc"}
 .hosted_dkim_cloudflare_api_token: &SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN {name: "HOSTED_DKIM_CLOUDFLARE_API_TOKEN", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/hosted-dkim-cloudflare-api-token-2Lwjs0"}
+.tb_pro_send_api_key: &SECRET_TB_PRO_SEND_API_KEY {name: "TB_PRO_SEND_API_KEY", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/send-api-key-dhBH44"}
 # Shared HMAC secret that Stalwart uses to sign outgoing webhook payloads. Must match the
 # `webhook.posthog.signature-key` value configured in Stalwart's admin API on mailstrom-stage.
 .stalwart_webhook_secret: &SECRET_STALWART_WEBHOOK_SECRET {name: "STALWART_WEBHOOK_SECRET", valueFrom: "arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/stalwart-webhook-secret-poF35r"}
@@ -157,6 +158,7 @@
     - *SECRET_STALWART_API_AUTH_METHOD
     - *SECRET_STALWART_API_AUTH_STRING
     - *SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN
+    - *SECRET_TB_PRO_SEND_API_KEY
     - *SECRET_ZENDESK_API_TOKEN
     - *SECRET_ZENDESK_SUBDOMAIN
     - *SECRET_ZENDESK_USER_EMAIL
@@ -332,6 +334,7 @@ resources:
         - stalwart-api-auth-method
         - stalwart-api-auth-key
         - hosted-dkim-cloudflare-api-token
+        - send-api-key
         - stalwart-webhook-secret
         - keycloak-admin-client-id
         - keycloak-admin-client-secret
@@ -862,6 +865,7 @@ resources:
                 valueFrom: arn:aws:secretsmanager:eu-central-1:768512802988:secret:accounts/stage/appointment-caldav-secret-CU7WNc
               - *SECRET_POSTHOG_API_KEY
               - *SECRET_HOSTED_DKIM_CLOUDFLARE_API_TOKEN
+              - *SECRET_TB_PRO_SEND_API_KEY
             environment:
               - name: ADMIN_WEBSITE
                 value: https://www.thunderbird.net

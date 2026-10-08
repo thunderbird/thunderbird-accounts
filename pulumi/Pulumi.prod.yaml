@@ -81,3 +81,5 @@ config:
     secure: AAABABaIJ/x287l9pyLW3HzJ5f7mCJv/o/96+jaI0KFU9VfIj6O+4OtFq5vfVJqqKH1LPOnkpMk0bneC3m/6TU/cmGdIPu2B/+U/qb6odlegj2TO1Gzu45wrGd2Qgthl
   accounts:hosted-dkim-cloudflare-api-token:
     secure: AAABAMYcS63m9YrFGLN7OEqyawkd3nbImI4NuBZrbbijsMr2EAXV0eezUFY9FH/CnOpRRAjU25lCQxjtEEWwp0IHaf5GRV2Ea5+JzCN6/P2c/srrgA==
+  accounts:send-api-key:
+    secure: AAABAG+mLlt/tuTV362gRy/fqPy7u34GYUMvAxDyYSzVMRpYkT3Eeo8Qh25xYldXaxlhjzTOaDh457JJgnxvBywjjCRaZD73LoYYIw==
