@@ -49,3 +49,15 @@ export const removeCustomDomain = async (domainName: string) => {
   });
   return await response.value.json();
 };
+
+export type DnsProviderOption = {
+  label: string;
+  value: string;
+};
+
+// TODO: Replace with the real list of DNS providers
+export const getDnsProviders = (): DnsProviderOption[] => [
+  { label: 'Provider One', value: 'provider-one' },
+  { label: 'Provider Two', value: 'provider-two' },
+  { label: 'Other', value: 'other' },
+];
