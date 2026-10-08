@@ -423,6 +423,23 @@
         }
       }
     },
+    "customDomains": {
+      "steps": {
+        "add": "Add domain",
+        "updateRecords": "Update records",
+        "summary": "Summary"
+      },
+      "stepsLabel": "Custom domain setup progress",
+      "stepAdd": {
+        "title": "Add a custom domain",
+        "description": "You must own this domain to add it to your account.",
+        "domainName": "Domain name",
+        "domainPlaceholder": "example.com",
+        "cancel": "Cancel",
+        "addDomain": "Add domain",
+        "needHelp": "Need help? Contact support"
+      }
+    },
     "manageMfa": {
       "multiFactorAuthentication": "Multi-factor Authentication",
       "multiFactorAuthenticationDescription": "Multi-factor authentication (MFA) adds an extra layer of security by requiring more than a password to sign in. We recommend setting up at least two methods to avoid lockout. You can change or remove MFA methods anytime on this screen.",
