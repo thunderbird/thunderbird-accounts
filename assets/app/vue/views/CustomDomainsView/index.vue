@@ -1,5 +1,31 @@
 <script setup lang="ts">
-import CustomDomainsSection from './CustomDomainsSection/index.vue';
+import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
+import CardContainer from '@/components/CardContainer.vue';
+import StepIndicator from '@/components/StepIndicator.vue';
+import Step1Add from './components/Step1Add.vue';
+
+const { t } = useI18n();
+const router = useRouter();
+
+const currentStep = ref(0);
+const customDomain = ref<string | null>(null);
+
+const steps = computed(() => [
+  { key: 'add', label: t('views.customDomains.steps.add') },
+  { key: 'update-records', label: t('views.customDomains.steps.updateRecords') },
+  { key: 'summary', label: t('views.customDomains.steps.summary') },
+]);
+
+const onCancel = () => {
+  router.push('/dashboard');
+};
+
+const onDomainAdded = (domainName: string) => {
+  customDomain.value = domainName;
+  // TODO: advance to Step2 once it exists
+};
 </script>
 
 <script lang="ts">
@@ -9,5 +35,20 @@ export default {
 </script>
 
 <template>
-  <custom-domains-section />
+  <card-container>
+    <step-indicator
+      class="steps"
+      :steps="steps"
+      :current-step="currentStep"
+      :aria-label="t('views.customDomains.stepsLabel')"
+    />
+
+    <step1-add v-if="currentStep === 0" @cancel="onCancel" @added="onDomainAdded" />
+  </card-container>
 </template>
+
+<style scoped>
+.steps {
+  margin-block-end: 2rem;
+}
+</style>
