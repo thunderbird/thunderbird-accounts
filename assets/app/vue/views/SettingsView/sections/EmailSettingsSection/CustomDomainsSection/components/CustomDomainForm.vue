@@ -3,6 +3,9 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PrimaryButton, TextInput, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { PhWarningCircle, PhWarningOctagon } from '@phosphor-icons/vue';
+import { useRouter } from 'vue-router';
+import { WAFFLE_FLAG } from '@/types';
+import { isWaffleFlagActive } from '@/utils';
 
 // Types
 import { CustomDomain, DNSRecord, StaleDNSRecord, STEP, DOMAIN_STATUS, DNSRecordStatus } from '../types';
@@ -12,6 +15,16 @@ import type { DomainVerificationResult } from '../types';
 import { addCustomDomain, verifyDomain, getRemoteDNSRecords } from '../api';
 
 const { t, te } = useI18n();
+const router = useRouter();
+const isCustomDomainsRevampActive = isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP);
+
+const onAddDomainClick = () => {
+  if (isCustomDomainsRevampActive) {
+    router.push('/custom-domains');
+    return;
+  }
+  step.value = STEP.ADD;
+};
 
 type InlineIssueSeverity = 'critical' | 'warning';
 
@@ -544,7 +557,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
   <template v-if="step === STEP.INITIAL">
     <primary-button
       variant="outline"
-      @click="step = STEP.ADD"
+      @click="onAddDomainClick"
       v-if="customDomains.length < maxCustomDomains"
     >
       {{ t('views.mail.sections.customDomains.addDomain') }}

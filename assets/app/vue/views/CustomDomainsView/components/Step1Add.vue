@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PrimaryButton, TextInput } from '@thunderbirdops/services-ui';
-import { addCustomDomain } from '../CustomDomainsSection/api';
+import { addCustomDomain } from '../api';
 
 const { t } = useI18n();
 
@@ -57,14 +57,13 @@ const onSubmit = async () => {
         required
       >
         {{ t('views.customDomains.stepAdd.domainName') }}
-        <span class="required" aria-hidden="true">*</span>
       </text-input>
 
       <div class="actions">
         <primary-button type="button" variant="outline" @click="emit('cancel')">
           {{ t('views.customDomains.stepAdd.cancel') }}
         </primary-button>
-        <primary-button type="submit" :disabled="isAdding || !domainName.trim()">
+        <primary-button type="primary" :disabled="isAdding || !domainName.trim()">
           {{ t('views.customDomains.stepAdd.addDomain') }}
         </primary-button>
       </div>
@@ -95,10 +94,6 @@ const onSubmit = async () => {
 
   .domain-input {
     margin-block-end: 1.5rem;
-  }
-
-  .required {
-    color: var(--colour-danger-default);
   }
 
   .actions {
