@@ -1059,20 +1059,21 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             )
         )
 
+        if len(response.method_responses) < 2:
+            raise RuntimeError(f'Stalwart JMAP response did not include x:DkimSignature/get for {domain_name}')
+
         self._debug_dump('get_dkim_signatures', response.method_responses[1].arguments)
 
-        # FIXME: Temp
-        if not response.method_responses or response.method_responses[0].arguments.get('total') == 0:
-            raise RuntimeError(domain_name)
-
+        # A domain with no signatures yields an empty list, not an error.
         dkim_signatures = response.method_responses[1].arguments.get('list', [])
-        signatures = [stalwart.DkimSignature(**signature) for signature in dkim_signatures]
-
-        return signatures
+        return [stalwart.DkimSignature(**signature) for signature in dkim_signatures]
 
     def delete_dkim(self, domain):
-        dkim_signatures = self.get_dkim_signatures(domain)
-        dkim_signature_ids = [signature.id for signature in dkim_signatures]
+        """Removes all DKIM signatures for the domain from Stalwart. A domain with none is a no-op."""
+        dkim_signature_ids = [signature.id for signature in self.get_dkim_signatures(domain)]
+        if not dkim_signature_ids:
+            return
+
         self._handle_destroy(StalwartMethods.DKIM_SIGNATURE, dkim_signature_ids)  # ty: ignore[invalid-argument-type]
 
     def ensure_dkim(self, domain_name: str, stage: DkimSignatureStage = DkimSignatureStage.PENDING):

@@ -12,6 +12,7 @@ from thunderbird_accounts.mail.tests.test_clients.test_legacy import (
 )
 from thunderbird_accounts.mail.types.jmap import Invocation, JMapRequest, JMapResponse, SessionResource
 from thunderbird_accounts.mail.types import stalwart
+from thunderbird_accounts.mail.types.stalwart import StalwartMethods
 
 
 class MockJMapClient(JMAPClient):
@@ -135,6 +136,54 @@ class TestCreateDkim(SimpleTestCase):
         self.assertEqual(3, requests_mock.call_count)
 
 
+class TestGetDkimSignatures(SimpleTestCase):
+    def setUp(self):
+        self.mail_client = build_admin_client()
+        self.mail_client.preflight_check = MagicMock()
+
+    @patch('thunderbird_accounts.mail.tests.test_clients.test_jmap.MockJMapClient.request')
+    @patch.object(MailClientAdminJMAP, 'get_domain', return_value=MagicMock(id='a'))
+    def test_returns_empty_list_when_domain_has_no_signatures(self, mock_get_domain, requests_mock):
+        requests_mock.return_value = JMapResponse(
+            method_responses=[
+                Invocation(name='x:DkimSignature/query', arguments={'ids': [], 'total': 0}, method_call_id='0'),
+                Invocation(name='x:DkimSignature/get', arguments={'list': [], 'notFound': []}, method_call_id='1'),
+            ],
+            session_state='a',
+        )
+
+        self.assertEqual([], self.mail_client.get_dkim_signatures('customdomain.com'))
+
+    @patch('thunderbird_accounts.mail.tests.test_clients.test_jmap.MockJMapClient.request')
+    @patch.object(MailClientAdminJMAP, 'get_domain', return_value=MagicMock(id='a'))
+    def test_raises_when_get_response_is_missing(self, mock_get_domain, requests_mock):
+        requests_mock.return_value = JMapResponse(method_responses=[], session_state='a')
+
+        with self.assertRaises(RuntimeError):
+            self.mail_client.get_dkim_signatures('customdomain.com')
+
+
+class TestDeleteDkim(SimpleTestCase):
+    def setUp(self):
+        self.mail_client = build_admin_client()
+
+    @patch.object(MailClientAdminJMAP, '_handle_destroy')
+    @patch.object(MailClientAdminJMAP, 'get_dkim_signatures', return_value=[])
+    def test_no_signatures_skips_destroy(self, mock_get_dkim_signatures, mock_handle_destroy):
+        self.mail_client.delete_dkim('customdomain.com')
+
+        mock_handle_destroy.assert_not_called()
+
+    @patch.object(MailClientAdminJMAP, '_handle_destroy')
+    @patch.object(MailClientAdminJMAP, 'get_dkim_signatures')
+    def test_destroys_every_signature(self, mock_get_dkim_signatures, mock_handle_destroy):
+        mock_get_dkim_signatures.return_value = [MagicMock(id='sig-1'), MagicMock(id='sig-2')]
+
+        self.mail_client.delete_dkim('customdomain.com')
+
+        mock_handle_destroy.assert_called_once_with(StalwartMethods.DKIM_SIGNATURE, ['sig-1', 'sig-2'])
+
+
 class TestDeleteDomain(SimpleTestCase):
     def setUp(self):
         self.mail_client = build_admin_client()
@@ -146,3 +195,13 @@ class TestDeleteDomain(SimpleTestCase):
         self.mail_client.delete_domain('customdomain.com')
 
         mock_delete_dkim.assert_called_once_with('customdomain.com')
+
+    @patch.object(MailClientAdminJMAP, '_handle_destroy')
+    @patch.object(MailClientAdminJMAP, 'get_dkim_signatures', return_value=[])
+    @patch.object(MailClientAdminJMAP, 'get_domain', return_value=MagicMock(id='a'))
+    def test_destroys_domain_with_no_dkim_signatures(
+        self, mock_get_domain, mock_get_dkim_signatures, mock_handle_destroy
+    ):
+        self.mail_client.delete_domain('customdomain.com')
+
+        mock_handle_destroy.assert_called_once_with(StalwartMethods.DOMAIN, 'a')
