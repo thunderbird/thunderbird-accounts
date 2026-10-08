@@ -457,6 +457,13 @@
         "dnsRecords": "DNS Records",
         "verifyDnsSettings": "Verify DNS settings"
       },
+      "stepSummary": {
+        "title": "Verification in progress",
+        "description": "Thundermail is verifying {domain}. Its status will update from {pending} when verification is complete. DNS changes can take up to 24 hours to propagate.",
+        "pending": "Pending",
+        "notifyByEmail": "Email {email} when verification is complete.",
+        "done": "Done"
+      },
       "dnsRecords": {
         "type": "Type",
         "nameHost": "{'Name/Host'}",
