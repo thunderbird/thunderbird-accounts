@@ -273,7 +273,8 @@ class CreateCustomDomainTestCase(TestCase):
         mock_instance.get_domain.side_effect = DomainNotFoundError('example.com')
         mock_mail_client_cls.return_value = mock_instance
 
-        response = create_custom_domain(self.create_request(' Example.COM '))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = create_custom_domain(self.create_request(' Example.COM '))
 
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.content.decode())
@@ -297,7 +298,8 @@ class CreateCustomDomainTestCase(TestCase):
         mock_instance.create_domain.return_value = 'domain-id'
         mock_mail_client_cls.return_value = mock_instance
 
-        response = create_custom_domain(self.create_request('example.com'))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = create_custom_domain(self.create_request('example.com'))
 
         self.assertEqual(response.status_code, 200)
         domain = Domain.objects.get(name='example.com', user=self.user)
@@ -344,12 +346,14 @@ class CreateCustomDomainTestCase(TestCase):
         mock_instance.create_domain.return_value = 'domain-id'
         mock_mail_client_cls.return_value = mock_instance
 
-        response = create_custom_domain(self.create_request('example.com'))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = create_custom_domain(self.create_request('example.com'))
 
         self.assertEqual(response.status_code, 400)
         mock_instance.delete_domain.assert_called_once_with('example.com')
-        mock_publish_hosted_dkim.assert_called_once_with('example.com')
-        mock_delete_hosted_dkim.assert_called_once_with('example.com')
+        # Publication waits for the local commit, so a failed write never publishes and needs no un-publish.
+        mock_publish_hosted_dkim.assert_not_called()
+        mock_delete_hosted_dkim.assert_not_called()
         self.assertFalse(Domain.objects.exists())
 
 

@@ -9,7 +9,7 @@ import requests.exceptions
 import sentry_sdk
 from django.conf import settings
 from django.contrib import messages
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse, Http404
@@ -72,22 +72,11 @@ def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: st
     sentry_sdk.capture_exception(exception)
 
 
-def _cleanup_failed_custom_domain_creation(
-    stalwart_client,
-    domain_name: str,
-    *,
-    delete_hosted_dkim_records: bool,
-):
+def _cleanup_failed_custom_domain_creation(stalwart_client, domain_name: str):
     try:
         stalwart_client.delete_domain(domain_name)
     except Exception as e:
         logging.error(f'Error deleting remote domain after custom domain creation failed: {e}')
-
-    if delete_hosted_dkim_records:
-        try:
-            mail_tasks.delete_hosted_dkim_dns_records.delay(domain_name)
-        except Exception as e:
-            logging.error(f'Error scheduling hosted DKIM cleanup after custom domain creation failed: {e}')
 
 
 @login_required
@@ -199,7 +188,6 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
         )
 
     remote_domain_created = False
-    hosted_dkim_records_requested = False
     try:
         stalwart_client = MailClient()
         domain_id = None
@@ -223,26 +211,24 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
         # we want this to happen before the local reference (Domain model) is created
         # so we're not missing any dkim records in the dns record list.
         stalwart_client.create_dkim(domain_name)
-        mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
-        hosted_dkim_records_requested = True
 
-        try:
-            Domain.objects.create(
-                name=domain_name,
-                user=request.user,
-                stalwart_id=domain_id,
-                stalwart_created_at=None,
-            )
-        except IntegrityError:
-            raise DomainAlreadyExistsError(domain_name)
+        with transaction.atomic():
+            try:
+                Domain.objects.create(
+                    name=domain_name,
+                    user=request.user,
+                    stalwart_id=domain_id,
+                    stalwart_created_at=None,
+                )
+            except IntegrityError:
+                raise DomainAlreadyExistsError(domain_name)
+            # Hosted records are published only once the row is durable, so a failed creation has none to remove
+            # and a publish can never race the delete of the same domain.
+            transaction.on_commit(lambda: mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name))
 
     except DomainAlreadyExistsError:
         if remote_domain_created:
-            _cleanup_failed_custom_domain_creation(
-                stalwart_client,
-                domain_name,
-                delete_hosted_dkim_records=hosted_dkim_records_requested,
-            )
+            _cleanup_failed_custom_domain_creation(stalwart_client, domain_name)
         return JsonResponse(
             {
                 'success': False,
@@ -255,11 +241,7 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
 
     except Exception as e:
         if remote_domain_created:
-            _cleanup_failed_custom_domain_creation(
-                stalwart_client,
-                domain_name,
-                delete_hosted_dkim_records=hosted_dkim_records_requested,
-            )
+            _cleanup_failed_custom_domain_creation(stalwart_client, domain_name)
         logging.error(f'Error creating custom domain: {e}')
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while creating the custom domain. Please try again later.'},
