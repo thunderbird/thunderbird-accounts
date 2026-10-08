@@ -91,7 +91,8 @@ def app_password_set(request: HttpRequest):
         new_password = data.get('password')
         label = data.get('name')
 
-        if not new_password or not label:
+        # Under JMAP Stalwart generates the secret, so only the legacy path takes a password from the user.
+        if not label or (not new_password and not settings.STALWART_ADMIN_API_USE_JMAP):
             return JsonResponse({'success': False, 'error': str(_('Label and password are required'))}, status=400)
 
         if settings.STALWART_ADMIN_API_USE_JMAP:

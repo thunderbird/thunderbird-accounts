@@ -154,6 +154,7 @@ def home(request: HttpRequest):
         {
             'connectionInfo': settings.CONNECTION_INFO,
             'appPasswords': app_passwords,
+            'appPasswordIsGenerated': settings.STALWART_ADMIN_API_USE_JMAP,
             'allowedDomains': settings.ALLOWED_EMAIL_DOMAINS if settings.ALLOWED_EMAIL_DOMAINS else [],
             'customDomains': custom_domains,
             'emailAddresses': email_addresses,

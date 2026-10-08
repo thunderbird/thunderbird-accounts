@@ -128,6 +128,26 @@ class AppPasswordApiTestCase(TestCase):
         mock_user_jmap.replace_app_password.assert_called_once_with(self.primary_email)
         mock_mail_client_cls.assert_not_called()
 
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClientUserJMAP', create=True)
+    def test_jmap_does_not_require_a_password(self, mock_user_jmap_cls):
+        self.account.verified_archive_folder = True
+        self.account.save()
+        session = self.client.session
+        session['oidc_access_token'] = 'user-access-token'
+        session.save()
+        mock_user_jmap_cls.return_value.replace_app_password.return_value = Mock(id='new-id', secret='generated')
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'name': self.primary_email}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(json.loads(response.content.decode())['app_password'], 'generated')
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=False)
     def test_name_and_password_are_required(self):
         response = self.client.post(
             self.url,

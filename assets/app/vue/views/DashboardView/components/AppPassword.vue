@@ -26,6 +26,7 @@ const errorMessage = ref<string>(window._page?.formError || null);
 const successMessage = ref<string>(null);
 const generatedAppPassword = ref<string>(null);
 const isSubmitting = ref(false);
+const passwordIsGenerated = Boolean(window._page?.appPasswordIsGenerated);
 
 const userEmail = computed(() => window._page?.userEmail);
 
@@ -39,7 +40,7 @@ const resetPasswordForm = () => {
 const onSetPasswordSubmit = async () => {
   if (isSubmitting.value) return;
 
-  if (appPassword.value !== appPasswordConfirm.value) {
+  if (!passwordIsGenerated && appPassword.value !== appPasswordConfirm.value) {
     errorMessage.value = t('views.mail.sections.emailSettings.passwordsDoNotMatch');
     return;
   }
@@ -151,23 +152,25 @@ const closeSuccessMessage = () => {
       <form ref="appPasswordFormRef" @submit.prevent="onSetPasswordSubmit">
         <input type="hidden" name="name" :value="userEmail" />
 
-        <text-input
-          v-model="appPassword"
-          name="password"
-          type="password"
-          data-testid="app-passwords-add-password-input"
-        >
-          {{ t('views.mail.sections.emailSettings.newPassword') }}:
-        </text-input>
+        <template v-if="!passwordIsGenerated">
+          <text-input
+            v-model="appPassword"
+            name="password"
+            type="password"
+            data-testid="app-passwords-add-password-input"
+          >
+            {{ t('views.mail.sections.emailSettings.newPassword') }}:
+          </text-input>
 
-        <text-input
-          v-model="appPasswordConfirm"
-          name="password-confirm"
-          type="password"
-          data-testid="app-passwords-add-password-confirm-input"
-        >
-          {{ t('views.mail.sections.emailSettings.confirmPassword') }}:
-        </text-input>
+          <text-input
+            v-model="appPasswordConfirm"
+            name="password-confirm"
+            type="password"
+            data-testid="app-passwords-add-password-confirm-input"
+          >
+            {{ t('views.mail.sections.emailSettings.confirmPassword') }}:
+          </text-input>
+        </template>
 
         <notice-bar :type="NoticeBarTypes.Critical" v-if="errorMessage">
           {{ errorMessage }}
