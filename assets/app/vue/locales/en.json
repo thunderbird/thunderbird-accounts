@@ -450,7 +450,19 @@
         "icannLookup": "ICANN Lookup",
         "cancel": "Cancel",
         "continue": "Continue",
-        "needHelp": "Need help? Contact support"
+        "needHelp": "Need help? Contact support",
+        "updateRecordsTitle": "Update the DNS records",
+        "updateRecordsDescription": "Sign in to {provider} and add or update the records below. After saving the changes, return here and select Verify DNS settings.",
+        "checkRecordFormat": "Check the DNS record format",
+        "dnsRecords": "DNS Records",
+        "verifyDnsSettings": "Verify DNS settings"
+      },
+      "dnsRecords": {
+        "type": "Type",
+        "nameHost": "{'Name/Host'}",
+        "valueData": "{'Value/Data'}",
+        "priority": "Priority",
+        "copy": "Copy"
       }
     },
     "manageMfa": {
