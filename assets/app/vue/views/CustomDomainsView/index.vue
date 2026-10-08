@@ -6,6 +6,7 @@ import CardContainer from '@/components/CardContainer.vue';
 import StepIndicator from '@/components/StepIndicator.vue';
 import Step1Add from './components/Step1Add.vue';
 import Step2Identify from './components/Step2Identify.vue';
+import Step3Summary from './components/Step3Summary.vue';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -31,7 +32,13 @@ const onDomainAdded = (domainName: string) => {
 
 const onVerify = (provider: string) => {
   dnsProvider.value = provider;
-  // TODO: verify the DNS settings and advance to the summary step
+  currentStep.value = 2;
+};
+
+const onDone = (notifyByEmail: boolean) => {
+  // TODO: persist the "email me when verification is complete" preference
+  console.debug('Custom domain verification email notification:', notifyByEmail);
+  router.push('/settings');
 };
 </script>
 
@@ -57,6 +64,7 @@ export default {
       @cancel="onCancel"
       @verify="onVerify"
     />
+    <step3-summary v-else-if="currentStep === 2 && customDomain" :domain-name="customDomain" @done="onDone" />
   </card-container>
 </template>
 
