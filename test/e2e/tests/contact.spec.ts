@@ -329,6 +329,37 @@ test.describe('contact support form on browser', {
     await expect(contactPage.errorMessage).toBeVisible();
   });
 
+  test('shows the backend rejection when the email belongs to another Thundermail account', async ({ page }) => {
+    await fakeBeingOnAllowListForLocalDev(page);
+
+    await contactPage.navigateToContactPage();
+
+    // the backend rejects managed-domain addresses that are not on the signed-in user's account
+    await page.route('*/**/contact/submit', async (route) => {
+      await route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          detail: "That Thundermail address isn't on your account. Use one of your own addresses or a different email address.",
+        }),
+      });
+    });
+
+    await contactPage.fillContactForm(
+      'someone-else@thundermail.example',
+      TEST_NAME,
+      TEST_SUBJECT,
+      MOCK_PRODUCT_VALUE,
+      MOCK_TYPE_VALUE,
+      TEST_DESC,
+    );
+
+    await contactPage.submitForm();
+
+    await expect(contactPage.identityRejectionMessage).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
+    await expect(contactPage.successMessage).not.toBeVisible();
+  });
+
   test('able to submit contact form with attachments', async ({ page }) => {
     await fakeBeingOnAllowListForLocalDev(page);
 
