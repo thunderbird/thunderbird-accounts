@@ -47,7 +47,9 @@ def health_check(request: HttpRequest):
             stalwart_client = MailClient()
             stalwart_client.get_telemetry()
             return True
-        except requests.exceptions.HTTPError:
+        except Exception as ex:
+            # The probe reports unhealthy; it must never be the thing that returns a 500.
+            logging.warning(f'[health_check] Stalwart unhealthy: {ex}')
             return False
 
     @PerformanceMonitored

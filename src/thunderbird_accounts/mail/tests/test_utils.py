@@ -10,6 +10,7 @@ from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
     EmailNotValidError,
     InvalidJMapResponseError,
+    JMapOriginMismatchError,
 )
 from thunderbird_accounts.mail.models import Account, Email
 from thunderbird_accounts.mail.types.jmap import Invocation, JMapResponse
@@ -292,3 +293,11 @@ class IsAddressTakenTestCase(TestCase):
             thundermail_address = self._form_email(str(uuid.uuid4()))
 
             self.assertTrue(is_address_taken(thundermail_address))
+
+    @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, True)
+    def test_stalwart_origin_mismatch_is_treated_as_taken(self):
+        """Sign-up must not 500 when the client refuses Stalwart's advertised apiUrl."""
+        with patch('thunderbird_accounts.mail.utils.MailClient', Mock()) as mail_client_mock:
+            mail_client_mock.side_effect = JMapOriginMismatchError('https://stalwart/jmap/', 'https://other')
+
+            self.assertTrue(is_address_taken(self._form_email(str(uuid.uuid4()))))
