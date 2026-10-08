@@ -2,9 +2,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
-import { WAFFLE_FLAG } from '@/types';
-import { isWaffleFlagActive } from '@/utils';
-import { hasAcceptedTos, hasActiveSubscription } from '@/access';
+import { hasActiveSubscription } from '@/access';
 import { APPOINTMENT_URL, SEND_URL } from '@/defines';
 import { AppDrawer, AppointmentIcon, BrandButton, IconButton, MailIcon, SendIcon, SettingsIcon } from '@thunderbirdops/services-ui';
 import type { AppDrawerApp } from '@thunderbirdops/services-ui';
@@ -32,24 +30,10 @@ const apps: AppDrawerApp[] = [
 const isAuthenticated = ref(window._page?.isAuthenticated);
 const avatarUsername = ref(window._page?.userDisplayName || window._page?.userEmail);
 
-const navItems = [
-  {
-    route: '/dashboard',
-    i18nKey: 'dashboard',
-  },
-  {
-    route: '/custom-domains',
-    i18nKey: 'customDomains',
-  },
-];
-
 const currentRoute = useRoute();
 const isSettingsActive = computed(() => currentRoute.path.startsWith('/settings'));
 
-const hasAccepted = ref(hasAcceptedTos());
 const isSubscribed = ref(hasActiveSubscription());
-const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
-const showNav = computed(() => hasAccepted.value && isSubscribed.value && isCustomDomainsRevampActive.value);
 
 // https://vite.dev/guide/assets.html#new-url-url-import-meta-url
 const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).href;
@@ -62,16 +46,6 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
     </router-link>
 
     <template v-if="isAuthenticated">
-      <nav v-if="showNav" class="desktop">
-        <ul>
-          <li v-for="navItem in navItems" :key="navItem.route">
-            <router-link :to="navItem.route" :class="{ active: currentRoute.path === navItem.route }">
-              {{ t(`navigationLinks.${navItem.i18nKey}`) }}
-            </router-link>
-          </li>
-        </ul>
-      </nav>
-
       <div class="header-actions">
         <router-link v-if="isSubscribed" v-slot="{ href, navigate }" to="/settings" custom>
           <icon-button
@@ -125,10 +99,6 @@ header {
     margin-left: auto;
   }
 
-  nav.desktop {
-    display: none;
-  }
-
   .header-actions {
     display: flex;
     align-items: center;
@@ -162,39 +132,11 @@ header {
     }
   }
 
-  ul {
-    display: flex;
-    gap: 0.5rem;
-    font-family: metropolis;
-    font-weight: 600;
-    font-size: 0.8125rem;
-    letter-spacing: 0.65px;
-    text-transform: uppercase;
-
-    a {
-      color: white;
-      text-decoration: none;
-      padding: 0.75rem 1.25rem;
-    }
-  }
-
-  /* Active treatment, shared by the text nav links and the settings icon button */
-  ul a.active,
+  /* Active treatment for the settings icon button */
   .header-actions > .icon-only.active {
     background-color: #18181b;
     border-radius: 0.5rem;
     box-shadow: inset 0 0.25rem 0.25rem 0 rgba(0, 0, 0, 0.15);
-  }
-}
-
-@media (min-width: 768px) {
-  header {
-    nav.desktop {
-      display: block;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-    }
   }
 }
 
