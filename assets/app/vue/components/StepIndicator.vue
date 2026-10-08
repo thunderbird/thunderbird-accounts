@@ -19,10 +19,10 @@ defineProps<{
       <li
         v-for="(step, index) in steps"
         :key="step.key"
-        :class="{ active: index === currentStep }"
+        :class="{ active: index === currentStep, completed: index < currentStep }"
         :aria-current="index === currentStep ? 'step' : undefined"
       >
-        <ph-check-circle size="24" aria-hidden="true" />
+        <ph-check-circle size="24" :weight="index < currentStep ? 'fill' : 'regular'" aria-hidden="true" />
         <span>{{ step.label }}</span>
       </li>
     </ol>

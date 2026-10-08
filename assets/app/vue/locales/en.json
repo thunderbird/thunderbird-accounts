@@ -437,6 +437,19 @@
         "domainPlaceholder": "example.com",
         "cancel": "Cancel",
         "addDomain": "Add domain",
+        "needHelp": "Need help? Contact support",
+        "domainAlreadyConfigured": "This domain is already configured. Please {link} in case you believe this is a mistake.",
+        "reachOutToSupport": "reach out to support"
+      },
+      "stepIdentify": {
+        "title": "Where are the DNS records for {domain} managed?",
+        "description": "This is often the company where the domain was registered, but it may be a different provider.",
+        "dnsProvider": "Select a DNS provider",
+        "dnsProviderPlaceholder": "Select an option",
+        "notSure": "Not sure? Use {link} to find the registrar. The DNS records may be managed by the same company.",
+        "icannLookup": "ICANN Lookup",
+        "cancel": "Cancel",
+        "continue": "Continue",
         "needHelp": "Need help? Contact support"
       }
     },
