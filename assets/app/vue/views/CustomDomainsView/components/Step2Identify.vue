@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PrimaryButton, SelectInput } from '@thunderbirdops/services-ui';
 import { getDnsProviders } from '../api';
@@ -17,8 +17,11 @@ const emit = defineEmits<{
 
 const ICANN_LOOKUP_URL = 'https://lookup.icann.org/';
 
-const providers = getDnsProviders();
-const selectedProvider = ref<string | null>(null);
+const providers = computed(() => [
+  { label: t('views.customDomains.stepIdentify.dnsProviderPlaceholder'), value: '' },
+  ...getDnsProviders(),
+]);
+const selectedProvider = ref<string>('');
 
 const onSubmit = () => {
   if (!selectedProvider.value) {
@@ -31,20 +34,15 @@ const onSubmit = () => {
 
 <template>
   <section class="step-identify">
-    <h2>{{ t('views.customDomains.stepIdentify.title', { domain: `[${domainName}]` }) }}</h2>
+    <h2>{{ t('views.customDomains.stepIdentify.title', { domain: domainName }) }}</h2>
     <p class="description">{{ t('views.customDomains.stepIdentify.description') }}</p>
 
     <form @submit.prevent="onSubmit">
-      <select-input
-        v-model="selectedProvider"
-        name="dns-provider"
-        class="provider-select"
-        :options="providers"
-        :placeholder="t('views.customDomains.stepIdentify.dnsProviderPlaceholder')"
-        required
-      >
-        {{ t('views.customDomains.stepIdentify.dnsProvider') }}
-      </select-input>
+      <div class="provider-select">
+        <select-input v-model="selectedProvider" name="dns-provider" :options="providers" required>
+          {{ t('views.customDomains.stepIdentify.dnsProvider') }}
+        </select-input>
+      </div>
 
       <i18n-t keypath="views.customDomains.stepIdentify.notSure" tag="p" class="help-text">
         <template #link>
