@@ -59,18 +59,6 @@ def _critical_errors_from_stale_dns_records(stale_dns_records: list[dict]) -> li
     return critical_errors
 
 
-def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: str):
-    sentry_sdk.set_context(
-        'domain',
-        {
-            'phase': phase,
-            'domain_name': domain.name,
-            'domain_status': domain.status,
-        },
-    )
-    sentry_sdk.capture_exception(exception)
-
-
 @login_required
 @require_http_methods(['POST'])
 @active_subscription_required(error_message=_('An active subscription is required to set an app password.'))
@@ -420,39 +408,17 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
                 status=400,
             )
 
-    stalwart_client = MailClient()
-    cleanup_phase = 'load_local_domains'
-    try:
-        domains = request.user.domains.filter(name__iexact=domain_name).all()
-        # There should only be one here, but just in case...
-        for _domain in domains:
-            if _domain.stalwart_id:
-                try:
-                    cleanup_phase = 'delete_stalwart_domain'
-                    stalwart_client.delete_domain(_domain.name)
-                except DomainNotFoundError as ex:
-                    # While it's not in Stalwart we seem to have a local reference,
-                    # so try deleting dkim and then local ref
-                    _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
-
-            if not request.user.is_migrated:
-                cleanup_phase = 'delete_dkim'
-                stalwart_client.delete_dkim(_domain.name)
-
-                cleanup_phase = 'delete_hosted_dkim_dns_records'
-                mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
-            break
-
-        cleanup_phase = 'delete_local_domain'
-        domain.delete()
-
-    except Exception as e:
-        logging.error(f'Error removing custom domain: {e}')
-        _capture_domain_exception(e, domain, phase=cleanup_phase)
+    # External clean up is best-effort and reports what failed. Only drop the local row on a
+    # full success so the user can retry instead of being left with orphaned Stalwart/Cloudflare state.
+    errors = domain.delete_external_resources()
+    if errors:
+        logging.error(f'Error removing custom domain {domain.name}: {errors}')
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while removing the custom domain. Please try again later.'},
             status=500,
         )
+
+    domain.delete()
 
     return JsonResponse({'success': True})
 

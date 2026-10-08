@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
 
@@ -59,3 +59,26 @@ class DomainAdmin(admin.ModelAdmin):
         'created_at',
         'last_verification_attempt',
     )
+
+    def delete_queryset(self, request, queryset):
+        for domain in queryset:
+            self.delete_model(request, domain)
+
+    def delete_model(self, request, obj: Domain):
+        """Mirror the user-facing removal so an admin delete doesn't leave Stalwart/Cloudflare state behind."""
+        errors = obj.delete_external_resources()
+
+        for error in errors:
+            messages.add_message(
+                request,
+                messages.ERROR,
+                _(f"You'll need to clean this up yourself. Error: {error}"),
+            )
+        if errors:
+            messages.add_message(
+                request,
+                messages.WARNING,
+                _('One or more delete requests failed. Please review the error messages and clean up accordingly.'),
+            )
+
+        super().delete_model(request, obj)
