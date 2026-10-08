@@ -598,6 +598,47 @@ class TestAccountOperations(SimpleTestCase):
         self.mail_client.account_id = 'admin-account'
         self.mail_client.primary_domain_id = 'primary-domain'
 
+    def test_get_account_gives_each_alias_its_own_domain(self):
+        self.mail_client.client.request = MagicMock(
+            return_value=JMapResponse(
+                method_responses=[
+                    Invocation(name='x:Account/query', arguments={'ids': ['account-id']}, method_call_id='0'),
+                    Invocation(
+                        name='x:Account/get',
+                        arguments={
+                            'list': [
+                                {
+                                    'id': 'account-id',
+                                    'name': 'person',
+                                    '@type': 'User',
+                                    'emailAddress': 'person@example.org',
+                                    'aliases': {
+                                        '0': {'name': 'first', 'domainId': 'primary-domain', 'enabled': True},
+                                        '1': {'name': 'second', 'domainId': 'custom-domain', 'enabled': True},
+                                    },
+                                    'roles': {'@type': 'User'},
+                                    'permissions': {'@type': 'Inherit'},
+                                    'encryptionAtRest': {'@type': 'Disabled'},
+                                }
+                            ]
+                        },
+                        method_call_id='1',
+                    ),
+                ],
+                session_state='a',
+            )
+        )
+        primary, custom = MagicMock(id='primary-domain'), MagicMock(id='custom-domain')
+        primary.name, custom.name = 'example.org', 'custom.test'
+
+        with patch.object(self.mail_client, '_get_domains_by_id', return_value=[primary, custom]):
+            account = self.mail_client.get_account('person@example.org')
+
+        self.assertEqual(
+            sorted(alias.full_address for alias in account.aliases.values()),
+            ['first@example.org', 'second@custom.test'],
+        )
+
     @patch('uuid.uuid4')
     def test_create_account_does_not_duplicate_primary_address_as_alias(self, uuid4_mock: MagicMock):
         uuid4_mock.return_value = 'temp-id'

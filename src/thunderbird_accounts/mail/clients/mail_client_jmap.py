@@ -722,6 +722,11 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
 
         return response.method_responses[1].arguments.get('list', [])
 
+    def _domain_names_by_id(self, domain_ids: set[str]) -> dict[str, str]:
+        if not domain_ids:
+            return {}
+        return {domain.id: domain.name for domain in self._get_domains_by_id(list(domain_ids))}
+
     def get_account(self, principal_id: str) -> stalwart.Account:
         """Retrieve an :any thunderbird_accounts.mail.types.stalwart.Account: from a given
         primary thundermail address.
@@ -756,12 +761,10 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         data = response.method_responses[1].arguments.get('list', [])[0]
         self._debug_dump('get_account', response.method_responses[1].arguments)
 
-        if len(data.get('aliases', {}).values()) > 0:
-            domain_ids = [alias.get('domainId') for alias in data.get('aliases', {}).values()]
-            domains = self._get_domains_by_id(domain_ids)
-            # FIXME: We should just require domains to have their new stalwart ids...
-            for idx, domain in data.get('aliases').items():
-                data['aliases'][idx]['full_address'] = f'{domain.get("name")}@{domains[0].name}'
+        aliases = data.get('aliases', {}).values()
+        domain_names = self._domain_names_by_id({alias['domainId'] for alias in aliases})
+        for alias in aliases:
+            alias['full_address'] = f'{alias["name"]}@{domain_names[alias["domainId"]]}'
 
         try:
             return stalwart.Account(**data)
