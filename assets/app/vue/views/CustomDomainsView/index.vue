@@ -19,7 +19,7 @@ const steps = computed(() => [
 ]);
 
 const onCancel = () => {
-  router.push('/dashboard');
+  router.push('/settings');
 };
 
 const onDomainAdded = (domainName: string) => {
