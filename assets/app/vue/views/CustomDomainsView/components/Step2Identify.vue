@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { NoticeBar, NoticeBarTypes, PrimaryButton, SelectInput } from '@thunderbirdops/services-ui';
 import { PhCaretDown, PhCaretRight } from '@phosphor-icons/vue';
 import DnsRecordsTable from './DnsRecordsTable.vue';
-import { getDnsProviders, getRemoteDNSRecords } from '../api';
+import { getDnsProviders, getRemoteDNSRecords, verifyDomain } from '../api';
 import type { DNSRecord } from '../types';
 
 const { t } = useI18n();
@@ -33,6 +33,7 @@ const records = ref<DNSRecord[] | null>(null);
 const error = ref<string | null>(null);
 const isLoadingRecords = ref(false);
 const showRecords = ref(true);
+const isVerifying = ref(false);
 
 const onContinue = async () => {
   if (!selectedProvider.value || isLoadingRecords.value) {
@@ -58,6 +59,33 @@ const onContinue = async () => {
     isLoadingRecords.value = false;
   }
 };
+
+const onVerify = async () => {
+  if (isVerifying.value) {
+    return;
+  }
+
+  isVerifying.value = true;
+  error.value = null;
+
+  try {
+    const data = await verifyDomain(props.domainName);
+
+    // Transient mail-backend outage! Stay on this step so the user can try again
+    if (data.code === 'mail_backend_unavailable') {
+      error.value = t('views.mail.sections.customDomains.mailBackendUnavailable');
+      return;
+    }
+
+    // The summary step only says verification is in progress, so the result itself isn't needed here
+    emit('verify', selectedProvider.value);
+  } catch (e) {
+    console.error(e);
+    error.value = String(e);
+  } finally {
+    isVerifying.value = false;
+  }
+};
 </script>
 
 <template>
@@ -80,7 +108,7 @@ const onContinue = async () => {
         </template>
       </i18n-t>
 
-      <notice-bar v-if="error" :type="NoticeBarTypes.Critical" class="error-notice">
+      <notice-bar v-if="error && !records" :type="NoticeBarTypes.Critical" class="error-notice">
         <span>{{ error }}</span>
       </notice-bar>
 
@@ -117,11 +145,15 @@ const onContinue = async () => {
         <dns-records-table :records="records" />
       </div>
 
+      <notice-bar v-if="error" :type="NoticeBarTypes.Critical" class="error-notice records-error">
+        <span>{{ error }}</span>
+      </notice-bar>
+
       <div class="actions">
         <primary-button form-action="none" variant="outline" @click="emit('cancel')">
           {{ t('views.customDomains.stepIdentify.cancel') }}
         </primary-button>
-        <primary-button form-action="none" @click="emit('verify', selectedProvider)">
+        <primary-button form-action="none" :disabled="isVerifying" @click="onVerify">
           {{ t('views.customDomains.stepIdentify.verifyDnsSettings') }}
         </primary-button>
       </div>
@@ -167,6 +199,10 @@ const onContinue = async () => {
 
   .error-notice {
     margin-block-end: 1.5rem;
+
+    &.records-error {
+      margin-block-start: 1.5rem;
+    }
   }
 
   .update-records {
