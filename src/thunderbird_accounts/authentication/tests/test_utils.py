@@ -1,8 +1,15 @@
+from unittest.mock import patch
+
+from django.conf import settings
 from django.test import TestCase, override_settings
 
 from thunderbird_accounts.authentication.models import AllowListEntry, User, UsernameBlockListEntry
 from thunderbird_accounts.authentication.reserved import is_reserved
-from thunderbird_accounts.authentication.utils import is_email_in_allow_list
+from thunderbird_accounts.authentication.utils import delete_user_data, is_email_in_allow_list
+from thunderbird_accounts.mail import tasks as mail_tasks
+from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.exceptions import DomainNotFoundError
+from thunderbird_accounts.mail.models import Domain
 
 
 class IsReservedUnitTests(TestCase):
@@ -257,3 +264,56 @@ class IsEmailInAllowListUnitTests(TestCase):
     @override_settings(USE_ALLOW_LIST=False)
     def test_returns_true_when_allow_list_is_disabled(self):
         self.assertTrue(is_email_in_allow_list('not-listed@example.com'))
+
+
+@patch.object(mail_tasks.delete_hosted_dkim_dns_records, 'delay')
+@patch.object(MailClient, 'delete_dkim')
+@patch.object(MailClient, 'delete_domain')
+class DeleteUserDataUnitTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}')
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    def test_migrated_user_skips_direct_dkim_deletion(self, mock_delete_domain, mock_delete_dkim, mock_delete_hosted):
+        domain = Domain.objects.create(name='customdomain.com', user=self.user)
+
+        self.assertEqual([], delete_user_data(self.user))
+
+        mock_delete_domain.assert_called_once_with(domain.name)
+        mock_delete_dkim.assert_not_called()
+        mock_delete_hosted.assert_called_once_with(domain.name)
+        self.assertFalse(User.objects.filter(pk=self.user.pk).exists())
+
+    def test_cleanup_failures_are_reported_without_skipping_other_cleanup(
+        self, mock_delete_domain, mock_delete_dkim, mock_delete_hosted
+    ):
+        failing_domain = Domain.objects.create(name='customdomain.com', user=self.user)
+        missing_domain = Domain.objects.create(name='othercustomdomain.com', user=self.user)
+
+        def fail_for_failing_domain(name):
+            if name == failing_domain.name:
+                raise RuntimeError('unavailable')
+
+        def delete_domain(name):
+            if name == missing_domain.name:
+                raise DomainNotFoundError(name)
+            fail_for_failing_domain(name)
+
+        mock_delete_domain.side_effect = delete_domain
+        mock_delete_dkim.side_effect = fail_for_failing_domain
+        mock_delete_hosted.side_effect = fail_for_failing_domain
+
+        with self.assertLogs(level='ERROR'):
+            errors = delete_user_data(self.user)
+
+        self.assertEqual(
+            [
+                f'Stalwart domain {failing_domain.name}: unavailable',
+                f'Stalwart DKIM {failing_domain.name}: unavailable',
+                f'Cloudflare {failing_domain.name}: unavailable',
+            ],
+            errors,
+        )
+        mock_delete_dkim.assert_any_call(missing_domain.name)
+        mock_delete_hosted.assert_any_call(missing_domain.name)
+        self.assertFalse(User.objects.filter(pk=self.user.pk).exists())

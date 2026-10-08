@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 from django.conf import settings
 from django.contrib.admin import AdminSite
 from django.http import HttpRequest, QueryDict
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.template.response import TemplateResponse
 
 from requests import Response
@@ -14,7 +14,9 @@ from thunderbird_accounts.authentication.admin import CustomUserAdmin
 from thunderbird_accounts.authentication.admin.actions import admin_backfill_recovery_email
 from thunderbird_accounts.authentication.clients import RequestMethods
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.mail import tasks as mail_tasks
+from thunderbird_accounts.mail.clients import MailClient
+from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.core.tests.utils import build_keycloak_success_response
 
 FAKE_OIDC_UUID = '39a7b5e8-7a64-45e3-acf1-ca7d314bfcec'
@@ -551,17 +553,31 @@ class AdminDeleteUserTestCase(TestCase):
         with self.assertRaises(User.DoesNotExist):
             self.user.refresh_from_db()
 
-    def test_success(self, mock_requests: MagicMock, mock_delete_principal: MagicMock):
+    # Pins the legacy path: direct delete_dkim is only called when the user is not migrated.
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=False)
+    @patch.object(mail_tasks.delete_hosted_dkim_dns_records, 'delay')
+    @patch.object(MailClient, 'delete_dkim')
+    @patch.object(MailClient, 'delete_domain')
+    def test_success(
+        self,
+        mock_delete_domain: MagicMock,
+        mock_delete_dkim: MagicMock,
+        mock_delete_hosted_dkim_dns_records: MagicMock,
+        mock_requests: MagicMock,
+        mock_delete_principal: MagicMock,
+    ):
         """Tests the full deletion flow:
         1. Delete the User model.
         2. Send a delete request to Keycloak to remove their login.
-        3. Send a delete request to Stalwart to remove their email/inbox."""
+        3. Send a delete request to Stalwart to remove their email/inbox.
+        4. Clean up their custom domain in Stalwart and Cloudflare."""
         account = Account.objects.create(name='test', user=self.user)
         email = Email.objects.create(
             address=self.user.username,
             type=Email.EmailType.PRIMARY,
             account=account,
         )
+        domain = Domain.objects.create(name='customdomain.com', user=self.user)
 
         self._main_test()
 
@@ -572,6 +588,10 @@ class AdminDeleteUserTestCase(TestCase):
         self.assertEqual(method, RequestMethods.DELETE)
 
         mock_delete_principal.assert_called_once()
+
+        mock_delete_domain.assert_called_once_with(domain.name)
+        mock_delete_dkim.assert_called_once_with(domain.name)
+        mock_delete_hosted_dkim_dns_records.assert_called_once_with(domain.name)
 
         with self.assertRaises(Account.DoesNotExist):
             account.refresh_from_db()
