@@ -936,6 +936,44 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         # I've never seen this return anything useful tbh, but we'll return a generic dict for now.
         return data
 
+    def clear_app_passwords(self, principal_id: str) -> list[str]:
+        """Destroy every app password on the account and return the destroyed ids.
+
+        The admin addresses another account's credentials through x:AppPassword with that account's id; the
+        get/set pair is chained with a result reference so the list cannot change between the two."""
+        self.preflight_check()
+
+        account = self.get_account(principal_id)
+        response = self.client.request(
+            JMapRequest(
+                using=['urn:ietf:params:jmap:core', 'urn:stalwart:jmap'],
+                method_calls=[
+                    Invocation(
+                        name=StalwartMethods.get(StalwartMethods.APP_PASSWORD),
+                        arguments={'accountId': account.id, 'properties': ['id']},
+                        method_call_id='0',
+                    ),
+                    Invocation(
+                        name=StalwartMethods.set(StalwartMethods.APP_PASSWORD),
+                        arguments={
+                            'accountId': account.id,
+                            '#destroy': {
+                                'resultOf': '0',
+                                'name': StalwartMethods.get(StalwartMethods.APP_PASSWORD),
+                                'path': '/list/*/id',
+                            },
+                        },
+                        method_call_id='1',
+                    ),
+                ],
+            )
+        )
+        result = response.method_responses[1].arguments
+        error = result.get('notDestroyed')
+        if error:
+            raise self._handle_jmap_error(list(error.values())[0], AppPasswordSetError)
+        return result.get('destroyed') or []
+
     def delete_account(self, principal_id: str) -> None:
         """
         Deletes a Stalwart account from the given thundermail address.

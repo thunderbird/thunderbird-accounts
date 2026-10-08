@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, call, patch
 import requests
 from django.test import SimpleTestCase, override_settings
 
+from thunderbird_accounts.core.tests.utils import build_stalwart_account
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
 from thunderbird_accounts.mail.exceptions import JMapOriginMismatchError, StalwartError
 from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientAdminJMAP, MailClientUserJMAP
@@ -597,6 +598,47 @@ class TestAccountOperations(SimpleTestCase):
         self.mail_client = build_admin_client()
         self.mail_client.account_id = 'admin-account'
         self.mail_client.primary_domain_id = 'primary-domain'
+
+    def test_clear_app_passwords_destroys_every_credential_on_the_account(self):
+        self.mail_client.get_account = MagicMock(return_value=build_stalwart_account(account_id='user-account'))
+        self.mail_client.client.request = MagicMock(
+            return_value=JMapResponse(
+                method_responses=[
+                    Invocation(
+                        name='x:AppPassword/get', arguments={'list': [{'id': 'a'}, {'id': 'b'}]}, method_call_id='0'
+                    ),
+                    Invocation(name='x:AppPassword/set', arguments={'destroyed': ['a', 'b']}, method_call_id='1'),
+                ],
+                session_state='a',
+            )
+        )
+
+        destroyed = self.mail_client.clear_app_passwords('person@example.org')
+
+        self.assertEqual(destroyed, ['a', 'b'])
+        get_call, set_call = self.mail_client.client.request.call_args.args[0].method_calls
+        self.assertEqual(get_call.arguments['accountId'], 'user-account')
+        self.assertEqual(set_call.arguments['accountId'], 'user-account')
+        self.assertEqual(set_call.arguments['#destroy']['path'], '/list/*/id')
+
+    def test_clear_app_passwords_raises_when_stalwart_refuses(self):
+        self.mail_client.get_account = MagicMock(return_value=build_stalwart_account(account_id='user-account'))
+        self.mail_client.client.request = MagicMock(
+            return_value=JMapResponse(
+                method_responses=[
+                    Invocation(name='x:AppPassword/get', arguments={'list': [{'id': 'a'}]}, method_call_id='0'),
+                    Invocation(
+                        name='x:AppPassword/set',
+                        arguments={'notDestroyed': {'a': {'type': 'forbidden', 'description': 'no'}}},
+                        method_call_id='1',
+                    ),
+                ],
+                session_state='a',
+            )
+        )
+
+        with self.assertRaises(AppPasswordSetError):
+            self.mail_client.clear_app_passwords('person@example.org')
 
     def test_get_account_gives_each_alias_its_own_domain(self):
         self.mail_client.client.request = MagicMock(

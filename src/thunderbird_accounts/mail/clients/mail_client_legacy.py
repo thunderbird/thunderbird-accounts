@@ -474,6 +474,12 @@ class MailClientLegacy(MailClientInterface):
             logging.error(f'[delete_app_password] err: {data}')
             raise RuntimeError(data)
 
+    def clear_app_passwords(self, principal_id: str) -> list[str]:
+        secrets = self.get_account(principal_id).get('secrets', [])
+        for secret in secrets:
+            self.delete_app_password(principal_id, secret)
+        return secrets
+
     def save_app_password(self, principal_id: str, secret: str):
         response = self._update_principal(
             principal_id,

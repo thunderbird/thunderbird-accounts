@@ -85,6 +85,10 @@ class MailClientInterface:
     def delete_app_password(self, principal_id: str, secret: str):
         raise NotImplementedError()
 
+    def clear_app_passwords(self, principal_id: str) -> list[str]:
+        """Remove every app password from the principal and return what was removed."""
+        raise NotImplementedError()
+
     def save_app_password(self, principal_id: str, secret: str):
         raise NotImplementedError()
 
