@@ -679,6 +679,30 @@ class TestAccountOperations(SimpleTestCase):
                 }
             },
         )
+        self.assertNotIn('quotas', created_account)
+
+    @patch('uuid.uuid4')
+    def test_create_account_with_quota_sends_max_disk_quota(self, uuid4_mock: MagicMock):
+        uuid4_mock.return_value = 'temp-id'
+        self.mail_client._get_domain_ids_by_name = MagicMock(return_value={'example.org': 'primary-domain'})
+        self.mail_client.client.request = MagicMock(
+            return_value=JMapResponse(
+                method_responses=[
+                    Invocation(
+                        name='x:Account/set',
+                        arguments={'created': {'temp-id': {'id': 'account-id'}}},
+                        method_call_id='0',
+                    )
+                ],
+                session_state='a',
+            )
+        )
+
+        self.mail_client.create_account(['person@example.org'], 'person@example.org', quota=2048)
+
+        request = self.mail_client.client.request.call_args.args[0]
+        created_account = request.method_calls[0].arguments['create']['temp-id']
+        self.assertEqual(created_account['quotas'], {'maxDiskQuota': 2048})
 
     def test_update_quota_uses_property_patch(self):
         self.mail_client.update_account = MagicMock()

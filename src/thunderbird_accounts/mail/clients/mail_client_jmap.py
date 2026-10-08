@@ -844,7 +844,8 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             permissions=stalwart.StalwartType(type='Inherit'),
             domain_id=domain_ids_by_domain[account_domain],
             aliases=aliases,
-            quotas=stalwart.StorageQuota(max_disk_quota=quota) if quota else None,
+            # Stalwart rejects an explicit null; leave the field unset for an account without a quota.
+            **({'quotas': stalwart.StorageQuota(max_disk_quota=quota)} if quota else {}),
         )
 
         temp_id = str(uuid.uuid4())
