@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal
 from unittest.mock import MagicMock, call, patch
 
+import requests
 from django.test import SimpleTestCase, override_settings
 
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
@@ -136,6 +137,41 @@ class TestJMAPClientTransport(SimpleTestCase):
 
         with self.assertRaises(InvalidJMapResponseError):
             client.request(self._request_data())
+
+    def _not_json(self) -> MagicMock:
+        response = MagicMock()
+        response.json.side_effect = requests.exceptions.JSONDecodeError('Expecting value', '<html>', 0)
+        return response
+
+    @patch('thunderbird_accounts.mail.clients.jmap_client.requests.get')
+    def test_non_json_session_body_raises_client_error(self, get_mock: MagicMock):
+        get_mock.return_value = self._not_json()
+        client = JMAPClient('https://stalwart.local', 'admin', 'token')
+
+        with self.assertRaises(InvalidJMapResponseError):
+            client.get_session()
+
+    @patch('thunderbird_accounts.mail.clients.jmap_client.requests.request')
+    def test_non_json_method_body_raises_client_error(self, request_mock: MagicMock):
+        """Covers the empty body of a 307/308 too: request() does not follow redirects."""
+        request_mock.return_value = self._not_json()
+        client = JMAPClient('https://stalwart.local', 'admin', 'token')
+        client.api_url = 'https://stalwart.local/jmap'
+
+        with self.assertRaises(InvalidJMapResponseError):
+            client.request(self._request_data())
+
+    @patch('thunderbird_accounts.mail.clients.jmap_client.requests.get')
+    def test_unparsable_api_url_is_an_origin_mismatch(self, get_mock: MagicMock):
+        client = JMAPClient('https://stalwart.local', 'admin', 'token')
+        for api_url in ('not a url', 'https://stalwart.local:99999/jmap/'):
+            with self.subTest(api_url=api_url):
+                client.session = None
+                self.session_data['apiUrl'] = api_url
+                get_mock.return_value = self._response(self.session_data)
+
+                with self.assertRaises(JMapOriginMismatchError):
+                    client.get_session()
 
 
 class MockJMapClient(JMAPClient):
