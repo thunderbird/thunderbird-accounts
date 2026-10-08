@@ -5,12 +5,14 @@ import { useRouter } from 'vue-router';
 import CardContainer from '@/components/CardContainer.vue';
 import StepIndicator from '@/components/StepIndicator.vue';
 import Step1Add from './components/Step1Add.vue';
+import Step2Identify from './components/Step2Identify.vue';
 
 const { t } = useI18n();
 const router = useRouter();
 
 const currentStep = ref(0);
 const customDomain = ref<string | null>(null);
+const dnsProvider = ref<string | null>(null);
 
 const steps = computed(() => [
   { key: 'add', label: t('views.customDomains.steps.add') },
@@ -24,7 +26,12 @@ const onCancel = () => {
 
 const onDomainAdded = (domainName: string) => {
   customDomain.value = domainName;
-  // TODO: advance to Step2 once it exists
+  currentStep.value = 1;
+};
+
+const onProviderSelected = (provider: string) => {
+  dnsProvider.value = provider;
+  // TODO: advance to Step3 once it exists
 };
 </script>
 
@@ -44,6 +51,12 @@ export default {
     />
 
     <step1-add v-if="currentStep === 0" @cancel="onCancel" @added="onDomainAdded" />
+    <step2-identify
+      v-else-if="currentStep === 1 && customDomain"
+      :domain-name="customDomain"
+      @cancel="onCancel"
+      @continue="onProviderSelected"
+    />
   </card-container>
 </template>
 
