@@ -315,7 +315,15 @@ class MailClientUserJMAP(BaseJMAP):
             for credential in self.get_app_passwords()
             if credential.id and credential.description == label
         ]
-        created = self.save_app_password(label)
+        try:
+            created = self.save_app_password(label)
+        except AppPasswordSetError as ex:
+            if ex.type != 'overQuota' or not existing_ids:
+                raise
+            # At maxAppPasswords the old credential has to go before its replacement can exist; a failed
+            # re-create then leaves the user one password short, never locked out of rotating.
+            self.delete_app_password(existing_ids)
+            return self.save_app_password(label)
 
         if not existing_ids:
             return created

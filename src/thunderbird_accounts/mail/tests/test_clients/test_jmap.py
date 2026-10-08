@@ -310,6 +310,38 @@ class TestUserAppPasswords(SimpleTestCase):
         self.mail_client.save_app_password.assert_called_once_with('user@example.org')
         self.mail_client.delete_app_password.assert_called_once_with(['old-id'])
 
+    def test_replace_app_password_at_quota_deletes_old_then_creates(self):
+        existing = [
+            stalwart.AppPassword(
+                id='old-id',
+                description='user@example.org',
+                permissions={'@type': 'Inherit'},
+                allowed_ips={},
+            )
+        ]
+        created = self.mail_client.SaveAppPasswordReturn(id='new-id', secret='server-generated-password')
+        over_quota = AppPasswordSetError('overQuota', 'You have exceeded your quota of 5 app passwords.', None)
+        self.mail_client.get_app_passwords = MagicMock(return_value=existing)
+        self.mail_client.save_app_password = MagicMock(side_effect=[over_quota, created])
+        self.mail_client.delete_app_password = MagicMock(return_value=True)
+
+        result = self.mail_client.replace_app_password('user@example.org')
+
+        self.assertEqual(result, created)
+        self.mail_client.delete_app_password.assert_called_once_with(['old-id'])
+        self.assertEqual(self.mail_client.save_app_password.call_count, 2)
+
+    def test_replace_app_password_at_quota_without_matching_label_raises(self):
+        over_quota = AppPasswordSetError('overQuota', 'You have exceeded your quota of 5 app passwords.', None)
+        self.mail_client.get_app_passwords = MagicMock(return_value=[])
+        self.mail_client.save_app_password = MagicMock(side_effect=over_quota)
+        self.mail_client.delete_app_password = MagicMock()
+
+        with self.assertRaises(AppPasswordSetError):
+            self.mail_client.replace_app_password('user@example.org')
+
+        self.mail_client.delete_app_password.assert_not_called()
+
     def test_replace_app_password_removes_new_credential_when_old_deletion_fails(self):
         existing = [
             stalwart.AppPassword(
