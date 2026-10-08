@@ -29,9 +29,9 @@ const onDomainAdded = (domainName: string) => {
   currentStep.value = 1;
 };
 
-const onProviderSelected = (provider: string) => {
+const onVerify = (provider: string) => {
   dnsProvider.value = provider;
-  // TODO: advance to Step3 once it exists
+  // TODO: verify the DNS settings and advance to the summary step
 };
 </script>
 
@@ -55,7 +55,7 @@ export default {
       v-else-if="currentStep === 1 && customDomain"
       :domain-name="customDomain"
       @cancel="onCancel"
-      @continue="onProviderSelected"
+      @verify="onVerify"
     />
   </card-container>
 </template>
