@@ -143,9 +143,7 @@ def delete_user_data(user) -> list[str]:
 
     from thunderbird_accounts.authentication.clients import KeycloakClient
     from thunderbird_accounts.authentication.exceptions import DeleteUserError
-    from thunderbird_accounts.mail import tasks as mail_tasks
     from thunderbird_accounts.mail.clients import MailClient
-    from thunderbird_accounts.mail.exceptions import DomainNotFoundError
 
     errors = []
 
@@ -163,27 +161,10 @@ def delete_user_data(user) -> list[str]:
             sentry_sdk.capture_exception(ex)
             errors.append(f'Stalwart: {ex}')
 
+    # The local Domain rows cascade with the user; this clears Stalwart and Cloudflare.
     for domain in user.domains.all():
-        try:
-            MailClient().delete_domain(domain.name)
-        except DomainNotFoundError:
-            pass
-        except Exception as ex:
-            sentry_sdk.capture_exception(ex)
-            errors.append(f'Stalwart domain {domain.name}: {ex}')
-
-        if not user.is_migrated:
-            try:
-                MailClient().delete_dkim(domain.name)
-            except Exception as ex:
-                sentry_sdk.capture_exception(ex)
-                errors.append(f'Stalwart DKIM {domain.name}: {ex}')
-
-        try:
-            mail_tasks.delete_hosted_dkim_dns_records.delay(domain.name)
-        except Exception as ex:
-            sentry_sdk.capture_exception(ex)
-            errors.append(f'Cloudflare {domain.name}: {ex}')
+        domain_errors = domain.delete_external_resources()
+        errors.extend(domain_errors)
 
     if errors:
         logging.error(f'Errors during user data deletion for {user.username}: {errors}')

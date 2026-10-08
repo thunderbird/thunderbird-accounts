@@ -13,7 +13,8 @@ from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.core.tests.utils import oidc_force_login
-from thunderbird_accounts.mail.clients import DomainVerificationErrors, StaleDNSRecordCode
+from thunderbird_accounts.mail import tasks as mail_tasks
+from thunderbird_accounts.mail.clients import DomainVerificationErrors, MailClient, StaleDNSRecordCode
 from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.mail.views import (
     _is_transient_backend_error,
@@ -688,7 +689,14 @@ class VerifyCustomDomainTestCase(TestCase):
         self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
 
 
+@patch.object(mail_tasks.delete_hosted_dkim_dns_records, 'delay')
+@patch.object(MailClient, 'delete_dkim')
+@patch.object(MailClient, 'delete_domain')
 class RemoveCustomDomainTestCase(TestCase):
+    """Exercises both Stalwart paths: legacy (v0.15, STALWART_ADMIN_API_USE_JMAP=False) and
+    migrated (v0.16 / JMAP, STALWART_ADMIN_API_USE_JMAP=True). The setting drives ``User.is_migrated``;
+    the client methods are patched on whichever ``MailClient`` class was selected at import."""
+
     def setUp(self):
         self.request_factory = RequestFactory()
         self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
@@ -711,81 +719,110 @@ class RemoveCustomDomainTestCase(TestCase):
         request.user = self.user
         return remove_custom_domain(request)
 
-    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_success_deletes_stalwart_dkim_cloudflare_records_and_local_domain(
-        self,
-        mock_mail_client_cls,
-        mock_delete_hosted_dkim_dns_records,
-    ):
-        mock_instance = Mock()
-        mock_mail_client_cls.return_value = mock_instance
+    def _mark_pending(self):
+        self.domain.stalwart_id = None
+        self.domain.status = Domain.DomainStatus.PENDING
+        self.domain.save()
 
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=False)
+    def test_legacy_success_deletes_stalwart_dkim_cloudflare_records_and_local_domain(
+        self, mock_delete_domain, mock_delete_dkim, mock_delete_hosted
+    ):
         response = self._delete_domain()
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content.decode()), {'success': True})
-        mock_instance.delete_domain.assert_called_once_with(self.domain.name)
-        mock_instance.delete_dkim.assert_called_once_with(self.domain.name)
-        mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
+        mock_delete_domain.assert_called_once_with(self.domain.name)
+        mock_delete_dkim.assert_called_once_with(self.domain.name)
+        mock_delete_hosted.assert_called_once_with(self.domain.name)
         self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
 
-    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_deleting_an_already_removed_domain_is_successful(
-        self,
-        mock_mail_client_cls,
-        mock_delete_hosted_dkim_dns_records,
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    def test_migrated_success_deletes_stalwart_cloudflare_records_and_local_domain(
+        self, mock_delete_domain, mock_delete_dkim, mock_delete_hosted
     ):
-        mock_instance = Mock()
-        mock_mail_client_cls.return_value = mock_instance
+        response = self._delete_domain()
 
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content.decode()), {'success': True})
+        mock_delete_domain.assert_called_once_with(self.domain.name)
+        # The JMAP client removes DKIM signatures inside delete_domain.
+        mock_delete_dkim.assert_not_called()
+        mock_delete_hosted.assert_called_once_with(self.domain.name)
+        self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=False)
+    def test_deleting_an_already_removed_domain_is_successful(
+        self, mock_delete_domain, mock_delete_dkim, mock_delete_hosted
+    ):
         self.assertEqual(self._delete_domain().status_code, 200)
         response = self._delete_domain()
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content.decode()), {'success': True})
-        mock_instance.delete_domain.assert_called_once_with(self.domain.name)
-        mock_instance.delete_dkim.assert_called_once_with(self.domain.name)
-        mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
+        mock_delete_domain.assert_called_once_with(self.domain.name)
+        mock_delete_dkim.assert_called_once_with(self.domain.name)
+        mock_delete_hosted.assert_called_once_with(self.domain.name)
 
-    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_pending_domain_still_deletes_dkim_and_cloudflare_records(
-        self,
-        mock_mail_client_cls,
-        mock_delete_hosted_dkim_dns_records,
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=False)
+    def test_legacy_pending_domain_still_deletes_dkim_and_cloudflare_records(
+        self, mock_delete_domain, mock_delete_dkim, mock_delete_hosted
     ):
-        self.domain.stalwart_id = None
-        self.domain.status = Domain.DomainStatus.PENDING
-        self.domain.save()
-        mock_instance = Mock()
-        mock_mail_client_cls.return_value = mock_instance
+        """Legacy pending domains don't exist in Stalwart yet, so DomainNotFound is expected and ignored."""
+        self._mark_pending()
+        mock_delete_domain.side_effect = DomainNotFoundError(self.domain.name)
 
         response = self._delete_domain()
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content.decode()), {'success': True})
-        mock_instance.delete_domain.assert_not_called()
-        mock_instance.delete_dkim.assert_called_once_with(self.domain.name)
-        mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
+        mock_delete_domain.assert_called_once_with(self.domain.name)
+        mock_delete_dkim.assert_called_once_with(self.domain.name)
+        mock_delete_hosted.assert_called_once_with(self.domain.name)
         self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
 
-    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_domain_with_alias_cannot_be_removed(
-        self,
-        mock_mail_client_cls,
-        mock_delete_hosted_dkim_dns_records,
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    def test_migrated_pending_domain_deletes_stalwart_domain_and_cloudflare_records(
+        self, mock_delete_domain, mock_delete_dkim, mock_delete_hosted
     ):
+        """Migrated users get a disabled Stalwart domain at add time, before stalwart_id is stored locally,
+        so removal must not be gated on stalwart_id."""
+        self._mark_pending()
+
+        response = self._delete_domain()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content.decode()), {'success': True})
+        mock_delete_domain.assert_called_once_with(self.domain.name)
+        mock_delete_dkim.assert_not_called()
+        mock_delete_hosted.assert_called_once_with(self.domain.name)
+        self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    def test_cleanup_failure_keeps_local_domain_and_returns_500(
+        self, mock_delete_domain, mock_delete_dkim, mock_delete_hosted
+    ):
+        mock_delete_domain.side_effect = RuntimeError('unavailable')
+
+        with self.assertLogs(level='ERROR'):
+            response = self._delete_domain()
+
+        self.assertEqual(response.status_code, 500)
+        self.assertFalse(json.loads(response.content.decode())['success'])
+        # Cloudflare clean up is still attempted, but the local row is kept so the user can retry.
+        mock_delete_hosted.assert_called_once_with(self.domain.name)
+        self.assertTrue(Domain.objects.filter(name=self.domain.name).exists())
+
+    def test_domain_with_alias_cannot_be_removed(self, mock_delete_domain, mock_delete_dkim, mock_delete_hosted):
         Email.objects.create(address=f'alias@{self.domain.name}', type=Email.EmailType.ALIAS, account=self.account)
 
         response = self._delete_domain()
 
         self.assertEqual(response.status_code, 400)
         self.assertFalse(json.loads(response.content.decode())['success'])
-        mock_mail_client_cls.assert_not_called()
-        mock_delete_hosted_dkim_dns_records.assert_not_called()
+        mock_delete_domain.assert_not_called()
+        mock_delete_dkim.assert_not_called()
+        mock_delete_hosted.assert_not_called()
         self.assertTrue(Domain.objects.filter(name=self.domain.name).exists())
 
 

@@ -2,6 +2,9 @@
 Stalwart reference models live here
 """
 
+import logging
+
+import sentry_sdk
 from django.db import models
 from django.forms import CharField
 from django.utils.translation import gettext_lazy as _
@@ -152,3 +155,58 @@ class Domain(BaseStalwartObject):
 
     def __str__(self):
         return f'{self.name} - {self.status.capitalize()}'
+
+    def delete_external_resources(self) -> list[str]:
+        """Removes everything this domain owns outside our database: the Stalwart domain principal,
+        its DKIM signatures, and the hosted DKIM TXT records in Cloudflare.
+
+        Every step is attempted regardless of earlier failures. Each failure is sent to Sentry and
+        returned as a message; an empty list means a full success. The local row is left in place so
+        callers can decide whether to keep it (user-facing removal) or let it cascade (account deletion).
+
+        Works for both the legacy (Stalwart v0.15) and migrated (Stalwart v0.16 / JMAP) paths. The
+        JMAP client removes DKIM signatures as part of ``delete_domain``, the legacy client does not."""
+        from thunderbird_accounts.mail import tasks as mail_tasks
+        from thunderbird_accounts.mail.clients import MailClient
+        from thunderbird_accounts.mail.exceptions import DomainNotFoundError
+
+        errors = []
+        stalwart_client = MailClient()
+
+        # Don't gate this on stalwart_id: migrated users get a disabled Stalwart domain at add time,
+        # before the local stalwart_id is filled in on verification.
+        try:
+            stalwart_client.delete_domain(self.name)
+        except DomainNotFoundError:
+            # Legacy pending domains are only created in Stalwart on verification, so this is expected there.
+            logging.info(f'[delete_external_resources] {self.name} not found in Stalwart, continuing clean up')
+        except Exception as ex:
+            errors.append(f'Stalwart domain {self.name}: {ex}')
+            self._capture_cleanup_exception(ex, phase='delete_stalwart_domain')
+
+        if not self.user.is_migrated:
+            try:
+                stalwart_client.delete_dkim(self.name)
+            except Exception as ex:
+                errors.append(f'Stalwart DKIM {self.name}: {ex}')
+                self._capture_cleanup_exception(ex, phase='delete_dkim')
+
+        # Hosted DKIM TXT records are published for every user, so they're always cleaned up.
+        try:
+            mail_tasks.delete_hosted_dkim_dns_records.delay(self.name)
+        except Exception as ex:
+            errors.append(f'Cloudflare {self.name}: {ex}')
+            self._capture_cleanup_exception(ex, phase='delete_hosted_dkim_dns_records')
+
+        return errors
+
+    def _capture_cleanup_exception(self, exception: Exception, *, phase: str):
+        sentry_sdk.set_context(
+            'domain',
+            {
+                'phase': phase,
+                'domain_name': self.name,
+                'domain_status': self.status,
+            },
+        )
+        sentry_sdk.capture_exception(exception)
