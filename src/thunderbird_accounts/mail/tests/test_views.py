@@ -914,8 +914,13 @@ class RemoveCustomDomainTestCase(TestCase):
         self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
 
     @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_migrated_pending_domain_without_stalwart_id_deletes_remote_domain(self, mock_mail_client_cls):
+    def test_migrated_pending_domain_without_stalwart_id_deletes_remote_domain(
+        self,
+        mock_mail_client_cls,
+        mock_delete_hosted_dkim_dns_records,
+    ):
         self.domain.stalwart_id = None
         self.domain.status = Domain.DomainStatus.PENDING
         self.domain.save()
@@ -926,6 +931,8 @@ class RemoveCustomDomainTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_instance.delete_domain.assert_called_once_with(self.domain.name)
+        mock_instance.delete_dkim.assert_not_called()
+        mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
         self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
 
     @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')

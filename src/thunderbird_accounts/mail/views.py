@@ -475,11 +475,13 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
                     _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
 
             if not request.user.is_migrated:
+                # The v0.16 delete_domain removes the domain's signatures itself; the legacy one does not.
                 cleanup_phase = 'delete_dkim'
                 stalwart_client.delete_dkim(_domain.name)
 
-                cleanup_phase = 'delete_hosted_dkim_dns_records'
-                mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
+            # Hosted records are published at creation for every user type, so they are removed for every one.
+            cleanup_phase = 'delete_hosted_dkim_dns_records'
+            mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
             break
 
         cleanup_phase = 'delete_local_domain'
