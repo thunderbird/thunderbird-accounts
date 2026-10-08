@@ -708,7 +708,13 @@ class TestAccountOperations(SimpleTestCase):
                                     'id': 'account-id',
                                     'name': 'person',
                                     '@type': 'User',
-                                }
+                                    'emailAddress': 'person@example.org',
+                                    'aliases': {'a': {'name': 'other', 'domainId': 'dom-1', 'enabled': True}},
+                                    'roles': {'@type': 'User'},
+                                    'quotas': {'maxDiskQuota': 2048},
+                                    'usedDiskQuota': 12,
+                                },
+                                {'id': 'group-id', 'name': 'staff', '@type': 'Group'},
                             ]
                         },
                         method_call_id='1',
@@ -718,9 +724,40 @@ class TestAccountOperations(SimpleTestCase):
             )
         )
 
-        principals = self.mail_client.list_principals()
+        custom_domain = MagicMock(id='dom-1')
+        custom_domain.name = 'custom.test'
+        with patch.object(self.mail_client, '_get_domains_by_id', return_value=[custom_domain]) as get_domains:
+            principals = self.mail_client.list_principals()
 
-        self.assertEqual(principals, [{'id': 'account-id', 'name': 'person', '@type': 'User'}])
+        get_domains.assert_called_once_with(['dom-1'])
+        # The admin listing reads the legacy principal shape.
+        self.assertEqual(
+            principals,
+            [
+                {
+                    'id': 'account-id',
+                    'name': 'person',
+                    'type': 'User',
+                    'description': None,
+                    'emails': ['person@example.org', 'other@custom.test'],
+                    'roles': ['User'],
+                    'members': [],
+                    'quota': 2048,
+                    'usedQuota': 12,
+                },
+                {
+                    'id': 'group-id',
+                    'name': 'staff',
+                    'type': 'Group',
+                    'description': None,
+                    'emails': [],
+                    'roles': [],
+                    'members': [],
+                    'quota': None,
+                    'usedQuota': None,
+                },
+            ],
+        )
         request = self.mail_client.client.request.call_args.args[0]
         self.assertEqual(len(request.method_calls), 2)
         self.assertEqual(

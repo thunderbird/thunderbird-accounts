@@ -720,7 +720,36 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             )
         )
 
-        return response.method_responses[1].arguments.get('list', [])
+        principals = response.method_responses[1].arguments.get('list', [])
+        domain_names = self._domain_names_by_id(
+            {alias['domainId'] for principal in principals for alias in (principal.get('aliases') or {}).values()}
+        )
+
+        # Legacy principal shape, which is what the admin listing reads.
+        return [
+            {
+                'id': principal.get('id'),
+                'name': principal.get('name'),
+                'type': principal.get('@type'),
+                'description': principal.get('description'),
+                'emails': [
+                    email
+                    for email in (
+                        principal.get('emailAddress'),
+                        *[
+                            f'{alias["name"]}@{domain_names[alias["domainId"]]}'
+                            for alias in (principal.get('aliases') or {}).values()
+                        ],
+                    )
+                    if email
+                ],
+                'roles': [role for role in [(principal.get('roles') or {}).get('@type')] if role],
+                'members': principal.get('memberGroupIds') or [],
+                'quota': (principal.get('quotas') or {}).get('maxDiskQuota'),
+                'usedQuota': principal.get('usedDiskQuota'),
+            }
+            for principal in principals
+        ]
 
     def _domain_names_by_id(self, domain_ids: set[str]) -> dict[str, str]:
         if not domain_ids:
