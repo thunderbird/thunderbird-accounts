@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 from django.conf import settings
 from django.contrib.admin import AdminSite
 from django.http import HttpRequest, QueryDict
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.template.response import TemplateResponse
 
 from requests import Response
@@ -553,6 +553,8 @@ class AdminDeleteUserTestCase(TestCase):
         with self.assertRaises(User.DoesNotExist):
             self.user.refresh_from_db()
 
+    # Pins the legacy path: direct delete_dkim is only called when the user is not migrated.
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=False)
     @patch.object(mail_tasks.delete_hosted_dkim_dns_records, 'delay')
     @patch.object(MailClient, 'delete_dkim')
     @patch.object(MailClient, 'delete_domain')
