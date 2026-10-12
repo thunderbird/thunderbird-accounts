@@ -1,5 +1,5 @@
 import datetime
-from thunderbird_accounts.mail.exceptions import AccountSetError, DomainNotFoundError
+from thunderbird_accounts.mail.exceptions import AccountSetError, DomainNotFoundError, DomainSetError
 from django.utils.crypto import get_random_string
 from thunderbird_accounts.subscription.models import Plan, Subscription
 import json
@@ -381,6 +381,34 @@ class CreateCustomDomainTestCase(TestCase):
         mock_instance.delete_domain.assert_called_once_with('example.com')
         mock_publish_hosted_dkim.assert_not_called()
         self.assertFalse(Domain.objects.exists())
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_migrated_add_rejects_a_domain_name_stalwart_refuses(self, mock_mail_client_cls):
+        mock_instance = Mock()
+        mock_instance.get_domain.side_effect = DomainNotFoundError('example.test')
+        mock_instance.create_domain.side_effect = DomainSetError('invalidPatch', 'Invalid domain name', None)
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = create_custom_domain(self.create_request('example.test'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(json.loads(response.content.decode())['error'], 'Enter a valid domain name.')
+        mock_instance.create_dkim.assert_not_called()
+        mock_instance.delete_domain.assert_not_called()
+        self.assertFalse(Domain.objects.exists())
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_migrated_add_keeps_500_for_other_stalwart_domain_errors(self, mock_mail_client_cls):
+        mock_instance = Mock()
+        mock_instance.get_domain.side_effect = DomainNotFoundError('example.com')
+        mock_instance.create_domain.side_effect = DomainSetError('forbidden', 'Not allowed', None)
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = create_custom_domain(self.create_request('example.com'))
+
+        self.assertEqual(response.status_code, 500)
 
     @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
     @patch('thunderbird_accounts.mail.views.Domain.objects.create', side_effect=IntegrityError)

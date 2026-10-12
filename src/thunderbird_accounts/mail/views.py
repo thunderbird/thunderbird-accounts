@@ -31,6 +31,7 @@ from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
     DomainAlreadyExistsError,
     DomainNotFoundError,
+    DomainSetError,
     EmailNotValidError,
     MAIL_CLIENT_ERRORS,
 )
@@ -220,6 +221,10 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
                 remote_domain_created = True
             except DomainAlreadyExistsError as ex:
                 raise ex
+            except DomainSetError as ex:
+                if ex.type in ('invalidPatch', 'invalidProperties'):
+                    return JsonResponse({'success': False, 'error': _('Enter a valid domain name.')}, status=400)
+                raise
 
         # If request fails the dkim will hit our general exception catch
         # we want this to happen before the local reference (Domain model) is created
