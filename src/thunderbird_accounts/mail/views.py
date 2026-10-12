@@ -95,6 +95,16 @@ def app_password_set(request: HttpRequest):
         if not label or (not new_password and not settings.STALWART_ADMIN_API_USE_JMAP):
             return JsonResponse({'success': False, 'error': str(_('Label and password are required'))}, status=400)
 
+        if not request.user.stalwart_primary_email:
+            return JsonResponse(
+                {
+                    'success': False,
+                    'error': str(_('Thundermail account setup is still in progress. Please try again shortly.')),
+                    'code': 'mail_account_not_ready',
+                },
+                status=409,
+            )
+
         if settings.STALWART_ADMIN_API_USE_JMAP:
             access_token = request.session.get('oidc_access_token')
             if not access_token:

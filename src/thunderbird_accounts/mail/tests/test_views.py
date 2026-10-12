@@ -147,6 +147,24 @@ class AppPasswordApiTestCase(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(json.loads(response.content.decode())['app_password'], 'generated')
 
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClientUserJMAP', create=True)
+    def test_returns_conflict_when_the_mail_account_does_not_exist_yet(self, mock_user_jmap_cls):
+        self.account.delete()
+        session = self.client.session
+        session['oidc_access_token'] = 'user-access-token'
+        session.save()
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'name': self.primary_email}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 409, response.content)
+        self.assertEqual(json.loads(response.content.decode())['code'], 'mail_account_not_ready')
+        mock_user_jmap_cls.assert_not_called()
+
     @override_settings(STALWART_ADMIN_API_USE_JMAP=False)
     def test_name_and_password_are_required(self):
         response = self.client.post(
