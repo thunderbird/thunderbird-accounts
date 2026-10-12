@@ -1,5 +1,5 @@
 import datetime
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError
+from thunderbird_accounts.mail.exceptions import AccountSetError, DomainNotFoundError
 from django.utils.crypto import get_random_string
 from thunderbird_accounts.subscription.models import Plan, Subscription
 import json
@@ -201,6 +201,21 @@ class DisplayNameApiTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(json.loads(response.content.decode())['success'])
         mock_instance.update_individual.assert_called_once_with(self.primary_email, full_name='New Name')
+
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_reports_failure_when_stalwart_rejects_the_update(self, mock_mail_client_cls):
+        mock_mail_client_cls.return_value.update_individual.side_effect = AccountSetError(
+            'invalidPatch', 'Invalid value for property.', ['name']
+        )
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'display-name': 'New Name'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertFalse(json.loads(response.content.decode())['success'])
 
     def test_display_name_is_required(self):
         response = self.client.post(

@@ -12,7 +12,7 @@ from thunderbird_accounts.core.tests.utils import build_stalwart_account
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
 from thunderbird_accounts.mail.exceptions import JMapOriginMismatchError, StalwartError
 from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientAdminJMAP, MailClientUserJMAP
-from thunderbird_accounts.mail.exceptions import AppPasswordSetError
+from thunderbird_accounts.mail.exceptions import AccountSetError, AppPasswordSetError
 from thunderbird_accounts.mail.tests.test_clients.test_legacy import (
     TestMailClientCheckDomainDNS,
 )
@@ -680,6 +680,57 @@ class TestAccountOperations(SimpleTestCase):
             sorted(alias.full_address for alias in account.aliases.values()),
             ['first@example.org', 'second@custom.test'],
         )
+
+    def test_update_individual_sends_only_the_description(self):
+        self.mail_client.update_account = MagicMock()
+
+        self.mail_client.update_individual('person@example.org', full_name='New Name')
+
+        principal_id, update = self.mail_client.update_account.call_args.args
+        self.assertEqual(principal_id, 'person@example.org')
+        self.assertEqual(update.model_dump(exclude_unset=True), {'description': 'New Name'})
+
+    def test_update_individual_sets_local_part_and_domain_for_a_new_address(self):
+        self.mail_client.update_account = MagicMock()
+        self.mail_client._get_domain_ids_by_name = MagicMock(return_value={'example.org': 'primary-domain'})
+
+        self.mail_client.update_individual('person@example.org', primary_email_address='renamed@example.org')
+
+        _, update = self.mail_client.update_account.call_args.args
+        self.assertEqual(update.model_dump(exclude_unset=True), {'name': 'renamed', 'domainId': 'primary-domain'})
+
+    def test_update_account_raises_when_stalwart_rejects_the_patch(self):
+        self.mail_client.client.request = MagicMock(
+            side_effect=[
+                JMapResponse(
+                    method_responses=[
+                        Invocation(name='x:Account/query', arguments={'ids': ['c'], 'total': 1}, method_call_id='0')
+                    ],
+                    session_state='a',
+                ),
+                JMapResponse(
+                    method_responses=[
+                        Invocation(
+                            name='x:Account/set',
+                            arguments={
+                                'notUpdated': {
+                                    'c': {
+                                        'type': 'invalidPatch',
+                                        'description': 'Invalid value for property.',
+                                        'properties': ['name'],
+                                    }
+                                }
+                            },
+                            method_call_id='0',
+                        )
+                    ],
+                    session_state='a',
+                ),
+            ]
+        )
+
+        with self.assertRaises(AccountSetError):
+            self.mail_client.update_account('person@example.org', stalwart.AccountUpdate(description='New Name'))
 
     @patch('uuid.uuid4')
     def test_create_account_does_not_duplicate_primary_address_as_alias(self, uuid4_mock: MagicMock):

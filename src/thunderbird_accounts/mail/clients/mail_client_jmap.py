@@ -930,6 +930,11 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             )
         )
 
+        error = response.method_responses[0].arguments.get('notUpdated')
+        if error:
+            error_obj = list(error.values())[0]
+            raise self._handle_jmap_error(error_obj, AccountSetError)
+
         data = response.method_responses[0].arguments.get('updated', {})
         self._debug_dump('patch_account', data)
 
@@ -1019,12 +1024,19 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
     ) -> None:
         """Updates Stalwart and changes their primary email address and/or full name"""
 
-        account = stalwart.AccountUpdate(name=primary_email_address or None, description=full_name or None)
+        # Only set fields may reach the patch: Stalwart rejects the whole update if name is sent as null.
+        fields = {}
+        if primary_email_address:
+            local_part, domain_name = primary_email_address.split('@')
+            fields['name'] = local_part
+            fields['domain_id'] = self._get_domain_ids_by_name([primary_email_address])[domain_name]
+        if full_name:
+            fields['description'] = full_name
 
-        if not account.name and not account.description:
+        if not fields:
             raise ValueError('You must provide at least one field to change.')
 
-        self.update_account(principal_id, account)
+        self.update_account(principal_id, stalwart.AccountUpdate(**fields))
 
     def update_quota(self, principal_id: str, quota: int) -> None:
         account = stalwart.AccountUpdate(**{'quotas/maxDiskQuota': quota})

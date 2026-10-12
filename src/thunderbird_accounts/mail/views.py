@@ -8,7 +8,6 @@ import requests
 import requests.exceptions
 import sentry_sdk
 from django.conf import settings
-from django.contrib import messages
 from django.db import IntegrityError, transaction
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
@@ -33,6 +32,7 @@ from thunderbird_accounts.mail.exceptions import (
     DomainAlreadyExistsError,
     DomainNotFoundError,
     EmailNotValidError,
+    MAIL_CLIENT_ERRORS,
 )
 from thunderbird_accounts.mail.dns import check_stale_dns_records
 from thunderbird_accounts.mail.utils import (
@@ -157,11 +157,14 @@ def display_name_set(request: HttpRequest):
     if not display_name:
         return JsonResponse({'success': False, 'error': str(_('Display name is required'))}, status=400)
 
-    stalwart_client = MailClient()
     try:
-        stalwart_client.update_individual(request.user.stalwart_primary_email, full_name=display_name)
-    except AccountNotFoundError:
-        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
+        MailClient().update_individual(request.user.stalwart_primary_email, full_name=display_name)
+    except MAIL_CLIENT_ERRORS as ex:
+        logging.error(f'Error setting display name: {ex}')
+        return JsonResponse(
+            {'success': False, 'error': str(_('Could not update your display name, please try again later.'))},
+            status=500,
+        )
 
     return JsonResponse({'success': True, 'message': str(_('Display name set successfully'))})
 
