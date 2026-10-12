@@ -633,7 +633,7 @@ def add_email_alias(request: HttpRequest):
             status=500,
         )
 
-    return JsonResponse({'success': True})
+    return JsonResponse({'success': True, 'email_alias': full_email_alias})
 
 
 @login_required
