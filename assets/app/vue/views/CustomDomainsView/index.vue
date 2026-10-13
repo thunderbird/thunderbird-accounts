@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import CardContainer from '@/components/CardContainer.vue';
 import StepIndicator from '@/components/StepIndicator.vue';
 import Step1Add from './components/Step1Add.vue';
@@ -9,10 +9,14 @@ import Step2Identify from './components/Step2Identify.vue';
 import Step3Summary from './components/Step3Summary.vue';
 
 const { t } = useI18n();
+const route = useRoute();
 const router = useRouter();
 
-const currentStep = ref(0);
-const customDomain = ref<string | null>(null);
+// An existing domain can be passed in to skip straight to choosing its DNS provider
+const initialDomain = typeof route.query.domain === 'string' ? route.query.domain : null;
+
+const currentStep = ref(initialDomain ? 1 : 0);
+const customDomain = ref<string | null>(initialDomain);
 const dnsProvider = ref<string | null>(null);
 
 const steps = computed(() => [

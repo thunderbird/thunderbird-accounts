@@ -11,6 +11,7 @@ import TosPrivacyView from '@/views/TosPrivacyView/index.vue';
 // Thundermail Routes
 import SecuritySettingsView from '@/views/SecuritySettingsView/index.vue';
 import CustomDomainsView from '@/views/CustomDomainsView/index.vue';
+import VerificationResultsView from '@/views/CustomDomainsView/VerificationResultsView/index.vue';
 
 // Zendesk Contact Form (Support)
 import ContactView from '@/views/ContactView/index.vue';
@@ -152,6 +153,10 @@ const routes: RouteRecordRaw[] = window._page?.isErrorPage ? [
     path: '/custom-domains',
     name: 'custom-domains',
     component: CustomDomainsView,
+  }, {
+    path: '/custom-domains/verification',
+    name: 'custom-domains-verification',
+    component: VerificationResultsView,
   }] : []),
   // Sign Up / Subscribe
   {
