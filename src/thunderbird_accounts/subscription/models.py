@@ -423,3 +423,77 @@ class Transaction(BaseModel):
             models.Index(fields=['revised_at']),
             models.Index(fields=['webhook_updated_at']),
         ]
+
+
+class Adjustment(BaseModel):
+    """A Paddle adjustment, including refunds.
+
+    A refund is approved when ``action`` is ``refund`` and ``status`` is ``approved``.
+    That can arrive on ``adjustment.created`` (auto-approved) or later on
+    ``adjustment.updated`` (Paddle reviewed a ``pending_approval`` refund).
+    The user is the subscription's user, reached through ``subscription`` or
+    ``transaction.subscription``.
+    """
+
+    class ActionValues(models.TextChoices):
+        CREDIT = 'credit', _('Credit')
+        REFUND = 'refund', _('Refund')
+        CHARGEBACK = 'chargeback', _('Chargeback')
+        CHARGEBACK_REVERSE = 'chargeback_reverse', _('Chargeback reverse')
+        CHARGEBACK_WARNING = 'chargeback_warning', _('Chargeback warning')
+        CHARGEBACK_WARNING_REVERSE = 'chargeback_warning_reverse', _('Chargeback warning reverse')
+        CREDIT_REVERSE = 'credit_reverse', _('Credit reverse')
+
+    class TypeValues(models.TextChoices):
+        FULL = 'full', _('Full')
+        PARTIAL = 'partial', _('Partial')
+
+    class StatusValues(models.TextChoices):
+        PENDING_APPROVAL = 'pending_approval', _('Pending approval')
+        APPROVED = 'approved', _('Approved')
+        REJECTED = 'rejected', _('Rejected')
+        REVERSED = 'reversed', _('Reversed')
+
+    paddle_id = PaddleId(help_text=_('The adjustment paddle id.'))
+    action = models.CharField(
+        max_length=256,
+        choices=ActionValues,
+        help_text=_('Kind of adjustment. A refund returns money to the original payment method.'),
+    )
+    adjustment_type = models.CharField(
+        max_length=256,
+        choices=TypeValues,
+        null=True,
+        help_text=_('Whether the whole transaction or only some of it was adjusted.'),
+    )
+    status = models.CharField(
+        max_length=256,
+        choices=StatusValues,
+        help_text=_('Whether Paddle has approved this adjustment.'),
+    )
+    reason = models.TextField(null=True, blank=True, help_text=_('Why this adjustment was created.'))
+
+    paddle_transaction_id = PaddleId(help_text=_('The transaction this adjustment belongs to.'))
+    paddle_subscription_id = PaddleId(null=True, help_text=_('The subscription this adjustment belongs to.'))
+    paddle_customer_id = PaddleId(help_text=_('The customer this adjustment belongs to.'))
+
+    total = models.CharField(max_length=256, help_text=_('Adjustment total after tax, in the lowest currency unit.'))
+    currency = models.CharField(max_length=256, help_text=_('Three letter ISO 4217 currency code.'))
+
+    webhook_updated_at = models.DateTimeField(
+        null=True, help_text=_('date when this model was last updated by a paddle webhook.')
+    )
+
+    transaction = models.ForeignKey(Transaction, null=True, on_delete=models.CASCADE)
+    subscription = models.ForeignKey(Subscription, null=True, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'Adjustment [{self.uuid}] {self.paddle_id} - {self.action} ({self.status})'
+
+    class Meta(BaseModel.Meta):
+        indexes = [
+            *BaseModel.Meta.indexes,
+            models.Index(fields=['action']),
+            models.Index(fields=['status']),
+            models.Index(fields=['webhook_updated_at']),
+        ]

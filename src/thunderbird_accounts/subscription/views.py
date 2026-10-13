@@ -262,6 +262,10 @@ def handle_paddle_webhook(request: Request):
         tasks.paddle_subscription_event.delay(event_data, occurred_at, is_create_event=is_create_event)
     elif event_type == 'product.created' or event_type == 'product.updated':
         tasks.paddle_product_event.delay(event_data, occurred_at, is_create_event=is_create_event)
+    elif event_type == 'adjustment.created' or event_type == 'adjustment.updated':
+        # Created covers auto-approved refunds. Updated covers refunds that move
+        # from pending_approval to approved or rejected.
+        tasks.paddle_adjustment_event.delay(event_data, occurred_at, is_create_event=is_create_event)
     else:
         logging.debug(f"Skipping {event_type} as it's not supported")
 

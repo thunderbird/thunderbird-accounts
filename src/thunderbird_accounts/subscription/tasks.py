@@ -19,7 +19,15 @@ from thunderbird_accounts.celery.retry import (
     retry_transient_external_service_errors,
 )
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
-from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product, Plan
+from thunderbird_accounts.subscription.models import (
+    Adjustment,
+    Transaction,
+    Subscription,
+    SubscriptionItem,
+    Price,
+    Product,
+    Plan,
+)
 from thunderbird_accounts.subscription.utils import activate_subscription_features
 from thunderbird_accounts.subscription.decorators import inject_paddle, init_paddle
 from thunderbird_accounts.core.types import TaskReturnStatus
@@ -452,6 +460,112 @@ def paddle_product_event(self, event_data: dict, occurred_at: datetime.datetime,
         'task_status': TaskReturnStatus.SUCCESS,
         'model_uuid': product.uuid,
         'model_created': product_created,
+    }
+
+
+@shared_task(base=DatabaseTask, bind=True)
+def paddle_adjustment_event(self, event_data: dict, occurred_at: datetime.datetime, is_create_event: bool):
+    """Handles adjustment.created and adjustment.updated events.
+
+    Docs: https://developer.paddle.com/webhooks/adjustments/adjustment-created
+    Docs: https://developer.paddle.com/webhooks/adjustments/adjustment-updated
+
+    A refund is approved when action is refund and status is approved. Auto-approved
+    refunds are created already approved, so adjustment.updated never fires for them.
+    Refunds that need review are created as pending_approval and later updated to
+    approved or rejected.
+    """
+    paddle_id = event_data.get('id')
+
+    try:
+        query = Adjustment.objects.filter(paddle_id=paddle_id)
+        if not is_create_event:
+            query = query.filter(webhook_updated_at__gt=occurred_at)
+        adjustment = query.get()
+        if adjustment:
+            if is_create_event:
+                err = (
+                    f'Ignoring webhook as adjustment (uuid={adjustment.uuid}, paddle_id={paddle_id}) exists when '
+                    f"it shouldn't exist."
+                )
+                reason = 'adjustment already exists'
+            else:
+                err = (
+                    f'Ignoring webhook as adjustment (uuid={adjustment.uuid}, paddle_id={paddle_id}) update was '
+                    f'updated later than when the webhook occurred at.'
+                )
+                reason = 'webhook is out of date'
+
+            logging.info(err)
+
+            raise TaskFailed(
+                reason,
+                {
+                    'paddle_id': paddle_id,
+                    'occurred_at': occurred_at,
+                },
+            )
+    except Adjustment.DoesNotExist:
+        pass
+
+    action = event_data.get('action')
+    status = event_data.get('status')
+    paddle_transaction_id = event_data.get('transaction_id')
+    paddle_subscription_id = event_data.get('subscription_id')
+    paddle_customer_id = event_data.get('customer_id')
+    totals = event_data.get('totals') or {}
+    total = totals.get('total')
+    currency = event_data.get('currency_code') or totals.get('currency_code')
+
+    if not action or not status or total is None or not currency:
+        logging.error(f'Adjustment (paddle_id={paddle_id}) webhook is missing action, status, total, or currency.')
+        raise TaskFailed(
+            'missing action, status, total, or currency',
+            {
+                'paddle_id': paddle_id,
+                'occurred_at': occurred_at,
+            },
+        )
+
+    transaction = Transaction.objects.filter(paddle_id=paddle_transaction_id).first()
+    subscription = None
+    if paddle_subscription_id:
+        subscription = Subscription.objects.filter(paddle_id=paddle_subscription_id).first()
+    if subscription is None and transaction is not None and transaction.subscription_id:
+        subscription = transaction.subscription
+
+    if subscription is None or subscription.user_id is None:
+        logging.info(
+            f'Adjustment (paddle_id={paddle_id}) has no local subscription user yet. '
+            f'Storing it against paddle ids so it can be matched later.'
+        )
+
+    adjustment, adjustment_created = Adjustment.objects.update_or_create(
+        paddle_id=paddle_id,
+        defaults={
+            'action': action,
+            'adjustment_type': event_data.get('type'),
+            'status': status,
+            'reason': event_data.get('reason'),
+            'paddle_transaction_id': paddle_transaction_id,
+            'paddle_subscription_id': paddle_subscription_id,
+            'paddle_customer_id': paddle_customer_id,
+            'total': total,
+            'currency': currency,
+            'webhook_updated_at': occurred_at,
+            'transaction': transaction,
+            'subscription': subscription,
+        },
+    )
+
+    return {
+        'paddle_id': paddle_id,
+        'occurred_at': occurred_at,
+        'task_status': TaskReturnStatus.SUCCESS,
+        'model_uuid': adjustment.uuid,
+        'model_created': adjustment_created,
+        'user_uuid': subscription.user_id if subscription else None,
+        'refund_approved': action == Adjustment.ActionValues.REFUND and status == Adjustment.StatusValues.APPROVED,
     }
 
 

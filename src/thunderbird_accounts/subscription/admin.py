@@ -5,7 +5,15 @@ from urllib.parse import urljoin
 from django.conf import settings
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _, ngettext
-from thunderbird_accounts.subscription.models import Subscription, Plan, SubscriptionItem, Price, Transaction, Product
+from thunderbird_accounts.subscription.models import (
+    Adjustment,
+    Subscription,
+    Plan,
+    SubscriptionItem,
+    Price,
+    Transaction,
+    Product,
+)
 from thunderbird_accounts.subscription.tasks import retrieve_and_update_localized_subscription_price
 
 
@@ -79,6 +87,8 @@ class CustomReadonlyAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
             return urljoin(base_url, f'/subscriptions-v2/{obj.paddle_id}')
         elif isinstance(obj, Transaction):
             return urljoin(base_url, f'/transactions-v2/{obj.paddle_id}')
+        elif isinstance(obj, Adjustment) and obj.paddle_transaction_id:
+            return urljoin(base_url, f'/transactions-v2/{obj.paddle_transaction_id}')
 
         return None
 
@@ -196,10 +206,29 @@ class CustomTransactionAdmin(CustomReadonlyAdmin):
         return None
 
 
+class CustomAdjustmentAdmin(CustomReadonlyAdmin):
+    search_fields = (
+        'paddle_id',
+        'paddle_transaction_id',
+        'paddle_subscription_id',
+        'subscription__user__username',
+    )
+    search_help_text = _('Search adjustments by Paddle adjustment ID, transaction ID, subscription ID, or email.')
+    list_display = ('paddle_id', 'action', 'status', 'subscription_username', 'total', 'currency')
+    list_select_related = ('subscription__user',)
+
+    @admin.display(description=_('Username'), ordering='subscription__user__username')
+    def subscription_username(self, obj):
+        if obj.subscription and obj.subscription.user:
+            return obj.subscription.user.username
+        return None
+
+
 # Data stores for Paddle information
 admin.site.register(Subscription, admin_class=CustomSubscriptionAdmin)
 admin.site.register(SubscriptionItem, admin_class=CustomSubscriptionItemAdmin)
 admin.site.register(Transaction, admin_class=CustomTransactionAdmin)
+admin.site.register(Adjustment, admin_class=CustomAdjustmentAdmin)
 admin.site.register(Price, admin_class=CustomPriceAdmin)
 admin.site.register(Product, admin_class=CustomProductAdmin)
 

@@ -112,6 +112,22 @@ class PaddleWebhookViewTestCase(DRF_APITestCase):
                     'occurred_at': '2024-04-12T10:18:49.621022Z',
                 },
             ),
+            (
+                'thunderbird_accounts.subscription.tasks.paddle_adjustment_event',
+                {
+                    'event_type': 'adjustment.created',
+                    'data': {'action': 'refund', 'status': 'pending_approval'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+            ),
+            (
+                'thunderbird_accounts.subscription.tasks.paddle_adjustment_event',
+                {
+                    'event_type': 'adjustment.updated',
+                    'data': {'action': 'refund', 'status': 'approved'},
+                    'occurred_at': '2024-04-12T10:18:49.621022Z',
+                },
+            ),
         ]
 
         for paddle_event, event_data in event_types:
@@ -915,6 +931,149 @@ class ProductUpdatedTaskTestCase(ProductCreatedTaskTestCase):
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), event_data.get('id'))
+        self.assertEqual(ex.exception.reason, 'webhook is out of date')
+
+
+class AdjustmentCreatedTaskTestCase(PaddleTestCase):
+    is_create_event: bool = True
+    paddle_fixture = 'fixtures/webhook_paddle_adjustment_created.json'
+
+    def _local_billing_rows(self, event_data: dict):
+        subscription = models.Subscription.objects.create(
+            paddle_id=event_data.get('subscription_id'),
+            paddle_customer_id=event_data.get('customer_id'),
+            user=self.test_user,
+        )
+        transaction = models.Transaction.objects.create(
+            paddle_id=event_data.get('transaction_id'),
+            paddle_subscription_id=event_data.get('subscription_id'),
+            subscription=subscription,
+            total='100',
+            tax='8',
+            currency='USD',
+            status=models.Transaction.StatusValues.COMPLETED,
+        )
+        return subscription, transaction
+
+    def test_success(self):
+        self.assertEqual(models.Adjustment.objects.count(), 0)
+
+        data = self.retrieve_webhook_fixture()
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+        subscription, transaction = self._local_billing_rows(event_data)
+
+        task_results = tasks.paddle_adjustment_event.delay(event_data, occurred_at, self.is_create_event).get(
+            timeout=10
+        )
+
+        self.assertEqual(task_results.get('task_status'), 'success')
+        self.assertTrue(task_results.get('model_created'))
+        self.assertFalse(task_results.get('refund_approved'))
+        self.assertEqual(task_results.get('user_uuid'), self.test_user.uuid)
+
+        adjustment = models.Adjustment.objects.get(pk=task_results.get('model_uuid'))
+        self.assertEqual(adjustment.action, models.Adjustment.ActionValues.REFUND)
+        self.assertEqual(adjustment.status, models.Adjustment.StatusValues.PENDING_APPROVAL)
+        self.assertEqual(adjustment.total, event_data.get('totals', {}).get('total'))
+        self.assertEqual(adjustment.subscription_id, subscription.uuid)
+        self.assertEqual(adjustment.transaction_id, transaction.uuid)
+        self.assertEqual(adjustment.subscription.user_id, self.test_user.uuid)
+
+    def test_auto_approved_refund_is_recorded_on_create(self):
+        """Paddle creates some live refunds as approved, and never sends adjustment.updated."""
+        data = self.retrieve_webhook_fixture()
+        event_data: dict = data.get('data')
+        event_data['status'] = models.Adjustment.StatusValues.APPROVED
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+        self._local_billing_rows(event_data)
+
+        task_results = tasks.paddle_adjustment_event.delay(event_data, occurred_at, self.is_create_event).get(
+            timeout=10
+        )
+
+        self.assertTrue(task_results.get('refund_approved'))
+        adjustment = models.Adjustment.objects.get(pk=task_results.get('model_uuid'))
+        self.assertEqual(adjustment.status, models.Adjustment.StatusValues.APPROVED)
+        self.assertEqual(adjustment.subscription.user_id, self.test_user.uuid)
+
+    def test_already_exists(self):
+        data = self.retrieve_webhook_fixture()
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        models.Adjustment.objects.create(
+            paddle_id=event_data.get('id'),
+            action=models.Adjustment.ActionValues.REFUND,
+            status=models.Adjustment.StatusValues.PENDING_APPROVAL,
+            total='100',
+            currency='USD',
+            webhook_updated_at=occurred_at,
+        )
+
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_adjustment_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+
+        self.assertEqual(ex.exception.reason, 'adjustment already exists')
+
+
+class AdjustmentUpdatedTaskTestCase(AdjustmentCreatedTaskTestCase):
+    is_create_event: bool = False
+    paddle_fixture = 'fixtures/webhook_paddle_adjustment_updated.json'
+
+    def test_success(self):
+        data = self.retrieve_webhook_fixture()
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+        subscription, transaction = self._local_billing_rows(event_data)
+
+        adjustment = models.Adjustment.objects.create(
+            paddle_id=event_data.get('id'),
+            action=models.Adjustment.ActionValues.REFUND,
+            status=models.Adjustment.StatusValues.PENDING_APPROVAL,
+            total='100',
+            currency='USD',
+            subscription=subscription,
+            transaction=transaction,
+            webhook_updated_at=occurred_at - datetime.timedelta(minutes=10),
+        )
+
+        task_results = tasks.paddle_adjustment_event.delay(event_data, occurred_at, self.is_create_event).get(
+            timeout=10
+        )
+
+        self.assertEqual(task_results.get('task_status'), 'success')
+        self.assertFalse(task_results.get('model_created'))
+        self.assertTrue(task_results.get('refund_approved'))
+        self.assertEqual(task_results.get('user_uuid'), self.test_user.uuid)
+
+        adjustment.refresh_from_db()
+        self.assertEqual(adjustment.status, models.Adjustment.StatusValues.APPROVED)
+        self.assertEqual(adjustment.subscription.user_id, self.test_user.uuid)
+
+    def test_already_exists(self):
+        pass
+
+    def test_auto_approved_refund_is_recorded_on_create(self):
+        pass
+
+    def test_out_of_date(self):
+        data = self.retrieve_webhook_fixture()
+        event_data: dict = data.get('data')
+        occurred_at: datetime.datetime = datetime.datetime.fromisoformat(data.get('occurred_at'))
+
+        models.Adjustment.objects.create(
+            paddle_id=event_data.get('id'),
+            action=models.Adjustment.ActionValues.REFUND,
+            status=models.Adjustment.StatusValues.APPROVED,
+            total='100',
+            currency='USD',
+            webhook_updated_at=occurred_at + datetime.timedelta(minutes=10),
+        )
+
+        with self.assertRaises(TaskFailed) as ex:
+            tasks.paddle_adjustment_event.delay(event_data, occurred_at, self.is_create_event).get(timeout=10)
+
         self.assertEqual(ex.exception.reason, 'webhook is out of date')
 
 
