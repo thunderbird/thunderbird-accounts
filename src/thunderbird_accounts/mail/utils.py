@@ -12,7 +12,7 @@ from django.contrib.auth.hashers import make_password, identify_hasher
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 
-from thunderbird_accounts.mail.exceptions import EmailNotValidError, AccountNotFoundError, InvalidJMapResponseError
+from thunderbird_accounts.mail.exceptions import MAIL_CLIENT_ERRORS, EmailNotValidError, AccountNotFoundError
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientUserJMAP
 from thunderbird_accounts.mail.models import Account
@@ -280,15 +280,15 @@ def is_address_taken(email_address: str, check_remote: bool = True) -> bool:
 
     # If this switch is enabled then check stalwart if this address is taken as well
     if check_remote and waffle.switch_is_active(WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART):
-        stalwart = MailClient()
         try:
-            stalwart.get_account(email_address)
+            MailClient().get_account(email_address)
             # It exists? That's a problem.
             return True
         except AccountNotFoundError:
             pass  # all okay
-        except InvalidJMapResponseError:
-            # We couldn't parse Stalwart's response, so we can't say the address is free so treat as taken.
+        except MAIL_CLIENT_ERRORS as ex:
+            # We couldn't confirm the address is free, so treat it as taken rather than fail the request.
+            logging.warning(f'[is_address_taken] Stalwart lookup failed: {ex}')
             return True
 
     return False

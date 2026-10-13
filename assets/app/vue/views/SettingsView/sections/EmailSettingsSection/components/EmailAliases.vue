@@ -70,7 +70,7 @@ const onAddAlias = async (emailAlias: string, domain: string) => {
     }
 
     if (response.success) {
-      emailAliases.value.push({ email: `${emailAlias}@${domain}`, domain, isPrimary: false, isSubscription: false, isCatchAll });
+      emailAliases.value.push({ email: response.email_alias, domain, isPrimary: false, isSubscription: false, isCatchAll });
       errorMessage.value = null;
     } else {
       errorMessage.value = response.error;

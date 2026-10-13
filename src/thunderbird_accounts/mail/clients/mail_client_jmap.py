@@ -315,7 +315,15 @@ class MailClientUserJMAP(BaseJMAP):
             for credential in self.get_app_passwords()
             if credential.id and credential.description == label
         ]
-        created = self.save_app_password(label)
+        try:
+            created = self.save_app_password(label)
+        except AppPasswordSetError as ex:
+            if ex.type != 'overQuota' or not existing_ids:
+                raise
+            # At maxAppPasswords the old credential has to go before its replacement can exist; a failed
+            # re-create then leaves the user one password short, never locked out of rotating.
+            self.delete_app_password(existing_ids)
+            return self.save_app_password(label)
 
         if not existing_ids:
             return created
@@ -712,7 +720,41 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             )
         )
 
-        return response.method_responses[1].arguments.get('list', [])
+        principals = response.method_responses[1].arguments.get('list', [])
+        domain_names = self._domain_names_by_id(
+            {alias['domainId'] for principal in principals for alias in (principal.get('aliases') or {}).values()}
+        )
+
+        # Legacy principal shape, which is what the admin listing reads.
+        return [
+            {
+                'id': principal.get('id'),
+                'name': principal.get('name'),
+                'type': principal.get('@type'),
+                'description': principal.get('description'),
+                'emails': [
+                    email
+                    for email in (
+                        principal.get('emailAddress'),
+                        *[
+                            f'{alias["name"]}@{domain_names[alias["domainId"]]}'
+                            for alias in (principal.get('aliases') or {}).values()
+                        ],
+                    )
+                    if email
+                ],
+                'roles': [role for role in [(principal.get('roles') or {}).get('@type')] if role],
+                'members': principal.get('memberGroupIds') or [],
+                'quota': (principal.get('quotas') or {}).get('maxDiskQuota'),
+                'usedQuota': principal.get('usedDiskQuota'),
+            }
+            for principal in principals
+        ]
+
+    def _domain_names_by_id(self, domain_ids: set[str]) -> dict[str, str]:
+        if not domain_ids:
+            return {}
+        return {domain.id: domain.name for domain in self._get_domains_by_id(list(domain_ids))}
 
     def get_account(self, principal_id: str) -> stalwart.Account:
         """Retrieve an :any thunderbird_accounts.mail.types.stalwart.Account: from a given
@@ -748,12 +790,10 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         data = response.method_responses[1].arguments.get('list', [])[0]
         self._debug_dump('get_account', response.method_responses[1].arguments)
 
-        if len(data.get('aliases', {}).values()) > 0:
-            domain_ids = [alias.get('domainId') for alias in data.get('aliases', {}).values()]
-            domains = self._get_domains_by_id(domain_ids)
-            # FIXME: We should just require domains to have their new stalwart ids...
-            for idx, domain in data.get('aliases').items():
-                data['aliases'][idx]['full_address'] = f'{domain.get("name")}@{domains[0].name}'
+        aliases = data.get('aliases', {}).values()
+        domain_names = self._domain_names_by_id({alias['domainId'] for alias in aliases})
+        for alias in aliases:
+            alias['full_address'] = f'{alias["name"]}@{domain_names[alias["domainId"]]}'
 
         try:
             return stalwart.Account(**data)
@@ -804,7 +844,8 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             permissions=stalwart.StalwartType(type='Inherit'),
             domain_id=domain_ids_by_domain[account_domain],
             aliases=aliases,
-            quotas=stalwart.StorageQuota(max_disk_quota=quota) if quota else None,
+            # Stalwart rejects an explicit null; leave the field unset for an account without a quota.
+            **({'quotas': stalwart.StorageQuota(max_disk_quota=quota)} if quota else {}),
         )
 
         temp_id = str(uuid.uuid4())
@@ -889,11 +930,54 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             )
         )
 
+        error = response.method_responses[0].arguments.get('notUpdated')
+        if error:
+            error_obj = list(error.values())[0]
+            raise self._handle_jmap_error(error_obj, AccountSetError)
+
         data = response.method_responses[0].arguments.get('updated', {})
         self._debug_dump('patch_account', data)
 
         # I've never seen this return anything useful tbh, but we'll return a generic dict for now.
         return data
+
+    def clear_app_passwords(self, principal_id: str) -> list[str]:
+        """Destroy every app password on the account and return the destroyed ids.
+
+        The admin addresses another account's credentials through x:AppPassword with that account's id; the
+        get/set pair is chained with a result reference so the list cannot change between the two."""
+        self.preflight_check()
+
+        account = self.get_account(principal_id)
+        response = self.client.request(
+            JMapRequest(
+                using=['urn:ietf:params:jmap:core', 'urn:stalwart:jmap'],
+                method_calls=[
+                    Invocation(
+                        name=StalwartMethods.get(StalwartMethods.APP_PASSWORD),
+                        arguments={'accountId': account.id, 'properties': ['id']},
+                        method_call_id='0',
+                    ),
+                    Invocation(
+                        name=StalwartMethods.set(StalwartMethods.APP_PASSWORD),
+                        arguments={
+                            'accountId': account.id,
+                            '#destroy': {
+                                'resultOf': '0',
+                                'name': StalwartMethods.get(StalwartMethods.APP_PASSWORD),
+                                'path': '/list/*/id',
+                            },
+                        },
+                        method_call_id='1',
+                    ),
+                ],
+            )
+        )
+        result = response.method_responses[1].arguments
+        error = result.get('notDestroyed')
+        if error:
+            raise self._handle_jmap_error(list(error.values())[0], AppPasswordSetError)
+        return result.get('destroyed') or []
 
     def delete_account(self, principal_id: str) -> None:
         """
@@ -940,12 +1024,19 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
     ) -> None:
         """Updates Stalwart and changes their primary email address and/or full name"""
 
-        account = stalwart.AccountUpdate(name=primary_email_address or None, description=full_name or None)
+        # Only set fields may reach the patch: Stalwart rejects the whole update if name is sent as null.
+        fields = {}
+        if primary_email_address:
+            local_part, domain_name = primary_email_address.split('@')
+            fields['name'] = local_part
+            fields['domain_id'] = self._get_domain_ids_by_name([primary_email_address])[domain_name]
+        if full_name:
+            fields['description'] = full_name
 
-        if not account.name and not account.description:
+        if not fields:
             raise ValueError('You must provide at least one field to change.')
 
-        self.update_account(principal_id, account)
+        self.update_account(principal_id, stalwart.AccountUpdate(**fields))
 
     def update_quota(self, principal_id: str, quota: int) -> None:
         account = stalwart.AccountUpdate(**{'quotas/maxDiskQuota': quota})

@@ -3,6 +3,7 @@ import re
 from django.utils.html import strip_tags
 from unittest.mock import patch, Mock
 
+import requests
 from django.conf import settings
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
@@ -14,6 +15,7 @@ from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.core.tests.utils import build_stalwart_account
 from thunderbird_accounts.core.views import PUBLIC_VUE_ROUTES, home
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
+from thunderbird_accounts.mail.exceptions import AppPasswordSetError, InvalidJMapResponseError, JMapOriginMismatchError
 from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.subscription.models import Subscription
 
@@ -175,6 +177,54 @@ class HomeViewTypedAccountTestCase(TestCase):
         self.assertEqual(page_data['userDisplayName'], None)
         self.assertEqual(page_data['emailAddresses'], [user.username, 'typed@example.com'])
         self.assertEqual(page_data['appPasswords'], ['Desktop'])
+
+
+class HomeViewMailClientFailureTestCase(TestCase):
+    """The catch-all route must degrade, not 500, on any mail-client failure."""
+
+    def setUp(self):
+        self.user = User.objects.create(username=f'down@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='down-home')
+        Account.objects.create(name=self.user.username, user=self.user)
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
+
+    def _request(self):
+        request = RequestFactory().get('/')
+        request.user = self.user
+        SessionMiddleware(lambda _request: None).process_request(request)
+        request.session.save()
+        request._messages = FallbackStorage(request)
+        return request
+
+    @patch('thunderbird_accounts.core.views.MailClient')
+    def test_mail_client_failures_render_with_banner(self, mock_mail_client_cls):
+        failures = [
+            JMapOriginMismatchError('https://stalwart/jmap/', 'https://stalwart.internal'),
+            InvalidJMapResponseError(None),
+            AppPasswordSetError('serverFail', 'boom', None),
+            requests.exceptions.ReadTimeout('slow'),
+        ]
+        for failure in failures:
+            with self.subTest(failure=type(failure).__name__):
+                mock_mail_client_cls.return_value.get_account.side_effect = failure
+                request = self._request()
+
+                response = home(request)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(len(list(request._messages)), 1)
+
+
+class HealthCheckMailClientFailureTestCase(TestCase):
+    @patch('thunderbird_accounts.infra.views.KeycloakClient')
+    @patch('thunderbird_accounts.infra.views.MailClient')
+    def test_stalwart_failure_reports_unhealthy(self, mock_mail_client_cls, _mock_keycloak):
+        mock_mail_client_cls.side_effect = JMapOriginMismatchError('https://stalwart/jmap/', 'https://other')
+
+        response = RequestClient().get('/health')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['stalwart']['healthy'])
+        self.assertFalse(response.json()['accounts']['healthy'])
 
 
 class HomeViewNeedsTosAcceptanceTestCase(TestCase):

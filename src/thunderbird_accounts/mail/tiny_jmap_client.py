@@ -14,7 +14,7 @@ class TinyJMAPClient:
         BASIC = 0
         BEARER = 1
 
-    def __init__(self, hostname, username, token, auth_type=AUTH_TYPES.BEARER):
+    def __init__(self, hostname, username, token, auth_type=AUTH_TYPES.BEARER, timeout=30):
         """Initialize using a hostname, username and bearer token"""
         assert len(hostname) > 0
         assert len(username) > 0
@@ -24,6 +24,7 @@ class TinyJMAPClient:
         self.username = username
         self.token = token
         self.auth_type = auth_type
+        self.timeout = timeout
         self.session = None
         self.api_url = None
         self.account_id = None
@@ -43,12 +44,14 @@ class TinyJMAPClient:
                 'Authorization': self._authorization_value(),
             },
             allow_redirects=True,
+            timeout=self.timeout,
         )
         r.raise_for_status()
-        self.session = session = r.json()
+        session = r.json()
         # Validate API URL matches our hostname
         if JMAPClient._origin(session['apiUrl']) != JMAPClient._origin(self.hostname):
             raise JMapOriginMismatchError(session['apiUrl'], self.hostname)
+        self.session = session
         self.api_url = session['apiUrl']
         return session
 
@@ -98,6 +101,11 @@ class TinyJMAPClient:
                 'Authorization': self._authorization_value(),
             },
             data=json.dumps(call),
+            # A 307/308 would replay the authenticated body at the new location.
+            allow_redirects=False,
+            timeout=self.timeout,
         )
         res.raise_for_status()
+        if res.is_redirect:
+            raise RuntimeError(f'JMAP API answered {res.status_code} redirect to {res.headers.get("Location")}')
         return res.json()

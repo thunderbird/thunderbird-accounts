@@ -6,7 +6,6 @@ from urllib.parse import urlsplit
 
 import requests
 from django.conf import settings
-from pydantic import ValidationError
 
 from thunderbird_accounts.mail.exceptions import InvalidJMapResponseError, JMapOriginMismatchError
 from thunderbird_accounts.mail.types.jmap import Invocation, JMapRequest, JMapResponse, SessionResource
@@ -76,11 +75,16 @@ class JMAPClient:
             timeout=self.timeout,
         )
         r.raise_for_status()
+        return self._accept_session(self._parse(r, SessionResource))
+
+    @staticmethod
+    def _parse(response: requests.Response, model: type[SessionResource] | type[JMapResponse]):
+        # requests' JSONDecodeError and pydantic's ValidationError are both ValueErrors, so a non-JSON body,
+        # an empty 3xx body and well-formed JSON of the wrong shape all surface as the same client error.
         try:
-            session = SessionResource.model_validate(r.json())
-        except ValidationError as ex:
+            return model.model_validate(response.json())
+        except ValueError as ex:
             raise InvalidJMapResponseError(ex) from ex
-        return self._accept_session(session)
 
     def _accept_session(self, session: SessionResource) -> SessionResource:
         """Validate and store a fetched session.
@@ -91,7 +95,11 @@ class JMAPClient:
         if settings.STALWART_JMAP_API_IGNORE_API_URL:
             self.api_url = self.base_url
         else:
-            if self._origin(session.api_url) != self._origin(self.base_url):
+            try:
+                same_origin = self._origin(session.api_url) == self._origin(self.base_url)
+            except ValueError:
+                same_origin = False
+            if not same_origin:
                 raise JMapOriginMismatchError(session.api_url, self.base_url)
             self.api_url = session.api_url
         self.session = session
@@ -155,7 +163,4 @@ class JMAPClient:
         )
         res.raise_for_status()
         logging.debug('[jmap_client.request] received response')
-        try:
-            return JMapResponse.model_validate(res.json())
-        except ValidationError as ex:
-            raise InvalidJMapResponseError(ex) from ex
+        return self._parse(res, JMapResponse)

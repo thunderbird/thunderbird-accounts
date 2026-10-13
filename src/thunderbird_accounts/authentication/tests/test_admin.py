@@ -522,6 +522,33 @@ class AdminUpdateUserTestcase(TestCase):
             [{'action': 'removeItem', 'field': 'secrets', 'value': app_password_secret}],
         )
 
+    @patch('thunderbird_accounts.authentication.admin.forms.MailClient')
+    def test_disable_account_clears_app_passwords_through_the_mail_client(
+        self,
+        mock_mail_client_cls: MagicMock,
+        mock_requests: MagicMock,
+        mock_update_principal: MagicMock,
+        mock_get_principal: MagicMock,
+    ):
+        """Deactivation goes through clear_app_passwords(), which both client generations implement, rather
+        than reading the legacy secrets list, which a v0.16 Account does not have."""
+        account = Account.objects.create(name=f'internaltest@{self.subdomain}', user=self.user)
+        Email.objects.create(address=self.user.username, type=Email.EmailType.PRIMARY, account=account)
+        form_data = {
+            'username': f'internaltest@{self.subdomain}',
+            'recovery_email': 'frog@example.com',
+            'timezone': 'America/Toronto',
+            'oidc_id': self.user.oidc_id,
+            'is_active': False,
+            'date_joined_0': self.user.date_joined.date(),
+            'date_joined_1': self.user.date_joined.time(),
+        }
+        mock_requests.return_value = build_keycloak_success_response()
+
+        self._build_form(form_data).save(True)
+
+        mock_mail_client_cls.return_value.clear_app_passwords.assert_called_once_with(form_data['username'])
+
 
 @patch('thunderbird_accounts.mail.clients.MailClient._delete_principal')
 @patch('thunderbird_accounts.authentication.clients.KeycloakClient.request')

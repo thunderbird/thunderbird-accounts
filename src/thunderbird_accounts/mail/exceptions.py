@@ -1,6 +1,8 @@
 from pydantic import ValidationError
 from typing import Optional
 
+import requests
+
 from thunderbird_accounts.celery.exceptions import RetryableExternalServiceError
 
 
@@ -202,3 +204,7 @@ class InvalidJMapResponseError(RuntimeError):
 
     def __init__(self, validation_error):
         self.validation_error = validation_error
+
+
+# Everything a mail client call can raise for a Stalwart-side or transport fault, as opposed to a bug.
+MAIL_CLIENT_ERRORS = (StalwartError, JMapError, InvalidJMapResponseError, requests.RequestException)

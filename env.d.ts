@@ -35,6 +35,8 @@ declare global {
       successRedirect?: string;
       signedUserId?: string;
       appPasswords?: string[];
+      // Stalwart generates the app password and the form must not collect one.
+      appPasswordIsGenerated?: boolean;
       cancelRedirect?: string;
       allowedDomains?: string[];
       customDomains?: CustomDomain[];

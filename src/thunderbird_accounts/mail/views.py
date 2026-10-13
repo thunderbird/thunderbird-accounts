@@ -8,8 +8,7 @@ import requests
 import requests.exceptions
 import sentry_sdk
 from django.conf import settings
-from django.contrib import messages
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse, Http404
@@ -32,7 +31,9 @@ from thunderbird_accounts.mail.exceptions import (
     AccountNotFoundError,
     DomainAlreadyExistsError,
     DomainNotFoundError,
+    DomainSetError,
     EmailNotValidError,
+    MAIL_CLIENT_ERRORS,
 )
 from thunderbird_accounts.mail.dns import check_stale_dns_records
 from thunderbird_accounts.mail.utils import (
@@ -72,22 +73,11 @@ def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: st
     sentry_sdk.capture_exception(exception)
 
 
-def _cleanup_failed_custom_domain_creation(
-    stalwart_client,
-    domain_name: str,
-    *,
-    delete_hosted_dkim_records: bool,
-):
+def _cleanup_failed_custom_domain_creation(stalwart_client, domain_name: str):
     try:
         stalwart_client.delete_domain(domain_name)
     except Exception as e:
         logging.error(f'Error deleting remote domain after custom domain creation failed: {e}')
-
-    if delete_hosted_dkim_records:
-        try:
-            mail_tasks.delete_hosted_dkim_dns_records.delay(domain_name)
-        except Exception as e:
-            logging.error(f'Error scheduling hosted DKIM cleanup after custom domain creation failed: {e}')
 
 
 @login_required
@@ -102,8 +92,19 @@ def app_password_set(request: HttpRequest):
         new_password = data.get('password')
         label = data.get('name')
 
-        if not new_password or not label:
+        # Under JMAP Stalwart generates the secret, so only the legacy path takes a password from the user.
+        if not label or (not new_password and not settings.STALWART_ADMIN_API_USE_JMAP):
             return JsonResponse({'success': False, 'error': str(_('Label and password are required'))}, status=400)
+
+        if not request.user.stalwart_primary_email:
+            return JsonResponse(
+                {
+                    'success': False,
+                    'error': str(_('Thundermail account setup is still in progress. Please try again shortly.')),
+                    'code': 'mail_account_not_ready',
+                },
+                status=409,
+            )
 
         if settings.STALWART_ADMIN_API_USE_JMAP:
             access_token = request.session.get('oidc_access_token')
@@ -167,11 +168,14 @@ def display_name_set(request: HttpRequest):
     if not display_name:
         return JsonResponse({'success': False, 'error': str(_('Display name is required'))}, status=400)
 
-    stalwart_client = MailClient()
     try:
-        stalwart_client.update_individual(request.user.stalwart_primary_email, full_name=display_name)
-    except AccountNotFoundError:
-        messages.error(request, _('Could not connect to Thundermail, please try again later.'))
+        MailClient().update_individual(request.user.stalwart_primary_email, full_name=display_name)
+    except MAIL_CLIENT_ERRORS as ex:
+        logging.error(f'Error setting display name: {ex}')
+        return JsonResponse(
+            {'success': False, 'error': str(_('Could not update your display name, please try again later.'))},
+            status=500,
+        )
 
     return JsonResponse({'success': True, 'message': str(_('Display name set successfully'))})
 
@@ -199,7 +203,6 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
         )
 
     remote_domain_created = False
-    hosted_dkim_records_requested = False
     try:
         stalwart_client = MailClient()
         domain_id = None
@@ -218,31 +221,33 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
                 remote_domain_created = True
             except DomainAlreadyExistsError as ex:
                 raise ex
+            except DomainSetError as ex:
+                if ex.type in ('invalidPatch', 'invalidProperties'):
+                    return JsonResponse({'success': False, 'error': _('Enter a valid domain name.')}, status=400)
+                raise
 
         # If request fails the dkim will hit our general exception catch
         # we want this to happen before the local reference (Domain model) is created
         # so we're not missing any dkim records in the dns record list.
         stalwart_client.create_dkim(domain_name)
-        mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
-        hosted_dkim_records_requested = True
 
-        try:
-            Domain.objects.create(
-                name=domain_name,
-                user=request.user,
-                stalwart_id=domain_id,
-                stalwart_created_at=None,
-            )
-        except IntegrityError:
-            raise DomainAlreadyExistsError(domain_name)
+        with transaction.atomic():
+            try:
+                Domain.objects.create(
+                    name=domain_name,
+                    user=request.user,
+                    stalwart_id=domain_id,
+                    stalwart_created_at=None,
+                )
+            except IntegrityError:
+                raise DomainAlreadyExistsError(domain_name)
+            # Hosted records are published only once the row is durable, so a failed creation has none to remove
+            # and a publish can never race the delete of the same domain.
+            transaction.on_commit(lambda: mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name))
 
     except DomainAlreadyExistsError:
         if remote_domain_created:
-            _cleanup_failed_custom_domain_creation(
-                stalwart_client,
-                domain_name,
-                delete_hosted_dkim_records=hosted_dkim_records_requested,
-            )
+            _cleanup_failed_custom_domain_creation(stalwart_client, domain_name)
         return JsonResponse(
             {
                 'success': False,
@@ -255,11 +260,7 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
 
     except Exception as e:
         if remote_domain_created:
-            _cleanup_failed_custom_domain_creation(
-                stalwart_client,
-                domain_name,
-                delete_hosted_dkim_records=hosted_dkim_records_requested,
-            )
+            _cleanup_failed_custom_domain_creation(stalwart_client, domain_name)
         logging.error(f'Error creating custom domain: {e}')
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while creating the custom domain. Please try again later.'},
@@ -493,11 +494,13 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
                     _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
 
             if not request.user.is_migrated:
+                # The v0.16 delete_domain removes the domain's signatures itself; the legacy one does not.
                 cleanup_phase = 'delete_dkim'
                 stalwart_client.delete_dkim(_domain.name)
 
-                cleanup_phase = 'delete_hosted_dkim_dns_records'
-                mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
+            # Hosted records are published at creation for every user type, so they are removed for every one.
+            cleanup_phase = 'delete_hosted_dkim_dns_records'
+            mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
             break
 
         cleanup_phase = 'delete_local_domain'
@@ -630,7 +633,7 @@ def add_email_alias(request: HttpRequest):
             status=500,
         )
 
-    return JsonResponse({'success': True})
+    return JsonResponse({'success': True, 'email_alias': full_email_alias})
 
 
 @login_required

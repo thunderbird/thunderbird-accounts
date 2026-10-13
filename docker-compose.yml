@@ -141,11 +141,26 @@ services:
       ADMIN_SECRET: "{plain}accounts"
       MAIL_STALWART_PATH: "/opt/stalwart"
 
+  # Seeds an empty stalwart_data with the shipped Keycloak OIDC directory and example.org domain, without which a
+  # clean v0.16 rejects every user token. Runs as the image's stalwart user, which owns a freshly created volume.
+  stalwart_new_seed:
+    image: stalwartlabs/stalwart:v0.16
+    entrypoint: ["sh", "-c", "[ -e /var/lib/stalwart/main.db ] || cp /seed/main.db.example /var/lib/stalwart/main.db"]
+    volumes:
+      - "./mail/stalwart/lib/main.db.example:/seed/main.db.example:ro,Z"
+      - "stalwart_data:/var/lib/stalwart"
+
   stalwart_new:
     image: stalwartlabs/stalwart:v0.16
     hostname: 'stalwart_new'
     domainname: 'stalwart_new.local'
     #entrypoint: bash
+    # Stalwart fetches the seeded OIDC directory's discovery document once, at startup, and never retries.
+    depends_on:
+      stalwart_new_seed:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
     volumes:
       - "./mail/stalwart/etc:/etc/stalwart:Z"
       - "stalwart_data:/var/lib/stalwart"
@@ -220,6 +235,12 @@ services:
     volumes:
       - "./keycloak/themes:/opt/keycloak/themes:z"
       - "./keycloak/data/export:/opt/keycloak/data/export:z"
+    # Healthy once the tbpro realm's discovery document is served. The image has bash but no curl.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8999 && printf 'GET /realms/tbpro/.well-known/openid-configuration HTTP/1.1\\r\\nHost: keycloak:8999\\r\\nConnection: close\\r\\n\\r\\n' >&3 && read -r status <&3 && [[ $$status == *' 200'* ]]"]
+      interval: 5s
+      start_period: 60s
+      retries: 60
 
   # Capturing keycloak emails for dev
   mailpit:

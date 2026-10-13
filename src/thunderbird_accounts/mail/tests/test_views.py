@@ -1,5 +1,5 @@
 import datetime
-from thunderbird_accounts.mail.exceptions import DomainNotFoundError
+from thunderbird_accounts.mail.exceptions import AccountSetError, DomainNotFoundError, DomainSetError
 from django.utils.crypto import get_random_string
 from thunderbird_accounts.subscription.models import Plan, Subscription
 import json
@@ -128,6 +128,44 @@ class AppPasswordApiTestCase(TestCase):
         mock_user_jmap.replace_app_password.assert_called_once_with(self.primary_email)
         mock_mail_client_cls.assert_not_called()
 
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClientUserJMAP', create=True)
+    def test_jmap_does_not_require_a_password(self, mock_user_jmap_cls):
+        self.account.verified_archive_folder = True
+        self.account.save()
+        session = self.client.session
+        session['oidc_access_token'] = 'user-access-token'
+        session.save()
+        mock_user_jmap_cls.return_value.replace_app_password.return_value = Mock(id='new-id', secret='generated')
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'name': self.primary_email}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(json.loads(response.content.decode())['app_password'], 'generated')
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClientUserJMAP', create=True)
+    def test_returns_conflict_when_the_mail_account_does_not_exist_yet(self, mock_user_jmap_cls):
+        self.account.delete()
+        session = self.client.session
+        session['oidc_access_token'] = 'user-access-token'
+        session.save()
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'name': self.primary_email}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 409, response.content)
+        self.assertEqual(json.loads(response.content.decode())['code'], 'mail_account_not_ready')
+        mock_user_jmap_cls.assert_not_called()
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=False)
     def test_name_and_password_are_required(self):
         response = self.client.post(
             self.url,
@@ -181,6 +219,21 @@ class DisplayNameApiTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(json.loads(response.content.decode())['success'])
         mock_instance.update_individual.assert_called_once_with(self.primary_email, full_name='New Name')
+
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_reports_failure_when_stalwart_rejects_the_update(self, mock_mail_client_cls):
+        mock_mail_client_cls.return_value.update_individual.side_effect = AccountSetError(
+            'invalidPatch', 'Invalid value for property.', ['name']
+        )
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'display-name': 'New Name'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertFalse(json.loads(response.content.decode())['success'])
 
     def test_display_name_is_required(self):
         response = self.client.post(
@@ -273,7 +326,8 @@ class CreateCustomDomainTestCase(TestCase):
         mock_instance.get_domain.side_effect = DomainNotFoundError('example.com')
         mock_mail_client_cls.return_value = mock_instance
 
-        response = create_custom_domain(self.create_request(' Example.COM '))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = create_custom_domain(self.create_request(' Example.COM '))
 
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.content.decode())
@@ -297,7 +351,8 @@ class CreateCustomDomainTestCase(TestCase):
         mock_instance.create_domain.return_value = 'domain-id'
         mock_mail_client_cls.return_value = mock_instance
 
-        response = create_custom_domain(self.create_request('example.com'))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = create_custom_domain(self.create_request('example.com'))
 
         self.assertEqual(response.status_code, 200)
         domain = Domain.objects.get(name='example.com', user=self.user)
@@ -328,6 +383,34 @@ class CreateCustomDomainTestCase(TestCase):
         self.assertFalse(Domain.objects.exists())
 
     @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_migrated_add_rejects_a_domain_name_stalwart_refuses(self, mock_mail_client_cls):
+        mock_instance = Mock()
+        mock_instance.get_domain.side_effect = DomainNotFoundError('example.test')
+        mock_instance.create_domain.side_effect = DomainSetError('invalidPatch', 'Invalid domain name', None)
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = create_custom_domain(self.create_request('example.test'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(json.loads(response.content.decode())['error'], 'Enter a valid domain name.')
+        mock_instance.create_dkim.assert_not_called()
+        mock_instance.delete_domain.assert_not_called()
+        self.assertFalse(Domain.objects.exists())
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_migrated_add_keeps_500_for_other_stalwart_domain_errors(self, mock_mail_client_cls):
+        mock_instance = Mock()
+        mock_instance.get_domain.side_effect = DomainNotFoundError('example.com')
+        mock_instance.create_domain.side_effect = DomainSetError('forbidden', 'Not allowed', None)
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = create_custom_domain(self.create_request('example.com'))
+
+        self.assertEqual(response.status_code, 500)
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
     @patch('thunderbird_accounts.mail.views.Domain.objects.create', side_effect=IntegrityError)
     @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
@@ -344,12 +427,14 @@ class CreateCustomDomainTestCase(TestCase):
         mock_instance.create_domain.return_value = 'domain-id'
         mock_mail_client_cls.return_value = mock_instance
 
-        response = create_custom_domain(self.create_request('example.com'))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = create_custom_domain(self.create_request('example.com'))
 
         self.assertEqual(response.status_code, 400)
         mock_instance.delete_domain.assert_called_once_with('example.com')
-        mock_publish_hosted_dkim.assert_called_once_with('example.com')
-        mock_delete_hosted_dkim.assert_called_once_with('example.com')
+        # Publication waits for the local commit, so a failed write never publishes and needs no un-publish.
+        mock_publish_hosted_dkim.assert_not_called()
+        mock_delete_hosted_dkim.assert_not_called()
         self.assertFalse(Domain.objects.exists())
 
 
@@ -910,8 +995,13 @@ class RemoveCustomDomainTestCase(TestCase):
         self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
 
     @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_migrated_pending_domain_without_stalwart_id_deletes_remote_domain(self, mock_mail_client_cls):
+    def test_migrated_pending_domain_without_stalwart_id_deletes_remote_domain(
+        self,
+        mock_mail_client_cls,
+        mock_delete_hosted_dkim_dns_records,
+    ):
         self.domain.stalwart_id = None
         self.domain.status = Domain.DomainStatus.PENDING
         self.domain.save()
@@ -922,6 +1012,8 @@ class RemoveCustomDomainTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_instance.delete_domain.assert_called_once_with(self.domain.name)
+        mock_instance.delete_dkim.assert_not_called()
+        mock_delete_hosted_dkim_dns_records.assert_called_once_with(self.domain.name)
         self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
 
     @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
@@ -965,7 +1057,31 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
+
+    def test_returns_the_stored_lowercase_address(self):
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()):
+            response = self.client.post(
+                reverse('add_email_alias'),
+                data={'email-alias': 'Buddy', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content.decode())['email_alias'], f'buddy@{settings.PRIMARY_EMAIL_DOMAIN}')
+        self.assertTrue(Email.objects.filter(address=f'buddy@{settings.PRIMARY_EMAIL_DOMAIN}').exists())
+
+    def test_returns_catch_all_as_bare_domain(self):
+        domain = Domain.objects.create(name='customdomain.com', user=self.user, status=Domain.DomainStatus.VERIFIED)
+
+        with patch('thunderbird_accounts.mail.views.MailClient', Mock()):
+            response = self.client.post(
+                reverse('add_email_alias'),
+                data={'email-alias': '*', 'domain': domain.name},
+                content_type='application/json',
+            )
+
+        self.assertEqual(json.loads(response.content.decode())['email_alias'], '@customdomain.com')
 
     def test_rejects_alias_with_plus_symbol(self):
         email_alias_url = reverse('add_email_alias')
@@ -1000,7 +1116,7 @@ class AddEmailAliasTestCase(TestCase):
                     content_type='application/json',
                 )
                 self.assertEqual(response.status_code, 200)
-                self.assertEqual(json.loads(response.content.decode()), {'success': True})
+                self.assertTrue(json.loads(response.content.decode())['success'])
 
             # Remove all emails so we can try the next alias
             Email.objects.all().delete()
@@ -1022,7 +1138,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
             response = self.client.post(
                 email_alias_url,
@@ -1072,7 +1188,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
         with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
             instance = Mock()
@@ -1113,7 +1229,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
         with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
             instance = Mock()
@@ -1124,7 +1240,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
         with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
             instance = Mock()
@@ -1135,7 +1251,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
     def test_reserved(self):
         email_alias_url = reverse('add_email_alias')
@@ -1172,7 +1288,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
     def test_already_used_alias(self):
         """Ensure that creating an email alias that is already in-use will error out."""
@@ -1288,7 +1404,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
     @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
     @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=3)
@@ -1311,7 +1427,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
             # Test with 2 characters - should succeed for custom domain
             response = self.client.post(
@@ -1320,7 +1436,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
     @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
     @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=2)
@@ -1356,7 +1472,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
             # Test custom domain: 1 character should be allowed
             response = self.client.post(
@@ -1365,7 +1481,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
             # Test custom domain: 2 characters should be allowed
             response = self.client.post(
@@ -1374,7 +1490,7 @@ class AddEmailAliasTestCase(TestCase):
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(json.loads(response.content.decode()), {'success': True})
+            self.assertTrue(json.loads(response.content.decode())['success'])
 
 
 class AppointmentCalDAVSetupTestCase(TestCase):

@@ -5,12 +5,14 @@ from pathlib import Path
 from typing import Literal
 from unittest.mock import MagicMock, call, patch
 
+import requests
 from django.test import SimpleTestCase, override_settings
 
+from thunderbird_accounts.core.tests.utils import build_stalwart_account
 from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
 from thunderbird_accounts.mail.exceptions import JMapOriginMismatchError, StalwartError
 from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientAdminJMAP, MailClientUserJMAP
-from thunderbird_accounts.mail.exceptions import AppPasswordSetError
+from thunderbird_accounts.mail.exceptions import AccountSetError, AppPasswordSetError
 from thunderbird_accounts.mail.tests.test_clients.test_legacy import (
     TestMailClientCheckDomainDNS,
 )
@@ -136,6 +138,41 @@ class TestJMAPClientTransport(SimpleTestCase):
 
         with self.assertRaises(InvalidJMapResponseError):
             client.request(self._request_data())
+
+    def _not_json(self) -> MagicMock:
+        response = MagicMock()
+        response.json.side_effect = requests.exceptions.JSONDecodeError('Expecting value', '<html>', 0)
+        return response
+
+    @patch('thunderbird_accounts.mail.clients.jmap_client.requests.get')
+    def test_non_json_session_body_raises_client_error(self, get_mock: MagicMock):
+        get_mock.return_value = self._not_json()
+        client = JMAPClient('https://stalwart.local', 'admin', 'token')
+
+        with self.assertRaises(InvalidJMapResponseError):
+            client.get_session()
+
+    @patch('thunderbird_accounts.mail.clients.jmap_client.requests.request')
+    def test_non_json_method_body_raises_client_error(self, request_mock: MagicMock):
+        """Covers the empty body of a 307/308 too: request() does not follow redirects."""
+        request_mock.return_value = self._not_json()
+        client = JMAPClient('https://stalwart.local', 'admin', 'token')
+        client.api_url = 'https://stalwart.local/jmap'
+
+        with self.assertRaises(InvalidJMapResponseError):
+            client.request(self._request_data())
+
+    @patch('thunderbird_accounts.mail.clients.jmap_client.requests.get')
+    def test_unparsable_api_url_is_an_origin_mismatch(self, get_mock: MagicMock):
+        client = JMAPClient('https://stalwart.local', 'admin', 'token')
+        for api_url in ('not a url', 'https://stalwart.local:99999/jmap/'):
+            with self.subTest(api_url=api_url):
+                client.session = None
+                self.session_data['apiUrl'] = api_url
+                get_mock.return_value = self._response(self.session_data)
+
+                with self.assertRaises(JMapOriginMismatchError):
+                    client.get_session()
 
 
 class MockJMapClient(JMAPClient):
@@ -273,6 +310,38 @@ class TestUserAppPasswords(SimpleTestCase):
         self.assertEqual(result, created)
         self.mail_client.save_app_password.assert_called_once_with('user@example.org')
         self.mail_client.delete_app_password.assert_called_once_with(['old-id'])
+
+    def test_replace_app_password_at_quota_deletes_old_then_creates(self):
+        existing = [
+            stalwart.AppPassword(
+                id='old-id',
+                description='user@example.org',
+                permissions={'@type': 'Inherit'},
+                allowed_ips={},
+            )
+        ]
+        created = self.mail_client.SaveAppPasswordReturn(id='new-id', secret='server-generated-password')
+        over_quota = AppPasswordSetError('overQuota', 'You have exceeded your quota of 5 app passwords.', None)
+        self.mail_client.get_app_passwords = MagicMock(return_value=existing)
+        self.mail_client.save_app_password = MagicMock(side_effect=[over_quota, created])
+        self.mail_client.delete_app_password = MagicMock(return_value=True)
+
+        result = self.mail_client.replace_app_password('user@example.org')
+
+        self.assertEqual(result, created)
+        self.mail_client.delete_app_password.assert_called_once_with(['old-id'])
+        self.assertEqual(self.mail_client.save_app_password.call_count, 2)
+
+    def test_replace_app_password_at_quota_without_matching_label_raises(self):
+        over_quota = AppPasswordSetError('overQuota', 'You have exceeded your quota of 5 app passwords.', None)
+        self.mail_client.get_app_passwords = MagicMock(return_value=[])
+        self.mail_client.save_app_password = MagicMock(side_effect=over_quota)
+        self.mail_client.delete_app_password = MagicMock()
+
+        with self.assertRaises(AppPasswordSetError):
+            self.mail_client.replace_app_password('user@example.org')
+
+        self.mail_client.delete_app_password.assert_not_called()
 
     def test_replace_app_password_removes_new_credential_when_old_deletion_fails(self):
         existing = [
@@ -530,6 +599,139 @@ class TestAccountOperations(SimpleTestCase):
         self.mail_client.account_id = 'admin-account'
         self.mail_client.primary_domain_id = 'primary-domain'
 
+    def test_clear_app_passwords_destroys_every_credential_on_the_account(self):
+        self.mail_client.get_account = MagicMock(return_value=build_stalwart_account(account_id='user-account'))
+        self.mail_client.client.request = MagicMock(
+            return_value=JMapResponse(
+                method_responses=[
+                    Invocation(
+                        name='x:AppPassword/get', arguments={'list': [{'id': 'a'}, {'id': 'b'}]}, method_call_id='0'
+                    ),
+                    Invocation(name='x:AppPassword/set', arguments={'destroyed': ['a', 'b']}, method_call_id='1'),
+                ],
+                session_state='a',
+            )
+        )
+
+        destroyed = self.mail_client.clear_app_passwords('person@example.org')
+
+        self.assertEqual(destroyed, ['a', 'b'])
+        get_call, set_call = self.mail_client.client.request.call_args.args[0].method_calls
+        self.assertEqual(get_call.arguments['accountId'], 'user-account')
+        self.assertEqual(set_call.arguments['accountId'], 'user-account')
+        self.assertEqual(set_call.arguments['#destroy']['path'], '/list/*/id')
+
+    def test_clear_app_passwords_raises_when_stalwart_refuses(self):
+        self.mail_client.get_account = MagicMock(return_value=build_stalwart_account(account_id='user-account'))
+        self.mail_client.client.request = MagicMock(
+            return_value=JMapResponse(
+                method_responses=[
+                    Invocation(name='x:AppPassword/get', arguments={'list': [{'id': 'a'}]}, method_call_id='0'),
+                    Invocation(
+                        name='x:AppPassword/set',
+                        arguments={'notDestroyed': {'a': {'type': 'forbidden', 'description': 'no'}}},
+                        method_call_id='1',
+                    ),
+                ],
+                session_state='a',
+            )
+        )
+
+        with self.assertRaises(AppPasswordSetError):
+            self.mail_client.clear_app_passwords('person@example.org')
+
+    def test_get_account_gives_each_alias_its_own_domain(self):
+        self.mail_client.client.request = MagicMock(
+            return_value=JMapResponse(
+                method_responses=[
+                    Invocation(name='x:Account/query', arguments={'ids': ['account-id']}, method_call_id='0'),
+                    Invocation(
+                        name='x:Account/get',
+                        arguments={
+                            'list': [
+                                {
+                                    'id': 'account-id',
+                                    'name': 'person',
+                                    '@type': 'User',
+                                    'emailAddress': 'person@example.org',
+                                    'aliases': {
+                                        '0': {'name': 'first', 'domainId': 'primary-domain', 'enabled': True},
+                                        '1': {'name': 'second', 'domainId': 'custom-domain', 'enabled': True},
+                                    },
+                                    'roles': {'@type': 'User'},
+                                    'permissions': {'@type': 'Inherit'},
+                                    'encryptionAtRest': {'@type': 'Disabled'},
+                                }
+                            ]
+                        },
+                        method_call_id='1',
+                    ),
+                ],
+                session_state='a',
+            )
+        )
+        primary, custom = MagicMock(id='primary-domain'), MagicMock(id='custom-domain')
+        primary.name, custom.name = 'example.org', 'custom.test'
+
+        with patch.object(self.mail_client, '_get_domains_by_id', return_value=[primary, custom]):
+            account = self.mail_client.get_account('person@example.org')
+
+        self.assertEqual(
+            sorted(alias.full_address for alias in account.aliases.values()),
+            ['first@example.org', 'second@custom.test'],
+        )
+
+    def test_update_individual_sends_only_the_description(self):
+        self.mail_client.update_account = MagicMock()
+
+        self.mail_client.update_individual('person@example.org', full_name='New Name')
+
+        principal_id, update = self.mail_client.update_account.call_args.args
+        self.assertEqual(principal_id, 'person@example.org')
+        self.assertEqual(update.model_dump(exclude_unset=True), {'description': 'New Name'})
+
+    def test_update_individual_sets_local_part_and_domain_for_a_new_address(self):
+        self.mail_client.update_account = MagicMock()
+        self.mail_client._get_domain_ids_by_name = MagicMock(return_value={'example.org': 'primary-domain'})
+
+        self.mail_client.update_individual('person@example.org', primary_email_address='renamed@example.org')
+
+        _, update = self.mail_client.update_account.call_args.args
+        self.assertEqual(update.model_dump(exclude_unset=True), {'name': 'renamed', 'domainId': 'primary-domain'})
+
+    def test_update_account_raises_when_stalwart_rejects_the_patch(self):
+        self.mail_client.client.request = MagicMock(
+            side_effect=[
+                JMapResponse(
+                    method_responses=[
+                        Invocation(name='x:Account/query', arguments={'ids': ['c'], 'total': 1}, method_call_id='0')
+                    ],
+                    session_state='a',
+                ),
+                JMapResponse(
+                    method_responses=[
+                        Invocation(
+                            name='x:Account/set',
+                            arguments={
+                                'notUpdated': {
+                                    'c': {
+                                        'type': 'invalidPatch',
+                                        'description': 'Invalid value for property.',
+                                        'properties': ['name'],
+                                    }
+                                }
+                            },
+                            method_call_id='0',
+                        )
+                    ],
+                    session_state='a',
+                ),
+            ]
+        )
+
+        with self.assertRaises(AccountSetError):
+            self.mail_client.update_account('person@example.org', stalwart.AccountUpdate(description='New Name'))
+
     @patch('uuid.uuid4')
     def test_create_account_does_not_duplicate_primary_address_as_alias(self, uuid4_mock: MagicMock):
         uuid4_mock.return_value = 'temp-id'
@@ -570,6 +772,30 @@ class TestAccountOperations(SimpleTestCase):
                 }
             },
         )
+        self.assertNotIn('quotas', created_account)
+
+    @patch('uuid.uuid4')
+    def test_create_account_with_quota_sends_max_disk_quota(self, uuid4_mock: MagicMock):
+        uuid4_mock.return_value = 'temp-id'
+        self.mail_client._get_domain_ids_by_name = MagicMock(return_value={'example.org': 'primary-domain'})
+        self.mail_client.client.request = MagicMock(
+            return_value=JMapResponse(
+                method_responses=[
+                    Invocation(
+                        name='x:Account/set',
+                        arguments={'created': {'temp-id': {'id': 'account-id'}}},
+                        method_call_id='0',
+                    )
+                ],
+                session_state='a',
+            )
+        )
+
+        self.mail_client.create_account(['person@example.org'], 'person@example.org', quota=2048)
+
+        request = self.mail_client.client.request.call_args.args[0]
+        created_account = request.method_calls[0].arguments['create']['temp-id']
+        self.assertEqual(created_account['quotas'], {'maxDiskQuota': 2048})
 
     def test_update_quota_uses_property_patch(self):
         self.mail_client.update_account = MagicMock()
@@ -599,7 +825,13 @@ class TestAccountOperations(SimpleTestCase):
                                     'id': 'account-id',
                                     'name': 'person',
                                     '@type': 'User',
-                                }
+                                    'emailAddress': 'person@example.org',
+                                    'aliases': {'a': {'name': 'other', 'domainId': 'dom-1', 'enabled': True}},
+                                    'roles': {'@type': 'User'},
+                                    'quotas': {'maxDiskQuota': 2048},
+                                    'usedDiskQuota': 12,
+                                },
+                                {'id': 'group-id', 'name': 'staff', '@type': 'Group'},
                             ]
                         },
                         method_call_id='1',
@@ -609,9 +841,40 @@ class TestAccountOperations(SimpleTestCase):
             )
         )
 
-        principals = self.mail_client.list_principals()
+        custom_domain = MagicMock(id='dom-1')
+        custom_domain.name = 'custom.test'
+        with patch.object(self.mail_client, '_get_domains_by_id', return_value=[custom_domain]) as get_domains:
+            principals = self.mail_client.list_principals()
 
-        self.assertEqual(principals, [{'id': 'account-id', 'name': 'person', '@type': 'User'}])
+        get_domains.assert_called_once_with(['dom-1'])
+        # The admin listing reads the legacy principal shape.
+        self.assertEqual(
+            principals,
+            [
+                {
+                    'id': 'account-id',
+                    'name': 'person',
+                    'type': 'User',
+                    'description': None,
+                    'emails': ['person@example.org', 'other@custom.test'],
+                    'roles': ['User'],
+                    'members': [],
+                    'quota': 2048,
+                    'usedQuota': 12,
+                },
+                {
+                    'id': 'group-id',
+                    'name': 'staff',
+                    'type': 'Group',
+                    'description': None,
+                    'emails': [],
+                    'roles': [],
+                    'members': [],
+                    'quota': None,
+                    'usedQuota': None,
+                },
+            ],
+        )
         request = self.mail_client.client.request.call_args.args[0]
         self.assertEqual(len(request.method_calls), 2)
         self.assertEqual(

@@ -208,9 +208,7 @@ class CustomUserChangeForm(CustomUserFormBase):
                 # If we've deactivated a user then ALL app passwords must be removed.
                 if old_username and not is_active:
                     try:
-                        stalwart_account = stalwart.get_account(old_username)
-                        for secret in stalwart_account.get('secrets', []):
-                            stalwart.delete_app_password(old_username, secret)
+                        stalwart.clear_app_passwords(old_username)
                     except (AccountNotFoundError, InvalidJMapResponseError) as ex:
                         raise RuntimeError(
                             'Could not remove app passwords! Please login to Stalwart admin panel, '

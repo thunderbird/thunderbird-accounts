@@ -4,9 +4,7 @@ from thunderbird_accounts.subscription.utils import get_visible_plan_info
 from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
 from gettext import gettext
 import sys
-import requests
 
-import requests.exceptions
 import sentry_sdk
 from django.conf import settings
 from django.contrib import messages
@@ -18,9 +16,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.messages import get_messages
 
 from thunderbird_accounts.mail.clients import MailClient
-from thunderbird_accounts.mail.exceptions import (
-    AccountNotFoundError,
-)
+from thunderbird_accounts.mail.exceptions import MAIL_CLIENT_ERRORS, AccountNotFoundError
 from thunderbird_accounts.mail.utils import decode_app_password, filter_app_passwords
 
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
@@ -109,7 +105,7 @@ def home(request: HttpRequest):
         except AccountNotFoundError:
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))
-        except requests.ConnectionError as ex:
+        except MAIL_CLIENT_ERRORS as ex:
             sentry_sdk.capture_exception(ex)
             messages.error(
                 request,
@@ -158,6 +154,7 @@ def home(request: HttpRequest):
         {
             'connectionInfo': settings.CONNECTION_INFO,
             'appPasswords': app_passwords,
+            'appPasswordIsGenerated': settings.STALWART_ADMIN_API_USE_JMAP,
             'allowedDomains': settings.ALLOWED_EMAIL_DOMAINS if settings.ALLOWED_EMAIL_DOMAINS else [],
             'customDomains': custom_domains,
             'emailAddresses': email_addresses,
