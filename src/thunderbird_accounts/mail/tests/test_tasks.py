@@ -11,7 +11,7 @@ from thunderbird_accounts.celery.exceptions import RetryableExternalServiceError
 from thunderbird_accounts.mail import tasks
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError, HostedDkimDeleteRetry, HostedDkimPublishRetry
 from thunderbird_accounts.mail.models import Account, Email
-from thunderbird_accounts.core.tests.utils import build_mail_get_account
+from thunderbird_accounts.core.tests.utils import build_mail_get_account, build_stalwart_account
 
 
 class TaskTestCase(TestCase):
@@ -522,6 +522,27 @@ class CreateStalwartAccountTestCase(TaskTestCase):
 
             self.assertEqual(user.uuid, task_results.get('user_uuid'))
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
+
+    def test_fail_if_typed_account_already_exists(self, grant_role_mock):
+        with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:
+            username = f'typed_user@{settings.PRIMARY_EMAIL_DOMAIN}'
+            oidc_id = 'typed-account'
+            instance_mock = Mock()
+            instance_mock.get_account.return_value = build_stalwart_account(
+                account_id='typed-stalwart-id',
+                email_address=username,
+            )
+            mail_client_mock.return_value = instance_mock
+            User.objects.create(oidc_id=oidc_id, username=username, email=username)
+
+            with self.assertRaises(TaskFailed) as ex:
+                tasks.create_stalwart_account.run(oidc_id=oidc_id, username=username, email=username)
+
+            instance_mock.create_account.assert_not_called()
+            instance_mock.save_email_addresses.assert_not_called()
+            instance_mock.delete_email_addresses.assert_not_called()
+            self.assertEqual(ex.exception.other['stalwart_pkid'], 'typed-stalwart-id')
+            grant_role_mock.assert_not_called()
 
     def test_creating_with_not_primary_domain(self, grant_role_mock):
         with patch('thunderbird_accounts.mail.tasks.MailClient', Mock()) as mail_client_mock:

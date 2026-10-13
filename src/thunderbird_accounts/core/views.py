@@ -99,6 +99,13 @@ def home(request: HttpRequest):
                 user_display_name = email_user.description
                 email_addresses = [email_user.email_address]
                 email_addresses += [alias.full_address for alias in email_user.aliases.values()]
+                for credential in (email_user.credentials or {}).values():
+                    if credential.type != stalwart.Credential.Types.APP_PASSWORD:
+                        continue
+
+                    description = getattr(credential, 'description', '')
+                    if description and not description.startswith(settings.APPOINTMENT_APP_PASSWORD_PREFIX):
+                        app_passwords.append(description)
         except AccountNotFoundError:
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))

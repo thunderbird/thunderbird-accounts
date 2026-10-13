@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import {
   BaseBadge,
   BaseBadgeTypes,
+  CopyToClipboard,
   NoticeBar,
   NoticeBarTypes,
   PrimaryButton,
@@ -23,6 +24,7 @@ const appPassword = ref<string>(null);
 const appPasswordConfirm = ref<string>(null);
 const errorMessage = ref<string>(window._page?.formError || null);
 const successMessage = ref<string>(null);
+const generatedAppPassword = ref<string>(null);
 const isSubmitting = ref(false);
 
 const userEmail = computed(() => window._page?.userEmail);
@@ -54,7 +56,10 @@ const onSetPasswordSubmit = async () => {
       // Reset form and close
       resetPasswordForm();
 
-      successMessage.value = t('views.mail.sections.emailSettings.passwordSetSuccessfully');
+      generatedAppPassword.value = data.app_password || null;
+      successMessage.value = data.app_password
+        ? t('views.mail.sections.emailSettings.generatedPasswordDescription')
+        : t('views.mail.sections.emailSettings.passwordSetSuccessfully');
 
       window._page.appPasswords = [...(window?._page?.appPasswords ?? []), label];
       accountHasAppPasswords.value = window._page.appPasswords.length > 0;
@@ -71,6 +76,11 @@ const onSetPasswordSubmit = async () => {
 
 const onCancelSetPassword = () => {
   resetPasswordForm();
+};
+
+const closeSuccessMessage = () => {
+  successMessage.value = null;
+  generatedAppPassword.value = null;
 };
 </script>
 
@@ -119,10 +129,17 @@ const onCancelSetPassword = () => {
 
     <notice-bar :type="NoticeBarTypes.Success" v-if="successMessage" class="success-message">
       {{ successMessage }}
+      <div v-if="generatedAppPassword" class="generated-app-password">
+        <code data-testid="generated-app-password">{{ generatedAppPassword }}</code>
+        <copy-to-clipboard
+          :copy-value="generatedAppPassword"
+          :display-text="t('views.mail.sections.emailSettings.copyGeneratedPassword')"
+        />
+      </div>
       <template v-slot:cta>
         <button
           class="close-button"
-          @click="successMessage = null"
+          @click="closeSuccessMessage"
           :aria-label="$t('views.mail.sections.emailSettings.close')"
         >
           <ph-x size="24" aria-hidden="true" />
@@ -234,6 +251,18 @@ const onCancelSetPassword = () => {
 
   .success-message {
     margin-block-end: 1rem;
+  }
+
+  .generated-app-password {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-block-start: 0.75rem;
+
+    code {
+      overflow-wrap: anywhere;
+      user-select: all;
+    }
   }
 
   .info-tooltip-trigger {

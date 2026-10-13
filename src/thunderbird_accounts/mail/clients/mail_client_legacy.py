@@ -84,12 +84,10 @@ class MailClientLegacy(MailClientInterface):
             details_and_reason = ': '.join([data.get('details'), data.get('reason')])
             raise StalwartError(details_and_reason)
 
-    def _list_principals(self, page=1, limit=100, type: Optional[str] = None) -> requests.Response:
-        """Returns a response for a principal object from Stalwart
+    def list_principals(self, page=1, limit=100, type: Optional[str] = None) -> list[dict]:
+        """Returns one page of principal objects from Stalwart.
 
         Docs: https://stalw.art/docs/api/management/endpoints/#list-principals
-
-        Important: Don't use this directly!
         """
         params = {'page': page, 'limit': limit}
         if type:
@@ -104,10 +102,7 @@ class MailClientLegacy(MailClientInterface):
         response.raise_for_status()
         self._raise_for_error(response)
 
-        # Reduce log spam
-        # logging.info(f'[MailClient._list_principals()]: {response.json()}')
-
-        return response
+        return response.json().get('data', {}).get('items', [])
 
     def _get_principal(self, principal_id: str) -> requests.Response:
         """Returns a response for a principal object from Stalwart
