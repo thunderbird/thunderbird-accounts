@@ -50,7 +50,7 @@ defineProps<{
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-family: metropolis;
+    font-family: metropolis, sans-serif;
     font-weight: 600;
     font-size: 1rem;
     letter-spacing: 0.65px;
