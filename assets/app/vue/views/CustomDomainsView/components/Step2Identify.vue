@@ -168,7 +168,7 @@ const onVerify = async () => {
 <style scoped>
 .step-identify {
   h2 {
-    font-family: metropolis;
+    font-family: metropolis, sans-serif;
     font-size: 1.5rem;
     font-weight: 500;
     color: var(--colour-ti-highlight);
@@ -230,7 +230,7 @@ const onVerify = async () => {
       padding: 0.75rem 1rem;
       border: 1px solid var(--colour-neutral-border);
       border-radius: 0.5rem;
-      font-family: metropolis;
+      font-family: metropolis, sans-serif;
       font-size: 1rem;
       font-weight: 600;
       color: var(--colour-ti-secondary);
