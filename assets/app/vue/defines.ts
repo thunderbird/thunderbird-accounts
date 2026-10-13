@@ -5,6 +5,7 @@ export const WHAT_IS_JMAP_SUPPORT_URL = 'https://support.tb.pro/hc/articles/4610
 export const WHAT_IS_SMTP_SUPPORT_URL = 'https://support.tb.pro/hc/articles/46106891841043-What-is-SMTP';
 export const EMAIL_ALIASES_SUPPORT_URL = 'https://support.tb.pro/hc/articles/46804820453907-Email-alises';
 export const EMAIL_ALIASES_CATCH_ALL_SUPPORT_URL = 'https://support.tb.pro/hc/articles/51338950680467-Email-aliases-catchall';
+export const DNS_FORMATTING_SUPPORT_URL = 'https://support.tb.pro/hc/en-us/articles/51253809827347-How-do-I-set-up-a-custom-domain-and-configure-DNS-in-Thundermail#h_01M2915GV7109WH59D7V8HF043';
 export const DOWNLOAD_THUNDERBIRD_DESKTOP_URL = 'https://www.thunderbird.net/thunderbird/all?utm_campaign=main&utm_medium=tb_pro&utm_source=thundermail_dashboard&utm_content=desktop_download';
 export const DOWNLOAD_THUNDERBIRD_MOBILE_URL = 'https://play.google.com/store/apps/details?id=net.thunderbird.android&referrer=utm_campaign%3Dmain%26utm_medium%3Dtb_pro%26utm_source%3Dthundermail_dashboard%26utm_content%3Dmobile_download';
 export const IOS_SUPPORT_URL = 'https://support.tb.pro/hc/articles/51053665815827-Setting-Up-Thundermail-on-iOS';

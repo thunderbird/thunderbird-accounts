@@ -90,7 +90,7 @@ const onVerify = async () => {
 
 <template>
   <section class="step-identify">
-    <h2>{{ t('views.customDomains.stepIdentify.title', { domain: `[${domainName}]` }) }}</h2>
+    <h2>{{ t('views.customDomains.stepIdentify.title', { domain: domainName }) }}</h2>
     <p class="description">{{ t('views.customDomains.stepIdentify.description') }}</p>
 
     <form @submit.prevent="onContinue">

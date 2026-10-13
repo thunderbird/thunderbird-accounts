@@ -475,7 +475,45 @@
         "notifyByEmail": "Email {email} when verification is complete.",
         "done": "Done"
       },
+      "verificationResults": {
+        "title": "Verification results for {domain}",
+        "verifying": "Verifying your domain…",
+        "failedTitle": "Verification failed.",
+        "failedDescription": "Fix the DNS record conflicts below, then retry verification.",
+        "successDescription": "You can now create email aliases for this domain.",
+        "done": "Done",
+        "addAliases": "Add aliases",
+        "recordTypeDescription": "Description",
+        "recordTypeDescriptions": {
+          "MX": "MX records prevent email from being delivered to another server.",
+          "SRV": "SRV records prevent compatibility issues.",
+          "TXT": "TXT records prevent having your outgoing email be flagged as spam.",
+          "CNAME": "CNAME records prevent having your outgoing email be flagged as spam."
+        },
+        "goToFirstError": "Go to first error",
+        "updateRecordsTitle": "Update the following DNS records",
+        "updateRecordsDescription": "Sign in to your DNS provider and correct the records marked below. After saving the changes, return here and retry verification.",
+        "notRightProvider": "Not the right provider? {link}",
+        "selectDifferentProvider": "Select a different DNS provider",
+        "recordNotFound": "The required {type} record for {name} could not be found. Add the record shown in this row to the DNS provider, then retry verification.",
+        "notifyByEmail": "Send email notification when verification is complete.",
+        "finishLater": "Finish later",
+        "retryVerification": "Retry verification",
+        "formatPanel": {
+          "title": "Check your provider’s DNS format",
+          "description": "DNS providers may format the {name} or {host} value differently. Some providers add your domain automatically. If yours does, enter only the shorter value.",
+          "name": "Name",
+          "host": "Host",
+          "checkDocumentation": "Check the provider’s documentation before removing your domain from the value.",
+          "learnMore": "View common DNS formatting differences"
+        }
+      },
       "dnsRecords": {
+        "status": "Status",
+        "statusVerified": "Verified",
+        "statusActionRequired": "Action required",
+        "statusNotFound": "Not found",
+        "toggleIssue": "Show or hide details",
         "type": "Type",
         "nameHost": "{'Name/Host'}",
         "valueData": "{'Value/Data'}",
