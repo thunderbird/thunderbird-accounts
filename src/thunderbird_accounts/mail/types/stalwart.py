@@ -218,11 +218,12 @@ class SecondaryCredential(Credential):
 class AppPassword(JMapType):
     """A mix of the above credential objects"""
 
-    description: str
+    # Optional: a required field here aborts the whole get_app_passwords list over one credential.
+    description: Optional[str] = None
     secret: Optional[str] = None  # Server set
     created_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None
-    permissions: StalwartType
+    permissions: Optional[StalwartType] = None
     allowed_ips: Optional[dict] = None
 
 

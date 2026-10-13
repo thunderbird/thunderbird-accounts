@@ -8,7 +8,7 @@ import requests
 from django.conf import settings
 from pydantic import ValidationError
 
-from thunderbird_accounts.mail.exceptions import InvalidJMapResponseError
+from thunderbird_accounts.mail.exceptions import InvalidJMapResponseError, JMapOriginMismatchError
 from thunderbird_accounts.mail.types.jmap import Invocation, JMapRequest, JMapResponse, SessionResource
 
 
@@ -71,7 +71,7 @@ class JMAPClient:
                 'Content-Type': 'application/json',
                 'Authorization': self._authorization_value(),
             },
-            allow_redirects=False,
+            allow_redirects=True,
             verify=self.verify_ssl,
             timeout=self.timeout,
         )
@@ -80,13 +80,19 @@ class JMAPClient:
             session = SessionResource.model_validate(r.json())
         except ValidationError as ex:
             raise InvalidJMapResponseError(ex) from ex
-        # With STALWART_JMAP_API_IGNORE_API_URL the advertised apiUrl is never used, so there is
-        # nothing to pin: requests go to the configured base_url.
+        return self._accept_session(session)
+
+    def _accept_session(self, session: SessionResource) -> SessionResource:
+        """Validate and store a fetched session.
+
+        With STALWART_JMAP_API_IGNORE_API_URL the advertised apiUrl is never used, so there is
+        nothing to pin: requests go to the configured base_url.
+        """
         if settings.STALWART_JMAP_API_IGNORE_API_URL:
             self.api_url = self.base_url
         else:
             if self._origin(session.api_url) != self._origin(self.base_url):
-                raise ValueError('JMAP apiUrl origin does not match configured base URL')
+                raise JMapOriginMismatchError(session.api_url, self.base_url)
             self.api_url = session.api_url
         self.session = session
         return session

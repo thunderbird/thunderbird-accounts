@@ -2,6 +2,9 @@ import enum
 import json
 import requests
 
+from thunderbird_accounts.mail.clients.jmap_client import JMAPClient
+from thunderbird_accounts.mail.exceptions import JMapOriginMismatchError
+
 
 class TinyJMAPClient:
     """The tiniest JMAP client you can imagine.
@@ -43,6 +46,9 @@ class TinyJMAPClient:
         )
         r.raise_for_status()
         self.session = session = r.json()
+        # Validate API URL matches our hostname
+        if JMAPClient._origin(session['apiUrl']) != JMAPClient._origin(self.hostname):
+            raise JMapOriginMismatchError(session['apiUrl'], self.hostname)
         self.api_url = session['apiUrl']
         return session
 
