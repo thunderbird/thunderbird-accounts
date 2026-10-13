@@ -95,7 +95,7 @@ const onSubmit = async () => {
 <style scoped>
 .step-add {
   h2 {
-    font-family: metropolis;
+    font-family: metropolis, sans-serif;
     font-size: 1.5rem;
     font-weight: 500;
     color: var(--colour-ti-highlight);

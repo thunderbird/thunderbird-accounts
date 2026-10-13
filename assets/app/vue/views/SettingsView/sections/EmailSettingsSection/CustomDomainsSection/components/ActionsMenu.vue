@@ -164,7 +164,7 @@ onBeforeUnmount(() => {
     color: white;
     text-align: left;
     padding: 1rem 1.5rem;
-    font-family: metropolis;
+    font-family: metropolis, sans-serif;
     font-size: 0.875rem;
     cursor: pointer;
 
