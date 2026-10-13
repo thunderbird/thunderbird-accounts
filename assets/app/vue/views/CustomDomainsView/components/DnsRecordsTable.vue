@@ -162,7 +162,7 @@ const recordsByType = computed(() => {
       padding: 0.75rem 1rem;
       font-size: 0.8125rem;
       color: var(--colour-ti-secondary);
-      word-break: break-word;
+      word-break: word-break;
     }
 
     /* Short columns never wrap and get a minimum width; name and value share the remaining space */
