@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { BaseButton, CheckboxInput, DangerButton, ModalDialog } from '@thunderbirdops/services-ui';
+import { BaseButton, CheckboxInput, DangerButton, ModalDialog, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 
 // API
 import { removeCustomDomain } from '../api';
-import { removeEmailAlias } from '../../api';
 
 const emit = defineEmits<{
   'custom-domain-removed': [domainName: string];
-  'custom-domain-error': [error: string];
 }>();
 
 const { t } = useI18n();
@@ -19,6 +17,7 @@ const domainName = ref('');
 const aliases = ref<string[]>([]);
 const confirmedAliases = ref<Record<string, boolean>>({});
 const isDeleting = ref(false);
+const errorMessage = ref<string | null>(null);
 
 const allAliasesConfirmed = computed(() => aliases.value.every((alias) => confirmedAliases.value[alias]));
 
@@ -28,6 +27,7 @@ const show = (name: string) => {
     email.toLowerCase().endsWith(`@${name.toLowerCase()}`)
   );
   confirmedAliases.value = {};
+  errorMessage.value = null;
   modal.value?.show();
 };
 
@@ -35,26 +35,18 @@ const hide = () => modal.value?.hide();
 
 const handleDelete = async () => {
   isDeleting.value = true;
+  errorMessage.value = null;
 
   try {
-    // The backend refuses to remove a domain while aliases are still attached to it
-    for (const alias of aliases.value) {
-      const result = await removeEmailAlias(alias);
-      if (!result.success) {
-        emit('custom-domain-error', result.error);
-        return;
-      }
-    }
-
     const data = await removeCustomDomain(domainName.value);
     if (data.success) {
       emit('custom-domain-removed', domainName.value);
       hide();
     } else {
-      emit('custom-domain-error', data.error);
+      errorMessage.value = data.error;
     }
   } catch (error) {
-    emit('custom-domain-error', String(error));
+    errorMessage.value = String(error);
   } finally {
     isDeleting.value = false;
   }
@@ -80,6 +72,10 @@ defineExpose({ show, hide });
         <template #domain><strong>{{ domainName }}</strong></template>
       </i18n-t>
     </p>
+
+    <notice-bar v-if="errorMessage" :type="NoticeBarTypes.Critical" class="delete-domain-error">
+      <p>{{ errorMessage }}</p>
+    </notice-bar>
 
     <template v-if="aliases.length > 0">
       <h3 class="existing-aliases-heading">{{ t('views.mail.sections.customDomains.deleteModal.existingAliases') }}</h3>
@@ -109,6 +105,14 @@ defineExpose({ show, hide });
 <style scoped>
 .delete-domain-description {
   margin-block-end: 1.5rem;
+}
+
+.delete-domain-error {
+  margin-block-end: 1.5rem;
+
+  p {
+    margin-block-end: 0;
+  }
 }
 
 .existing-aliases-heading {

@@ -153,7 +153,6 @@ export default {
   <delete-domain-modal
     ref="deleteDomainModalRef"
     @custom-domain-removed="handleCustomDomainRemoved"
-    @custom-domain-error="handleCustomDomainError"
   />
 </template>
 
