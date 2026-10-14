@@ -12,6 +12,8 @@ import EmailAliasForm from './EmailAliasForm.vue';
 import { DOMAIN_STATUS } from '../CustomDomainsSection/types';
 import { EmailAlias } from '../types';
 
+import { useEmailSettings } from '../useEmailSettings';
+
 // API
 import { addEmailAlias } from '../api';
 
@@ -19,14 +21,16 @@ const { t } = useI18n();
 
 const aliasLimit = window._page?.maxEmailAliases;
 
-const emailAliases = ref<EmailAlias[]>(window._page?.emailAddresses?.map((email, index) => ({
-  email: email,
+const { emailAddresses, customDomains: allCustomDomains, addAlias, removeAlias } = useEmailSettings();
+
+const emailAliases = computed<EmailAlias[]>(() => emailAddresses.value.map((email, index) => ({
+  email,
   domain: email.split('@')[1],
   // From Stalwart, primary / subscription email is always the first email address in the list
   isPrimary: index === 0,
   isSubscription: index === 0,
   isCatchAll: email.startsWith('@'),
-})) || []);
+})));
 const isAddingEmailAlias = ref(false);
 const errorMessage = ref<string>(null);
 
@@ -52,9 +56,9 @@ const sharedDomainAliases = computed(() => {
 /**
  * Allowed domains include any verified custom domains
  */
-const customDomains = computed(() => window._page.customDomains
-  ?.filter(domain => domain.status === DOMAIN_STATUS.VERIFIED)
-  .map(domain => domain.name) || []);
+const customDomains = computed(() => allCustomDomains.value
+  .filter(domain => domain.status === DOMAIN_STATUS.VERIFIED)
+  .map(domain => domain.name));
 
 const usedAliases = computed(() => (sharedDomainAliases.value?.length || 1) - 1);
 
@@ -63,14 +67,9 @@ const onAddAlias = async (emailAlias: string, domain: string) => {
 
   try {
     const response = await addEmailAlias(emailAlias, domain);
-    const isCatchAll = emailAlias === '*' || emailAlias === '';
-    if (isCatchAll) {
-      // This is cheating but it's the easiest way to do it.
-      emailAlias = '';
-    }
 
     if (response.success) {
-      emailAliases.value.push({ email: response.email_alias, domain, isPrimary: false, isSubscription: false, isCatchAll });
+      addAlias(response.email_alias);
       errorMessage.value = null;
     } else {
       errorMessage.value = response.error;
@@ -83,7 +82,7 @@ const onAddAlias = async (emailAlias: string, domain: string) => {
 };
 
 const onDeleteAliasSuccess = (alias: EmailAlias) => {
-  emailAliases.value = emailAliases.value.filter(item => item.email !== alias.email);
+  removeAlias(alias.email);
 };
 
 const onDeleteAliasError = (error: string) => {

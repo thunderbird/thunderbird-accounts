@@ -3,6 +3,9 @@ import { computed, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { BaseButton, CheckboxInput, DangerButton, ModalDialog, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 
+// Shared state
+import { useEmailSettings } from '../../useEmailSettings';
+
 // API
 import { removeCustomDomain } from '../api';
 
@@ -11,6 +14,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { aliasesForDomain } = useEmailSettings();
 
 const modal = useTemplateRef<InstanceType<typeof ModalDialog>>('modal');
 const domainName = ref('');
@@ -23,9 +27,7 @@ const allAliasesConfirmed = computed(() => aliases.value.every((alias) => confir
 
 const show = (name: string) => {
   domainName.value = name;
-  aliases.value = (window._page?.emailAddresses ?? []).filter((email: string) =>
-    email.toLowerCase().endsWith(`@${name.toLowerCase()}`)
-  );
+  aliases.value = aliasesForDomain(name);
   confirmedAliases.value = {};
   errorMessage.value = null;
   modal.value?.show();

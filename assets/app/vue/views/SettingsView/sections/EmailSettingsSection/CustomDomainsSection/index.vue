@@ -5,10 +5,12 @@ import { PhGlobe, PhCheckCircle, PhX } from '@phosphor-icons/vue';
 import { BaseBadge, BaseBadgeTypes, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 // Types
 import { DOMAIN_STATUS, STEP } from './types';
-import type { CustomDomain, DomainVerificationResult } from './types';
+import type { DomainVerificationResult } from './types';
 
 // Shared components
 import DetailsSummary from '@/components/DetailsSummary.vue';
+
+import { useEmailSettings } from '../useEmailSettings';
 
 // Local components
 import CustomDomainForm from './components/CustomDomainForm.vue';
@@ -18,7 +20,7 @@ import DeleteDomainModal from './components/DeleteDomainModal.vue';
 const { t } = useI18n();
 
 const currentStep = ref<STEP>(STEP.INITIAL);
-const customDomains = ref<CustomDomain[]>(window._page?.customDomains || []);
+const { customDomains, aliasesForDomain, removeAliasesForDomain } = useEmailSettings();
 const customDomainsDescription = computed(() =>
   currentStep.value === STEP.INITIAL
   ? t('views.mail.sections.customDomains.customDomainsDescriptionInitial')
@@ -50,6 +52,7 @@ const handleCustomDomainRemoved = (domainName: string) => {
   const index = customDomains.value.findIndex((domain) => domain.name === domainName);
   if (index !== -1) {
     lastDomainRemoved.value = domainName;
+    removeAliasesForDomain(domainName);
     customDomains.value.splice(index, 1);
   }
 };
@@ -115,8 +118,8 @@ export default {
           <base-badge :type="BaseBadgeTypes.Pending">{{ t('views.mail.sections.customDomains.pending') }}</base-badge>
         </template>
 
-        <template v-if="domain.emailsCount > 0">
-          <base-badge :type="BaseBadgeTypes.Emails">{{ t('views.mail.sections.customDomains.emailsCount', domain.emailsCount) }}</base-badge>
+        <template v-if="aliasesForDomain(domain.name).length > 0">
+          <base-badge :type="BaseBadgeTypes.Emails">{{ t('views.mail.sections.customDomains.emailsCount', aliasesForDomain(domain.name).length) }}</base-badge>
         </template>
 
         <actions-menu
