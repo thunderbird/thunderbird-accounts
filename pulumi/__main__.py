@@ -1,6 +1,7 @@
 #!/bin/env python3
 
 import pulumi
+import pulumi_aws as aws
 import pulumi_cloudflare as cloudflare
 import tb_pulumi
 import tb_pulumi.autoscale
@@ -11,6 +12,8 @@ import tb_pulumi.fargate
 import tb_pulumi.iam
 import tb_pulumi.network
 import tb_pulumi.secrets
+
+from live_images import resolve_live_images
 
 
 MSG_LB_MATCHING_CONTAINER = 'In this stack, container security groups must have matching load balancer security groups.'
@@ -27,9 +30,16 @@ def wait_for_ecs_service_steady_state(args):
     return pulumi.ResourceTransformationResult(props, args.opts)
 
 
+def lookup_live_image(cluster: str, service: str, container: str) -> str:
+    """Return the image `container` runs in the task definition currently assigned to the ECS service."""
+    current = aws.ecs.get_service(cluster_arn=cluster, service_name=service)
+    return aws.ecs.get_container_definition(task_definition=current.task_definition, container_name=container).image
+
+
 # Set up the project and convenient config access
 project = tb_pulumi.ThunderbirdPulumiProject()
 resources = project.config.get('resources')
+resolve_live_images(resources, lookup_live_image)
 cloudflare_zone_id = project.pulumi_config.require_secret('cloudflare_zone_id')
 
 
