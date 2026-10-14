@@ -13,6 +13,7 @@ import DetailsSummary from '@/components/DetailsSummary.vue';
 // Local components
 import CustomDomainForm from './components/CustomDomainForm.vue';
 import ActionsMenu from './components/ActionsMenu.vue';
+import DeleteDomainModal from './components/DeleteDomainModal.vue';
 
 const { t } = useI18n();
 
@@ -26,6 +27,7 @@ const customDomainsDescription = computed(() =>
 const lastDomainRemoved = ref<string>(null);
 const errorMessage = ref<string>(null);
 const customDomainFormRef = ref(null);
+const deleteDomainModalRef = ref<InstanceType<typeof DeleteDomainModal> | null>(null);
 const maxCustomDomains = window._page?.maxCustomDomains;
 
 const handleStepChange = (step: STEP) => {
@@ -50,6 +52,10 @@ const handleCustomDomainRemoved = (domainName: string) => {
     lastDomainRemoved.value = domainName;
     customDomains.value.splice(index, 1);
   }
+};
+
+const handleCustomDomainDelete = (domainName: string) => {
+  deleteDomainModalRef.value?.show(domainName);
 };
 
 const handleCustomDomainError = (error: string) => {
@@ -115,7 +121,7 @@ export default {
 
         <actions-menu
           :domain="domain"
-          @custom-domain-removed="handleCustomDomainRemoved"
+          @custom-domain-delete="handleCustomDomainDelete"
           @custom-domain-verified="handleCustomDomainVerified"
           @custom-domain-error="handleCustomDomainError"
           @custom-domain-view-dns-records="handleCustomDomainViewDnsRecords"
@@ -143,6 +149,12 @@ export default {
       :custom-domains="customDomains"
     />
   </details-summary>
+
+  <delete-domain-modal
+    ref="deleteDomainModalRef"
+    @custom-domain-removed="handleCustomDomainRemoved"
+    @custom-domain-error="handleCustomDomainError"
+  />
 </template>
 
 <style scoped>
