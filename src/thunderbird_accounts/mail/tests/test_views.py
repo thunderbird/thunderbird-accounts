@@ -1018,20 +1018,49 @@ class RemoveCustomDomainTestCase(TestCase):
 
     @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.views.MailClient')
-    def test_domain_with_alias_cannot_be_removed(
+    def test_domain_with_aliases_removes_aliases_and_domain(
         self,
         mock_mail_client_cls,
         mock_delete_hosted_dkim_dns_records,
     ):
+        mock_instance = Mock()
+        mock_mail_client_cls.return_value = mock_instance
+        Email.objects.create(address=f'alias@{self.domain.name}', type=Email.EmailType.ALIAS, account=self.account)
+        Email.objects.create(address=f'@{self.domain.name}', type=Email.EmailType.ALIAS, account=self.account)
+        other = Email.objects.create(
+            address=f'alias@{settings.PRIMARY_EMAIL_DOMAIN}', type=Email.EmailType.ALIAS, account=self.account
+        )
+
+        response = self._delete_domain()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content.decode()), {'success': True})
+        mock_instance.delete_email_addresses.assert_called_once()
+        removed = mock_instance.delete_email_addresses.call_args.args[1]
+        self.assertCountEqual(removed, [f'alias@{self.domain.name}', f'@{self.domain.name}'])
+        mock_instance.delete_domain.assert_called_once_with(self.domain.name)
+        self.assertFalse(Domain.objects.filter(name=self.domain.name).exists())
+        self.assertEqual(list(Email.objects.filter(account=self.account)), [other])
+
+    @patch('thunderbird_accounts.mail.views.mail_tasks.delete_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.views.MailClient')
+    def test_alias_removal_failure_keeps_domain(
+        self,
+        mock_mail_client_cls,
+        mock_delete_hosted_dkim_dns_records,
+    ):
+        mock_instance = Mock()
+        mock_instance.delete_email_addresses.side_effect = RuntimeError('boom')
+        mock_mail_client_cls.return_value = mock_instance
         Email.objects.create(address=f'alias@{self.domain.name}', type=Email.EmailType.ALIAS, account=self.account)
 
         response = self._delete_domain()
 
-        self.assertEqual(response.status_code, 400)
-        self.assertFalse(json.loads(response.content.decode())['success'])
-        mock_mail_client_cls.assert_not_called()
+        self.assertEqual(response.status_code, 500)
+        mock_instance.delete_domain.assert_not_called()
         mock_delete_hosted_dkim_dns_records.assert_not_called()
         self.assertTrue(Domain.objects.filter(name=self.domain.name).exists())
+        self.assertTrue(Email.objects.filter(address=f'alias@{self.domain.name}').exists())
 
 
 class AddEmailAliasTestCase(TestCase):

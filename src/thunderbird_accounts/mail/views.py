@@ -456,7 +456,6 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
         logging.info(f'Custom domain {domain_name} was already removed for user {request.user.uuid}')
         return JsonResponse({'success': True})
 
-    # Check if we have any aliases for that domain setup
     try:
         account = Account.objects.get(user=request.user)
     except Account.DoesNotExist:
@@ -466,21 +465,25 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
             status=404,
         )
 
-    # Get the local Email object
-    aliases: list[Email] = Email.objects.filter(type=Email.EmailType.ALIAS, account=account).all()
-    for alias in aliases:
-        if alias.address.endswith(f'@{domain_name}'):
-            return JsonResponse(
-                {
-                    'success': False,
-                    'error': 'You must remove all aliases using this domain before you can remove the domain.',
-                },
-                status=400,
-            )
+    # Any aliases using this domain are removed along with it
+    domain_aliases = Email.objects.filter(
+        type=Email.EmailType.ALIAS,
+        account=account,
+        address__iendswith=f'@{domain_name}',
+    )
+
+    alias_addresses = [alias.address.lower() for alias in domain_aliases]
 
     stalwart_client = MailClient()
     cleanup_phase = 'load_local_domains'
     try:
+        if alias_addresses:
+            cleanup_phase = 'delete_stalwart_aliases'
+            stalwart_client.delete_email_addresses(request.user.stalwart_primary_email, alias_addresses)
+            cleanup_phase = 'delete_local_aliases'
+            domain_aliases.delete()
+
+        cleanup_phase = 'load_local_domains'
         domains = request.user.domains.filter(name__iexact=domain_name).all()
         # There should only be one here, but just in case...
         for _domain in domains:
