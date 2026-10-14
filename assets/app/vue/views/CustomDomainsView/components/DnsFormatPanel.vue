@@ -6,7 +6,15 @@ import { DNS_FORMATTING_SUPPORT_URL } from '@/defines';
 
 const { t } = useI18n();
 
-const isOpen = ref(true);
+const props = withDefaults(defineProps<{
+  title?: string;
+  defaultOpen?: boolean;
+}>(), {
+  title: undefined,
+  defaultOpen: true,
+});
+
+const isOpen = ref(props.defaultOpen);
 </script>
 
 <template>
@@ -20,7 +28,7 @@ const isOpen = ref(true);
     >
       <ph-caret-down v-if="isOpen" size="20" aria-hidden="true" />
       <ph-caret-right v-else size="20" aria-hidden="true" />
-      <span>{{ t('views.customDomains.verificationResults.formatPanel.title') }}</span>
+      <span>{{ title ?? t('views.customDomains.verificationResults.formatPanel.title') }}</span>
     </button>
 
     <div v-show="isOpen" id="dns-format-content" class="panel-content">
