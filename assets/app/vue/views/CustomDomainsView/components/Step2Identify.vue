@@ -2,9 +2,10 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NoticeBar, NoticeBarTypes, PrimaryButton, SelectInput } from '@thunderbirdops/services-ui';
-import { PhCaretDown, PhCaretRight } from '@phosphor-icons/vue';
-import DnsRecordsTable from './DnsRecordsTable.vue';
+import DnsFormatPanel from './DnsFormatPanel.vue';
+import ProviderRecordsTable from './ProviderRecordsTable.vue';
 import { getDnsProviders, getRemoteDNSRecords, verifyDomain } from '../api';
+import { DNS_PROVIDERS, GENERIC_DNS_PROVIDER_ID } from '../dnsProviders.generated';
 import type { DNSRecord } from '../types';
 
 const { t } = useI18n();
@@ -25,14 +26,18 @@ const providers = computed(() => [
   ...getDnsProviders(),
 ]);
 const selectedProvider = ref<string>('');
-const selectedProviderLabel = computed(
-  () => providers.value.find((provider) => provider.value === selectedProvider.value)?.label ?? ''
+const selectedProviderConfig = computed(() => DNS_PROVIDERS.find((provider) => provider.id === selectedProvider.value));
+
+// "Other" reads oddly in "Sign in to Other", so fall back to a generic phrase for it
+const selectedProviderLabel = computed(() =>
+  selectedProvider.value === GENERIC_DNS_PROVIDER_ID
+    ? t('views.customDomains.stepIdentify.genericProviderName')
+    : (selectedProviderConfig.value?.label ?? '')
 );
 
 const records = ref<DNSRecord[] | null>(null);
 const error = ref<string | null>(null);
 const isLoadingRecords = ref(false);
-const showRecords = ref(true);
 const isVerifying = ref(false);
 
 const onContinue = async () => {
@@ -128,22 +133,18 @@ const onVerify = async () => {
         {{ t('views.customDomains.stepIdentify.updateRecordsDescription', { provider: selectedProviderLabel }) }}
       </p>
 
-      <button
-        type="button"
-        class="records-toggle"
-        :aria-expanded="showRecords"
-        aria-controls="dns-records"
-        @click="showRecords = !showRecords"
-      >
-        <ph-caret-down v-if="showRecords" size="20" aria-hidden="true" />
-        <ph-caret-right v-else size="20" aria-hidden="true" />
-        <span>{{ t('views.customDomains.stepIdentify.checkRecordFormat') }}</span>
-      </button>
+      <dns-format-panel
+        :title="t('views.customDomains.stepIdentify.checkRecordFormat')"
+        :default-open="false"
+      />
 
-      <div v-show="showRecords" id="dns-records">
-        <h4>{{ t('views.customDomains.stepIdentify.dnsRecords') }}</h4>
-        <dns-records-table :records="records" />
-      </div>
+      <h4>{{ t('views.customDomains.stepIdentify.dnsRecords') }}</h4>
+      <provider-records-table
+        v-if="selectedProviderConfig"
+        :records="records"
+        :domain-name="domainName"
+        :provider="selectedProviderConfig"
+      />
 
       <notice-bar v-if="error" :type="NoticeBarTypes.Critical" class="error-notice records-error">
         <span>{{ error }}</span>
@@ -218,32 +219,6 @@ const onVerify = async () => {
       font-weight: 600;
       color: var(--colour-ti-secondary);
       margin-block: 1.5rem 1rem;
-    }
-
-    .records-toggle {
-      all: unset;
-      box-sizing: border-box;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: 1px solid var(--colour-neutral-border);
-      border-radius: 0.5rem;
-      font-family: metropolis, sans-serif;
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--colour-ti-secondary);
-      cursor: pointer;
-
-      &:hover {
-        background-color: var(--colour-neutral-lower);
-      }
-
-      &:focus-visible {
-        outline: 2px solid var(--colour-primary-default);
-        outline-offset: 2px;
-      }
     }
   }
 

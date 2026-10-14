@@ -466,7 +466,8 @@
         "updateRecordsDescription": "Sign in to {provider} and add or update the records below. After saving the changes, return here and select Verify DNS settings.",
         "checkRecordFormat": "Check the DNS record format",
         "dnsRecords": "DNS Records",
-        "verifyDnsSettings": "Verify DNS settings"
+        "verifyDnsSettings": "Verify DNS settings",
+        "genericProviderName": "your DNS provider"
       },
       "stepSummary": {
         "title": "Verification in progress",
@@ -518,7 +519,8 @@
         "nameHost": "{'Name/Host'}",
         "valueData": "{'Value/Data'}",
         "priority": "Priority",
-        "copy": "Copy"
+        "copy": "Copy",
+        "leaveBlank": "(leave blank)"
       }
     },
     "manageMfa": {
