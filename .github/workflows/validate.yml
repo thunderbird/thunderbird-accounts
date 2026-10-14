@@ -124,6 +124,18 @@ jobs:
         with:
           src: "pulumi"
 
+      - name: Set up Python for IaC tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # The tests cover plain helpers and don't import pulumi or tb_pulumi, so pytest is enough.
+      - name: Run IaC unit tests
+        working-directory: pulumi
+        run: |
+          pip install pytest
+          python -m pytest
+
   run-e2e-tests-local:
     needs:
       - detect-changes
