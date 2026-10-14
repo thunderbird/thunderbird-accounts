@@ -62,7 +62,11 @@ defineExpose({ show, hide });
     </template>
 
     <p v-if="aliases.length > 0" class="delete-domain-description">
-      <i18n-t keypath="views.mail.sections.customDomains.deleteModal.description" tag="span" scope="global">
+      <i18n-t keypath="views.mail.sections.customDomains.deleteModal.description"
+        tag="span"
+        scope="global"
+        :plural="aliases.length"
+      >
         <template #domain><strong>{{ domainName }}</strong></template>
         <template #count>{{ aliases.length }}</template>
       </i18n-t>
