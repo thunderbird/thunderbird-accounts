@@ -60,3 +60,20 @@ class CanCreateTestAllowListEntries(BasePermission):
             and request.user.is_authenticated
             and request.user.has_perm('authentication.create_test_entry_via_api')
         )
+
+
+def user_owns_email(user, email: str) -> bool:
+    """Return True if ``email`` is one of the addresses on the user's record: their username,
+    account email, recovery email, or a primary/alias ``Email`` row on one of their mail accounts.
+    Case-insensitive. Uses the local database only; Stalwart is not consulted."""
+    from thunderbird_accounts.mail.models import Email
+
+    if not user or not getattr(user, 'is_authenticated', False) or not email:
+        return False
+
+    email = email.strip().lower()
+    own_addresses = {address.lower() for address in (user.username, user.email, user.recovery_email) if address}
+    if email in own_addresses:
+        return True
+
+    return Email.objects.filter(address__iexact=email, account__user=user).exists()

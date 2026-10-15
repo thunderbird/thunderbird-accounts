@@ -232,7 +232,7 @@ const handleSubmit = async () => {
     const data = await response.json();
 
     if (!data.success) {
-      errorText.value = data.error || t('views.contact.errorSubmittingForm');
+      errorText.value = data.error || data.detail || t('views.contact.errorSubmittingForm');
       return;
     }
 
