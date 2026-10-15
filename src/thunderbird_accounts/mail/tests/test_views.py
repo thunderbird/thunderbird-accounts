@@ -1148,7 +1148,7 @@ class AddEmailAliasTestCase(TestCase):
             self.assertEqual(response.status_code, 403)
             self.assertEqual(
                 json.loads(response.content.decode()),
-                {'success': False, 'error': _('You cannot use this email address.')},
+                {'success': False, 'error': _('This email address is already in use. Try another one.')},
             )
 
     def test_failed_catch_all_with_shared_domain(self):
@@ -1307,7 +1307,7 @@ class AddEmailAliasTestCase(TestCase):
             self.assertEqual(response.status_code, 403)
             self.assertEqual(
                 json.loads(response.content.decode()),
-                {'success': False, 'error': _('You cannot use this email address.')},
+                {'success': False, 'error': _('This email address is already in use. Try another one.')},
             )
 
     def test_already_used_alias_case_sensitive(self):
@@ -1327,8 +1327,42 @@ class AddEmailAliasTestCase(TestCase):
             self.assertEqual(response.status_code, 403)
             self.assertEqual(
                 json.loads(response.content.decode()),
-                {'success': False, 'error': _('You cannot use this email address.')},
+                {'success': False, 'error': _('This email address is already in use. Try another one.')},
             )
+
+    @patch('thunderbird_accounts.mail.views.is_address_taken', return_value=False)
+    @patch('thunderbird_accounts.mail.views.Email.objects.get_or_create')
+    def test_alias_found_during_creation_uses_descriptive_error(self, mock_get_or_create, _mock_is_address_taken):
+        """Ensure a duplicate found after the availability check returns the same clear error."""
+        mock_get_or_create.return_value = (Mock(), False)
+
+        response = self.client.post(
+            reverse('add_email_alias'),
+            data={'email-alias': 'duplicate', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {'success': False, 'error': _('This email address is already in use. Try another one.')},
+        )
+
+    @patch('thunderbird_accounts.mail.views.is_address_taken', return_value=False)
+    @patch('thunderbird_accounts.mail.views.Email.objects.get_or_create', side_effect=IntegrityError)
+    def test_alias_creation_race_uses_descriptive_error(self, _mock_get_or_create, _mock_is_address_taken):
+        """Ensure a duplicate-address race returns the same clear error."""
+        response = self.client.post(
+            reverse('add_email_alias'),
+            data={'email-alias': 'duplicate', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            json.loads(response.content.decode()),
+            {'success': False, 'error': _('This email address is already in use. Try another one.')},
+        )
 
     @override_settings(ALLOWED_EMAIL_DOMAINS=['example.org', 'example.com'])
     @override_settings(MIN_CUSTOM_DOMAIN_ALIAS_LENGTH=3)
