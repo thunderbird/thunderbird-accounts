@@ -347,9 +347,9 @@ def sign_up(request: Request):
             status=400,
         )
     except ImportUserError as ex:
-        if ex.is_already_exists and not can_register_with_username(partial_username):
+        if ex.is_already_exists or ex.is_validation_error:
             logging.info(
-                f'Dupe signup suppressed (status={ex.status_code or "none"}, error={ex.error_code or "unknown"})',
+                f'Sign up rejected by Keycloak (status={ex.status_code or "none"}, error={ex.error_desc or "unknown"})',
             )
         elif ex.is_password_policy_error:
             logging.info(f'Sign up password rejected by Keycloak password policy (error={ex.error_code})')
