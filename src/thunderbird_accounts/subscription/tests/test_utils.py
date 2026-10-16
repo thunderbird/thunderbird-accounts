@@ -1,5 +1,8 @@
 from unittest.mock import patch
-from thunderbird_accounts.subscription.utils import activate_subscription_features
+from thunderbird_accounts.subscription.utils import (
+    activate_subscription_features,
+    deactivate_subscription_features,
+)
 import datetime
 from thunderbird_accounts.mail.models import Account
 from thunderbird_accounts.subscription.models import Plan, Product, Subscription, Transaction, SubscriptionItem, Price
@@ -105,3 +108,41 @@ class TestActivationSubscriptionFeatures(TestCase):
             create_stalwart_account_mock.assert_not_called()
             update_quota_mock.assert_called_with(username=self.user.username, quota=self.plan.mail_storage_bytes)
             grant_role_mock.assert_called_once_with(oidc_id=self.user.oidc_id)
+
+
+class TestDeactivationSubscriptionFeatures(TestActivationSubscriptionFeatures):
+    def setUp(self):
+        super().setUp()
+        self.user.plan = self.plan
+        self.user.save()
+
+    def test_success(self):
+        """A canceled subscription with no other active one removes the plan."""
+        self._create_subscription(status=Subscription.StatusValues.CANCELED, user=self.user)
+
+        deactivate_subscription_features(user=self.user)
+
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.plan_id)
+
+    def test_existing_stalwart_account_updates_quota_and_regrants_mail_access(self):
+        """Inherited activation test, not applicable."""
+        pass
+
+    def test_keeps_plan_while_another_subscription_is_active(self):
+        self._create_subscription(status=Subscription.StatusValues.ACTIVE, user=self.user)
+
+        deactivate_subscription_features(user=self.user)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.plan_id, self.plan.uuid)
+
+    def test_noop_without_plan(self):
+        self.user.plan = None
+        self.user.save()
+        self._create_subscription(status=Subscription.StatusValues.CANCELED, user=self.user)
+
+        deactivate_subscription_features(user=self.user)
+
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.plan_id)

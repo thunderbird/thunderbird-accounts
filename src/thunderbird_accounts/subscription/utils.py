@@ -3,7 +3,7 @@ from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.tasks import grant_mail_access_role
 from thunderbird_accounts.mail.utils import create_stalwart_account, update_quota_on_stalwart_account
-from thunderbird_accounts.subscription.models import Plan, Price
+from thunderbird_accounts.subscription.models import Plan, Price, Subscription
 
 
 def get_visible_plan_info() -> dict | None:
@@ -83,8 +83,22 @@ def activate_subscription_features(user: User, plan: Plan):
     create_stalwart_account(user, None)
 
 
-def deactivate_subscription_features():
-    """
-    TODO: Implement me
-    """
-    pass
+def deactivate_subscription_features(user: User):
+    """Removes the plan from a user who has no active subscription left.
+
+    Counterpart of activate_subscription_features. Mail access and quota are left unchanged; offboarding is #176."""
+    # Another subscription may still be paying for the plan.
+    if user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).exists():
+        return
+
+    with dj_transaction.atomic():
+        locked_user = User.objects.select_for_update().get(pk=user.uuid)
+        if locked_user.plan_id is None:
+            return
+        locked_user.plan_id = None
+        locked_user.save()
+
+    user.refresh_from_db()
+
+    # TODO: Temporarily removed until https://github.com/thunderbird/thunderbird-accounts/issues/346 is ready
+    # sync_plan_to_keycloak(user)

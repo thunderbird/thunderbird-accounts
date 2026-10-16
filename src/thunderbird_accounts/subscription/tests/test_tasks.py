@@ -711,6 +711,10 @@ class SubscriptionUpdatedToCancelledTaskTestCase(SubscriptionCreatedTaskTestCase
             webhook_updated_at=occurred_at - datetime.timedelta(hours=1),
         )
 
+        # The user was on a plan before the cancellation came in
+        self.test_user.plan = models.Plan.objects.first()
+        self.test_user.save()
+
         task_results: dict | None = tasks.paddle_subscription_event.delay(
             event_data, occurred_at, self.is_create_event
         ).get(timeout=10)
@@ -750,6 +754,9 @@ class SubscriptionUpdatedToCancelledTaskTestCase(SubscriptionCreatedTaskTestCase
         # Refresh the test user, and confirm that the payment pending flag was not cleared (as this is a cancel)
         self.test_user.refresh_from_db()
         self.assertTrue(self.test_user.is_awaiting_payment_verification)
+
+        # No remaining active subscription, so the plan is removed
+        self.assertIsNone(self.test_user.plan_id)
 
     def test_subscription_already_exists(self):
         """Not needed for update webhook"""

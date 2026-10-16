@@ -20,7 +20,10 @@ from thunderbird_accounts.celery.retry import (
 )
 from thunderbird_accounts.subscription.mailchimp import MailchimpClient
 from thunderbird_accounts.subscription.models import Transaction, Subscription, SubscriptionItem, Price, Product, Plan
-from thunderbird_accounts.subscription.utils import activate_subscription_features
+from thunderbird_accounts.subscription.utils import (
+    activate_subscription_features,
+    deactivate_subscription_features,
+)
 from thunderbird_accounts.subscription.decorators import inject_paddle, init_paddle
 from thunderbird_accounts.core.types import TaskReturnStatus
 
@@ -377,6 +380,11 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             product_id=product_obj.uuid if product_obj else None,
             defaults={'quantity': quantity},
         )
+
+    # Cancelled, paused and past due subscriptions no longer entitle the user to a plan.
+    if status != Subscription.StatusValues.ACTIVE.value:
+        logging.info(f'Subscription (paddle_id={paddle_id}) is {status}; removing plan from user {user.uuid}.')
+        deactivate_subscription_features(user)
 
     # Queue up the price update for now.
     retrieve_and_update_localized_subscription_price.delay(subscription_uuid=str(subscription.uuid))
