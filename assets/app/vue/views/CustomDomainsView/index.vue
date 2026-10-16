@@ -1,5 +1,49 @@
 <script setup lang="ts">
-import CustomDomainsSection from './CustomDomainsSection/index.vue';
+import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
+import CardContainer from '@/components/CardContainer.vue';
+import StepIndicator from '@/components/StepIndicator.vue';
+import Step1Add from './components/Step1Add.vue';
+import Step2Identify from './components/Step2Identify.vue';
+import Step3Summary from './components/Step3Summary.vue';
+
+const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
+
+// An existing domain can be passed in to skip straight to choosing its DNS provider
+const initialDomain = typeof route.query.domain === 'string' ? route.query.domain : null;
+
+const currentStep = ref(initialDomain ? 1 : 0);
+const customDomain = ref<string | null>(initialDomain);
+const dnsProvider = ref<string | null>(null);
+
+const steps = computed(() => [
+  { key: 'add', label: t('views.customDomains.steps.add') },
+  { key: 'update-records', label: t('views.customDomains.steps.updateRecords') },
+  { key: 'summary', label: t('views.customDomains.steps.summary') },
+]);
+
+const onCancel = () => {
+  router.push('/settings');
+};
+
+const onDomainAdded = (domainName: string) => {
+  customDomain.value = domainName;
+  currentStep.value = 1;
+};
+
+const onVerify = (provider: string) => {
+  dnsProvider.value = provider;
+  currentStep.value = 2;
+};
+
+const onDone = (notifyByEmail: boolean) => {
+  // TODO: persist the "email me when verification is complete" preference
+  console.debug('Custom domain verification email notification:', notifyByEmail);
+  router.push('/settings');
+};
 </script>
 
 <script lang="ts">
@@ -9,5 +53,27 @@ export default {
 </script>
 
 <template>
-  <custom-domains-section />
+  <card-container>
+    <step-indicator
+      class="steps"
+      :steps="steps"
+      :current-step="currentStep"
+      :aria-label="t('views.customDomains.stepsLabel')"
+    />
+
+    <step1-add v-if="currentStep === 0" @cancel="onCancel" @added="onDomainAdded" />
+    <step2-identify
+      v-else-if="currentStep === 1 && customDomain"
+      :domain-name="customDomain"
+      @cancel="onCancel"
+      @verify="onVerify"
+    />
+    <step3-summary v-else-if="currentStep === 2 && customDomain" :domain-name="customDomain" @done="onDone" />
+  </card-container>
 </template>
+
+<style scoped>
+.steps {
+  margin-block-end: 2rem;
+}
+</style>

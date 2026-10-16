@@ -2,6 +2,9 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhDotsThreeVertical } from '@phosphor-icons/vue';
+import { useRouter } from 'vue-router';
+import { WAFFLE_FLAG } from '@/types';
+import { isWaffleFlagActive } from '@/utils';
 
 // Types
 import { DOMAIN_STATUS } from '../types';
@@ -30,6 +33,8 @@ const showMenu = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 
 const { t } = useI18n();
+const router = useRouter();
+const isCustomDomainsRevampActive = isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP);
 
 const toggleMenu = () => {
   showMenu.value = !showMenu.value;
@@ -51,6 +56,13 @@ const emitVerificationResult = (data: {
 };
 
 const handleRetry = async () => {
+  // With the revamp enabled, verification and its results live on their own page
+  if (isCustomDomainsRevampActive) {
+    showMenu.value = false;
+    router.push({ path: '/custom-domains/verification', query: { domain: props.domain.name } });
+    return;
+  }
+
   try {
     const data = await verifyDomain(props.domain.name);
 
@@ -164,7 +176,7 @@ onBeforeUnmount(() => {
     color: white;
     text-align: left;
     padding: 1rem 1.5rem;
-    font-family: metropolis;
+    font-family: metropolis, sans-serif;
     font-size: 0.875rem;
     cursor: pointer;
 
