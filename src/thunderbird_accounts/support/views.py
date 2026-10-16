@@ -182,7 +182,7 @@ def contact_submit(request: HttpRequest):
             {
                 'name': name,
                 'email': email,
-                'external_id': str(request.user.uuid),
+                'external_id': request.user.oidc_id,
                 'user_fields': {settings.ZENDESK_USER_PLAN_STATUS_FIELD_KEY: get_plan_status_for_zendesk(request.user)},
             }
         )

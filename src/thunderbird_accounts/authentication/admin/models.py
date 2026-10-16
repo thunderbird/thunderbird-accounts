@@ -104,7 +104,7 @@ class CustomUserAdmin(UserAdmin):
         admin_add_to_mailchimp_list,
         admin_reset_totp_credentials,
     ]
-    search_fields = ('email', 'recovery_email', 'last_used_email', 'username')
+    search_fields = ('email', 'recovery_email', 'last_used_email', 'username', '=oidc_id')
     list_filter = [
         'is_staff',
         'is_superuser',
