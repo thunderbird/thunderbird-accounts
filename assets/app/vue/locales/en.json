@@ -282,6 +282,14 @@
           "verifyStepInfoDescription": "Once you start verification, we’ll keep trying automatically for a few days. If it doesn’t succeed in that time, we’ll stop and you’ll need to restart the process manually.",
           "retry": "Retry",
           "delete": "Delete",
+          "deleteModal": {
+            "title": "Delete aliases and domain",
+            "description": "{domain} has {count} active alias. Select the alias below to confirm that it will be deleted along with the domain. | {domain} has {count} active aliases. Select the aliases below to confirm that they will be deleted along with the domain.",
+            "descriptionNoAliases": "{domain} has no active aliases. Are you sure you want to delete this domain?",
+            "existingAliases": "Existing aliases",
+            "cancel": "Cancel",
+            "confirm": "Delete domain and aliases"
+          },
           "verify": "Verify",
           "reVerify": "Re-verify",
           "domainAlreadyExists": "Domain already exists",
