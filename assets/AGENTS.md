@@ -49,7 +49,7 @@ the second request from being sent.
 
 ## Accessability
 
-Accessbility best practices must be followed, and any compromises surfaced to the user.
+Accessibility best practices must be followed and any compromises surfaced to the user.
 
  - `<router-link>` for navigation
  - aria-label on decorative icons
@@ -61,3 +61,4 @@ Accessbility best practices must be followed, and any compromises surfaced to th
  - A sibling project `services-ui` is used to house shared Vue components. It is likely checked
 out in a sibling repo.
  - check the services-ui Storybook before writing a component or styling a button, modal, or divider.
+ - Use CSS color variables coming from `services-ui` intead of direct hex codes when possible.
