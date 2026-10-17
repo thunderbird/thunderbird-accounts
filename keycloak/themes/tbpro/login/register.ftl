@@ -5,7 +5,7 @@
     <#if section = "js">
     <script>
       window._page['currentView'] = {
-        formAction: '${url.registrationAction}',
+        formAction: '${url.registrationAction?js_string?no_esc}',
         messageHeader: '${kcSanitize(msg("${messageHeader!}"))?no_esc}',
         errors: {
           email: '${kcSanitize(messagesPerField.get("email"))?no_esc}',

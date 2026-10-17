@@ -34,7 +34,7 @@ RUN rm -rf /app/keycloak/assets/*
 
 # release source — download a pinned, checksummed jar from GitHub Releases.
 # NOTE: requires the keycloak-mfa-rest v* release to exist before this image can build.
-FROM quay.io/keycloak/keycloak:26.7.5 AS mfa-release
+FROM quay.io/keycloak/keycloak:26.8.1 AS mfa-release
 ARG KEYCLOAK_MFA_REST_VERSION=v0.1.1
 ARG KEYCLOAK_MFA_REST_SHA256=d40092a89671d08089a590e75622e1b525de7efc73ac5edfe2bec8e8cb704b5d
 ADD --chown=keycloak:keycloak \
@@ -45,13 +45,16 @@ RUN if [ -n "${KEYCLOAK_MFA_REST_SHA256}" ]; then \
     fi
 
 # local source — copy a jar built in a container into keycloak/providers/ (gitignored).
-FROM quay.io/keycloak/keycloak:26.7.5 AS mfa-local
+FROM quay.io/keycloak/keycloak:26.8.1 AS mfa-local
 COPY --chown=keycloak:keycloak keycloak/providers/keycloak-mfa-rest.jar /opt/keycloak/providers/keycloak-mfa-rest.jar
 
 # Select the provider source; defaults to the released jar. BuildKit only builds the
 # referenced stage, so a `release` build never needs the local jar present and vice versa.
 # (MFA_JAR_MODE is declared as a global ARG at the top of this file.)
 FROM mfa-${MFA_JAR_MODE}
+
+# SCIM API is enabled by default from Keycloak 26.8; we don't use it, so keep it off.
+ENV KC_FEATURES_DISABLED=scim-api
 
 # Load in our dev setup
 COPY --chown=keycloak:keycloak keycloak/data/import /opt/keycloak/data/import
