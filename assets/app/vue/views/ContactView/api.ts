@@ -1,4 +1,4 @@
-export const isEmailInAllowList = async (email: string) => {
+export const checkContactEmail = async (email: string) => {
   const response = await fetch('/api/v1/contact/check-email-is-on-allow-list/', {
     method: 'POST',
     body: JSON.stringify({

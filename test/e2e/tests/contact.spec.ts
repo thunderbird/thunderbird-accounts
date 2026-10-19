@@ -61,7 +61,7 @@ const fakeBeingOnAllowListForLocalDev = async (page: Page) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ is_on_allow_list: true }),
+      body: JSON.stringify({ is_on_allow_list: true, has_account: true }),
     });
   });
 };
@@ -275,12 +275,12 @@ test.describe('contact support form on browser', {
     await expect(contactPage.successMessage).not.toBeVisible();
   });
 
-  test('shows waitlist warning when email is not on allow list', async ({ page }) => {
+  test('shows waitlist warning when email has no account', async ({ page }) => {
     await page.route('*/**/api/v1/contact/check-email-is-on-allow-list/', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ is_on_allow_list: false }),
+        body: JSON.stringify({ is_on_allow_list: false, has_account: false }),
       });
     });
 
