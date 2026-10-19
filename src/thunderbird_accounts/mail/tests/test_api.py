@@ -63,7 +63,9 @@ class CheckEmailIsOnAllowListApiTestCase(APITestCase):
 
     @patch('thunderbird_accounts.mail.api.is_email_in_allow_list', return_value=True)
     def test_has_account_is_true_for_recovery_email(self, _mock):
-        User.objects.create(username='user@example.org', email='user@example.org', recovery_email='recovery@example.com')
+        User.objects.create(
+            username='user@example.org', email='user@example.org', recovery_email='recovery@example.com'
+        )
 
         response = self.client.post(self.url, {'email': 'recovery@example.com'})
 
