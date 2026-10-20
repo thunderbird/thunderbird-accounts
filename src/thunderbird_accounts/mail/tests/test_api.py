@@ -27,7 +27,7 @@ class CheckEmailIsOnAllowListApiTestCase(APITestCase):
         response = self.client.post(self.url, {'email': email})
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'is_on_allow_list': True})
+        self.assertEqual(response.json(), {'is_on_allow_list': True, 'has_account': False})
         mock_is_email_in_allow_list.assert_called_once_with(email)
 
     @patch('thunderbird_accounts.mail.api.is_email_in_allow_list')
@@ -38,7 +38,7 @@ class CheckEmailIsOnAllowListApiTestCase(APITestCase):
         response = self.client.post(self.url, {'email': email})
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'is_on_allow_list': False})
+        self.assertEqual(response.json(), {'is_on_allow_list': False, 'has_account': False})
         mock_is_email_in_allow_list.assert_called_once_with(email)
 
     @override_settings(CONTACT_SUPPORT_ONLY_FOR_ALLOW_LISTED_USERS=False)
@@ -50,8 +50,26 @@ class CheckEmailIsOnAllowListApiTestCase(APITestCase):
         response = self.client.post(self.url, {})
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'is_on_allow_list': True})
+        self.assertEqual(response.json(), {'is_on_allow_list': True, 'has_account': True})
         mock_is_email_in_allow_list.assert_not_called()
+
+    @patch('thunderbird_accounts.mail.api.is_email_in_allow_list', return_value=True)
+    def test_has_account_is_true_for_account_email(self, _mock):
+        User.objects.create(username='has-account@example.com', email='has-account@example.com')
+
+        response = self.client.post(self.url, {'email': 'has-account@example.com'})
+
+        self.assertTrue(response.json()['has_account'])
+
+    @patch('thunderbird_accounts.mail.api.is_email_in_allow_list', return_value=True)
+    def test_has_account_is_true_for_recovery_email(self, _mock):
+        User.objects.create(
+            username='user@example.org', email='user@example.org', recovery_email='recovery@example.com'
+        )
+
+        response = self.client.post(self.url, {'email': 'recovery@example.com'})
+
+        self.assertTrue(response.json()['has_account'])
 
 
 class IsUsernameAvailableTestCase(APITestCase):

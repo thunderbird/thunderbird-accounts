@@ -1,6 +1,7 @@
 from thunderbird_accounts.authentication.utils import (
     is_email_reserved,
     is_email_in_allow_list,
+    get_user_by_contact_email,
     can_register_with_username,
 )
 from thunderbird_accounts.mail.exceptions import EmailNotValidError
@@ -58,6 +59,7 @@ def check_email_is_on_allow_list(request: Request):
         return Response(
             {
                 'is_on_allow_list': True,
+                'has_account': True,
             },
             status=200,
         )
@@ -69,6 +71,7 @@ def check_email_is_on_allow_list(request: Request):
     return Response(
         {
             'is_on_allow_list': is_email_in_allow_list(email),
+            'has_account': get_user_by_contact_email(email) is not None,
         },
         status=200,
     )

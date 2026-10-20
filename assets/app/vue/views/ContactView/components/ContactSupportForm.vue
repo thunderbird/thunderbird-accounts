@@ -6,7 +6,7 @@ import { NoticeBar, TextInput, TextArea, SelectInput, PrimaryButton, NoticeBarTy
 import CsrfToken from '@/components/forms/CsrfToken.vue';
 import { COMMUNITY_SUPPORT_URL } from '@/defines';
 import NativeInputWrapper from './NativeInputWrapper.vue';
-import { isEmailInAllowList } from '../api';
+import { checkContactEmail } from '../api';
 
 // Types
 import { ContactFieldsAPIResponse, TicketField } from '../types';
@@ -34,6 +34,7 @@ const { t } = useI18n();
 
 const csrfTokenVal = ref(window._page.csrfToken);
 const errorText = ref(window._page.formError);
+const emailHasAccount = ref(true);
 const userEmailInAllowList = ref(true);
 const successText = ref('');
 const isSubmitting = ref(false);
@@ -156,21 +157,22 @@ const resetForm = () => {
   formRef.value.reset();
 };
 
-const checkEmailInAllowList = useDebounceFn(async () => {
+const checkEmail = useDebounceFn(async () => {
   await nextTick();
 
   const emailField = formRef.value?.elements.namedItem('email') as HTMLInputElement | null;
 
   if (emailField?.checkValidity()) {
-    const { is_on_allow_list } = await isEmailInAllowList(emailField.value.trim());
+    const { is_on_allow_list, has_account } = await checkContactEmail(emailField.value.trim());
     userEmailInAllowList.value = is_on_allow_list;
+    emailHasAccount.value = has_account;
   }
 }, 250);
 
 const handleSubmit = async () => {
   if (isSubmitting.value) return;
 
-  await checkEmailInAllowList();
+  await checkEmail();
 
   if (!userEmailInAllowList.value) {
     return;
@@ -253,8 +255,8 @@ onMounted(() => {
 <template>
   <notice-bar :type="NoticeBarTypes.Critical" v-if="errorText" class="notice">{{ errorText }}</notice-bar>
   <notice-bar :type="NoticeBarTypes.Success" v-if="successText" class="notice">{{ successText }}</notice-bar>
-  <notice-bar :type="NoticeBarTypes.Warning" v-if="!userEmailInAllowList" class="notice">
-    <i18n-t keypath="views.contact.emailNotOnAllowList">
+  <notice-bar :type="NoticeBarTypes.Warning" v-if="!emailHasAccount" class="notice">
+    <i18n-t keypath="views.contact.emailHasNoAccount">
       <template #joinWaitlist>
         <a :href="tbProWaitListUrl" target="_blank" rel="noopener noreferrer">
           {{ t('views.contact.joinWaitlist') }}
@@ -264,7 +266,7 @@ onMounted(() => {
 
     <br />
 
-    <i18n-t keypath="views.contact.emailNotOnAllowListSupport" tag="span" class="second-line">
+    <i18n-t keypath="views.contact.emailHasNoAccountSupport" tag="span" class="second-line">
       <template #communitySupportLink>
         <a :href="COMMUNITY_SUPPORT_URL" target="_blank" rel="noopener noreferrer">
           {{ t('views.contact.communitySupportLink') }}
@@ -282,7 +284,7 @@ onMounted(() => {
       v-model="form.email"
       :required="true"
       data-testid="contact-email-input"
-      @input="checkEmailInAllowList"
+      @input="checkEmail"
     >
       {{ t('views.contact.emailAddressLabel') }}
     </text-input>
