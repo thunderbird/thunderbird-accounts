@@ -61,10 +61,16 @@ def _resolve_user_id(account_id=None, email=None):
     return oidc_id
 
 
+def _stalwart_event_map():
+    if settings.STALWART_ADMIN_API_USE_JMAP:
+        return {**settings.STALWART_EVENT_MAP, **settings.STALWART_EVENT_MAP_V016}
+    return settings.STALWART_EVENT_MAP
+
+
 def _process_stalwart_event(event):
     """Process a single Stalwart webhook event: enrich and capture to PostHog."""
     event_type = event.get('type', '')
-    posthog_event = settings.STALWART_EVENT_MAP.get(event_type)
+    posthog_event = _stalwart_event_map().get(event_type)
     if not posthog_event:
         return False
 
@@ -73,7 +79,7 @@ def _process_stalwart_event(event):
     from_email = data.get('from')
     to_emails = data.get('to') or []
 
-    if event_type.startswith('queue.queue-message'):
+    if posthog_event == 'thundermail.message-sending.sent':
         identity_email = from_email
     else:
         identity_email = to_emails[0] if isinstance(to_emails, list) and to_emails else from_email

@@ -158,6 +158,46 @@ class ProcessStalwartEventTestCase(TestCase):
 
         self.mock_resolve.assert_called_once_with(account_id=None, email='owner@thundermail.test')
 
+    def _submission_event(self, event_type):
+        return {
+            'id': 'e3',
+            'createdAt': '2024-01-01T00:00:00Z',
+            'type': event_type,
+            'data': {'from': 'owner@thundermail.test', 'to': ['recipient@elsewhere.test'], 'size': 1234},
+        }
+
+    def _assert_sent_from_sender(self, processed):
+        self.assertTrue(processed)
+        self.mock_resolve.assert_called_once_with(account_id=None, email='owner@thundermail.test')
+        kwargs = self.mock_submit.call_args.kwargs
+        self.assertEqual(kwargs['event'], 'thundermail.message-sending.sent')
+        self.assertEqual(kwargs['distinct_id'], 'hashed-id')
+        self.assertEqual(kwargs['properties']['size'], 1234)
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=True)
+    def test_authenticated_message_queued_with_jmap_flag_is_sent_from_sender(self):
+        processed = _process_stalwart_event(self._submission_event('queue.authenticated-message-queued'))
+
+        self._assert_sent_from_sender(processed)
+
+    @override_settings(STALWART_ADMIN_API_USE_JMAP=False)
+    def test_authenticated_message_queued_without_jmap_flag_is_ignored(self):
+        processed = _process_stalwart_event(self._submission_event('queue.authenticated-message-queued'))
+
+        self.assertFalse(processed)
+        self.mock_resolve.assert_not_called()
+        self.mock_submit.assert_not_called()
+
+    def test_queue_message_authenticated_is_sent_from_sender_with_either_flag_state(self):
+        for use_jmap in (False, True):
+            with self.subTest(use_jmap=use_jmap), override_settings(STALWART_ADMIN_API_USE_JMAP=use_jmap):
+                self.mock_resolve.reset_mock()
+                self.mock_submit.reset_mock()
+
+                processed = _process_stalwart_event(self._submission_event('queue.queue-message-authenticated'))
+
+                self._assert_sent_from_sender(processed)
+
     def test_forwards_created_at_and_derived_uuid_for_posthog_dedup(self):
         """Stalwart event id is hashed into a UUID5 (PostHog rejects integer-string uuids,
         see PostHog/posthog#35684); same Stalwart id must always derive the same UUID."""

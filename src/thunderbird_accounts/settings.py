@@ -487,6 +487,9 @@ STALWART_EVENT_MAP = {
     'message-ingest.spam': 'thundermail.message-ingest.spam',
     'queue.queue-message-authenticated': 'thundermail.message-sending.sent',
 }
+STALWART_EVENT_MAP_V016 = {
+    'queue.authenticated-message-queued': 'thundermail.message-sending.sent',
+}
 # Cache config for the Stalwart accountId/email -> hashed oidc_id lookup.
 STALWART_USER_CACHE_PREFIX = 'stalwart_uid:'
 STALWART_USER_CACHE_TTL = 3600
