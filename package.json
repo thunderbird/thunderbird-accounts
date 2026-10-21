@@ -55,7 +55,7 @@
     "jiti": "^2.5.1",
     "prettier": "3.6.2",
     "typescript-eslint": "^8.39.1",
-    "vite": "^8.0.16",
+    "vite": "^8.3.5",
     "vitest": "^4.1.11"
   }
 }
