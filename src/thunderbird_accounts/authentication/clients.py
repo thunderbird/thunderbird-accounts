@@ -71,7 +71,6 @@ class ActiveSessionResponse(GeoIPSession, total=False):
 
 class ConnectedAppResponse(GeoIPSession, total=False):
     client_id: str
-    session_id: str | None
     app_name: str
     access_given: int | None
     last_access: int | None
@@ -529,7 +528,8 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
         return self._normalize_session_devices(sessions_response.json(), devices_response.json())
 
     def sign_out_session(self, user_access_token: str, session_id: str) -> dict:
-        self.request(f'account/sessions/{session_id}', user_access_token, RequestMethods.DELETE)
+        encoded_session_id = quote(session_id, safe='')
+        self.request(f'account/sessions/{encoded_session_id}', user_access_token, RequestMethods.DELETE)
         return {'success': True}
 
     def get_connected_apps(self, user_access_token: str) -> list[ConnectedAppResponse]:
@@ -537,7 +537,21 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
         devices_response = self.request('account/sessions/devices', user_access_token, RequestMethods.GET)
         return self._normalize_connected_apps(applications_response.json(), devices_response.json())
 
-    def revoke_connected_app(self, user_access_token: str, client_id: str) -> dict:
+    def get_connected_app_session_ids(self, user_access_token: str, client_id: str) -> list[str]:
+        """Ids of every Keycloak session, online or offline, that holds a client session for the app."""
+        devices_response = self.request('account/sessions/devices', user_access_token, RequestMethods.GET)
+        session_ids = []
+        for device in devices_response.json():
+            for session in device.get('sessions') or []:
+                session_id = session.get('id')
+                if not session_id or session_id in session_ids:
+                    continue
+                if any(session_client_id == client_id for session_client_id, _ in self._session_clients(session)):
+                    session_ids.append(session_id)
+        return session_ids
+
+    def revoke_client_consent(self, user_access_token: str, client_id: str) -> dict:
+        """Revoke the user's consent for a client, which drops every offline token issued to it."""
         encoded_client_id = quote(client_id, safe='')
         self.request(
             f'account/applications/{encoded_client_id}/consent',
@@ -602,6 +616,12 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
         return response
 
     def _normalize_connected_apps(self, applications: list[dict], devices: list[dict]) -> list[ConnectedAppResponse]:
+        """One entry per app with offline access, described by its most recently used session.
+
+        Keycloak's devices listing mixes online and offline sessions and an app that signed in
+        more than once holds several of them; the Connected apps view is about the app, so the
+        extra sessions only inform which one is shown.
+        """
         offline_apps = {
             app['clientId']: {
                 'name': app.get('clientName'),
@@ -610,13 +630,10 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
             for app in applications
             if app.get('offlineAccess') and app.get('clientId')
         }
-        connected_apps = []
-        matched_client_ids = set()
-        seen_sessions = set()
+        latest_sessions: dict[str, dict] = {}
 
         for device in devices:
             for session in device.get('sessions') or []:
-                session_id = session.get('id')
                 ip_address = session.get('ipAddress') or device.get('ipAddress')
                 last_access = session.get('lastAccess') or device.get('lastAccess')
                 started = session.get('started')
@@ -625,30 +642,22 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
                     if client_id not in offline_apps:
                         continue
 
-                    app = offline_apps[client_id]
-                    access_given = started * 1000 if started is not None else app['access_given']
+                    candidate = {
+                        'name': session_client_name,
+                        'ip_address': ip_address,
+                        'last_access': last_access,
+                        'started': started,
+                    }
+                    current = latest_sessions.get(client_id)
+                    if current is None or self._session_recency(candidate) > self._session_recency(current):
+                        latest_sessions[client_id] = candidate
 
-                    session_key = (client_id, session_id or device.get('id') or (ip_address, last_access))
-                    if session_key in seen_sessions:
-                        continue
-
-                    seen_sessions.add(session_key)
-                    matched_client_ids.add(client_id)
-                    connected_apps.append(
-                        {
-                            'client_id': client_id,
-                            'session_id': session_id,
-                            'app_name': app['name'] or session_client_name or client_id,
-                            'access_given': access_given,
-                            'ip_address': ip_address,
-                            'last_access': last_access * 1000 if last_access is not None else None,
-                        }
-                    )
-
-        # offlineAccess is the authoritative signal. Keep the app visible even if
-        # Keycloak does not return usable device metadata for its offline session.
+        connected_apps = []
         for client_id, app in offline_apps.items():
-            if client_id not in matched_client_ids:
+            latest = latest_sessions.get(client_id)
+            if latest is None:
+                # offlineAccess is the authoritative signal. Keep the app visible even if
+                # Keycloak does not return usable device metadata for its offline session.
                 connected_apps.append(
                     {
                         'client_id': client_id,
@@ -656,8 +665,25 @@ class KeycloakAccountClient(KeycloakSelfServiceClient):
                         'access_given': app['access_given'],
                     }
                 )
+                continue
+
+            started = latest['started']
+            last_access = latest['last_access']
+            connected_apps.append(
+                {
+                    'client_id': client_id,
+                    'app_name': app['name'] or latest['name'] or client_id,
+                    'access_given': started * 1000 if started is not None else app['access_given'],
+                    'ip_address': latest['ip_address'],
+                    'last_access': last_access * 1000 if last_access is not None else None,
+                }
+            )
 
         return connected_apps
+
+    @staticmethod
+    def _session_recency(session: dict) -> tuple[int, int]:
+        return (session.get('last_access') or 0, session.get('started') or 0)
 
     def _session_clients(self, session: dict) -> list[tuple[str, str | None]]:
         clients = session.get('clients') or []
