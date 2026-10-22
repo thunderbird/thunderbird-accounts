@@ -1,5 +1,5 @@
 from requests import JSONDecodeError
-import json
+import logging
 
 import sentry_sdk
 from django.conf import settings
@@ -8,13 +8,21 @@ from django.http import HttpRequest, JsonResponse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_http_methods
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
+from rest_framework.request import Request
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.authentication.permissions import user_owns_email
 from thunderbird_accounts.subscription.models import Subscription
+from thunderbird_accounts.support.contact_form import parse_contact_payload
+from thunderbird_accounts.support.permissions import CanSubmitContactRequest, ContactSubmitThrottle
 from thunderbird_accounts.support.zendesk import ZendeskClient
 
 # Add browser and OS information to hidden custom fields
 from thunderbird_accounts.core.utils import parse_user_agent_info
+
+logger = logging.getLogger(__name__)
 
 
 def get_plan_status_for_zendesk(user: User) -> str:
@@ -72,20 +80,24 @@ def contact_fields(request: HttpRequest):
     return JsonResponse({'success': True, 'ticket_form': ticket_form_data, 'ticket_fields': ticket_fields_data})
 
 
-@require_http_methods(['POST'])
-def contact_submit(request: HttpRequest):
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([CanSubmitContactRequest])
+@throttle_classes([ContactSubmitThrottle])
+def contact_submit(request: Request):
     """Uses Zendesk's Requests API to create a ticket
     Ref https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#tickets-and-requests"""
 
     # Data comes in as multipart/form-data, so we need to parse the JSON data from the form
     # using the 'data' field so that we can also send attachments in the same request
     try:
-        data_json = json.loads(request.POST.get('data', '{}'))
-    except json.JSONDecodeError as ex:
+        data_json = parse_contact_payload(request)
+    except ValueError as ex:
         sentry_sdk.capture_exception(ex)
         return JsonResponse({'success': False, 'error': _('Invalid form data')}, status=400)
 
     email = data_json.get('email')
+    email = email.strip() if isinstance(email, str) else ''
 
     # Name is optional in the UI,
     # but it is required for the Zendesk Requests API's requester object
@@ -113,7 +125,7 @@ def contact_submit(request: HttpRequest):
 
         # Check if required field is empty
         if field_required and (not field_value or field_value.strip() == ''):
-            validation_errors.append(f'{field_title} is required')
+            validation_errors.append(_('{field_title} is required').format(field_title=field_title))
 
         if field_type == 'subject':
             subject = field_value
@@ -127,17 +139,19 @@ def contact_submit(request: HttpRequest):
 
     # TODO: Refactor this view to use Django's Forms API instead of direct EMPTY_VALUES access.
     if email in EMPTY_VALUES:
-        validation_errors.append('Email is required')
+        validation_errors.append(_('Email is required'))
 
     if subject in EMPTY_VALUES:
-        validation_errors.append('Subject is required')
+        validation_errors.append(_('Subject is required'))
 
     if description in EMPTY_VALUES:
-        validation_errors.append('Description is required')
+        validation_errors.append(_('Description is required'))
 
     # Check for validation errors
     if validation_errors:
-        return JsonResponse({'success': False, 'error': ', '.join(validation_errors)}, status=400)
+        return JsonResponse(
+            {'success': False, 'error': ', '.join(str(error) for error in validation_errors)}, status=400
+        )
 
     # Upload files to Zendesk and collect tokens
     attachment_tokens = []
@@ -256,6 +270,21 @@ def contact_submit(request: HttpRequest):
             f'Zendesk ticket created but failed to update hidden fields: {zendesk_api_response}',
             level='error',
             user={'ticket_id': ticket_id},
+        )
+
+    # Tell agents whether the requester address was proven to belong to the signed-in submitter
+    identity_tag = (
+        settings.ZENDESK_TAG_IDENTITY_VERIFIED
+        if user_owns_email(request.user, email)
+        else settings.ZENDESK_TAG_IDENTITY_UNVERIFIED
+    )
+    tags_response = zendesk_client.add_ticket_tags(ticket_id, [identity_tag])
+
+    if not tags_response.ok:
+        logger.error(
+            '[contact_submit] Zendesk ticket %s created but failed to add identity tag: %s',
+            ticket_id,
+            getattr(tags_response, 'status_code', 'unknown'),
         )
 
     return JsonResponse({'success': True})
