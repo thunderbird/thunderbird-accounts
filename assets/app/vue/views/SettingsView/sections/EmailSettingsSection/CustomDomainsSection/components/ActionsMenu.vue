@@ -8,7 +8,7 @@ import { DOMAIN_STATUS } from '../types';
 import type { DNSRecord, DomainVerificationResult, StaleDNSRecord } from '../types';
 
 // API
-import { verifyDomain, removeCustomDomain } from '../api'
+import { verifyDomain } from '../api'
 
 const props = defineProps<{
   domain: {
@@ -19,7 +19,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  'custom-domain-removed': [domainName: string];
+  'custom-domain-delete': [domainName: string];
   'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }];
   'custom-domain-error': [error: string];
   'custom-domain-view-dns-records': [domainName: string];
@@ -76,14 +76,9 @@ const handleRetry = async () => {
   showMenu.value = false;
 };
 
-const handleDelete = async () => {
-  const data = await removeCustomDomain(props.domain.name);
-  if (data.success) {
-    emit('custom-domain-removed', props.domain.name);
-    showMenu.value = false;
-  } else {
-    emit('custom-domain-error', data.error);
-  }
+const handleDelete = () => {
+  showMenu.value = false;
+  emit('custom-domain-delete', props.domain.name);
 };
 
 const handleClickOutside = (event: MouseEvent) => {
@@ -164,7 +159,7 @@ onBeforeUnmount(() => {
     color: white;
     text-align: left;
     padding: 1rem 1.5rem;
-    font-family: metropolis;
+    font-family: metropolis, sans-serif;
     font-size: 0.875rem;
     cursor: pointer;
 
