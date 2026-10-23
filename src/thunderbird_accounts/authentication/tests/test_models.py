@@ -43,3 +43,47 @@ class UserUsernameValidatorTestCase(TestCase):
         with self.assertRaises(ValidationError) as ctx:
             user.full_clean(exclude=self._EXCLUDE)
         self.assertIn('username', ctx.exception.message_dict)
+
+
+class UserDeactivatedAtTestCase(TestCase):
+    def _make_user(self, **kwargs) -> User:
+        return User.objects.create(username='person@example.org', email='recovery@example.com', **kwargs)
+
+    def test_active_user_has_no_timestamp(self):
+        self.assertIsNone(self._make_user().deactivated_at)
+
+    def test_user_created_inactive_is_stamped(self):
+        self.assertIsNotNone(self._make_user(is_active=False).deactivated_at)
+
+    def test_deactivation_stamps_and_reactivation_clears(self):
+        user = self._make_user()
+
+        user.is_active = False
+        user.save()
+        user.refresh_from_db()
+        self.assertIsNotNone(user.deactivated_at)
+
+        user.is_active = True
+        user.save()
+        user.refresh_from_db()
+        self.assertIsNone(user.deactivated_at)
+
+    def test_unrelated_saves_keep_the_timestamp(self):
+        user = self._make_user(is_active=False)
+        stamped_at = user.deactivated_at
+
+        user.display_name = 'Someone'
+        user.save()
+        user.refresh_from_db()
+
+        self.assertEqual(user.deactivated_at, stamped_at)
+
+    def test_timestamp_is_persisted_when_saving_with_update_fields(self):
+        user = self._make_user()
+
+        user.is_active = False
+        user.save(update_fields=['is_active'])
+        user.refresh_from_db()
+
+        self.assertFalse(user.is_active)
+        self.assertIsNotNone(user.deactivated_at)

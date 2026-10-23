@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 from django.conf import settings
 from django.db.models import Q
 from django.urls import reverse
-from mozilla_django_oidc.contrib.drf import OIDCAuthentication
+from thunderbird_accounts.authentication.rest_authentication import ActiveUserOIDCAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -345,7 +345,7 @@ class SupportCustomerThrottle(UserRateThrottle):
 
 
 @api_view(['POST'])
-@authentication_classes([OIDCAuthentication])
+@authentication_classes([ActiveUserOIDCAuthentication])
 @permission_classes([IsAuthenticated])
 @throttle_classes([SupportCustomerThrottle])
 def support_customer_api(request: Request):

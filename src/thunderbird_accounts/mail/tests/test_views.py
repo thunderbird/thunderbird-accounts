@@ -1616,6 +1616,24 @@ class AppointmentCalDAVSetupTestCase(TestCase):
 
     @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
     @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
+    def test_inactive_user_is_refused(self, mock_backend_cls):
+        self.user.is_active = False
+        self.user.save()
+        mock_backend = Mock()
+        mock_backend.get_user_from_access_token.return_value = self.user
+        mock_backend_cls.return_value = mock_backend
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'appointment-secret': 'test-secret-123', 'oidc-access-token': self.access_token}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(json.loads(response.content.decode())['success'])
+
+    @override_settings(APPOINTMENT_CALDAV_SECRET='test-secret-123')
+    @patch('thunderbird_accounts.mail.views.AccountsOIDCBackend')
     def test_user_not_found(self, mock_backend_cls):
         """Test that 404 is returned when user is not found."""
         mock_backend = Mock()

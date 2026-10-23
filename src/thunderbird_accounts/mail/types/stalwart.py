@@ -258,6 +258,16 @@ class StorageQuota(BaseSchema):
     max_disk_quota: Optional[int] = None
 
 
+class AccountPermissions(StalwartType):
+    """Account permissions. ``@type`` is ``Inherit``, ``Merge`` or ``Replace``; the permission maps are
+    ``{name: true}`` objects. ``Replace`` with empty maps leaves the account with no permissions at all.
+
+    Ref: https://stalw.art/docs/ref/object/account/#permissions"""
+
+    enabled_permissions: Optional[dict[str, bool]] = None
+    disabled_permissions: Optional[dict[str, bool]] = None
+
+
 class Account(JMapType, StalwartType):
     """Stalwart Account Type
 
@@ -329,7 +339,7 @@ class AccountUpdate(Account):
     `save_email_addresses` has the best existing example at the moment."""
 
     name: Optional[str] = None
-    permissions: Optional[StalwartType] = None
+    permissions: Optional[AccountPermissions | StalwartType] = None
     roles: Optional[StalwartType | dict] = None
     encryption_at_rest: Optional[StalwartType] = None
     locale: Optional[str] = None
