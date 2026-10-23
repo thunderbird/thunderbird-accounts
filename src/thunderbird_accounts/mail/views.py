@@ -19,9 +19,25 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.exceptions import ParseError
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
+from thunderbird_accounts.mail.app_passwords import (
+    APP_PASSWORD_CLIENT_ERRORS,
+    AppPasswordNameError,
+    app_password_error_response,
+    app_password_management_required,
+    is_internal_app_password,
+    parse_app_password_name,
+    serialize_app_password,
+    visible_app_passwords,
+)
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, MailClient, StaleDNSRecordCode
 from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientUserJMAP
 from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
@@ -29,6 +45,7 @@ from thunderbird_accounts.core.validators import normalize_custom_domain
 from thunderbird_accounts.mail.exceptions import (
     AccessTokenNotFound,
     AccountNotFoundError,
+    AppPasswordSetError,
     DomainAlreadyExistsError,
     DomainNotFoundError,
     DomainSetError,
@@ -150,6 +167,127 @@ def app_password_set(request: HttpRequest):
             {'success': False, 'error': str(_('An error occurred while setting the password. Please try again.'))},
             status=500,
         )
+
+
+@never_cache
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
+@active_subscription_required(error_message=_('An active subscription is required to manage app passwords.'))
+@app_password_management_required
+def app_password_list(request: Request, jmap_client: MailClientUserJMAP):
+    """Lists the metadata (never the secret) of the app passwords the user manages themselves."""
+    try:
+        credentials = visible_app_passwords(jmap_client.get_app_passwords())
+    except APP_PASSWORD_CLIENT_ERRORS as ex:
+        return app_password_error_response(ex, _('Could not load your app passwords, please try again later.'))
+
+    return Response(
+        {
+            'success': True,
+            'username': request.user.stalwart_primary_email,
+            'appPasswords': [serialize_app_password(credential) for credential in credentials],
+        }
+    )
+
+
+@never_cache
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
+@active_subscription_required(error_message=_('An active subscription is required to manage app passwords.'))
+@app_password_management_required
+def app_password_create(request: Request, jmap_client: MailClientUserJMAP):
+    """Creates one more named app password; existing credentials are left untouched (RFC 8620 §5.3 create only)."""
+    try:
+        name = parse_app_password_name(request.data)
+    except ParseError:
+        return Response({'success': False, 'error': str(_('Invalid request data'))}, status=400)
+    except AppPasswordNameError as ex:
+        return Response({'success': False, 'error': ex.message}, status=400)
+
+    try:
+        created = jmap_client.save_app_password(name)
+    except AppPasswordSetError as ex:
+        if ex.type == 'overQuota':
+            return Response(
+                {
+                    'success': False,
+                    'error': str(
+                        _(
+                            'You have reached the maximum number of app passwords. '
+                            'Remove one you no longer use before creating another.'
+                        )
+                    ),
+                    'code': 'app_password_quota',
+                },
+                status=409,
+            )
+        return app_password_error_response(ex, _('Could not create the app password, please try again later.'))
+    except APP_PASSWORD_CLIENT_ERRORS as ex:
+        return app_password_error_response(ex, _('Could not create the app password, please try again later.'))
+
+    # The secret only exists in this response, so no failure of the optional metadata reload may turn the
+    # completed creation into an error.
+    app_password = {'id': created.id, 'name': name, 'createdAt': None}
+    try:
+        for credential in jmap_client.get_app_passwords():
+            if credential.id == created.id:
+                app_password = serialize_app_password(credential)
+                break
+    except Exception as ex:
+        logging.warning(f'[app_password_create] Created app password but could not reload its metadata: {ex}')
+
+    return Response(
+        {
+            'success': True,
+            'appPassword': app_password,
+            'secret': created.secret,
+            'username': request.user.stalwart_primary_email,
+        }
+    )
+
+
+@never_cache
+@api_view(['DELETE'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
+@active_subscription_required(error_message=_('An active subscription is required to manage app passwords.'))
+@app_password_management_required
+def app_password_revoke(request: Request, app_password_id: str, jmap_client: MailClientUserJMAP):
+    """Revokes exactly one of the user's own app passwords. Already-gone credentials answer 404 without erroring."""
+    # The code lets the client tell "this credential is already gone" apart from any other 404 (route, flag, ...).
+    not_found = Response(
+        {'success': False, 'error': str(_('App password not found.')), 'code': 'app_password_not_found'}, status=404
+    )
+    error_message = _('Could not remove the app password, please try again later.')
+
+    try:
+        credentials = jmap_client.get_app_passwords()
+    except APP_PASSWORD_CLIENT_ERRORS as ex:
+        return app_password_error_response(ex, error_message)
+
+    target = next((credential for credential in credentials if credential.id == app_password_id), None)
+    if target is None:
+        # Double submits land here; the credential is gone, which is what the caller wanted.
+        logging.info(f'[app_password_revoke] App password {app_password_id!r} not found for user {request.user.uuid}')
+        return not_found
+    if is_internal_app_password(target.description):
+        # Hidden internal credentials are never revocable from here, and must not look "already gone" either.
+        logging.info(f'[app_password_revoke] Refused to revoke an internal credential for user {request.user.uuid}')
+        return Response({'success': False, 'error': str(_('App password not found.'))}, status=404)
+
+    try:
+        jmap_client.delete_app_password(app_password_id)
+    except AppPasswordSetError as ex:
+        if ex.type == 'notFound':
+            logging.info(f'[app_password_revoke] App password {app_password_id!r} was already gone')
+            return not_found
+        return app_password_error_response(ex, error_message)
+    except APP_PASSWORD_CLIENT_ERRORS as ex:
+        return app_password_error_response(ex, error_message)
+
+    return Response({'success': True, 'id': app_password_id})
 
 
 @login_required

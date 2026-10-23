@@ -719,6 +719,9 @@ VERIFY_PRIVATE_LINK_SSL = True if os.getenv('VERIFY_PRIVATE_LINK_SSL', 'true').l
 # For Appointment's CalDAV auto-setup
 APPOINTMENT_APP_PASSWORD_PREFIX: str = 'appointment-caldav-setup-'
 
+# Longest app/device name a user may give an app password they create.
+APP_PASSWORD_NAME_MAX_LENGTH: int = int(os.getenv('APP_PASSWORD_NAME_MAX_LENGTH', '64'))
+
 # Max seconds for each DNS lookup when checking stale records
 STALE_DNS_LOOKUP_LIFETIME: float = 2.0
 
@@ -747,3 +750,7 @@ WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART = 'is-address-taken-lookup-stalwart
 
 # Show the user's Send storage usage on the dashboard, and allow the endpoint that backs it to be called.
 WAFFLE_FLAG_SEND_STORAGE = 'send-storage'
+
+# Show the named multi app password manager on the dashboard and enable the /api/v1/mail/app-passwords/
+# list, create and revoke endpoints that back it. Requires STALWART_ADMIN_API_USE_JMAP.
+WAFFLE_FLAG_APP_PASSWORD_MANAGEMENT = 'app-password-management'

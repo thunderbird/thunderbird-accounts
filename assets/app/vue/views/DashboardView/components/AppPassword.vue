@@ -13,9 +13,17 @@ import {
 } from '@thunderbirdops/services-ui';
 import { PhX, PhInfo } from '@phosphor-icons/vue';
 import { APP_PASSWORD_SUPPORT_URL } from '@/defines';
+import { WAFFLE_FLAG } from '@/types';
+import { isWaffleFlagActive } from '@/utils';
 import { setAppPassword } from '../api';
+import AppPasswordManager from './AppPasswordManager.vue';
 
 const { t } = useI18n();
+
+// The named multi-password manager needs Stalwart to generate secrets (JMAP) and rolls out behind a flag;
+// everything else keeps the single replace-on-save flow below.
+const useAppPasswordManager =
+  Boolean(window._page?.appPasswordIsGenerated) && isWaffleFlagActive(WAFFLE_FLAG.APP_PASSWORD_MANAGEMENT);
 
 const appPasswords = ref<string[]>(window._page?.appPasswords || []);
 const accountHasAppPasswords = ref(appPasswords.value.length > 0);
@@ -87,6 +95,8 @@ const closeSuccessMessage = () => {
 
 <template>
   <div id="app-password-container" class="app-password-details">
+    <app-password-manager v-if="useAppPasswordManager" />
+    <template v-else>
     <div class="app-password-set-indicator-container">
       <strong>{{ t('views.mail.sections.emailSettings.appPassword') }}:</strong>
       <template v-if="accountHasAppPasswords">
@@ -206,6 +216,7 @@ const closeSuccessMessage = () => {
       <primary-button variant="outline" @click="showPasswordForm = true">{{
         t('views.mail.sections.emailSettings.createPasswordButtonLabel')
       }}</primary-button>
+    </template>
     </template>
   </div>
 </template>
