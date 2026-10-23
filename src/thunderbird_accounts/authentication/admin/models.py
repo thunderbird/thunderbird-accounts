@@ -10,6 +10,7 @@ from thunderbird_accounts.authentication.admin.actions import (
     admin_add_to_mailchimp_list,
     admin_reset_totp_credentials,
 )
+from thunderbird_accounts.authentication.account_status import set_user_active
 from thunderbird_accounts.authentication.admin.forms import CustomUserChangeForm, CustomNewUserForm
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.utils import delete_user_data
@@ -34,6 +35,7 @@ class CustomUserAdmin(UserAdmin):
         'is_staff',
         'is_test_account',
         'is_active',
+        'deactivated_at',
     )
     list_display_links = ('username',)
     fieldsets = (
@@ -70,7 +72,7 @@ class CustomUserAdmin(UserAdmin):
                 )
             },
         ),
-        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+        (_('Important dates'), {'fields': ('last_login', 'date_joined', 'deactivated_at')}),
         (_('Timestamps'), {'fields': ('created_at', 'updated_at')}),
         (
             _('Permissions'),
@@ -93,6 +95,7 @@ class CustomUserAdmin(UserAdmin):
         'avatar_url',
         'recovery_email_rejected_at',
         'recovery_email_rejection_reason',
+        'deactivated_at',
         'created_at',
         'updated_at',
     )
@@ -142,6 +145,21 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
     )
+
+    def save_model(self, request, obj: User, form, change):
+        super().save_model(request, obj, form, change)
+
+        # Only an is_active transition touches Keycloak and Stalwart; the form syncs the other fields itself.
+        if change and 'is_active' in form.changed_data:
+            for error in set_user_active(obj, obj.is_active):
+                messages.add_message(
+                    request,
+                    messages.ERROR,
+                    _(
+                        f'The user was marked {"active" if obj.is_active else "inactive"} here, but not everywhere. '
+                        f'Tell a developer: {error}'
+                    ),
+                )
 
     def delete_queryset(self, request, queryset):
         """Given a queryset, delete it from the database."""

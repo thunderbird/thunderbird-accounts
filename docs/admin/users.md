@@ -137,6 +137,20 @@ This is not an ideal flow, but it's needed for now.
 
 ![A screenshot of part of the change user form.](./users_6.png)
 
+### Deactivating Users
+
+Unticking `Active` under Permissions on the Change user page and saving deactivates the user everywhere:
+
+* Keycloak: the user is disabled and signed out of every session, so they can no longer sign in to Accounts, webmail, or a Thunderbird client that uses OAuth.
+* Stalwart: the mail account loses all of its permissions. Existing app passwords stop working, and incoming mail starts bouncing with a `550` error.
+* Accounts: the user is signed out, and API requests made with their tokens are refused.
+
+ `Deactivated at` under Important dates records when this happened. Ticking `Active` again reverses all of the above and clears the timestamp;
+
+Deactivating here does not change the user's Paddle subscription. To stop billing, pause or cancel the subscription in Paddle; Accounts is notified by webhook and handles the offboarding from there.
+
+If Keycloak or Stalwart could not be updated you'll see an error at the top of the page. The user is still marked inactive in Accounts; to retry, tick `Active`, save, untick it and save again, or ask a developer.
+
 ## History
 
 On some pages you'll see a button called History. Here you can see an audit log of who performed an action, what that

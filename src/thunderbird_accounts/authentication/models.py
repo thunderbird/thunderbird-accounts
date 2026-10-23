@@ -5,6 +5,7 @@ from django.core.validators import MinLengthValidator, RegexValidator
 from django.db import models
 
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.core.models import BaseModel
@@ -77,6 +78,14 @@ class User(AbstractUser, BaseModel):
         _('Test Account'), default=False, help_text=_('Whether this account is used for testing.')
     )
 
+    deactivated_at = models.DateTimeField(
+        _('deactivated at'),
+        null=True,
+        blank=True,
+        editable=False,
+        help_text=_('When is_active was last set to False. Cleared on reactivation.'),
+    )
+
     is_awaiting_payment_verification = models.BooleanField(
         default=False,
         help_text=_(
@@ -103,21 +112,25 @@ class User(AbstractUser, BaseModel):
         return self.display_name
 
     def save(self, *args, **kwargs):
-        # If recovery_email changes, clear related rejection fields.
-        if self.pk and self.recovery_email_rejected_at:
-            existing_recovery_email = (
-                type(self).objects.filter(pk=self.pk).values_list('recovery_email', flat=True).first()
-            )
+        # The uuid primary key is set before the first save, so an empty result means this is a create.
+        existing = type(self).objects.filter(pk=self.pk).values('recovery_email', 'is_active').first()
+        extra_update_fields = set()
 
-            if existing_recovery_email != self.recovery_email:
-                self.recovery_email_rejected_at = None
-                self.recovery_email_rejection_reason = None
-                update_fields = kwargs.get('update_fields')
-                if update_fields is not None:
-                    kwargs['update_fields'] = set(update_fields) | {
-                        'recovery_email_rejected_at',
-                        'recovery_email_rejection_reason',
-                    }
+        # If recovery_email changes, clear related rejection fields.
+        if existing and self.recovery_email_rejected_at and existing['recovery_email'] != self.recovery_email:
+            self.recovery_email_rejected_at = None
+            self.recovery_email_rejection_reason = None
+            extra_update_fields |= {'recovery_email_rejected_at', 'recovery_email_rejection_reason'}
+
+        # Stamp is_active transitions; a user created inactive counts as a transition.
+        previously_active = existing['is_active'] if existing else True
+        if previously_active != self.is_active:
+            self.deactivated_at = None if self.is_active else timezone.now()
+            extra_update_fields.add('deactivated_at')
+
+        update_fields = kwargs.get('update_fields')
+        if extra_update_fields and update_fields is not None:
+            kwargs['update_fields'] = set(update_fields) | extra_update_fields
 
         super().save(*args, **kwargs)
 

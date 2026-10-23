@@ -808,6 +808,26 @@ class TestAccountOperations(SimpleTestCase):
             {'quotas/maxDiskQuota': 2048},
         )
 
+    def test_set_account_active_false_replaces_permissions_with_an_empty_set(self):
+        self.mail_client.update_account = MagicMock()
+
+        self.mail_client.set_account_active('person@example.org', False)
+
+        principal_id, account_update = self.mail_client.update_account.call_args.args
+        self.assertEqual(principal_id, 'person@example.org')
+        self.assertEqual(
+            account_update.model_dump(exclude_unset=True),
+            {'permissions': {'@type': 'Replace', 'enabledPermissions': {}, 'disabledPermissions': {}}},
+        )
+
+    def test_set_account_active_true_restores_inherited_permissions(self):
+        self.mail_client.update_account = MagicMock()
+
+        self.mail_client.set_account_active('person@example.org', True)
+
+        account_update = self.mail_client.update_account.call_args.args[1]
+        self.assertEqual(account_update.model_dump(exclude_unset=True), {'permissions': {'@type': 'Inherit'}})
+
     def test_list_principals_requests_one_page(self):
         self.mail_client.client.request = MagicMock(
             return_value=JMapResponse(

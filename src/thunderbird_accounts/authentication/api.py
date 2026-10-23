@@ -8,7 +8,7 @@ from urllib.parse import quote
 import logging
 
 from django.conf import settings
-from mozilla_django_oidc.contrib.drf import OIDCAuthentication
+from thunderbird_accounts.authentication.rest_authentication import ActiveUserOIDCAuthentication
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -102,7 +102,7 @@ def get_connected_apps(request: Request):
 
 
 @api_view(['GET'])
-@authentication_classes([OIDCAuthentication])
+@authentication_classes([ActiveUserOIDCAuthentication])
 @permission_classes([IsAuthenticated])
 def get_waffle_flags(request: Request):
     """Return the caller's active waffle flags, switches, and samples.

@@ -495,6 +495,16 @@ class WaffleFlagsTestcase(APITestCase):
         response = self.client.get(self.url, headers={'authorization': 'Bearer invalid-token'})
         self.assertEqual(401, response.status_code)
 
+    def test_returns_401_for_inactive_user(self):
+        # The backend re-checks the allow list for inactive users before our is_active check runs.
+        AllowListEntry.objects.create(email=f'{self.user.oidc_id}@example.org')
+        self.user.is_active = False
+        self.user.save()
+
+        response = self.client.get(self.url, headers={'authorization': f'Bearer {self.user.oidc_id}'})
+
+        self.assertEqual(401, response.status_code, response.content)
+
 
 class ActiveSessionsTestcase(APITestCase):
     def setUp(self):

@@ -1,4 +1,3 @@
-from thunderbird_accounts.mail.exceptions import InvalidJMapResponseError, AccountNotFoundError
 from thunderbird_accounts.authentication.utils import KeycloakRequiredAction
 import zoneinfo
 
@@ -165,9 +164,9 @@ class CustomUserChangeForm(CustomUserFormBase):
         oidc_id = self.cleaned_data.get('oidc_id')
         username = self.cleaned_data.get('username')
         display_name = (self.cleaned_data.get('display_name') or '').strip()
-        is_active = self.cleaned_data.get('is_active')
 
-        # Update the user on keycloak's end
+        # Update the user on keycloak's end. The active state is mirrored separately by
+        # account_status.set_user_active when is_active changes (see CustomUserAdmin.save_model).
         keycloak = KeycloakClient()
         try:
             if not oidc_id:
@@ -176,7 +175,6 @@ class CustomUserChangeForm(CustomUserFormBase):
                 oidc_id,
                 username=username,
                 email=self.cleaned_data.get('recovery_email'),
-                enabled=is_active,
                 timezone=self.cleaned_data.get('timezone'),
                 locale=self.cleaned_data.get('language'),
                 first_name=display_name,
@@ -204,16 +202,6 @@ class CustomUserChangeForm(CustomUserFormBase):
 
                 if old_full_name != display_name:
                     new_full_name = display_name
-
-                # If we've deactivated a user then ALL app passwords must be removed.
-                if old_username and not is_active:
-                    try:
-                        stalwart.clear_app_passwords(old_username)
-                    except (AccountNotFoundError, InvalidJMapResponseError) as ex:
-                        raise RuntimeError(
-                            'Could not remove app passwords! Please login to Stalwart admin panel, '
-                            'find the user and save their account with an empty list of app passwords.'
-                        ) from ex
 
                 # Update that user with any updated user information
                 if old_username and (new_primary_email_address or new_full_name):
