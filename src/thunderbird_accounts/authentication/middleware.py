@@ -1,3 +1,4 @@
+import jwt
 import waffle
 from enum import StrEnum
 from django.utils.module_loading import import_string
@@ -130,6 +131,26 @@ def refresh_user_access_token(request) -> Optional[str]:
     # id_token dropped on refresh — see OIDCRefreshSession.process_request for the why.
     store_tokens(request, access_token, None, token_info.get('refresh_token'))
     return access_token
+
+
+def _access_token_is_expired(access_token: str) -> bool:
+    """True only when the token's exp can be read and has passed (minus a small skew).
+    Unreadable tokens are treated as not-expired so we forward them unchanged."""
+    try:
+        claims = jwt.decode(access_token, options={'verify_signature': False})
+        exp = int(claims['exp'])
+    except (jwt.PyJWTError, KeyError, ValueError, TypeError):
+        return False
+    return time() >= exp - settings.MFA_ACCESS_TOKEN_EXPIRY_LEEWAY_SECONDS
+
+
+def get_user_access_token(request) -> str | None:
+    """Return the end user's OIDC access token, refreshing it before its actual expiry."""
+    # Only local expiry is checked here; provider-side revocation surfaces later as a 401.
+    access_token = request.session.get(OIDC_ACCESS_TOKEN_KEY)
+    if access_token and not _access_token_is_expired(access_token):
+        return access_token
+    return refresh_user_access_token(request) or access_token
 
 
 class AccountsOIDCBackend(OIDCAuthenticationBackend):
