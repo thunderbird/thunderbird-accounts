@@ -114,6 +114,13 @@ urlpatterns = [
         'api/v1/subscription/send/storage/', subscription_views.get_send_storage_info, name='subscription_send_storage'
     ),
     path('api/v1/mail/app-passwords/set/', mail_views.app_password_set, name='api_app_password_set'),
+    path('api/v1/mail/app-passwords/', mail_views.app_password_list, name='api_app_password_list'),
+    path('api/v1/mail/app-passwords/create/', mail_views.app_password_create, name='api_app_password_create'),
+    path(
+        'api/v1/mail/app-passwords/<str:credential_id>/revoke/',
+        mail_views.app_password_revoke,
+        name='api_app_password_revoke',
+    ),
     path('api/v1/mail/display-name/set/', mail_views.display_name_set, name='api_display_name_set'),
     path('api/v1/mail/is-username-available/', mail_api.is_username_available, name='api_is_username_available'),
     path(
