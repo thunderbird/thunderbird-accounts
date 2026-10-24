@@ -14,6 +14,8 @@ from thunderbird_accounts.telemetry.client import capture, hash_id, shutdown, su
 
 logger = logging.getLogger(__name__)
 
+STALWART_SUBMISSION_EVENTS = frozenset({'queue.queue-message-authenticated', 'queue.authenticated-message-queued'})
+
 
 def _retry_or_report(task, exc, message):
     """Log, retry with backoff, and only report to Sentry once retries are exhausted.
@@ -73,7 +75,7 @@ def _process_stalwart_event(event):
     from_email = data.get('from')
     to_emails = data.get('to') or []
 
-    if event_type.startswith('queue.queue-message'):
+    if event_type in STALWART_SUBMISSION_EVENTS:
         identity_email = from_email
     else:
         identity_email = to_emails[0] if isinstance(to_emails, list) and to_emails else from_email
