@@ -1,5 +1,4 @@
 import enum
-import jwt
 import logging
 from urllib.parse import quote, urljoin
 
@@ -10,7 +9,6 @@ from django.urls import reverse
 
 from thunderbird_accounts.core.utils import get_absolute_url
 from thunderbird_accounts.authentication.reserved import is_reserved
-from rest_framework.request import Request
 
 
 class KeycloakRequiredAction(enum.StrEnum):
@@ -190,29 +188,3 @@ def delete_user_data(user) -> list[str]:
 
     user.delete()
     return errors
-
-
-def _session_id_from_access_token(request: Request) -> str | None:
-    access_token = request.session.get('oidc_access_token')
-    if not access_token:
-        return None
-
-    try:
-        return jwt.decode(access_token, options={'verify_signature': False}).get('sid')
-    except (jwt.PyJWTError, TypeError):
-        return None
-
-
-def mark_current_session(request: Request, sessions: list[dict]) -> list[dict]:
-    """Modify sessions list to mark current one with is_current key"""
-    current_session_id = _session_id_from_access_token(request)
-
-    if not current_session_id:
-        for session in sessions:
-            session['is_current'] = False
-        return sessions
-
-    for session in sessions:
-        session['is_current'] = session.get('id') == current_session_id
-
-    return sessions

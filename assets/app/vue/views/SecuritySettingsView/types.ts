@@ -22,7 +22,6 @@ export interface ActiveSession {
 
 export interface ConnectedApp {
   client_id: string;
-  session_id?: string | null;
   app_name: string;
   ip_address?: string | null;
   location?: {

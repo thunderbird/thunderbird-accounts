@@ -53,7 +53,7 @@ export const revokeConnectedApp = async (clientId: string) => {
     body: JSON.stringify({ client_id: clientId }),
   });
 
-  return parseJsonResponse<{ success: boolean }>(response);
+  return parseJsonResponse<{ success: boolean; signed_out_current_session?: boolean }>(response);
 };
 
 export const signOutAllSessions = async () => {

@@ -3,7 +3,7 @@ from django.contrib.auth.models import Permission
 from thunderbird_accounts.authentication.api import CanISignUpResponses
 from django.urls import reverse
 from json import JSONDecodeError
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 from waffle.models import Flag
 import uuid
 
@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import SuspiciousOperation
 import jwt
+import requests
 from urllib.parse import quote
 from django.test import Client as RequestClient, override_settings
 from rest_framework.test import APITestCase, APIClient
@@ -661,21 +662,21 @@ class ActiveSessionsTestcase(APITestCase):
 
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
     def test_sign_out_session_keeps_django_session_when_signing_out_other_session(self, mock_account_client: MagicMock):
-        access_token = jwt.encode({'sid': 'current-session-id'}, key='', algorithm='none')
+        access_token = jwt.encode({'sid': '1b3e5d7f-9c2e-4f4a-8b6c-0d2e4f6a8b9c'}, key='', algorithm='none')
         session = self.client.session
         session['oidc_access_token'] = access_token
         session.save()
 
         response = self.client.post(
             reverse('api_sign_out_session'),
-            data={'session_id': 'session-id'},
+            data={'session_id': '0a2f4c6e-8b1d-4e3f-9a5b-7c9d1e3f5a7b'},
             format='json',
         )
 
         self.assertEqual(response.status_code, 200)
         mock_account_client.return_value.sign_out_session.assert_called_once_with(
             access_token,
-            'session-id',
+            '0a2f4c6e-8b1d-4e3f-9a5b-7c9d1e3f5a7b',
         )
         self.assertEqual(self.client.session['oidc_access_token'], access_token)
 
@@ -683,21 +684,21 @@ class ActiveSessionsTestcase(APITestCase):
     def test_sign_out_session_flushes_django_session_when_signing_out_current_session(
         self, mock_account_client: MagicMock
     ):
-        access_token = jwt.encode({'sid': 'session-id'}, key='', algorithm='none')
+        access_token = jwt.encode({'sid': '0a2f4c6e-8b1d-4e3f-9a5b-7c9d1e3f5a7b'}, key='', algorithm='none')
         session = self.client.session
         session['oidc_access_token'] = access_token
         session.save()
 
         response = self.client.post(
             reverse('api_sign_out_session'),
-            data={'session_id': 'session-id'},
+            data={'session_id': '0a2f4c6e-8b1d-4e3f-9a5b-7c9d1e3f5a7b'},
             format='json',
         )
 
         self.assertEqual(response.status_code, 200)
         mock_account_client.return_value.sign_out_session.assert_called_once_with(
             access_token,
-            'session-id',
+            '0a2f4c6e-8b1d-4e3f-9a5b-7c9d1e3f5a7b',
         )
         self.assertNotIn('oidc_access_token', self.client.session)
 
@@ -708,7 +709,7 @@ class ActiveSessionsTestcase(APITestCase):
 
         response = self.client.post(
             reverse('api_sign_out_session'),
-            data={'session_id': 'session-id'},
+            data={'session_id': '0a2f4c6e-8b1d-4e3f-9a5b-7c9d1e3f5a7b'},
             format='json',
         )
 
@@ -739,7 +740,6 @@ class ConnectedAppsTestcase(APITestCase):
         connected_apps = [
             {
                 'client_id': 'thunderbird-desktop',
-                'session_id': 'session-id',
                 'app_name': 'Mozilla Thunderbird',
                 'last_access': 1710000000000,
                 'ip_address': '203.0.113.10',
@@ -759,7 +759,16 @@ class ConnectedAppsTestcase(APITestCase):
         self.assertEqual(response.json()[0]['location']['city'], 'Toronto')
 
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
-    def test_revoke_connected_app_uses_user_access_token(self, mock_account_client: MagicMock):
+    def test_revoke_connected_app_revokes_consent_and_signs_out_every_session_of_the_app(
+        self, mock_account_client: MagicMock
+    ):
+        access_token = jwt.encode({'sid': '1b3e5d7f-9c2e-4f4a-8b6c-0d2e4f6a8b9c'}, key='', algorithm='none')
+        session = self.client.session
+        session['oidc_access_token'] = access_token
+        session.save()
+        keycloak = mock_account_client.return_value
+        keycloak.get_connected_app_session_ids.return_value = ['d3PMV-Ad8LL-nbJui2sIBk0f', 'XzVNF7xptpVG9t0sM1BAP4wL']
+
         response = self.client.post(
             reverse('api_revoke_connected_app'),
             data={'client_id': 'thunderbird-desktop'},
@@ -767,15 +776,69 @@ class ConnectedAppsTestcase(APITestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        mock_account_client.return_value.revoke_connected_app.assert_called_once_with(
-            'test-user-access-token',
-            'thunderbird-desktop',
+        self.assertEqual(response.json(), {'success': True, 'signed_out_current_session': False})
+        keycloak.get_connected_app_session_ids.assert_called_once_with(access_token, 'thunderbird-desktop')
+        keycloak.revoke_client_consent.assert_called_once_with(access_token, 'thunderbird-desktop')
+        self.assertEqual(
+            keycloak.sign_out_session.call_args_list,
+            [call(access_token, 'd3PMV-Ad8LL-nbJui2sIBk0f'), call(access_token, 'XzVNF7xptpVG9t0sM1BAP4wL')],
         )
+        self.assertEqual(self.client.session['oidc_access_token'], access_token)
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_revoke_connected_app_flushes_django_session_when_the_app_shares_the_current_session(
+        self, mock_account_client: MagicMock
+    ):
+        access_token = jwt.encode({'sid': '0a2f4c6e-8b1d-4e3f-9a5b-7c9d1e3f5a7b'}, key='', algorithm='none')
+        session = self.client.session
+        session['oidc_access_token'] = access_token
+        session.save()
+        keycloak = mock_account_client.return_value
+        keycloak.get_connected_app_session_ids.return_value = [
+            '0a2f4c6e-8b1d-4e3f-9a5b-7c9d1e3f5a7b',
+            'd3PMV-Ad8LL-nbJui2sIBk0f',
+        ]
+
+        response = self.client.post(
+            reverse('api_revoke_connected_app'),
+            data={'client_id': 'thunderbird-desktop'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'success': True, 'signed_out_current_session': True})
+        # The current session is signed out last so the access token still works for the other calls.
+        self.assertEqual(
+            keycloak.sign_out_session.call_args_list,
+            [
+                call(access_token, 'd3PMV-Ad8LL-nbJui2sIBk0f'),
+                call(access_token, '0a2f4c6e-8b1d-4e3f-9a5b-7c9d1e3f5a7b'),
+            ],
+        )
+        self.assertNotIn('oidc_access_token', self.client.session)
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_revoke_connected_app_skips_session_ids_outside_keycloak_alphabet(self, mock_account_client: MagicMock):
+        keycloak = mock_account_client.return_value
+        keycloak.get_connected_app_session_ids.return_value = [
+            '../applications/other/consent',
+            'd3PMV-Ad8LL-nbJui2sIBk0f',
+        ]
+
+        response = self.client.post(
+            reverse('api_revoke_connected_app'),
+            data={'client_id': 'thunderbird-desktop'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        keycloak.sign_out_session.assert_called_once_with('test-user-access-token', 'd3PMV-Ad8LL-nbJui2sIBk0f')
 
     @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
     def test_revoke_connected_app_returns_generic_server_error(self, mock_account_client: MagicMock):
-        error = RuntimeError('keycloak revoke failed')
-        mock_account_client.return_value.revoke_connected_app.side_effect = error
+        keycloak = mock_account_client.return_value
+        keycloak.get_connected_app_session_ids.return_value = []
+        keycloak.revoke_client_consent.side_effect = RuntimeError('keycloak revoke failed')
 
         response = self.client.post(
             reverse('api_revoke_connected_app'),
@@ -785,3 +848,20 @@ class ConnectedAppsTestcase(APITestCase):
 
         self.assertEqual(response.status_code, 500)
         self.assertEqual(response.json(), {'detail': 'Internal server error'})
+
+    @patch('thunderbird_accounts.authentication.api.KeycloakAccountClient')
+    def test_revoke_connected_app_returns_not_found_when_keycloak_has_no_client(self, mock_account_client: MagicMock):
+        error_response = requests.Response()
+        error_response.status_code = 404
+        keycloak = mock_account_client.return_value
+        keycloak.get_connected_app_session_ids.return_value = []
+        keycloak.revoke_client_consent.side_effect = requests.HTTPError(response=error_response)
+
+        response = self.client.post(
+            reverse('api_revoke_connected_app'),
+            data={'client_id': 'thunderbird-desktop'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 404)
+        keycloak.sign_out_session.assert_not_called()
