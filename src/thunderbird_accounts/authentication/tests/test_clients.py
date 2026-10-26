@@ -237,7 +237,7 @@ class KeycloakAccountClientTestCase(TestCase):
         self.assertEqual(result[0]['last_access'], 1710000200000)
         self.assertEqual(result[0]['device_info']['app'], 'Thunderbird Accounts')
 
-    def test_get_connected_apps_returns_each_matching_session(self):
+    def test_get_connected_apps_returns_one_entry_per_app_from_its_most_recent_session(self):
         client = KeycloakAccountClient()
 
         with patch.object(client, 'request') as mock_request:
@@ -271,6 +271,7 @@ class KeycloakAccountClientTestCase(TestCase):
                         {
                             'id': 'work-session',
                             'ipAddress': '203.0.113.11',
+                            'started': 1710000050,
                             'lastAccess': 1710000100,
                             'clients': [
                                 {'clientId': 'thunderbird-desktop', 'clientName': 'Thunderbird'},
@@ -296,22 +297,72 @@ class KeycloakAccountClientTestCase(TestCase):
             [
                 {
                     'client_id': 'thunderbird-desktop',
-                    'session_id': 'home-session',
                     'app_name': 'Mozilla Thunderbird',
-                    'access_given': 1710000000000,
-                    'ip_address': '203.0.113.10',
-                    'last_access': 1710000000000,
-                },
-                {
-                    'client_id': 'thunderbird-desktop',
-                    'session_id': 'work-session',
-                    'app_name': 'Mozilla Thunderbird',
-                    'access_given': 1700000000000,
+                    'access_given': 1710000050000,
                     'ip_address': '203.0.113.11',
                     'last_access': 1710000100000,
                 },
             ],
         )
+
+    def test_get_connected_apps_falls_back_to_consent_date_without_a_session_start(self):
+        client = KeycloakAccountClient()
+
+        with patch.object(client, 'request') as mock_request:
+            applications_response = Mock()
+            applications_response.json.return_value = [
+                {
+                    'clientId': 'desktop',
+                    'clientName': 'Thunderbird',
+                    'offlineAccess': True,
+                    'consent': {'createdDate': 1700000000000},
+                },
+            ]
+            devices_response = Mock()
+            devices_response.json.return_value = [
+                {
+                    'id': 'device',
+                    'sessions': [{'id': 'session', 'lastAccess': 1710000100, 'clients': {'desktop': 'Thunderbird'}}],
+                },
+            ]
+            mock_request.side_effect = [applications_response, devices_response]
+
+            result = client.get_connected_apps(self.USER_TOKEN)
+
+        self.assertEqual(result[0]['access_given'], 1700000000000)
+        self.assertEqual(result[0]['last_access'], 1710000100000)
+
+    def test_get_connected_app_session_ids_lists_every_session_holding_the_client(self):
+        client = KeycloakAccountClient()
+
+        with patch.object(client, 'request') as mock_request:
+            devices_response = Mock()
+            devices_response.json.return_value = [
+                {
+                    'id': 'home-device',
+                    'sessions': [{'id': 'home-session', 'clients': {'thunderbird-desktop': 'Thunderbird'}}],
+                },
+                {
+                    'id': 'work-device',
+                    'sessions': [
+                        {
+                            'id': 'work-session',
+                            'clients': [
+                                {'clientId': 'thunderbird-desktop', 'clientName': 'Thunderbird'},
+                                {'clientId': 'tb-accounts', 'clientName': 'Thunderbird Accounts'},
+                            ],
+                        },
+                        {'id': 'work-session', 'clients': {'thunderbird-desktop': 'Thunderbird'}},
+                        {'id': 'browser-session', 'clients': {'tb-accounts': 'Thunderbird Accounts'}},
+                    ],
+                },
+            ]
+            mock_request.return_value = devices_response
+
+            result = client.get_connected_app_session_ids(self.USER_TOKEN, 'thunderbird-desktop')
+
+        mock_request.assert_called_once_with('account/sessions/devices', self.USER_TOKEN, RequestMethods.GET)
+        self.assertEqual(result, ['home-session', 'work-session'])
 
     def test_get_connected_apps_keeps_offline_app_without_device_metadata(self):
         client = KeycloakAccountClient()
@@ -332,11 +383,11 @@ class KeycloakAccountClientTestCase(TestCase):
             [{'client_id': 'one-password', 'app_name': '1Password', 'access_given': None}],
         )
 
-    def test_revoke_connected_app_deletes_client_consent(self):
+    def test_revoke_client_consent_deletes_client_consent(self):
         client = KeycloakAccountClient()
 
         with patch.object(client, 'request') as mock_request:
-            result = client.revoke_connected_app(self.USER_TOKEN, 'desktop/client')
+            result = client.revoke_client_consent(self.USER_TOKEN, 'desktop/client')
 
         endpoint, user_token, method = mock_request.call_args.args[:3]
         self.assertEqual(endpoint, 'account/applications/desktop%2Fclient/consent')
@@ -348,10 +399,10 @@ class KeycloakAccountClientTestCase(TestCase):
         client = KeycloakAccountClient()
 
         with patch.object(client, 'request') as mock_request:
-            result = client.sign_out_session(self.USER_TOKEN, 'session-id')
+            result = client.sign_out_session(self.USER_TOKEN, 'session/id')
 
         endpoint, user_token, method = mock_request.call_args.args[:3]
-        self.assertEqual(endpoint, 'account/sessions/session-id')
+        self.assertEqual(endpoint, 'account/sessions/session%2Fid')
         self.assertEqual(user_token, self.USER_TOKEN)
         self.assertEqual(method, RequestMethods.DELETE)
         self.assertEqual(result, {'success': True})

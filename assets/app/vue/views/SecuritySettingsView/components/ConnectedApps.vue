@@ -17,7 +17,7 @@ const connectedApps = computed<DisplayConnectedApp[]>(() =>
   [...connectedAppsData.value]
     .sort((a, b) => (b.last_access || 0) - (a.last_access || 0))
     .map((app) => ({
-      id: `${app.client_id}:${app.session_id ?? 'offline'}`,
+      id: app.client_id,
       clientId: app.client_id,
       label: app.app_name || t('views.mail.views.securitySettings.unknownApp'),
       ipAddress: app.ip_address || t('views.mail.views.securitySettings.unknownIpAddress'),
@@ -37,6 +37,7 @@ const connectedApps = computed<DisplayConnectedApp[]>(() =>
     }))
 );
 const loading = ref(true);
+const isRemoving = ref(false);
 const errorMessage = ref<string | null>(null);
 const appPendingRemoval = ref<DisplayConnectedApp | null>(null);
 const removeAccessModal = useTemplateRef<InstanceType<typeof ModalDialog>>('removeAccessModal');
@@ -51,24 +52,7 @@ const confirmRemoveAccess = (id: string) => {
   removeAccessModal.value?.show();
 };
 
-const removeAccess = async () => {
-  const app = appPendingRemoval.value;
-  if (!app) {
-    return;
-  }
-
-  removeAccessModal.value?.hide();
-
-  try {
-    await revokeConnectedApp(app.clientId);
-    connectedAppsData.value = connectedAppsData.value.filter((connectedApp) => connectedApp.client_id !== app.clientId);
-  } catch (error) {
-    console.log(error);
-    errorMessage.value = t('views.mail.views.securitySettings.errorRemovingAccess');
-  }
-};
-
-onMounted(async () => {
+const loadConnectedApps = async () => {
   try {
     connectedAppsData.value = await getConnectedApps();
   } catch (error) {
@@ -77,7 +61,35 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
-});
+};
+
+const removeAccess = async () => {
+  const app = appPendingRemoval.value;
+  if (!app || isRemoving.value) {
+    return;
+  }
+
+  isRemoving.value = true;
+  errorMessage.value = null;
+
+  try {
+    const result = await revokeConnectedApp(app.clientId);
+    if (result.signed_out_current_session) {
+      // The app was signed in through this browser's session, which has now been ended too.
+      window.location.href = '/login/';
+      return;
+    }
+    await loadConnectedApps();
+  } catch (error) {
+    console.log(error);
+    errorMessage.value = t('views.mail.views.securitySettings.errorRemovingAccess');
+  } finally {
+    isRemoving.value = false;
+    removeAccessModal.value?.hide();
+  }
+};
+
+onMounted(loadConnectedApps);
 </script>
 
 <template>
@@ -139,10 +151,10 @@ onMounted(async () => {
     <p>{{ t('views.mail.views.securitySettings.removeAccessConfirmationDescription') }}</p>
 
     <template #actions>
-      <link-button @click="removeAccessModal?.hide()">
+      <link-button :disabled="isRemoving" @click="removeAccessModal?.hide()">
         {{ t('views.mail.views.securitySettings.cancel') }}
       </link-button>
-      <danger-button @click="removeAccess">
+      <danger-button :disabled="isRemoving" @click="removeAccess">
         {{ t('views.mail.views.securitySettings.removeAccess') }}
       </danger-button>
     </template>

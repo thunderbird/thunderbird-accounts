@@ -7,6 +7,7 @@ from enum import StrEnum
 from urllib.parse import quote
 import logging
 
+import requests
 from django.conf import settings
 from mozilla_django_oidc.contrib.drf import OIDCAuthentication
 from rest_framework.authentication import SessionAuthentication
@@ -25,9 +26,12 @@ from thunderbird_accounts.authentication.mfa_management import (
     get_user_access_token,
     mfa_management_error_response,
 )
-from thunderbird_accounts.authentication.utils import (
-    _session_id_from_access_token,
+from thunderbird_accounts.authentication.sessions import (
     mark_current_session,
+    revoke_connected_app_access,
+    sign_out_keycloak_session,
+)
+from thunderbird_accounts.authentication.utils import (
     is_email_in_allow_list,
     KeycloakRequiredAction,
     is_email_reserved,
@@ -35,7 +39,7 @@ from thunderbird_accounts.authentication.utils import (
     get_user_by_contact_email,
 )
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
-from rest_framework.exceptions import NotAuthenticated, ValidationError
+from rest_framework.exceptions import NotAuthenticated, NotFound, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
@@ -379,13 +383,8 @@ def sign_out_session(request: Request):
     if not user_access_token:
         raise NotAuthenticated('OIDC session has expired')
 
-    # Sign out from the Keycloak session
     keycloak_client = KeycloakAccountClient()
-    keycloak_client.sign_out_session(user_access_token, session_id)
-
-    if _session_id_from_access_token(request) == session_id:
-        # Delete current session data and cookie from Django as well.
-        request.session.flush()
+    sign_out_keycloak_session(request, keycloak_client, user_access_token, session_id)
 
     return Response({'success': True})
 
@@ -403,5 +402,11 @@ def revoke_connected_app(request: Request):
         raise NotAuthenticated('OIDC session has expired')
 
     keycloak_client = KeycloakAccountClient()
-    keycloak_client.revoke_connected_app(user_access_token, client_id)
-    return Response({'success': True})
+    try:
+        signed_out_current_session = revoke_connected_app_access(request, keycloak_client, user_access_token, client_id)
+    except requests.HTTPError as ex:
+        if ex.response is not None and ex.response.status_code == 404:
+            logging.info(f'[revoke_connected_app] Keycloak has no client {client_id!r}; nothing to revoke')
+            raise NotFound('Connected app not found')
+        raise
+    return Response({'success': True, 'signed_out_current_session': signed_out_current_session})
