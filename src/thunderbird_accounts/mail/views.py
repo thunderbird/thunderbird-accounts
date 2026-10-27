@@ -1,5 +1,4 @@
 from thunderbird_accounts.core.types import AuthenticatedHttpRequest
-import datetime
 import json
 import logging
 import secrets
@@ -7,6 +6,7 @@ import requests
 
 import requests.exceptions
 import sentry_sdk
+import waffle
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.contrib.admin.views.decorators import staff_member_required
@@ -22,7 +22,7 @@ from django.views.generic import TemplateView
 
 from thunderbird_accounts.authentication.middleware import AccountsOIDCBackend
 from thunderbird_accounts.authentication.reserved import is_reserved
-from thunderbird_accounts.mail.clients import DomainVerificationErrors, MailClient, StaleDNSRecordCode
+from thunderbird_accounts.mail.clients import MailClient
 from thunderbird_accounts.mail.clients.mail_client_jmap import MailClientUserJMAP
 from thunderbird_accounts.mail.dkim import build_customer_dkim_cname_records
 from thunderbird_accounts.core.validators import normalize_custom_domain
@@ -35,7 +35,11 @@ from thunderbird_accounts.mail.exceptions import (
     EmailNotValidError,
     MAIL_CLIENT_ERRORS,
 )
-from thunderbird_accounts.mail.dns import check_stale_dns_records
+from thunderbird_accounts.mail.domain_verification import (
+    acquire_verification_lock,
+    release_verification_lock,
+    verify_domain,
+)
 from thunderbird_accounts.mail.utils import (
     filter_app_passwords,
     is_address_taken,
@@ -46,19 +50,6 @@ from thunderbird_accounts.mail.models import Account, Email, Domain
 from thunderbird_accounts.mail import tasks as mail_tasks
 from thunderbird_accounts.mail import utils
 from thunderbird_accounts.subscription.decorators import active_subscription_required
-from thunderbird_accounts.mail.types import stalwart
-
-
-def _critical_errors_from_stale_dns_records(stale_dns_records: list[dict]) -> list[DomainVerificationErrors]:
-    stale_record_codes = {record.get('code') for record in stale_dns_records}
-    critical_errors = []
-
-    if StaleDNSRecordCode.AUTODISCOVER_CNAME_UNEXPECTED.value in stale_record_codes:
-        critical_errors.append(DomainVerificationErrors.AUTODISCOVER_RECORD_FOUND)
-    if StaleDNSRecordCode.AUTODISCOVER_SRV_UNEXPECTED.value in stale_record_codes:
-        critical_errors.append(DomainVerificationErrors.AUTODISCOVER_SRV_RECORD_FOUND)
-
-    return critical_errors
 
 
 def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: str):
@@ -348,82 +339,18 @@ def verify_custom_domain(request: AuthenticatedHttpRequest):
     if not domain:
         return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
 
-    now = datetime.datetime.now(datetime.UTC)
+    if waffle.flag_is_active(request, settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP):
+        if acquire_verification_lock(domain.uuid):
+            try:
+                mail_tasks.verify_custom_domain_and_notify.delay(str(domain.uuid))
+            except Exception:
+                release_verification_lock(domain.uuid)
+                raise
+        return JsonResponse({'success': True, 'queued': True}, status=202)
 
     try:
-        stalwart_client = MailClient()
-
-        dns_check = stalwart_client.check_domain_dns(domain.name)
-        if settings.CUSTOM_DOMAINS_DO_VERIFY:
-            is_verified = dns_check['is_verified']
-            critical_errors = dns_check['critical_errors']
-            warnings = dns_check['warnings']
-        else:
-            is_verified = True
-            critical_errors = []
-            warnings = [_('Custom domain DNS verification disabled. Automatically verified domain.')]
-
-        domain.last_verification_attempt = now
-
-        dns_records = dns_check['dns_records']
-        stale_dns_records = check_stale_dns_records(domain.name)
-        stale_dns_critical_errors = _critical_errors_from_stale_dns_records(stale_dns_records)
-        for critical_error in stale_dns_critical_errors:
-            if critical_error not in critical_errors:
-                critical_errors.append(critical_error)
-
-        if stale_dns_critical_errors:
-            is_verified = False
-
-        response_data = {
-            'critical_errors': critical_errors,
-            'warnings': warnings,
-            'dns_records': dns_records,
-            'stale_dns_records': stale_dns_records,
-        }
-
-        # If we're verified via dns check
-        if is_verified:
-            try:
-                stalwart_resp = stalwart_client.get_domain(domain_name)
-            except DomainNotFoundError:
-                stalwart_resp = None
-
-            # Only roll through these steps if we're not already verified OR stalwart doesn't have our domain
-            if domain.status != Domain.DomainStatus.VERIFIED or not stalwart_resp:
-                domain.status = Domain.DomainStatus.VERIFIED
-                domain.verified_at = now
-
-                # Fetch or create a domain on Stalwart's end, and retrieve the domain_id
-                if stalwart_resp:
-                    domain_id = stalwart_resp.get('id')
-                    # Now we need to enable the domain if it's not already enabled.
-                    if request.user.is_migrated and not stalwart_resp.is_enabled:
-                        stalwart_client.update_domain(domain_name, stalwart.DomainUpdate(is_enabled=True))
-                else:
-                    domain_id = stalwart_client.create_domain(domain_name)
-
-                # Ensure missing DKIM selectors without replacing keys created at domain-add time.
-                stalwart_client.ensure_dkim(domain_name)
-
-                mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name)
-                if settings.STALWART_DKIM_STAGE_MANAGEMENT_ENABLED:
-                    stalwart_client.activate_pending_dkim_signatures(domain_name)
-
-                if domain_id:
-                    domain.stalwart_id = domain_id
-                else:
-                    logging.error(f'There was a problem saving the domain id for {domain.name} / {domain.uuid}')
-
-                domain.stalwart_created_at = datetime.datetime.now(datetime.UTC)
-                domain.save()
-
-            return JsonResponse({'success': True, **response_data})
-        else:
-            domain.status = Domain.DomainStatus.FAILED
-            domain.save()
-
-            return JsonResponse({'success': False, **response_data})
+        result = verify_domain(domain)
+        return JsonResponse({'success': result.is_verified, **result.response_data})
     except requests.RequestException as e:
         # For transient errors, return 503 to the frontend, warn in the logs but don't call Sentry.
         if _is_transient_backend_error(e):
