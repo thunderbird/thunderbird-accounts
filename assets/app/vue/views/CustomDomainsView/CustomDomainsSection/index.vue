@@ -25,6 +25,7 @@ const customDomainsDescription = computed(() =>
 );
 const lastDomainRemoved = ref<string>(null);
 const errorMessage = ref<string>(null);
+const infoMessage = ref<string>(null);
 const customDomainFormRef = ref(null);
 const maxCustomDomains = window._page?.maxCustomDomains;
 
@@ -54,6 +55,11 @@ const handleCustomDomainRemoved = (domainName: string) => {
 
 const handleCustomDomainError = (error: string) => {
   errorMessage.value = error;
+};
+
+const handleCustomDomainVerificationQueued = () => {
+  errorMessage.value = null;
+  infoMessage.value = t('views.mail.sections.customDomains.verificationQueued');
 };
 
 const handleCustomDomainViewDnsRecords = (domainName: string) => {
@@ -112,6 +118,7 @@ export default {
             @custom-domain-removed="handleCustomDomainRemoved"
             @custom-domain-verified="handleCustomDomainVerified"
             @custom-domain-error="handleCustomDomainError"
+            @custom-domain-verification-queued="handleCustomDomainVerificationQueued"
             @custom-domain-view-dns-records="handleCustomDomainViewDnsRecords"
             @custom-domain-verification-result="handleCustomDomainVerificationResult"
           />
@@ -128,11 +135,22 @@ export default {
         </template>
       </notice-bar>
 
+      <notice-bar :type="NoticeBarTypes.Info" class="verify-step-notice-bar" v-if="infoMessage">
+        <p>{{ infoMessage }}</p>
+
+        <template #cta>
+          <button @click="infoMessage = null" :aria-label="t('views.mail.sections.customDomains.dismissNotice')">
+            <ph-x size="24" aria-hidden="true" />
+          </button>
+        </template>
+      </notice-bar>
+
       <custom-domain-form
         ref="customDomainFormRef"
         @step-change="handleStepChange"
         @custom-domain-added="handleCustomDomainAdded"
         @custom-domain-verified="handleCustomDomainVerified"
+        @custom-domain-verification-queued="handleCustomDomainVerificationQueued"
         :last-domain-removed="lastDomainRemoved"
         :custom-domains="customDomains"
       />

@@ -22,6 +22,7 @@ const emit = defineEmits<{
   'custom-domain-removed': [domainName: string];
   'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }];
   'custom-domain-error': [error: string];
+  'custom-domain-verification-queued': [];
   'custom-domain-view-dns-records': [domainName: string];
   'custom-domain-verification-result': [result: DomainVerificationResult];
 }>();
@@ -58,6 +59,13 @@ const handleRetry = async () => {
     // domain's verification state (don't apply results or mark it FAILED).
     if (data.code === 'mail_backend_unavailable') {
       emit('custom-domain-error', t('views.mail.sections.customDomains.mailBackendUnavailable'));
+      showMenu.value = false;
+      return;
+    }
+
+    if (data.queued) {
+      emit('custom-domain-verified', { name: props.domain.name, status: DOMAIN_STATUS.PENDING });
+      emit('custom-domain-verification-queued');
       showMenu.value = false;
       return;
     }

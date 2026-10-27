@@ -296,6 +296,7 @@
           "domainAlreadyConfigured": "This domain is already configured. Please {link} in case you believe this is a mistake.",
           "reachOutToSupport": "reach out to support",
           "mailBackendUnavailable": "Mail server unavailable. Please try again in a few minutes.",
+          "verificationQueued": "We're verifying your domain. We'll email you the result when it's done.",
           "verificationValidationErrors": {
             "mxLookupError": "Unable to find MX record pointing to Thundermail",
             "ipLookupError": "Unable to resolve IP addresses",
