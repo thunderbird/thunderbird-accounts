@@ -4,7 +4,7 @@ from django.conf import settings
 from django.test import TestCase
 
 from thunderbird_accounts.authentication.account_status import set_user_active
-from thunderbird_accounts.authentication.exceptions import UpdateUserError
+from thunderbird_accounts.authentication.exceptions import LogoutUserError, UpdateUserError
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError
 from thunderbird_accounts.mail.models import Account, Email
@@ -62,10 +62,21 @@ class SetUserActiveTestCase(TestCase):
 
         self.assertEqual(len(errors), 1)
         self.assertTrue(errors[0].startswith('Keycloak:'), errors)
-        mock_keycloak_cls.return_value.logout_user.assert_not_called()
+        mock_keycloak_cls.return_value.logout_user.assert_called_once_with(OIDC_ID)
         mock_mail_cls.return_value.set_account_active.assert_called_once_with(self.username, False)
         self.user.refresh_from_db()
         self.assertFalse(self.user.is_active)
+
+    def test_keycloak_update_and_logout_failures_are_both_reported(self, mock_keycloak_cls: MagicMock, mock_mail_cls):
+        keycloak = mock_keycloak_cls.return_value
+        keycloak.update_user.side_effect = UpdateUserError(error='boom', username=self.username)
+        keycloak.logout_user.side_effect = LogoutUserError(oidc_id=OIDC_ID, error='bang')
+
+        errors = set_user_active(self.user, False)
+
+        self.assertEqual(len(errors), 2)
+        self.assertTrue(all(error.startswith('Keycloak:') for error in errors), errors)
+        mock_mail_cls.return_value.set_account_active.assert_called_once_with(self.username, False)
 
     def test_stalwart_failure_is_reported_and_local_account_flag_is_left_alone(
         self, mock_keycloak_cls: MagicMock, mock_mail_cls

@@ -26,11 +26,16 @@ def set_user_active(user: User, active: bool) -> list[str]:
         keycloak = KeycloakClient()
         try:
             keycloak.update_user(user.oidc_id, enabled=active)
-            if not active:
-                keycloak.logout_user(user.oidc_id)
         except KeycloakError as ex:
             sentry_sdk.capture_exception(ex)
             errors.append(f'Keycloak: {ex}')
+        # Revoke sessions even if disabling failed, so a live session cannot outlast a Keycloak outage.
+        if not active:
+            try:
+                keycloak.logout_user(user.oidc_id)
+            except KeycloakError as ex:
+                sentry_sdk.capture_exception(ex)
+                errors.append(f'Keycloak: {ex}')
 
     primary_email = user.stalwart_primary_email
     if primary_email:
