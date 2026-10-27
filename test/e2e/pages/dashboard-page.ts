@@ -325,11 +325,21 @@ export class DashboardPage {
   }
 
   private async verifyAppPasswordFormOpensAndCancels() {
+    // we don't want to actually create/change the app password because these tests can be run on anyone's
+    // account, which could already have and be using an app password legitimately; so just check the UI
     await expect(this.appPasswordSection).toContainText('App Password');
     await expect(this.appPasswordSection).toContainText(/Set|Not set/);
     await this.appPasswordSection.getByRole('button', { name: /^(Create|Change) app password$/ }).click();
-    await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-input')).toBeVisible();
-    await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-confirm-input')).toBeVisible();
+
+    // on legacy Stalwart 0.15X the user can input the app password value; if the 'New password' text appears that
+    // means we're on legacy 0.15X and therefore just verify the password and confirm password fields are visible;
+    // on stalwart 0.16+ the app password is generated automatically so there are no password/confirm password fields
+    const newPWText = this.appPasswordSection.getByText('New password:');   
+    if (await newPWText.isVisible()) {
+      await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-input')).toBeVisible();
+      await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-confirm-input')).toBeVisible();
+    }
+
     await expect(this.appPasswordSection.getByRole('button', { name: 'Save' })).toBeVisible();
     await this.appPasswordSection.getByRole('button', { name: 'Cancel' }).click();
     await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-input')).not.toBeVisible();
