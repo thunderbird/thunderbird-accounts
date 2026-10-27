@@ -7,9 +7,11 @@ import requests
 from unittest.mock import patch, Mock
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import IntegrityError
 from django.test import TestCase, Client as RequestClient, override_settings, RequestFactory
 from django.urls import reverse
+from waffle.testutils import override_flag
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
@@ -448,7 +450,7 @@ class CustomDomainDNSRecordsTestCase(TestCase):
         self.url = reverse('get_dns_records')
 
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
     @patch('thunderbird_accounts.mail.views.MailClient')
     def test_returns_expected_dns_records_without_verification(
         self,
@@ -516,8 +518,8 @@ class VerifyCustomDomainTestCase(TestCase):
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
-    @patch('thunderbird_accounts.mail.views.MailClient')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
     def test_success_does_not_activate_pending_dkim_by_default(
         self,
         mock_mail_client_cls,
@@ -562,8 +564,8 @@ class VerifyCustomDomainTestCase(TestCase):
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
-    @patch('thunderbird_accounts.mail.views.MailClient')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
     def test_reverification_of_ok_domain_is_success(
         self,
         mock_mail_client_cls,
@@ -613,8 +615,8 @@ class VerifyCustomDomainTestCase(TestCase):
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
-    @patch('thunderbird_accounts.mail.views.MailClient')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
     def test_reverification_of_bad_domain_is_success(
         self,
         mock_mail_client_cls,
@@ -665,8 +667,8 @@ class VerifyCustomDomainTestCase(TestCase):
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
-    @patch('thunderbird_accounts.mail.views.MailClient')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
     def test_reverification_of_unverified_domain_is_success(
         self,
         mock_mail_client_cls,
@@ -717,8 +719,8 @@ class VerifyCustomDomainTestCase(TestCase):
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
-    @patch('thunderbird_accounts.mail.views.MailClient')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
     def test_autodiscover_record_is_critical_error(
         self,
         mock_mail_client_cls,
@@ -762,8 +764,8 @@ class VerifyCustomDomainTestCase(TestCase):
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
-    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
-    @patch('thunderbird_accounts.mail.views.MailClient')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
     def test_autodiscover_srv_record_is_critical_error(
         self,
         mock_mail_client_cls,
@@ -844,8 +846,8 @@ class VerifyCustomDomainTestCase(TestCase):
                 self.assertFalse(_is_transient_backend_error(error))
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
-    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
-    @patch('thunderbird_accounts.mail.views.MailClient')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
     def test_backend_500_during_create_domain_returns_503(self, mock_mail_client_cls, mock_check_stale_dns_records):
         """DNS verification succeeds, then the Stalwart backend returns 500 on
         create_domain() (/api/principal/deploy). That transient outage returns 503
@@ -869,8 +871,8 @@ class VerifyCustomDomainTestCase(TestCase):
         self.assertEqual(Domain.DomainStatus.PENDING, self.domain.status)
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
-    @patch('thunderbird_accounts.mail.views.check_stale_dns_records')
-    @patch('thunderbird_accounts.mail.views.MailClient')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
     def test_backend_4xx_is_not_transient_returns_500(self, mock_mail_client_cls, mock_check_stale_dns_records):
         """A non-transient backend response (4xx) is a genuine failure, not a
         retryable outage, so it keeps the original 500 + FAILED behaviour."""
@@ -890,7 +892,7 @@ class VerifyCustomDomainTestCase(TestCase):
         self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
-    @patch('thunderbird_accounts.mail.views.MailClient')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
     def test_unexpected_error_still_returns_500(self, mock_mail_client_cls):
         """A genuine, unexpected (non-requests) error keeps the original 500 +
         FAILED behaviour — only transient backend outages are downgraded to 503."""
@@ -909,6 +911,68 @@ class VerifyCustomDomainTestCase(TestCase):
 
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @override_flag(settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP, active=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.verify_custom_domain_and_notify.delay')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
+    def test_revamp_flag_queues_verification_task(self, mock_mail_client_cls, mock_delay):
+        self.domain.status = Domain.DomainStatus.FAILED
+        self.domain.save()
+        cache.clear()
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 202, response.content)
+        self.assertEqual({'success': True, 'queued': True}, json.loads(response.content.decode()))
+        mock_delay.assert_called_once_with(str(self.domain.uuid))
+        mock_mail_client_cls.assert_not_called()
+
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
+        cache.clear()
+
+    @override_flag(settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP, active=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.verify_custom_domain_and_notify.delay')
+    def test_revamp_flag_does_not_queue_a_second_task_while_one_is_pending(self, mock_delay):
+        cache.clear()
+        for attempt in range(2):
+            response = self.client.post(
+                self.url,
+                data=json.dumps({'domain-name': self.domain.name}),
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 202, response.content)
+
+        mock_delay.assert_called_once_with(str(self.domain.uuid))
+        cache.clear()
+
+    @override_flag(settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP, active=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.verify_custom_domain_and_notify.delay')
+    def test_revamp_flag_releases_lock_when_queueing_fails(self, mock_delay):
+        cache.clear()
+        mock_delay.side_effect = [ConnectionError('broker down'), None]
+        self.client.raise_request_exception = False
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 500)
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(mock_delay.call_count, 2)
+        cache.clear()
 
 
 class RemoveCustomDomainTestCase(TestCase):

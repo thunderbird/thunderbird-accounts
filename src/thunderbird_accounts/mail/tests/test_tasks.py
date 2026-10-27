@@ -3,14 +3,17 @@ from unittest.mock import patch, Mock, call
 import requests
 from celery.exceptions import Retry
 from django.conf import settings
+from django.core import mail
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 
 from thunderbird_accounts.authentication.exceptions import RoleMappingError
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.celery.exceptions import RetryableExternalServiceError, TaskFailed
 from thunderbird_accounts.mail import tasks
+from thunderbird_accounts.mail.domain_verification import acquire_verification_lock
 from thunderbird_accounts.mail.exceptions import AccountNotFoundError, HostedDkimDeleteRetry, HostedDkimPublishRetry
-from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.core.tests.utils import build_mail_get_account, build_stalwart_account
 
 
@@ -576,3 +579,98 @@ class CreateStalwartAccountTestCase(TaskTestCase):
 
             self.assertEqual(user.uuid, task_results.get('user_uuid'))
             self.assertEqual(oidc_id, task_results.get('oidc_id'))
+
+
+class VerifyCustomDomainAndNotifyTestCase(TaskTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = User.objects.create(
+            username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234', email='owner@example.com'
+        )
+        self.domain = Domain.objects.create(name='example.com', user=self.user)
+
+    @override_settings(PUBLIC_BASE_URL='https://accounts.example.com')
+    @patch('thunderbird_accounts.mail.tasks.verify_domain')
+    def test_sends_verified_email_with_settings_link(self, mock_verify_domain):
+        def mark_verified(domain):
+            domain.status = Domain.DomainStatus.VERIFIED
+            domain.save()
+
+        mock_verify_domain.side_effect = mark_verified
+
+        results = tasks.verify_custom_domain_and_notify.run(str(self.domain.uuid))
+
+        self.assertEqual(results['status'], Domain.DomainStatus.VERIFIED)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['owner@example.com'])
+        self.assertIn('example.com', mail.outbox[0].subject)
+        self.assertIn('has been verified', mail.outbox[0].body)
+        self.assertIn('https://accounts.example.com/settings', mail.outbox[0].body)
+
+    @override_settings(PUBLIC_BASE_URL='https://accounts.example.com')
+    @patch('thunderbird_accounts.mail.tasks.verify_domain')
+    def test_sends_failed_email_when_dns_check_fails(self, mock_verify_domain):
+        def mark_failed(domain):
+            domain.status = Domain.DomainStatus.FAILED
+            domain.save()
+
+        mock_verify_domain.side_effect = mark_failed
+
+        tasks.verify_custom_domain_and_notify.run(str(self.domain.uuid))
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('failed', mail.outbox[0].subject)
+        self.assertIn('https://accounts.example.com/settings', mail.outbox[0].body)
+
+    @patch('thunderbird_accounts.mail.tasks.verify_domain', side_effect=ValueError('boom'))
+    def test_unexpected_error_marks_domain_failed_and_notifies(self, mock_verify_domain):
+        tasks.verify_custom_domain_and_notify.run(str(self.domain.uuid))
+
+        self.domain.refresh_from_db()
+        self.assertEqual(self.domain.status, Domain.DomainStatus.FAILED)
+        self.assertEqual(len(mail.outbox), 1)
+
+    @patch('thunderbird_accounts.mail.tasks.verify_domain', side_effect=requests.ConnectionError('down'))
+    def test_transient_backend_error_is_retried_without_email(self, mock_verify_domain):
+        with self.assertRaises(RetryableExternalServiceError):
+            tasks.verify_custom_domain_and_notify.run(str(self.domain.uuid))
+
+        self.domain.refresh_from_db()
+        self.assertEqual(self.domain.status, Domain.DomainStatus.PENDING)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_missing_domain_is_skipped(self):
+        tasks.verify_custom_domain_and_notify.run('00000000-0000-0000-0000-000000000000')
+
+        self.assertEqual(len(mail.outbox), 0)
+
+    @patch('thunderbird_accounts.mail.tasks.verify_domain')
+    def test_does_not_change_status_before_verifying_and_releases_lock(self, mock_verify_domain):
+        self.domain.status = Domain.DomainStatus.VERIFIED
+        self.domain.save()
+        seen = []
+        mock_verify_domain.side_effect = lambda domain: seen.append(domain.status)
+        cache.clear()
+        acquire_verification_lock(self.domain.uuid)
+
+        tasks.verify_custom_domain_and_notify.run(str(self.domain.uuid))
+
+        self.assertEqual(seen, [Domain.DomainStatus.VERIFIED])
+        self.assertTrue(acquire_verification_lock(self.domain.uuid))
+        cache.clear()
+
+    @patch('thunderbird_accounts.mail.notifications._', side_effect=lambda message: message)
+    @patch('thunderbird_accounts.mail.tasks.verify_domain')
+    def test_email_is_built_in_the_users_language(self, mock_verify_domain, mock_gettext):
+        from django.utils import translation
+
+        languages = []
+        mock_gettext.side_effect = lambda message: languages.append(translation.get_language()) or message
+        self.user.language = User.UserLanguageType.GERMAN
+        self.user.save()
+
+        tasks.verify_custom_domain_and_notify.run(str(self.domain.uuid))
+
+        self.assertTrue(languages)
+        self.assertEqual(set(languages), {'de'})
+        self.assertEqual(len(mail.outbox), 1)
