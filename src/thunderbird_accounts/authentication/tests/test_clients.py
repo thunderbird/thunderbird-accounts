@@ -4,7 +4,7 @@ import requests
 from django.test import SimpleTestCase, TestCase, override_settings
 
 from thunderbird_accounts.authentication.clients import KeycloakAccountClient, KeycloakClient, RequestMethods
-from thunderbird_accounts.authentication.exceptions import ImportUserError, RoleMappingError
+from thunderbird_accounts.authentication.exceptions import ImportUserError, LogoutUserError, RoleMappingError
 from thunderbird_accounts.core.tests.utils import build_keycloak_success_response
 
 OIDC_ID = 'd0e5c511-c78e-48be-a9ff-b7d3d8562ce4'
@@ -425,3 +425,25 @@ class KeycloakClientImportUserTestCase(SimpleTestCase):
         self.assertTrue(ctx.exception.is_password_policy_error)
         self.assertEqual(ctx.exception.error_code, 'invalidPasswordMinLengthMessage')
         self.assertEqual(ctx.exception.error_desc, 'Invalid password: minimum length 12.')
+
+
+@patch('thunderbird_accounts.authentication.clients.sentry_sdk.capture_exception')
+@patch.object(KeycloakClient, 'request')
+class KeycloakClientLogoutUserTestCase(SimpleTestCase):
+    def test_logout_user_posts_to_the_admin_logout_endpoint(self, mock_request, mock_capture):
+        mock_request.return_value = build_keycloak_success_response()
+
+        self.assertTrue(KeycloakClient().logout_user(OIDC_ID))
+        mock_request.assert_called_once_with(f'users/{OIDC_ID}/logout', RequestMethods.POST)
+        mock_capture.assert_not_called()
+
+    def test_logout_user_wraps_failures(self, mock_request, mock_capture):
+        error = _http_error(404)
+        mock_request.side_effect = error
+
+        with self.assertRaises(LogoutUserError) as ctx:
+            KeycloakClient().logout_user(OIDC_ID)
+
+        self.assertEqual(ctx.exception.oidc_id, OIDC_ID)
+        self.assertIn('Error<404>', str(ctx.exception))
+        mock_capture.assert_called_once_with(error)

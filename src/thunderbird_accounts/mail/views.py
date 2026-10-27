@@ -748,6 +748,11 @@ def appointment_caldav_setup(request: HttpRequest):
         error_response.status_code = 404
         return error_response
 
+    if not user.is_active:
+        logging.info(f'Deactivated user {user.uuid} refused during Appointment CalDAV setup')
+        error_response.status_code = 403
+        return error_response
+
     if not user.has_active_subscription:
         logging.error('User does not have an active subscription during Appointment CalDAV setup')
         error_response.status_code = 400

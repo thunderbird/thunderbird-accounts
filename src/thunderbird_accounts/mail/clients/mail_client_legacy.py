@@ -591,6 +591,24 @@ class MailClientLegacy(MailClientInterface):
             logging.error(f'[update_individual] err: {data}')
             raise RuntimeError(data)
 
+    # The 0.15 API has no "all permissions" value. `authenticate` gates every login path (passwords, app passwords
+    # and OIDC bearer tokens) and `email-receive` gates local delivery; disabled permissions override the user role.
+    DEACTIVATION_DISABLED_PERMISSIONS = ('authenticate', 'email-receive')
+
+    def set_account_active(self, principal_id: str, active: bool):
+        action = 'removeItem' if active else 'addItem'
+        update_data = [
+            {'action': action, 'field': 'disabledPermissions', 'value': permission}
+            for permission in self.DEACTIVATION_DISABLED_PERMISSIONS
+        ]
+        response = self._update_principal(principal_id, update_data)
+
+        data = response.json()
+        error = data.get('error')
+        if error:
+            logging.error(f'[set_account_active] err: {data}')
+            raise RuntimeError(data)
+
     def make_api_key(self, principal_id, password):
         if not settings.IS_DEV:
             raise RuntimeError('You can only make api keys in dev.')

@@ -112,6 +112,11 @@ class MailClientInterface:
     def update_quota(self, principal_id: str, quota: int):
         raise NotImplementedError()
 
+    def set_account_active(self, principal_id: str, active: bool) -> None:
+        """Deactivation removes the account's permissions so no credential can authenticate and inbound mail is
+        bounced; reactivation restores them."""
+        raise NotImplementedError()
+
     def make_api_key(self, principal_id, password):
         raise NotImplementedError()
 

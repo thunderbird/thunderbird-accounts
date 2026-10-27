@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 from django.contrib.admin import AdminSite
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.http import HttpRequest, QueryDict
 from django.test import TestCase, override_settings
 from django.template.response import TemplateResponse
@@ -461,93 +462,102 @@ class AdminUpdateUserTestcase(TestCase):
         # 3. No update to stalwart
         self.assertEqual(mock_update_principal.call_count, 0)
 
-    def test_success_disable_account(
-        self, mock_requests: MagicMock, mock_update_principal: MagicMock, mock_get_principal: MagicMock
-    ):
-        account = Account.objects.create(name=f'internaltest@{self.subdomain}', user=self.user)
-        Email.objects.create(
-            address=self.user.username,
-            type=Email.EmailType.PRIMARY,
-            account=account,
-        )
-
-        form_data = {
+    def _form_data(self, **overrides) -> dict:
+        return {
             'username': f'internaltest@{self.subdomain}',
             'recovery_email': 'frog@example.com',
             'timezone': 'America/Toronto',
             'oidc_id': self.user.oidc_id,
-            'is_active': False,
-            # This is dumb, the fields are split into 2 and are populated via existing data
-            # But we need to provide it as form data otherwise it'll error out.
+            # The split date fields are populated from existing data but must be posted or the form errors out.
             'date_joined_0': self.user.date_joined.date(),
             'date_joined_1': self.user.date_joined.time(),
+            **overrides,
         }
 
-        mock_requests.return_value = build_keycloak_success_response()
+    def _link_stalwart_account(self):
+        account = Account.objects.create(name=f'internaltest@{self.subdomain}', user=self.user)
+        Email.objects.create(address=self.user.username, type=Email.EmailType.PRIMARY, account=account)
 
-        # Set the json output to an empty object
-        mock_update_principal.return_value.json.return_value = {}
-        app_password_secret = '$app$whatever$'
-        mock_get_principal.return_value.json.return_value = {
-            'data': {'username': form_data.get('username'), 'type': 'individual', 'secrets': [app_password_secret]}
-        }
+    def _save_through_admin(self, form, request: HttpRequest | None = None) -> User:
+        """Mimic ModelAdmin.changeform_view: validate, build the instance, then run save_model."""
+        self.assertTrue(form.is_valid(), form.errors)
+        obj = form.save(commit=False)
+        CustomUserAdmin(User, AdminSite()).save_model(request or HttpRequest(), obj, form, change=True)
+        return obj
 
-        form = self._build_form(form_data)
-
-        user = form.save(True)
-
-        # We should have a user, they should have a pk (saved to db), and our fake oidc id
-        self.assertIsNotNone(user)
-        self.assertIsNotNone(user.pk)
-        self.assertEqual(user.oidc_id, FAKE_OIDC_UUID)
-
-        # 1. Retrieving existing user data
-        # 2. Updating the user
-        self.assertEqual(mock_requests.call_count, 2)
-
-        # Ensure that our endpoint calls line up with our expectations above
-        # ...yes it has that many tuples
-        self.assertEqual(mock_requests.call_args[0][0], f'users/{self.user.oidc_id}')
-        self.assertEqual(mock_requests.call_args[0][1], RequestMethods.PUT)
-
-        # 2. Get stalwart account
-        self.assertEqual(mock_get_principal.call_count, 1)
-        self.assertEqual(mock_get_principal.call_args[0][0], form_data.get('username'))
-
-        # 3. 1 Update to the app passwords
-        self.assertEqual(mock_update_principal.call_count, 1)
-        self.assertEqual(mock_update_principal.call_args[0][0], form_data.get('username'))
-        self.assertEqual(
-            mock_update_principal.call_args[0][1],
-            [{'action': 'removeItem', 'field': 'secrets', 'value': app_password_secret}],
-        )
-
-    @patch('thunderbird_accounts.authentication.admin.forms.MailClient')
-    def test_disable_account_clears_app_passwords_through_the_mail_client(
+    @patch('thunderbird_accounts.authentication.admin.models.set_user_active', return_value=[])
+    def test_deactivation_goes_through_set_user_active(
         self,
-        mock_mail_client_cls: MagicMock,
+        mock_set_user_active: MagicMock,
         mock_requests: MagicMock,
         mock_update_principal: MagicMock,
         mock_get_principal: MagicMock,
     ):
-        """Deactivation goes through clear_app_passwords(), which both client generations implement, rather
-        than reading the legacy secrets list, which a v0.16 Account does not have."""
-        account = Account.objects.create(name=f'internaltest@{self.subdomain}', user=self.user)
-        Email.objects.create(address=self.user.username, type=Email.EmailType.PRIMARY, account=account)
-        form_data = {
-            'username': f'internaltest@{self.subdomain}',
-            'recovery_email': 'frog@example.com',
-            'timezone': 'America/Toronto',
-            'oidc_id': self.user.oidc_id,
-            'is_active': False,
-            'date_joined_0': self.user.date_joined.date(),
-            'date_joined_1': self.user.date_joined.time(),
-        }
+        self._link_stalwart_account()
         mock_requests.return_value = build_keycloak_success_response()
 
-        self._build_form(form_data).save(True)
+        user = self._save_through_admin(self._build_form(self._form_data(is_active=False)))
 
-        mock_mail_client_cls.return_value.clear_app_passwords.assert_called_once_with(form_data['username'])
+        mock_set_user_active.assert_called_once_with(user, False)
+        self.assertFalse(User.objects.get(pk=user.pk).is_active)
+
+        # The form itself no longer writes the active state to Keycloak, and never touches Stalwart for it.
+        self.assertEqual(mock_requests.call_args[0][1], RequestMethods.PUT)
+        self.assertNotIn('enabled', mock_requests.call_args.kwargs['json_data'])
+        mock_get_principal.assert_not_called()
+        mock_update_principal.assert_not_called()
+
+    @patch('thunderbird_accounts.authentication.admin.models.set_user_active', return_value=[])
+    def test_reactivation_goes_through_set_user_active(
+        self,
+        mock_set_user_active: MagicMock,
+        mock_requests: MagicMock,
+        mock_update_principal: MagicMock,
+        mock_get_principal: MagicMock,
+    ):
+        self.user.is_active = False
+        self.user.save()
+        mock_requests.return_value = build_keycloak_success_response()
+
+        user = self._save_through_admin(self._build_form(self._form_data(is_active=True)))
+
+        mock_set_user_active.assert_called_once_with(user, True)
+        self.assertTrue(User.objects.get(pk=user.pk).is_active)
+
+    @patch('thunderbird_accounts.authentication.admin.models.set_user_active', return_value=[])
+    def test_saving_an_inactive_user_without_a_transition_skips_set_user_active(
+        self,
+        mock_set_user_active: MagicMock,
+        mock_requests: MagicMock,
+        mock_update_principal: MagicMock,
+        mock_get_principal: MagicMock,
+    ):
+        self.user.is_active = False
+        self.user.save()
+        mock_requests.return_value = build_keycloak_success_response()
+
+        self._save_through_admin(self._build_form(self._form_data(is_active=False)))
+
+        mock_set_user_active.assert_not_called()
+
+    @patch('thunderbird_accounts.authentication.admin.models.set_user_active', return_value=['Stalwart: boom'])
+    def test_set_user_active_errors_are_shown_as_admin_messages(
+        self,
+        mock_set_user_active: MagicMock,
+        mock_requests: MagicMock,
+        mock_update_principal: MagicMock,
+        mock_get_principal: MagicMock,
+    ):
+        mock_requests.return_value = build_keycloak_success_response()
+        request = HttpRequest()
+        request.session = {}
+        request._messages = FallbackStorage(request)
+
+        self._save_through_admin(self._build_form(self._form_data(is_active=False)), request)
+
+        shown = [str(message) for message in request._messages]
+        self.assertEqual(len(shown), 1)
+        self.assertIn('Stalwart: boom', shown[0])
 
 
 @patch('thunderbird_accounts.mail.clients.MailClient._delete_principal')

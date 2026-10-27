@@ -22,6 +22,7 @@ from thunderbird_accounts.authentication.exceptions import (
     SendExecuteActionsEmailError,
     UpdateUserError,
     DeleteUserError,
+    LogoutUserError,
     UpdateUserPlanInfoError,
     GetUserError,
 )
@@ -201,6 +202,23 @@ class KeycloakClient:
             raise DeleteUserError(
                 oidc_id=oidc_id, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
             )
+
+        return True
+
+    def logout_user(self, oidc_id: str):
+        """Sign the user out of every Keycloak session; also sets the user's not-before so tokens issued earlier
+        (including offline tokens) stop validating.
+
+        :raises LogoutUserError: If there was an error during the keycloak logout api request"""
+        try:
+            self.request(f'users/{oidc_id}/logout', RequestMethods.POST)
+        except RequestException as exc:
+            sentry_sdk.capture_exception(exc)
+            if exc.response is not None:
+                raise LogoutUserError(
+                    oidc_id=oidc_id, error=f'Error<{exc.response.status_code}>: {exc.response.content.decode()}'
+                )
+            raise LogoutUserError(oidc_id=oidc_id, error=f'Error<{exc}>: No response!')
 
         return True
 
