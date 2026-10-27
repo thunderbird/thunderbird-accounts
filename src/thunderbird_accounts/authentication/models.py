@@ -112,23 +112,35 @@ class User(AbstractUser, BaseModel):
         return self.display_name
 
     def save(self, *args, **kwargs):
-        # The uuid primary key is set before the first save, so an empty result means this is a create.
-        existing = type(self).objects.filter(pk=self.pk).values('recovery_email', 'is_active').first()
+        update_fields = kwargs.get('update_fields')
+
+        # Only process fields if we need to
+        writing_recovery_email = update_fields is None or 'recovery_email' in update_fields
+        writing_is_active = update_fields is None or 'is_active' in update_fields
         extra_update_fields = set()
 
+        existing = None
+        if writing_recovery_email or writing_is_active:
+            existing = type(self).objects.filter(pk=self.pk).values('recovery_email', 'is_active').first()
+
         # If recovery_email changes, clear related rejection fields.
-        if existing and self.recovery_email_rejected_at and existing['recovery_email'] != self.recovery_email:
+        if (
+            writing_recovery_email
+            and existing
+            and self.recovery_email_rejected_at
+            and existing['recovery_email'] != self.recovery_email
+        ):
             self.recovery_email_rejected_at = None
             self.recovery_email_rejection_reason = None
             extra_update_fields |= {'recovery_email_rejected_at', 'recovery_email_rejection_reason'}
 
         # Stamp is_active transitions; a user created inactive counts as a transition.
-        previously_active = existing['is_active'] if existing else True
-        if previously_active != self.is_active:
-            self.deactivated_at = None if self.is_active else timezone.now()
-            extra_update_fields.add('deactivated_at')
+        if writing_is_active:
+            previously_active = existing['is_active'] if existing else True
+            if previously_active != self.is_active:
+                self.deactivated_at = None if self.is_active else timezone.now()
+                extra_update_fields.add('deactivated_at')
 
-        update_fields = kwargs.get('update_fields')
         if extra_update_fields and update_fields is not None:
             kwargs['update_fields'] = set(update_fields) | extra_update_fields
 

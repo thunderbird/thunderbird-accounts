@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django.test import TestCase
 
 from thunderbird_accounts.authentication.models import User
@@ -87,3 +88,64 @@ class UserDeactivatedAtTestCase(TestCase):
 
         self.assertFalse(user.is_active)
         self.assertIsNotNone(user.deactivated_at)
+
+    def test_save_without_is_active_in_update_fields_ignores_in_memory_value(self):
+        user = self._make_user()
+
+        user.is_active = False
+        user.save(update_fields=['display_name'])
+        user.refresh_from_db()
+
+        self.assertTrue(user.is_active)
+        self.assertIsNone(user.deactivated_at)
+
+    def test_stale_instance_partial_save_keeps_the_timestamp(self):
+        user = self._make_user()
+        User.objects.filter(pk=user.pk).update(is_active=False, deactivated_at=timezone.now())
+
+        # user still has is_active=True in memory, as with Django's last_login update at login.
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+        user.refresh_from_db()
+
+        self.assertFalse(user.is_active)
+        self.assertIsNotNone(user.deactivated_at)
+
+    def test_partial_save_without_tracked_fields_skips_the_lookup(self):
+        user = self._make_user()
+
+        user.last_login = timezone.now()
+        with self.assertNumQueries(1):
+            user.save(update_fields=['last_login'])
+
+
+class UserRecoveryEmailRejectionTestCase(TestCase):
+    def _make_rejected_user(self) -> User:
+        return User.objects.create(
+            username='person@example.org',
+            email='recovery@example.com',
+            recovery_email='old@example.com',
+            recovery_email_rejected_at=timezone.now(),
+            recovery_email_rejection_reason='bounced',
+        )
+
+    def test_changing_recovery_email_clears_rejection(self):
+        user = self._make_rejected_user()
+
+        user.recovery_email = 'new@example.com'
+        user.save(update_fields=['recovery_email'])
+        user.refresh_from_db()
+
+        self.assertIsNone(user.recovery_email_rejected_at)
+        self.assertIsNone(user.recovery_email_rejection_reason)
+
+    def test_save_without_recovery_email_in_update_fields_keeps_rejection(self):
+        user = self._make_rejected_user()
+
+        user.recovery_email = 'new@example.com'
+        user.save(update_fields=['display_name'])
+        user.refresh_from_db()
+
+        self.assertEqual(user.recovery_email, 'old@example.com')
+        self.assertIsNotNone(user.recovery_email_rejected_at)
+        self.assertEqual(user.recovery_email_rejection_reason, 'bounced')
