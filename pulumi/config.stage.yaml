@@ -624,7 +624,7 @@ resources:
         celery-stage:
           assign_public_ip: yes
           service:
-            desired_count: 1
+            desired_count: 0
           target: null
         flower-stage:
           assign_public_ip: yes
@@ -632,7 +632,7 @@ resources:
           container_port: 5555
           load_balancer: flower
           service:
-            desired_count: 1
+            desired_count: 0
           target: flower
 
       registries:
@@ -660,7 +660,7 @@ resources:
   tb:fargate:FargateClusterWithLogging:
     keycloak:
       assign_public_ip: True
-      desired_count: 1
+      desired_count: 0
       health_check_grace_period_seconds: 600 # Time before the LB checks for health of a new backend
       internal: False
       services:
@@ -766,7 +766,7 @@ resources:
 
     accounts:
       assign_public_ip: True  # Necessary, or else it can't talk out through the IG
-      desired_count: 1
+      desired_count: 0
       ecr_resources:
         - arn:aws:ecr:eu-central-1:768512802988:repository/thunderbird/accounts*
       health_check_grace_period_seconds: 30 # Time before the LB checks for health of a new backend
