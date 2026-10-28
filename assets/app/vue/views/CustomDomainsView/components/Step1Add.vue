@@ -129,7 +129,7 @@ const onSubmit = async () => {
 
   .help-link {
     color: var(--colour-ti-secondary);
-    font-size: 1rem;
+    font-size: 0.875rem;
   }
 }
 

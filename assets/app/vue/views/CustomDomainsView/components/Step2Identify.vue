@@ -188,8 +188,7 @@ const onVerify = async () => {
   }
 
   .help-text {
-    font-size: 0.8125rem;
-    line-height: 1.32;
+    font-size: 0.688rem;
     color: var(--colour-ti-secondary);
     margin-block-end: 1.5rem;
 
@@ -231,7 +230,7 @@ const onVerify = async () => {
 
   .help-link {
     color: var(--colour-ti-secondary);
-    font-size: 1rem;
+    font-size: 0.875rem;
   }
 }
 
