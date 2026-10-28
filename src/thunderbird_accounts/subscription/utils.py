@@ -1,4 +1,5 @@
 from django.db import transaction as dj_transaction
+from thunderbird_accounts.authentication.account_status import sync_user_access
 from thunderbird_accounts.authentication.clients import KeycloakClient
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.mail.tasks import grant_mail_access_role
@@ -78,27 +79,28 @@ def activate_subscription_features(user: User, plan: Plan):
         # The mailbox exists, so the Keycloak gate role can be (re)granted; repairs a lost mapping.
         if user.oidc_id:
             grant_mail_access_role.delay(oidc_id=user.oidc_id)
-        return
+    else:
+        create_stalwart_account(user, None)
 
-    create_stalwart_account(user, None)
+    sync_user_access(user)
 
 
 def deactivate_subscription_features(user: User):
-    """Removes the plan from a user who has no active subscription left.
+    """Removes the plan from a user who has no entitled subscription left and locks their services.
 
-    Counterpart of activate_subscription_features. Mail access and quota are left unchanged; offboarding is #176."""
+    Counterpart of activate_subscription_features."""
     # Another subscription may still be paying for the plan.
     if user.subscription_set.filter(status__in=Subscription.ENTITLED_STATUSES).exists():
         return
 
     with dj_transaction.atomic():
         locked_user = User.objects.select_for_update().get(pk=user.uuid)
-        if locked_user.plan_id is None:
-            return
-        locked_user.plan_id = None
-        locked_user.save()
+        if locked_user.plan_id is not None:
+            locked_user.plan_id = None
+            locked_user.save()
 
     user.refresh_from_db()
+    sync_user_access(user)
 
     # TODO: Temporarily removed until https://github.com/thunderbird/thunderbird-accounts/issues/346 is ready
     # sync_plan_to_keycloak(user)

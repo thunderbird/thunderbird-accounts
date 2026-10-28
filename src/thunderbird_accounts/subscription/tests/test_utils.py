@@ -21,6 +21,9 @@ class TestActivationSubscriptionFeatures(TestCase):
         )
 
         self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        sync_patcher = patch('thunderbird_accounts.subscription.utils.sync_user_access')
+        self.sync_user_access_mock = sync_patcher.start()
+        self.addCleanup(sync_patcher.stop)
         self.plan = Plan.objects.create(
             name='Test Plan',
             mail_address_count=10,
@@ -94,6 +97,8 @@ class TestActivationSubscriptionFeatures(TestCase):
             # The mailbox does not exist yet; only the provisioning task may grant the gate role.
             grant_role_mock.assert_not_called()
 
+        self.sync_user_access_mock.assert_called_once_with(self.user)
+
     def test_existing_stalwart_account_updates_quota_and_regrants_mail_access(self):
         _active_sub_item = self._create_subscription(user=self.user)
         Account.objects.create(name=self.user.username, user=self.user, stalwart_id='42', quota=1)
@@ -109,6 +114,8 @@ class TestActivationSubscriptionFeatures(TestCase):
             update_quota_mock.assert_called_with(username=self.user.username, quota=self.plan.mail_storage_bytes)
             grant_role_mock.assert_called_once_with(oidc_id=self.user.oidc_id)
 
+        self.sync_user_access_mock.assert_called_once_with(self.user)
+
 
 class TestDeactivationSubscriptionFeatures(TestActivationSubscriptionFeatures):
     def setUp(self):
@@ -117,13 +124,14 @@ class TestDeactivationSubscriptionFeatures(TestActivationSubscriptionFeatures):
         self.user.save()
 
     def test_success(self):
-        """A canceled subscription with no other active one removes the plan."""
+        """A canceled subscription with no other active one removes the plan and locks the services."""
         self._create_subscription(status=Subscription.StatusValues.CANCELED, user=self.user)
 
         deactivate_subscription_features(user=self.user)
 
         self.user.refresh_from_db()
         self.assertIsNone(self.user.plan_id)
+        self.sync_user_access_mock.assert_called_once_with(self.user)
 
     def test_existing_stalwart_account_updates_quota_and_regrants_mail_access(self):
         """Inherited activation test, not applicable."""
@@ -136,6 +144,7 @@ class TestDeactivationSubscriptionFeatures(TestActivationSubscriptionFeatures):
 
         self.user.refresh_from_db()
         self.assertEqual(self.user.plan_id, self.plan.uuid)
+        self.sync_user_access_mock.assert_not_called()
 
     def test_keeps_plan_while_a_subscription_is_past_due(self):
         self._create_subscription(status=Subscription.StatusValues.PAST_DUE, user=self.user)
@@ -153,7 +162,7 @@ class TestDeactivationSubscriptionFeatures(TestActivationSubscriptionFeatures):
         self.user.refresh_from_db()
         self.assertIsNone(self.user.plan_id)
 
-    def test_noop_without_plan(self):
+    def test_without_plan_still_locks_the_services(self):
         self.user.plan = None
         self.user.save()
         self._create_subscription(status=Subscription.StatusValues.CANCELED, user=self.user)
@@ -162,3 +171,4 @@ class TestDeactivationSubscriptionFeatures(TestActivationSubscriptionFeatures):
 
         self.user.refresh_from_db()
         self.assertIsNone(self.user.plan_id)
+        self.sync_user_access_mock.assert_called_once_with(self.user)

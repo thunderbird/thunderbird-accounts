@@ -715,9 +715,14 @@ class SubscriptionUpdatedToCancelledTaskTestCase(SubscriptionCreatedTaskTestCase
         self.test_user.plan = models.Plan.objects.first()
         self.test_user.save()
 
-        task_results: dict | None = tasks.paddle_subscription_event.delay(
-            event_data, occurred_at, self.is_create_event
-        ).get(timeout=10)
+        with patch('thunderbird_accounts.subscription.utils.sync_user_access') as sync_user_access_mock:
+            task_results: dict | None = tasks.paddle_subscription_event.delay(
+                event_data, occurred_at, self.is_create_event
+            ).get(timeout=10)
+
+        # Losing the subscription locks the services
+        sync_user_access_mock.assert_called_once()
+        self.assertEqual(sync_user_access_mock.call_args.args[0].uuid, self.test_user.uuid)
 
         self.assertIsNotNone(task_results)
         self.assertEqual(task_results.get('paddle_id'), subscription.paddle_id)
