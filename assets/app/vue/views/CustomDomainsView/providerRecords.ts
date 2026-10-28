@@ -1,6 +1,4 @@
-import type { DNSRecord, DnsProviderConfig } from './types';
-
-type TokenContext = Record<string, string>;
+import type { DNSRecord, DnsProviderConfig, TokenContext, ProviderRecordGroup } from './types';
 
 const stripTrailingDot = (value: string): string => value.replace(/\.$/, '');
 
@@ -63,20 +61,6 @@ export const buildTokenContext = (record: DNSRecord, domainName: string): TokenC
 const interpolate = (template: string, context: TokenContext): string =>
   template.replace(/\{(\w+)\}/g, (_, token: string) => context[token] ?? '');
 
-export type ProviderCell = {
-  label: string;
-  // What belongs in the provider's field, empty when it should be left blank
-  value: string;
-  hint: string;
-};
-
-export type ProviderRecordGroup = {
-  type: string;
-  header: string;
-  columns: string[];
-  rows: ProviderCell[][];
-};
-
 // Groups the records by type, in the order they first appear, with each record laid out
 // in the fields the provider's panel asks for
 export const buildProviderRecordGroups = (
@@ -95,7 +79,6 @@ export const buildProviderRecordGroups = (
     if (!groups.has(record.type)) {
       groups.set(record.type, {
         type: record.type,
-        header: instructions.header,
         columns: instructions.fields.map((field) => field.label),
         rows: [],
       });

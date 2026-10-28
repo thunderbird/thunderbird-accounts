@@ -22,7 +22,6 @@ export type DnsProviderField = {
 };
 
 export type DnsProviderRecordInstructions = {
-  header: string;
   fields: DnsProviderField[];
 };
 
@@ -30,4 +29,19 @@ export type DnsProviderConfig = {
   id: string;
   label: string;
   records: Record<'MX' | 'SRV' | 'TXT' | 'CNAME', DnsProviderRecordInstructions>;
+};
+
+export type TokenContext = Record<string, string>;
+
+export type ProviderCell = {
+  label: string;
+  // What belongs in the provider's field, empty when it should be left blank
+  value: string;
+  hint: string;
+};
+
+export type ProviderRecordGroup = {
+  type: string;
+  columns: string[];
+  rows: ProviderCell[][];
 };
