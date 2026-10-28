@@ -226,6 +226,10 @@ class Subscription(BaseModel):
         PAUSED = 'paused', _('Paused')
         TRIALING = 'trialing', _('Trialing')
 
+    # Statuses that entitle the user to their plan's services.
+    # Ref: https://developer.paddle.com/api-reference/subscriptions/overview#status
+    ENTITLED_STATUSES = (StatusValues.ACTIVE, StatusValues.PAST_DUE)
+
     class DiscountTypes(models.TextChoices):
         # Empty value, non-paddle value
         NONE = '', _('None')

@@ -368,7 +368,7 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             plan = product_obj.plan
             if not plan:
                 logging.error(f'Product {product.get("id")} has no plan attached!')
-            elif status == Subscription.StatusValues.ACTIVE.value:
+            elif status in Subscription.ENTITLED_STATUSES:
                 activate_subscription_features(user, plan)
 
         SubscriptionItem.objects.update_or_create(
@@ -381,8 +381,7 @@ def paddle_subscription_event(self, event_data: dict, occurred_at: datetime.date
             defaults={'quantity': quantity},
         )
 
-    # Cancelled, paused and past due subscriptions no longer entitle the user to a plan.
-    if status != Subscription.StatusValues.ACTIVE.value:
+    if status not in Subscription.ENTITLED_STATUSES:
         logging.info(f'Subscription (paddle_id={paddle_id}) is {status}; removing plan from user {user.uuid}.')
         deactivate_subscription_features(user)
 

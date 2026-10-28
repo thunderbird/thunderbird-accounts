@@ -88,7 +88,7 @@ def deactivate_subscription_features(user: User):
 
     Counterpart of activate_subscription_features. Mail access and quota are left unchanged; offboarding is #176."""
     # Another subscription may still be paying for the plan.
-    if user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).exists():
+    if user.subscription_set.filter(status__in=Subscription.ENTITLED_STATUSES).exists():
         return
 
     with dj_transaction.atomic():

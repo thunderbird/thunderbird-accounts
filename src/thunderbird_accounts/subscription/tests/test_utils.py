@@ -137,6 +137,22 @@ class TestDeactivationSubscriptionFeatures(TestActivationSubscriptionFeatures):
         self.user.refresh_from_db()
         self.assertEqual(self.user.plan_id, self.plan.uuid)
 
+    def test_keeps_plan_while_a_subscription_is_past_due(self):
+        self._create_subscription(status=Subscription.StatusValues.PAST_DUE, user=self.user)
+
+        deactivate_subscription_features(user=self.user)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.plan_id, self.plan.uuid)
+
+    def test_paused_subscription_removes_the_plan(self):
+        self._create_subscription(status=Subscription.StatusValues.PAUSED, user=self.user)
+
+        deactivate_subscription_features(user=self.user)
+
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.plan_id)
+
     def test_noop_without_plan(self):
         self.user.plan = None
         self.user.save()

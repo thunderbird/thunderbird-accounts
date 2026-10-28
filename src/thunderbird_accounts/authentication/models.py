@@ -148,9 +148,10 @@ class User(AbstractUser, BaseModel):
 
     @cached_property
     def has_active_subscription(self):
+        """Whether a subscription in one of ``Subscription.ENTITLED_STATUSES`` (``active`` or ``past_due``) exists."""
         from thunderbird_accounts.subscription.models import Subscription
 
-        return self.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).count() > 0
+        return self.subscription_set.filter(status__in=Subscription.ENTITLED_STATUSES).exists()
 
     @cached_property
     def stalwart_primary_email(self) -> str | None:

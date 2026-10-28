@@ -207,7 +207,7 @@ def get_paddle_portal_link(request: HttpRequest, paddle: Client):
 
     Ref: https://developer.paddle.com/build/customers/integrate-customer-portal/#customer-portal-sessions
     """
-    subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
+    subscription = request.user.subscription_set.filter(status__in=Subscription.ENTITLED_STATUSES).first()
 
     try:
         customer_session = paddle.customer_portal_sessions.create(
@@ -278,7 +278,7 @@ def get_subscription_plan_info(request: Request, paddle: Client):
     """Returns the user's current subscription information including plan details, pricing, and features."""
 
     # Get the user's active subscription
-    subscription: Subscription = request.user.subscription_set.filter(status=Subscription.StatusValues.ACTIVE).first()
+    subscription: Subscription = request.user.subscription_set.filter(status__in=Subscription.ENTITLED_STATUSES).first()
 
     if not subscription:
         return JsonResponse({'success': False, 'error': 'No active subscription found'}, status=404)
