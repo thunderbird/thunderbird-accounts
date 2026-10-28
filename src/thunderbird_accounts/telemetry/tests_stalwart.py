@@ -158,6 +158,38 @@ class ProcessStalwartEventTestCase(TestCase):
 
         self.mock_resolve.assert_called_once_with(account_id=None, email='owner@thundermail.test')
 
+    def test_authenticated_message_queued_uses_sender_as_identity(self):
+        """queue.authenticated-message-queued (Stalwart 0.16) identifies the sender."""
+        _process_stalwart_event(
+            {
+                'id': 'e3',
+                'createdAt': '2024-01-01T00:00:00Z',
+                'type': 'queue.authenticated-message-queued',
+                'data': {'from': 'owner@thundermail.test', 'to': ['recipient@elsewhere.test']},
+            }
+        )
+
+        self.mock_resolve.assert_called_once_with(account_id=None, email='owner@thundermail.test')
+
+    def test_submission_events_map_to_sent_with_size(self):
+        """Both Stalwart 0.15 and 0.16 submission event names emit the sent event with size."""
+        for event_type in ('queue.queue-message-authenticated', 'queue.authenticated-message-queued'):
+            with self.subTest(event_type=event_type):
+                self.mock_submit.reset_mock()
+                processed = _process_stalwart_event(
+                    {
+                        'id': 'e4',
+                        'createdAt': '2024-01-01T00:00:00Z',
+                        'type': event_type,
+                        'data': {'from': 'owner@thundermail.test', 'to': ['recipient@elsewhere.test'], 'size': 1234},
+                    }
+                )
+
+                self.assertTrue(processed)
+                kwargs = self.mock_submit.call_args.kwargs
+                self.assertEqual(kwargs['event'], 'thundermail.message-sending.sent')
+                self.assertEqual(kwargs['properties']['size'], 1234)
+
     def test_forwards_created_at_and_derived_uuid_for_posthog_dedup(self):
         """Stalwart event id is hashed into a UUID5 (PostHog rejects integer-string uuids,
         see PostHog/posthog#35684); same Stalwart id must always derive the same UUID."""
