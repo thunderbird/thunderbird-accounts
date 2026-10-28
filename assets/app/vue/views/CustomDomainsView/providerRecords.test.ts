@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildProviderRecordGroups, buildTokenContext } from './providerRecords';
-import { DNS_PROVIDERS, GENERIC_DNS_PROVIDER_ID } from './dnsProviders.generated';
+import { DNS_PROVIDERS, GENERIC_DNS_PROVIDER_ID } from './dnsProviders';
 import type { DNSRecord } from './types';
 
 const DOMAIN = 'example.com';
