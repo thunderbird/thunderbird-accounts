@@ -80,10 +80,4 @@ const notifyByEmail = ref(false);
     }
   }
 }
-
-@media (min-width: 768px) {
-  .step-summary .description {
-    max-width: 50%;
-  }
-}
 </style>
