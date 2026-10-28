@@ -25,8 +25,6 @@ const groups = computed(() => buildProviderRecordGroups(props.records, props.dom
       :title="`${group.type} (${group.rows.length})`"
       :default-open="groupIndex === 0"
     >
-      <p class="header">{{ group.header }}</p>
-
       <!-- Desktop -->
       <table class="records-table">
         <thead>
@@ -71,13 +69,6 @@ const groups = computed(() => buildProviderRecordGroups(props.records, props.dom
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.header {
-  margin: 0 0 1rem;
-  font-size: 0.875rem;
-  line-height: 1.4;
-  color: var(--colour-ti-secondary);
 }
 
 .blank {

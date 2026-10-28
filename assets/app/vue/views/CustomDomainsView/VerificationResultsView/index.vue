@@ -266,10 +266,4 @@ export default {
     font-size: 1rem;
   }
 }
-
-@media (min-width: 768px) {
-  .verification-results .description {
-    max-width: 50%;
-  }
-}
 </style>

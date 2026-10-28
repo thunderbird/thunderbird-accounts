@@ -275,16 +275,12 @@ defineExpose({ scrollToFirstIssue });
       width: 9rem;
     }
 
-    tbody tr:nth-child(even):not(.issue-row) {
-      background-color: var(--colour-neutral-lower);
-    }
-
     .has-issue-message td {
       padding-block-end: 0.25rem;
     }
 
     .issue-row td {
-      padding-block: 0 0.75rem;
+      padding: 0;
     }
 
     /* The value takes the free space so every copy button lines up on the column's right edge */
