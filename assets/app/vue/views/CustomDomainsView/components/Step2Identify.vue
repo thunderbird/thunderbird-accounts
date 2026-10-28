@@ -5,7 +5,7 @@ import { NoticeBar, NoticeBarTypes, PrimaryButton, SelectInput } from '@thunderb
 import DnsFormatPanel from './DnsFormatPanel.vue';
 import ProviderRecordsTable from './ProviderRecordsTable.vue';
 import { getDnsProviders, getRemoteDNSRecords, verifyDomain } from '../api';
-import { DNS_PROVIDERS, GENERIC_DNS_PROVIDER_ID } from '../dnsProviders.generated';
+import { DNS_PROVIDERS, GENERIC_DNS_PROVIDER_ID } from '../dnsProviders';
 import type { DNSRecord } from '../types';
 
 const { t } = useI18n();

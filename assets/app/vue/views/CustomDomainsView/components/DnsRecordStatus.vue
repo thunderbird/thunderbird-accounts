@@ -28,10 +28,10 @@ const config = computed(() => ({
 .dns-record-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding-block: 0.5rem;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.688rem;
   white-space: nowrap;
 
   &.verified {
