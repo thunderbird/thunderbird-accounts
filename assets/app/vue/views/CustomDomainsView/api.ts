@@ -1,4 +1,4 @@
-import { DNS_PROVIDERS } from './dnsProviders.generated';
+import { DNS_PROVIDERS } from './dnsProviders';
 
 // The requests are shared with the inline flow in the email settings, so they live in a single place.
 // TODO: We should move this over when we remove the custom-domains-revamp feature flag
