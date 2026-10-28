@@ -14,6 +14,13 @@ const props = defineProps<{
   provider: DnsProviderConfig;
 }>();
 
+const NARROW_COLUMN_WIDTHS: Record<string, string> = {
+  Type: '9.5rem',
+  Priority: '8rem',
+  Weight: '7rem',
+  Port: '7rem',
+};
+
 const groups = computed(() => buildProviderRecordGroups(props.records, props.domainName, props.provider));
 </script>
 
@@ -27,6 +34,9 @@ const groups = computed(() => buildProviderRecordGroups(props.records, props.dom
     >
       <!-- Desktop -->
       <table class="records-table">
+        <colgroup>
+          <col v-for="column in group.columns" :key="column" :style="{ width: NARROW_COLUMN_WIDTHS[column] }" />
+        </colgroup>
         <thead>
           <tr>
             <th v-for="column in group.columns" :key="column" scope="col">{{ column }}</th>
