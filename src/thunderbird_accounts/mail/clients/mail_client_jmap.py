@@ -1043,17 +1043,17 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
         self.update_account(principal_id, account)
 
     def set_account_active(self, principal_id: str, active: bool) -> None:
-        """Replace the permissions with an empty set to deactivate, or reset them to role inheritance to reactivate.
-        Every login path (passwords, app passwords, API keys, OAuth) asserts `authenticate` and local delivery
-        asserts `emailReceive`, so an account with no permissions is fully locked.
+        """Deactivate/Reactivate using role permissions, which every login path uses.
+        `emailReceive` is kept. See docs/admin/users.md for rationale.
 
-        Reactivation is a reset, not an inverse: it writes `Inherit` unconditionally and discards any explicit
-        `Merge`/`Replace` permissions the account had. This assumes accounts only ever carry `Inherit`, which is
-        what create_account provisions and nothing else in this codebase changes."""
+        Reactivation is a reset, not an inverse. If we start using non-default permissions,
+        the distinction may matter."""
         if active:
             permissions = stalwart.AccountPermissions(type='Inherit')
         else:
-            permissions = stalwart.AccountPermissions(type='Replace', enabled_permissions={}, disabled_permissions={})
+            permissions = stalwart.AccountPermissions(
+                type='Merge', enabled_permissions={}, disabled_permissions={'authenticate': True}
+            )
 
         self.update_account(principal_id, stalwart.AccountUpdate(permissions=permissions))
 

@@ -142,7 +142,8 @@ This is not an ideal flow, but it's needed for now.
 Unticking `Active` under Permissions on the Change user page and saving deactivates the user everywhere:
 
 * Keycloak: the user is disabled and signed out of every session, so they can no longer sign in to Accounts, webmail, or a Thunderbird client that uses OAuth.
-* Stalwart: the mail account loses all of its permissions. Existing app passwords stop working, and incoming mail starts bouncing with a `550` error.
+* Stalwart: the mail account loses the `authenticate` permission. Existing app passwords stop working and nothing can sign in or send, but incoming mail keeps arriving in the mailbox.
+  * *Why does mail keep arriving during deactivation phase? Most mail is spam and much of that is from forged addresses. bounces it back envelope senders who who didn't actually send it could harm our reputation. Also, automated systems may stop sending an account mail that be become active again. Onnce the account is fully removed, we can start rejecting the mail at the SMTP level without backscatter deliveries harming our reputation.*  
 * Accounts: the user is signed out, and API requests made with their tokens are refused.
 
  `Deactivated at` under Important dates records when this happened. Ticking `Active` again reverses all of the above and clears the timestamp;
@@ -158,3 +159,4 @@ action was (high level), and when that action was performed. An even higher-leve
 is located on the main admin panel titled as `Recent Actions`.
 
 ![A screenshot of the history page. It shows the date and time, user who performed the action, and the action that was performed.](./users_7.png)
+
