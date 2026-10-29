@@ -79,6 +79,14 @@ export const buildResultRecords = (result: VerificationApiResult, t: Translate):
         });
         break;
       }
+      case 'unknown':
+        // The lookup itself failed, which says nothing about whether the record is set
+        rows.push({
+          ...expected,
+          status: DNS_RECORD_STATUS.ACTION_REQUIRED,
+          issue: t('views.customDomains.verificationResults.recordUnknown', { type: record.type, name: record.name }),
+        });
+        break;
       default:
         rows.push(expected);
     }
