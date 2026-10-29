@@ -26,6 +26,7 @@ from thunderbird_accounts.mail.views import (
     get_dns_records,
     list_custom_domains,
     remove_custom_domain,
+    verify_custom_domain,
 )
 
 
@@ -489,7 +490,11 @@ class CustomDomainVerificationResultTestCase(TestCase):
             'stale_dns_records': [],
         }
         Domain.objects.create(
-            name='example.com', user=self.user, status=Domain.DomainStatus.FAILED, last_verification_result=result
+            name='example.com',
+            user=self.user,
+            status=Domain.DomainStatus.FAILED,
+            dns_provider='godaddy',
+            last_verification_result=result,
         )
 
         response = self._get('Example.com')
@@ -498,6 +503,7 @@ class CustomDomainVerificationResultTestCase(TestCase):
         data = json.loads(response.content.decode())
         self.assertTrue(data['success'])
         self.assertEqual('failed', data['status'])
+        self.assertEqual('godaddy', data['dns_provider'])
         self.assertEqual(result['dns_records'], data['dns_records'])
         self.assertEqual(result['critical_errors'], data['critical_errors'])
 
@@ -1010,6 +1016,46 @@ class VerifyCustomDomainTestCase(TestCase):
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
         cache.clear()
+
+    def _post_directly(self, body):
+        # Calls the view without the session middleware, which needs the cache backend
+        request = RequestFactory().post(self.url, data=json.dumps(body), content_type='application/json')
+        request.user = self.user
+        return verify_custom_domain(request)
+
+    @override_flag(settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP, active=True)
+    @patch('thunderbird_accounts.mail.views.release_verification_lock')
+    @patch('thunderbird_accounts.mail.views.acquire_verification_lock', return_value=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.verify_custom_domain_and_notify.delay')
+    def test_saves_the_dns_provider_when_one_is_sent(self, mock_delay, mock_acquire, mock_release):
+        response = self._post_directly({'domain-name': self.domain.name, 'dns-provider': 'metanet-plesk'})
+
+        self.assertEqual(response.status_code, 202, response.content)
+        self.domain.refresh_from_db()
+        self.assertEqual('metanet-plesk', self.domain.dns_provider)
+
+    @override_flag(settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP, active=True)
+    @patch('thunderbird_accounts.mail.views.release_verification_lock')
+    @patch('thunderbird_accounts.mail.views.acquire_verification_lock', return_value=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.verify_custom_domain_and_notify.delay')
+    def test_keeps_the_dns_provider_when_none_is_sent(self, mock_delay, mock_acquire, mock_release):
+        self.domain.dns_provider = 'godaddy'
+        self.domain.save()
+
+        response = self._post_directly({'domain-name': self.domain.name})
+
+        self.assertEqual(response.status_code, 202, response.content)
+        self.domain.refresh_from_db()
+        self.assertEqual('godaddy', self.domain.dns_provider)
+
+    def test_rejects_an_invalid_dns_provider(self):
+        for invalid in ['Go Daddy', '', 'a' * 51, 5]:
+            response = self._post_directly({'domain-name': self.domain.name, 'dns-provider': invalid})
+
+            self.assertEqual(response.status_code, 400, invalid)
+
+        self.domain.refresh_from_db()
+        self.assertEqual('', self.domain.dns_provider)
 
     @override_flag(settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP, active=True)
     @patch('thunderbird_accounts.mail.views.mail_tasks.verify_custom_domain_and_notify.delay')

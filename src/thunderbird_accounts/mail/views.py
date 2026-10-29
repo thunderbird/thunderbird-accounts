@@ -1,5 +1,6 @@
 from thunderbird_accounts.core.types import AuthenticatedHttpRequest
 import json
+import re
 import logging
 import secrets
 import requests
@@ -283,6 +284,7 @@ def get_custom_domain_verification_result(request: AuthenticatedHttpRequest):
         {
             'success': True,
             'status': domain.status,
+            'dns_provider': domain.dns_provider,
             # Empty when the domain was never verified or the last attempt failed before it produced a result
             **(domain.last_verification_result or {}),
         }
@@ -366,6 +368,18 @@ def verify_custom_domain(request: AuthenticatedHttpRequest):
     domain = request.user.domains.get(name=domain_name)
     if not domain:
         return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    # Optional, sent when the user picks who manages their DNS. Provider ids are matched by the frontend.
+    dns_provider = data.get('dns-provider')
+    if dns_provider is not None:
+        # Ids like 'godaddy' or 'metanet-plesk'
+        DNS_PROVIDER_ID_PATTERN = re.compile(r'[a-z0-9-]{1,50}')
+
+        if not isinstance(dns_provider, str) or not DNS_PROVIDER_ID_PATTERN.fullmatch(dns_provider):
+            return JsonResponse({'success': False, 'error': _('Invalid DNS provider')}, status=400)
+        if domain.dns_provider != dns_provider:
+            domain.dns_provider = dns_provider
+            domain.save(update_fields=['dns_provider'])
 
     if waffle.flag_is_active(request, settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP):
         if acquire_verification_lock(domain.uuid):
