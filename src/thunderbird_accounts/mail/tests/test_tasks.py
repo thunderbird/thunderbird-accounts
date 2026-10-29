@@ -628,6 +628,7 @@ class VerifyCustomDomainAndNotifyTestCase(TaskTestCase):
 
         self.domain.refresh_from_db()
         self.assertEqual(self.domain.status, Domain.DomainStatus.FAILED)
+        self.assertIsNotNone(self.domain.last_verification_attempt)
         self.assertEqual(len(mail.outbox), 1)
 
     @patch('thunderbird_accounts.mail.tasks.verify_domain', side_effect=requests.ConnectionError('down'))
@@ -674,3 +675,47 @@ class VerifyCustomDomainAndNotifyTestCase(TaskTestCase):
         self.assertTrue(languages)
         self.assertEqual(set(languages), {'de'})
         self.assertEqual(len(mail.outbox), 1)
+
+
+class VerifyCustomDomainLockLifecycleTestCase(TaskTestCase):
+    def setUp(self):
+        super().setUp()
+        user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        self.domain = Domain.objects.create(name='example.com', user=user)
+        cache.clear()
+        acquire_verification_lock(self.domain.uuid)
+
+    def tearDown(self):
+        cache.clear()
+        super().tearDown()
+
+    @override_settings(CELERY_PATIENT_TASK_RETRY_BACKOFF_MAX=3600, CUSTOM_DOMAIN_VERIFICATION_LOCK_SECONDS=300)
+    @patch('thunderbird_accounts.mail.tasks.extend_verification_lock')
+    def test_on_retry_extends_lock_past_the_longest_backoff(self, mock_extend):
+        uuid = str(self.domain.uuid)
+
+        tasks.verify_custom_domain_and_notify.on_retry(RetryableExternalServiceError('down'), 'id', [uuid], {}, None)
+
+        mock_extend.assert_called_once_with(uuid, 3900)
+
+    @override_settings(CUSTOM_DOMAIN_VERIFICATION_LOCK_SECONDS=1)
+    def test_on_retry_keeps_lock_held_after_original_timeout(self):
+        from thunderbird_accounts.mail.domain_verification import extend_verification_lock
+
+        extend_verification_lock(self.domain.uuid, 3600)
+
+        self.assertFalse(acquire_verification_lock(self.domain.uuid))
+
+    def test_on_failure_releases_lock(self):
+        tasks.verify_custom_domain_and_notify.on_failure(
+            RetryableExternalServiceError('down'), 'id', [str(self.domain.uuid)], {}, None
+        )
+
+        self.assertTrue(acquire_verification_lock(self.domain.uuid))
+
+    @patch('thunderbird_accounts.mail.tasks.verify_domain', side_effect=requests.ConnectionError('down'))
+    def test_lock_stays_held_while_task_is_retrying(self, mock_verify_domain):
+        with self.assertRaises(RetryableExternalServiceError):
+            tasks.verify_custom_domain_and_notify.run(str(self.domain.uuid))
+
+        self.assertFalse(acquire_verification_lock(self.domain.uuid))

@@ -28,6 +28,10 @@ def acquire_verification_lock(domain_uuid) -> bool:
     return cache.add(_verification_lock_key(domain_uuid), 1, timeout=settings.CUSTOM_DOMAIN_VERIFICATION_LOCK_SECONDS)
 
 
+def extend_verification_lock(domain_uuid, seconds: int):
+    cache.set(_verification_lock_key(domain_uuid), 1, timeout=seconds)
+
+
 def release_verification_lock(domain_uuid):
     cache.delete(_verification_lock_key(domain_uuid))
 
