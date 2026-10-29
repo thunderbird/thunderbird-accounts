@@ -8,7 +8,8 @@ from django.conf import settings
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import SimpleTestCase, TestCase, Client as RequestClient, RequestFactory
-from django.urls import reverse
+from django.urls import resolve, reverse
+from django.views.generic import RedirectView
 from pathlib import Path
 
 from thunderbird_accounts.authentication.models import User
@@ -49,6 +50,14 @@ class PublicVueRouteSyncTestCase(SimpleTestCase):
     @staticmethod
     def _is_concrete_vue_path(path):
         return path.startswith('/') and ':' not in path and '*' not in path and path != '/'
+
+
+class AdminSlashRedirectTestCase(SimpleTestCase):
+    def test_admin_without_slash_redirects_to_admin(self):
+        match = resolve('/admin')
+
+        self.assertIs(match.func.view_class, RedirectView)
+        self.assertEqual(match.func.view_initkwargs, {'url': '/admin/', 'permanent': True})
 
 
 class HomeViewRedirectTestCase(TestCase):
