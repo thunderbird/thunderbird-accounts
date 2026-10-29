@@ -35,6 +35,8 @@ const selectedProviderLabel = computed(() =>
     : (selectedProviderConfig.value?.label ?? '')
 );
 
+const isGenericProvider = computed(() => selectedProvider.value === GENERIC_DNS_PROVIDER_ID);
+
 const records = ref<DNSRecord[] | null>(null);
 const error = ref<string | null>(null);
 const isLoadingRecords = ref(false);
@@ -138,9 +140,15 @@ const onVerify = async () => {
         {{ t('views.customDomains.stepIdentify.updateRecordsDescription', { provider: selectedProviderLabel }) }}
       </p>
 
+      <notice-bar v-if="isGenericProvider" :type="NoticeBarTypes.Info" class="generic-provider-notice">
+        <strong class="notice-title">{{ t('views.customDomains.stepIdentify.genericProviderNoticeTitle') }}</strong>
+        {{ t('views.customDomains.stepIdentify.genericProviderNoticeDescription') }}
+      </notice-bar>
+
       <dns-format-panel
+        :key="selectedProvider"
         :title="t('views.customDomains.stepIdentify.checkRecordFormat')"
-        :default-open="false"
+        :default-open="isGenericProvider"
       />
 
       <h4>{{ t('views.customDomains.stepIdentify.dnsRecords') }}</h4>
@@ -199,6 +207,14 @@ const onVerify = async () => {
 
     a {
       color: inherit;
+    }
+  }
+
+  .generic-provider-notice {
+    margin-block-end: 1.5rem;
+
+    .notice-title {
+      display: block;
     }
   }
 
