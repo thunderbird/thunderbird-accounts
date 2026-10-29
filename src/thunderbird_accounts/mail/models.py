@@ -2,6 +2,7 @@
 Stalwart reference models live here
 """
 
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.forms import CharField
 from django.utils.translation import gettext_lazy as _
@@ -148,6 +149,12 @@ class Domain(BaseStalwartObject):
     verified_at = models.DateTimeField(null=True, blank=True, help_text=_('Date and time when the domain was verified'))
     last_verification_attempt = models.DateTimeField(
         null=True, blank=True, help_text=_('Date and time of the last verification attempt')
+    )
+    last_verification_result = models.JSONField(
+        null=True,
+        blank=True,
+        encoder=DjangoJSONEncoder,
+        help_text=_('Per-record outcome of the last verification attempt, used to explain a failed verification'),
     )
 
     def __str__(self):
