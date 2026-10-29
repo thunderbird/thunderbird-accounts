@@ -27,8 +27,6 @@ const fieldValue = (record: DNSRecord, key: RecordField['key']): string => recor
 // A status column is only shown for records that have been through verification
 const showStatus = computed(() => props.records.some((record) => record.status));
 
-const rows = computed(() => props.records.map((record, index) => ({ key: `${record.type}-${record.name}-${index}`, record })));
-
 // Issue messages are expanded unless the user collapses them
 const collapsedRows = ref<Set<string>>(new Set());
 
@@ -40,7 +38,7 @@ const toggleRow = (key: string) => {
   collapsedRows.value = next;
 };
 
-// Mobile groups the records by their type, keeping the order they first appear in
+// Records are grouped by their type, keeping the order they first appear in
 const recordsByType = computed(() => {
   const groups = new Map<string, DNSRecord[]>();
   props.records.forEach((record) => {
@@ -48,10 +46,13 @@ const recordsByType = computed(() => {
   });
   return [...groups.entries()].map(([type, records]) => ({
     type,
-    records,
+    rows: records.map((record, index) => ({ key: `${type}-${record.name}-${index}`, record })),
     hasIssue: records.some((record) => record.issue),
   }));
 });
+
+// The group's title already says the type, so the desktop table doesn't repeat it as a column
+const tableFields = computed(() => fields.value.filter((field) => field.key !== 'type'));
 
 const rootRef = ref<HTMLElement | null>(null);
 
@@ -67,61 +68,61 @@ defineExpose({ scrollToFirstIssue });
 
 <template>
   <div ref="rootRef" class="dns-records">
-    <!-- Desktop -->
-    <table class="records-table">
-      <thead>
-        <tr>
-          <th v-if="showStatus" scope="col" class="col-status">{{ t('views.customDomains.dnsRecords.status') }}</th>
-          <th v-for="field in fields" :key="field.key" scope="col" :class="`col-${field.key}`">{{ field.label }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <template v-for="{ key, record } in rows" :key="key">
-          <tr :class="{ 'has-issue-message': record.issue && !collapsedRows.has(key) }" :data-issue="record.issue ? '' : undefined">
-            <td v-if="showStatus" class="col-status">
-              <div class="status-cell">
-                <button
-                  v-if="record.issue"
-                  type="button"
-                  class="issue-toggle"
-                  :aria-expanded="!collapsedRows.has(key)"
-                  :aria-label="t('views.customDomains.dnsRecords.toggleIssue')"
-                  @click="toggleRow(key)"
-                >
-                  <ph-caret-down v-if="collapsedRows.has(key)" size="16" aria-hidden="true" />
-                  <ph-caret-up v-else size="16" aria-hidden="true" />
-                </button>
-                <dns-record-status v-if="record.status" :status="record.status" />
-              </div>
-            </td>
-            <td v-for="field in fields" :key="field.key" :class="`col-${field.key}`">
-              <div class="cell">
-                <span>{{ fieldValue(record, field.key) }}</span>
-                <copy-value-button :value="fieldValue(record, field.key)" />
-              </div>
-            </td>
-          </tr>
-          <tr v-if="record.issue && !collapsedRows.has(key)" class="issue-row">
-            <td :colspan="fields.length + 1">
-              <p class="issue-message" :class="record.status">{{ record.issue }}</p>
-            </td>
-          </tr>
-        </template>
-      </tbody>
-    </table>
-
-    <!-- Mobile -->
     <div class="records-groups">
       <details-summary
         v-for="(group, groupIndex) in recordsByType"
         :key="group.type"
-        :title="`${group.type} (${group.records.length})`"
+        :title="`${group.type} (${group.rows.length})`"
         :default-open="group.hasIssue || (!showStatus && groupIndex === 0)"
       >
+        <!-- Desktop -->
+        <table class="records-table">
+          <thead>
+            <tr>
+              <th v-if="showStatus" scope="col" class="col-status">{{ t('views.customDomains.dnsRecords.status') }}</th>
+              <th v-for="field in tableFields" :key="field.key" scope="col" :class="`col-${field.key}`">{{ field.label }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="{ key, record } in group.rows" :key="key">
+              <tr :class="{ 'has-issue-message': record.issue && !collapsedRows.has(key) }" :data-issue="record.issue ? '' : undefined">
+                <td v-if="showStatus" class="col-status">
+                  <div class="status-cell">
+                    <button
+                      v-if="record.issue"
+                      type="button"
+                      class="issue-toggle"
+                      :aria-expanded="!collapsedRows.has(key)"
+                      :aria-label="t('views.customDomains.dnsRecords.toggleIssue')"
+                      @click="toggleRow(key)"
+                    >
+                      <ph-caret-down v-if="collapsedRows.has(key)" size="16" aria-hidden="true" />
+                      <ph-caret-up v-else size="16" aria-hidden="true" />
+                    </button>
+                    <dns-record-status v-if="record.status" :status="record.status" />
+                  </div>
+                </td>
+                <td v-for="field in tableFields" :key="field.key" :class="`col-${field.key}`">
+                  <div class="cell">
+                    <span>{{ fieldValue(record, field.key) }}</span>
+                    <copy-value-button :value="fieldValue(record, field.key)" />
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="record.issue && !collapsedRows.has(key)" class="issue-row">
+                <td :colspan="tableFields.length + 1">
+                  <p class="issue-message" :class="record.status">{{ record.issue }}</p>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <!-- Mobile -->
         <div class="group-records">
           <dl
-            v-for="(record, index) in group.records"
-            :key="`${record.name}-${index}`"
+            v-for="{ key, record } in group.rows"
+            :key="key"
             class="record-card"
             :data-issue="record.issue ? '' : undefined"
           >
@@ -147,6 +148,10 @@ defineExpose({ scrollToFirstIssue });
 </template>
 
 <style scoped>
+.dns-records {
+  margin-block-end: 2rem;
+}
+
 .records-table {
   display: none;
 }
@@ -227,7 +232,7 @@ defineExpose({ scrollToFirstIssue });
 }
 
 @media (min-width: 768px) {
-  .records-groups {
+  .group-records {
     display: none;
   }
 
@@ -258,17 +263,12 @@ defineExpose({ scrollToFirstIssue });
     /* Fixed layout keeps the table inside its container: the short columns get set widths (never wrapping)
        and name and value split whatever remains, wrapping long values instead of stretching the table */
     .col-status,
-    .col-type,
     .col-priority {
       white-space: nowrap;
     }
 
     .col-status {
       width: 11rem;
-    }
-
-    .col-type {
-      width: 7.5rem;
     }
 
     .col-priority {
