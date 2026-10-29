@@ -1,4 +1,4 @@
-import type { DNSRecord, DnsProviderConfig, TokenContext, ProviderRecordGroup } from './types';
+import type { DNSRecord, DnsProviderConfig, DnsProviderField, TokenContext, ProviderRecordGroup } from './types';
 
 const stripTrailingDot = (value: string): string => value.replace(/\.$/, '');
 
@@ -81,6 +81,7 @@ export const buildProviderRecordGroups = (
         type: record.type,
         columns: instructions.fields.map((field) => field.label),
         rows: [],
+        sharedFields: [],
       });
     }
 
@@ -93,5 +94,34 @@ export const buildProviderRecordGroups = (
     );
   });
 
+  groups.forEach((group) =>
+    collapseSharedFields(group, provider.records[group.type as keyof DnsProviderConfig['records']].fields)
+  );
   return [...groups.values()];
+};
+
+// Only these are collapsed: they are the fields most likely to be 0 in every row
+const COLLAPSIBLE_TOKENS = ['{priority}', '{weight}'];
+
+// Moves priority and weight columns out of the table when every row holds the same value, since
+// they'd only waste space. A single row is left alone, as are blank or hinted values, which the
+// reader needs to see in place.
+const collapseSharedFields = (group: ProviderRecordGroup, fields: DnsProviderField[]): void => {
+  if (group.rows.length < 2) {
+    return;
+  }
+
+  const sharedIndexes = fields
+    .map((field, index) => (COLLAPSIBLE_TOKENS.some((token) => field.template.includes(token)) ? index : -1))
+    .filter((index) => {
+      if (index < 0) {
+        return false;
+      }
+      const [first, ...rest] = group.rows.map((row) => row[index]);
+      return first.value && !first.hint && rest.every((cell) => cell.value === first.value && !cell.hint);
+    });
+
+  group.sharedFields = sharedIndexes.map((index) => ({ label: group.columns[index], value: group.rows[0][index].value }));
+  group.columns = group.columns.filter((_, index) => !sharedIndexes.includes(index));
+  group.rows = group.rows.map((row) => row.filter((_, index) => !sharedIndexes.includes(index)));
 };

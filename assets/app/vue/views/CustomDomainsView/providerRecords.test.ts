@@ -60,6 +60,33 @@ describe('buildProviderRecordGroups', () => {
     expect(host.value).toBe('');
   });
 
+  it('moves columns with the same value in every row out of the table', () => {
+    const srv = (name: string, port: string): DNSRecord => ({
+      type: 'SRV',
+      name: `${name}._tcp.example.com.`,
+      content: `0 ${port} mail.thundermail.com`,
+      priority: '0',
+    });
+    const [group] = buildProviderRecordGroups([srv('_imap', '143'), srv('_imaps', '993')], DOMAIN, provider('godaddy'));
+
+    expect(group.columns).not.toContain('Priority');
+    expect(group.columns).not.toContain('Weight');
+    expect(group.columns).toContain('Port');
+    expect(group.columns).toContain('Name');
+    expect(group.sharedFields).toEqual([
+      { label: 'Priority', value: '0' },
+      { label: 'Weight', value: '0' },
+    ]);
+    expect(group.rows.every((row) => row.length === group.columns.length)).toBe(true);
+  });
+
+  it('keeps every column when there is a single row', () => {
+    const [mx] = buildProviderRecordGroups([records[0]], DOMAIN, provider('godaddy'));
+
+    expect(mx.sharedFields).toEqual([]);
+    expect(mx.columns).toHaveLength(4);
+  });
+
   it('supports the generic provider', () => {
     const groups = buildProviderRecordGroups(records, DOMAIN, provider(GENERIC_DNS_PROVIDER_ID));
 

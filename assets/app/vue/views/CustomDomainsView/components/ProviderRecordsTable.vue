@@ -4,9 +4,9 @@ import { useI18n } from 'vue-i18n';
 import DetailsSummary from '@/components/DetailsSummary.vue';
 import CopyValueButton from './CopyValueButton.vue';
 import { buildProviderRecordGroups } from '../providerRecords';
-import type { DNSRecord, DnsProviderConfig } from '../types';
+import type { DNSRecord, DnsProviderConfig, ProviderRecordGroup } from '../types';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const props = defineProps<{
   records: DNSRecord[];
@@ -22,6 +22,23 @@ const NARROW_COLUMN_WIDTHS: Record<string, string> = {
 };
 
 const groups = computed(() => buildProviderRecordGroups(props.records, props.domainName, props.provider));
+
+// "Priority and Weight are 0": fields sharing a value are listed together
+const sharedMessages = (group: ProviderRecordGroup) => {
+  const labelsByValue = new Map<string, string[]>();
+  group.sharedFields.forEach(({ label, value }) => {
+    labelsByValue.set(value, [...(labelsByValue.get(value) ?? []), label]);
+  });
+
+  const entries = [...labelsByValue.entries()];
+  return entries.map(([value, labels], index) => ({
+    value,
+    separator: index < entries.length - 1 ? ', ' : ` ${t('views.customDomains.dnsRecords.sharedSuffix', { type: group.type })}`,
+    count: labels.length,
+    // Each label comes back as its own part so it can be bolded without v-html
+    parts: new Intl.ListFormat(locale.value, { style: 'long', type: 'conjunction' }).formatToParts(labels),
+  }));
+};
 </script>
 
 <template>
@@ -32,6 +49,20 @@ const groups = computed(() => buildProviderRecordGroups(props.records, props.dom
       :title="`${group.type} (${group.rows.length})`"
       :default-open="groupIndex === 0"
     >
+      <p v-if="group.sharedFields.length" class="shared-fields">
+        <template v-for="message in sharedMessages(group)" :key="message.value">
+          <i18n-t keypath="views.customDomains.dnsRecords.sharedValue" :plural="message.count" tag="span">
+            <template #fields>
+              <template v-for="(part, partIndex) in message.parts" :key="partIndex">
+                <strong v-if="part.type === 'element'">{{ part.value }}</strong>
+                <template v-else>{{ part.value }}</template>
+              </template>
+            </template>
+            <template #value><strong>{{ message.value }}</strong></template>
+          </i18n-t>{{ message.separator }}
+        </template>
+      </p>
+
       <!-- Desktop -->
       <table class="records-table">
         <colgroup>
@@ -84,6 +115,11 @@ const groups = computed(() => buildProviderRecordGroups(props.records, props.dom
 .blank {
   font-style: italic;
   color: var(--colour-ti-muted);
+}
+
+.shared-fields {
+  margin: 0 0 1rem;
+  color: var(--colour-ti-secondary);
 }
 
 .hint {

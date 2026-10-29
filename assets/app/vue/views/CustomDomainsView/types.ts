@@ -44,4 +44,6 @@ export type ProviderRecordGroup = {
   type: string;
   columns: string[];
   rows: ProviderCell[][];
+  // Fields that hold the same value in every row, so they are described once instead of getting a column
+  sharedFields: { label: string; value: string }[];
 };

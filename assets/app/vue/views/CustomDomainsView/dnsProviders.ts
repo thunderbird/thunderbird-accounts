@@ -287,7 +287,7 @@ export const DNS_PROVIDERS: DnsProviderConfig[] = [
           { label: "Protokoll (Protocol)", template: "{bareprotocol}" },
           { label: "Domainname (Host)", template: "{srvsubhost}" },
           { label: "Priorität (Priority)", template: "{priority}" },
-          { label: "Relative Gewichtung (Weight)", template: "niedrig (0)" },
+          { label: "Relative Gewichtung (Weight)", template: "niedrig ({weight})" },
           { label: "Zielhost (Target host)", template: "{target}" },
           { label: "Zielport (Target port)", template: "{port}" },
         ],
