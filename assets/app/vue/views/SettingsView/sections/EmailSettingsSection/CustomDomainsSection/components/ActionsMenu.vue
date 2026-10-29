@@ -56,10 +56,30 @@ const emitVerificationResult = (data: {
 };
 
 const handleRetry = async () => {
-  // With the revamp enabled, verification and its results live on their own page
+  // With the revamp enabled, verification (and re-verification) runs in the background and the
+  // custom domains view takes over: a failed domain explains what to fix, anything else queues a new
+  // verification and shows its summary
   if (isCustomDomainsRevampActive) {
     showMenu.value = false;
-    router.push({ path: '/custom-domains/verification', query: { domain: props.domain.name } });
+
+    if (props.domain.status === DOMAIN_STATUS.FAILED) {
+      router.push({ path: '/custom-domains', state: { verificationResultsDomain: props.domain.name } });
+      return;
+    }
+
+    try {
+      const data = await verifyDomain(props.domain.name);
+
+      if (data.code === 'mail_backend_unavailable') {
+        emit('custom-domain-error', t('views.mail.sections.customDomains.mailBackendUnavailable'));
+      } else if (!data.success) {
+        emit('custom-domain-error', data.error);
+      } else {
+        router.push({ path: '/custom-domains', state: { verificationQueuedDomain: props.domain.name } });
+      }
+    } catch (error) {
+      emit('custom-domain-error', String(error));
+    }
     return;
   }
 
@@ -100,6 +120,13 @@ const handleClickOutside = (event: MouseEvent) => {
 };
 
 const handleViewDnsRecords = () => {
+  // With the revamp enabled, the records are part of the verification results
+  if (isCustomDomainsRevampActive) {
+    showMenu.value = false;
+    router.push({ path: '/custom-domains', state: { verificationResultsDomain: props.domain.name } });
+    return;
+  }
+
   emit('custom-domain-view-dns-records', props.domain.name);
   showMenu.value = false;
 };
