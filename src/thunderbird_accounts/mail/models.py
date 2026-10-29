@@ -150,6 +150,12 @@ class Domain(BaseStalwartObject):
     last_verification_attempt = models.DateTimeField(
         null=True, blank=True, help_text=_('Date and time of the last verification attempt')
     )
+    dns_provider = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        help_text=_('Id of the DNS provider the user said manages this domain, used to tailor the DNS instructions'),
+    )
     last_verification_result = models.JSONField(
         null=True,
         blank=True,
