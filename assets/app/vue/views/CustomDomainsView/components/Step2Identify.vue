@@ -74,7 +74,7 @@ const onVerify = async () => {
   error.value = null;
 
   try {
-    const data = await verifyDomain(props.domainName);
+    const data = await verifyDomain(props.domainName, selectedProvider.value);
 
     // Transient mail-backend outage! Stay on this step so the user can try again
     if (data.code === 'mail_backend_unavailable') {
