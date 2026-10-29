@@ -29,6 +29,7 @@ const isLoading = ref(true);
 const isVerifying = ref(false);
 const isVerified = ref(false);
 const isFailed = ref(false);
+const hasBeenVerified = ref(false);
 const dnsProvider = ref<string | null>(null);
 
 // "Other" reads oddly in "Sign in to Other", so it falls back to a generic phrase
@@ -66,6 +67,7 @@ const load = async () => {
     isFailed.value = data.status === 'failed';
     dnsProvider.value = data.dns_provider || null;
     records.value = buildResultRecords(data, t);
+    hasBeenVerified.value = records.value.length > 0;
     validationErrors.value = [...(data.critical_errors ?? []), ...(data.warnings ?? [])];
 
     // Nothing was checked yet (or before results were kept), so show the records the domain needs
@@ -124,7 +126,14 @@ export default {
 <template>
   <section class="verification-results">
     <div class="title-row">
-      <h2>{{ t('views.customDomains.verificationResults.title', { domain: domainName }) }}</h2>
+      <!-- Held back until loaded, so the title doesn't flip once it is known whether anything was verified -->
+      <h2 v-if="!isLoading">
+        {{
+          hasBeenVerified
+            ? t('views.customDomains.verificationResults.title', { domain: domainName })
+            : t('views.customDomains.verificationResults.updateRecordsTitle')
+        }}
+      </h2>
       <base-badge v-if="isVerified" :type="BaseBadgeTypes.Verified">
         {{ t('views.mail.sections.customDomains.verified') }}
       </base-badge>
@@ -171,7 +180,7 @@ export default {
           </template>
         </notice-bar>
 
-        <h3>{{ t('views.customDomains.verificationResults.updateRecordsTitle') }}</h3>
+        <h3 v-if="hasBeenVerified">{{ t('views.customDomains.verificationResults.updateRecordsTitle') }}</h3>
         <p class="description">
           {{
             providerLabel
