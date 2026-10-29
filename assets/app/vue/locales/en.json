@@ -520,7 +520,9 @@
         "valueData": "{'Value/Data'}",
         "priority": "Priority",
         "copy": "Copy",
-        "leaveBlank": "(leave blank)"
+        "leaveBlank": "(leave blank)",
+        "sharedValue": "{fields} is {value} | {fields} are {value}",
+        "sharedSuffix": "across all {type} records."
       }
     },
     "manageMfa": {
