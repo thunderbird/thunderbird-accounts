@@ -82,6 +82,11 @@ const onVerify = async () => {
       return;
     }
 
+    if (!data.success) {
+      error.value = data.error;
+      return;
+    }
+
     // The summary step only says verification is in progress, so the result itself isn't needed here
     emit('verify', selectedProvider.value);
   } catch (e) {
