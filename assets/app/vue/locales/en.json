@@ -465,6 +465,8 @@
         "updateRecordsTitle": "Update the DNS records",
         "updateRecordsDescription": "Sign in to {provider} and add or update the records below. After saving the changes, return here and select Verify DNS settings.",
         "checkRecordFormat": "Check the DNS record format",
+        "genericProviderNoticeTitle": "Provider-specific instructions aren’t available.",
+        "genericProviderNoticeDescription": "Use the standard DNS records below.",
         "dnsRecords": "DNS Records",
         "verifyDnsSettings": "Verify DNS settings",
         "genericProviderName": "your DNS provider"
