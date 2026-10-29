@@ -1,10 +1,10 @@
 import { useAuthFetch } from "@/composables/useFetch";
+import type { CustomDomain, AddCustomDomainResponse } from "./types";
 
-type AddCustomDomainResponse = {
-  success: boolean;
-  domain_name?: string;
-  error?: string;
-  code?: string;
+export const listCustomDomains = async (): Promise<CustomDomain[]> => {
+  const { response } = await useAuthFetch(`/custom-domains/list`);
+  const data = await response.value.json();
+  return data.domains ?? [];
 };
 
 export const addCustomDomain = async (domainName: string): Promise<AddCustomDomainResponse> => {

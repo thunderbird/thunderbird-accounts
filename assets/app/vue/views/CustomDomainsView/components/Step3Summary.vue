@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { CheckboxInput, PrimaryButton } from '@thunderbirdops/services-ui';
+import { PrimaryButton } from '@thunderbirdops/services-ui';
 
 const { t } = useI18n();
 
@@ -10,11 +9,10 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  done: [notifyByEmail: boolean];
+  done: [];
 }>();
 
 const primaryEmail = window._page?.userEmail;
-const notifyByEmail = ref(false);
 </script>
 
 <template>
@@ -30,16 +28,13 @@ const notifyByEmail = ref(false);
       </template>
     </i18n-t>
 
-    <div class="notify">
-      <checkbox-input v-model="notifyByEmail" name="notify-by-email" />
-      <i18n-t keypath="views.customDomains.stepSummary.notifyByEmail" tag="label" for="notify-by-email">
-        <template #email>
-          <strong>{{ primaryEmail }}</strong>
-        </template>
-      </i18n-t>
-    </div>
+    <i18n-t keypath="views.customDomains.stepSummary.notifyByEmail" tag="p" class="description">
+      <template #email>
+        <strong>{{ primaryEmail }}</strong>
+      </template>
+    </i18n-t>
 
-    <primary-button form-action="none" @click="emit('done', notifyByEmail)">
+    <primary-button form-action="none" @click="emit('done')">
       {{ t('views.customDomains.stepSummary.done') }}
     </primary-button>
   </section>
@@ -60,24 +55,6 @@ const notifyByEmail = ref(false);
     line-height: 1.5;
     color: var(--colour-ti-secondary);
     margin-block-end: 1.5rem;
-  }
-
-  .notify {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: start;
-    gap: 0.5rem;
-    margin-block-end: 1.5rem;
-    color: var(--colour-ti-secondary);
-    line-height: 1.32;
-
-    :deep(.checkbox-wrapper) {
-      width: auto;
-    }
-
-    label {
-      cursor: pointer;
-    }
   }
 }
 </style>

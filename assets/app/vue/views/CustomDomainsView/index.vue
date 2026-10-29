@@ -7,10 +7,12 @@ import StepIndicator from '@/components/StepIndicator.vue';
 import Step1Add from './components/Step1Add.vue';
 import Step2Identify from './components/Step2Identify.vue';
 import Step3Summary from './components/Step3Summary.vue';
+import { useEmailSettings } from '../SettingsView/sections/EmailSettingsSection/useEmailSettings';
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const { requestCustomDomainsExpanded } = useEmailSettings();
 
 // An existing domain can be passed in to skip straight to choosing its DNS provider
 const initialDomain = typeof route.query.domain === 'string' ? route.query.domain : null;
@@ -39,9 +41,8 @@ const onVerify = (provider: string) => {
   currentStep.value = 2;
 };
 
-const onDone = (notifyByEmail: boolean) => {
-  // TODO: persist the "email me when verification is complete" preference
-  console.debug('Custom domain verification email notification:', notifyByEmail);
+const onDone = () => {
+  requestCustomDomainsExpanded();
   router.push('/settings');
 };
 </script>
