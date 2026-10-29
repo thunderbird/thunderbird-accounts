@@ -23,6 +23,7 @@ from thunderbird_accounts.mail.views import (
     _is_transient_backend_error,
     create_custom_domain,
     get_dns_records,
+    list_custom_domains,
     remove_custom_domain,
 )
 
@@ -441,6 +442,32 @@ class CreateCustomDomainTestCase(TestCase):
 
 
 @override_settings(HOSTED_DKIM_DOMAIN='dkim.example.net', HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'])
+class ListCustomDomainsTestCase(TestCase):
+    def setUp(self):
+        self.request_factory = RequestFactory()
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
+        self.url = reverse('list_custom_domains')
+
+    def test_returns_only_the_users_domains(self):
+        other_user = User.objects.create(username=f'other@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='5678')
+        Domain.objects.create(name='example.com', user=self.user)
+        Domain.objects.create(name='other.com', user=other_user)
+
+        request = self.request_factory.get(self.url)
+        request.user = self.user
+
+        response = list_custom_domains(request)
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content.decode())
+        self.assertTrue(data['success'])
+        self.assertEqual(
+            [{'name': 'example.com', 'status': Domain.DomainStatus.PENDING}],
+            data['domains'],
+        )
+
+
 class CustomDomainDNSRecordsTestCase(TestCase):
     def setUp(self):
         self.request_factory = RequestFactory()

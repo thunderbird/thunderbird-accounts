@@ -264,6 +264,15 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
 @login_required
 @require_http_methods(['GET'])
 @active_subscription_required
+def list_custom_domains(request: AuthenticatedHttpRequest):
+    """Lists the user's custom domains and their verification status"""
+    domains = [{'name': domain.name, 'status': domain.status} for domain in request.user.domains.all()]
+    return JsonResponse({'success': True, 'domains': domains})
+
+
+@login_required
+@require_http_methods(['GET'])
+@active_subscription_required
 def get_dns_records(request: HttpRequest):
     """Gets the DNS records for a custom domain"""
     domain = request.user.domains.get(name=request.GET.get('domain-name'))
