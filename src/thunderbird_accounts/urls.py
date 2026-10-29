@@ -58,6 +58,11 @@ urlpatterns = [
     path('app-passwords/set', mail_views.app_password_set, name='app_password_set'),
     path('display-name/set', mail_views.display_name_set, name='display_name_set'),
     path('custom-domains/list', mail_views.list_custom_domains, name='list_custom_domains'),
+    path(
+        'custom-domains/verification-result',
+        mail_views.get_custom_domain_verification_result,
+        name='custom_domain_verification_result',
+    ),
     path('custom-domains/add', mail_views.create_custom_domain, name='add_custom_domain'),
     path('custom-domains/verify', mail_views.verify_custom_domain, name='verify_custom_domain'),
     path('custom-domains/remove', mail_views.remove_custom_domain, name='remove_custom_domain'),

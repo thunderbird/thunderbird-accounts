@@ -273,6 +273,25 @@ def list_custom_domains(request: AuthenticatedHttpRequest):
 @login_required
 @require_http_methods(['GET'])
 @active_subscription_required
+def get_custom_domain_verification_result(request: AuthenticatedHttpRequest):
+    """Gets the outcome of the last verification attempt, e.g. to show which records need fixing"""
+    domain = request.user.domains.filter(name=request.GET.get('domain-name', '').lower()).first()
+    if not domain:
+        return JsonResponse({'success': False, 'error': _('Domain not found')}, status=404)
+
+    return JsonResponse(
+        {
+            'success': True,
+            'status': domain.status,
+            # Empty when the domain was never verified or the last attempt failed before it produced a result
+            **(domain.last_verification_result or {}),
+        }
+    )
+
+
+@login_required
+@require_http_methods(['GET'])
+@active_subscription_required
 def get_dns_records(request: HttpRequest):
     """Gets the DNS records for a custom domain"""
     domain = request.user.domains.get(name=request.GET.get('domain-name'))
@@ -350,9 +369,18 @@ def verify_custom_domain(request: AuthenticatedHttpRequest):
 
     if waffle.flag_is_active(request, settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP):
         if acquire_verification_lock(domain.uuid):
+            previous_status = domain.status
+            # A re-verification starts over, so the domain shouldn't keep claiming to be verified meanwhile.
+            # This has to be saved before queueing, or the task could finish first and be overwritten.
+            if previous_status == Domain.DomainStatus.VERIFIED:
+                domain.status = Domain.DomainStatus.PENDING
+                domain.save(update_fields=['status'])
             try:
                 mail_tasks.verify_custom_domain_and_notify.delay(str(domain.uuid))
             except Exception:
+                if domain.status != previous_status:
+                    domain.status = previous_status
+                    domain.save(update_fields=['status'])
                 release_verification_lock(domain.uuid)
                 raise
         return JsonResponse({'success': True, 'queued': True}, status=202)

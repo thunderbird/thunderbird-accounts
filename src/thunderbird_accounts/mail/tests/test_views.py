@@ -22,6 +22,7 @@ from thunderbird_accounts.mail.views import (
     AdminStalwartList,
     _is_transient_backend_error,
     create_custom_domain,
+    get_custom_domain_verification_result,
     get_dns_records,
     list_custom_domains,
     remove_custom_domain,
@@ -466,6 +467,53 @@ class ListCustomDomainsTestCase(TestCase):
             [{'name': 'example.com', 'status': Domain.DomainStatus.PENDING}],
             data['domains'],
         )
+
+
+class CustomDomainVerificationResultTestCase(TestCase):
+    def setUp(self):
+        self.request_factory = RequestFactory()
+        self.user = User.objects.create(username=f'test@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='1234')
+        Subscription.objects.create(user=self.user, status=Subscription.StatusValues.ACTIVE)
+        self.url = reverse('custom_domain_verification_result')
+
+    def _get(self, domain_name):
+        request = self.request_factory.get(self.url, {'domain-name': domain_name})
+        request.user = self.user
+        return get_custom_domain_verification_result(request)
+
+    def test_returns_the_stored_result(self):
+        result = {
+            'critical_errors': ['mxLookupError'],
+            'warnings': [],
+            'dns_records': [{'type': 'MX', 'name': '@', 'content': 'mail.example.net', 'status': 'missing'}],
+            'stale_dns_records': [],
+        }
+        Domain.objects.create(
+            name='example.com', user=self.user, status=Domain.DomainStatus.FAILED, last_verification_result=result
+        )
+
+        response = self._get('Example.com')
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content.decode())
+        self.assertTrue(data['success'])
+        self.assertEqual('failed', data['status'])
+        self.assertEqual(result['dns_records'], data['dns_records'])
+        self.assertEqual(result['critical_errors'], data['critical_errors'])
+
+    def test_returns_no_records_when_never_verified(self):
+        Domain.objects.create(name='example.com', user=self.user)
+
+        data = json.loads(self._get('example.com').content.decode())
+
+        self.assertTrue(data['success'])
+        self.assertNotIn('dns_records', data)
+
+    def test_other_users_domain_is_not_found(self):
+        other_user = User.objects.create(username=f'other@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='5678')
+        Domain.objects.create(name='other.com', user=other_user)
+
+        self.assertEqual(self._get('other.com').status_code, 404)
 
 
 class CustomDomainDNSRecordsTestCase(TestCase):
@@ -961,6 +1009,45 @@ class VerifyCustomDomainTestCase(TestCase):
 
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
+        cache.clear()
+
+    @override_flag(settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP, active=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.verify_custom_domain_and_notify.delay')
+    def test_revamp_flag_resets_a_verified_domain_to_pending_when_queueing(self, mock_delay):
+        self.domain.status = Domain.DomainStatus.VERIFIED
+        self.domain.save()
+        cache.clear()
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 202, response.content)
+        mock_delay.assert_called_once_with(str(self.domain.uuid))
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.PENDING, self.domain.status)
+        cache.clear()
+
+    @override_flag(settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP, active=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.verify_custom_domain_and_notify.delay')
+    def test_revamp_flag_restores_status_when_queueing_fails(self, mock_delay):
+        self.domain.status = Domain.DomainStatus.VERIFIED
+        self.domain.save()
+        cache.clear()
+        mock_delay.side_effect = ConnectionError('broker down')
+        self.client.raise_request_exception = False
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 500)
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.VERIFIED, self.domain.status)
         cache.clear()
 
     @override_flag(settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP, active=True)

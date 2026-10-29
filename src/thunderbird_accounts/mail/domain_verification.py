@@ -84,6 +84,8 @@ def verify_domain(domain: Domain) -> DomainVerificationResult:
         'stale_dns_records': stale_dns_records,
     }
 
+    domain.last_verification_result = response_data
+
     if not is_verified:
         domain.status = Domain.DomainStatus.FAILED
         domain.save()
@@ -124,6 +126,8 @@ def verify_domain(domain: Domain) -> DomainVerificationResult:
             logging.error(f'There was a problem saving the domain id for {domain.name} / {domain.uuid}')
 
         domain.stalwart_created_at = datetime.datetime.now(datetime.UTC)
-        domain.save()
+
+    # Also covers an already verified domain that was simply re-checked
+    domain.save()
 
     return DomainVerificationResult(is_verified=True, response_data=response_data)
