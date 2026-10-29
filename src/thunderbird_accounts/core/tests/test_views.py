@@ -8,8 +8,7 @@ from django.conf import settings
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import SimpleTestCase, TestCase, Client as RequestClient, RequestFactory
-from django.urls import resolve, reverse
-from django.views.generic import RedirectView
+from django.urls import reverse
 from pathlib import Path
 
 from thunderbird_accounts.authentication.models import User
@@ -52,12 +51,18 @@ class PublicVueRouteSyncTestCase(SimpleTestCase):
         return path.startswith('/') and ':' not in path and '*' not in path and path != '/'
 
 
-class AdminSlashRedirectTestCase(SimpleTestCase):
+class AdminRoutingTestCase(TestCase):
     def test_admin_without_slash_redirects_to_admin(self):
-        match = resolve('/admin')
+        response = RequestClient().get('/admin')
 
-        self.assertIs(match.func.view_class, RedirectView)
-        self.assertEqual(match.func.view_initkwargs, {'url': '/admin/', 'permanent': True})
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response['Location'], '/admin/')
+
+    def test_admin_with_slash_serves_django_admin(self):
+        response = RequestClient().get('/admin/', follow=True)
+
+        self.assertEqual(response.redirect_chain, [('/admin/login/?next=/admin/', 302)])
+        self.assertTemplateUsed(response, 'admin/login.html')
 
 
 class HomeViewRedirectTestCase(TestCase):
