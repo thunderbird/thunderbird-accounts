@@ -39,6 +39,7 @@ const emit = defineEmits<{
   'step-change': [step: STEP]
   'custom-domain-added': [customDomain: string]
   'custom-domain-verified': [customDomain: { name: string, status: DOMAIN_STATUS }]
+  'custom-domain-verification-queued': []
 }>();
 
 const step = ref<STEP>(STEP.INITIAL);
@@ -477,6 +478,13 @@ const onVerifyDomain = async () => {
     // domain's verification state untouched (don't apply results or mark FAILED).
     if (data.code === 'mail_backend_unavailable') {
       customDomainError.value = t('views.mail.sections.customDomains.mailBackendUnavailable');
+      return;
+    }
+
+    if (data.queued) {
+      emit('custom-domain-verified', { name: customDomain.value, status: DOMAIN_STATUS.PENDING });
+      emit('custom-domain-verification-queued');
+      customDomainError.value = null;
       return;
     }
 

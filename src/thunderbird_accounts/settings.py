@@ -747,3 +747,18 @@ WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART = 'is-address-taken-lookup-stalwart
 
 # Show the user's Send storage usage on the dashboard, and allow the endpoint that backs it to be called.
 WAFFLE_FLAG_SEND_STORAGE = 'send-storage'
+
+# Custom domains revamp. Verifying a custom domain runs as a background task and emails the user the result.
+WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP = 'custom-domains-revamp'
+
+# How long a queued custom domain verification blocks another one for the same domain.
+CUSTOM_DOMAIN_VERIFICATION_LOCK_SECONDS = int(os.getenv('CUSTOM_DOMAIN_VERIFICATION_LOCK_SECONDS', 300))
+
+# Outbound transactional email (Django's SMTP backend)
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 25))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS') == 'True'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL') == 'True'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', f'noreply@{PRIMARY_EMAIL_DOMAIN}')

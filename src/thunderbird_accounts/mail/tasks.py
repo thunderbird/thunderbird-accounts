@@ -30,7 +30,13 @@ from thunderbird_accounts.mail.exceptions import (
     HostedDkimPublishRetry,
     InvalidJMapResponseError,
 )
-from thunderbird_accounts.mail.models import Account, Email
+from thunderbird_accounts.mail.domain_verification import (
+    extend_verification_lock,
+    release_verification_lock,
+    verify_domain,
+)
+from thunderbird_accounts.mail.models import Account, Domain, Email
+from thunderbird_accounts.mail.notifications import send_domain_verification_result_email
 from thunderbird_accounts.core.types import TaskReturnStatus
 
 # Allow self-healing from problems accessing our DNS provider with generous retry policy.
@@ -481,5 +487,54 @@ def create_stalwart_account(
         'oidc_id': oidc_id,
         'stalwart_pkid': pkid,
         'user_uuid': user.uuid,
+        'task_status': TaskReturnStatus.SUCCESS,
+    }
+
+
+class VerifyCustomDomainTask(PatientExternalServiceTask):
+    """Holds the domain's verification lock for as long as the task is retrying."""
+
+    def on_retry(self, exc, task_id, args, kwargs, einfo):
+        extend_verification_lock(
+            args[0],
+            settings.CELERY_PATIENT_TASK_RETRY_BACKOFF_MAX + settings.CUSTOM_DOMAIN_VERIFICATION_LOCK_SECONDS,
+        )
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        release_verification_lock(args[0])
+
+
+@shared_task(base=VerifyCustomDomainTask, bind=True)
+def verify_custom_domain_and_notify(self, domain_uuid: str):
+    """Verifies a custom domain, then emails its owner the overall result."""
+    try:
+        domain = Domain.objects.select_related('user').get(uuid=domain_uuid)
+    except Domain.DoesNotExist:
+        logging.info(f'[verify_custom_domain_and_notify] Domain {domain_uuid} no longer exists, skipping.')
+        release_verification_lock(domain_uuid)
+        return {'domain_uuid': domain_uuid, 'task_status': TaskReturnStatus.SUCCESS}
+
+    try:
+        verify_domain(domain)
+    except Exception as ex:
+        # Transient mail backend failures are retried by the task base; anything else fails the verification.
+        if isinstance(ex, requests.RequestException):
+            raise_retryable_external_service_error(ex)
+        logging.exception(f'[verify_custom_domain_and_notify] Error verifying domain {domain.name}: {ex}')
+        domain.status = Domain.DomainStatus.FAILED
+        domain.last_verification_attempt = datetime.datetime.now(datetime.UTC)
+        domain.save()
+
+    release_verification_lock(domain.uuid)
+
+    try:
+        send_domain_verification_result_email(domain)
+    except Exception as ex:
+        # The verification result is already saved; a notification failure must not fail or retry the task.
+        logging.warning(f'[verify_custom_domain_and_notify] Could not email result for {domain.name}: {ex}')
+
+    return {
+        'domain_uuid': domain_uuid,
+        'status': domain.status,
         'task_status': TaskReturnStatus.SUCCESS,
     }
