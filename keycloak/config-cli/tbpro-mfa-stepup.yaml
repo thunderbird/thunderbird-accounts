@@ -15,8 +15,8 @@
 # without the `pre-provisioning-login` client scope when the user lacks the
 # `thundermail-access` realm role, which accounts grants once the Stalwart mailbox exists.
 # TBPRO_MAIL_GATE sets the subflow requirement: CONDITIONAL (on) or DISABLED (off). The role
-# and scope are created per environment with the Admin API; declaring `roles` or
-# `clientScopes` here would switch config-cli to managed mode and delete undeclared ones.
+# and scope are created per environment with the Admin API; declaring `roles` here would
+# switch config-cli to managed mode and delete undeclared ones.
 # A missing role or scope evaluates to false, i.e. the gate is skipped.
 realm: tbpro
 

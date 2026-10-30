@@ -197,8 +197,7 @@ finished.
 
 ### Keycloak
 
-Keycloak is the auth/OIDC provider that is setup by default. Two realms are imported the default `master` realm and the
-`tbpro` realm.
+Keycloak is the auth/OIDC provider that is setup by default. Two realms are imported the default `master` realm and the `tbpro` realm.
 
 If you like to login to Keycloak's admin interface you can access that at [http://keycloak:8999/admin/master/console/](http://keycloak:8999/admin/master/console/)
 with the following credentials:
@@ -210,7 +209,19 @@ Password: admin
 
 From there you can switch to the tbpro realm and access settings that will affect Account's and Stalwart's login.
 
-Additionally, you can access a simple user management portal under the tbpro realm available
+** Change realm settings in code **
+
+For consistency, more management of Keycloak is moving from ClickOps to code.  [`keycloak/config-cli/`](./keycloak/config-cli)`*.yaml` where the data is stored and [`scripts/apply-cli-config.sh`](./scripts/apply-cli-config.sh) for how we apply it. Changes applied here will overwrite anything changed by hand in the admin UI!
+
+Currently managed in code:
+
+ - MFA
+ - Client audience mappers
+ - client scope mappers
+
+New settings updates to Keycloak should follow this pattern.
+
+You can access a simple user management portal under the tbpro realm available
 at [http://keycloak:8999/realms/tbpro/account](http://keycloak:8999/realms/tbpro/account). Since this within the tbpro
 realm you can login to any account you created for accounts including admin@example.org.
 
