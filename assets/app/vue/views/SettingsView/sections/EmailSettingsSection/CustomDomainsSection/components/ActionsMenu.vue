@@ -2,6 +2,9 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhDotsThreeVertical } from '@phosphor-icons/vue';
+import { useRouter } from 'vue-router';
+import { WAFFLE_FLAG } from '@/types';
+import { isWaffleFlagActive } from '@/utils';
 
 // Types
 import { DOMAIN_STATUS } from '../types';
@@ -30,6 +33,8 @@ const showMenu = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 
 const { t } = useI18n();
+const router = useRouter();
+const isCustomDomainsRevampActive = isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP);
 
 const toggleMenu = () => {
   showMenu.value = !showMenu.value;
@@ -51,6 +56,33 @@ const emitVerificationResult = (data: {
 };
 
 const handleRetry = async () => {
+  // With the revamp enabled, verification (and re-verification) runs in the background and the
+  // custom domains view takes over: a failed domain explains what to fix, anything else queues a new
+  // verification and shows its summary
+  if (isCustomDomainsRevampActive) {
+    showMenu.value = false;
+
+    if (props.domain.status === DOMAIN_STATUS.FAILED) {
+      router.push({ path: '/custom-domains', state: { verificationResultsDomain: props.domain.name } });
+      return;
+    }
+
+    try {
+      const data = await verifyDomain(props.domain.name);
+
+      if (data.code === 'mail_backend_unavailable') {
+        emit('custom-domain-error', t('views.mail.sections.customDomains.mailBackendUnavailable'));
+      } else if (!data.success) {
+        emit('custom-domain-error', data.error);
+      } else {
+        router.push({ path: '/custom-domains', state: { verificationQueuedDomain: props.domain.name } });
+      }
+    } catch (error) {
+      emit('custom-domain-error', String(error));
+    }
+    return;
+  }
+
   try {
     const data = await verifyDomain(props.domain.name);
 
@@ -88,6 +120,13 @@ const handleClickOutside = (event: MouseEvent) => {
 };
 
 const handleViewDnsRecords = () => {
+  // With the revamp enabled, the records are part of the verification results
+  if (isCustomDomainsRevampActive) {
+    showMenu.value = false;
+    router.push({ path: '/custom-domains', state: { verificationResultsDomain: props.domain.name } });
+    return;
+  }
+
   emit('custom-domain-view-dns-records', props.domain.name);
   showMenu.value = false;
 };
