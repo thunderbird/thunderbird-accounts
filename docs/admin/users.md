@@ -25,6 +25,28 @@ There are currently four available actions:
 
 If you spot an option that's not documented or has an issue number, please ask a developer before using.
 
+### Deactivating Users
+
+Two independent switches control what a user can do. 
+| Switch | Where it is changed | Effect |
+|---|---|---|
+| `Active` (Permissions, Change user page) | Accounts admin | Staff kill switch. Unticking disables the Keycloak user and signs them out everywhere, locks every service below, and signs them out of Accounts. |
+| Subscription status | Paddle | Billing lever. A subscription that is `active` or `past_due` entitles the user to the services; `paused` or `canceled` locks the services but the user can still sign in to Accounts, for example to fix payment. |
+
+Services locked by either switch:
+
+* Stalwart: the mail account loses the `authenticate` permission. Existing app passwords stop working and nothing can sign in or send, but incoming mail keeps arriving in the mailbox and is available again once access is restored.
+
+`Deactivated at` under Important dates records when `Active` was last unticked. Ticking `Active` again clears the timestamp and restores Keycloak; the services come back only if the subscription still entitles the user.
+
+Changing `Active` never changes the user's Paddle subscription. To stop billing, pause or cancel in Paddle.
+
+If Keycloak or Stalwart could not be updated you'll see an error at the top of the page. The user is still marked inactive in Accounts; to retry, tick `Active`, save, untick it and save again, or ask a developer.
+
+#### Why does mail keep arriving while an account is deactivated?
+
+A deactivated account may be activated again, so its address is not dead yet. That rules out both ways of refusing mail. We can't accept the mail and bounce it: most inbound mail is spam with forged sender addresses, so the bounces would go to people who never sent anything, and that backscatter would damage our sending reputation. We can't reject it during the SMTP session either. A permanent rejection tells the sending server the address does not exist, so legitimate senders see "user unknown" for a real person and automated systems stop sending for good; a user who is unlocked later would silently lose those subscriptions and notifications. A temporary rejection only defers the problem, since sending servers retry for a few days and then give up the same way. Once the account is fully removed, the address really is gone and rejecting at SMTP time is correct: the sending server handles the failure, so we never emit a bounce ourselves.
+
 ### Deleting Users
 
 Deleting a user will **remove their ability to login and access** Thunderbird Pro Services, as well as
@@ -137,20 +159,6 @@ This is not an ideal flow, but it's needed for now.
 
 ![A screenshot of part of the change user form.](./users_6.png)
 
-### Deactivating Users
-
-Unticking `Active` under Permissions on the Change user page and saving deactivates the user everywhere:
-
-* Keycloak: the user is disabled and signed out of every session, so they can no longer sign in to Accounts, webmail, or a Thunderbird client that uses OAuth.
-* Stalwart: the mail account loses all of its permissions. Existing app passwords stop working, and incoming mail starts bouncing with a `550` error.
-* Accounts: the user is signed out, and API requests made with their tokens are refused.
-
- `Deactivated at` under Important dates records when this happened. Ticking `Active` again reverses all of the above and clears the timestamp;
-
-Deactivating here does not change the user's Paddle subscription. To stop billing, pause or cancel the subscription in Paddle; Accounts is notified by webhook and handles the offboarding from there.
-
-If Keycloak or Stalwart could not be updated you'll see an error at the top of the page. The user is still marked inactive in Accounts; to retry, tick `Active`, save, untick it and save again, or ask a developer.
-
 ## History
 
 On some pages you'll see a button called History. Here you can see an audit log of who performed an action, what that
@@ -158,3 +166,4 @@ action was (high level), and when that action was performed. An even higher-leve
 is located on the main admin panel titled as `Recent Actions`.
 
 ![A screenshot of the history page. It shows the date and time, user who performed the action, and the action that was performed.](./users_7.png)
+

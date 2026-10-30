@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.test import TestCase
 
 from thunderbird_accounts.authentication.models import User
+from thunderbird_accounts.subscription.models import Subscription
 
 
 class UserUsernameValidatorTestCase(TestCase):
@@ -149,3 +150,30 @@ class UserRecoveryEmailRejectionTestCase(TestCase):
         self.assertEqual(user.recovery_email, 'old@example.com')
         self.assertIsNotNone(user.recovery_email_rejected_at)
         self.assertEqual(user.recovery_email_rejection_reason, 'bounced')
+
+
+class UserHasActiveSubscriptionTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(username='person@example.org', email='recovery@example.com')
+
+    def _has_active_subscription_with(self, status: Subscription.StatusValues) -> bool:
+        Subscription.objects.create(user=self.user, status=status, paddle_id='sub_1', paddle_customer_id='ctm_1')
+        return User.objects.get(pk=self.user.pk).has_active_subscription
+
+    def test_no_subscription(self):
+        self.assertFalse(self.user.has_active_subscription)
+
+    def test_active_counts(self):
+        self.assertTrue(self._has_active_subscription_with(Subscription.StatusValues.ACTIVE))
+
+    def test_past_due_counts(self):
+        self.assertTrue(self._has_active_subscription_with(Subscription.StatusValues.PAST_DUE))
+
+    def test_paused_does_not_count(self):
+        self.assertFalse(self._has_active_subscription_with(Subscription.StatusValues.PAUSED))
+
+    def test_canceled_does_not_count(self):
+        self.assertFalse(self._has_active_subscription_with(Subscription.StatusValues.CANCELED))
+
+    def test_trialing_does_not_count(self):
+        self.assertFalse(self._has_active_subscription_with(Subscription.StatusValues.TRIALING))

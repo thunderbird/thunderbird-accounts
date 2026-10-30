@@ -808,7 +808,7 @@ class TestAccountOperations(SimpleTestCase):
             {'quotas/maxDiskQuota': 2048},
         )
 
-    def test_set_account_active_false_replaces_permissions_with_an_empty_set(self):
+    def test_set_account_active_false_disables_authenticate_only(self):
         self.mail_client.update_account = MagicMock()
 
         self.mail_client.set_account_active('person@example.org', False)
@@ -817,7 +817,13 @@ class TestAccountOperations(SimpleTestCase):
         self.assertEqual(principal_id, 'person@example.org')
         self.assertEqual(
             account_update.model_dump(exclude_unset=True),
-            {'permissions': {'@type': 'Replace', 'enabledPermissions': {}, 'disabledPermissions': {}}},
+            {
+                'permissions': {
+                    '@type': 'Merge',
+                    'enabledPermissions': {},
+                    'disabledPermissions': {'authenticate': True},
+                }
+            },
         )
 
     def test_set_account_active_true_restores_inherited_permissions(self):

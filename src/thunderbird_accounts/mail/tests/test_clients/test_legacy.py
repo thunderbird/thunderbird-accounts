@@ -675,30 +675,24 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
 )
 @patch.object(MailClient, '_update_principal')
 class TestMailClientSetAccountActive(SimpleTestCase):
-    def test_deactivation_disables_authenticate_and_email_receive(self, mock_update_principal: MagicMock):
+    def test_deactivation_disables_authenticate_only(self, mock_update_principal: MagicMock):
         mock_update_principal.return_value.json.return_value = {}
 
         MailClient().set_account_active('person@example.org', False)
 
         mock_update_principal.assert_called_once_with(
             'person@example.org',
-            [
-                {'action': 'addItem', 'field': 'disabledPermissions', 'value': 'authenticate'},
-                {'action': 'addItem', 'field': 'disabledPermissions', 'value': 'email-receive'},
-            ],
+            [{'action': 'addItem', 'field': 'disabledPermissions', 'value': 'authenticate'}],
         )
 
-    def test_reactivation_removes_the_disabled_permissions(self, mock_update_principal: MagicMock):
+    def test_reactivation_removes_the_disabled_permission(self, mock_update_principal: MagicMock):
         mock_update_principal.return_value.json.return_value = {}
 
         MailClient().set_account_active('person@example.org', True)
 
         mock_update_principal.assert_called_once_with(
             'person@example.org',
-            [
-                {'action': 'removeItem', 'field': 'disabledPermissions', 'value': 'authenticate'},
-                {'action': 'removeItem', 'field': 'disabledPermissions', 'value': 'email-receive'},
-            ],
+            [{'action': 'removeItem', 'field': 'disabledPermissions', 'value': 'authenticate'}],
         )
 
     def test_stalwart_error_raises(self, mock_update_principal: MagicMock):

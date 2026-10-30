@@ -465,6 +465,13 @@ STALWART_JMAP_API_IGNORE_API_URL: bool = os.getenv('STALWART_JMAP_API_IGNORE_API
 STALWART_ALIAS_UPDATE_LOCK_TIMEOUT = 30
 STALWART_ALIAS_UPDATE_LOCK_BLOCKING_TIMEOUT = 30
 
+# Services whose access is updated during activation/deactivation of user or subscription; run in this order.
+# See authentication/account_status.py for the handler contract.
+USER_ACCOUNT_STATUS_HANDLERS = [
+    'thunderbird_accounts.authentication.keycloak_account_status.KeycloakAccountStatusHandler',
+    'thunderbird_accounts.mail.stalwart_account_status.StalwartAccountStatusHandler',
+]
+
 HOSTED_DKIM_DOMAIN = os.getenv('HOSTED_DKIM_DOMAIN')
 HOSTED_DKIM_SELECTORS = [
     selector.strip() for selector in os.getenv('HOSTED_DKIM_SELECTORS', 'tm1,tm2,tm3').split(',') if selector.strip()

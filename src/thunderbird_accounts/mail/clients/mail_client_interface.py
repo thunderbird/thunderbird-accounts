@@ -113,8 +113,8 @@ class MailClientInterface:
         raise NotImplementedError()
 
     def set_account_active(self, principal_id: str, active: bool) -> None:
-        """Deactivation removes the account's permissions so no credential can authenticate and inbound mail is
-        bounced; reactivation restores them."""
+        """Deactivation removes the `authenticate` permission so no credential can sign in or send while inbound
+        mail keeps being delivered to the mailbox; reactivation restores it."""
         raise NotImplementedError()
 
     def make_api_key(self, principal_id, password):

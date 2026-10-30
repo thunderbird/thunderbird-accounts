@@ -297,10 +297,8 @@ class ActiveSubscriptionRequiredViewTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, f'/oidc/authenticate/?next={reverse("paddle_portal")}')
 
-    def _create_active_subscription(self):
-        return Subscription.objects.create(
-            user=self.user, status=Subscription.StatusValues.ACTIVE, paddle_customer_id='ctm_123'
-        )
+    def _create_active_subscription(self, status=Subscription.StatusValues.ACTIVE):
+        return Subscription.objects.create(user=self.user, status=status, paddle_customer_id='ctm_123')
 
     def test_paddle_portal_link_redirects_to_fresh_portal_session(self):
         self._create_active_subscription()
@@ -317,6 +315,19 @@ class ActiveSubscriptionRequiredViewTestCase(TestCase):
         self.assertEqual(second.url, 'https://portal.paddle.example/overview')
         # Portal links must never be cached or reused, so each request creates its own session
         self.assertEqual(sessions.create.call_count, 2)
+        self.assertEqual(sessions.create.call_args.args[0], 'ctm_123')
+
+    def test_paddle_portal_link_works_while_past_due(self):
+        self._create_active_subscription(status=Subscription.StatusValues.PAST_DUE)
+
+        with patch('thunderbird_accounts.subscription.decorators.init_paddle') as init_paddle_mock:
+            sessions = init_paddle_mock.return_value.customer_portal_sessions
+            sessions.create.return_value.urls.general.overview = 'https://portal.paddle.example/overview'
+
+            response = self.client.get(reverse('paddle_portal'), HTTP_ACCEPT='text/html')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://portal.paddle.example/overview')
         self.assertEqual(sessions.create.call_args.args[0], 'ctm_123')
 
     def test_paddle_portal_link_redirects_to_dashboard_with_error_when_paddle_fails(self):
