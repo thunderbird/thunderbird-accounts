@@ -97,7 +97,8 @@ def verify_domain(domain: Domain) -> DomainVerificationResult:
         stalwart_resp = None
 
     # Only roll through these steps if the domain was never provisioned, failed before, OR stalwart doesn't have our
-    # domain. A re-verification of a verified domain is queued as PENDING, so stalwart_created_at marks it as provisioned.
+    # domain. A re-verification of a verified domain is queued as PENDING, so stalwart_created_at marks it as
+    # provisioned.
     if domain.status == Domain.DomainStatus.FAILED or not domain.stalwart_created_at or not stalwart_resp:
         # Deferred: mail.tasks imports this module
         from thunderbird_accounts.mail import tasks as mail_tasks
