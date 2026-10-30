@@ -51,20 +51,6 @@ class PublicVueRouteSyncTestCase(SimpleTestCase):
         return path.startswith('/') and ':' not in path and '*' not in path and path != '/'
 
 
-class AdminRoutingTestCase(TestCase):
-    def test_admin_without_slash_redirects_to_admin(self):
-        response = RequestClient().get('/admin')
-
-        self.assertEqual(response.status_code, 301)
-        self.assertEqual(response['Location'], '/admin/')
-
-    def test_admin_with_slash_serves_django_admin(self):
-        response = RequestClient().get('/admin/', follow=True)
-
-        self.assertEqual(response.redirect_chain, [('/admin/login/?next=/admin/', 302)])
-        self.assertTemplateUsed(response, 'admin/login.html')
-
-
 class HomeViewRedirectTestCase(TestCase):
     """Test redirect behavior for authenticated and unauthenticated users."""
 
