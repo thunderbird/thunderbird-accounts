@@ -52,6 +52,10 @@ from thunderbird_accounts.mail import tasks as mail_tasks
 from thunderbird_accounts.mail import utils
 from thunderbird_accounts.subscription.decorators import active_subscription_required
 
+# Ids like 'godaddy' or 'metanet-plesk'
+# Added on the module level so it doesn't get recompiled on every method call
+DNS_PROVIDER_ID_PATTERN = re.compile(r'[a-z0-9-]{1,50}')
+
 
 def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: str):
     sentry_sdk.set_context(
@@ -282,11 +286,11 @@ def get_custom_domain_verification_result(request: AuthenticatedHttpRequest):
 
     return JsonResponse(
         {
+            # Empty when the domain was never verified or the last attempt failed before it produced a result
+            **(domain.last_verification_result or {}),
             'success': True,
             'status': domain.status,
             'dns_provider': domain.dns_provider,
-            # Empty when the domain was never verified or the last attempt failed before it produced a result
-            **(domain.last_verification_result or {}),
         }
     )
 
@@ -372,9 +376,6 @@ def verify_custom_domain(request: AuthenticatedHttpRequest):
     # Optional, sent when the user picks who manages their DNS. Provider ids are matched by the frontend.
     dns_provider = data.get('dns-provider')
     if dns_provider is not None:
-        # Ids like 'godaddy' or 'metanet-plesk'
-        DNS_PROVIDER_ID_PATTERN = re.compile(r'[a-z0-9-]{1,50}')
-
         if not isinstance(dns_provider, str) or not DNS_PROVIDER_ID_PATTERN.fullmatch(dns_provider):
             return JsonResponse({'success': False, 'error': _('Invalid DNS provider')}, status=400)
         if domain.dns_provider != dns_provider:

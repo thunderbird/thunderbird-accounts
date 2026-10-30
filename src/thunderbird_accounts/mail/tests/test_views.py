@@ -698,6 +698,53 @@ class VerifyCustomDomainTestCase(TestCase):
     @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
     @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
     @patch('thunderbird_accounts.mail.domain_verification.MailClient')
+    def test_reverification_of_pending_provisioned_domain_does_not_reprovision(
+        self,
+        mock_mail_client_cls,
+        mock_check_stale_dns_records,
+        mock_publish_hosted_dkim,
+    ):
+        """A re-verification is queued as PENDING, so provisioning is decided by stalwart_created_at"""
+        created_at = datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
+        verified_at = datetime.datetime(2026, 1, 2, tzinfo=datetime.UTC)
+        self.domain.stalwart_id = 'domain-id'
+        self.domain.status = Domain.DomainStatus.PENDING
+        self.domain.stalwart_created_at = created_at
+        self.domain.verified_at = verified_at
+        self.domain.save()
+
+        mock_instance = Mock()
+        mock_instance.check_domain_dns.return_value = {
+            'is_verified': True,
+            'critical_errors': [],
+            'warnings': [],
+            'dns_records': [],
+        }
+        mock_instance.get_domain.return_value = {'id': 'domain-id'}
+        mock_check_stale_dns_records.return_value = []
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        mock_instance.create_domain.assert_not_called()
+        mock_instance.ensure_dkim.assert_not_called()
+        mock_instance.activate_pending_dkim_signatures.assert_not_called()
+        mock_publish_hosted_dkim.assert_not_called()
+
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.VERIFIED, self.domain.status)
+        self.assertEqual(created_at, self.domain.stalwart_created_at)
+        self.assertEqual(verified_at, self.domain.verified_at)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
     def test_reverification_of_bad_domain_is_success(
         self,
         mock_mail_client_cls,
