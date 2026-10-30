@@ -443,7 +443,6 @@ class CreateCustomDomainTestCase(TestCase):
         self.assertFalse(Domain.objects.exists())
 
 
-@override_settings(HOSTED_DKIM_DOMAIN='dkim.example.net', HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'])
 class ListCustomDomainsTestCase(TestCase):
     def setUp(self):
         self.request_factory = RequestFactory()
@@ -522,6 +521,7 @@ class CustomDomainVerificationResultTestCase(TestCase):
         self.assertEqual(self._get('other.com').status_code, 404)
 
 
+@override_settings(HOSTED_DKIM_DOMAIN='dkim.example.net', HOSTED_DKIM_SELECTORS=['tm1', 'tm2', 'tm3'])
 class CustomDomainDNSRecordsTestCase(TestCase):
     def setUp(self):
         self.request_factory = RequestFactory()
