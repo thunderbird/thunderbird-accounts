@@ -50,6 +50,7 @@ urlpatterns = [
         auth_views.bulk_import_allow_list,
         name='allow_list_entry_import_submit',
     ),
+    path('admin', RedirectView.as_view(url='/admin/', permanent=True)),
     path('admin/', admin.site.urls),
     # Django-specific routes (not handled by Vue)
     path('contact/fields', support_views.contact_fields, name='contact_fields'),
