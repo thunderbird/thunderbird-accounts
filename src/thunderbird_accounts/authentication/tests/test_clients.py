@@ -447,3 +447,64 @@ class KeycloakClientLogoutUserTestCase(SimpleTestCase):
         self.assertEqual(ctx.exception.oidc_id, OIDC_ID)
         self.assertIn('Error<404>', str(ctx.exception))
         mock_capture.assert_called_once_with(error)
+
+
+@patch('thunderbird_accounts.authentication.clients.sentry_sdk.capture_exception')
+@patch.object(KeycloakClient, 'request')
+class KeycloakClientUpdateUserAttributesTestCase(SimpleTestCase):
+    CURRENT = {
+        'id': OIDC_ID,
+        'username': 'person@example.org',
+        'enabled': True,
+        'attributes': {'zoneinfo': ['UTC'], 'is_services_admin': ['yes'], 'is_subscribed': ['true']},
+    }
+
+    def _put_body(self, mock_request) -> dict:
+        endpoint, method = mock_request.call_args.args
+        self.assertEqual((endpoint, method), (f'users/{OIDC_ID}', RequestMethods.PUT))
+        return mock_request.call_args.kwargs['json_data']
+
+    def test_attributes_are_merged_into_the_fetched_representation(self, mock_request, mock_capture):
+        mock_request.side_effect = [
+            build_keycloak_success_response(self.CURRENT),
+            build_keycloak_success_response(),
+        ]
+
+        KeycloakClient().update_user(OIDC_ID, enabled=False, attributes={'is_subscribed': 'false'})
+
+        self.assertEqual(mock_request.call_args_list[0].args, (f'users/{OIDC_ID}', RequestMethods.GET))
+        body = self._put_body(mock_request)
+        self.assertFalse(body['enabled'])
+        self.assertEqual(body['username'], 'person@example.org')
+        self.assertEqual(
+            body['attributes'],
+            {'zoneinfo': ['UTC'], 'is_services_admin': ['yes'], 'is_subscribed': 'false', 'locale': 'en'},
+        )
+
+    def test_a_given_representation_skips_the_lookup(self, mock_request, mock_capture):
+        mock_request.return_value = build_keycloak_success_response()
+
+        KeycloakClient().update_user(
+            OIDC_ID, enabled=True, attributes={'is_subscribed': 'true'}, user_data=self.CURRENT
+        )
+
+        mock_request.assert_called_once()
+        body = self._put_body(mock_request)
+        self.assertTrue(body['enabled'])
+        self.assertEqual(body['attributes']['is_services_admin'], ['yes'])
+        self.assertEqual(body['attributes']['is_subscribed'], 'true')
+
+    def test_plan_info_writes_is_subscribed_as_true_or_false(self, mock_request, mock_capture):
+        for is_subscribed, expected in ((True, 'true'), (False, 'false')):
+            with self.subTest(is_subscribed=is_subscribed):
+                mock_request.reset_mock()
+                mock_request.side_effect = [
+                    build_keycloak_success_response(self.CURRENT),
+                    build_keycloak_success_response(),
+                ]
+                with patch('thunderbird_accounts.authentication.clients.User.objects.get'):
+                    KeycloakClient().update_user_plan_info(OIDC_ID, is_subscribed=is_subscribed)
+
+                body = self._put_body(mock_request)
+                self.assertEqual(body['attributes']['is_subscribed'], expected)
+                self.assertEqual(body['attributes']['is_services_admin'], ['yes'])
