@@ -2,11 +2,12 @@
 
 ### Special variables used throughout this file
 
-# Update this value to update all containers based on this thunderbird/accounts image
-.accounts_image: &ACCOUNTS_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:c4027e79fe7670d7ad2d546acb832ba7f21dc85e
-
-# Update this value to update all containers based on this Keycloak image
-.keycloak_image: &KEYCLOAK_IMAGE 768512802988.dkr.ecr.eu-central-1.amazonaws.com/thunderbird/accounts:keycloak-c4027e79fe7670d7ad2d546acb832ba7f21dc85e
+# Stage image tags are not committed. merge.yml replaces these anchors with the images it just
+# built; otherwise "live:<cluster>/<service>/<container>" resolves to the image that ECS service
+# runs now (pulumi/live_images.py), so a `pulumi up` outside CI can't roll stage back (#1409).
+# The celery and flower containers follow the accounts service's image.
+.accounts_image: &ACCOUNTS_IMAGE live:accounts-stage-fargate-accounts/accounts-stage-fargate-accounts/accounts
+.keycloak_image: &KEYCLOAK_IMAGE live:accounts-stage-fargate-keycloak/accounts-stage-fargate-keycloak/keycloak
 
 # These variables are common to Accounts application environments. Some tasks will require additional configuration.
 .admin_contact: &VAR_ADMIN_CONTACT {name: "ADMIN_CONTACT", value: "dummy@example.org"}

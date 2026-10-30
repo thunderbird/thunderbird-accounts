@@ -14,5 +14,10 @@ dependencies = { file = ["requirements.txt"] }
 
 [project.optional-dependencies]
 dev = [
+    "pytest",
     "ruff"
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
