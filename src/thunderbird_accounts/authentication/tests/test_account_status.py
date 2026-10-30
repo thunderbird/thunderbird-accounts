@@ -223,4 +223,3 @@ class SyncUserAccessTestCase(TestCase):
         self.assertFalse(self.user.is_active)
         expected = UserAccess(can_sign_in=False, has_services=False)
         self.assertEqual(HANDLER_CALLS, [('Recording', expected), ('Second', expected)])
-
