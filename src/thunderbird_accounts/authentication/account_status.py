@@ -77,7 +77,7 @@ def sync_user_access(user: User) -> list[str]:
 
 
 def set_user_active(user: User, active: bool) -> list[str]:
-    """Persist ``is_active`` and update services to refoect it. Returns the handler error messages."""
+    """Persist ``is_active`` and update services to reflect it. Returns the handler error messages."""
     user.is_active = active
     user.save(update_fields=['is_active', 'updated_at'])
     return sync_user_access(user)
