@@ -501,6 +501,10 @@ class VerifyCustomDomainTask(PatientExternalServiceTask):
         )
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
+        # Retries ran out: don't leave the domain pending, as the view reset it when queueing.
+        Domain.objects.filter(uuid=args[0], status=Domain.DomainStatus.PENDING).update(
+            status=Domain.DomainStatus.FAILED, last_verification_attempt=datetime.datetime.now(datetime.UTC)
+        )
         release_verification_lock(args[0])
 
 
