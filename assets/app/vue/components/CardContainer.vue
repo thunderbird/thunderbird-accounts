@@ -51,7 +51,7 @@ defineEmits<{
 <style scoped>
 section {
   position: relative;
-  background-color: var(--colour-neutral-base);
+  background-color: var(--colour-surface-base);
   border-radius: 1.5rem;
   box-shadow: 0.25rem 0.25rem 1rem 0 rgba(0, 0, 0, 0.04);
   width: 100%;

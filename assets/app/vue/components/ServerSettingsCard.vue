@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhInfo } from '@phosphor-icons/vue';
-import { ToolTip } from '@thunderbirdops/services-ui';
+import { ToolTip, TooltipPosition } from '@thunderbirdops/services-ui';
 import ServerSettingsCardItem from '@/components/ServerSettingsCardItem.vue';
 import { WHAT_IS_IMAP_SUPPORT_URL, WHAT_IS_JMAP_SUPPORT_URL, WHAT_IS_SMTP_SUPPORT_URL } from '@/defines';
 
@@ -87,32 +87,38 @@ const incomingServerDetails = computed(() =>
   
         <template #footer v-if="showFooter">
           <template v-if="incomingServerSelectedTab === INCOMING_SERVER_TABS.IMAP">
-            <div class="what-is-container">
-              <ph-info size="24" weight="fill" aria-hidden="true" />
-              <span>{{ t('views.mail.sections.dashboard.whatIsImap') }}</span>
-  
-              <tool-tip :alt="t('views.mail.sections.dashboard.whatIsImap')">
+            <tool-tip :position="TooltipPosition.Top">
+              <template #default="{ tooltipId }">
+                <div class="what-is-container" tabindex="0" :aria-describedby="tooltipId">
+                  <ph-info size="24" weight="fill" aria-hidden="true" />
+                  <span>{{ t('views.mail.sections.dashboard.whatIsImap') }}</span>
+                </div>
+              </template>
+              <template #content>
                 <i18n-t keypath="views.mail.sections.dashboard.whatIsImapContent" tag="span">
                   <template #supportUrl>
                     <a :href="WHAT_IS_IMAP_SUPPORT_URL" target="_blank">{{ t('views.mail.sections.dashboard.whatIsImapArticleTitle') }}</a>
                   </template>
                 </i18n-t>
-              </tool-tip>
-            </div>
+              </template>
+            </tool-tip>
           </template>
           <template v-else>
-            <div class="what-is-container">
-              <ph-info size="24" weight="fill" aria-hidden="true" />
-              <span>{{ t('views.mail.sections.dashboard.whatIsJmap') }}</span>
-  
-              <tool-tip :alt="t('views.mail.sections.dashboard.whatIsJmap')">
+            <tool-tip :position="TooltipPosition.Top">
+              <template #default="{ tooltipId }">
+                <div class="what-is-container" tabindex="0" :aria-describedby="tooltipId">
+                  <ph-info size="24" weight="fill" aria-hidden="true" />
+                  <span>{{ t('views.mail.sections.dashboard.whatIsJmap') }}</span>
+                </div>
+              </template>
+              <template #content>
                 <i18n-t keypath="views.mail.sections.dashboard.whatIsJmapContent" tag="span">
                   <template #supportUrl>
                     <a :href="WHAT_IS_JMAP_SUPPORT_URL" target="_blank">{{ t('views.mail.sections.dashboard.whatIsJmapArticleTitle') }}</a>
                   </template>
                 </i18n-t>
-              </tool-tip>
-            </div>
+              </template>
+            </tool-tip>
           </template>
         </template>
       </server-settings-card-item>
@@ -134,18 +140,21 @@ const incomingServerDetails = computed(() =>
         </template>
   
         <template #footer v-if="showFooter">
-          <div class="what-is-container">
-            <ph-info size="24" weight="fill" aria-hidden="true" />
-            <span>{{ t('views.mail.sections.dashboard.whatIsSmtp') }}</span>
-  
-            <tool-tip :alt="t('views.mail.sections.dashboard.whatIsSmtp')">
+          <tool-tip :position="TooltipPosition.Top">
+            <template #default="{ tooltipId }">
+              <div class="what-is-container" tabindex="0" :aria-describedby="tooltipId">
+                <ph-info size="24" weight="fill" aria-hidden="true" />
+                <span>{{ t('views.mail.sections.dashboard.whatIsSmtp') }}</span>
+              </div>
+            </template>
+            <template #content>
               <i18n-t keypath="views.mail.sections.dashboard.whatIsSmtpContent" tag="span">
                 <template #supportUrl>
                   <a :href="WHAT_IS_SMTP_SUPPORT_URL" target="_blank">{{ t('views.mail.sections.dashboard.whatIsSmtpArticleTitle') }}</a>
                 </template>
               </i18n-t>
-            </tool-tip>
-          </div>
+            </template>
+          </tool-tip>
         </template>
       </server-settings-card-item>
     </div>

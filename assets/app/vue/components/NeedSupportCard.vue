@@ -32,13 +32,13 @@ const { t } = useI18n();
   border-radius: 1rem;
   border: solid 1px rgba(88, 201, 255, 0.2);
   background-color: rgba(0, 0, 0, 0.4);
-  color: #eeeef0; /* TODO: --colour-ti-base forced dark */
+  color: var(--colour-ti-base-dark);
   padding: 1rem 2rem;
 
   h2 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #d9d9de; /* TODO: --colour-ti-secondary forced dark */
+    color: var(--colour-ti-secondary-dark);
     margin-block-end: 1.75rem;
     text-align: center;
   }

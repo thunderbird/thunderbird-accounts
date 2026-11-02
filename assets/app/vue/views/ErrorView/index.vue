@@ -80,7 +80,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--colour-neutral-lower);
+  background-color: var(--colour-surface-lower);
 }
 
 main {

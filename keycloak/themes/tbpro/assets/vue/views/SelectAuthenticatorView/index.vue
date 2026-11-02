@@ -58,15 +58,15 @@ export default {
   text-align: left;
   cursor: pointer;
   padding: 1rem 1.125rem;
-  border: 0.0625rem solid var(--colour-neutral-border);
+  border: 0.0625rem solid var(--colour-surface-border);
   border-radius: 0.5rem;
-  background-color: var(--colour-neutral-base, #ffffff);
+  background-color: var(--colour-surface-base, #ffffff);
   color: var(--colour-ti-base);
   transition: var(--transition, 0.2s ease);
 }
 
 .select-auth-item:hover {
-  border-color: var(--colour-neutral-border-intense);
+  border-color: var(--colour-surface-border-intense);
 }
 
 .select-auth-item__body {

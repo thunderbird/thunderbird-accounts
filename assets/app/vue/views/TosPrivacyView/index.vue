@@ -173,7 +173,7 @@ export default {
       <p class="acknowledgment">{{ t('views.tosPrivacy.acknowledgment') }}</p>
 
       <div class="buttons">
-        <primary-button variant="outline" :disabled="declining" @click="handleDecline">
+        <primary-button outline :disabled="declining" @click="handleDecline">
           {{ declineButtonLabel }}
         </primary-button>
         <primary-button :disabled="accepting" @click="handleAccept">
@@ -207,11 +207,11 @@ h1 {
 }
 
 .error-message {
-  color: var(--colour-danger-default, #d32f2f);
+  color: var(--colour-critical-default, #d32f2f);
   padding: 0.75rem 1rem;
   margin-block-end: 1rem;
   border-radius: 0.5rem;
-  background-color: var(--colour-danger-lower, #fdecea);
+  background-color: var(--colour-critical-soft, #fdecea);
 }
 
 .loading {
@@ -230,11 +230,11 @@ h1 {
     border-block-end: 2px solid transparent;
     padding-block: 1rem;
     text-align: center;
-    background-color: var(--colour-neutral-lower);
+    background-color: var(--colour-surface-lower);
 
     &.active {
       border-block-end-color: var(--colour-primary-default);
-      background-color: var(--colour-neutral-base);
+      background-color: var(--colour-surface-base);
     }
   }
 }
@@ -245,7 +245,7 @@ h1 {
   align-items: center;
   gap: 2rem;
   padding: 2rem 1.5rem 1.5rem 1.5rem;
-  background-color: var(--colour-neutral-base);
+  background-color: var(--colour-surface-base);
   border-end-start-radius: 1rem;
   border-end-end-radius: 1rem;
 

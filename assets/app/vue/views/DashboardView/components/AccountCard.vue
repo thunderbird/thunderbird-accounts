@@ -158,7 +158,7 @@ onMounted(async () => {
 }
 
 .fake-button-link {
-  color: var(--colour-service-primary);
+  color: var(--colour-primary-default);
   display: flex;
   justify-content: center;
   align-items: center;

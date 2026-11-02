@@ -27,7 +27,7 @@ defineProps<{
   align-items: center;
   gap: 0.25rem;
   padding: 0.75rem 0.5rem 0.5rem;
-  border: 1px solid var(--colour-neutral-border);
+  border: 1px solid var(--colour-surface-border);
   border-radius: 8px;
 
   .action-content {
