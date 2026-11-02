@@ -38,7 +38,7 @@
     "qr": "^0.5.5",
     "thunderbird-account-qr-code": "^1.1.0",
     "vue": "^3.5.44",
-    "vue-i18n": "^11.1.11",
+    "vue-i18n": "^11.4.14",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
