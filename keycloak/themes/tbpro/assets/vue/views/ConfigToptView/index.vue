@@ -5,6 +5,8 @@ import {
   LinkButton,
   CheckboxInput,
   CopyIcon,
+  ToolTip,
+  TooltipPosition,
 } from "@thunderbirdops/services-ui";
 import { computed, ref, useTemplateRef } from "vue";
 import { i18n } from '@kc/composables/i18n.js';
@@ -146,13 +148,18 @@ export default {
         <p>{{ $t('manualTotp1') }}</p>
       </article>
       <aside>
-        <link-button data-testid="copy-otp-manual-url-btn" class="my-link-btn" @click="copyLink"
-                      :tooltip="myLinkTooltip" :force-tooltip="myLinkShow">
-          <template v-slot:icon>
-            <copy-icon/>
+        <tool-tip class="my-link-tooltip" :position="TooltipPosition.Top" :visible="myLinkShow || undefined">
+          <template #default="{ tooltipId }">
+            <link-button data-testid="copy-otp-manual-url-btn" class="my-link-btn" :aria-describedby="tooltipId"
+                         @click="copyLink">
+              <template v-slot:icon>
+                <copy-icon/>
+              </template>
+              {{ otpManualUrl }}
+            </link-button>
           </template>
-          {{ otpManualUrl }}
-        </link-button>
+          <template #content>{{ myLinkTooltip }}</template>
+        </tool-tip>
         <link-button data-testid="switch-to-qrcode-mode-btn" @click="() => isManualMode = false" id="mode-barcode">{{
             $t('loginTotpScanBarcode')
           }}
@@ -164,7 +171,7 @@ export default {
           $t('doContinue')
         }}
       </primary-button>
-      <primary-button variant="outline" data-testid="cancel-btn" id="back" class="submit" @click="onPrevious" v-if="showCancel">{{
+      <primary-button outline data-testid="cancel-btn" id="back" class="submit" @click="onPrevious" v-if="showCancel">{{
           $t('doCancel')
         }}
       </primary-button>
@@ -231,10 +238,15 @@ export default {
   justify-content: space-between;
 }
 
+:deep(.my-link-tooltip) {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--space-4);
+}
+
 .my-link-btn {
   text-align: left !important;
   width: 100%;
-  margin-bottom: var(--space-4);
 }
 
 :deep(.my-link-btn .text) {
