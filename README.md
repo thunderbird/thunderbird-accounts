@@ -218,6 +218,7 @@ Currently managed in code:
  - MFA
  - Client audience mappers
  - client scope mappers
+ - User profile (user attributes)
 
 New settings updates to Keycloak should follow this pattern.
 
