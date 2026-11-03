@@ -15,7 +15,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ "$KC_DEV" == "yes" ]]; then
     /bin/bash /opt/keycloak/bin/kc.sh start-dev --import-realm &
 else
-    /bin/bash /opt/keycloak/bin/kc.sh start --http-enabled=true --proxy-headers forwarded &
+    # xforwarded, not forwarded: the load balancer in front of Keycloak terminates TLS and
+    # forwards over plain HTTP with X-Forwarded-*. It never sends the RFC 7239 Forwarded
+    # header, so `forwarded` left Keycloak treating every request as a non-secure context.
+    # In that state it cannot emit SameSite=None (invalid without Secure) and falls back to
+    # SameSite=Lax, which the browser then withholds on the cross-site POST back from the
+    # MFA step -- surfacing as error="cookie_not_found" and a restarted login flow.
+    # This is a CLI flag, so it also overrides KC_PROXY_HEADERS: setting that env var alone
+    # cannot fix it.
+    /bin/bash /opt/keycloak/bin/kc.sh start --http-enabled=true --proxy-headers xforwarded &
 fi
 KC_PID=$!
 
