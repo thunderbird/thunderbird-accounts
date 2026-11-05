@@ -22,7 +22,7 @@ permissions:
 jobs:
   # This job detects which parts of the repo have been changed, setting future jobs up for conditional behavior.
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       IS_CI_AUTOMATION: "yes"
     outputs:
@@ -71,7 +71,7 @@ jobs:
   validate-accounts:
     needs: detect-changes
     if: needs.detect-changes.outputs.src-changed == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: staging
       deployment: false
@@ -106,7 +106,7 @@ jobs:
   validate-iac:
     needs: detect-changes
     if: needs.detect-changes.outputs.iac-changed
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: staging
       deployment: false
@@ -139,7 +139,7 @@ jobs:
       needs.validate-accounts.result != 'cancelled' &&
       (github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: staging
       deployment: false
