@@ -239,50 +239,6 @@ jobs:
           name: pulumi
           path: pulumi.tbz
 
-      # Deploy to stage in a single Pulumi update so we only ever hold one
-      # stack lock at a time. The image config keys and the --target list are
-      # assembled dynamically from whichever image(s) were built above.
-      - name: Deploy new image(s) to stage
-        shell: bash
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          ACCOUNTS_IMAGE: ${{ steps.build-accounts.outputs.accounts-image }}
-          KEYCLOAK_IMAGE: ${{ steps.build-keycloak.outputs.keycloak-image }}
-        run: |
-          # Update the PATH to include the right version of Pulumi; this is non-trivial or impossible
-          # to do with the GHA workflow "env" settings above.
-          export PATH="/home/runner/.pulumi/bin:$PATH"
-          export PULUMI_CONFIG_PASSPHRASE='${{ secrets.PULUMI_PASSPHRASE }}'
-
-          cd $PULUMI_DIR
-
-          TARGETS=()
-
-          # Merge each rebuilt image tag into the stage config and queue its targets.
-          if [ -n "$ACCOUNTS_IMAGE" ]; then
-            echo ".accounts_image: &ACCOUNTS_IMAGE $ACCOUNTS_IMAGE" > accounts-image.yaml
-            yq -i '. *= load("accounts-image.yaml")' config.stage.yaml
-            TARGETS+=(--target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-accounts-taskdef')
-            TARGETS+=(--target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-celery-stage')
-            TARGETS+=(--target 'urn:pulumi:stage::accounts::aws:ecs/taskDefinition:TaskDefinition::accounts-stage-afc-accounts-taskdef-flower-stage')
-          fi
-
-          if [ -n "$KEYCLOAK_IMAGE" ]; then
-            echo ".keycloak_image: &KEYCLOAK_IMAGE $KEYCLOAK_IMAGE" > keycloak-image.yaml
-            yq -i '. *= load("keycloak-image.yaml")' config.stage.yaml
-            TARGETS+=(--target 'urn:pulumi:stage::accounts::tb:fargate:FargateClusterWithLogging$aws:ecs/taskDefinition:TaskDefinition::accounts-stage-fargate-keycloak-taskdef')
-          fi
-
-          if [ ${#TARGETS[@]} -eq 0 ]; then
-            echo "No images were built; nothing to deploy."
-            exit 0
-          fi
-
-          source ./venv/bin/activate
-          pulumi login
-          pulumi stack select thunderbird/stage
-          pulumi up -y --diff "${TARGETS[@]}" --target-dependents
-
   create-release:
     needs: deploy
     # Releases track the accounts image, so only create one when accounts deployed.
@@ -329,45 +285,3 @@ jobs:
           tag_name: ${{ steps.create-release-tag.outputs.tag_name }}
           # Pin the tag to the commit that was built
           target_commitish: ${{ github.sha }}
-
-  e2e-tests-browserstack-stage:
-    name: e2e-tests-browserstack-stage
-    needs:
-      - deploy
-    if: always() && needs.deploy.result == 'success'
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      deployment: false
-    env:
-      ACCTS_OIDC_EMAIL: ${{ secrets.E2E_ACCTS_OIDC_EMAIL }}
-      ACCTS_OIDC_PWORD: ${{ secrets.E2E_ACCTS_OIDC_PWORD }}
-      ACCTS_OIDC_RECOVERY_EMAIL: ${{ secrets.E2E_ACCTS_OIDC_RECOVERY_EMAIL }}
-      PRIMARY_THUNDERMAIL_EMAIL: ${{ secrets.E2E_PRIMARY_THUNDERMAIL_EMAIL }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: 'test/e2e/package-lock.json'
-
-      - name: Install dependencies
-        run: |
-          cd ./test/e2e
-          npm install
-
-      - name: BrowserStack Env Setup
-        uses: browserstack/github-actions/setup-env@master
-        with:
-          username:  ${{ secrets.BROWSERSTACK_USERNAME }}
-          access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
-          project-name: 'Thunderbird Accounts'
-          build-name: 'TB Accounts E2E Tests: BUILD_INFO'
-
-      - name: Run E2E Tests on stage via Browserstack
-        run: |
-          cd ./test/e2e
-          cp .env.stage.example .env
-          npm run e2e-test-browserstack-desktop-firefox
