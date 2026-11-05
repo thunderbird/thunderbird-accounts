@@ -73,6 +73,21 @@ class ZendeskClient(object):
 
         return response
 
+    def add_ticket_tags(self, ticket_id, tags: list[str]):
+        """Append tags to a ticket using the Tags API.
+        PUT appends to the existing tags; the ``tags`` property on a ticket update would replace them.
+        Ref https://developer.zendesk.com/api-reference/ticketing/ticket-management/tags/#add-tags"""
+        url = f'{self.base_url}/tickets/{ticket_id}/tags'
+
+        response = requests.put(
+            url,
+            headers={'Content-Type': 'application/json'},
+            auth=(f'{settings.ZENDESK_USER_EMAIL}/token', settings.ZENDESK_API_TOKEN),
+            json={'tags': tags},
+        )
+
+        return response
+
     def create_or_update_user(self, user_fields):
         """Create or update a Zendesk user (matched on external_id, then email) using the Users API.
         Ref https://developer.zendesk.com/api-reference/ticketing/users/users/#create-or-update-user"""
