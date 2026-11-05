@@ -35,7 +35,7 @@ permissions:
 
 jobs:
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       IS_CI_AUTOMATION: "yes"
     outputs:
@@ -99,7 +99,7 @@ jobs:
     environment:
       name: staging
       deployment: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       IS_CI_AUTOMATION: "yes"
       PULUMI_DIR: "pulumi"
@@ -287,7 +287,7 @@ jobs:
     needs: deploy
     # Releases track the accounts image, so only create one when accounts deployed.
     if: needs.deploy.result == 'success' && needs.deploy.outputs.accounts-image != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
 
@@ -335,7 +335,7 @@ jobs:
     needs:
       - deploy
     if: always() && needs.deploy.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     environment:
       name: staging
       deployment: false
