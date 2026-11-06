@@ -395,10 +395,10 @@ form {
     box-shadow: inset 2px 2px 4px 0 rgba(0, 0, 0, 0.05);
     /* Dashed border effect as we can't easily set the distance between the dashes */
     background-image:
-      linear-gradient(to right, var(--colour-neutral-border) 0 12px, transparent 12px 100%),
-      linear-gradient(to right, var(--colour-neutral-border) 0 12px, transparent 12px 100%),
-      linear-gradient(to bottom, var(--colour-neutral-border) 0 12px, transparent 12px 100%),
-      linear-gradient(to bottom, var(--colour-neutral-border) 0 12px, transparent 12px 100%);
+      linear-gradient(to right, var(--colour-surface-border) 0 12px, transparent 12px 100%),
+      linear-gradient(to right, var(--colour-surface-border) 0 12px, transparent 12px 100%),
+      linear-gradient(to bottom, var(--colour-surface-border) 0 12px, transparent 12px 100%),
+      linear-gradient(to bottom, var(--colour-surface-border) 0 12px, transparent 12px 100%);
     background-position: top left, bottom left, top left, top right;
     background-size: 16px 1px, 16px 1px, 1px 16px, 1px 16px;
     background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
@@ -420,7 +420,7 @@ form {
       cursor: pointer;
 
       &::file-selector-button {
-        background-color: var(--colour-neutral-base);
+        background-color: var(--colour-surface-base);
         color: var(--colour-primary-hover);
         border-radius: 8px;
         border: 1px solid var(--colour-ti-highlight);

@@ -3,7 +3,7 @@ import { ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onClickOutside, onKeyStroke } from '@vueuse/core';
 import { PhArrowSquareOut, PhDownloadSimple } from '@phosphor-icons/vue';
-import { PrimaryButton, ToolTip } from '@thunderbirdops/services-ui';
+import { PrimaryButton, ToolTip, TooltipPosition } from '@thunderbirdops/services-ui';
 import ActionCard from '@/components/ActionCard.vue';
 import { DOWNLOAD_THUNDERBIRD_DESKTOP_URL } from '@/defines';
 import { WAFFLE_FLAG } from '@/types';
@@ -76,29 +76,28 @@ export default {
         </template>
         <template #action>
           <div class="connect-action" ref="connectAction">
-            <primary-button
-              size="small"
-              :disabled="isConnecting"
-              :aria-expanded="isTooltipVisible"
-              aria-controls="connect-now-tooltip"
-              @click="handleConnectClick"
-              class="button-link"
-            >
-              {{ t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButton') }}
-            </primary-button>
-            <tool-tip
-              v-if="isTooltipVisible"
-              id="connect-now-tooltip"
-              role="status"
-              :alt="t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButtonTooltip')"
-            >
-              <i18n-t keypath="views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButtonTooltip" tag="p">
-                <template #downloadLink>
-                  <a :href="DOWNLOAD_THUNDERBIRD_DESKTOP_URL" target="_blank" rel="noopener noreferrer">
-                    {{ t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButtonTooltipDownloadLink') }}
-                  </a>
-                </template>
-              </i18n-t>
+            <tool-tip :position="TooltipPosition.Top" :visible="isTooltipVisible">
+              <template #default="{ tooltipId }">
+                <primary-button
+                  size="small"
+                  :disabled="isConnecting"
+                  :aria-expanded="isTooltipVisible"
+                  :aria-controls="tooltipId"
+                  @click="handleConnectClick"
+                  class="button-link"
+                >
+                  {{ t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButton') }}
+                </primary-button>
+              </template>
+              <template #content>
+                <i18n-t keypath="views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButtonTooltip" tag="p">
+                  <template #downloadLink>
+                    <a :href="DOWNLOAD_THUNDERBIRD_DESKTOP_URL" target="_blank" rel="noopener noreferrer">
+                      {{ t('views.mail.sections.dashboard.getStartedWithThundermail.desktopPanel.connectButtonTooltipDownloadLink') }}
+                    </a>
+                  </template>
+                </i18n-t>
+              </template>
             </tool-tip>
           </div>
         </template>
@@ -121,7 +120,7 @@ export default {
       <template #action>
         <primary-button
           size="small"
-          :variant="showConnectNow ? 'outline' : 'filled'"
+          :outline="showConnectNow"
           :href="DOWNLOAD_THUNDERBIRD_DESKTOP_URL"
           target="_blank"
           rel="noopener noreferrer"
@@ -146,15 +145,10 @@ export default {
 }
 
 .connect-action {
-  position: relative;
   display: inline-flex;
 }
 
 .connect-action :deep(.tooltip) {
-  top: auto;
-  bottom: calc(100% + 1rem);
-  left: 50%;
-  transform: translateX(-50%);
   max-width: 17rem;
 
   p {
@@ -168,6 +162,6 @@ export default {
 
 .error-message {
   font-size: 0.75rem;
-  color: var(--colour-danger-default);
+  color: var(--colour-critical-default);
 }
 </style>

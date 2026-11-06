@@ -29,7 +29,7 @@ export default {
         <p>{{ t('views.settings.accountAccessDescription') }}</p>
 
         <router-link v-slot="{ href, navigate }" custom to="/settings/security">
-          <primary-button :href="href" variant="outline" @click="navigate">
+          <primary-button :href="href" outline @click="navigate">
             {{ t('views.settings.manageAccountAccess') }}
           </primary-button>
         </router-link>

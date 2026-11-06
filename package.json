@@ -31,7 +31,7 @@
   "dependencies": {
     "@paddle/paddle-js": "^1.6.2",
     "@phosphor-icons/vue": "^2.2.1",
-    "@thunderbirdops/services-ui": "1.7.0",
+    "@thunderbirdops/services-ui": "2.0.1",
     "@vueuse/core": "^14.2.1",
     "dinero.js": "^2.0.2",
     "pinia": "^3.0.4",

@@ -62,10 +62,10 @@ export default {
         <slot name="form-extras" />
       </div>
       <div class="buttons" v-if="!hideActions">
-        <brand-button variant="outline" v-if="showAlternativeAction" @click.prevent="onAlternativeAction()">
+        <brand-button outline v-if="showAlternativeAction" @click.prevent="onAlternativeAction()">
           {{ alternativeActionTitle || $t('views.mail.views.signUp.back') }}
         </brand-button>
-        <brand-button form-action="submit" data-testid="submit-button" class="submit" :disabled="submitDisabled"
+        <brand-button type="submit" data-testid="submit-button" class="submit" :disabled="submitDisabled"
           @click.prevent="onSubmit()">
           <template #iconRight>
             <ph-arrow-right size="20" aria-hidden="true" />

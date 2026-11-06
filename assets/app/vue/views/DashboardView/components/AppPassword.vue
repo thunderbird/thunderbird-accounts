@@ -10,6 +10,7 @@ import {
   PrimaryButton,
   TextInput,
   ToolTip,
+  TooltipPosition,
 } from '@thunderbirdops/services-ui';
 import { PhX, PhInfo } from '@phosphor-icons/vue';
 import { APP_PASSWORD_SUPPORT_URL } from '@/defines';
@@ -102,20 +103,28 @@ const closeSuccessMessage = () => {
     <template v-if="accountHasAppPasswords">
       <p>
         {{ t('views.mail.sections.emailSettings.changePasswordDescriptionTwo') }}
-        <span class="info-tooltip-trigger">
-          <ph-info size="16" aria-hidden="true" />
-          <tool-tip :alt="t('views.mail.sections.emailSettings.changePasswordTooltip')">
+        <tool-tip class="info-tooltip-trigger" :position="TooltipPosition.Top">
+          <template #default="{ tooltipId }">
+            <span class="info-tooltip-icon" tabindex="0" :aria-describedby="tooltipId">
+              <ph-info size="16" aria-hidden="true" />
+            </span>
+          </template>
+          <template #content>
             <span>{{ t('views.mail.sections.emailSettings.changePasswordTooltip') }}</span>
-          </tool-tip>
-        </span>
+          </template>
+        </tool-tip>
       </p>
     </template>
     <template v-else>
       <p>
         {{ t('views.mail.sections.emailSettings.createPasswordDescriptionTwo') }}
-        <span class="info-tooltip-trigger">
-          <ph-info size="16" aria-hidden="true" />
-          <tool-tip :alt="t('views.mail.sections.emailSettings.createPasswordTooltip')">
+        <tool-tip class="info-tooltip-trigger" :position="TooltipPosition.Top">
+          <template #default="{ tooltipId }">
+            <span class="info-tooltip-icon" tabindex="0" :aria-describedby="tooltipId">
+              <ph-info size="16" aria-hidden="true" />
+            </span>
+          </template>
+          <template #content>
             <i18n-t keypath="views.mail.sections.emailSettings.createPasswordTooltip" tag="span">
               <template #supportUrl>
                 <a :href="APP_PASSWORD_SUPPORT_URL" target="_blank">{{
@@ -123,8 +132,8 @@ const closeSuccessMessage = () => {
                 }}</a>
               </template>
             </i18n-t>
-          </tool-tip>
-        </span>
+          </template>
+        </tool-tip>
       </p>
     </template>
 
@@ -186,7 +195,7 @@ const closeSuccessMessage = () => {
         </notice-bar>
 
         <div class="set-password-buttons-container">
-          <primary-button variant="outline" @click="onCancelSetPassword" :disabled="isSubmitting"
+          <primary-button outline @click="onCancelSetPassword" :disabled="isSubmitting"
             >{{ t('views.mail.sections.emailSettings.cancel') }}
           </primary-button>
           <primary-button @click="onSetPasswordSubmit" :disabled="isSubmitting" data-testid="app-passwords-add-btn">
@@ -198,12 +207,12 @@ const closeSuccessMessage = () => {
       </form>
     </template>
     <template v-else-if="appPasswords.length > 0">
-      <primary-button variant="outline" @click="showPasswordForm = true">{{
+      <primary-button outline @click="showPasswordForm = true">{{
         t('views.mail.sections.emailSettings.changePasswordButtonLabel')
       }}</primary-button>
     </template>
     <template v-else>
-      <primary-button variant="outline" @click="showPasswordForm = true">{{
+      <primary-button outline @click="showPasswordForm = true">{{
         t('views.mail.sections.emailSettings.createPasswordButtonLabel')
       }}</primary-button>
     </template>
@@ -268,39 +277,14 @@ const closeSuccessMessage = () => {
     }
   }
 
-  .info-tooltip-trigger {
-    position: relative;
+  .info-tooltip-icon {
     display: inline-flex;
     align-items: center;
     cursor: pointer;
-
-    &::before {
-      content: '';
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      width: max(100%, 18rem);
-      height: 0.75rem;
-      transform: translateX(-50%);
-    }
   }
 
   .info-tooltip-trigger :deep(.tooltip) {
-    visibility: hidden;
-    opacity: 0;
-    width: max-content;
-    bottom: calc(100% + 0.5rem);
-    left: 50%;
-    top: auto;
-    transform: translateX(-50%);
     font-size: 0.8125rem;
-  }
-
-  .info-tooltip-trigger:hover :deep(.tooltip),
-  .info-tooltip-trigger :deep(.tooltip:hover) {
-    visibility: visible;
-    opacity: 1;
-    cursor: default;
   }
 
   .info-tooltip-trigger :deep(.tooltip a) {

@@ -69,8 +69,8 @@ function toggle() {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    background-color: var(--colour-neutral-subtle);
-    border: 1px solid var(--colour-neutral-border);
+    background-color: var(--colour-surface-subtle);
+    border: 1px solid var(--colour-surface-border);
     border-radius: 0.5rem;
     padding: 1rem 0.5rem;
     text-align: left;
@@ -124,11 +124,11 @@ function toggle() {
   }
 
   .accordion__panel {
-    border: 1px solid var(--colour-neutral-border);
+    border: 1px solid var(--colour-surface-border);
     border-top: none;
     border-radius: 0 0 0.5rem 0.5rem;
     padding: 1rem;
-    background-color: var(--colour-neutral-base);
+    background-color: var(--colour-surface-base);
   }
 }
 
