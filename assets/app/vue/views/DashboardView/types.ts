@@ -34,3 +34,41 @@ export interface SendStorageData {
   used: number;
   total: number;
 }
+
+/** Metadata of one Stalwart app password; the secret is only ever returned once, on creation. */
+export interface AppPasswordSummary {
+  id: string;
+  name: string;
+  createdAt: string | null;
+}
+
+export interface AppPasswordApiResponse {
+  success: boolean;
+  error?: string;
+  code?: string;
+  /** HTTP status of the response, so callers can tell "already gone" (404) apart from real failures. */
+  status: number;
+}
+
+export interface AppPasswordListResponse extends AppPasswordApiResponse {
+  username?: string;
+  appPasswords?: AppPasswordSummary[];
+}
+
+export interface AppPasswordCreateResponse extends AppPasswordApiResponse {
+  appPassword?: AppPasswordSummary;
+  secret?: string;
+  username?: string;
+}
+
+export interface AppPasswordRevokeResponse extends AppPasswordApiResponse {
+  id?: string;
+}
+
+/** One-time handoff state shown right after a password is generated. */
+export interface GeneratedAppPassword {
+  id: string;
+  name: string;
+  secret: string;
+  username: string;
+}

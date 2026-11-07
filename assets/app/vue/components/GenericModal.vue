@@ -1,16 +1,28 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue';
+import { useId, useTemplateRef } from 'vue';
 import { PhX } from '@phosphor-icons/vue';
 
-defineProps<{
-  title: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    title: string;
+    /** When false the close button is hidden and Escape is ignored, e.g. while a request is in flight. */
+    dismissible?: boolean;
+  }>(),
+  { dismissible: true },
+);
 
 const modal = useTemplateRef<HTMLDialogElement>('modal');
+const titleId = useId();
 
 const handleClose = () => {
   modal.value.close();
-  emit('close');
+}
+
+// Escape triggers the dialog's native cancel; swallow it while the caller asked not to be dismissed.
+const handleCancel = (event: Event) => {
+  if (!props.dismissible) {
+    event.preventDefault();
+  }
 }
 
 const emit = defineEmits<{
@@ -26,17 +38,26 @@ defineExpose({
 </script>
 
 <template>
-  <dialog ref="modal">
-    <button class="close-button" @click="handleClose" :aria-label="$t('components.genericModal.close')">
+  <!-- The native close event fires for the button, close() and Escape alike, so parents hear about all of them. -->
+  <dialog ref="modal" :aria-labelledby="titleId" @close="emit('close')" @cancel="handleCancel">
+    <button
+      v-if="dismissible"
+      class="close-button"
+      @click="handleClose"
+      :aria-label="$t('components.genericModal.close')"
+    >
       <ph-x size="24" aria-hidden="true" />
     </button>
 
     <div class="modal-scroll-area">
       <div class="modal-content">
-        <h2>{{ title }}</h2>
+        <h2 :id="titleId">{{ title }}</h2>
 
         <slot />
       </div>
+    </div>
+    <div v-if="$slots.actions" class="modal-actions">
+      <slot name="actions" />
     </div>
   </dialog>
 </template>
@@ -102,6 +123,7 @@ dialog {
     flex-direction: column;
     align-items: center;
     padding-inline: 1rem;
+    padding-block-end: 0.5rem;
 
     h2 {
       font-family: metropolis;
@@ -114,9 +136,19 @@ dialog {
       text-align: center;
     }
   }
+
+  .modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem 1rem 0;
+  }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 600px) {
   dialog {
     --modal-inset-block-start: 144px;
   }
