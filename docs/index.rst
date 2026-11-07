@@ -28,6 +28,7 @@ Contents
     onboarding.rst
     sign-up.rst
     tasks.rst
+    dependency-remediation.md
 
     ci/image-publish-pipeline.md
 
