@@ -26,7 +26,9 @@
   },
   "homepage": "https://github.com/thunderbird/thunderbird-accounts#readme",
   "overrides": {
-    "vue": "$vue"
+    "vue": "$vue",
+    "vue-i18n": "$vue-i18n",
+    "@intlify/core-base": "11.4.16"
   },
   "dependencies": {
     "@paddle/paddle-js": "^1.6.2",
