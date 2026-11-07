@@ -71,6 +71,19 @@ class CheckEmailIsOnAllowListApiTestCase(APITestCase):
 
         self.assertTrue(response.json()['has_account'])
 
+    @patch('thunderbird_accounts.mail.api.is_email_in_allow_list', return_value=True)
+    def test_has_account_is_false_for_inactive_user(self, _mock):
+        User.objects.create(
+            username='user@example.org',
+            email='recovery@example.com',
+            recovery_email='recovery@example.com',
+            is_active=False,
+        )
+
+        response = self.client.post(self.url, {'email': 'recovery@example.com'})
+
+        self.assertFalse(response.json()['has_account'])
+
 
 class IsUsernameAvailableTestCase(APITestCase):
     def setUp(self):
