@@ -333,6 +333,20 @@ class CanISignUpTestcase(APITestCase):
         resp_data = response.json()
         self.assertEqual(CanISignUpResponses.LOGIN, resp_data.get('go_to'))
 
+    def test_inactive_user_with_released_recovery_email_does_not_block_sign_up(self):
+        """released@example.com can be re-used when there's a prior use that is inactive"""
+        AllowListEntry.objects.create(email='released@example.com')
+        User.objects.create(
+            username='retired-user@example.org',
+            email='released@example.com',
+            recovery_email='released-at-example-com@deleted.example.org',
+            is_active=False,
+        )
+
+        response = self.client.post(self.url, {'email': 'released@example.com'})
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(CanISignUpResponses.SIGN_UP, response.json().get('go_to'))
+
 
 class CreateTestAllowListEntryTestCase(APITestCase):
     def setUp(self):
