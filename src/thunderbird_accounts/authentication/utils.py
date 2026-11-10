@@ -78,9 +78,7 @@ def is_email_reserved(email: str):
 
 
 def get_user_by_contact_email(email: str):
-    """Return an active user whose recovery email or account email matches the given address.
-
-    Inactive users are locked out, so they don't count as having an account."""
+    """Return an active user whose recovery email or account email matches the given address."""
     from thunderbird_accounts.authentication.models import User
 
     return User.objects.filter(Q(email__iexact=email) | Q(recovery_email__iexact=email), is_active=True).first()
