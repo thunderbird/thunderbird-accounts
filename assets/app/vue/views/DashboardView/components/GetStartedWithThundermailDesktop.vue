@@ -75,7 +75,7 @@ export default {
           <ph-arrow-square-out :size="20" aria-hidden="true" />
         </template>
         <template #action>
-          <div class="connect-action" ref="connectAction">
+          <div class="connect-action" ref="connectAction" aria-live="polite">
             <tool-tip :position="TooltipPosition.Top" :visible="isTooltipVisible">
               <template #default="{ tooltipId }">
                 <primary-button
