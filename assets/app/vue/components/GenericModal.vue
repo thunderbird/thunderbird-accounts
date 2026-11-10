@@ -66,7 +66,7 @@ dialog {
   }
 
   &::backdrop {
-    background-color: var(--colour-surface-deep);
+    background-color: var(--colour-surface-subtle-dark);
     opacity: 0.5;
   }
 
