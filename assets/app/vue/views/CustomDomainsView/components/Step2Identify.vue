@@ -125,10 +125,10 @@ const onVerify = async () => {
       </notice-bar>
 
       <div v-if="!records" class="actions">
-        <primary-button form-action="none" variant="outline" @click="emit('cancel')">
+        <primary-button outline @click="emit('cancel')">
           {{ t('views.customDomains.stepIdentify.cancel') }}
         </primary-button>
-        <primary-button form-action="submit" :disabled="!selectedProvider || isLoadingRecords">
+        <primary-button type="submit" :disabled="!selectedProvider || isLoadingRecords">
           {{ t('views.customDomains.stepIdentify.continue') }}
         </primary-button>
       </div>
@@ -164,10 +164,10 @@ const onVerify = async () => {
       </notice-bar>
 
       <div class="actions">
-        <primary-button form-action="none" variant="outline" @click="emit('cancel')">
+        <primary-button outline @click="emit('cancel')">
           {{ t('views.customDomains.stepIdentify.cancel') }}
         </primary-button>
-        <primary-button form-action="none" :disabled="isVerifying" @click="onVerify">
+        <primary-button :disabled="isVerifying" @click="onVerify">
           {{ t('views.customDomains.stepIdentify.verifyDnsSettings') }}
         </primary-button>
       </div>

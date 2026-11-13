@@ -73,11 +73,11 @@ const description = (type: string): string => {
   margin: 0;
   padding: 1rem;
   border-radius: 0.5rem;
-  background-color: var(--colour-neutral-lower);
+  background-color: var(--colour-surface-lower);
 
   .type-card-row {
     padding-block: 0.75rem;
-    border-block-end: 1px solid var(--colour-neutral-border);
+    border-block-end: 1px solid var(--colour-surface-border);
 
     &:first-child {
       padding-block-start: 0;
@@ -123,14 +123,14 @@ const description = (type: string): string => {
       letter-spacing: 0.39px;
       text-transform: uppercase;
       color: var(--colour-ti-secondary);
-      border-block-end: 1px solid var(--colour-neutral-border);
+      border-block-end: 1px solid var(--colour-surface-border);
     }
 
     td {
       padding: 1rem;
       font-size: 0.875rem;
       color: var(--colour-ti-secondary);
-      border-block-end: 1px solid var(--colour-neutral-border);
+      border-block-end: 1px solid var(--colour-surface-border);
     }
   }
 }

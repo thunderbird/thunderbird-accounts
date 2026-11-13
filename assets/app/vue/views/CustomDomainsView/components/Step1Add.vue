@@ -77,10 +77,10 @@ const onSubmit = async () => {
       </notice-bar>
 
       <div class="actions">
-        <primary-button form-action="none" variant="outline" @click="emit('cancel')">
+        <primary-button outline @click="emit('cancel')">
           {{ t('views.customDomains.stepAdd.cancel') }}
         </primary-button>
-        <primary-button form-action="submit" :disabled="isAdding || !domainName.trim()">
+        <primary-button type="submit" :disabled="isAdding || !domainName.trim()">
           {{ t('views.customDomains.stepAdd.addDomain') }}
         </primary-button>
       </div>

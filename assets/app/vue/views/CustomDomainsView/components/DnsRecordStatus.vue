@@ -44,8 +44,8 @@ const config = computed(() => ({
   }
 
   &.not-found {
-    color: var(--colour-danger-default);
-    background-color: var(--colour-danger-soft);
+    color: var(--colour-critical-default);
+    background-color: var(--colour-critical-soft);
   }
 }
 </style>
