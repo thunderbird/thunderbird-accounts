@@ -34,7 +34,7 @@ const primaryEmail = window._page?.userEmail;
       </template>
     </i18n-t>
 
-    <primary-button form-action="none" @click="emit('done')">
+    <primary-button @click="emit('done')">
       {{ t('views.customDomains.stepSummary.done') }}
     </primary-button>
   </section>

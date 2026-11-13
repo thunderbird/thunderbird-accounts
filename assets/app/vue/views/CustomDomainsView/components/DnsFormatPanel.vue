@@ -46,7 +46,7 @@ const isOpen = ref(props.defaultOpen);
 
 <style scoped>
 .dns-format-panel {
-  border: 1px solid var(--colour-neutral-border);
+  border: 1px solid var(--colour-surface-border);
   border-radius: 0.5rem;
   margin-block-end: 1.5rem;
 
@@ -76,7 +76,7 @@ const isOpen = ref(props.defaultOpen);
     gap: 1rem;
     margin-inline: 1rem;
     padding-block: 1rem 1.25rem;
-    border-block-start: 1px solid var(--colour-neutral-border);
+    border-block-start: 1px solid var(--colour-surface-border);
     font-size: 0.875rem;
     line-height: 1.4;
     color: var(--colour-ti-secondary);

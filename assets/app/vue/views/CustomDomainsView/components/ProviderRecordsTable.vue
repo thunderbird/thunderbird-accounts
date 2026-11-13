@@ -135,7 +135,7 @@ const sharedMessages = (group: ProviderRecordGroup) => {
   margin: 0 0 1rem;
   padding: 1rem;
   border-radius: 0.5rem;
-  background-color: var(--colour-neutral-lower);
+  background-color: var(--colour-surface-lower);
 
   .record-card-row {
     display: flex;
@@ -143,7 +143,7 @@ const sharedMessages = (group: ProviderRecordGroup) => {
     justify-content: space-between;
     gap: 1rem;
     padding-block: 0.75rem;
-    border-block-end: 1px solid var(--colour-neutral-border);
+    border-block-end: 1px solid var(--colour-surface-border);
 
     &:first-child {
       padding-block-start: 0;
@@ -191,7 +191,7 @@ const sharedMessages = (group: ProviderRecordGroup) => {
       letter-spacing: 0.39px;
       text-transform: uppercase;
       color: var(--colour-ti-secondary);
-      border-block-end: 1px solid var(--colour-neutral-border);
+      border-block-end: 1px solid var(--colour-surface-border);
     }
 
     td {
@@ -202,7 +202,7 @@ const sharedMessages = (group: ProviderRecordGroup) => {
     }
 
     tbody tr:nth-child(even) {
-      background-color: var(--colour-neutral-lower);
+      background-color: var(--colour-surface-lower);
     }
 
     .cell {

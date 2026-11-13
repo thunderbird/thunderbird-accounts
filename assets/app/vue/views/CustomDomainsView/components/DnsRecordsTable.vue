@@ -172,7 +172,7 @@ defineExpose({ scrollToFirstIssue });
   margin: 0;
   padding: 1rem;
   border-radius: 0.5rem;
-  background-color: var(--colour-neutral-lower);
+  background-color: var(--colour-surface-lower);
 
   .record-card-row {
     display: flex;
@@ -180,7 +180,7 @@ defineExpose({ scrollToFirstIssue });
     justify-content: space-between;
     gap: 1rem;
     padding-block: 0.75rem;
-    border-block-end: 1px solid var(--colour-neutral-border);
+    border-block-end: 1px solid var(--colour-surface-border);
 
     &:first-child {
       padding-block-start: 0;
@@ -227,7 +227,7 @@ defineExpose({ scrollToFirstIssue });
   }
 
   &.not-found {
-    background-color: var(--colour-danger-soft);
+    background-color: var(--colour-critical-soft);
   }
 }
 
@@ -250,7 +250,7 @@ defineExpose({ scrollToFirstIssue });
       letter-spacing: 0.39px;
       text-transform: uppercase;
       color: var(--colour-ti-secondary);
-      border-block-end: 1px solid var(--colour-neutral-border);
+      border-block-end: 1px solid var(--colour-surface-border);
     }
 
     td {

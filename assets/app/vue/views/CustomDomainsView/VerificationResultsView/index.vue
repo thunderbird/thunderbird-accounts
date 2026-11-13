@@ -151,10 +151,10 @@ export default {
       <p class="description">{{ t('views.customDomains.verificationResults.successDescription') }}</p>
 
       <div class="actions">
-        <primary-button form-action="none" variant="outline" @click="emit('done')">
+        <primary-button outline @click="emit('done')">
           {{ t('views.customDomains.verificationResults.done') }}
         </primary-button>
-        <primary-button form-action="none" @click="emit('addAliases')">
+        <primary-button @click="emit('addAliases')">
           {{ t('views.customDomains.verificationResults.addAliases') }}
         </primary-button>
       </div>
@@ -204,10 +204,10 @@ export default {
       </template>
 
       <div class="actions">
-        <primary-button form-action="none" variant="outline" @click="emit('done')">
+        <primary-button outline @click="emit('done')">
           {{ t('views.customDomains.verificationResults.finishLater') }}
         </primary-button>
-        <primary-button form-action="none" :disabled="isVerifying" @click="retry">
+        <primary-button :disabled="isVerifying" @click="retry">
           {{ t('views.customDomains.verificationResults.retryVerification') }}
         </primary-button>
       </div>

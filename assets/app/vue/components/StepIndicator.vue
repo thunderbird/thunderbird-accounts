@@ -32,7 +32,7 @@ defineProps<{
 <style scoped>
 .step-indicator {
   display: block;
-  background-color: var(--colour-neutral-lower);
+  background-color: var(--colour-surface-lower);
   border-radius: 0.5rem;
   padding: 1rem;
 
@@ -69,7 +69,7 @@ defineProps<{
       top: 100%;
       width: 1px;
       height: 0.75rem;
-      background-color: var(--colour-neutral-border);
+      background-color: var(--colour-surface-border);
     }
   }
 }
