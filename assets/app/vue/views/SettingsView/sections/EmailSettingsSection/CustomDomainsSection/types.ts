@@ -46,3 +46,10 @@ export type DomainVerificationResult = {
   criticalErrors: string[];
   warnings: string[];
 };
+
+export type AddCustomDomainResponse = {
+  success: boolean;
+  domain_name?: string;
+  error?: string;
+  code?: string;
+};

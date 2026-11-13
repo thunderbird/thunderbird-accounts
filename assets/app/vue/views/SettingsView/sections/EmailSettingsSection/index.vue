@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { WAFFLE_FLAG } from '@/types';
-import { isWaffleFlagActive } from '@/utils';
 
 // Shared components
 import CardContainer from '@/components/CardContainer.vue';
@@ -15,8 +12,6 @@ import ViewServerSettings from './components/ViewServerSettings.vue';
 import CustomDomainsSection from './CustomDomainsSection/index.vue';
 
 const { t } = useI18n();
-
-const isCustomDomainsRevampActive = computed(() => isWaffleFlagActive(WAFFLE_FLAG.CUSTOM_DOMAINS_REVAMP));
 </script>
 
 <script lang="ts">
@@ -39,7 +34,7 @@ export default {
         <email-aliases />
       </details-summary>
 
-      <custom-domains-section v-if="!isCustomDomainsRevampActive" />
+      <custom-domains-section />
 
       <view-server-settings />
     </card-container>
