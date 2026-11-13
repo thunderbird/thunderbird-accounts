@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 from django.conf import settings
 from django.test import TestCase, override_settings
@@ -105,7 +105,9 @@ class SetUserActiveTestCase(TestCase):
         self.assertFalse(self.account.active)
 
         keycloak = mock_keycloak_cls.return_value
-        keycloak.update_user.assert_called_once_with(OIDC_ID, enabled=False)
+        keycloak.update_user.assert_called_once_with(
+            OIDC_ID, enabled=False, attributes={'is_active': 'false', 'is_subscribed': 'false'}, user_data=ANY
+        )
         keycloak.logout_user.assert_called_once_with(OIDC_ID)
         mock_mail_cls.return_value.set_account_active.assert_called_once_with(self.username, False)
 
@@ -124,7 +126,9 @@ class SetUserActiveTestCase(TestCase):
         self.assertTrue(self.account.active)
 
         keycloak = mock_keycloak_cls.return_value
-        keycloak.update_user.assert_called_once_with(OIDC_ID, enabled=True)
+        keycloak.update_user.assert_called_once_with(
+            OIDC_ID, enabled=True, attributes={'is_active': 'true', 'is_subscribed': 'true'}, user_data=ANY
+        )
         keycloak.logout_user.assert_not_called()
         mock_mail_cls.return_value.set_account_active.assert_called_once_with(self.username, True)
 
@@ -142,7 +146,9 @@ class SetUserActiveTestCase(TestCase):
         self.assertEqual(errors, [])
         self.account.refresh_from_db()
         self.assertFalse(self.account.active)
-        mock_keycloak_cls.return_value.update_user.assert_called_once_with(OIDC_ID, enabled=True)
+        mock_keycloak_cls.return_value.update_user.assert_called_once_with(
+            OIDC_ID, enabled=True, attributes={'is_active': 'true', 'is_subscribed': 'false'}, user_data=ANY
+        )
         mock_mail_cls.return_value.set_account_active.assert_called_once_with(self.username, False)
 
     def test_keycloak_failure_is_reported_and_stalwart_still_updated(self, mock_keycloak_cls: MagicMock, mock_mail_cls):
