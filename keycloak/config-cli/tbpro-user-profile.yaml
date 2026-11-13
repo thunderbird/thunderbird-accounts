@@ -1,0 +1,195 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/adorsys/keycloak-config-cli/main/src/main/resources/keycloak-config-cli-import-schema.json
+# keycloak-config-cli: user profile of the `tbpro` realm.
+#
+# The user profile defines which user attributes exist, who may edit them and what values
+# they accept. Accounts writes the plan and status attributes via the Admin API
+# (authentication/clients.py) and the `tbpro` client scope publishes them as claims
+# (tbpro-scope-mappers.yaml).
+#
+# config-cli replaces the realm's whole profile with the `userProfile` block below on every
+# Keycloak start, so this file must list every attribute, including the built-in ones. An
+# attribute missing here disappears from the admin console and, because the realm's unmanaged
+# attribute policy is disabled, its values can no longer be written. The apply neither
+# deletes nor validates stored values; validation runs on every later write to a user, and
+# an `options` list rejects the whole write when the stored value is not in it.
+realm: tbpro
+
+# config-cli imports `userProfile` only when this realm attribute is true. Keycloak 24+ has
+# the declarative profile always on and ignores the attribute.
+attributes:
+  userProfileEnabled: "true"
+
+userProfile:
+  attributes:
+    - name: username
+      displayName: ${username}
+      validations:
+        length:
+          min: 3
+          max: 255
+        up-username-not-idn-homograph:
+          error-message: ""
+        username-prohibited-characters:
+          error-message: ""
+      annotations: {}
+      permissions:
+        view: [admin, user]
+        edit: [admin, user]
+      multivalued: false
+
+    - name: email
+      displayName: ${email}
+      validations:
+        email: {}
+        length:
+          max: 255
+      annotations: {}
+      required:
+        roles: [user]
+      permissions:
+        view: [admin, user]
+        edit: [admin, user]
+      multivalued: false
+
+    - name: firstName
+      displayName: ${firstName}
+      validations:
+        length:
+          max: 255
+        person-name-prohibited-characters: {}
+      annotations: {}
+      permissions:
+        view: [admin, user]
+        edit: [admin, user]
+      multivalued: false
+
+    - name: lastName
+      displayName: ${lastName}
+      validations:
+        length:
+          max: 255
+        person-name-prohibited-characters: {}
+      annotations: {}
+      permissions:
+        view: [admin, user]
+        edit: [admin, user]
+      multivalued: false
+
+    - name: locale
+      displayName: ${locale}
+      validations: {}
+      annotations: {}
+      permissions:
+        view: [admin, user]
+        edit: [admin, user]
+      multivalued: false
+
+    - name: zoneinfo
+      displayName: ${profile.attributes.zoneinfo}
+      validations: {}
+      annotations: {}
+      required:
+        roles: [admin, user]
+      permissions:
+        view: [admin, user]
+        edit: [admin, user]
+      multivalued: false
+
+    # Read by the Accounts middleware as the string "yes"; published by the tbpro-admin scope.
+    - name: is_services_admin
+      displayName: ${profile.attributes.is_services_admin}
+      validations:
+        options:
+          options: ["no", "yes"]
+      annotations:
+        inputType: select
+      permissions:
+        view: [admin, user]
+        edit: [admin]
+      multivalued: false
+
+    # Boolean flags published by the tbpro scope. The mappers emit them as JSON booleans,
+    # which Keycloak derives from the literal string "true" only, so the stored value is
+    # restricted to "true"/"false".
+    - name: is_active
+      displayName: ${profile.attributes.is_active}
+      validations:
+        options:
+          options: ["false", "true"]
+      annotations:
+        inputType: select
+      permissions:
+        view: [admin, user]
+        edit: [admin]
+      selector:
+        scopes: [tbpro]
+      multivalued: false
+
+    # "no"/"yes" are the values update_user_plan_info writes today and the ones stored on
+    # stage and prod. Keycloak rejects any write to a user whose stored value is not listed
+    # here, so they stay accepted until the writer emits "true"/"false" and existing users
+    # are backfilled; drop them then.
+    - name: is_subscribed
+      displayName: ${profile.attributes.is_subscribed}
+      validations:
+        options:
+          options: ["false", "true", "no", "yes"]
+      annotations:
+        inputType: select
+      permissions:
+        view: [admin, user]
+        edit: [admin]
+      selector:
+        scopes: [tbpro]
+      group: plan-metadata
+      multivalued: false
+
+    # Plan limits, mirrored from subscription.Plan by update_user_plan_info.
+    - name: mail_address_count
+      displayName: ${profile.attributes.mail_address_count}
+      validations: {}
+      annotations: {}
+      permissions:
+        view: [admin, user]
+        edit: [admin]
+      group: plan-metadata
+      multivalued: false
+
+    - name: mail_domain_count
+      displayName: ${profile.attributes.mail_domain_count}
+      validations: {}
+      annotations: {}
+      permissions:
+        view: [admin, user]
+        edit: [admin]
+      group: plan-metadata
+      multivalued: false
+
+    - name: mail_storage_bytes
+      displayName: ${profile.attributes.mail_storage_bytes}
+      validations: {}
+      annotations: {}
+      permissions:
+        view: [admin, user]
+        edit: [admin]
+      group: plan-metadata
+      multivalued: false
+
+    - name: send_storage_bytes
+      displayName: ${profile.attributes.send_storage_bytes}
+      validations: {}
+      annotations: {}
+      permissions:
+        view: [admin, user]
+        edit: [admin]
+      group: plan-metadata
+      multivalued: false
+
+  groups:
+    - name: user-metadata
+      displayHeader: User metadata
+      displayDescription: Attributes, which refer to user metadata
+    - name: plan-metadata
+      displayHeader: Plan Metadata
+      displayDescription: Information about a user's plan
+      annotations: {}

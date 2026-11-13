@@ -24,6 +24,7 @@ trap 'kill -TERM "$KC_PID" 2>/dev/null' TERM INT
 
 /bin/bash "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-mfa-stepup" \
     && /bin/bash "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-aud-mapper" \
-    && /bin/bash "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-scope-mappers" &
+    && /bin/bash "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-scope-mappers" \
+    && /bin/bash "$SCRIPT_DIR/apply-cli-config.sh" "tbpro-user-profile" &
 
 wait "$KC_PID"
