@@ -15,8 +15,11 @@ import {
 import { PhX, PhInfo } from '@phosphor-icons/vue';
 import { APP_PASSWORD_SUPPORT_URL } from '@/defines';
 import { setAppPassword } from '../api';
+import AppPasswordManager from './AppPasswordManager.vue';
 
 const { t } = useI18n();
+
+const passwordIsGenerated = Boolean(window._page?.appPasswordIsGenerated);
 
 const appPasswords = ref<string[]>(window._page?.appPasswords || []);
 const accountHasAppPasswords = ref(appPasswords.value.length > 0);
@@ -27,7 +30,6 @@ const errorMessage = ref<string>(window._page?.formError || null);
 const successMessage = ref<string>(null);
 const generatedAppPassword = ref<string>(null);
 const isSubmitting = ref(false);
-const passwordIsGenerated = Boolean(window._page?.appPasswordIsGenerated);
 
 const userEmail = computed(() => window._page?.userEmail);
 
@@ -88,6 +90,8 @@ const closeSuccessMessage = () => {
 
 <template>
   <div id="app-password-container" class="app-password-details">
+    <app-password-manager v-if="passwordIsGenerated" />
+    <template v-else>
     <div class="app-password-set-indicator-container">
       <strong>{{ t('views.mail.sections.emailSettings.appPassword') }}:</strong>
       <template v-if="accountHasAppPasswords">
@@ -215,6 +219,7 @@ const closeSuccessMessage = () => {
       <primary-button outline @click="showPasswordForm = true">{{
         t('views.mail.sections.emailSettings.createPasswordButtonLabel')
       }}</primary-button>
+    </template>
     </template>
   </div>
 </template>
