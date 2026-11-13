@@ -1,0 +1,125 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/adorsys/keycloak-config-cli/main/src/main/resources/keycloak-config-cli-import-schema.json
+# keycloak-config-cli: protocol mappers of the `tbpro` client scope.
+#
+# The `tbpro` scope carries the account-level claims Accounts publishes to the other
+# services (Send, Appointment, Stalwart). This includes:
+#   - the user's plan limits
+#   - `is_active`
+#   - `is_subscribed`
+#
+# Accounts writes the attributes via the Admin API.
+# 
+# This file is the source of truth for how they reach tokens and is applied on every Keycloak start.
+# 
+# config-cli reconciles the declared scope's mapper set completely: a mapper on the realm's
+# `tbpro` scope that is not listed here is deleted. Scopes that are not declared in this file
+# are kept (IMPORT_MANAGED_CLIENT_SCOPE=no-delete in apply-cli-config.sh). A declared
+# client's `defaultClientScopes` list is likewise reconciled in full, so list every default
+# scope the client needs, not only `tbpro`.
+realm: tbpro
+
+clientScopes:
+  - name: tbpro
+    description: Extra profile information for tbpro
+    protocol: openid-connect
+    attributes:
+      include.in.token.scope: "false"
+      display.on.consent.screen: "true"
+    protocolMappers:
+      - name: session_state
+        protocol: openid-connect
+        protocolMapper: oidc-session-state-mapper
+        consentRequired: false
+        config:
+          id.token.claim: "true"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
+          userinfo.token.claim: "true"
+
+      # Boolean flags. The user attribute must hold the string "true" or "false".
+      - &user_attribute
+        name: is_active
+        protocol: openid-connect
+        protocolMapper: oidc-usermodel-attribute-mapper
+        consentRequired: false
+        config:
+          user.attribute: is_active
+          claim.name: is_active
+          jsonType.label: boolean
+          id.token.claim: "true"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
+          userinfo.token.claim: "true"
+      - <<: *user_attribute
+        name: is_subscribed
+        config:
+          user.attribute: is_subscribed
+          claim.name: is_subscribed
+          jsonType.label: boolean
+          id.token.claim: "true"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
+          userinfo.token.claim: "true"
+
+      # Plan limits, mirrored from subscription.Plan by update_user_plan_info. Byte counts
+      # exceed int32 and stay String, as they were created on stage and prod.
+      - <<: *user_attribute
+        name: mail_address_count
+        config:
+          user.attribute: mail_address_count
+          claim.name: mail_address_count
+          jsonType.label: int
+          id.token.claim: "true"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
+          userinfo.token.claim: "true"
+      - <<: *user_attribute
+        name: mail_domain_count
+        config:
+          user.attribute: mail_domain_count
+          claim.name: mail_domain_count
+          jsonType.label: int
+          id.token.claim: "true"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
+          userinfo.token.claim: "true"
+      - <<: *user_attribute
+        name: mail_storage_bytes
+        config:
+          user.attribute: mail_storage_bytes
+          claim.name: mail_storage_bytes
+          jsonType.label: String
+          id.token.claim: "true"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
+          userinfo.token.claim: "true"
+      - <<: *user_attribute
+        name: send_storage_bytes
+        config:
+          user.attribute: send_storage_bytes
+          claim.name: send_storage_bytes
+          jsonType.label: String
+          id.token.claim: "true"
+          lightweight.claim: "false"
+          access.token.claim: "true"
+          introspection.token.claim: "true"
+          userinfo.token.claim: "true"
+
+# Clients that must carry the tbpro claims. Realm defaults only apply to clients created
+# afterwards, so the scope is pinned here. Full default-scope list per client (see header).
+clients:
+  - clientId: thunderbird-send-backend
+    defaultClientScopes:
+      - web-origins
+      - acr
+      - roles
+      - profile
+      - basic
+      - email
+      - tbpro
