@@ -107,8 +107,8 @@ export default {
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem;
-  background-color: var(--colour-neutral-lower);
-  border: 1px solid var(--colour-neutral-border);
+  background-color: var(--colour-surface-lower);
+  border: 1px solid var(--colour-surface-border);
   border-radius: 0.625rem;
 }
 
@@ -143,7 +143,7 @@ export default {
   }
 
   &.active {
-    background-color: var(--colour-neutral-base);
+    background-color: var(--colour-surface-base);
     border: 1px solid var(--colour-primary-default);
     box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.25);
     color: var(--colour-primary-default);

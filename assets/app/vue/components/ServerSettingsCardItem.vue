@@ -116,7 +116,7 @@ const copyValue = async (value: string | number) => {
 
 .server-settings-card :deep(.incoming-server-tab:not(.active)) {
   color: var(--colour-ti-muted);
-  background-color: var(--colour-neutral-lower);
+  background-color: var(--colour-surface-lower);
 }
 
 .server-settings-card .server-detail-item {
@@ -145,7 +145,7 @@ const copyValue = async (value: string | number) => {
 }
 
 .server-settings-card .copy-error {
-  color: var(--colour-danger-default);
+  color: var(--colour-critical-default);
   font-size: 0.75rem;
   padding: 0.25rem 0.375rem;
   margin: 0;
@@ -169,7 +169,6 @@ const copyValue = async (value: string | number) => {
 }
 
 .server-settings-card :deep(.what-is-container) {
-  position: relative;
   display: inline-flex;
   align-items: center;
   flex-grow: 0;
@@ -178,38 +177,19 @@ const copyValue = async (value: string | number) => {
   text-decoration: none;
   width: max-content;
   color: var(--colour-ti-base);
+}
+
+/* Keeps the anchor (and so the tooltip) sized to its trigger inside the flex column */
+.server-settings-card :deep(.tooltip-anchor) {
+  align-self: flex-start;
+}
+
+.server-settings-card :deep(.tooltip) {
+  font-size: 0.75rem;
 
   a {
     color: var(--colour-ti-highlight);
   }
-}
-
-/* Fills the gap between the trigger row and the tooltip so :hover is not lost in dead space */
-.server-settings-card :deep(.what-is-container::before) {
-  content: '';
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  width: max(100%, 18rem);
-  height: 0.75rem;
-  transform: translateX(-50%);
-}
-
-.server-settings-card :deep(.what-is-container .tooltip) {
-  visibility: hidden;
-  opacity: 0;
-  width: max-content;
-  bottom: calc(100% + 0.5rem);
-  left: 50%;
-  top: auto;
-  transform: translateX(-50%);
-}
-
-.server-settings-card :deep(.what-is-container:hover .tooltip),
-.server-settings-card :deep(.what-is-container .tooltip:hover) {
-  visibility: visible;
-  opacity: 1;
-  cursor: default;
 }
 
 .server-settings-card :deep(.what-is-container span) {

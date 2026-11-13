@@ -49,7 +49,7 @@ dialog {
   left: 50%;
   transform: translate(-50%, 0);
   margin: 0;
-  background-color: var(--colour-neutral-base);
+  background-color: var(--colour-surface-base);
   border-radius: 1.5rem;
   border: none;
   box-shadow: 0.25rem 0.25rem 1rem 0 rgba(0, 0, 0, 0.04);
@@ -66,7 +66,7 @@ dialog {
   }
 
   &::backdrop {
-    background-color: var(--colour-neutral-900);
+    background-color: var(--colour-surface-subtle-dark);
     opacity: 0.5;
   }
 

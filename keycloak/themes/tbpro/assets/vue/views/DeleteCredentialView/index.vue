@@ -34,7 +34,7 @@ export default {
       <danger-button class="submit" @click="onSubmit" name="accept" id="kc-accept" :value="$t('doConfirmDelete')" data-testid="submit-btn">
         {{ $t('doConfirmDelete') }}
       </danger-button>
-      <primary-button variant="outline" class="submit" @click="onCancel" data-testid="cancel-btn">{{ $t('doCancel') }}</primary-button>
+      <primary-button outline class="submit" @click="onCancel" data-testid="cancel-btn">{{ $t('doCancel') }}</primary-button>
     </div>
   </form>
 </template>

@@ -88,7 +88,7 @@ watch(selectedDomain, () => {
 <template>
   <template v-if="step === EMAIL_ALIAS_STEP.INITIAL">
     <primary-button
-      variant="outline"
+      outline
       class="add-email-alias-button"
       @click="step = EMAIL_ALIAS_STEP.SUBMIT"
     >
@@ -140,10 +140,6 @@ watch(selectedDomain, () => {
 </template>
 
 <style scoped>
-:deep(.tooltip) {
-  min-width: 200px;
-}
-
 :deep(.email-alias-input-wrapper .help-label) {
   white-space: break-spaces;
 }

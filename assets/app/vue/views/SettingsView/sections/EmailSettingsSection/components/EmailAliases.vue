@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { NoticeBar, NoticeBarTypes, BaseBadge, BaseBadgeTypes, ToolTip } from '@thunderbirdops/services-ui';
+import { NoticeBar, NoticeBarTypes, BaseBadge, BaseBadgeTypes, ToolTip, TooltipPosition } from '@thunderbirdops/services-ui';
 import { PhX, PhInfo } from '@phosphor-icons/vue';
 
 // Local components
@@ -104,17 +104,21 @@ const onDeleteAliasError = (error: string) => {
           {{ t('views.mail.sections.emailSettings.catchAllUsed', {
             catchAllUsed: catchAlls.length, catchAllLimit: customDomains.length,
           }) }}
-          <aside aria-labelledby="catch-all-tooltip" class="info-tooltip-trigger" tabindex="0"
+          <tool-tip class="info-tooltip-trigger" :position="TooltipPosition.Top"
             v-if="catchAlls.length >= customDomains.length">
-            <ph-info size="13" aria-hidden="true" />
-            <tool-tip id="catch-all-tooltip" :alt="t('views.mail.sections.emailSettings.catchAllTooltip')">
+            <template #default="{ tooltipId }">
+              <span class="info-tooltip-icon" tabindex="0" :aria-describedby="tooltipId">
+                <ph-info size="13" aria-hidden="true" />
+              </span>
+            </template>
+            <template #content>
               <i18n-t keypath="views.mail.sections.emailSettings.catchAllTooltip" tag="span">
                 <template #supportUrl>
                   <!-- Add a supportUrl link when a support article exists. -->
                 </template>
               </i18n-t>
-            </tool-tip>
-          </aside>
+            </template>
+          </tool-tip>
         </span>
       </div>
     </div>
@@ -211,7 +215,7 @@ const onDeleteAliasError = (error: string) => {
       gap: 0.5rem;
       height: 100%;
       min-height: 60px;
-      background-color: var(--colour-neutral-lower);
+      background-color: var(--colour-surface-lower);
 
       &+.alias-item {
         background-color: transparent;
@@ -254,42 +258,19 @@ const onDeleteAliasError = (error: string) => {
     }
   }
 
-  /* Stolen from AppPassword, this should really be in tooltip itself though. */
   .info-tooltip-trigger {
-    position: relative;
+    /* Small hack for alignment */
+    top: 2px;
+  }
+
+  .info-tooltip-icon {
     display: inline-flex;
     align-items: center;
     cursor: pointer;
-    /* Small hack for alignment */
-    top: 2px;
-
-    &::before {
-      content: '';
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      width: max(100%, 18rem);
-      height: 0.75rem;
-      transform: translateX(-50%);
-    }
   }
 
   .info-tooltip-trigger :deep(.tooltip) {
-    visibility: hidden;
-    opacity: 0;
-    width: max-content;
-    bottom: calc(100% + 0.5rem);
-    left: 50%;
-    top: auto;
-    transform: translateX(-50%);
     font-size: 0.8125rem;
-  }
-
-  .info-tooltip-trigger:hover :deep(.tooltip),
-  .info-tooltip-trigger :deep(.tooltip:hover) {
-    visibility: visible;
-    opacity: 1;
-    cursor: default;
   }
 
   .info-tooltip-trigger :deep(.tooltip a) {

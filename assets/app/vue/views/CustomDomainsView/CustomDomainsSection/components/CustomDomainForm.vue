@@ -551,7 +551,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
 <template>
   <template v-if="step === STEP.INITIAL">
     <primary-button
-      variant="outline"
+      outline
       @click="step = STEP.ADD"
       v-if="customDomains.length < maxCustomDomains"
     >
@@ -580,7 +580,7 @@ watch(() => props.lastDomainRemoved, (newLastDomainRemoved) => {
         </i18n-t>
       </notice-bar>
 
-      <primary-button variant="outline" @click="onCreateCustomDomain" :disabled="isAddingCustomDomain">
+      <primary-button outline @click="onCreateCustomDomain" :disabled="isAddingCustomDomain">
         {{ t('views.mail.sections.customDomains.continue') }}
       </primary-button>
     </form>
@@ -746,7 +746,7 @@ h3 {
 .records-table-header {
   display: flex;
   align-items: center;
-  border-block-end: 1px solid var(--colour-neutral-border);
+  border-block-end: 1px solid var(--colour-surface-border);
   min-width: max-content;
 
   p {
@@ -767,7 +767,7 @@ h3 {
   border-inline-start: 0.25rem solid transparent;
 
   &:nth-child(odd) {
-    background-color: var(--colour-neutral-lower);
+    background-color: var(--colour-surface-lower);
   }
 
   &.record-warning {
@@ -776,8 +776,8 @@ h3 {
   }
 
   &.record-critical {
-    border-inline-start-color: var(--colour-danger-default);
-    background-color: var(--colour-danger-soft);
+    border-inline-start-color: var(--colour-critical-default);
+    background-color: var(--colour-critical-soft);
   }
 
   &.record-stale {
@@ -817,7 +817,7 @@ h3 {
 
 .records-table-footer {
   min-width: max-content;
-  border-block-start: 1px solid var(--colour-neutral-border);
+  border-block-start: 1px solid var(--colour-surface-border);
   padding-block-start: 1rem;
 }
 
@@ -836,7 +836,7 @@ h3 {
 }
 
 .inline-issue-critical {
-  color: var(--colour-danger-default);
+  color: var(--colour-critical-default);
 }
 
 .inline-issue-warning {

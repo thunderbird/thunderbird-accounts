@@ -214,8 +214,8 @@ export default {
   }
 
   .custom-domains-list {
-    border-block-start: 1px solid var(--colour-neutral-border);
-    border-block-end: 1px solid var(--colour-neutral-border);
+    border-block-start: 1px solid var(--colour-surface-border);
+    border-block-end: 1px solid var(--colour-surface-border);
     margin-block-end: 1.5rem;
 
     .custom-domain-item {
@@ -226,7 +226,7 @@ export default {
       gap: 0.5rem;
 
       & + .custom-domain-item {
-        border-block-start: 1px solid var(--colour-neutral-border);
+        border-block-start: 1px solid var(--colour-surface-border);
       }
 
       p {
