@@ -163,11 +163,11 @@ class TestDNSRecordStatus(SimpleTestCase):
         mock_resolve.side_effect = dns_resolver.NoAnswer()
 
         status, existing_values = check_txt_record_status(
-            'tb.stosberg.com',
-            {'type': 'TXT', 'name': 'tb.stosberg.com.', 'content': 'v=spf1 include:spf.test.com -all'},
+            'tb.customdomain.com',
+            {'type': 'TXT', 'name': 'tb.customdomain.com.', 'content': 'v=spf1 include:spf.test.com -all'},
         )
 
-        mock_resolve.assert_called_once_with('tb.stosberg.com.', 'TXT')
+        mock_resolve.assert_called_once_with('tb.customdomain.com.', 'TXT')
         self.assertEqual(status, DNSRecordStatus.MISSING)
         self.assertEqual(existing_values, [])
 
