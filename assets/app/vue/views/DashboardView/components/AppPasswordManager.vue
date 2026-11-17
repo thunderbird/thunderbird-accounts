@@ -14,8 +14,10 @@ import {
   PrimaryButton,
   TextInput,
   ToolTip,
+  TooltipPosition,
+  XIcon,
 } from '@thunderbirdops/services-ui';
-import { PhInfo, PhX } from '@phosphor-icons/vue';
+import { PhInfo } from '@phosphor-icons/vue';
 import GenericModal from '@/components/GenericModal.vue';
 import { APP_PASSWORD_SUPPORT_URL } from '@/defines';
 import { createAppPassword, listAppPasswords, revokeAppPassword } from '../api';
@@ -234,16 +236,25 @@ onMounted(loadAppPasswords);
 
     <p class="app-password-description">
       {{ t(`${KEY}.description`)
-      }}<span
+      }}<tool-tip
         class="info-tooltip-trigger"
-        :class="{ 'tooltip-hovered': tooltipHovered }"
-        tabindex="0"
-        :aria-label="t(`${KEY}.moreInformation`)"
+        :position="TooltipPosition.Top"
+        :beak="false"
+        :visible="tooltipHovered || undefined"
         @mouseenter="openTooltip"
         @mouseleave="scheduleTooltipClose()"
       >
-        <ph-info size="16" aria-hidden="true" />
-        <tool-tip :alt="t(`${KEY}.tooltip`)">
+        <template #default="{ tooltipId }">
+          <span
+            class="info-tooltip-icon"
+            tabindex="0"
+            :aria-label="t(`${KEY}.moreInformation`)"
+            :aria-describedby="tooltipId"
+          >
+            <ph-info size="16" aria-hidden="true" />
+          </span>
+        </template>
+        <template #content>
           <i18n-t :keypath="`${KEY}.tooltip`" tag="span">
             <template #supportUrl>
               <a :href="APP_PASSWORD_SUPPORT_URL" target="_blank" rel="noopener">{{
@@ -251,8 +262,8 @@ onMounted(loadAppPasswords);
               }}</a>
             </template>
           </i18n-t>
-        </tool-tip>
-      </span>
+        </template>
+      </tool-tip>
     </p>
 
     <notice-bar v-if="loadError" :type="NoticeBarTypes.Critical" class="app-password-notice" role="alert">
@@ -280,7 +291,7 @@ onMounted(loadAppPasswords);
           </span>
         </div>
         <primary-button
-          variant="outline"
+          outline
           size="small"
           class="app-password-revoke"
           :aria-label="t(`${KEY}.revokeNamed`, { name: displayName(appPassword) })"
@@ -305,11 +316,10 @@ onMounted(loadAppPasswords);
       <template #cta>
         <icon-button
           size="large"
-          class="app-password-notice-close"
           :aria-label="t('views.mail.sections.emailSettings.close')"
           @click="statusMessage = ''"
         >
-          <ph-x size="24" aria-hidden="true" />
+          <x-icon aria-hidden="true" />
         </icon-button>
       </template>
     </notice-bar>
@@ -345,7 +355,7 @@ onMounted(loadAppPasswords);
       </div>
       <p
         class="app-password-copy-status"
-        :class="{ failed: copyStatus === 'failed' }"
+        :class="{ idle: copyStatus === 'idle', failed: copyStatus === 'failed' }"
         role="status"
         aria-live="polite"
         data-testid="copy-status"
@@ -374,10 +384,10 @@ onMounted(loadAppPasswords);
       </notice-bar>
 
       <div class="app-password-actions">
-        <primary-button variant="outline" :disabled="isCreating" @click="cancelCreate">
+        <primary-button outline :disabled="isCreating" @click="cancelCreate">
           {{ t('views.mail.sections.emailSettings.cancel') }}
         </primary-button>
-        <primary-button form-action="submit" :disabled="isBusy" data-testid="app-password-generate">
+        <primary-button type="submit" :disabled="isBusy" data-testid="app-password-generate">
           {{ isCreating ? t(`${KEY}.generating`) : t(`${KEY}.generateButton`) }}
         </primary-button>
       </div>
@@ -385,7 +395,7 @@ onMounted(loadAppPasswords);
 
     <primary-button
       v-else
-      variant="outline"
+      outline
       class="app-password-create"
       :disabled="isBusy"
       data-testid="app-password-create"
@@ -410,7 +420,7 @@ onMounted(loadAppPasswords);
         </notice-bar>
       </template>
       <template v-if="pendingRevoke" #actions>
-        <primary-button variant="outline" :disabled="isRevoking" data-testid="cancel-revoke" @click="cancelRevoke">
+        <primary-button outline :disabled="isRevoking" data-testid="cancel-revoke" @click="cancelRevoke">
           {{ t('views.mail.sections.emailSettings.cancel') }}
         </primary-button>
         <danger-button :disabled="isRevoking" data-testid="confirm-revoke" @click="confirmRevoke">
@@ -452,7 +462,7 @@ onMounted(loadAppPasswords);
     padding: 0;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--colour-neutral-border);
+    border: 1px solid var(--colour-surface-border);
     border-radius: 0.5rem;
   }
 
@@ -464,7 +474,7 @@ onMounted(loadAppPasswords);
     padding: 0.75rem 1rem;
 
     & + .app-password-item {
-      border-block-start: 1px solid var(--colour-neutral-border);
+      border-block-start: 1px solid var(--colour-surface-border);
     }
   }
 
@@ -494,10 +504,6 @@ onMounted(loadAppPasswords);
     align-self: flex-start;
   }
 
-  .app-password-notice-close {
-    color: var(--colour-ti-secondary);
-  }
-
   .app-password-empty {
     color: var(--colour-ti-muted);
   }
@@ -507,9 +513,9 @@ onMounted(loadAppPasswords);
     flex-direction: column;
     gap: 0.75rem;
     padding: 1rem;
-    border: 1px solid var(--colour-neutral-border);
+    border: 1px solid var(--colour-surface-border);
     border-radius: 0.5rem;
-    background-color: var(--colour-neutral-lower);
+    background-color: var(--colour-surface-lower);
 
     h3 {
       margin: 0;
@@ -545,9 +551,9 @@ onMounted(loadAppPasswords);
       display: inline-block;
       max-width: 100%;
       padding: 0.375rem 0.5rem;
-      border: 1px solid var(--colour-neutral-border);
+      border: 1px solid var(--colour-surface-border);
       border-radius: 0.25rem;
-      background-color: var(--colour-neutral-base);
+      background-color: var(--colour-surface-base);
       color: var(--colour-ti-base);
       font-size: 0.9375rem;
       overflow-wrap: anywhere;
@@ -562,9 +568,12 @@ onMounted(loadAppPasswords);
   }
 
   .app-password-copy-status {
-    min-height: 1.32em;
     font-size: 0.875rem;
     color: var(--colour-ti-highlight);
+
+    &.idle {
+      margin-block-start: -0.75rem;
+    }
 
     &.failed {
       color: var(--colour-ti-critical);
@@ -578,10 +587,16 @@ onMounted(loadAppPasswords);
   }
 
   .info-tooltip-trigger {
+    position: static;
     display: inline-flex;
     align-items: center;
     vertical-align: text-bottom;
     margin-inline-start: 0.375rem;
+  }
+
+  .info-tooltip-icon {
+    display: inline-flex;
+    align-items: center;
     cursor: pointer;
 
     &:focus-visible {
@@ -591,27 +606,13 @@ onMounted(loadAppPasswords);
     }
   }
 
-  /* display:none while hidden keeps the tooltip out of layout, so it cannot widen the page on small screens. */
   .info-tooltip-trigger :deep(.tooltip) {
-    display: none;
     width: auto;
     max-width: none;
-    bottom: calc(100% + 0.5rem);
     left: 0;
     right: 0;
-    top: auto;
     transform: none;
     font-size: 0.8125rem;
-  }
-
-  /* focus-within keeps the tooltip open while Tab moves from the icon onto the link inside it. */
-  .info-tooltip-trigger.tooltip-hovered :deep(.tooltip),
-  .info-tooltip-trigger:focus-within :deep(.tooltip),
-  .info-tooltip-trigger :deep(.tooltip:hover) {
-    display: block;
-    visibility: visible;
-    opacity: 1;
-    cursor: default;
   }
 
   .info-tooltip-trigger :deep(.tooltip a) {

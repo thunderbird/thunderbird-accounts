@@ -25,8 +25,8 @@ const listResponse = (appPasswords = [laptop, unnamed]) => ({
 // The services-ui controls are stubbed so the tests pin this component's behaviour, not the design system's.
 const ButtonStub = {
   inheritAttrs: false,
-  props: ['disabled', 'formAction'],
-  template: `<button :type="formAction === 'submit' ? 'submit' : 'button'" :disabled="disabled" v-bind="$attrs"><slot /></button>`,
+  props: ['disabled', 'type'],
+  template: `<button :type="type || 'button'" :disabled="disabled" v-bind="$attrs"><slot /></button>`,
 };
 const TextInputStub = {
   inheritAttrs: false,
@@ -280,7 +280,7 @@ describe('AppPasswordManager', () => {
     expect(wrapper.find('form').exists()).toBe(true);
   });
 
-  it('reports copy success only when the clipboard write resolves', async () => {
+  it('keeps a live region mounted for clipboard success and failure', async () => {
     vi.mocked(createAppPassword).mockResolvedValue({
       success: true,
       status: 200,
@@ -291,14 +291,20 @@ describe('AppPasswordManager', () => {
     const wrapper = await mountManager();
     await createPassword(wrapper, 'Phone');
 
+    const status = wrapper.get('[data-testid="copy-status"]');
+    expect(status.text()).toBe('');
+    expect(status.attributes('role')).toBe('status');
+    expect(status.attributes('aria-live')).toBe('polite');
     await wrapper.find('[data-testid="copy-app-password"]').trigger('click');
     await flushPromises();
     expect(writeText).toHaveBeenCalledWith('generated-secret-value');
+    expect(wrapper.get('[data-testid="copy-status"]').element).toBe(status.element);
     expect(wrapper.find('[data-testid="copy-status"]').text()).toBe('Copied!');
 
     writeText.mockRejectedValueOnce(new Error('denied'));
     await wrapper.find('[data-testid="copy-app-password"]').trigger('click');
     await flushPromises();
+    expect(wrapper.get('[data-testid="copy-status"]').element).toBe(status.element);
     expect(wrapper.find('[data-testid="copy-status"]').text()).not.toContain('Copied');
     expect(wrapper.find('[data-testid="copy-status"]').text()).toContain('copy it yourself');
     // The secret stays on screen so the user can still save it by hand.
