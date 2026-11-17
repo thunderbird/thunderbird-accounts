@@ -25,7 +25,7 @@ from thunderbird_accounts.authentication.mfa import (
     MFA_REST_ERROR_STEP_UP_REQUIRED,
     MFA_REST_ERROR_TOTP_NOT_CONFIGURED,
 )
-from thunderbird_accounts.authentication.mfa_management import get_user_access_token
+from thunderbird_accounts.authentication.middleware import get_user_access_token
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.views import MfaReauthenticationRequestView
 
@@ -677,28 +677,28 @@ class GetUserAccessTokenTestCase(TestCase):
     def _request(**session):
         return SimpleNamespace(session=dict(session))
 
-    @patch('thunderbird_accounts.authentication.mfa_management.refresh_user_access_token')
+    @patch('thunderbird_accounts.authentication.middleware.refresh_user_access_token')
     def test_returns_unexpired_token_without_refreshing(self, mock_refresh: Mock):
         token = _jwt_with_exp(300)
         self.assertEqual(get_user_access_token(self._request(oidc_access_token=token)), token)
         mock_refresh.assert_not_called()
 
-    @patch('thunderbird_accounts.authentication.mfa_management.refresh_user_access_token', return_value='fresh-token')
+    @patch('thunderbird_accounts.authentication.middleware.refresh_user_access_token', return_value='fresh-token')
     def test_refreshes_expired_token(self, mock_refresh: Mock):
         request = self._request(oidc_access_token=_jwt_with_exp(-10))
         self.assertEqual(get_user_access_token(request), 'fresh-token')
         mock_refresh.assert_called_once_with(request)
 
-    @patch('thunderbird_accounts.authentication.mfa_management.refresh_user_access_token', return_value=None)
+    @patch('thunderbird_accounts.authentication.middleware.refresh_user_access_token', return_value=None)
     def test_falls_back_to_stored_token_when_refresh_fails(self, _mock_refresh: Mock):
         expired = _jwt_with_exp(-10)
         self.assertEqual(get_user_access_token(self._request(oidc_access_token=expired)), expired)
 
-    @patch('thunderbird_accounts.authentication.mfa_management.refresh_user_access_token')
+    @patch('thunderbird_accounts.authentication.middleware.refresh_user_access_token')
     def test_opaque_token_is_forwarded_unchanged(self, mock_refresh: Mock):
         self.assertEqual(get_user_access_token(self._request(oidc_access_token='opaque-not-a-jwt')), 'opaque-not-a-jwt')
         mock_refresh.assert_not_called()
 
-    @patch('thunderbird_accounts.authentication.mfa_management.refresh_user_access_token', return_value=None)
+    @patch('thunderbird_accounts.authentication.middleware.refresh_user_access_token', return_value=None)
     def test_returns_none_when_no_token_stored(self, _mock_refresh: Mock):
         self.assertIsNone(get_user_access_token(self._request()))
