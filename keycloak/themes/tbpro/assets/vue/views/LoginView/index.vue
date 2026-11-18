@@ -14,6 +14,23 @@ const loginForm = useTemplateRef('login-form');
 const isSubmitting = ref(false);
 const message = window._page?.message;
 const tbProPrimaryDomain = window._page.currentView?.tbProPrimaryDomain;
+const noticeText = window._page.currentView?.noticeText?.trim();
+const noticeType =
+  [NoticeBarTypes.Info, NoticeBarTypes.Warning, NoticeBarTypes.Critical].find(
+    (type) => type === window._page.currentView?.noticeType
+  ) ?? NoticeBarTypes.Warning;
+const noticeStatusText = window._page.currentView?.noticeStatusText?.trim();
+
+// The status URL is operator-entered, so only http(s) links are rendered (never javascript: and the like).
+const httpUrlOrNull = (value?: string) => {
+  try {
+    const url = new URL(value?.trim() ?? '');
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+};
+const noticeStatusUrl = httpUrlOrNull(window._page.currentView?.noticeStatusUrl);
 
 const onSubmit = () => {
   if (isSubmitting.value) return;
@@ -63,6 +80,23 @@ export default {
 </script>
 
 <template>
+  <notice-bar
+    v-if="noticeText"
+    :type="noticeType"
+    class="notice-bar-login maintenance-notice"
+    role="status"
+    data-testid="maintenance-notice"
+  >
+    {{ noticeText }}
+    <a
+      v-if="noticeStatusUrl && noticeStatusText"
+      :href="noticeStatusUrl"
+      target="_blank"
+      rel="noopener"
+      data-testid="maintenance-notice-status-url"
+      >{{ noticeStatusText }}</a
+    >
+  </notice-bar>
   <notice-bar :type="NoticeBarTypes.Critical" v-if="firstError" class="notice-bar-login">{{ firstError }}</notice-bar>
   <notice-bar :type="NoticeBarTypes.Info" v-else-if="!message?.type" class="notice-bar-login">
     <i18n-t keypath="inviteOnly" tag="span">
@@ -159,6 +193,11 @@ export default {
 <style scoped>
 .notice-bar-login {
   margin-bottom: 1.5rem;
+}
+
+.maintenance-notice {
+  /* A pasted status URL must wrap instead of widening the card past a phone screen. */
+  overflow-wrap: anywhere;
 }
 
 form {
