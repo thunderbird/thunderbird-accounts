@@ -16,8 +16,8 @@ jobs:
   promote-release-to-tb-prod:
     if: vars.KARGO_PROMOTE_TB_PROD == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    environment: production
+    timeout-minutes: 90
+    environment: tb-prod-promote
     permissions:
       actions: read
       contents: read
@@ -55,7 +55,6 @@ jobs:
             [[ "$state" == "completed/success" ]] || fail "publish-images for $1 is $state"
           }
 
-          require_published "$RELEASE_SHA"
           git rev-list --first-parent "$RELEASE_SHA" > "$RUNNER_TEMP/commits"
 
           resolve() {
@@ -63,8 +62,9 @@ jobs:
             tags="$RUNNER_TEMP/tags-$key"
             skopeo list-tags "docker://$image" | jq -r '.Tags[]' > "$tags"
             sha=$(grep -m1 -Fxf "$tags" "$RUNNER_TEMP/commits") || fail "no $image:<sha> tag on the history of $RELEASE_SHA"
-            while read -r commit && [[ "$commit" != "$sha" ]]; do
+            while read -r commit; do
               require_published "$commit"
+              [[ "$commit" == "$sha" ]] && break
             done < "$RUNNER_TEMP/commits"
             digest=$(docker buildx imagetools inspect "$image:$sha" --format '{{json .Manifest}}' | jq -r .digest)
             [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "bad digest for $image:$sha: $digest"
@@ -80,12 +80,13 @@ jobs:
           KARGO_TOKEN: ${{ secrets.KARGO_TB_PROD_TOKEN }}
           ACCOUNTS_DIGEST: ${{ steps.resolve.outputs.accounts-digest }}
           KEYCLOAK_DIGEST: ${{ steps.resolve.outputs.keycloak-digest }}
+          VERIFY_TIMEOUT_SECONDS: "2700"
           PROMOTION_TIMEOUT_SECONDS: "1800"
           POLL_SECONDS: "15"
         run: |
           set -euo pipefail
           fail() { echo "::error::$*"; exit 1; }
-          [[ -n "$KARGO_TOKEN" ]] || fail "secret KARGO_TB_PROD_TOKEN is not set in the production environment"
+          [[ -n "$KARGO_TOKEN" ]] || fail "secret KARGO_TB_PROD_TOKEN is not set in the tb-prod-promote environment"
 
           umask 077
           auth="$RUNNER_TEMP/kargo-auth"
@@ -113,27 +114,58 @@ jobs:
             esac
           }
 
-          kargo GET "/v1beta1/projects/$KARGO_PROJECT/freight"
-          jq --arg a "$ACCOUNTS_IMAGE" --arg k "$KEYCLOAK_IMAGE" '[.groups[]?.items[]?] | unique_by(.metadata.name) | map({
-              name: .metadata.name,
-              alias: (.alias // ""),
-              accounts: ([.images[]? | select(.repoURL == $a) | .digest][0] // ""),
-              keycloak: ([.images[]? | select(.repoURL == $k) | .digest][0] // ""),
-              verifiedIn: ((.status.verifiedIn // {}) | keys)
-            })' "$body" > "$RUNNER_TEMP/freight.json"
-          jq --arg ad "$ACCOUNTS_DIGEST" --arg kd "$KEYCLOAK_DIGEST" \
-            'map(select(.accounts == $ad and .keycloak == $kd))' "$RUNNER_TEMP/freight.json" > "$RUNNER_TEMP/match.json"
-
-          count=$(jq length "$RUNNER_TEMP/match.json")
-          if [[ "$count" != 1 ]]; then
+          show_freight() {
             echo "Wanted: accounts $ACCOUNTS_DIGEST, keycloak $KEYCLOAK_DIGEST"
             echo "Freight in $KARGO_PROJECT:"
             jq -r '.[] | "  \(.name) (\(.alias)) accounts=\(.accounts) keycloak=\(.keycloak) verifiedIn=\(.verifiedIn | join(","))"' "$RUNNER_TEMP/freight.json"
-            fail "expected exactly one Freight with both digests, found $count; nothing was promoted"
-          fi
+          }
+
+          deadline=$((SECONDS + VERIFY_TIMEOUT_SECONDS))
+          while :; do
+            kargo GET "/v1beta1/projects/$KARGO_PROJECT/freight"
+            jq --arg a "$ACCOUNTS_IMAGE" --arg k "$KEYCLOAK_IMAGE" '[.groups[]?.items[]?] | map({
+                name: .metadata.name,
+                alias: (.alias // ""),
+                discoveredAt: (.discoveredAt // .metadata.creationTimestamp // ""),
+                accounts: ([.images[]? | select(.repoURL == $a) | .digest][0] // ""),
+                keycloak: ([.images[]? | select(.repoURL == $k) | .digest][0] // ""),
+                verifiedIn: ((.status.verifiedIn // {}) | keys)
+              })' "$body" > "$RUNNER_TEMP/freight.json"
+            jq --arg ad "$ACCOUNTS_DIGEST" --arg kd "$KEYCLOAK_DIGEST" \
+              'map(select(.accounts == $ad and .keycloak == $kd))' "$RUNNER_TEMP/freight.json" > "$RUNNER_TEMP/match.json"
+            count=$(jq length "$RUNNER_TEMP/match.json")
+            if (( count > 1 )); then
+              show_freight
+              fail "found $count Freight with both digests, expected one; nothing was promoted"
+            fi
+            if (( count == 1 )) && jq -e --arg s "$KARGO_VERIFIED_IN" '.[0].verifiedIn | index($s)' "$RUNNER_TEMP/match.json" > /dev/null; then
+              break
+            fi
+            if (( SECONDS >= deadline )); then
+              show_freight
+              if (( count == 0 )); then
+                fail "no Freight with both digests after ${VERIFY_TIMEOUT_SECONDS}s; Kargo never saw this pair as :latest together, or deleted it. Nothing was promoted"
+              fi
+              fail "Freight $(jq -r '.[0].name' "$RUNNER_TEMP/match.json") is not verified on $KARGO_VERIFIED_IN after ${VERIFY_TIMEOUT_SECONDS}s; nothing was promoted"
+            fi
+            sleep "$POLL_SECONDS"
+          done
           freight=$(jq -r '.[0].name' "$RUNNER_TEMP/match.json")
-          jq -e --arg s "$KARGO_VERIFIED_IN" '.[0].verifiedIn | index($s)' "$RUNNER_TEMP/match.json" > /dev/null \
-            || fail "Freight $freight is not verified on $KARGO_VERIFIED_IN yet (verified in: $(jq -r '.[0].verifiedIn | join(",")' "$RUNNER_TEMP/match.json")); nothing was promoted. Re-run this job once $KARGO_VERIFIED_IN verification passes"
+
+          kargo GET "/v1beta1/projects/$KARGO_PROJECT/stages/$KARGO_STAGE"
+          current=$(jq -r '[.status.freightHistory[0].items[]?.name][0] // ""' "$body")
+          if [[ "$current" == "$freight" ]]; then
+            echo "### $RELEASE_TAG: Freight \`$freight\` is already current on $KARGO_STAGE, nothing to do" >> "$GITHUB_STEP_SUMMARY"
+            echo "Freight $freight is already current on $KARGO_STAGE"
+            exit 0
+          fi
+          if [[ -n "$current" ]]; then
+            current_at=$(jq -r --arg n "$current" '.[] | select(.name == $n) | .discoveredAt' "$RUNNER_TEMP/freight.json")
+            freight_at=$(jq -r '.[0].discoveredAt' "$RUNNER_TEMP/match.json")
+            [[ -n "$current_at" ]] || fail "current $KARGO_STAGE Freight $current is not in the Freight list; nothing was promoted"
+            [[ "$freight_at" > "$current_at" ]] \
+              || fail "Freight $freight ($freight_at) is older than $KARGO_STAGE's current Freight $current ($current_at); refusing to move $KARGO_STAGE back. A Kargo admin can do that by hand"
+          fi
 
           kargo POST "/v1beta1/projects/$KARGO_PROJECT/stages/$KARGO_STAGE/promotions" "$(jq -nc --arg f "$freight" '{freight: $f}')"
           promotion=$(jq -r '.metadata.name // empty' "$body")
