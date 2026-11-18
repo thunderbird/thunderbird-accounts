@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           node-version: 20
           cache: 'npm'
@@ -41,7 +41,7 @@ jobs:
           npm ci
 
       - name: BrowserStack Env Setup
-        uses: browserstack/github-actions/setup-env@master
+        uses: browserstack/github-actions/setup-env@e1ceb209003b8bf050dac07c9038347259fed39c # master
         with:
           username:  ${{ secrets.BROWSERSTACK_USERNAME }}
           access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
