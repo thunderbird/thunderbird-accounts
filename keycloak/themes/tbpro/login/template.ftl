@@ -107,6 +107,11 @@
         //<#else>
         clientUrl: null,
         //</#if>
+        //<#if properties.tbproContactUrl??>
+        supportUrl: '${properties.tbproContactUrl}',
+        //<#else>
+        supportUrl: null,
+        //</#if>
         //<#-- Honor displayMessage: pages that show an error per-field (e.g. login-otp) set it -->
         //<#-- false to suppress the global banner, avoiding a duplicate message. -->
         //<#if displayMessage && message?has_content>
