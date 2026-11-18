@@ -53,6 +53,11 @@ COPY --chown=keycloak:keycloak keycloak/providers/keycloak-mfa-rest.jar /opt/key
 # (MFA_JAR_MODE is declared as a global ARG at the top of this file.)
 FROM mfa-${MFA_JAR_MODE}
 
+# CVE-2026-114938: the image's JDK (Red Hat OpenJDK 21.0.12.1) has the vulnerable AVX-512
+# Base64 decode intrinsic. kc.sh appends JAVA_OPTS_APPEND to the server's JVM options.
+# Remove once the base image ships a patched JDK.
+ENV JAVA_OPTS_APPEND="-XX:-UseBASE64Intrinsics"
+
 # Load in our dev setup
 COPY --chown=keycloak:keycloak keycloak/data/import /opt/keycloak/data/import
 COPY --from=build /app/keycloak/themes/tbpro /opt/keycloak/themes/tbpro
