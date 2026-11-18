@@ -1,0 +1,93 @@
+---
+name: tag-release-images
+
+on:
+  release:
+    types:
+      - published
+
+permissions: {}
+
+jobs:
+  tag-release-images:
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+    env:
+      ACCOUNTS_IMAGE: ghcr.io/thunderbird/thunderbird-accounts
+      KEYCLOAK_IMAGE: ghcr.io/thunderbird/thunderbird-accounts-keycloak
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve both digests and check them against tb-stage
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_AUTHOR: ${{ github.event.release.author.login }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$*"; exit 1; }
+
+          [[ "$RELEASE_TAG" =~ ^r-[0-9]{4}$ ]] || fail "release tag $RELEASE_TAG is not r-NNNN"
+          [[ "$RELEASE_AUTHOR" == "github-actions[bot]" ]] || fail "release $RELEASE_TAG was not drafted by merge.yml"
+
+          require_published() {
+            local state
+            state=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/publish-images.yml/runs?head_sha=$1&event=push&branch=main" \
+              --jq '.workflow_runs | max_by(.created_at) | "\(.status)/\(.conclusion)"')
+            [[ "$state" == "completed/success" ]] || fail "publish-images for $1 is $state"
+          }
+
+          require_published "$RELEASE_SHA"
+          git rev-list --first-parent "$RELEASE_SHA" > "$RUNNER_TEMP/commits"
+
+          resolve() {
+            local key=$1 image=$2 deploy_repo=$3 tags sha digest pinned existing
+            tags="$RUNNER_TEMP/tags-$key"
+            skopeo list-tags "docker://$image" | jq -r '.Tags[]' > "$tags"
+            sha=$(grep -m1 -Fxf "$tags" "$RUNNER_TEMP/commits") || fail "no $image:<sha> tag on the history of $RELEASE_SHA"
+            while read -r commit && [[ "$commit" != "$sha" ]]; do
+              require_published "$commit"
+            done < "$RUNNER_TEMP/commits"
+            digest=$(docker buildx imagetools inspect "$image:$sha" --format '{{json .Manifest}}' | jq -r .digest)
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "bad digest for $image:$sha: $digest"
+
+            pinned=$(gh api -H 'Accept: application/vnd.github.raw' \
+              "repos/thunderbird/$deploy_repo/contents/overlays/tb-stage/kustomization.yaml?ref=env/tb-stage" \
+              | yq -r ".images[] | select(.newName == \"$image\") | .digest")
+            [[ "$pinned" == "$digest" ]] || fail "$image:$sha is $digest but env/tb-stage of $deploy_repo pins '$pinned'"
+
+            if grep -qFx "$RELEASE_TAG" "$tags"; then
+              existing=$(docker buildx imagetools inspect "$image:$RELEASE_TAG" --format '{{json .Manifest}}' | jq -r .digest)
+              [[ "$existing" == "$digest" ]] || fail "$image:$RELEASE_TAG already exists at $existing"
+            fi
+
+            echo "$image:$RELEASE_TAG <- $image:$sha ($digest)"
+            echo "$key-digest=$digest" >> "$GITHUB_OUTPUT"
+          }
+
+          resolve accounts "$ACCOUNTS_IMAGE" accounts-deploy
+          resolve keycloak "$KEYCLOAK_IMAGE" keycloak-customer-deploy
+
+      - name: Log in to GHCR
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag both images with the release tag
+        env:
+          ACCOUNTS_DIGEST: ${{ steps.resolve.outputs.accounts-digest }}
+          KEYCLOAK_DIGEST: ${{ steps.resolve.outputs.keycloak-digest }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create -t "$ACCOUNTS_IMAGE:$RELEASE_TAG" "$ACCOUNTS_IMAGE@$ACCOUNTS_DIGEST"
+          docker buildx imagetools create -t "$KEYCLOAK_IMAGE:$RELEASE_TAG" "$KEYCLOAK_IMAGE@$KEYCLOAK_DIGEST"
