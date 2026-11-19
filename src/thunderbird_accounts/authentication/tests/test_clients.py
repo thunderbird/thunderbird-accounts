@@ -124,14 +124,6 @@ class KeycloakClientTokenRefreshTestCase(SimpleTestCase):
         self.assertEqual(mock_get_token.call_count, 1)
         self.assertEqual(mock_request.call_count, 1)
 
-    def test_passes_the_timeout_to_the_token_and_api_calls(self, mock_get_token, mock_request):
-        mock_request.side_effect = [self._response(200)]
-
-        KeycloakClient().request('roles/x', timeout=2)
-
-        mock_get_token.assert_called_once_with(timeout=2)
-        self.assertEqual(mock_request.call_args.kwargs['timeout'], 2)
-
 
 class KeycloakAccountClientTestCase(TestCase):
     USER_TOKEN = 'user-access-token'

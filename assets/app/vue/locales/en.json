@@ -43,9 +43,6 @@
     "trafficBanner": {
       "message": "We're currently experiencing high demand. Pages may load slowly, and some features may not work. Thank you for your patience."
     },
-    "maintenanceNotice": {
-      "statusLink": "Status"
-    },
     "genericModal": {
       "close": "Close"
     }

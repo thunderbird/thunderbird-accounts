@@ -5,8 +5,8 @@ Maintenance notice
 The Keycloak login page (``auth.tb.pro``) can show a maintenance or incident notice, with an optional link to a status
 page, above the invite-only notice. Accounts pages (``accounts.tb.pro``) with the standard header, including the
 dashboard, show the same notice under the header, so signed-in users see it too. The text is a Keycloak message that
-you set as a **realm
-localization override** on the ``tbpro`` realm, so it appears without a deploy or restart. See
+you set as a **realm localization override** on the ``tbpro`` realm, so it appears on the next page load without a
+deploy or restart. See
 `#1490 <https://github.com/thunderbird/thunderbird-accounts/issues/1490>`_.
 
 How it works
@@ -26,11 +26,9 @@ How it works
   shown literally.
 * A realm override replaces a theme message for that realm. Keycloak stores it in its database, shares it across
   nodes, and keeps it across restarts.
-* Accounts reads the English overrides with its Keycloak admin client
-  (``GET /admin/realms/tbpro/localization/en``) and applies the same rules to the type and status URL. It caches the
-  result for ``MAINTENANCE_NOTICE_CACHE_SECONDS`` (default 60), so a change can take that long to show on Accounts
-  pages. If Keycloak does not answer within ``MAINTENANCE_NOTICE_TIMEOUT_SECONDS`` (default 2) or returns an error,
-  Accounts shows no notice, logs a warning and caches that result for the same time.
+* On each page load, Accounts fetches the English login messages from Keycloak in the browser
+  (``/resources/tbpro/login/en``, about 45 KB) and applies the same rules to the type and status URL. The notice
+  appears once that request finishes; if it fails, Accounts shows no notice.
 
 Turning the notice on or off
 ----------------------------
@@ -45,10 +43,9 @@ Turning the notice on or off
    * Key ``maintenanceNoticeType``, value ``critical``
    * Key ``maintenanceNoticeStatusUrl``, value the status page URL, for example ``https://status.example.org/``
 
-#. Open the login page in a private window and check the notice and its link. Within a minute it also shows on
-   Accounts pages.
+#. Open the login page in a private window and check the notice and its link, then reload an Accounts page.
 #. To remove the notice, delete the rows you added with **⋮ → Delete**. Overrides survive Keycloak restarts, so the
-   notice stays until it is deleted. Accounts pages stop showing it within a minute.
+   notice stays until it is deleted.
 
 The same overrides can be set through the admin REST API with an access token for a master-realm client that can
 manage the ``tbpro`` realm:

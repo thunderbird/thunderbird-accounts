@@ -626,12 +626,6 @@ KEYCLOAK_SEEN_EVENTS_CACHE_KEY = 'keycloak_poll:seen_event_ids'
 KEYCLOAK_SEEN_EVENTS_CACHE_TTL = 3600
 KEYCLOAK_EVENTS_PAGE_SIZE = 500
 
-# The login page's maintenance notice (docs/keycloak/maintenance-notice.rst), read from the tbpro
-# realm overrides when an Accounts page renders. The notice and failed reads are both cached.
-MAINTENANCE_NOTICE_CACHE_KEY = 'keycloak:maintenance_notice'
-MAINTENANCE_NOTICE_CACHE_SECONDS = int(os.getenv('MAINTENANCE_NOTICE_CACHE_SECONDS', '60'))
-MAINTENANCE_NOTICE_TIMEOUT_SECONDS = float(os.getenv('MAINTENANCE_NOTICE_TIMEOUT_SECONDS', '2'))
-
 # TOTP secrets and recovery codes are generated, validated, and hashed entirely by
 # the keycloak-mfa-rest provider (Keycloak's own credential providers). Accounts only
 # orchestrates the flow, so the secret/digit/period/algorithm tunables live in Keycloak.

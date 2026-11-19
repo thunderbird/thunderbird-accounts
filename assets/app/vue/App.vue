@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import HeaderBar from '@/components/HeaderBar.vue';
 import TrafficBanner from '@/components/TrafficBanner.vue';
+import MaintenanceNotice from '@/components/MaintenanceNotice.vue';
 import FooterBar from '@/components/FooterBar.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { SERVER_MESSAGE_LEVEL } from '@/types';
 import { useRoute, useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
 
-const { t } = useI18n();
-
-const maintenanceNotice = window._page?.maintenanceNotice;
 const serverMessages = ref(window._page?.serverMessages ?? []);
 const serverLevelToNoticeBarType = (level: SERVER_MESSAGE_LEVEL) => {
   switch (level) {
@@ -50,23 +47,7 @@ onMounted(() => {
     <header-bar />
 
     <section class="server-messages" v-if="serverMessages !== null">
-      <notice-bar
-        v-if="maintenanceNotice"
-        class="server-message maintenance-notice"
-        :type="maintenanceNotice.type"
-        role="status"
-        data-testid="maintenance-notice"
-      >
-        {{ maintenanceNotice.text }}
-        <a
-          v-if="maintenanceNotice.statusUrl"
-          :href="maintenanceNotice.statusUrl"
-          target="_blank"
-          rel="noopener"
-          data-testid="maintenance-notice-status-url"
-          >{{ maintenanceNotice.statusText || t('components.maintenanceNotice.statusLink') }}</a
-        >
-      </notice-bar>
+      <maintenance-notice class="server-message" />
       <template v-for="message in serverMessages" :key="message.message">
         <notice-bar
           class="server-message"
@@ -112,11 +93,6 @@ main {
   .server-message {
     max-width: 60rem;
     margin: 1rem;
-  }
-
-  .maintenance-notice {
-    /* A pasted status URL must wrap instead of widening the page past a phone screen. */
-    overflow-wrap: anywhere;
   }
 }
 

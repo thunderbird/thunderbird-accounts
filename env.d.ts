@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 import { CustomDomain } from '@/views/MailView/sections/CustomDomainsSection/types';
-import { MaintenanceNotice, ServerMessage } from '@/types';
+import { ServerMessage } from '@/types';
 
 declare global {
   interface Window {
@@ -50,7 +50,6 @@ declare global {
       webmailUrl?: string;
       currentView?: Record<string, any>;
       serverMessages: ServerMessage[];
-      maintenanceNotice?: MaintenanceNotice | null;
       needsTosAcceptance?: boolean;
       recoveryEmail?: string;
       // Special, only used for tbpro_500.html

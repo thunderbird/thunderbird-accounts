@@ -85,7 +85,7 @@ class KeycloakClient:
         self.client_secret = settings.KEYCLOAK_ADMIN_CLIENT_SECRET
         self.access_token = None
 
-    def _get_access_token(self, timeout: Optional[float] = None):
+    def _get_access_token(self):
         response = requests.post(
             settings.KEYCLOAK_ADMIN_TOKEN_ENDPOINT,
             data={
@@ -93,7 +93,6 @@ class KeycloakClient:
                 'client_secret': self.client_secret,
                 'grant_type': 'client_credentials',
             },
-            timeout=timeout,
         )
         response.raise_for_status()
         data = response.json()
@@ -107,15 +106,13 @@ class KeycloakClient:
         data: Optional[dict | list | str] = None,
         params: Optional[dict] = None,
         content_type: str = 'application/json',
-        timeout: Optional[float] = None,
     ) -> requests.Response:
         """Handles authenticated requests to the keycloak api
         Endpoint should not have a leading slash to prevent urljoin from trimming the admin API base URL.
-        :param timeout: Seconds to wait on each HTTP call (token and request). None waits indefinitely.
         :raises RequestException: On non-200 responses. You can access the response object from the exception."""
         token_was_cached = bool(self.access_token)
         if not token_was_cached:
-            self.access_token = self._get_access_token(timeout=timeout)
+            self.access_token = self._get_access_token()
 
         # TODO: Consider raising a value error instead of fixing
         if endpoint[0] == '/':
@@ -135,7 +132,6 @@ class KeycloakClient:
                     'Content-Type': content_type,
                     'Authorization': f'Bearer {self.access_token}',
                 },
-                timeout=timeout,
             )
 
         response = send()
@@ -143,7 +139,7 @@ class KeycloakClient:
         # The service-account token is cached for the client's lifetime and outlives its
         # expiry during long-running commands; re-authenticate once and replay the request.
         if response.status_code == 401 and token_was_cached:
-            self.access_token = self._get_access_token(timeout=timeout)
+            self.access_token = self._get_access_token()
             response = send()
 
         response.raise_for_status()

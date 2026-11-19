@@ -14,7 +14,7 @@ export type ServerMessage = {
   message: string;
 };
 
-/* The login page's maintenance notice, validated server-side (core/maintenance_notice.py) */
+/* The login page's maintenance notice (docs/keycloak/maintenance-notice.rst) */
 export type MaintenanceNotice = {
   text: string;
   type: NoticeBarTypes.Info | NoticeBarTypes.Warning | NoticeBarTypes.Critical;
