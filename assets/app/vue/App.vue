@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import HeaderBar from '@/components/HeaderBar.vue';
 import TrafficBanner from '@/components/TrafficBanner.vue';
+import MaintenanceNotice from '@/components/MaintenanceNotice.vue';
 import FooterBar from '@/components/FooterBar.vue';
 import { NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
 import { SERVER_MESSAGE_LEVEL } from '@/types';
@@ -46,6 +47,7 @@ onMounted(() => {
     <header-bar />
 
     <section class="server-messages" v-if="serverMessages !== null">
+      <maintenance-notice class="server-message" />
       <template v-for="message in serverMessages" :key="message.message">
         <notice-bar
           class="server-message"
