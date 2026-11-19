@@ -1,4 +1,5 @@
 from thunderbird_accounts.mail.types import stalwart
+from thunderbird_accounts.core.maintenance_notice import get_maintenance_notice
 from thunderbird_accounts.core.utils import get_feature_flags
 from thunderbird_accounts.subscription.utils import get_visible_plan_info
 from thunderbird_accounts.authentication.exceptions import AuthenticationUnavailable
@@ -184,6 +185,7 @@ def home(request: HttpRequest):
             'userFullName': request.user.get_full_name() if request.user.is_authenticated else None,
             'username': request.user.username if request.user.is_authenticated else None,
             'userDisplayName': user_display_name,
+            'maintenanceNotice': get_maintenance_notice(),
         },
         'pageLoadData',
     )

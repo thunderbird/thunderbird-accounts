@@ -3,8 +3,9 @@ Maintenance notice
 ====================
 
 The Keycloak login page (``auth.tb.pro``) can show a maintenance or incident notice, with an optional link to a status
-page, above the invite-only notice. The text is a Keycloak message that you set as a **realm localization override**
-on the ``tbpro`` realm, so it appears on the next page load without a deploy or restart. See
+page, above the invite-only notice. Every Accounts page (``accounts.tb.pro``), including the dashboard, shows the same
+notice under the header, so signed-in users see it too. The text is a Keycloak message that you set as a **realm
+localization override** on the ``tbpro`` realm, so it appears without a deploy or restart. See
 `#1490 <https://github.com/thunderbird/thunderbird-accounts/issues/1490>`_.
 
 How it works
@@ -24,6 +25,11 @@ How it works
   shown literally.
 * A realm override replaces a theme message for that realm. Keycloak stores it in its database, shares it across
   nodes, and keeps it across restarts.
+* Accounts reads the English overrides with its Keycloak admin client
+  (``GET /admin/realms/tbpro/localization/en``) and applies the same rules to the type and status URL. It caches the
+  result for ``MAINTENANCE_NOTICE_CACHE_SECONDS`` (default 60), so a change can take that long to show on Accounts
+  pages. If Keycloak does not answer within ``MAINTENANCE_NOTICE_TIMEOUT_SECONDS`` (default 2) or returns an error,
+  Accounts shows no notice, logs a warning and caches that result for the same time.
 
 Turning the notice on or off
 ----------------------------
@@ -38,9 +44,10 @@ Turning the notice on or off
    * Key ``maintenanceNoticeType``, value ``critical``
    * Key ``maintenanceNoticeStatusUrl``, value the status page URL, for example ``https://status.example.org/``
 
-#. Open the login page in a private window and check the notice and its link.
+#. Open the login page in a private window and check the notice and its link. Within a minute it also shows on
+   Accounts pages.
 #. To remove the notice, delete the rows you added with **⋮ → Delete**. Overrides survive Keycloak restarts, so the
-   notice stays until it is deleted.
+   notice stays until it is deleted. Accounts pages stop showing it within a minute.
 
 The same overrides can be set through the admin REST API with an access token for a master-realm client that can
 manage the ``tbpro`` realm:
@@ -78,10 +85,12 @@ same.
 Limitations
 -----------
 
-* The notice is part of the Keycloak login page, so it cannot announce a Keycloak outage. That needs a notice outside
-  Keycloak.
-* Only the login screen shows the notice. Registration, password reset and other Keycloak pages do not.
+* The notice is stored in Keycloak, so it cannot announce a Keycloak outage: during one, neither the login page nor
+  Accounts can show it. That needs a notice outside Keycloak.
+* Of the Keycloak pages, only the login screen shows the notice. Registration, password reset and other Keycloak pages
+  do not.
 * Overrides are per locale. The realm offers English and German, and German falls back to the English override
   because the theme has no German messages. If the theme gains ``messages_de.properties`` with a
-  ``maintenanceNotice`` line, German visitors see that instead, so set a German override too.
+  ``maintenanceNotice`` line, German visitors see that instead, so set a German override too. Accounts always shows
+  the English override.
 * There is no scheduled start or end time; turn the notice on and off by hand.
