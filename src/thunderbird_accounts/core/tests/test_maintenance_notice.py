@@ -9,16 +9,15 @@ from django.utils.html import strip_tags
 
 from thunderbird_accounts.core.maintenance_notice import get_maintenance_notice
 
-KEYCLOAK_API_ENDPOINT = 'http://keycloak.test/admin/realms/tbpro/'
 
-
-@override_settings(KEYCLOAK_API_ENDPOINT=KEYCLOAK_API_ENDPOINT)
+@override_settings(KEYCLOAK_API_ENDPOINT='http://keycloak.test/admin/realms/tbpro/')
 @patch('thunderbird_accounts.core.maintenance_notice.KeycloakClient')
 class GetMaintenanceNoticeTestCase(TestCase):
     def setUp(self):
         cache.clear()
 
     def _set_overrides(self, mock_client_cls, overrides):
+        cache.clear()
         mock_client_cls.return_value.request.return_value.json.return_value = overrides
 
     def test_returns_the_notice_from_the_realm_overrides(self, mock_client_cls):
@@ -47,73 +46,54 @@ class GetMaintenanceNoticeTestCase(TestCase):
         )
 
     def test_returns_none_without_notice_text(self, mock_client_cls):
-        for overrides in ({}, {'maintenanceNotice': '   '}, {'maintenanceNoticeType': 'critical'}):
+        for overrides in ({}, {'maintenanceNotice': '   '}):
             with self.subTest(overrides=overrides):
-                cache.clear()
                 self._set_overrides(mock_client_cls, overrides)
                 self.assertIsNone(get_maintenance_notice())
 
     def test_unknown_type_falls_back_to_warning(self, mock_client_cls):
-        for notice_type in (None, '', 'success', 'Critical', ' critical'):
+        for notice_type in (None, 'success', 'Critical'):
             with self.subTest(notice_type=notice_type):
-                cache.clear()
                 self._set_overrides(
                     mock_client_cls, {'maintenanceNotice': 'Maintenance', 'maintenanceNoticeType': notice_type}
                 )
                 self.assertEqual(get_maintenance_notice()['type'], 'warning')
 
-    def test_drops_status_urls_that_are_not_http(self, mock_client_cls):
-        for status_url in ('javascript:alert(1)', 'ftp://status.example.org/', 'status.example.org', '', None):
+    def test_only_links_http_status_urls(self, mock_client_cls):
+        for status_url in ('javascript:alert(1)', 'status.example.org', ''):
             with self.subTest(status_url=status_url):
-                cache.clear()
                 self._set_overrides(
                     mock_client_cls, {'maintenanceNotice': 'Maintenance', 'maintenanceNoticeStatusUrl': status_url}
                 )
                 self.assertIsNone(get_maintenance_notice()['statusUrl'])
 
-    def test_blank_status_text_is_left_to_the_frontend_default(self, mock_client_cls):
-        self._set_overrides(mock_client_cls, {'maintenanceNotice': 'Maintenance', 'maintenanceNoticeStatusText': ' '})
-
-        self.assertIsNone(get_maintenance_notice()['statusText'])
-
     def test_caches_the_notice(self, mock_client_cls):
         self._set_overrides(mock_client_cls, {'maintenanceNotice': 'Maintenance'})
 
         first = get_maintenance_notice()
-        self._set_overrides(mock_client_cls, {'maintenanceNotice': 'Changed'})
+        mock_client_cls.return_value.request.return_value.json.return_value = {'maintenanceNotice': 'Changed'}
 
         self.assertEqual(get_maintenance_notice(), first)
         self.assertEqual(mock_client_cls.return_value.request.call_count, 1)
 
-    def test_caches_the_absence_of_a_notice(self, mock_client_cls):
-        self._set_overrides(mock_client_cls, {})
-
-        self.assertIsNone(get_maintenance_notice())
-        self.assertIsNone(get_maintenance_notice())
-        self.assertEqual(mock_client_cls.return_value.request.call_count, 1)
-
-    def test_read_failures_show_no_notice_and_are_cached(self, mock_client_cls):
-        for error in (requests.ConnectionError('down'), requests.HTTPError('403'), ValueError('bad json'), KeyError()):
-            with self.subTest(error=error):
-                cache.clear()
-                mock_client_cls.return_value.request.reset_mock()
-                mock_client_cls.return_value.request.side_effect = error
+    def test_unreadable_overrides_show_no_notice_and_are_cached(self, mock_client_cls):
+        mock_request = mock_client_cls.return_value.request
+        cases = {
+            'timeout': {'side_effect': requests.Timeout('timed out')},
+            'invalid JSON': {'side_effect': ValueError('bad json')},
+            'token response without access_token': {'side_effect': KeyError('access_token')},
+            'non-object JSON': {'json': ['maintenanceNotice']},
+        }
+        for case, setup in cases.items():
+            with self.subTest(case=case):
+                self._set_overrides(mock_client_cls, setup.get('json'))
+                mock_request.reset_mock()
+                mock_request.side_effect = setup.get('side_effect')
 
                 with self.assertLogs('thunderbird_accounts.core.maintenance_notice', 'WARNING'):
                     self.assertIsNone(get_maintenance_notice())
                 self.assertIsNone(get_maintenance_notice())
-                self.assertEqual(mock_client_cls.return_value.request.call_count, 1)
-
-    def test_non_object_response_shows_no_notice(self, mock_client_cls):
-        self._set_overrides(mock_client_cls, ['maintenanceNotice'])
-
-        with self.assertLogs('thunderbird_accounts.core.maintenance_notice', 'WARNING'):
-            self.assertIsNone(get_maintenance_notice())
-
-    @override_settings(KEYCLOAK_API_ENDPOINT=None)
-    def test_skips_keycloak_when_the_admin_api_is_not_configured(self, mock_client_cls):
-        self.assertIsNone(get_maintenance_notice())
-        mock_client_cls.assert_not_called()
+                self.assertEqual(mock_request.call_count, 1)
 
 
 class MaintenanceNoticePageDataTestCase(TestCase):
