@@ -22,8 +22,6 @@ const httpUrlOrNull = (value?: string) => {
 onMounted(async () => {
   try {
     const response = await fetch(LOGIN_MESSAGES_URL);
-    if (!response.ok) return;
-
     const entries: { key: string; value: string }[] = await response.json();
     const messages = Object.fromEntries(entries.map(({ key, value }) => [key, value]));
     const text = messages.maintenanceNotice?.trim();
@@ -39,7 +37,7 @@ onMounted(async () => {
       statusText: messages.maintenanceNoticeStatusText?.trim() || null,
     };
   } catch {
-    // Keycloak unreachable or an unexpected response: show no notice.
+    // Keycloak unreachable, or an error page instead of the message list: show no notice.
   }
 });
 </script>

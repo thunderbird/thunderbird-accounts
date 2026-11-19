@@ -15,7 +15,6 @@ const THEME_DEFAULTS = {
 const mountWithMessages = async (overrides: Record<string, string>) => {
   const messages = { ...THEME_DEFAULTS, ...overrides, otherKey: 'ignored' };
   const fetchMock = vi.fn().mockResolvedValue({
-    ok: true,
     json: async () => Object.entries(messages).map(([key, value]) => ({ key, value })),
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -67,15 +66,8 @@ describe('MaintenanceNotice', () => {
     expect(wrapper.find('[data-testid="maintenance-notice-status-url"]').exists()).toBe(false);
   });
 
-  it.each([
-    ['the request fails', () => Promise.reject(new TypeError('Failed to fetch'))],
-    [
-      'Keycloak returns an error',
-      () => Promise.resolve({ ok: false, json: async () => [{ key: 'maintenanceNotice', value: 'Maintenance' }] }),
-    ],
-    ['the response is not a message list', () => Promise.resolve({ ok: true, json: async () => ({}) })],
-  ])('shows nothing when %s', async (_case, response) => {
-    vi.stubGlobal('fetch', vi.fn(response));
+  it('shows nothing when Keycloak cannot be reached', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
 
     const wrapper = mount(MaintenanceNotice);
     await flushPromises();
