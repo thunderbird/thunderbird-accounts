@@ -3,8 +3,9 @@ Maintenance notice
 ====================
 
 The Keycloak login page (``auth.tb.pro``) can show a maintenance or incident notice, with an optional link to a status
-page, above the invite-only notice. Every Accounts page (``accounts.tb.pro``), including the dashboard, shows the same
-notice under the header, so signed-in users see it too. The text is a Keycloak message that you set as a **realm
+page, above the invite-only notice. Accounts pages (``accounts.tb.pro``) with the standard header, including the
+dashboard, show the same notice under the header, so signed-in users see it too. The text is a Keycloak message that
+you set as a **realm
 localization override** on the ``tbpro`` realm, so it appears without a deploy or restart. See
 `#1490 <https://github.com/thunderbird/thunderbird-accounts/issues/1490>`_.
 
@@ -88,7 +89,7 @@ Limitations
 * The notice is stored in Keycloak, so it cannot announce a Keycloak outage: during one, neither the login page nor
   Accounts can show it. That needs a notice outside Keycloak.
 * Of the Keycloak pages, only the login screen shows the notice. Registration, password reset and other Keycloak pages
-  do not.
+  do not. Accounts pages without the standard header (sign-up, and the error and not-found pages) do not either.
 * Overrides are per locale. The realm offers English and German, and German falls back to the English override
   because the theme has no German messages. If the theme gains ``messages_de.properties`` with a
   ``maintenanceNotice`` line, German visitors see that instead, so set a German override too. Accounts always shows
