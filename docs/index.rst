@@ -38,6 +38,7 @@ Contents
     keycloak/how-to-deploy-to-prod.rst
     keycloak/how-to-integrate.rst
     keycloak/theme.rst
+    keycloak/maintenance-notice.rst
 
 
 Indices and tables

@@ -87,6 +87,31 @@ export const getUserSessionIds = async (): Promise<string[]> => {
   return (sessions as Array<{ id: string }>).map((session) => session.id);
 };
 
+const realmMessageUrl = (key: string) =>
+  `${KEYCLOAK_ADMIN_BASE_URL}/admin/realms/tbpro/localization/en/${encodeURIComponent(key)}`;
+
+export const setRealmMessage = async (key: string, text: string) => {
+  const response = await fetch(realmMessageUrl(key), {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${await getKeycloakAdminToken()}`, 'Content-Type': 'text/plain' },
+    body: text,
+  });
+  if (!response.ok) {
+    throw new Error(`Could not set the ${key} realm message: ${await response.text()}`);
+  }
+};
+
+export const deleteRealmMessage = async (key: string) => {
+  const response = await fetch(realmMessageUrl(key), {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${await getKeycloakAdminToken()}` },
+  });
+  // 404 means no override was set.
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`Could not delete the ${key} realm message: ${await response.text()}`);
+  }
+};
+
 export const getRecoveryCodesCredentialMetadata = async () => {
   const { credentials } = await fetchKeycloakCredentials();
   return credentials
