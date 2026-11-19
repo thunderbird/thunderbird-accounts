@@ -456,7 +456,7 @@ resources:
                 - name: INCOMPLETE_SIGNUP_PURGE_HOURS
                   value: "120"
                 - name: INCOMPLETE_SIGNUP_PURGE_CRON_HOUR
-                  value: "3"
+                  value: "23"
                 - name: INCOMPLETE_SIGNUP_PURGE_CRON_MINUTE
                   value: "0"
 
