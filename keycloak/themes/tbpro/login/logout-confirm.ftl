@@ -3,7 +3,7 @@
   <#if section = "js">
   <script>
       window._page['currentView'] = {
-        formAction: '${url.logoutConfirmAction}',
+        formAction: '${url.logoutConfirmAction?js_string?no_esc}',
         sessionCode: '${logoutConfirm.code}',
         clientUrl: '${client.baseUrl}',
       };

@@ -127,7 +127,7 @@
           //<#list locale.supported as l>
           {
             label: '${l.label}',
-            url: '${l.url}'
+            url: '${l.url?js_string?no_esc}'
           },
           //<#assign i++>
           //</#list>
