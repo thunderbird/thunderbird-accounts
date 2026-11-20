@@ -349,14 +349,10 @@ Flower landing page, listing Celery workers on the network.
 
 ## Deploying
 
-After a commit has been pushed to main the CI will run a workflow to deploy code to stage. The final step of this workflow is to create 
-a draft release. This draft when published will start a production deploy from the images built for that particular stage deploy.
+Changes to the Accounts or Keycloak image on `main` publish to GHCR and create
+a numbered GitHub draft release. Kargo promotes the image pair to `tb-dev` and
+`tb-stage`. Publish the draft only after Kargo verifies the matching Freight in
+`tb-stage`. Publishing requests promotion of that Freight to `tb-prod`.
 
-Production images are tagged from the package version, and you will receive a CI / deployment error if you try to deploy code under 
-a version that has already been deployed. You **must** increment the version in pyproject.toml, package.json, and run `npm i && uv lock`, and commit that 
-as a (preferably) stand-alone commit labelled `vX.Y.Z` (e.g. `v1.15.0`)
-
-Once that commit has ran through the CI and created a draft release you may publish that release to start the production deployment.
-
-Keycloak changes are automatically deployed to stage, but **are not** automatically deployed to production.
-Please read [the following documentation](https://pro-services-docs.thunderbird.net/en/latest/keycloak/how-to-deploy-to-prod.html) on how to deploy Keycloak changes to production.
+See the [CI image pipeline](docs/ci/image-publish-pipeline.md) and the
+[Keycloak deployment guide](docs/keycloak/how-to-deploy-to-prod.rst).

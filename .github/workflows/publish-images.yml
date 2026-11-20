@@ -1,17 +1,9 @@
 ---
-# Decoupled image-publish pipeline. On merge to main it builds the accounts and
-# keycloak images as native multi-arch (amd64 + arm64) manifest lists and pushes
-# them to GHCR. This is INDEPENDENT of the deploy-stage pipeline (merge.yml):
-# it uses no cloud credentials, runs no Pulumi, and deploys nothing -- it only
-# publishes images. See docs/ci/image-publish-pipeline.md for the architecture.
 name: publish-images
 
 concurrency:
   group: publish-images-${{ github.ref }}
-  # Serialize (don't cancel) so every merged commit's :<sha> image gets
-  # published and a run is never aborted mid-push/merge. Queued runs still
-  # settle :latest to the newest finished build.
-  cancel-in-progress: false
+  queue: max
 
 on:
   push:
@@ -56,6 +48,7 @@ jobs:
               - 'package.json'
               - 'package-lock.json'
               - 'pyproject.toml'
+              - 'README.md'
               - 'src/**'
               - 'uv.lock'
               # Frontend build inputs COPYd by the Dockerfile (note: .mts, plus
@@ -70,6 +63,7 @@ jobs:
               - 'package-lock.json'
               - 'scripts/entry-keycloak.sh'
               - 'scripts/apply-cli-config.sh'
+              - 'scripts/PgAdvisoryLockRun.java'
 
       - name: Get version from pyproject.toml
         id: read-version

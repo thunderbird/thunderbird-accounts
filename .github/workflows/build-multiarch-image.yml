@@ -8,9 +8,6 @@
 # Why native runners instead of `buildx --platform amd64,arm64` with QEMU:
 # emulated arm64 builds are minutes-slower and occasionally miscompile. Each
 # arch builds on its own hardware and the two run in parallel.
-#
-# Auth is GHCR + the automatic GITHUB_TOKEN (packages: write) -- no cloud
-# credentials, which keeps this pipeline decoupled from the ECR/Pulumi deploy.
 name: build-multiarch-image
 
 on:
