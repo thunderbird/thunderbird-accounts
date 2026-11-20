@@ -29,10 +29,6 @@ jobs:
       e2e-changed: ${{ steps.check.outputs.e2e-changed }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
       - uses: dorny/paths-filter@v3
         id: check
         with:

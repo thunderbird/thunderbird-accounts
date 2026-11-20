@@ -59,8 +59,9 @@ Confirm that ``publish-images`` succeeded for the intended commit. In the
 find the Freight with the expected Accounts and Keycloak image digests. Confirm
 it is verified and current in ``tb-stage`` before running
 ``e2e-tests-browserstack-stage.yml`` manually from GitHub Actions. Confirm the
-suite passed while that Freight was current. Check login, MFA, introspection,
-mail authentication, and Keycloak configuration reconciliation.
+suite passed and use Kargo promotion history to confirm that Freight stayed
+current throughout the run. Separately check login, MFA, introspection, mail
+authentication, and Keycloak configuration reconciliation.
 
 3. Promote and verify production
 --------------------------------

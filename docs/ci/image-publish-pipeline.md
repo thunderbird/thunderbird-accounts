@@ -4,8 +4,9 @@
 It builds the affected Accounts and Keycloak images on native amd64 and arm64
 runners. `build-multiarch-image.yml` pushes each architecture to GHCR by digest,
 then publishes the combined manifest under the commit SHA, `v<version>`, and
-`latest`. A manual run rebuilds both images and updates `latest` without
-creating a draft release.
+`latest`. A manual run rebuilds both images from the selected ref and updates the
+shared `latest` tags without creating a draft release. On `main`, a rebuild
+can also replace the SHA tag used by an existing draft.
 
 After a successful push run publishes at least one image, `draft-release.yml`
 creates a GitHub draft release pinned to that push commit. It assigns the next
@@ -20,9 +21,10 @@ for automatic promotion to `tb-stage`. If a later build replaces either tag
 before Kargo sees the pair, the draft can exist without matching Freight. Leave
 that draft unpublished and coordinate with the Kargo operator.
 
-Run `e2e-tests-browserstack-stage.yml` manually from GitHub Actions while the
-matching Freight is current in `tb-stage`. The suite tests the live stage
-endpoint.
+Run `e2e-tests-browserstack-stage.yml` manually from GitHub Actions. The suite
+tests the live stage endpoint. Check Kargo promotion history against the test
+run times to confirm the matching Freight stayed current throughout the suite.
+A new dispatch can replace one pending run while another is running.
 
 Publish the draft after the matching Freight is verified in `tb-stage`.
 `promote-release-to-tb-prod.yml` checks the release, both image digests, their
@@ -32,13 +34,17 @@ publishing history, and the matching Freight before requesting promotion to
 ## Recovering a missing draft
 
 In Actions, check both `publish-images` and `draft-release` for the intended
-commit. If an image merge job succeeded in a successful publish run, resolve
-the draft error and rerun the failed draft job. This leaves the published
-tags alone. A run with both image jobs skipped has no draft.
+commit. A successful push with both image jobs skipped has no draft. If at
+least one image merge job succeeded and the publish run concluded successfully,
+rerun the draft job after resolving any transient error. This leaves the
+published tags alone. If no draft workflow ran, for example because the publish
+run predates this workflow, coordinate with the Kargo operator before retrying
+the image build. A manually authored draft fails the production author check.
 
-GitHub can reject release creation for an older target whose workflow files
-differ from the current default branch. If this happens, keep the original
-target SHA and coordinate with the Kargo operator on the release.
+GitHub rejects the draft workflow's release request if the target SHA adds
+or modifies workflow files relative to the current default branch. Rerunning
+the draft job with the same target and branch state will fail again. Keep the
+original target SHA and coordinate with the Kargo operator.
 
 If an image failed to publish, a successful sibling may already have moved
 `latest`, and Kargo may have rolled out that partial update. Before retrying
