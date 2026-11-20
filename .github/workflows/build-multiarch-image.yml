@@ -160,6 +160,7 @@ jobs:
             sources+=("${IMAGE}@sha256:$digest")
           done
           docker buildx imagetools create \
+            --annotation="index:org.opencontainers.image.revision=${SHA}" \
             -t "${IMAGE}:${SHA}" \
             -t "${IMAGE}:v${VERSION}" \
             -t "${IMAGE}:latest" \
