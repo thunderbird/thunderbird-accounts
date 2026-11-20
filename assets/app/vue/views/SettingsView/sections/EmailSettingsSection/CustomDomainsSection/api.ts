@@ -1,10 +1,10 @@
 import { useAuthFetch } from "@/composables/useFetch";
+import type { CustomDomain, AddCustomDomainResponse } from "./types";
 
-type AddCustomDomainResponse = {
-  success: boolean;
-  domain_name?: string;
-  error?: string;
-  code?: string;
+export const listCustomDomains = async (): Promise<CustomDomain[]> => {
+  const { response } = await useAuthFetch(`/custom-domains/list`);
+  const data = await response.value.json();
+  return data.domains ?? [];
 };
 
 export const addCustomDomain = async (domainName: string): Promise<AddCustomDomainResponse> => {
@@ -25,14 +25,15 @@ export const getRemoteDNSRecords = async (domainName: string) => {
   return await response.value.json();
 };
 
-export const verifyDomain = async (domainName: string) => {
+// The DNS provider is only sent by the custom domains flow, where the user says who manages their DNS
+export const verifyDomain = async (domainName: string, dnsProvider?: string) => {
   const { response } = await useAuthFetch(`/custom-domains/verify`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': window._page.csrfToken,
     },
-    body: JSON.stringify({ 'domain-name': domainName }),
+    body: JSON.stringify({ 'domain-name': domainName, ...(dnsProvider ? { 'dns-provider': dnsProvider } : {}) }),
   });
 
   return await response.value.json();

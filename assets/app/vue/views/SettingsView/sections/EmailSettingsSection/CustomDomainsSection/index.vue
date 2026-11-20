@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhGlobe, PhCheckCircle, PhX } from '@phosphor-icons/vue';
 import { BaseBadge, BaseBadgeTypes, NoticeBar, NoticeBarTypes } from '@thunderbirdops/services-ui';
@@ -20,7 +20,9 @@ import DeleteDomainModal from './components/DeleteDomainModal.vue';
 const { t } = useI18n();
 
 const currentStep = ref<STEP>(STEP.INITIAL);
-const { customDomains, aliasesForDomain, removeAliasesForDomain } = useEmailSettings();
+const { customDomains, aliasesForDomain, removeAliasesForDomain, consumeCustomDomainsExpandRequest, refreshCustomDomains } = useEmailSettings();
+const defaultOpen = consumeCustomDomainsExpandRequest();
+
 const customDomainsDescription = computed(() =>
   currentStep.value === STEP.INITIAL
   ? t('views.mail.sections.customDomains.customDomainsDescriptionInitial')
@@ -76,6 +78,8 @@ const handleCustomDomainVerificationResult = (result: DomainVerificationResult) 
     customDomainFormRef.value.showVerificationResult(result);
   }
 };
+
+onMounted(refreshCustomDomains);
 </script>
 
 <script lang="ts">
@@ -88,6 +92,7 @@ export default {
   <details-summary
     class="custom-domains-details-summary"
     :title="t('views.mail.sections.customDomains.customDomains')"
+    :default-open="defaultOpen"
   >
     <template #icon>
       <ph-globe size="24" aria-hidden="true" />

@@ -84,6 +84,8 @@ def verify_domain(domain: Domain) -> DomainVerificationResult:
         'stale_dns_records': stale_dns_records,
     }
 
+    domain.last_verification_result = response_data
+
     if not is_verified:
         domain.status = Domain.DomainStatus.FAILED
         domain.save()
@@ -94,12 +96,13 @@ def verify_domain(domain: Domain) -> DomainVerificationResult:
     except DomainNotFoundError:
         stalwart_resp = None
 
-    # Only roll through these steps if we're not already verified OR stalwart doesn't have our domain
-    if domain.status != Domain.DomainStatus.VERIFIED or not stalwart_resp:
+    # Only roll through these steps if the domain was never provisioned, failed before, OR stalwart doesn't have our
+    # domain. A re-verification of a verified domain is queued as PENDING, so stalwart_created_at marks it as
+    # provisioned.
+    if domain.status == Domain.DomainStatus.FAILED or not domain.stalwart_created_at or not stalwart_resp:
         # Deferred: mail.tasks imports this module
         from thunderbird_accounts.mail import tasks as mail_tasks
 
-        domain.status = Domain.DomainStatus.VERIFIED
         domain.verified_at = now
 
         # Fetch or create a domain on Stalwart's end, and retrieve the domain_id
@@ -124,6 +127,8 @@ def verify_domain(domain: Domain) -> DomainVerificationResult:
             logging.error(f'There was a problem saving the domain id for {domain.name} / {domain.uuid}')
 
         domain.stalwart_created_at = datetime.datetime.now(datetime.UTC)
-        domain.save()
+
+    domain.status = Domain.DomainStatus.VERIFIED
+    domain.save()
 
     return DomainVerificationResult(is_verified=True, response_data=response_data)
