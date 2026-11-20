@@ -204,6 +204,24 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
 
         return user
 
+    def _repair_keycloak_access(self, user: User, claims: dict):
+        """Rewrite the Keycloak ``is_active`` / ``is_subscribed`` attributes when the claims Keycloak just returned
+        disagree with the access the database grants (a sync that failed, or a legacy value). A failure here must not
+        block the login."""
+        # Circular import: keycloak_account_status -> clients -> mail.utils -> settings -> middleware.
+        from thunderbird_accounts.authentication.account_status import user_access
+        from thunderbird_accounts.authentication.keycloak_account_status import KeycloakAccountStatusHandler
+
+        access = user_access(user)
+        if claims.get('is_active') == access.can_sign_in and claims.get('is_subscribed') == access.has_services:
+            return
+
+        try:
+            KeycloakAccountStatusHandler().sync(user, access)
+        except Exception as ex:
+            capture_exception(ex)
+            logging.warning(f'[AccountsOIDCBackend] Could not repair Keycloak access for user {user.uuid}: {ex}')
+
     def create_user(self, claims):
         self._check_allow_list(claims)
 
@@ -213,6 +231,8 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
 
         # Refresh so we have access to the uuid
         user.refresh_from_db()
+
+        self._repair_keycloak_access(user, claims)
 
         return user
 
@@ -227,6 +247,8 @@ class AccountsOIDCBackend(OIDCAuthenticationBackend):
         if claims.get('email') and user.email != claims.get('email'):
             user.email = claims.get('email')
         user.save()
+
+        self._repair_keycloak_access(user, claims)
 
         return user
 

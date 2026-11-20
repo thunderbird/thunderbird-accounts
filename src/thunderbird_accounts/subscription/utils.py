@@ -66,9 +66,6 @@ def activate_subscription_features(user: User, plan: Plan):
     # Pull the updated user data from the transaction above
     user.refresh_from_db()
 
-    # TODO: Temporarily removed until https://github.com/thunderbird/thunderbird-accounts/issues/346 is ready
-    # sync_plan_to_keycloak(user)
-
     account = user.account_set.first()
     if account and account.stalwart_id:
         # Update the mail storage quota
@@ -82,6 +79,7 @@ def activate_subscription_features(user: User, plan: Plan):
     else:
         create_stalwart_account(user, None)
 
+    # Also mirrors is_subscribed to Keycloak; plan limits are only pushed by sync_plan_to_keycloak (#346).
     sync_user_access(user)
 
 
@@ -101,6 +99,3 @@ def deactivate_subscription_features(user: User):
 
     user.refresh_from_db()
     sync_user_access(user)
-
-    # TODO: Temporarily removed until https://github.com/thunderbird/thunderbird-accounts/issues/346 is ready
-    # sync_plan_to_keycloak(user)

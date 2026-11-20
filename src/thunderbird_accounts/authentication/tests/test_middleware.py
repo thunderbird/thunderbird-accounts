@@ -3,7 +3,7 @@ import uuid
 import datetime
 from waffle.testutils import override_flag
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import freezegun
 import requests
@@ -26,6 +26,7 @@ from thunderbird_accounts.authentication.middleware import (
 )
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.authentication.models import AllowListEntry
+from thunderbird_accounts.authentication.exceptions import GetUserError, UpdateUserError
 
 
 @override_settings(
@@ -219,6 +220,63 @@ class AccountsOIDCBackendTestCase(TestCase):
 
         # Remove any allow list entries
         AllowListEntry.objects.all().delete()
+
+        # Login repairs Keycloak access attributes; keep Keycloak out of these tests.
+        handler_patcher = patch('thunderbird_accounts.authentication.keycloak_account_status.KeycloakClient')
+        self.mock_keycloak_cls = handler_patcher.start()
+        self.addCleanup(handler_patcher.stop)
+
+    def _login_claims(self, **extra) -> dict:
+        return {
+            'sub': self.claim_oidc_id,
+            'preferred_username': 'test@example.org',
+            'email': self.claim_email,
+            'email_verified': True,
+            **extra,
+        }
+
+    def test_update_user_leaves_keycloak_alone_when_claims_match_access(self):
+        self.backend.update_user(self.user, self._login_claims(is_active=True, is_subscribed=False))
+
+        self.mock_keycloak_cls.assert_not_called()
+
+    def test_update_user_repairs_keycloak_when_claims_are_missing(self):
+        self.backend.update_user(self.user, self._login_claims())
+
+        self.mock_keycloak_cls.return_value.update_user.assert_called_once_with(
+            self.claim_oidc_id,
+            enabled=True,
+            attributes={'is_active': 'true', 'is_subscribed': 'false'},
+            user_data=ANY,
+        )
+
+    def test_update_user_repairs_keycloak_when_a_claim_is_stale(self):
+        self.backend.update_user(self.user, self._login_claims(is_active=True, is_subscribed=True))
+
+        self.mock_keycloak_cls.return_value.update_user.assert_called_once()
+
+    def test_update_user_survives_a_keycloak_failure(self):
+        self.mock_keycloak_cls.return_value.get_user.side_effect = GetUserError(oidc_id=self.claim_oidc_id, error='x')
+        self.mock_keycloak_cls.return_value.update_user.side_effect = UpdateUserError(error='down')
+
+        with patch('thunderbird_accounts.authentication.middleware.capture_exception') as mock_capture:
+            user = self.backend.update_user(self.user, self._login_claims())
+
+        self.assertIsNotNone(user)
+        mock_capture.assert_called_once()
+
+    def test_create_user_writes_keycloak_access(self):
+        claims = self._login_claims(sub='5f75218f-1cb0-49a5-bd1c-e38c3b32dbd2', preferred_username='new@example.org')
+        AllowListEntry.objects.create(email=self.claim_email)
+
+        self.backend.create_user(claims)
+
+        self.mock_keycloak_cls.return_value.update_user.assert_called_once_with(
+            claims['sub'],
+            enabled=True,
+            attributes={'is_active': 'true', 'is_subscribed': 'false'},
+            user_data=ANY,
+        )
 
     def test_create_user_success(self):
         claims = {

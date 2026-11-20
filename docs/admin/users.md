@@ -35,6 +35,7 @@ Two independent switches control what a user can do.
 
 Services locked by either switch:
 
+* Keycloak: the `is_subscribed` token claim becomes `false` and the user's Keycloak sessions are revoked. Send and Appt see the change at their next token check, within a few minutes.
 * Stalwart: the mail account loses the `authenticate` permission. Existing app passwords stop working and nothing can sign in or send, but incoming mail keeps arriving in the mailbox and is available again once access is restored.
 
 `Deactivated at` under Important dates records when `Active` was last unticked. Ticking `Active` again clears the timestamp and restores Keycloak; the services come back only if the subscription still entitles the user.
@@ -91,8 +92,11 @@ It currently syncs the following information:
 * mail_storage_bytes: The amount of mail storage (in bytes) their plan allows them to use.
 * send_storage_bytes: The amount of Send storage (in bytes) their plan allows them to use.
 
-This should automatically update if the user's plan changes, or if the plan itself changes. There may be a delay between 
-changing plan information and the information updating in Keycloak.
+`is_subscribed` and `is_active` are maintained automatically: subscription webhooks and changes to the `Active` toggle
+re-sync them, and each login to Accounts rewrites them if Keycloak's copy has drifted. Losing `is_subscribed` revokes
+the user's Keycloak sessions.
+
+The plan limits are only written by this action.
 
 This is safe to re-run. 
 
