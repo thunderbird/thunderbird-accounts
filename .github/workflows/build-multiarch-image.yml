@@ -33,6 +33,13 @@ on:
           their per-arch digest artifacts don't collide.
         required: true
         type: string
+      pair:
+        description: >-
+          True when the sibling image is built in the same run. Recorded on the
+          image index so Kargo waits for both images before it creates Freight.
+        required: false
+        type: boolean
+        default: false
     outputs:
       image:
         description: The :<sha>-tagged multi-arch image reference that was pushed.
@@ -150,6 +157,8 @@ jobs:
           IMAGE: ${{ inputs.image }}
           VERSION: ${{ inputs.version }}
           SHA: ${{ github.sha }}
+          RUN_NUMBER: ${{ github.run_number }}
+          PAIR: ${{ inputs.pair }}
         run: |
           # imagetools create references digests already in GHCR, so nothing is
           # rebuilt or re-pushed here -- it only writes the manifest list, under
@@ -161,6 +170,8 @@ jobs:
           done
           docker buildx imagetools create \
             --annotation="index:org.opencontainers.image.revision=${SHA}" \
+            --annotation="index:net.thunderbird.publish-images.run=${RUN_NUMBER}" \
+            --annotation="index:net.thunderbird.publish-images.pair=${PAIR}" \
             -t "${IMAGE}:${SHA}" \
             -t "${IMAGE}:v${VERSION}" \
             -t "${IMAGE}:latest" \

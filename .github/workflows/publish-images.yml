@@ -84,6 +84,7 @@ jobs:
       dockerfile: Dockerfile
       version: ${{ needs.detect-changes.outputs.version }}
       artifact-prefix: accounts
+      pair: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.keycloak-changed == 'true' }}
 
   keycloak:
     needs: detect-changes
@@ -96,3 +97,4 @@ jobs:
       dockerfile: Dockerfile.keycloak
       version: ${{ needs.detect-changes.outputs.version }}
       artifact-prefix: keycloak
+      pair: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.accounts-changed == 'true' }}
