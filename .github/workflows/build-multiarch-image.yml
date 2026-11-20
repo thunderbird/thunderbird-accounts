@@ -8,9 +8,6 @@
 # Why native runners instead of `buildx --platform amd64,arm64` with QEMU:
 # emulated arm64 builds are minutes-slower and occasionally miscompile. Each
 # arch builds on its own hardware and the two run in parallel.
-#
-# Auth is GHCR + the automatic GITHUB_TOKEN (packages: write) -- no cloud
-# credentials, which keeps this pipeline decoupled from the ECR/Pulumi deploy.
 name: build-multiarch-image
 
 on:
@@ -158,10 +155,14 @@ jobs:
           # rebuilt or re-pushed here -- it only writes the manifest list, under
           # all three tags at once. The glob expands to one
           # `${IMAGE}@sha256:<hex>` per downloaded digest.
+          sources=()
+          for digest in *; do
+            sources+=("${IMAGE}@sha256:$digest")
+          done
           docker buildx imagetools create \
             -t "${IMAGE}:${SHA}" \
             -t "${IMAGE}:v${VERSION}" \
             -t "${IMAGE}:latest" \
-            $(printf "${IMAGE}@sha256:%s " *)
+            "${sources[@]}"
           docker buildx imagetools inspect "${IMAGE}:${SHA}"
           echo "image=${IMAGE}:${SHA}" >> "$GITHUB_OUTPUT"

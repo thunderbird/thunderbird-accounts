@@ -53,7 +53,7 @@ jobs:
           }
 
           [[ "$RELEASE_TAG" =~ ^r-[0-9]{4}$ ]] || fail "release tag $RELEASE_TAG is not r-NNNN"
-          [[ "$RELEASE_AUTHOR" == "github-actions[bot]" ]] || fail "release $RELEASE_TAG was not drafted by merge.yml"
+          [[ "$RELEASE_AUTHOR" == "github-actions[bot]" ]] || fail "release $RELEASE_TAG was not drafted by GitHub Actions"
           [[ "$RELEASE_TARGET" == "$RELEASE_SHA" ]] || fail "release $RELEASE_TAG targets $RELEASE_TARGET, not commit $RELEASE_SHA; publish a draft pinned to a commit (r-0647 or later)"
 
           commits="$RUNNER_TEMP/commits"

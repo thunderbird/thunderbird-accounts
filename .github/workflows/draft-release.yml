@@ -1,0 +1,69 @@
+---
+name: draft-release
+
+on:
+  workflow_run:
+    workflows: [publish-images]
+    types: [completed]
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  create-release:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: draft-release
+      queue: max
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Create draft release for published images
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_RUN_ID: ${{ github.event.workflow_run.id }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          repo="repos/$GITHUB_REPOSITORY"
+          images=$(gh api --paginate "$repo/actions/runs/$PUBLISH_RUN_ID/jobs?filter=all&per_page=100" \
+            --jq '.jobs[] | select(.conclusion == "success" and (.name == "accounts / merge" or .name == "keycloak / merge")) | .name')
+          if [[ -z "$images" ]]; then
+            echo "No image was published in run $PUBLISH_RUN_ID."
+            exit 0
+          fi
+
+          releases=$(gh api --paginate "$repo/releases?per_page=100" \
+            --jq '.[] | select(.tag_name | test("^r-[0-9]{4}$")) | [.tag_name, .target_commitish, .author.login] | @tsv')
+          existing=$(awk -F '\t' -v sha="$RELEASE_SHA" '$2 == sha && $3 == "github-actions[bot]" { print $1; exit }' <<< "$releases")
+          if [[ -n "$existing" ]]; then
+            echo "Release $existing already exists for $RELEASE_SHA."
+            exit 0
+          fi
+
+          tags=$(gh api "$repo/git/matching-refs/tags/r-" --jq '.[].ref | ltrimstr("refs/tags/")')
+          highest=$(printf '%s\n%s\n' "$releases" "$tags" | awk '
+            $1 ~ /^r-[0-9][0-9][0-9][0-9]$/ {
+              number = substr($1, 3) + 0
+              if (number > highest) highest = number
+            }
+            END { print highest + 0 }
+          ')
+          if (( highest >= 9999 )); then
+            echo "::error::The four-digit release tag range is exhausted."
+            exit 1
+          fi
+          tag=$(printf 'r-%04d' "$((highest + 1))")
+
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$PUBLISH_RUN_ID"
+          printf -v body '%s\n\n%s' \
+            "[Image publishing run]($run_url) completed for commit \`$RELEASE_SHA\`." \
+            "Publish this release after Kargo verifies the matching Accounts and Keycloak Freight in tb-stage. Publishing requests promotion to tb-prod."
+          gh api --method POST "$repo/releases" \
+            -f tag_name="$tag" -f name="Release $tag" -f target_commitish="$RELEASE_SHA" \
+            -F draft=true -f body="$body" --jq .html_url

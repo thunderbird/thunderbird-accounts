@@ -16,7 +16,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write   # This is required for requesting the JWT
   contents: read    # This is required for actions/checkout
 
 jobs:
@@ -28,13 +27,8 @@ jobs:
     outputs:
       src-changed: ${{ steps.check.outputs.src-changed }}
       e2e-changed: ${{ steps.check.outputs.e2e-changed }}
-      iac-changed: ${{ steps.check.outputs.iac-changed }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
       - uses: dorny/paths-filter@v3
         id: check
         with:
@@ -65,9 +59,7 @@ jobs:
               - 'scripts/apply-cli-config.sh'
               - 'scripts/PgAdvisoryLockRun.java'
               - 'test/e2e/**'
-            iac-changed:
-              - 'pulumi/**'
-  
+
   validate-accounts:
     needs: detect-changes
     if: needs.detect-changes.outputs.src-changed == 'true'
@@ -102,27 +94,6 @@ jobs:
         continue-on-error: true
         run: |
           docker compose exec accounts bash -c 'uv run coverage report'
-
-  validate-iac:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.iac-changed
-    runs-on: ubuntu-26.04
-    environment:
-      name: staging
-      deployment: false
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Ruff formatting/linting checks
-        uses: chartboost/ruff-action@v1
-        with:
-          src: "pulumi"
-          args: "format --check"
-
-      - name: Ruff error checks
-        uses: chartboost/ruff-action@v1
-        with:
-          src: "pulumi"
 
   run-e2e-tests-local:
     needs:
