@@ -75,8 +75,14 @@ for service, sg in resources['tb:network:SecurityGroupWithRules']['containers'].
     )
 
 instances = {}
+# Our bastions run AL2023's minimal AMI, which doesn't ship with amazon-ssm-agent preinstalled.
+# This installs it so future rebuilds/replacements are reachable via SSM Session Manager.
+with open('bastion_user_data.sh') as user_data_fh:
+    bastion_user_data = user_data_fh.read()
+
 for instance in resources['tb:ec2:SshableInstance'].keys():
     instance_opts = resources['tb:ec2:SshableInstance'][instance]
+    instance_opts.setdefault('user_data', bastion_user_data)
     instances[instance] = tb_pulumi.ec2.SshableInstance(
         f'{project.name_prefix}-{instance}',
         project=project,
