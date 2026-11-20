@@ -4,6 +4,10 @@ name: e2e-tests-browserstack-stage
 on:
   workflow_dispatch:
 
+concurrency:
+  group: e2e-tests-browserstack-stage
+  cancel-in-progress: false
+
 permissions:
   contents: read
 

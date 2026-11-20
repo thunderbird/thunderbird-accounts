@@ -54,11 +54,13 @@ GitHub draft release. Kargo promotes the Accounts and Keycloak image pair to
 2. Verify staging
 -----------------
 
-Confirm that ``publish-images`` succeeded for the intended commit. In Kargo,
-find the Freight with the expected Accounts and Keycloak image digests and
-confirm it is verified in ``tb-stage``. Run the stage BrowserStack workflow
-after that rollout. Check login, MFA, introspection, mail authentication, and
-Keycloak configuration reconciliation.
+Confirm that ``publish-images`` succeeded for the intended commit. In the
+`Kargo Accounts project <https://kargo.pi.thunderbird.net/project/tb-accounts>`__,
+find the Freight with the expected Accounts and Keycloak image digests. Confirm
+it is verified and current in ``tb-stage`` before running
+``e2e-tests-browserstack-stage.yml`` manually from GitHub Actions. Confirm the
+suite passed while that Freight was current. Check login, MFA, introspection,
+mail authentication, and Keycloak configuration reconciliation.
 
 3. Promote and verify production
 --------------------------------
