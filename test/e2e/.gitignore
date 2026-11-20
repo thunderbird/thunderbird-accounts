@@ -13,3 +13,4 @@ node_modules/
 # BrowserStack SDK temp files
 browserstackSetupConfig.json
 playwright-browserstack-sdk.config.ts
+playwright-browserstack-sdk.config.temp.json
