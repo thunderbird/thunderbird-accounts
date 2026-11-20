@@ -35,8 +35,7 @@ on:
         type: string
       pair:
         description: >-
-          True when the sibling image is built in the same run. Recorded on the
-          image index so Kargo waits for both images before it creates Freight.
+          True when the publishing workflow selects both image jobs.
         required: false
         type: boolean
         default: false

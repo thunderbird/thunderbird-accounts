@@ -4,9 +4,10 @@
 It builds the affected Accounts and Keycloak images on native amd64 and arm64
 runners. `build-multiarch-image.yml` pushes each architecture to GHCR by digest,
 then publishes the combined manifest under the commit SHA, `v<version>`, and
-`latest`. A manual run rebuilds both images from the selected ref and updates the
-shared `latest` tags without creating a draft release. On `main`, a rebuild
-can also replace the SHA tag used by an existing draft.
+`latest`. A manual run on `main` rebuilds both images and updates the shared
+tags without creating a draft release. A manual run on another ref skips both
+image jobs if that ref includes the publish guard. A rebuild on `main` can
+replace the SHA tag used by an existing draft.
 
 After a successful push run publishes at least one image, `draft-release.yml`
 creates a GitHub draft release pinned to that push commit. It assigns the next
