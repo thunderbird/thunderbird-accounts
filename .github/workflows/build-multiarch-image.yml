@@ -159,6 +159,7 @@ jobs:
           # all three tags at once. The glob expands to one
           # `${IMAGE}@sha256:<hex>` per downloaded digest.
           docker buildx imagetools create \
+            --annotation "index:org.opencontainers.image.revision=${SHA}" \
             -t "${IMAGE}:${SHA}" \
             -t "${IMAGE}:v${VERSION}" \
             -t "${IMAGE}:latest" \
