@@ -134,6 +134,10 @@ ZENDESK_FORM_ID: str = os.getenv('ZENDESK_FORM_ID')
 ZENDESK_FORM_BROWSER_FIELD_ID: str = os.getenv('ZENDESK_FORM_BROWSER_FIELD_ID')
 ZENDESK_FORM_OS_FIELD_ID: str = os.getenv('ZENDESK_FORM_OS_FIELD_ID')
 ZENDESK_USER_PLAN_STATUS_FIELD_KEY: str = os.getenv('ZENDESK_USER_PLAN_STATUS_FIELD_KEY')
+# Tags added to contact-form tickets recording whether the requester address was proven to belong
+# to the signed-in submitter.
+ZENDESK_TAG_IDENTITY_VERIFIED: str = os.getenv('ZENDESK_TAG_IDENTITY_VERIFIED', 'thundermail_accounts_identity_verified')
+ZENDESK_TAG_IDENTITY_UNVERIFIED: str = os.getenv('ZENDESK_TAG_IDENTITY_UNVERIFIED', 'thundermail_accounts_identity_unverified')
 
 ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
@@ -291,6 +295,7 @@ REST_FRAMEWORK = {
         'sign_up': '15/minute',
         'can_i_sign_up': '10/minute',  # Give them a few refreshes
         'check_email_is_on_allow_list': '10/minute',
+        'contact_submit': '5/minute',
         'analytics': '1000/minute',  # Just in case
         'totp_confirm': '10/minute',
         'recovery_codes_regenerate': '10/minute',
