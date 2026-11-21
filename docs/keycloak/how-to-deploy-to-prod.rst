@@ -2,10 +2,12 @@
 Updating and deploying Keycloak
 =================================
 
-A Keycloak image change on ``main`` publishes to GHCR and creates a numbered
-GitHub draft release. Kargo promotes the Accounts and Keycloak image pair to
-``tb-dev`` and ``tb-stage``. Publishing the draft requests promotion to
-``tb-prod``.
+A Keycloak image change on ``main`` publishes to GHCR. After all selected
+image jobs succeed, ``publish-images`` records both image digests in
+``pair.yaml`` on ``kargo/accounts-pairs`` and a numbered GitHub draft release
+is created. Kargo creates Freight from the record commit and promotes the
+pair to ``tb-dev`` and ``tb-stage``. Publishing the draft requests promotion
+to ``tb-prod``.
 
 .. warning::
 
@@ -54,21 +56,27 @@ GitHub draft release. Kargo promotes the Accounts and Keycloak image pair to
 2. Verify staging
 -----------------
 
-Confirm that ``publish-images`` succeeded for the intended commit. In the
-`Kargo Accounts project <https://kargo.pi.thunderbird.net/project/tb-accounts>`__,
-find the Freight with the expected Accounts and Keycloak image digests. Confirm
-it is verified and current in ``tb-stage`` before running
+Confirm that the **Record image pair** job in ``publish-images`` succeeded for
+the intended commit. On ``kargo/accounts-pairs``, find the newest ``pair.yaml``
+whose top-level ``revision`` matches that commit. The record pins the Accounts
+and Keycloak multi-architecture index digests and each image's source
+revision. Find the Freight carrying that record commit and confirm it is
+verified and current in ``tb-stage`` before running
 ``e2e-tests-browserstack-stage.yml`` manually from GitHub Actions. Confirm the
 suite passed and use Kargo promotion history to confirm that Freight stayed
 current throughout the run. Separately check login, MFA, introspection, mail
 authentication, and Keycloak configuration reconciliation.
+`Kargo Accounts project <https://kargo.pi.thunderbird.net/project/tb-accounts>`__
 
 3. Promote and verify production
 --------------------------------
 
-Publish the GitHub draft for that commit. Confirm that the
-``promote-release-to-tb-prod`` workflow succeeds and Kargo shows the expected
-Freight as current in ``tb-prod``.
+Publish the GitHub draft for that commit. The ``promote-release-to-tb-prod``
+workflow requires exactly one Freight carrying the newest matching record
+commit, verified in ``tb-stage``. Confirm the workflow succeeds and Kargo
+shows that Freight as current in ``tb-prod``. GitHub runs the workflow from the
+tagged release commit, so releases pinned before the record lookup was
+introduced still use the image-digest lookup.
 
 Check `Keycloak discovery
 <https://auth.tb.pro/realms/tbpro/.well-known/openid-configuration>`__ and
@@ -76,6 +84,23 @@ Check `Keycloak discovery
 rollout and configuration reconciliation logs in Argo CD. Use the dedicated
 test account to sign in, complete MFA, confirm the custom theme and configured
 MFA methods, then send and read a test message.
+
+Seeding and recovery
+--------------------
+
+To seed the first record, run ``publish-images`` on ``main`` with
+``seed_pair`` enabled. This skips the builds and records the digests and
+source revisions of both current GHCR ``latest`` indexes. Check ``pair.yaml``
+on ``kargo/accounts-pairs`` before switching the Kargo Warehouse. The seed
+creates no draft release.
+
+A failed or cancelled image job leaves the previous record in place. Check
+for newer runs before retrying, since an older run can still move shared GHCR
+tags. Resolve the failure and rerun ``publish-images`` for the same commit,
+or publish the fix on ``main`` if it requires a source change. A rerun can
+write another record for that commit. Check the Freight for the newest
+matching record is verified in ``tb-stage`` before publishing the draft.
+`CI image publishing and promotion <../ci/image-publish-pipeline.md>`__
 
 Rollback
 --------

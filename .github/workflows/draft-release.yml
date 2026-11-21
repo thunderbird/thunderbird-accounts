@@ -23,7 +23,7 @@ jobs:
       actions: read
       contents: write
     steps:
-      - name: Create draft release for published images
+      - name: Create draft release for a recorded image pair
         env:
           GH_TOKEN: ${{ github.token }}
           PUBLISH_RUN_ID: ${{ github.event.workflow_run.id }}
@@ -31,10 +31,10 @@ jobs:
         run: |
           set -euo pipefail
           repo="repos/$GITHUB_REPOSITORY"
-          images=$(gh api --paginate "$repo/actions/runs/$PUBLISH_RUN_ID/jobs?filter=all&per_page=100" \
-            --jq '.jobs[] | select(.conclusion == "success" and (.name == "accounts / merge" or .name == "keycloak / merge")) | .name')
-          if [[ -z "$images" ]]; then
-            echo "No image was published in run $PUBLISH_RUN_ID."
+          record=$(gh api --paginate "$repo/actions/runs/$PUBLISH_RUN_ID/jobs?filter=all&per_page=100" \
+            --jq '.jobs[] | select(.conclusion == "success" and .name == "Record image pair") | .name')
+          if [[ -z "$record" ]]; then
+            echo "No image pair was recorded in run $PUBLISH_RUN_ID."
             exit 0
           fi
 
