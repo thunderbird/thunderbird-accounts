@@ -16,7 +16,7 @@ from thunderbird_accounts.core.tests.utils import build_stalwart_account
 from thunderbird_accounts.core.views import PUBLIC_VUE_ROUTES, home
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 from thunderbird_accounts.mail.exceptions import AppPasswordSetError, InvalidJMapResponseError, JMapOriginMismatchError
-from thunderbird_accounts.mail.models import Account
+from thunderbird_accounts.mail.models import Account, Domain
 from thunderbird_accounts.subscription.models import Subscription
 
 
@@ -137,7 +137,10 @@ class HomeViewTypedAccountTestCase(TestCase):
         user = User.objects.create(username=f'typed@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='typed-home')
         Account.objects.create(name=user.username, user=user)
         Subscription.objects.create(user=user, status=Subscription.StatusValues.ACTIVE)
-        mock_mail_client_cls.return_value.get_account.return_value = build_stalwart_account(
+        Domain.objects.create(name='customdomain.com', user=user, status=Domain.DomainStatus.VERIFIED)
+        mock_mail_client = mock_mail_client_cls.return_value
+        mock_mail_client.get_catch_all_addresses.return_value = ['@customdomain.com']
+        mock_mail_client.get_account.return_value = build_stalwart_account(
             email_address=user.username,
             aliases={
                 '0': {
@@ -175,7 +178,10 @@ class HomeViewTypedAccountTestCase(TestCase):
         page_data = json.loads(strip_tags(response.context_data['page_load_data_script']))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(page_data['userDisplayName'], None)
-        self.assertEqual(page_data['emailAddresses'], [user.username, 'typed@example.com'])
+        self.assertEqual(page_data['emailAddresses'], [user.username, 'typed@example.com', '@customdomain.com'])
+        mock_mail_client.get_catch_all_addresses.assert_called_once_with(
+            [user.username, 'typed@example.com'], ['customdomain.com']
+        )
         self.assertEqual(page_data['appPasswords'], ['Desktop'])
 
 

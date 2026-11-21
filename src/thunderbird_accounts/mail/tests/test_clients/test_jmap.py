@@ -592,6 +592,24 @@ class TestEmailAddressUpdates(SimpleTestCase):
         self.assertIsNone(contract.catch_all_address)
         self.assertEqual(contract.account_aliases, {})
 
+    def test_catch_all_addresses_lists_domains_delivering_to_a_recipient(self):
+        contract = AliasJMapContract(catch_all_address='User@Example.test')
+        client = self.build_client(contract)
+
+        with patch.object(client, '_get_domains_by_id', return_value=[stalwart.Domain(**contract._domain_data())]):
+            catch_alls = client.get_catch_all_addresses([self.principal_id], ['custom.test'])
+
+        self.assertEqual(catch_alls, ['@custom.test'])
+
+    def test_catch_all_addresses_omits_domains_delivering_elsewhere(self):
+        contract = AliasJMapContract(catch_all_address='other@example.test')
+        client = self.build_client(contract)
+
+        with patch.object(client, '_get_domains_by_id', return_value=[stalwart.Domain(**contract._domain_data())]):
+            catch_alls = client.get_catch_all_addresses([self.principal_id], ['custom.test'])
+
+        self.assertEqual(catch_alls, [])
+
 
 class TestAccountOperations(SimpleTestCase):
     def setUp(self):

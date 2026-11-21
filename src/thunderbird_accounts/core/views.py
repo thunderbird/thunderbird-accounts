@@ -95,6 +95,11 @@ def home(request: HttpRequest):
                 user_display_name = email_user.description
                 email_addresses = [email_user.email_address]
                 email_addresses += [alias.full_address for alias in email_user.aliases.values()]
+                # Catch-alls live on the Domain object rather than in the account's aliases.
+                catch_alls = stalwart_client.get_catch_all_addresses(
+                    email_addresses, list(request.user.domains.values_list('name', flat=True))
+                )
+                email_addresses = email_addresses + catch_alls
                 for credential in (email_user.credentials or {}).values():
                     if credential.type != stalwart.Credential.Types.APP_PASSWORD:
                         continue

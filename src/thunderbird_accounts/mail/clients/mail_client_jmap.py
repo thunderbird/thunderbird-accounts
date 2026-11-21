@@ -1061,6 +1061,53 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
     # Alias / Email Address
     #
 
+    def get_catch_all_addresses(self, recipient_addresses: list[str], domain_names: list[str]) -> list[str]:
+        """Return a catch-all alias (``@domain``) for each given domain whose catchAllAddress is one of
+        ``recipient_addresses``. Domains that do not exist in Stalwart are skipped."""
+        if not recipient_addresses or not domain_names:
+            return []
+
+        self.preflight_check()
+
+        response = self.client.request(
+            JMapRequest(
+                using=[
+                    'urn:ietf:params:jmap:core',
+                    'urn:stalwart:jmap',
+                ],
+                method_calls=[
+                    # x:Domain/query does not support OR filter, so each domain gets its own query.
+                    Invocation(
+                        name=StalwartMethods.query(StalwartMethods.DOMAIN),
+                        arguments={
+                            'accountId': self.account_id,
+                            'filter': {'name': domain_name},
+                            'limit': 1,
+                            'position': 0,
+                            'calculateTotal': False,
+                        },
+                        method_call_id=str(idx),
+                    )
+                    for idx, domain_name in enumerate(domain_names)
+                ],
+            )
+        )
+
+        domain_ids = [
+            domain_id
+            for method_response in response.method_responses
+            for domain_id in method_response.arguments.get('ids', [])
+        ]
+        if not domain_ids:
+            return []
+
+        recipients = {address.lower() for address in recipient_addresses}
+        return [
+            f'@{domain.name}'
+            for domain in self._get_domains_by_id(domain_ids)
+            if domain.catch_all_address and domain.catch_all_address.lower() in recipients
+        ]
+
     def save_email_addresses(self, principal_id: str, emails: str | list[str]) -> None:
         """Saves a list of new aliases to Stalwart.
         We need to first look-up the existing stalwart account to get a fresh list of aliases,
