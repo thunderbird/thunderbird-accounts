@@ -622,6 +622,13 @@ def add_email_alias(request: HttpRequest):
             status=400,
         )
 
+    # A lone * is only meaningful as a catch-all request on a custom domain.
+    if not is_catch_all and '*' in email_alias:
+        return JsonResponse(
+            {'success': False, 'error': _('The * symbol is not allowed as part of an alias name.')},
+            status=400,
+        )
+
     if not is_catch_all:
         # min_length=1 because the domain-specific minimum has already been checked above.
         try:

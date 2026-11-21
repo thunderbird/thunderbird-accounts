@@ -6,6 +6,7 @@ export const EMAIL_ALIAS_VALIDATION_MESSAGES = {
   MIN_LENGTH: 'views.mail.sections.emailSettings.nameValidationErrorMinLength',
   MAX_LENGTH: 'views.mail.sections.emailSettings.nameValidationErrorMaxLength',
   PLUS_SYMBOL: 'views.mail.sections.emailSettings.nameValidationErrorPlusSymbol',
+  ASTERISK_SYMBOL: 'views.mail.sections.emailSettings.nameValidationErrorAsteriskSymbol',
 } as const;
 
 export type EmailAliasValidationMessageKey =
