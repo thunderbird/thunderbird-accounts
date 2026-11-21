@@ -30,6 +30,29 @@ test('email alias validation blocks catch-all aliases on domains with an existin
   ).toBe(EMAIL_ALIAS_VALIDATION_MESSAGES.MIN_LENGTH);
 });
 
+test('the asterisk is only accepted alone, as a catch-all request on a custom domain', () => {
+  const customDomainOptions = {
+    selectedDomain: 'my-domain.com',
+    allowedDomains: ['example.org'],
+    existingCatchAlls: [],
+  };
+
+  expect(validateEmailAlias({ ...customDomainOptions, value: '*' })).toBe(null);
+
+  for (const value of ['aa*', '*aa', 'a*a', '**']) {
+    expect(validateEmailAlias({ ...customDomainOptions, value })).toBe(
+      EMAIL_ALIAS_VALIDATION_MESSAGES.ASTERISK_SYMBOL
+    );
+    expect(validateEmailAlias({ ...sharedDomainOptions, value })).toBe(
+      EMAIL_ALIAS_VALIDATION_MESSAGES.ASTERISK_SYMBOL
+    );
+  }
+
+  expect(validateEmailAlias({ ...sharedDomainOptions, value: '*' })).toBe(
+    EMAIL_ALIAS_VALIDATION_MESSAGES.MIN_LENGTH
+  );
+});
+
 test('shared domains enforce the minimum local-part length', () => {
   expect(validateEmailAlias({ ...sharedDomainOptions, value: 'ab' })).toBe(
     EMAIL_ALIAS_VALIDATION_MESSAGES.MIN_LENGTH
