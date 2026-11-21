@@ -60,7 +60,7 @@ export default {
     </div>
     <div class="buttons">
       <template v-if="loginUrl">
-        <primary-button variant="outline" :href="loginUrl" data-testid="back-url">{{ $t('backToLogin') }}</primary-button>
+        <primary-button outline :href="loginUrl" data-testid="back-url">{{ $t('backToLogin') }}</primary-button>
       </template>
 
       <primary-button class="submit" @click="onSubmit" :disabled="isSubmitting" data-testid="submit">{{ $t('doSubmit') }}</primary-button>

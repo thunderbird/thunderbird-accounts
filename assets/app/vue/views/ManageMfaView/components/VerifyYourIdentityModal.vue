@@ -82,16 +82,16 @@ p {
     display: flex;
     align-items: center;
     gap: 0.875rem;
-    border: 1px solid var(--colour-neutral-border);
+    border: 1px solid var(--colour-surface-border);
     border-radius: 0.5rem;
-    background-color: var(--colour-neutral-base);
+    background-color: var(--colour-surface-base);
     padding: 0.875rem 1rem;
 
     .icon {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: var(--colour-service-primary);
+      color: var(--colour-primary-default);
     }
 
     .content {

@@ -98,7 +98,7 @@ defineExpose({ show, hide });
     </template>
 
     <template #actions>
-      <base-button :disabled="isDeleting" @click="hide" variant="outline">
+      <base-button :disabled="isDeleting" @click="hide" outline>
         {{ t('views.mail.sections.customDomains.deleteModal.cancel') }}
       </base-button>
       <danger-button :disabled="isDeleting || !allAliasesConfirmed" @click="handleDelete">

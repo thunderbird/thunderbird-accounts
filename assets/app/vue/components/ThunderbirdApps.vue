@@ -37,7 +37,7 @@ const tbProMailUrl = window._page?.webmailUrl;
 section {
   max-width: 345px;
   box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.04);
-  background-color: var(--colour-neutral-base);
+  background-color: var(--colour-surface-base);
   padding: 2rem 1.5rem;
   border-radius: 24px;
 
@@ -84,7 +84,7 @@ p.subheading {
       justify-content: center;
       padding: 0.5rem;
       border-radius: 1rem;
-      background-color: var(--colour-neutral-base);
+      background-color: var(--colour-surface-base);
       box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
       color: var(--colour-ti-secondary);
     }

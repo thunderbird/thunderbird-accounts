@@ -94,7 +94,7 @@ table {
 }
 
 thead {
-  border-block-end: solid 1px var(--surface-border-intense);
+  border-block-end: solid 1px var(--colour-surface-border-intense);
 }
 
 th,
@@ -114,7 +114,7 @@ th {
 }
 
 td {
-  background-color: var(--surface-lower);
+  background-color: var(--colour-surface-lower);
   font-size: 0.75rem;
   overflow-wrap: anywhere;
   vertical-align: middle;

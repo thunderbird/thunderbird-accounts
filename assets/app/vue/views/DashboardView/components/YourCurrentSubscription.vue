@@ -128,14 +128,14 @@ h3 {
   border: solid 1px rgba(88, 201, 255, 0.2);
   background-color: rgba(0, 0, 0, 0.4);
   text-align: center;
-  color: #eeeef0; /* TODO: --colour-ti-base forced dark */
+  color: var(--colour-ti-base-dark);
   padding: 1rem;
   margin-block-end: 1rem;
 
   .subscription-description {
     font-size: 0.875rem;
     line-height: 1.23;
-    color: #d9d9de; /* TODO: --colour-ti-secondary forced dark */
+    color: var(--colour-ti-secondary-dark);
     margin-block-end: 0.75rem;
   }
 
@@ -201,10 +201,10 @@ h3 {
   align-items: center;
   gap: 1rem;
   text-align: center;
-  color: #eeeef0; /* TODO: --colour-ti-base forced dark */
+  color: var(--colour-ti-base-dark);
 
   .footer-text {
-    color: var(--colour-neutral-lower);
+    color: var(--colour-surface-lower);
     font-size: 0.75rem;
     max-width: 75%;
   }

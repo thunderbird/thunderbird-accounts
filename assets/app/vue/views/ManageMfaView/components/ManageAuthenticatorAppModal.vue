@@ -163,14 +163,14 @@ p {
   .qr-image {
     width: 210px;
     height: 180px;
-    border: 1px solid var(--colour-neutral-border);
+    border: 1px solid var(--colour-surface-border);
     border-radius: 0.5rem;
-    background-color: var(--colour-neutral-base);
+    background-color: var(--colour-surface-base);
     margin-block-end: 1.5rem;
     object-fit: contain;
 
     &.loading {
-      background: linear-gradient(90deg, var(--colour-neutral-base), #f5f5f5, var(--colour-neutral-base));
+      background: linear-gradient(90deg, var(--colour-surface-base), #f5f5f5, var(--colour-surface-base));
     }
   }
 
@@ -189,8 +189,8 @@ p {
 
   code {
     color: var(--colour-ti-secondary);
-    background-color: var(--colour-neutral-base);
-    border: 1px solid var(--colour-neutral-border);
+    background-color: var(--colour-surface-base);
+    border: 1px solid var(--colour-surface-border);
     border-radius: 0.25rem;
     padding: 0.5rem;
     letter-spacing: 0.08em;

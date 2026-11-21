@@ -17,7 +17,7 @@ div#app {
 body {
   display: flex;
   flex-direction: column;
-  background-color: var(--colour-neutral-base);
+  background-color: var(--colour-surface-base);
 }
 
 h2 {

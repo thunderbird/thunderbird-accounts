@@ -43,7 +43,7 @@ defineExpose({
         <text-input class="email-input" name="recovery-email" v-model="email" required>
           {{ t('views.manageMfa.modals.manageEmailRecovery.email') }}
         </text-input>
-        <primary-button variant="outline" @click="sendCode">
+        <primary-button outline @click="sendCode">
           {{ t('views.manageMfa.modals.manageEmailRecovery.sendCode') }}
         </primary-button>
       </div>

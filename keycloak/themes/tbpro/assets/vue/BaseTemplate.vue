@@ -86,7 +86,7 @@ section {
       flex-direction: column;
       min-height: 100vh;
       flex: 1;
-      background-color: var(--colour-neutral-base, #ffffff);
+      background-color: var(--colour-surface-base, #ffffff);
     }
 
     .panel {
@@ -142,7 +142,7 @@ section {
       min-height: 720px;
       border-radius: var(--card-border-radius);
       align-items: initial;
-      border: 0.0625rem solid var(--colour-neutral-border-intense);
+      border: 0.0625rem solid var(--colour-surface-border-intense);
 
       .left-side {
         background-color: unset;

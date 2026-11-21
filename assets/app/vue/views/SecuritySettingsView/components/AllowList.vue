@@ -98,7 +98,7 @@ const onShowMore = () => {
     </template>
     <template v-else>
       <div class="manage-allow-list-button-wrapper">
-        <primary-button variant="outline" class="manage-allow-list-button" @click="isManagingAllowList = true">
+        <primary-button outline class="manage-allow-list-button" @click="isManagingAllowList = true">
           {{ t('views.mail.views.securitySettings.manageAllowList') }}
         </primary-button>
       </div>
@@ -145,7 +145,7 @@ p {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 0.5rem;
-  border-block-end: 1px solid var(--colour-neutral-border);
+  border-block-end: 1px solid var(--colour-surface-border);
   word-break: break-all;
 
   p {
@@ -156,7 +156,7 @@ p {
   }
 
   &:nth-child(odd) {
-    background-color: var(--colour-neutral-lower);
+    background-color: var(--colour-surface-lower);
   }
 
   .remove-from-allow-list-button {

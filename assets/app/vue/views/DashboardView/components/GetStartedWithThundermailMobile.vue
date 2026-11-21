@@ -84,7 +84,7 @@ export default {
       <template #action>
         <primary-button
           size="small"
-          variant="outline"
+          outline
           :href="DOWNLOAD_THUNDERBIRD_MOBILE_URL"
           target="_blank"
           rel="noopener noreferrer"
@@ -139,7 +139,7 @@ export default {
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.75rem 0.5rem 0.5rem;
-    border: 1px solid var(--colour-neutral-border);
+    border: 1px solid var(--colour-surface-border);
     border-radius: 8px;
 
     .qr-code-details-summary {

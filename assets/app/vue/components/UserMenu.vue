@@ -78,7 +78,7 @@ onBeforeUnmount(() => {
   font-size: 0.8125rem;
 
   & :first-child {
-    color: #eeeef0;
+    color: var(--colour-ti-base-dark);
     /* var(--colour-ti-base) dark mode */
   }
 }
@@ -101,7 +101,7 @@ onBeforeUnmount(() => {
     box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
     padding: 0.5rem 0;
     min-width: max-content;
-    z-index: var(--z-index-header-dropdown);
+    z-index: 10;
 
     a {
       display: flex;

@@ -167,7 +167,7 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_queries_subdomain_mx(self, mock_resolve):
-        cust_domain = 'tb.stosberg.com'
+        cust_domain = 'tb.customdomain.test'
         mock_resolve.side_effect = self._resolve_side_effect(cust_domain=cust_domain)
 
         result = self.mail_client.check_domain_dns(cust_domain)
@@ -176,15 +176,15 @@ class TestMailClientCheckDomainDNS(SimpleTestCase):
         dns_queries = [call_args.args for call_args in mock_resolve.call_args_list]
         self.assertIn((f'{cust_domain}.', 'MX'), dns_queries)
         self.assertIn((f'{cust_domain}.', 'TXT'), dns_queries)
-        self.assertNotIn(('stosberg.com', 'MX'), dns_queries)
-        self.assertNotIn(('stosberg.com.', 'MX'), dns_queries)
-        self.assertNotIn(('stosberg.com', 'TXT'), dns_queries)
-        self.assertNotIn(('stosberg.com.', 'TXT'), dns_queries)
+        self.assertNotIn(('customdomain.test', 'MX'), dns_queries)
+        self.assertNotIn(('customdomain.test.', 'MX'), dns_queries)
+        self.assertNotIn(('customdomain.test', 'TXT'), dns_queries)
+        self.assertNotIn(('customdomain.test.', 'TXT'), dns_queries)
 
     @patch('thunderbird_accounts.mail.dns.dns_resolver.resolve')
     def test_check_domain_dns_subdomain_spf_does_not_use_parent_txt(self, mock_resolve):
-        cust_domain = 'tb.stosberg.com'
-        parent_domain = 'stosberg.com'
+        cust_domain = 'tb.customdomain.test'
+        parent_domain = 'customdomain.test'
         fallback_resolve = self._resolve_side_effect(cust_domain=cust_domain)
 
         def resolve_side_effect(name, record_type):
@@ -601,16 +601,16 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
         )
 
     def test_build_expected_dns_records_uses_subdomain_mx_owner(self):
-        records = self.mail_client.build_expected_dns_records('tb.stosberg.com')
+        records = self.mail_client.build_expected_dns_records('tb.customdomain.test')
 
         self.assertEqual(
             records[0],
-            {'type': 'MX', 'name': 'tb.stosberg.com.', 'content': 'mail.test.com.', 'priority': '10'},
+            {'type': 'MX', 'name': 'tb.customdomain.test.', 'content': 'mail.test.com.', 'priority': '10'},
         )
         self.assertIn(
             {
                 'type': 'SRV',
-                'name': '_jmap._tcp.tb.stosberg.com.',
+                'name': '_jmap._tcp.tb.customdomain.test.',
                 'content': '0 443 mail.test.com',
                 'priority': '0',
             },
@@ -619,7 +619,7 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
         self.assertIn(
             {
                 'type': 'TXT',
-                'name': 'tb.stosberg.com.',
+                'name': 'tb.customdomain.test.',
                 'content': 'v=spf1 include:spf.example.net -all',
                 'priority': '-',
             },
@@ -634,15 +634,15 @@ class TestMailClientBuildExpectedDNSRecords(SimpleTestCase):
         self.assertEqual(spf_record['content'], 'v=spf1 include:spf.localhost -all')
 
     def test_build_expected_dns_records_normalizes_customer_domain(self):
-        records = self.mail_client.build_expected_dns_records('tb.stosberg.com.')
+        records = self.mail_client.build_expected_dns_records('tb.customdomain.test.')
 
-        self.assertEqual(records[1]['name'], '_jmap._tcp.tb.stosberg.com.')
+        self.assertEqual(records[1]['name'], '_jmap._tcp.tb.customdomain.test.')
         self.assertNotIn('..', ''.join(record['name'] for record in records))
         self.assertIn(
             {
                 'type': 'TXT',
-                'name': '_smtp._tls.tb.stosberg.com.',
-                'content': 'v=TLSRPTv1; rua=mailto:postmaster@tb.stosberg.com',
+                'name': '_smtp._tls.tb.customdomain.test.',
+                'content': 'v=TLSRPTv1; rua=mailto:postmaster@tb.customdomain.test',
                 'priority': '-',
             },
             records,

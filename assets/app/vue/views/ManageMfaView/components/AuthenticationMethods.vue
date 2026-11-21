@@ -140,19 +140,19 @@ onMounted(loadMfaMethods);
                    looks out of place, so Remove takes the same outline-button style Edit
                    would have used. -->
               <template v-if="isEditable(method)">
-                <primary-button :data-testid="`mfa-${method}-edit-button`" variant="outline" size="small" @click="openMethodModal(method)">
+                <primary-button :data-testid="`mfa-${method}-edit-button`" outline size="small" @click="openMethodModal(method)">
                   {{ editLabel(method) }}
                 </primary-button>
                 <link-button :data-testid="`mfa-${method}-remove-button`" size="small" @click="beginRemove(method, methodData)">
                   {{ t('views.manageMfa.actions.remove') }}
                 </link-button>
               </template>
-              <primary-button v-else :data-testid="`mfa-${method}-remove-button`" variant="outline" size="small" @click="beginRemove(method, methodData)">
+              <primary-button v-else :data-testid="`mfa-${method}-remove-button`" outline size="small" @click="beginRemove(method, methodData)">
                 {{ t('views.manageMfa.actions.remove') }}
               </primary-button>
             </template>
             <template v-else>
-              <primary-button :data-testid="`mfa-${method}-setup-button`" variant="outline" size="small" :disabled="isSetupDisabled(method)" @click="openMethodModal(method)">
+              <primary-button :data-testid="`mfa-${method}-setup-button`" outline size="small" :disabled="isSetupDisabled(method)" @click="openMethodModal(method)">
                 {{ t('views.manageMfa.actions.setUp') }}
               </primary-button>
             </template>
@@ -195,15 +195,15 @@ onMounted(loadMfaMethods);
 
 <style scoped>
 .authentication-methods-container {
-  border: 1px solid var(--colour-neutral-border);
+  border: 1px solid var(--colour-surface-border);
   border-radius: 0.5rem;
   background-color: white;
 
   header {
     padding: 1rem 1.125rem;
     border-radius: 0.5rem 0.5rem 0 0;
-    color: #eeeef0; /* TODO: --colour-ti-base forced dark */
-    background-color: #262d3b; /* TODO: --colour-neutral-raised forced dark */
+    color: var(--colour-ti-base-dark);
+    background-color: #2b2b2f; /* --colour-surface-raised dark value; no dark-only token */
     font-size: 1.25rem;
     font-weight: 500;
   }

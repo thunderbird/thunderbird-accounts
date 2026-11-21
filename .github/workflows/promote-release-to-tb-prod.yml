@@ -1,0 +1,197 @@
+---
+name: promote-release-to-tb-prod
+
+concurrency:
+  group: promote-release-to-tb-prod
+  cancel-in-progress: false
+
+on:
+  release:
+    types:
+      - published
+
+permissions: {}
+
+jobs:
+  promote-release-to-tb-prod:
+    if: vars.KARGO_PROMOTE_TB_PROD == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: tb-prod-promote
+    permissions:
+      actions: read
+      contents: read
+    env:
+      ACCOUNTS_IMAGE: ghcr.io/thunderbird/thunderbird-accounts
+      KEYCLOAK_IMAGE: ghcr.io/thunderbird/thunderbird-accounts-keycloak
+      KARGO_API: https://kargo.pi.thunderbird.net
+      KARGO_PROJECT: tb-accounts
+      KARGO_STAGE: tb-prod
+      KARGO_VERIFIED_IN: tb-stage
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve both image digests for the release commit
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_AUTHOR: ${{ github.event.release.author.login }}
+          RELEASE_TARGET: ${{ github.event.release.target_commitish }}
+        run: |
+          set -euo pipefail
+          fail() {
+            local m="$*"
+            echo "### $RELEASE_TAG was not promoted to $KARGO_STAGE: $m" >> "$GITHUB_STEP_SUMMARY"
+            m=${m//'%'/%25} m=${m//$'\r'/%0D} m=${m//$'\n'/%0A}
+            echo "::error::$m"
+            exit 1
+          }
+
+          [[ "$RELEASE_TAG" =~ ^r-[0-9]{4}$ ]] || fail "release tag $RELEASE_TAG is not r-NNNN"
+          [[ "$RELEASE_AUTHOR" == "github-actions[bot]" ]] || fail "release $RELEASE_TAG was not drafted by GitHub Actions"
+          [[ "$RELEASE_TARGET" == "$RELEASE_SHA" ]] || fail "release $RELEASE_TAG targets $RELEASE_TARGET, not commit $RELEASE_SHA; publish a draft pinned to a commit (r-0647 or later)"
+
+          commits="$RUNNER_TEMP/commits"
+          git rev-list --first-parent "$RELEASE_SHA" > "$commits"
+
+          resolve() {
+            local key=$1 image=$2 sha commit state digest
+            sha=$(skopeo list-tags "docker://$image" | jq -r '.Tags[]' | grep -m1 -Fxf - "$commits") \
+              || fail "no $image:<sha> tag on the history of $RELEASE_SHA"
+            while read -r commit; do
+              state=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/publish-images.yml/runs?head_sha=$commit&event=push&branch=main" \
+                --jq '.workflow_runs | max_by(.created_at) | "\(.status)/\(.conclusion)"')
+              [[ "$state" == "completed/success" ]] || fail "publish-images for $commit is $state"
+              [[ "$commit" == "$sha" ]] && break
+            done < "$commits"
+            digest=$(skopeo inspect --format '{{.Digest}}' "docker://$image:$sha")
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "bad digest for $image:$sha: $digest"
+            echo "$image <- :$sha ($digest)"
+            echo "$key-digest=$digest" >> "$GITHUB_OUTPUT"
+          }
+
+          resolve accounts "$ACCOUNTS_IMAGE"
+          resolve keycloak "$KEYCLOAK_IMAGE"
+
+      - name: Promote the matching Freight to tb-prod
+        env:
+          KARGO_TOKEN: ${{ secrets.KARGO_TB_PROD_TOKEN }}
+          ACCOUNTS_DIGEST: ${{ steps.resolve.outputs.accounts-digest }}
+          KEYCLOAK_DIGEST: ${{ steps.resolve.outputs.keycloak-digest }}
+          VERIFY_TIMEOUT_SECONDS: "2700"
+          PROMOTION_TIMEOUT_SECONDS: "1800"
+          POLL_SECONDS: "15"
+        run: |
+          set -euo pipefail
+          promotion=
+          fail() {
+            local m="$*"
+            {
+              echo "### $RELEASE_TAG: $KARGO_STAGE promotion failed"
+              echo "- $m"
+              if [[ -n "$promotion" ]]; then echo "- Promotion: \`$promotion\`"; fi
+              echo "- Kargo: $KARGO_API/project/$KARGO_PROJECT"
+            } >> "$GITHUB_STEP_SUMMARY"
+            m=${m//'%'/%25} m=${m//$'\r'/%0D} m=${m//$'\n'/%0A}
+            echo "::error::$m"
+            exit 1
+          }
+          [[ -n "$KARGO_TOKEN" ]] || fail "secret KARGO_TB_PROD_TOKEN is not set in the tb-prod-promote environment"
+
+          umask 077
+          auth="$RUNNER_TEMP/kargo-auth" body="$RUNNER_TEMP/kargo-body"
+          printf 'Authorization: Bearer %s\n' "$KARGO_TOKEN" > "$auth"
+          trap 'rm -f "$auth"' EXIT
+
+          kargo() {
+            local method=$1 path=$2 data=${3:-} out status error
+            local args=(-sS -X "$method" -o "$body" -w '%{http_code} %header{cf-mitigated}' --max-time 60
+              -A thunderbird-accounts-release-promoter -H "@$auth" -H 'Accept: application/json')
+            if [[ -n "$data" ]]; then args+=(-H 'Content-Type: application/json' --data-raw "$data"); fi
+            if [[ "$method" == GET ]]; then args+=(--retry 4 --retry-connrefused --retry-max-time 300); fi
+            out=$(curl "${args[@]}" "$KARGO_API$path") || fail "$method $path: cannot reach $KARGO_API"
+            status=${out%% *}
+            if [[ -n "${out#* }" ]]; then
+              fail "$method $path: Cloudflare challenged this runner (HTTP $status); the request did not reach Kargo, so this is not an auth failure"
+            fi
+            error=$(jq -r '.error? // empty' "$body" 2>/dev/null || true)
+            case "$status" in
+              2??) ;;
+              401) fail "$method $path: Kargo rejected the token (401 ${error:-no body})" ;;
+              *) fail "$method $path: HTTP $status ${error:-with no Kargo error body, so it came from in front of Kargo: $(head -c 300 "$body")}" ;;
+            esac
+          }
+
+          deadline=$((SECONDS + VERIFY_TIMEOUT_SECONDS))
+          while :; do
+            kargo GET "/v1beta1/projects/$KARGO_PROJECT/freight"
+            freights=$(jq -c --arg a "$ACCOUNTS_IMAGE" --arg k "$KEYCLOAK_IMAGE" '[.groups[]?.items[]? | {
+                name: .metadata.name,
+                alias: (.alias // ""),
+                at: (.discoveredAt // .metadata.creationTimestamp // ""),
+                accounts: ([.images[]? | select(.repoURL == $a) | .digest][0] // ""),
+                keycloak: ([.images[]? | select(.repoURL == $k) | .digest][0] // ""),
+                verifiedIn: ((.status.verifiedIn // {}) | keys)
+              }]' "$body")
+            read -r count freight freight_at verified < <(jq -r --arg ad "$ACCOUNTS_DIGEST" --arg kd "$KEYCLOAK_DIGEST" --arg s "$KARGO_VERIFIED_IN" \
+              'map(select(.accounts == $ad and .keycloak == $kd)) | "\(length) \(.[0].name // "-") \(.[0].at // "-") \(.[0].verifiedIn // [] | index($s) != null)"' <<< "$freights")
+            if (( count == 1 )) && [[ "$verified" == true ]]; then break; fi
+            if (( count > 1 || SECONDS >= deadline )); then
+              echo "Wanted: accounts $ACCOUNTS_DIGEST, keycloak $KEYCLOAK_DIGEST. Freight in $KARGO_PROJECT:"
+              jq -r '.[] | "  \(.name) (\(.alias)) accounts=\(.accounts) keycloak=\(.keycloak) verifiedIn=\(.verifiedIn | join(","))"' <<< "$freights"
+              case "$count" in
+                0) fail "no Freight with both digests after ${VERIFY_TIMEOUT_SECONDS}s; Kargo never saw this pair as :latest together, or deleted it. Nothing was promoted" ;;
+                1) fail "Freight $freight is not verified on $KARGO_VERIFIED_IN after ${VERIFY_TIMEOUT_SECONDS}s; nothing was promoted" ;;
+                *) fail "found $count Freight with both digests, expected one; nothing was promoted" ;;
+              esac
+            fi
+            sleep "$POLL_SECONDS"
+          done
+
+          kargo GET "/v1beta1/projects/$KARGO_PROJECT/stages/$KARGO_STAGE"
+          current=$(jq -r '[.status.freightHistory[0].items[]?.name][0] // ""' "$body")
+          if [[ "$current" == "$freight" ]]; then
+            echo "### $RELEASE_TAG: Freight \`$freight\` is already current on $KARGO_STAGE, nothing to do" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [[ -n "$current" ]]; then
+            current_at=$(jq -r --arg n "$current" '.[] | select(.name == $n) | .at' <<< "$freights")
+            [[ -n "$current_at" && "$freight_at" > "$current_at" ]] \
+              || fail "Freight $freight ($freight_at) is not newer than $KARGO_STAGE's current Freight $current (${current_at:-not in the Freight list}); refusing to move $KARGO_STAGE back. A Kargo admin can do that by hand"
+          fi
+
+          kargo GET "/v1beta1/projects/$KARGO_PROJECT/promotions?stage=$KARGO_STAGE"
+          unfinished=$(jq -c '[.items[]? | select(.status.phase // "" | IN("Succeeded", "Failed", "Errored", "Aborted") | not)
+            | {name: .metadata.name, freight: .spec.freight, phase: (.status.phase // "Pending")}]' "$body")
+          others=$(jq -r --arg f "$freight" 'map(select(.freight != $f) | "\(.name) (Freight \(.freight), \(.phase))") | join(", ")' <<< "$unfinished")
+          [[ -z "$others" ]] || fail "$KARGO_STAGE has unfinished Promotions: $others; nothing was promoted. Re-run when they end, or a Kargo admin can abort them"
+          promotion=$(jq -r --arg f "$freight" 'map(select(.freight == $f)) | .[0].name // empty' <<< "$unfinished")
+          if [[ -n "$promotion" ]]; then
+            echo "Promotion $promotion of Freight $freight is already queued on $KARGO_STAGE; waiting for it"
+          else
+            kargo POST "/v1beta1/projects/$KARGO_PROJECT/stages/$KARGO_STAGE/promotions" "$(jq -nc --arg f "$freight" '{freight: $f}')"
+            promotion=$(jq -r '.metadata.name' "$body")
+          fi
+          printf '%s\n' "### Promoting $RELEASE_TAG to $KARGO_STAGE" "- Freight: \`$freight\`" "- Accounts: \`$ACCOUNTS_DIGEST\`" \
+            "- Keycloak: \`$KEYCLOAK_DIGEST\`" "- Promotion: \`$promotion\`" >> "$GITHUB_STEP_SUMMARY"
+
+          deadline=$((SECONDS + PROMOTION_TIMEOUT_SECONDS))
+          while :; do
+            sleep "$POLL_SECONDS"
+            kargo GET "/v1beta1/projects/$KARGO_PROJECT/promotions/$promotion"
+            phase=$(jq -r '.status.phase // "Pending"' "$body")
+            if [[ "$phase" =~ ^(Succeeded|Failed|Errored|Aborted)$ ]] || (( SECONDS >= deadline )); then break; fi
+          done
+          case "$phase" in
+            Succeeded) result=Succeeded ;;
+            Failed | Errored | Aborted) result="$phase: $(jq -r '.status.message // ""' "$body")" ;;
+            *) result="still $phase after ${PROMOTION_TIMEOUT_SECONDS}s: queued or running; a Kargo admin can abort it at $KARGO_API/project/$KARGO_PROJECT" ;;
+          esac
+          echo "- Result: $result" >> "$GITHUB_STEP_SUMMARY"
+          [[ "$phase" == Succeeded ]] || fail "Promotion $promotion: $result"
+          echo "Promotion $promotion of Freight $freight to $KARGO_STAGE succeeded"

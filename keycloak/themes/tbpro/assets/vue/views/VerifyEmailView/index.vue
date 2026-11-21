@@ -44,7 +44,7 @@ export default {
           submitText
         }}
       </primary-button>
-      <primary-button variant="outline" data-testid="cancel-btn" id="cancel" class="submit" @click="onCancel">{{ $t('doCancel') }}</primary-button>
+      <primary-button outline data-testid="cancel-btn" id="cancel" class="submit" @click="onCancel">{{ $t('doCancel') }}</primary-button>
     </div>
   </form>
   <template v-else>

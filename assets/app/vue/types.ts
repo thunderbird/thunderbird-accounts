@@ -1,3 +1,5 @@
+import type { NoticeBarTypes } from '@thunderbirdops/services-ui';
+
 /* Source: https://docs.djangoproject.com/en/5.2/ref/contrib/messages/#creating-custom-message-levels */
 export enum SERVER_MESSAGE_LEVEL {
   DEBUG = 10,
@@ -10,6 +12,14 @@ export enum SERVER_MESSAGE_LEVEL {
 export type ServerMessage = {
   level: SERVER_MESSAGE_LEVEL;
   message: string;
+};
+
+/* The login page's maintenance notice (docs/keycloak/maintenance-notice.rst) */
+export type MaintenanceNotice = {
+  text: string;
+  type: NoticeBarTypes.Info | NoticeBarTypes.Warning | NoticeBarTypes.Critical;
+  statusUrl: string | null;
+  statusText: string | null;
 };
 
 export enum WAFFLE_FLAG {

@@ -1,5 +1,4 @@
 @import 'fonts.css';
-@import "variables.css";
 
 *,
 *::before,
@@ -202,4 +201,20 @@ b {
   100% {
     --trail-offset: -270deg;
   }
+}
+
+/* Keeps the tooltip open while the pointer crosses the gap to reach links inside it */
+.tooltip::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  height: var(--tooltip-gap, 0.5rem);
+}
+
+.tooltip.pos-top::before {
+  top: 100%;
+}
+
+.tooltip.pos-bottom::before {
+  bottom: 100%;
 }

@@ -32,8 +32,21 @@ export function sendUrlForHostname(hostname = globalThis.location?.hostname): st
   return 'https://send-stage.tb.pro';
 }
 
+export function keycloakUrlForHostname(hostname = globalThis.location?.hostname): string {
+  if (hostname === 'accounts.tb.pro') {
+    return 'https://auth.tb.pro';
+  }
+  if (hostname === 'accounts.stage-thundermail.com') {
+    return 'https://auth.stage-thundermail.com';
+  }
+  return 'http://keycloak:8999';
+}
+
 export const APPOINTMENT_URL =
   import.meta.env.VITE_APPOINTMENT_URL || appointmentUrlForHostname();
 
 export const SEND_URL =
   import.meta.env.VITE_SEND_URL || sendUrlForHostname();
+
+export const KEYCLOAK_URL =
+  import.meta.env.VITE_KEYCLOAK_URL || keycloakUrlForHostname();

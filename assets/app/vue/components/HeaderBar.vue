@@ -92,7 +92,7 @@ const logoSrc = new URL('@/assets/svg/thundermail-logo.svg', import.meta.url).hr
     <template v-else>
       <!-- Login is done through Django routing and not Vue router -->
       <a href="/login/" class="login-button-link">
-        <brand-button variant="outline">
+        <brand-button outline>
           {{ t('navigationLinks.login') }}
         </brand-button>
       </a>
@@ -115,7 +115,7 @@ header {
 
   /* Without this we can't be on top of main content when we need */
   position: relative;
-  z-index: var(--z-index-header-dropdown);
+  z-index: 10;
 
   &:first-child {
     margin-right: auto;
@@ -144,7 +144,7 @@ header {
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #eeeef0;
+      color: var(--colour-ti-base-dark);
     }
 
     :deep(.app-drawer__button svg) {
@@ -157,7 +157,7 @@ header {
     text-decoration: none;
 
     .brand.outline {
-      color: #eeeef0;
+      color: var(--colour-ti-base-dark);
       /* var(--colour-ti-base) dark mode */
     }
   }

@@ -16,7 +16,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write   # This is required for requesting the JWT
   contents: read    # This is required for actions/checkout
 
 jobs:
@@ -28,7 +27,6 @@ jobs:
     outputs:
       src-changed: ${{ steps.check.outputs.src-changed }}
       e2e-changed: ${{ steps.check.outputs.e2e-changed }}
-      iac-changed: ${{ steps.check.outputs.iac-changed }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -65,9 +63,7 @@ jobs:
               - 'scripts/apply-cli-config.sh'
               - 'scripts/PgAdvisoryLockRun.java'
               - 'test/e2e/**'
-            iac-changed:
-              - 'pulumi/**'
-  
+
   validate-accounts:
     needs: detect-changes
     if: needs.detect-changes.outputs.src-changed == 'true'
@@ -102,27 +98,6 @@ jobs:
         continue-on-error: true
         run: |
           docker compose exec accounts bash -c 'uv run coverage report'
-
-  validate-iac:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.iac-changed
-    runs-on: ubuntu-26.04
-    environment:
-      name: staging
-      deployment: false
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Ruff formatting/linting checks
-        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
-        with:
-          src: "pulumi"
-          args: "format --check"
-
-      - name: Ruff error checks
-        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
-        with:
-          src: "pulumi"
 
   run-e2e-tests-local:
     needs:

@@ -60,7 +60,7 @@ const onCancelSetDisplayName = () => {
 
         <div class="set-display-name-buttons-container">
           <primary-button
-            variant="outline"
+            outline
             @click="onCancelSetDisplayName"
             :disabled="isSubmittingDisplayName"
             >{{ t('views.dashboard.accountCard.cancel') }}</primary-button
@@ -117,7 +117,7 @@ const onCancelSetDisplayName = () => {
 }
 
 .fake-button-link {
-  color: var(--colour-service-primary);
+  color: var(--colour-primary-default);
   border: 0;
   font-size: var(--txt-input);
   font-weight: 400;

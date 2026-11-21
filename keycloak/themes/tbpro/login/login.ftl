@@ -20,6 +20,12 @@
         rememberMe: '${(login.rememberMe)!"off"}' === 'on',
         loginHint: '${login.username!''}',
         tbProPrimaryDomain: '${properties.tbproPrimaryDomain}',
+        // Operator-entered realm overrides: passed as the {0} argument so MessageFormat never parses their quotes or
+        // braces, and escaped for this JS string literal rather than HTML-escaped.
+        noticeText: '${msg("{0}", r"${maintenanceNotice}")?js_string?no_esc}',
+        noticeType: '${msg("{0}", r"${maintenanceNoticeType}")?js_string?no_esc}',
+        noticeStatusUrl: '${msg("{0}", r"${maintenanceNoticeStatusUrl}")?js_string?no_esc}',
+        noticeStatusText: '${msg("{0}", r"${maintenanceNoticeStatusText}")?js_string?no_esc}',
         socialProviders: [
             //<#if realm.password && social?? && social.providers?has_content>
             //<#list social.providers as p>

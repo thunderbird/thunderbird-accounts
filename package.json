@@ -1,6 +1,6 @@
 {
   "name": "thunderbird-accounts",
-  "version": "1.22.1",
+  "version": "1.24.2",
   "description": "> [!IMPORTANT]   > Thunderbird Accounts is still in active development and is not ready for any active use.",
   "private": true,
   "directories": {
@@ -26,12 +26,14 @@
   },
   "homepage": "https://github.com/thunderbird/thunderbird-accounts#readme",
   "overrides": {
-    "vue": "$vue"
+    "vue": "$vue",
+    "vue-i18n": "$vue-i18n",
+    "@intlify/core-base": "11.4.16"
   },
   "dependencies": {
     "@paddle/paddle-js": "^1.6.2",
     "@phosphor-icons/vue": "^2.2.1",
-    "@thunderbirdops/services-ui": "1.7.0",
+    "@thunderbirdops/services-ui": "2.0.1",
     "@vueuse/core": "^14.2.1",
     "dinero.js": "^2.0.2",
     "pinia": "^3.0.4",
