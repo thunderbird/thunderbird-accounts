@@ -19,11 +19,9 @@ jobs:
     timeout-minutes: 90
     environment: tb-prod-promote
     permissions:
-      actions: read
       contents: read
     env:
-      ACCOUNTS_IMAGE: ghcr.io/thunderbird/thunderbird-accounts
-      KEYCLOAK_IMAGE: ghcr.io/thunderbird/thunderbird-accounts-keycloak
+      PAIR_REPO_URL: https://github.com/thunderbird/thunderbird-accounts.git
       KARGO_API: https://kargo.pi.thunderbird.net
       KARGO_PROJECT: tb-accounts
       KARGO_STAGE: tb-prod
@@ -35,10 +33,9 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Resolve both image digests for the release commit
+      - name: Resolve the image pair record for the release commit
         id: resolve
         env:
-          GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ github.sha }}
           RELEASE_AUTHOR: ${{ github.event.release.author.login }}
           RELEASE_TARGET: ${{ github.event.release.target_commitish }}
@@ -56,31 +53,15 @@ jobs:
           [[ "$RELEASE_AUTHOR" == "github-actions[bot]" ]] || fail "release $RELEASE_TAG was not drafted by GitHub Actions"
           [[ "$RELEASE_TARGET" == "$RELEASE_SHA" ]] || fail "release $RELEASE_TAG targets $RELEASE_TARGET, not commit $RELEASE_SHA; publish a draft pinned to a commit (r-0647 or later)"
 
-          commits="$RUNNER_TEMP/commits"
-          git rev-list --first-parent "$RELEASE_SHA" > "$commits"
-
-          resolve() {
-            local key=$1 image=$2 sha commit state digest
-            sha=$(skopeo list-tags "docker://$image" | jq -r '.Tags[]' | grep -m1 -Fxf - "$commits") \
-              || fail "no $image:<sha> tag on the history of $RELEASE_SHA"
-            while read -r commit; do
-              state=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/publish-images.yml/runs?head_sha=$commit&event=push&branch=main" \
-                --jq '.workflow_runs | max_by(.created_at) | "\(.status)/\(.conclusion)"')
-              [[ "$state" == "completed/success" ]] || fail "publish-images for $commit is $state"
-              [[ "$commit" == "$sha" ]] && break
-            done < "$commits"
-            digest=$(skopeo inspect --format '{{.Digest}}' "docker://$image:$sha")
-            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "bad digest for $image:$sha: $digest"
-            echo "$image <- :$sha ($digest)"
-            echo "$key-digest=$digest" >> "$GITHUB_OUTPUT"
-          }
-
-          resolve accounts "$ACCOUNTS_IMAGE"
-          resolve keycloak "$KEYCLOAK_IMAGE"
+          record=$(bash .github/scripts/find-release-pair.sh "$RELEASE_SHA" 2>&1) || fail "$record"
+          IFS=$'\t' read -r pair_commit accounts_digest keycloak_digest <<< "$record"
+          printf '%s\n' "pair-commit=$pair_commit" "accounts-digest=$accounts_digest" \
+            "keycloak-digest=$keycloak_digest" >> "$GITHUB_OUTPUT"
 
       - name: Promote the matching Freight to tb-prod
         env:
           KARGO_TOKEN: ${{ secrets.KARGO_TB_PROD_TOKEN }}
+          PAIR_COMMIT: ${{ steps.resolve.outputs.pair-commit }}
           ACCOUNTS_DIGEST: ${{ steps.resolve.outputs.accounts-digest }}
           KEYCLOAK_DIGEST: ${{ steps.resolve.outputs.keycloak-digest }}
           VERIFY_TIMEOUT_SECONDS: "2700"
@@ -130,24 +111,23 @@ jobs:
           deadline=$((SECONDS + VERIFY_TIMEOUT_SECONDS))
           while :; do
             kargo GET "/v1beta1/projects/$KARGO_PROJECT/freight"
-            freights=$(jq -c --arg a "$ACCOUNTS_IMAGE" --arg k "$KEYCLOAK_IMAGE" '[.groups[]?.items[]? | {
+            freights=$(jq -c --arg repo "$PAIR_REPO_URL" '[.groups[]?.items[]? | {
                 name: .metadata.name,
                 alias: (.alias // ""),
                 at: (.discoveredAt // .metadata.creationTimestamp // ""),
-                accounts: ([.images[]? | select(.repoURL == $a) | .digest][0] // ""),
-                keycloak: ([.images[]? | select(.repoURL == $k) | .digest][0] // ""),
+                commits: [.commits[]? | select(.repoURL == $repo) | .id],
                 verifiedIn: ((.status.verifiedIn // {}) | keys)
               }]' "$body")
-            read -r count freight freight_at verified < <(jq -r --arg ad "$ACCOUNTS_DIGEST" --arg kd "$KEYCLOAK_DIGEST" --arg s "$KARGO_VERIFIED_IN" \
-              'map(select(.accounts == $ad and .keycloak == $kd)) | "\(length) \(.[0].name // "-") \(.[0].at // "-") \(.[0].verifiedIn // [] | index($s) != null)"' <<< "$freights")
+            read -r count freight freight_at verified < <(jq -r --arg commit "$PAIR_COMMIT" --arg s "$KARGO_VERIFIED_IN" \
+              'map(select(.commits | index($commit) != null)) | "\(length) \(.[0].name // "-") \(.[0].at // "-") \(.[0].verifiedIn // [] | index($s) != null)"' <<< "$freights")
             if (( count == 1 )) && [[ "$verified" == true ]]; then break; fi
             if (( count > 1 || SECONDS >= deadline )); then
-              echo "Wanted: accounts $ACCOUNTS_DIGEST, keycloak $KEYCLOAK_DIGEST. Freight in $KARGO_PROJECT:"
-              jq -r '.[] | "  \(.name) (\(.alias)) accounts=\(.accounts) keycloak=\(.keycloak) verifiedIn=\(.verifiedIn | join(","))"' <<< "$freights"
+              echo "Wanted: record commit $PAIR_COMMIT. Freight in $KARGO_PROJECT:"
+              jq -r '.[] | "  \(.name) (\(.alias)) commits=\(.commits | join(",")) verifiedIn=\(.verifiedIn | join(","))"' <<< "$freights"
               case "$count" in
-                0) fail "no Freight with both digests after ${VERIFY_TIMEOUT_SECONDS}s; Kargo never saw this pair as :latest together, or deleted it. Nothing was promoted" ;;
+                0) fail "no Freight with record commit $PAIR_COMMIT after ${VERIFY_TIMEOUT_SECONDS}s; Kargo never discovered it, or deleted its Freight. Nothing was promoted" ;;
                 1) fail "Freight $freight is not verified on $KARGO_VERIFIED_IN after ${VERIFY_TIMEOUT_SECONDS}s; nothing was promoted" ;;
-                *) fail "found $count Freight with both digests, expected one; nothing was promoted" ;;
+                *) fail "found $count Freight with record commit $PAIR_COMMIT, expected one; nothing was promoted" ;;
               esac
             fi
             sleep "$POLL_SECONDS"
