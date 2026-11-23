@@ -40,6 +40,10 @@ def validate_email(email: str, error_message: str | None = None, min_length: int
     if len(local_part) > User.USERNAME_MAX_LENGTH or len(local_part) < effective_min:
         raise EmailNotValidError(email, not_valid_err_msg)
 
+    # EmailValidator accepts * in the local part, but Stalwart treats it as a wildcard.
+    if '*' in local_part:
+        raise EmailNotValidError(email, not_valid_err_msg)
+
     email_validator = EmailValidator(not_valid_err_msg)
     # So EmailValidator.__call__ will raise a ValidationError if it fails, but they're the wrong
     # ValidationError...So catch this ValidationError so we can raise DRF's ValidationError.

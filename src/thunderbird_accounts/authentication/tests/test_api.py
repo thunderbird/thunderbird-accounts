@@ -202,6 +202,22 @@ class SignUpTestcase(APITestCase):
             resp_data = response.json()
             self.assertEqual(resp_data.get('type'), 'username-in-use', msg=assert_fail_msg)
 
+    def test_username_with_asterisk(self, mock_import_user: MagicMock):
+        """A username containing * is rejected before the Keycloak user is created."""
+        for local_part in ['aa*', '*aa', 'a*a', '***']:
+            with self.subTest(local_part=local_part):
+                response = self.client.post(
+                    '/api/v1/auth/sign-up/',
+                    self.make_sign_up_data(email=self.wait_list[0], partialUsername=local_part),
+                )
+                assert_fail_msg = self.get_messages(response)
+
+                self.assertEqual(response.status_code, 400, msg=assert_fail_msg)
+                self.assertEqual(response.json().get('type'), 'bad-email', msg=assert_fail_msg)
+
+        mock_import_user.assert_not_called()
+        self.assertFalse(User.objects.filter(username__contains='*').exists())
+
     def test_alias_already_exists(self, mock_import_user: MagicMock):
         """Test that we check if a alias exists before creating a user"""
 
