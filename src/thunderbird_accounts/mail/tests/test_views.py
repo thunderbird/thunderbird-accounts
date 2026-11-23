@@ -11,7 +11,7 @@ from django.core.cache import cache
 from django.db import IntegrityError
 from django.test import TestCase, Client as RequestClient, override_settings, RequestFactory
 from django.urls import reverse
-from waffle.testutils import override_flag
+from waffle.testutils import override_flag, override_switch
 from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.authentication.models import User
@@ -1336,6 +1336,58 @@ class AddEmailAliasTestCase(TestCase):
 
             # Remove all emails so we can try the next alias
             Email.objects.all().delete()
+
+    @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, True)
+    def test_custom_domain_alias_skips_stalwart_address_lookup(self):
+        domain = Domain.objects.create(name='customdomain.com', user=self.user, status=Domain.DomainStatus.VERIFIED)
+
+        with (
+            patch('thunderbird_accounts.mail.views.MailClient', Mock()),
+            patch('thunderbird_accounts.mail.utils.MailClient', Mock()) as lookup_client,
+        ):
+            response = self.client.post(
+                reverse('add_email_alias'),
+                data={'email-alias': 'buddy', 'domain': domain.name},
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 200)
+        lookup_client.return_value.get_account.assert_not_called()
+
+    @override_switch(settings.WAFFLE_FLAG_IS_ADDRESS_TAKEN_LOOKUP_STALWART, True)
+    def test_shared_domain_alias_checks_stalwart_address_lookup(self):
+        with (
+            patch('thunderbird_accounts.mail.views.MailClient', Mock()),
+            patch('thunderbird_accounts.mail.utils.MailClient', Mock()) as lookup_client,
+        ):
+            response = self.client.post(
+                reverse('add_email_alias'),
+                data={'email-alias': 'buddy', 'domain': settings.PRIMARY_EMAIL_DOMAIN},
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 403)
+        lookup_client.return_value.get_account.assert_called_once_with(f'buddy@{settings.PRIMARY_EMAIL_DOMAIN}')
+
+    def test_unowned_domain_returns_not_found_for_taken_address(self):
+        other_user = User.objects.create(username=f'other@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='5678')
+        other_account = Account.objects.create(name=other_user.username, user=other_user)
+        domain = Domain.objects.create(name='otherdomain.com', user=other_user, status=Domain.DomainStatus.VERIFIED)
+        Email.objects.create(address=f'buddy@{domain.name}', type=Email.EmailType.ALIAS, account=other_account)
+
+        # A taken address and a free one must be indistinguishable.
+        for alias in ['buddy', 'nobody']:
+            response = self.client.post(
+                reverse('add_email_alias'),
+                data={'email-alias': alias, 'domain': domain.name},
+                content_type='application/json',
+            )
+
+            self.assertEqual(response.status_code, 404)
+            self.assertEqual(
+                json.loads(response.content.decode()),
+                {'success': False, 'error': _('Domain not found.')},
+            )
 
     def test_too_many_aliases(self):
         email_alias_url = reverse('add_email_alias')
