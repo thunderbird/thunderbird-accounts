@@ -638,9 +638,11 @@ def add_email_alias(request: HttpRequest):
     if not is_custom_domain and not is_shared_domain:
         return JsonResponse({'success': False, 'error': _('Domain not found.')}, status=404)
 
+    if not is_catch_all and not is_custom_domain and is_reserved(email_alias):
+        return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
+
     # The Stalwart lookup only matches mailbox names on the primary domain, so it cannot answer for a custom domain.
-    address_taken = is_address_taken(full_email_alias, check_remote=not is_custom_domain)
-    if (not is_catch_all and not is_custom_domain and is_reserved(email_alias)) or address_taken:
+    if is_address_taken(full_email_alias, check_remote=not is_custom_domain):
         return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
 
     # Get the user's account
