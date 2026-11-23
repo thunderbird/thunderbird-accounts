@@ -600,10 +600,9 @@ def add_email_alias(request: HttpRequest):
     domain = data.get('domain')
     is_shared_domain = domain in settings.ALLOWED_EMAIL_DOMAINS
     # Verification is the proof of ownership, so an unverified domain is treated as not found.
-    verified_domain_names = request.user.domains.filter(status=Domain.DomainStatus.VERIFIED).values_list(
-        'name', flat=True
+    is_custom_domain = (
+        not is_shared_domain and request.user.domains.filter(status=Domain.DomainStatus.VERIFIED, name=domain).exists()
     )
-    is_custom_domain = domain in verified_domain_names and not is_shared_domain
     is_catch_all = is_custom_domain and (email_alias == '*' or email_alias == '')
 
     # We don't need to specify the asterisk for catch-all on stalwart's end.
