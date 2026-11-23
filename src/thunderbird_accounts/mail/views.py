@@ -599,7 +599,10 @@ def add_email_alias(request: HttpRequest):
     email_alias = data.get('email-alias')
     domain = data.get('domain')
     is_shared_domain = domain in settings.ALLOWED_EMAIL_DOMAINS
-    is_custom_domain = domain in request.user.domains.values_list('name', flat=True) and not is_shared_domain
+    # Verification is the proof of ownership, so an unverified domain is treated as not found.
+    is_custom_domain = (
+        not is_shared_domain and request.user.domains.filter(status=Domain.DomainStatus.VERIFIED, name=domain).exists()
+    )
     is_catch_all = is_custom_domain and (email_alias == '*' or email_alias == '')
 
     # We don't need to specify the asterisk for catch-all on stalwart's end.
@@ -632,14 +635,11 @@ def add_email_alias(request: HttpRequest):
     if (not is_catch_all and not email_alias) or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)
 
+    if not is_custom_domain and not is_shared_domain:
+        return JsonResponse({'success': False, 'error': _('Domain not found.')}, status=404)
+
     if (not is_catch_all and not is_custom_domain and is_reserved(email_alias)) or is_address_taken(full_email_alias):
         return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
-
-    if (
-        domain not in request.user.domains.values_list('name', flat=True)
-        and domain not in settings.ALLOWED_EMAIL_DOMAINS
-    ):
-        return JsonResponse({'success': False, 'error': _('Domain not found.')}, status=404)
 
     # Get the user's account
     try:

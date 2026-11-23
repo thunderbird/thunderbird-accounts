@@ -1176,6 +1176,52 @@ class AddEmailAliasTestCase(TestCase):
 
         self.assertEqual(json.loads(response.content.decode())['email_alias'], '@customdomain.com')
 
+    def test_rejects_alias_on_unverified_custom_domain(self):
+        for status in [Domain.DomainStatus.PENDING, Domain.DomainStatus.FAILED]:
+            domain = Domain.objects.create(name=f'{status}.com', user=self.user, status=status)
+
+            for alias in ['buddy', '*', '']:
+                with self.subTest(status=status, alias=alias):
+                    with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mail_client:
+                        response = self.client.post(
+                            reverse('add_email_alias'),
+                            data={'email-alias': alias, 'domain': domain.name},
+                            content_type='application/json',
+                        )
+
+                    self.assertIn(response.status_code, [400, 404])
+                    self.assertFalse(json.loads(response.content.decode())['success'])
+                    mail_client.return_value.save_email_addresses.assert_not_called()
+                    self.assertFalse(Email.objects.filter(address__endswith=f'@{domain.name}').exists())
+
+    def test_rejects_alias_on_unverified_custom_domain_as_not_found(self):
+        domain = Domain.objects.create(name='pending.com', user=self.user, status=Domain.DomainStatus.PENDING)
+
+        response = self.client.post(
+            reverse('add_email_alias'),
+            data={'email-alias': 'buddy', 'domain': domain.name},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(json.loads(response.content.decode()), {'success': False, 'error': _('Domain not found.')})
+
+    def test_domain_not_found_precedes_address_checks(self):
+        Domain.objects.create(name='pending.com', user=self.user, status=Domain.DomainStatus.PENDING)
+        Email.objects.create(address='taken@elsewhere.com', type=Email.EmailType.ALIAS, account=self.account)
+
+        for alias, domain in [('admin', 'pending.com'), ('taken', 'elsewhere.com')]:
+            with self.subTest(alias=alias, domain=domain):
+                with patch('thunderbird_accounts.mail.views.is_address_taken') as is_address_taken:
+                    response = self.client.post(
+                        reverse('add_email_alias'),
+                        data={'email-alias': alias, 'domain': domain},
+                        content_type='application/json',
+                    )
+
+                self.assertEqual(response.status_code, 404)
+                is_address_taken.assert_not_called()
+
     def test_rejects_alias_with_plus_symbol(self):
         email_alias_url = reverse('add_email_alias')
 
