@@ -88,6 +88,12 @@ class IsUsernameAvailableTestCase(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()[0], 'This username is not valid. Try another one.')
 
+    def test_asterisk(self):
+        """Fail on a username containing *"""
+        response = self.client.post(self.url, {'username': 'aa*'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()[0], 'This username is not valid. Try another one.')
+
     def test_in_use_username(self):
         """Fail on an in-use username"""
         # Create a user with an in-use username

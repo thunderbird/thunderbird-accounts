@@ -67,6 +67,9 @@ class CustomUserFormBase(forms.ModelForm):
         if not self.data.get('username', '').endswith(f'@{settings.PRIMARY_EMAIL_DOMAIN}'):
             self.add_error('username', _(f'Thundermail address must end with {settings.PRIMARY_EMAIL_DOMAIN}'))
 
+        if '*' in self.data.get('username', ''):
+            self.add_error('username', _('The * symbol is not allowed in a Thundermail address.'))
+
         if not self.data.get('recovery_email'):
             self.add_error('recovery_email', _('A recovery email is required.'))
 

@@ -222,6 +222,7 @@
           "nameValidationErrorMinLength": "Use at least 3 characters.",
           "nameValidationErrorMaxLength": "Use no more than 40 characters.",
           "nameValidationErrorPlusSymbol": "The + symbol is not allowed.",
+          "nameValidationErrorAsteriskSymbol": "The * symbol is not allowed as part of an alias name.",
           "domain": "Domain",
           "addEmailAlias": "Create email alias",
           "newPassword": "New password",

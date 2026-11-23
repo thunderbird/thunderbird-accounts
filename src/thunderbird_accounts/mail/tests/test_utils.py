@@ -140,6 +140,13 @@ class ValidateEmailTestCase(TestCase):
         with self.assertRaises(EmailNotValidError):
             validate_email('abc@')
 
+    def test_asterisk_in_local_part_raises(self):
+        """A local part containing * is rejected."""
+        for local_part in ('aa*', '*aa', 'a*a', '***'):
+            with self.subTest(local_part=local_part):
+                with self.assertRaises(EmailNotValidError):
+                    validate_email(self._email(local_part))
+
     def test_valid_email_returns_true(self):
         """A well-formed email within length bounds returns True."""
         self.assertTrue(validate_email('validuser@example.com'))

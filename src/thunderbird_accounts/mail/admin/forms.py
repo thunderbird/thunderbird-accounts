@@ -7,6 +7,9 @@ from thunderbird_accounts.mail import utils
 from thunderbird_accounts.mail.models import Account, Email
 
 
+ASTERISK_NOT_ALLOWED_ERROR = 'The * symbol is not allowed in an email address.'
+
+
 class CustomAccountBaseForm(forms.ModelForm):
     """Base class to use for custom email admin forms."""
 
@@ -23,6 +26,9 @@ class CustomAccountBaseForm(forms.ModelForm):
             validate_email(account_name)
         except ValidationError as ex:
             self.add_error('name', ex)
+
+        if '*' in account_name:
+            self.add_error('name', ASTERISK_NOT_ALLOWED_ERROR)
 
         if not account_name.endswith(f'@{settings.PRIMARY_EMAIL_DOMAIN}'):
             self.add_error('name', f'The account name must use the {settings.PRIMARY_EMAIL_DOMAIN} domain.')
@@ -67,6 +73,11 @@ class CustomEmailBaseForm(forms.BaseInlineFormSet):
                 validate_email(address.address)
             except ValidationError as ex:
                 form.add_error('address', ex)
+                has_errors = True
+                continue
+
+            if '*' in address.address:
+                form.add_error('address', ASTERISK_NOT_ALLOWED_ERROR)
                 has_errors = True
                 continue
 

@@ -1237,6 +1237,32 @@ class AddEmailAliasTestCase(TestCase):
             {'success': False, 'error': _('The + symbol is not allowed.')},
         )
 
+    def test_rejects_alias_with_asterisk(self):
+        domain = Domain.objects.create(name='customdomain.com', user=self.user, status=Domain.DomainStatus.VERIFIED)
+        cases = [
+            ('aa*', settings.PRIMARY_EMAIL_DOMAIN),
+            ('aa*', domain.name),
+            ('*aa', domain.name),
+            ('**', domain.name),
+        ]
+
+        for alias, alias_domain in cases:
+            with self.subTest(alias=alias, domain=alias_domain):
+                with patch('thunderbird_accounts.mail.views.MailClient', Mock()) as mock:
+                    response = self.client.post(
+                        reverse('add_email_alias'),
+                        data={'email-alias': alias, 'domain': alias_domain},
+                        content_type='application/json',
+                    )
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    json.loads(response.content.decode()),
+                    {'success': False, 'error': _('The * symbol is not allowed as part of an alias name.')},
+                )
+                mock.assert_not_called()
+                self.assertFalse(Email.objects.filter(address__contains='*').exists())
+
     def test_success_catch_all(self):
         email_alias_url = reverse('add_email_alias')
         domain = Domain.objects.create(

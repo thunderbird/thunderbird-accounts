@@ -31,6 +31,11 @@ export const validateEmailAlias = ({
     return EMAIL_ALIAS_VALIDATION_MESSAGES.PLUS_SYMBOL;
   }
 
+  // A lone * is only meaningful as a catch-all request on a custom domain.
+  if (value !== '*' && value.includes('*')) {
+    return EMAIL_ALIAS_VALIDATION_MESSAGES.ASTERISK_SYMBOL;
+  }
+
   if (isCatchAllRequest) {
     return isSharedDomain || isUsedCatchAll ? EMAIL_ALIAS_VALIDATION_MESSAGES.MIN_LENGTH : null;
   }

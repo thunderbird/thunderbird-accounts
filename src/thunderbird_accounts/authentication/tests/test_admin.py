@@ -58,6 +58,19 @@ class AdminCreateUserTestCase(TestCase):
 
         mock_requests.assert_not_called()
 
+    def test_failed_username_validation_asterisk(self, mock_requests: MagicMock):
+        form_data = {
+            'username': f'aa*@{self.subdomain}',
+            'recovery_email': 'frog@example.com',
+            'timezone': 'America/Toronto',
+        }
+
+        form = self._build_form(form_data)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('username', form.errors)
+        mock_requests.assert_not_called()
+
     def test_failed_username_validation_reserved(self, mock_requests: MagicMock):
         # Bad username
         form_data = {
