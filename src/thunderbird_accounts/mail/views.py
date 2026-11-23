@@ -636,11 +636,11 @@ def add_email_alias(request: HttpRequest):
     if (not is_catch_all and not email_alias) or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)
 
-    if (not is_catch_all and not is_custom_domain and is_reserved(email_alias)) or is_address_taken(full_email_alias):
-        return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
-
     if not is_custom_domain and not is_shared_domain:
         return JsonResponse({'success': False, 'error': _('Domain not found.')}, status=404)
+
+    if (not is_catch_all and not is_custom_domain and is_reserved(email_alias)) or is_address_taken(full_email_alias):
+        return JsonResponse({'success': False, 'error': _('You cannot use this email address.')}, status=403)
 
     # Get the user's account
     try:

@@ -1206,6 +1206,22 @@ class AddEmailAliasTestCase(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(json.loads(response.content.decode()), {'success': False, 'error': _('Domain not found.')})
 
+    def test_domain_not_found_precedes_address_checks(self):
+        Domain.objects.create(name='pending.com', user=self.user, status=Domain.DomainStatus.PENDING)
+        Email.objects.create(address='taken@elsewhere.com', type=Email.EmailType.ALIAS, account=self.account)
+
+        for alias, domain in [('admin', 'pending.com'), ('taken', 'elsewhere.com')]:
+            with self.subTest(alias=alias, domain=domain):
+                with patch('thunderbird_accounts.mail.views.is_address_taken') as is_address_taken:
+                    response = self.client.post(
+                        reverse('add_email_alias'),
+                        data={'email-alias': alias, 'domain': domain},
+                        content_type='application/json',
+                    )
+
+                self.assertEqual(response.status_code, 404)
+                is_address_taken.assert_not_called()
+
     def test_rejects_alias_with_plus_symbol(self):
         email_alias_url = reverse('add_email_alias')
 
