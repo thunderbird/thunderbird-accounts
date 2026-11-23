@@ -635,6 +635,7 @@ def add_email_alias(request: HttpRequest):
     if (not is_catch_all and not email_alias) or not domain:
         return JsonResponse({'success': False, 'error': _('Email alias and domain are required.')}, status=400)
 
+    # Checked before the reserved/taken checks so their 403 cannot reveal addresses on a domain the user does not own.
     if not is_custom_domain and not is_shared_domain:
         return JsonResponse({'success': False, 'error': _('Domain not found.')}, status=404)
 

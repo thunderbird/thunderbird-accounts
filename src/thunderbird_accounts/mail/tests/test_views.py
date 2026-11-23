@@ -1343,6 +1343,26 @@ class AddEmailAliasTestCase(TestCase):
         self.assertEqual(response.status_code, 403)
         lookup_client.return_value.get_account.assert_called_once_with(f'buddy@{settings.PRIMARY_EMAIL_DOMAIN}')
 
+    def test_unowned_domain_returns_not_found_for_taken_address(self):
+        other_user = User.objects.create(username=f'other@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='5678')
+        other_account = Account.objects.create(name=other_user.username, user=other_user)
+        domain = Domain.objects.create(name='otherdomain.com', user=other_user, status=Domain.DomainStatus.VERIFIED)
+        Email.objects.create(address=f'buddy@{domain.name}', type=Email.EmailType.ALIAS, account=other_account)
+
+        # A taken address and a free one must be indistinguishable.
+        for alias in ['buddy', 'nobody']:
+            response = self.client.post(
+                reverse('add_email_alias'),
+                data={'email-alias': alias, 'domain': domain.name},
+                content_type='application/json',
+            )
+
+            self.assertEqual(response.status_code, 404)
+            self.assertEqual(
+                json.loads(response.content.decode()),
+                {'success': False, 'error': _('Domain not found.')},
+            )
+
     def test_too_many_aliases(self):
         email_alias_url = reverse('add_email_alias')
 
