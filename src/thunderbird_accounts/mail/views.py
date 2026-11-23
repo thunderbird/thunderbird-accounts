@@ -338,11 +338,8 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
         except DomainNotFoundError:
             pass
 
-        # A migrated (v0.16) domain gets nothing in Stalwart until it is verified: Stalwart treats a Domain as
-        # local even while it is disabled, so one created here would take mail sent to it from our other
-        # accounts away from the domain's current mail provider. verify_domain creates the Domain and its dkim
-        # signatures. The dkim records a customer needs before that are CNAMEs with fixed targets, so they
-        # don't need the keys.
+        # Migrated (v0.16) domains are created in Stalwart at verification, because Stalwart treats a Domain as
+        # local even while it is disabled. The DKIM CNAMEs a customer needs before then have fixed targets.
         if not request.user.is_migrated:
             # If request fails the dkim will hit our general exception catch
             # we want this to happen before the local reference (Domain model) is created
@@ -543,9 +540,9 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
                     cleanup_phase = 'delete_stalwart_domain'
                     stalwart_client.delete_domain(_domain.name)
                 except DomainNotFoundError as ex:
-                    # A migrated domain is only in Stalwart once it is verified, so a missing one is only
-                    # worth reporting for a verified domain. Either way, carry on and delete the local ref.
-                    if _domain.status == Domain.DomainStatus.VERIFIED:
+                    # stalwart_id is set when the domain is created in Stalwart, so a missing one is only
+                    # worth reporting when we have it. Either way, carry on and delete the local ref.
+                    if _domain.stalwart_id:
                         _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
 
             if not request.user.is_migrated:
