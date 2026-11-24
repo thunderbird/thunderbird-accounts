@@ -524,6 +524,64 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
             sentry_sdk.capture_exception(ex)
             raise InvalidJMapResponseError(ex) from ex
 
+    def list_domain_names(self) -> set[str]:
+        """Return the name of every domain in Stalwart.
+
+        :raises InvalidJMapResponseError: If the pages read do not add up to the total Stalwart reports."""
+        self.preflight_check()
+
+        names_by_id: dict[str, str] = {}
+        position = 0
+        while True:
+            response = self.client.request(
+                JMapRequest(
+                    using=[
+                        'urn:ietf:params:jmap:core',
+                        'urn:stalwart:jmap',
+                    ],
+                    method_calls=[
+                        Invocation(
+                            name=StalwartMethods.query(StalwartMethods.DOMAIN),
+                            arguments={
+                                'accountId': self.account_id,
+                                # Stalwart only sorts the whole list before paging by position when
+                                # calculateTotal is set. Otherwise pages overlap.
+                                'sort': [{'property': 'id', 'isAscending': True}],
+                                'calculateTotal': True,
+                                'limit': settings.STALWART_DOMAIN_LIST_PAGE_SIZE,
+                                'position': position,
+                            },
+                            method_call_id='0',
+                        ),
+                        Invocation(
+                            name=StalwartMethods.get(StalwartMethods.DOMAIN),
+                            arguments={
+                                'accountId': self.account_id,
+                                '#ids': {'resultOf': '0', 'name': 'x:Domain/query', 'path': '/ids'},
+                                'properties': ['id', 'name'],
+                            },
+                            method_call_id='1',
+                        ),
+                    ],
+                )
+            )
+
+            if any(method.name == 'error' for method in response.method_responses):
+                raise InvalidJMapResponseError('Stalwart returned an error while listing domains')
+
+            query, domains = (method.arguments for method in response.method_responses)
+            total = query.get('total')
+            names_by_id.update({domain['id']: domain['name'] for domain in domains.get('list', [])})
+            position += len(query['ids'])
+
+            if not query['ids'] or total is None or position >= total:
+                break
+
+        if len(names_by_id) != total:
+            raise InvalidJMapResponseError(f'Listed {len(names_by_id)} domains, but Stalwart reports {total}')
+
+        return set(names_by_id.values())
+
     def get_domain(self, domain: str) -> stalwart.Domain:
         """Retrieve a :any thunderbird_accounts.mail.types.stalwart.Domain:
         object from a given domain name.

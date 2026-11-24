@@ -48,6 +48,9 @@ class MailClientInterface:
     def list_principals(self) -> list[dict]:
         raise NotImplementedError()
 
+    def list_domain_names(self) -> set[str]:
+        raise NotImplementedError()
+
     def get_domain(self, domain):
         raise NotImplementedError()
 
