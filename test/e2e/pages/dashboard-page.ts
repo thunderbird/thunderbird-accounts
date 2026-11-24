@@ -94,7 +94,7 @@ export class DashboardPage {
     this.planInfoContainer = this.page.locator('.plan-info-container');
     this.subscriptionErrorText = this.page.getByText('Failed to load subscription information');
     this.displayNameSection = this.myAccountCard.locator('.display-name-container');
-    this.appPasswordSection = this.myAccountCard.locator('#app-password-container');
+    this.appPasswordSection = this.myAccountCard.getByTestId('app-password-manager');
     this.accountDeletionHeading = this.page.getByRole('heading', { name: 'Account Deletion' });
     this.thunderbirdAppsHeading = this.page.getByRole('heading', { name: 'Thunderbird Apps' });
     this.currentSubscriptionHeading = this.page.getByRole('heading', { name: 'Current Subscription' });
@@ -176,7 +176,68 @@ export class DashboardPage {
     await expect(this.manageSubscriptionButton).toBeVisible({ timeout: TIMEOUT_30_SECONDS });
 
     await this.verifyDisplayNameFormOpensAndCancels();
-    await this.verifyAppPasswordFormOpensAndCancels();
+  }
+
+  async createAppPassword(name: string) {
+    await this.appPasswordSection.getByRole('button', { name: 'Create app password', exact: true }).click();
+    await this.appPasswordSection.getByRole('textbox', { name: /^App or device name/ }).fill(name);
+    await this.appPasswordSection.getByRole('button', { name: 'Generate app password', exact: true }).click();
+
+    const handoff = this.appPasswordSection.getByTestId('app-password-handoff');
+    await expect(handoff.getByRole('heading', { name: `App password for ${name}`, exact: true })).toBeVisible();
+    const username = handoff.getByTestId('app-password-username');
+    await expect(username).toBeVisible();
+    await expect(username).toHaveText(ACCTS_OIDC_EMAIL);
+    const password = handoff.getByTestId('generated-app-password');
+    await expect(password).toBeVisible();
+    const hasDisplayedPassword = await password.evaluate((element) => Boolean(element.textContent?.trim()));
+    expect(hasDisplayedPassword, 'the displayed app password should be nonblank').toBe(true);
+
+    // Keep the password in the browser and record the result of the native write.
+    const clipboardWrite = await password.evaluateHandle((element) => {
+      const displayedPassword = element.textContent;
+      const clipboard = navigator.clipboard;
+      const writeText = clipboard.writeText;
+      const result = { copiedDisplayedPassword: false };
+      clipboard.writeText = async (text) => {
+        clipboard.writeText = writeText;
+        await writeText.call(clipboard, text);
+        result.copiedDisplayedPassword = text === displayedPassword;
+      };
+      return result;
+    });
+    await handoff.getByTestId('copy-app-password').click();
+    await expect(handoff.getByTestId('copy-status')).toHaveText('Copied!');
+    const copiedDisplayedPassword = await clipboardWrite.evaluate((result) => result.copiedDisplayedPassword);
+    await clipboardWrite.dispose();
+    expect(copiedDisplayedPassword, 'the native clipboard write should copy the displayed app password').toBe(true);
+
+    await handoff.getByRole('button', { name: 'Done, I’ve saved it', exact: true }).click();
+    await expect(handoff).toBeHidden();
+    await expect(this.appPasswordRow(name)).toBeVisible();
+  }
+
+  async removeAppPassword(name: string) {
+    const row = this.appPasswordRow(name);
+    await row.getByRole('button', { name: `Remove ${name}`, exact: true }).click();
+
+    const dialog = this.appPasswordSection.getByRole('dialog', { name: 'Remove app password?', exact: true });
+    await expect(dialog.getByTestId('revoke-description')).toContainText(`“${name}”`);
+    await dialog.getByRole('button', { name: 'Remove app password', exact: true }).click();
+
+    const status = this.appPasswordSection.getByTestId('app-password-status');
+    await expect(status).toBeVisible();
+    await expect(status).toHaveText(`“${name}” was removed.`);
+    await expect(row).toHaveCount(0);
+  }
+
+  async removeAppPasswordIfPresent(name: string) {
+    await this.page.reload();
+    // The badge is rendered only after the app password list loads successfully.
+    await expect(this.appPasswordSection.getByTestId('badge')).toHaveText(/^(Set|Not set)$/);
+    if (await this.appPasswordRow(name).count()) {
+      await this.removeAppPassword(name);
+    }
 }
 
   async verifyGetStartedComponents() {
@@ -324,25 +385,10 @@ export class DashboardPage {
     await expect(this.displayNameSection.getByTestId('display-name-input')).not.toBeVisible();
   }
 
-  private async verifyAppPasswordFormOpensAndCancels() {
-    // we don't want to actually create/change the app password because these tests can be run on anyone's
-    // account, which could already have and be using an app password legitimately; so just check the UI
-    await expect(this.appPasswordSection).toContainText('App Password');
-    await expect(this.appPasswordSection).toContainText(/Set|Not set/);
-    await this.appPasswordSection.getByRole('button', { name: /^(Create|Change) app password$/ }).click();
-
-    // on legacy Stalwart 0.15X the user can input the app password value; if the 'New password' text appears that
-    // means we're on legacy 0.15X and therefore just verify the password and confirm password fields are visible;
-    // on stalwart 0.16+ the app password is generated automatically so there are no password/confirm password fields
-    const newPWText = this.appPasswordSection.getByText('New password:');   
-    if (await newPWText.isVisible()) {
-      await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-input')).toBeVisible();
-      await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-confirm-input')).toBeVisible();
-    }
-
-    await expect(this.appPasswordSection.getByRole('button', { name: 'Save' })).toBeVisible();
-    await this.appPasswordSection.getByRole('button', { name: 'Cancel' }).click();
-    await expect(this.appPasswordSection.getByTestId('app-passwords-add-password-input')).not.toBeVisible();
+  private appPasswordRow(name: string) {
+    return this.appPasswordSection.getByRole('list', { name: 'Your app passwords', exact: true })
+      .getByRole('listitem')
+      .filter({ has: this.page.getByText(name, { exact: true }) });
   }
 
   private async verifyPinToggle() {
