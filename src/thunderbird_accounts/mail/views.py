@@ -338,8 +338,9 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
         except DomainNotFoundError:
             pass
 
-        # Migrated (v0.16) domains are created in Stalwart at verification, because Stalwart treats a Domain as
+        # New domains are created in Stalwart at verification, not here, because Stalwart treats a Domain as
         # local even while it is disabled. The DKIM CNAMEs a customer needs before then have fixed targets.
+        # Only an environment still on the pre-v0.16 Stalwart API creates DKIM keys at this point.
         if not request.user.is_migrated:
             # If request fails the dkim will hit our general exception catch
             # we want this to happen before the local reference (Domain model) is created
@@ -351,6 +352,7 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
                 Domain.objects.create(
                     name=domain_name,
                     user=request.user,
+                    # Set by verify_domain, when the domain is created in Stalwart.
                     stalwart_id=None,
                     stalwart_created_at=None,
                 )
