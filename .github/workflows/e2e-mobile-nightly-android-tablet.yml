@@ -1,0 +1,55 @@
+name: e2e-mobile-nightly-android-tablet
+
+concurrency:
+  group: e2e-mobile-nightly-android-tablet
+  cancel-in-progress: true
+
+on:
+  schedule:
+    # run every day at 3am UTC
+    - cron:  '0 3 * * *'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read    # This is required for actions/checkout
+
+jobs:
+  mobile-nightly-android-tablet:
+    name: prod-mobile-nightly-android-tablet
+    runs-on: ubuntu-26.04
+    environment:
+      name: production
+      deployment: false
+    env:
+      ACCTS_OIDC_EMAIL: ${{ secrets.E2E_ACCTS_OIDC_EMAIL }}
+      ACCTS_OIDC_PWORD: ${{ secrets.E2E_ACCTS_OIDC_PWORD }}
+      ACCTS_OIDC_RECOVERY_EMAIL: ${{ secrets.E2E_ACCTS_OIDC_RECOVERY_EMAIL }}
+      PRIMARY_THUNDERMAIL_EMAIL: ${{ secrets.E2E_PRIMARY_THUNDERMAIL_EMAIL }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 26.13.1
+          cache: 'npm'
+          cache-dependency-path: 'test/e2e/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd ./test/e2e
+          npm ci
+
+      - name: BrowserStack Env Setup
+        uses: browserstack/github-actions/setup-env@e1ceb209003b8bf050dac07c9038347259fed39c # master
+        with:
+          username:  ${{ secrets.BROWSERSTACK_USERNAME }}
+          access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          project-name: 'Thunderbird Accounts'
+          build-name: 'TB Accounts Nightly Tests (Mobile Android): BUILD_INFO'
+
+      - name: Prod E2E Tests on Mobile Android Tablet
+        run: |
+          cd ./test/e2e
+          cp .env.prod.example .env
+          npm run prod-nightly-tests-mobile-browserstack-android-tablet-chrome
