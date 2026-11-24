@@ -929,9 +929,7 @@ class VerifyCustomDomainTestCase(TestCase):
         )
 
         self.assertEqual(response.status_code, 409, response.content)
-        self.assertEqual(
-            {'success': False, 'code': 'verification_in_progress'}, json.loads(response.content.decode())
-        )
+        self.assertEqual({'success': False, 'code': 'verification_in_progress'}, json.loads(response.content.decode()))
         mock_mail_client_cls.assert_not_called()
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.PENDING, self.domain.status)
