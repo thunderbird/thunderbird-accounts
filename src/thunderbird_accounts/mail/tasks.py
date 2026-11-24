@@ -1,3 +1,4 @@
+import dataclasses
 import datetime
 import logging
 from typing import Optional
@@ -9,7 +10,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 from thunderbird_accounts.authentication.models import User
-from thunderbird_accounts.celery.base import PatientExternalServiceTask
+from thunderbird_accounts.celery.base import DatabaseTask, PatientExternalServiceTask
 from thunderbird_accounts.celery.exceptions import TaskFailed
 from thunderbird_accounts.celery.retry import (
     raise_retryable_external_service_error,
@@ -30,6 +31,7 @@ from thunderbird_accounts.mail.exceptions import (
     HostedDkimPublishRetry,
     InvalidJMapResponseError,
 )
+from thunderbird_accounts.mail.domain_sync import count_domain_sync
 from thunderbird_accounts.mail.domain_verification import (
     extend_verification_lock,
     release_verification_lock,
@@ -538,3 +540,15 @@ def verify_custom_domain_and_notify(self, domain_uuid: str):
         'status': domain.status,
         'task_status': TaskReturnStatus.SUCCESS,
     }
+
+
+@shared_task(base=DatabaseTask, bind=True)
+def report_domain_sync(self):
+    """Log how the domains in Accounts and Stalwart line up. Counts only: the line feeds monitoring."""
+    if not settings.STALWART_ADMIN_API_USE_JMAP:
+        return {'task_status': 'skipped', 'reason': 'Stalwart JMAP admin API not in use'}
+
+    counts = dataclasses.asdict(count_domain_sync(MailClient().list_domain_names()))
+    logging.info('[report_domain_sync] %s', ' '.join(f'{key}={value}' for key, value in counts.items()))
+
+    return {'task_status': TaskReturnStatus.SUCCESS, **counts}

@@ -464,6 +464,9 @@ STALWART_JMAP_API_AUTH_METHOD = os.getenv('STALWART_JMAP_API_AUTH_METHOD')
 STALWART_JMAP_API_IGNORE_API_URL: bool = os.getenv('STALWART_JMAP_API_IGNORE_API_URL', '').lower() == 'true'
 STALWART_ALIAS_UPDATE_LOCK_TIMEOUT = 30
 STALWART_ALIAS_UPDATE_LOCK_BLOCKING_TIMEOUT = 30
+# Must not exceed Stalwart's getMaxResults (500 by default)
+STALWART_DOMAIN_LIST_PAGE_SIZE = int(os.getenv('STALWART_DOMAIN_LIST_PAGE_SIZE', '250'))
+DOMAIN_SYNC_REPORT_INTERVAL_SECONDS = int(os.getenv('DOMAIN_SYNC_REPORT_INTERVAL_SECONDS', '3600'))
 
 # Services whose access is updated during activation/deactivation of user or subscription; run in this order.
 # See authentication/account_status.py for the handler contract.
@@ -666,6 +669,12 @@ if POSTHOG_API_KEY:
     CELERY_BEAT_SCHEDULE['poll-keycloak-events'] = {
         'task': 'thunderbird_accounts.telemetry.tasks.poll_keycloak_events',
         'schedule': KEYCLOAK_EVENT_POLL_INTERVAL_SECONDS,
+    }
+
+if STALWART_ADMIN_API_USE_JMAP:
+    CELERY_BEAT_SCHEDULE['report-domain-sync'] = {
+        'task': 'thunderbird_accounts.mail.tasks.report_domain_sync',
+        'schedule': DOMAIN_SYNC_REPORT_INTERVAL_SECONDS,
     }
 
 # Some debug info for sentry
