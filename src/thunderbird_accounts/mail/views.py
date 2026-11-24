@@ -471,6 +471,11 @@ def verify_custom_domain(request: AuthenticatedHttpRequest):
                 raise
         return JsonResponse({'success': True, 'queued': True}, status=202)
 
+    # One verification of a domain at a time: two at once would both create it in Stalwart, and the one that lost
+    # would mark a domain FAILED that the other had just verified.
+    if not acquire_verification_lock(domain.uuid):
+        return JsonResponse({'success': False, 'code': 'verification_in_progress'}, status=409)
+
     try:
         result = verify_domain(domain)
         return JsonResponse({'success': result.is_verified, **result.response_data})
@@ -486,6 +491,8 @@ def verify_custom_domain(request: AuthenticatedHttpRequest):
         return _domain_verification_error(domain, e)
     except Exception as e:
         return _domain_verification_error(domain, e)
+    finally:
+        release_verification_lock(domain.uuid)
 
 
 @login_required

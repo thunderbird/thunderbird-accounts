@@ -17,6 +17,7 @@ from django.utils.translation import gettext_lazy as _
 from thunderbird_accounts.authentication.models import User
 from thunderbird_accounts.core.tests.utils import oidc_force_login
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, StaleDNSRecordCode
+from thunderbird_accounts.mail.domain_verification import acquire_verification_lock, release_verification_lock
 from thunderbird_accounts.mail.models import Account, Domain, Email
 from thunderbird_accounts.mail.views import (
     AdminStalwartList,
@@ -914,6 +915,66 @@ class VerifyCustomDomainTestCase(TestCase):
 
         self.domain.refresh_from_db()
         self.assertEqual(Domain.DomainStatus.FAILED, self.domain.status)
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
+    def test_verification_is_refused_while_another_is_running(self, mock_mail_client_cls):
+        cache.clear()
+        self.assertTrue(acquire_verification_lock(self.domain.uuid))
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 409, response.content)
+        self.assertEqual(
+            {'success': False, 'code': 'verification_in_progress'}, json.loads(response.content.decode())
+        )
+        mock_mail_client_cls.assert_not_called()
+        self.domain.refresh_from_db()
+        self.assertEqual(Domain.DomainStatus.PENDING, self.domain.status)
+        # The refused request must not release the lock the running verification holds.
+        self.assertFalse(acquire_verification_lock(self.domain.uuid))
+        cache.clear()
+
+    @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
+    @patch('thunderbird_accounts.mail.views.mail_tasks.publish_hosted_dkim_dns_records.delay')
+    @patch('thunderbird_accounts.mail.domain_verification.check_stale_dns_records')
+    @patch('thunderbird_accounts.mail.domain_verification.MailClient')
+    def test_verification_lock_is_released_after_success_and_after_an_error(
+        self,
+        mock_mail_client_cls,
+        mock_check_stale_dns_records,
+        mock_publish_hosted_dkim,
+    ):
+        cache.clear()
+        mock_instance = Mock()
+        mock_instance.check_domain_dns.return_value = self._verified_dns_check()
+        mock_instance.get_domain.side_effect = DomainNotFoundError(self.domain.name)
+        mock_instance.create_domain.return_value = 'domain-id'
+        mock_check_stale_dns_records.return_value = []
+        mock_mail_client_cls.return_value = mock_instance
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(acquire_verification_lock(self.domain.uuid))
+        release_verification_lock(self.domain.uuid)
+
+        mock_instance.check_domain_dns.side_effect = RuntimeError('boom')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'domain-name': self.domain.name}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 500, response.content)
+        self.assertTrue(acquire_verification_lock(self.domain.uuid))
+        cache.clear()
 
     @override_settings(CUSTOM_DOMAINS_DO_VERIFY=True)
     @override_flag(settings.WAFFLE_FLAG_CUSTOM_DOMAINS_REVAMP, active=True)

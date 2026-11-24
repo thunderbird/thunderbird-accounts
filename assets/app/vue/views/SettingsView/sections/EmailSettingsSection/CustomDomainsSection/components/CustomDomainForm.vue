@@ -473,6 +473,11 @@ const onVerifyDomain = async () => {
   try {
     const data = await verifyDomain(customDomain.value);
 
+    // Another verification of this domain is still running; its result is the one to show.
+    if (data.code === 'verification_in_progress') {
+      return;
+    }
+
     // Transient mail-backend outage: surface the error notice and leave the
     // domain's verification state untouched (don't apply results or mark FAILED).
     if (data.code === 'mail_backend_unavailable') {
