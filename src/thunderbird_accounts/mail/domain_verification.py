@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from thunderbird_accounts.mail.clients import DomainVerificationErrors, MailClient, StaleDNSRecordCode
 from thunderbird_accounts.mail.dns import check_stale_dns_records
-from thunderbird_accounts.mail.exceptions import DomainAlreadyExistsError, DomainNotFoundError
+from thunderbird_accounts.mail.exceptions import DomainNotFoundError
 from thunderbird_accounts.mail.models import Domain
 from thunderbird_accounts.mail.types import stalwart
 
@@ -109,11 +109,7 @@ def verify_domain(domain: Domain) -> DomainVerificationResult:
             if domain.user.is_migrated and not stalwart_resp.is_enabled:
                 stalwart_client.update_domain(domain.name, stalwart.DomainUpdate(is_enabled=True))
         else:
-            try:
-                domain_id = stalwart_client.create_domain(domain.name)
-            except DomainAlreadyExistsError:
-                # Another verification of this domain created it between our lookup and now.
-                domain_id = stalwart_client.get_domain(domain.name).get('id')
+            domain_id = stalwart_client.create_domain(domain.name)
 
         # Ensure missing DKIM selectors without replacing keys that already exist (a legacy domain's are
         # created at domain-add time).
