@@ -78,10 +78,10 @@ def is_email_reserved(email: str):
 
 
 def get_user_by_contact_email(email: str):
-    """Return a user whose recovery email or account email matches the given address."""
+    """Return an active user whose recovery email or account email matches the given address."""
     from thunderbird_accounts.authentication.models import User
 
-    return User.objects.filter(Q(email__iexact=email) | Q(recovery_email__iexact=email)).first()
+    return User.objects.filter(Q(email__iexact=email) | Q(recovery_email__iexact=email), is_active=True).first()
 
 
 def can_register_with_username(username: str, check_remote: bool = True):
