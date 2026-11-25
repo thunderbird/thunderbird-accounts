@@ -45,6 +45,39 @@ class RecoverableOIDCAuthenticationCallbackViewTestCase(TestCase):
         self.assertIn('no-store', response.headers['Cache-Control'])
         self.assertEqual(response.headers['Referrer-Policy'], 'no-referrer')
 
+    @patch('mozilla_django_oidc.views.auth.authenticate')
+    def test_inactive_user_login_failure_shows_inactive_message(self, authenticate_mock):
+        user = User.objects.create(
+            username='inactive@example.com',
+            email='inactive@example.com',
+            oidc_id='inactive-oidc-id',
+            is_active=False,
+        )
+        authenticate_mock.return_value = user
+
+        session = self.client.session
+        session['oidc_states'] = {
+            'expected-state': {
+                'nonce': 'expected-nonce',
+                'code_verifier': None,
+                'added_on': 0,
+            }
+        }
+        session.save()
+
+        response = self.client.get(
+            reverse('oidc_authentication_callback'),
+            {'code': 'unused-code', 'state': 'expected-state'},
+        )
+
+        self.assertRedirects(response, '/', fetch_redirect_response=False)
+        messages = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertIn(
+            'Your account is currently inactive. If you have questions, would like to access your account, '
+            'or would like to reactivate, please contact support.',
+            messages,
+        )
+
     def test_unknown_state_starts_a_fresh_login_flow(self):
         session = self.client.session
         session['oidc_states'] = {

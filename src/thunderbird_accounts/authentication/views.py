@@ -15,7 +15,7 @@ from django.urls import reverse
 from urllib.parse import quote
 from django.conf import settings
 from django.utils.decorators import method_decorator
-from django.utils.translation import ngettext
+from django.utils.translation import gettext_lazy as _, ngettext
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 from django.views.generic import TemplateView
@@ -32,6 +32,18 @@ logger = logging.getLogger(__name__)
 @method_decorator(never_cache, name='dispatch')
 class RecoverableOIDCAuthenticationCallbackView(OIDCAuthenticationCallbackView):
     """Keep successful or stale OIDC callbacks out of the user's browser history."""
+
+    def login_failure(self):
+        user = getattr(self, 'user', None)
+        if user and not user.is_active:
+            messages.error(
+                self.request,
+                _(
+                    'Your account is currently inactive. If you have questions, would like to access your account, '
+                    'or would like to reactivate, please contact support.'
+                ),
+            )
+        return super().login_failure()
 
     # The parent's `.get()` will call this.
     # Display a small HTML page that redirects via the frontend so
