@@ -55,6 +55,11 @@ const handleRetry = async () => {
   try {
     const data = await verifyDomain(props.domain.name);
 
+    // Another verification of this domain is still running; its result is the one to show.
+    if (data.code === 'verification_in_progress') {
+      return;
+    }
+
     // Transient mail-backend outage: surface the error notice and don't touch the
     // domain's verification state (don't apply results or mark it FAILED).
     if (data.code === 'mail_backend_unavailable') {

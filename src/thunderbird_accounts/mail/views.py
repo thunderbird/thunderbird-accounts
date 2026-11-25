@@ -48,7 +48,6 @@ from thunderbird_accounts.mail.exceptions import (
     AppPasswordSetError,
     DomainAlreadyExistsError,
     DomainNotFoundError,
-    DomainSetError,
     EmailNotValidError,
     MAIL_CLIENT_ERRORS,
 )
@@ -79,13 +78,6 @@ def _capture_domain_exception(exception: Exception, domain: Domain, *, phase: st
         },
     )
     sentry_sdk.capture_exception(exception)
-
-
-def _cleanup_failed_custom_domain_creation(stalwart_client, domain_name: str):
-    try:
-        stalwart_client.delete_domain(domain_name)
-    except Exception as e:
-        logging.error(f'Error deleting remote domain after custom domain creation failed: {e}')
 
 
 @login_required
@@ -336,10 +328,8 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
             {'success': False, 'error': _('You have reached the maximum number of custom domains')}, status=400
         )
 
-    remote_domain_created = False
     try:
         stalwart_client = MailClient()
-        domain_id = None
 
         try:
             domain = stalwart_client.get_domain(domain_name)
@@ -348,40 +338,32 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
         except DomainNotFoundError:
             pass
 
-        if request.user.is_migrated:
-            try:
-                # We need to create a disabled domain
-                domain_id = stalwart_client.create_domain(domain_name, is_enabled=False)
-                remote_domain_created = True
-            except DomainAlreadyExistsError as ex:
-                raise ex
-            except DomainSetError as ex:
-                if ex.type in ('invalidPatch', 'invalidProperties'):
-                    return JsonResponse({'success': False, 'error': _('Enter a valid domain name.')}, status=400)
-                raise
-
-        # If request fails the dkim will hit our general exception catch
-        # we want this to happen before the local reference (Domain model) is created
-        # so we're not missing any dkim records in the dns record list.
-        stalwart_client.create_dkim(domain_name)
+        # New domains are created in Stalwart at verification, not here, because Stalwart treats a Domain as
+        # local even while it is disabled. The DKIM CNAMEs a customer needs before then have fixed targets.
+        # Only an environment still on the pre-v0.16 Stalwart API creates DKIM keys at this point.
+        if not request.user.is_migrated:
+            # If request fails the dkim will hit our general exception catch
+            # we want this to happen before the local reference (Domain model) is created
+            # so we're not missing any dkim records in the dns record list.
+            stalwart_client.create_dkim(domain_name)
 
         with transaction.atomic():
             try:
                 Domain.objects.create(
                     name=domain_name,
                     user=request.user,
-                    stalwart_id=domain_id,
+                    # Set by verify_domain, when the domain is created in Stalwart.
+                    stalwart_id=None,
                     stalwart_created_at=None,
                 )
             except IntegrityError:
                 raise DomainAlreadyExistsError(domain_name)
-            # Hosted records are published only once the row is durable, so a failed creation has none to remove
-            # and a publish can never race the delete of the same domain.
-            transaction.on_commit(lambda: mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name))
+            if not request.user.is_migrated:
+                # Hosted records are published only once the row is durable, so a failed creation has none to
+                # remove and a publish can never race the delete of the same domain.
+                transaction.on_commit(lambda: mail_tasks.publish_hosted_dkim_dns_records.delay(domain_name))
 
     except DomainAlreadyExistsError:
-        if remote_domain_created:
-            _cleanup_failed_custom_domain_creation(stalwart_client, domain_name)
         return JsonResponse(
             {
                 'success': False,
@@ -393,8 +375,6 @@ def create_custom_domain(request: AuthenticatedHttpRequest):
         )
 
     except Exception as e:
-        if remote_domain_created:
-            _cleanup_failed_custom_domain_creation(stalwart_client, domain_name)
         logging.error(f'Error creating custom domain: {e}')
         return JsonResponse(
             {'success': False, 'error': 'An error occurred while creating the custom domain. Please try again later.'},
@@ -491,6 +471,11 @@ def verify_custom_domain(request: AuthenticatedHttpRequest):
                 raise
         return JsonResponse({'success': True, 'queued': True}, status=202)
 
+    # One verification of a domain at a time: two at once would both create it in Stalwart, and the one that lost
+    # would mark a domain FAILED that the other had just verified.
+    if not acquire_verification_lock(domain.uuid):
+        return JsonResponse({'success': False, 'code': 'verification_in_progress'}, status=409)
+
     try:
         result = verify_domain(domain)
         return JsonResponse({'success': result.is_verified, **result.response_data})
@@ -506,6 +491,8 @@ def verify_custom_domain(request: AuthenticatedHttpRequest):
         return _domain_verification_error(domain, e)
     except Exception as e:
         return _domain_verification_error(domain, e)
+    finally:
+        release_verification_lock(domain.uuid)
 
 
 @login_required
@@ -562,16 +549,18 @@ def remove_custom_domain(request: AuthenticatedHttpRequest):
                     cleanup_phase = 'delete_stalwart_domain'
                     stalwart_client.delete_domain(_domain.name)
                 except DomainNotFoundError as ex:
-                    # While it's not in Stalwart we seem to have a local reference,
-                    # so try deleting dkim and then local ref
-                    _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
+                    # stalwart_id is set when the domain is created in Stalwart, so a missing one is only
+                    # worth reporting when we have it. Either way, carry on and delete the local ref.
+                    if _domain.stalwart_id:
+                        _capture_domain_exception(ex, domain, phase='delete_stalwart_domain_not_found')
 
             if not request.user.is_migrated:
                 # The v0.16 delete_domain removes the domain's signatures itself; the legacy one does not.
                 cleanup_phase = 'delete_dkim'
                 stalwart_client.delete_dkim(_domain.name)
 
-            # Hosted records are published at creation for every user type, so they are removed for every one.
+            # Hosted records may have been published (at creation for a legacy domain, at verification for a
+            # migrated one), so they are removed for every one.
             cleanup_phase = 'delete_hosted_dkim_dns_records'
             mail_tasks.delete_hosted_dkim_dns_records.delay(_domain.name)
             break

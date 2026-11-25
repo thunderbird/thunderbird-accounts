@@ -111,7 +111,8 @@ def verify_domain(domain: Domain) -> DomainVerificationResult:
         else:
             domain_id = stalwart_client.create_domain(domain.name)
 
-        # Ensure missing DKIM selectors without replacing keys created at domain-add time.
+        # Ensure missing DKIM selectors without replacing keys that already exist (a legacy domain's are
+        # created at domain-add time).
         stalwart_client.ensure_dkim(domain.name)
 
         mail_tasks.publish_hosted_dkim_dns_records.delay(domain.name)
