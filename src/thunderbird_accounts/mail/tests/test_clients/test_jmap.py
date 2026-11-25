@@ -16,7 +16,7 @@ from thunderbird_accounts.mail.exceptions import AccountSetError, AppPasswordSet
 from thunderbird_accounts.mail.tests.test_clients.test_legacy import (
     TestMailClientCheckDomainDNS,
 )
-from thunderbird_accounts.mail.exceptions import InvalidJMapResponseError
+from thunderbird_accounts.mail.exceptions import DomainNotFoundError, InvalidJMapResponseError
 from thunderbird_accounts.mail.types.jmap import Invocation, JMapRequest, JMapResponse, SessionResource
 from thunderbird_accounts.mail.types import stalwart
 from thunderbird_accounts.mail.types.stalwart import StalwartMethods
@@ -591,6 +591,44 @@ class TestEmailAddressUpdates(SimpleTestCase):
 
         self.assertIsNone(contract.catch_all_address)
         self.assertEqual(contract.account_aliases, {})
+
+    def test_catch_all_addresses_lists_domains_delivering_to_a_recipient(self):
+        contract = AliasJMapContract(catch_all_address='User@Example.test')
+        client = self.build_client(contract)
+
+        with patch.object(
+            client, '_get_domains_by_id', return_value=[stalwart.Domain(**contract._domain_data())]
+        ) as get_domains:
+            catch_alls = client.get_catch_all_addresses([self.principal_id], ['domain-id'])
+
+        self.assertEqual(catch_alls, ['@custom.test'])
+        get_domains.assert_called_once_with(['domain-id'])
+
+    def test_catch_all_addresses_omits_domains_delivering_elsewhere(self):
+        contract = AliasJMapContract(catch_all_address='other@example.test')
+        client = self.build_client(contract)
+
+        with patch.object(client, '_get_domains_by_id', return_value=[stalwart.Domain(**contract._domain_data())]):
+            catch_alls = client.get_catch_all_addresses([self.principal_id], ['domain-id'])
+
+        self.assertEqual(catch_alls, [])
+
+    def test_catch_all_addresses_skips_ids_missing_from_stalwart(self):
+        client = self.build_client(AliasJMapContract())
+
+        with patch.object(client, '_get_domains_by_id', side_effect=DomainNotFoundError('domain-id')):
+            catch_alls = client.get_catch_all_addresses([self.principal_id], ['domain-id'])
+
+        self.assertEqual(catch_alls, [])
+
+    def test_catch_all_addresses_makes_no_request_without_domain_ids(self):
+        client = self.build_client(AliasJMapContract())
+
+        with patch.object(client, '_get_domains_by_id') as get_domains:
+            catch_alls = client.get_catch_all_addresses([self.principal_id], [])
+
+        self.assertEqual(catch_alls, [])
+        get_domains.assert_not_called()
 
 
 class TestAccountOperations(SimpleTestCase):

@@ -102,6 +102,16 @@ def home(request: HttpRequest):
                     description = getattr(credential, 'description', '')
                     if description and not description.startswith(settings.APPOINTMENT_APP_PASSWORD_PREFIX):
                         app_passwords.append(description)
+
+                # Catch-alls live on the Domain object rather than in the account's aliases. This lookup runs last
+                # so a failure leaves the addresses and app passwords gathered above intact.
+                domain_ids = (
+                    request.user.domains.exclude(stalwart_id__isnull=True)
+                    .exclude(stalwart_id='')
+                    .values_list('stalwart_id', flat=True)
+                )
+                catch_alls = stalwart_client.get_catch_all_addresses(email_addresses, list(domain_ids))
+                email_addresses = email_addresses + catch_alls
         except AccountNotFoundError:
             app_passwords = []
             messages.error(request, _('Could not connect to Thundermail, please try again later.'))

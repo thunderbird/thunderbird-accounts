@@ -1061,6 +1061,24 @@ class MailClientAdminJMAP(MailClientInterface, BaseJMAP):
     # Alias / Email Address
     #
 
+    def get_catch_all_addresses(self, recipient_addresses: list[str], domain_ids: list[str]) -> list[str]:
+        """Return a catch-all alias (``@domain``) for each Stalwart domain id in ``domain_ids`` whose
+        catchAllAddress is one of ``recipient_addresses``. Ids that do not exist in Stalwart are skipped."""
+        if not recipient_addresses or not domain_ids:
+            return []
+
+        try:
+            domains = self._get_domains_by_id(domain_ids)
+        except DomainNotFoundError:
+            return []
+
+        recipients = {address.lower() for address in recipient_addresses}
+        return [
+            f'@{domain.name}'
+            for domain in domains
+            if domain.catch_all_address and domain.catch_all_address.lower() in recipients
+        ]
+
     def save_email_addresses(self, principal_id: str, emails: str | list[str]) -> None:
         """Saves a list of new aliases to Stalwart.
         We need to first look-up the existing stalwart account to get a fresh list of aliases,

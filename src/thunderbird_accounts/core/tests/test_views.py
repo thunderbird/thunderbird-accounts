@@ -16,7 +16,7 @@ from thunderbird_accounts.core.tests.utils import build_stalwart_account
 from thunderbird_accounts.core.views import PUBLIC_VUE_ROUTES, home
 from thunderbird_accounts.legal.models import LegalDocument, LegalDocumentResponse
 from thunderbird_accounts.mail.exceptions import AppPasswordSetError, InvalidJMapResponseError, JMapOriginMismatchError
-from thunderbird_accounts.mail.models import Account
+from thunderbird_accounts.mail.models import Account, Domain
 from thunderbird_accounts.subscription.models import Subscription
 
 
@@ -137,7 +137,13 @@ class HomeViewTypedAccountTestCase(TestCase):
         user = User.objects.create(username=f'typed@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='typed-home')
         Account.objects.create(name=user.username, user=user)
         Subscription.objects.create(user=user, status=Subscription.StatusValues.ACTIVE)
-        mock_mail_client_cls.return_value.get_account.return_value = build_stalwart_account(
+        Domain.objects.create(
+            name='customdomain.com', user=user, status=Domain.DomainStatus.VERIFIED, stalwart_id='domain-id'
+        )
+        Domain.objects.create(name='pending.com', user=user)
+        mock_mail_client = mock_mail_client_cls.return_value
+        mock_mail_client.get_catch_all_addresses.return_value = ['@customdomain.com']
+        mock_mail_client.get_account.return_value = build_stalwart_account(
             email_address=user.username,
             aliases={
                 '0': {
@@ -175,8 +181,48 @@ class HomeViewTypedAccountTestCase(TestCase):
         page_data = json.loads(strip_tags(response.context_data['page_load_data_script']))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(page_data['userDisplayName'], None)
-        self.assertEqual(page_data['emailAddresses'], [user.username, 'typed@example.com'])
+        self.assertEqual(page_data['emailAddresses'], [user.username, 'typed@example.com', '@customdomain.com'])
+        mock_mail_client.get_catch_all_addresses.assert_called_once_with(
+            [user.username, 'typed@example.com'], ['domain-id']
+        )
         self.assertEqual(page_data['appPasswords'], ['Desktop'])
+
+    @patch('thunderbird_accounts.core.views.sentry_sdk.capture_exception')
+    @patch('thunderbird_accounts.core.views.MailClient')
+    def test_catch_all_lookup_failure_keeps_addresses_and_app_passwords(self, mock_mail_client_cls, mock_capture):
+        user = User.objects.create(username=f'typed@{settings.PRIMARY_EMAIL_DOMAIN}', oidc_id='typed-home')
+        Account.objects.create(name=user.username, user=user)
+        Subscription.objects.create(user=user, status=Subscription.StatusValues.ACTIVE)
+        Domain.objects.create(
+            name='customdomain.com', user=user, status=Domain.DomainStatus.VERIFIED, stalwart_id='domain-id'
+        )
+        mock_mail_client = mock_mail_client_cls.return_value
+        mock_mail_client.get_catch_all_addresses.side_effect = InvalidJMapResponseError('boom')
+        mock_mail_client.get_account.return_value = build_stalwart_account(
+            email_address=user.username,
+            credentials={
+                'desktop-password': {
+                    '@type': 'AppPassword',
+                    'description': 'Desktop',
+                    'secret': '********',
+                    'permissions': {'@type': 'Inherit'},
+                    'allowedIps': {},
+                },
+            },
+        )
+        request = RequestFactory().get('/')
+        request.user = user
+        SessionMiddleware(lambda _request: None).process_request(request)
+        request.session.save()
+        request._messages = FallbackStorage(request)
+
+        response = home(request)
+
+        page_data = json.loads(strip_tags(response.context_data['page_load_data_script']))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(page_data['emailAddresses'], [user.username])
+        self.assertEqual(page_data['appPasswords'], ['Desktop'])
+        mock_capture.assert_called_once()
 
 
 class HomeViewMailClientFailureTestCase(TestCase):
