@@ -3,7 +3,7 @@
 <#if section = "js">
     <script>
       window._page['currentView'] = {
-        formAction: '${url.loginAction}',
+        formAction: '${url.loginAction?js_string?no_esc}',
         authenticationSelections: [
           //<#list auth.authenticationSelections as selection>
           {
