@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Reconcile the tbpro realm's remember-me settings and cli step-up flow with
+# Reconcile one keycloak/config-cli/*.yaml file against the tbpro realm with
 # keycloak-config-cli.
 #
 # Runs in the background from entry-keycloak.sh on every Keycloak start (local + deploy):
@@ -62,6 +62,9 @@ export IMPORT_VARSUBSTITUTION_ENABLED=true
 export IMPORT_MANAGED_AUTHENTICATIONFLOW=no-delete
 # Only Stalwart is declared under clients; preserve every other realm client.
 export IMPORT_MANAGED_CLIENT=no-delete
+# Only the tbpro scope is declared under clientScopes; preserve every other scope. The
+# declared scope's mapper set is still reconciled in full (tbpro-scope-mappers.yaml).
+export IMPORT_MANAGED_CLIENT_SCOPE=no-delete
 # Reconcile on every start, not just when the file changes: config-cli otherwise stores a
 # file checksum on the realm and skips, so manual drift would never be repaired. Disabling
 # the cache makes each start re-assert the flow. The reconcile is idempotent and adds ~1s
