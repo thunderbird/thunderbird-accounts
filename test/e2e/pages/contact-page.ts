@@ -16,6 +16,7 @@ export class ContactPage {
   readonly submitButton: Locator;
   readonly successMessage: Locator;
   readonly errorMessage: Locator;
+  readonly identityRejectionMessage: Locator;
   readonly allowListWarning: Locator;
   readonly joinWaitlistLink: Locator;
 
@@ -34,6 +35,7 @@ export class ContactPage {
     this.submitButton = this.page.getByTestId('contact-submit-btn');
     this.successMessage = this.page.getByText('Your support request has been submitted successfully');
     this.errorMessage = this.page.getByText('Failed to submit contact form. Please try again.');
+    this.identityRejectionMessage = this.page.getByText("That Thundermail address isn't on your account");
     this.allowListWarning = this.page.getByText("You don't have a Thundermail account yet. Want to create one?");
     this.joinWaitlistLink = this.page.getByRole('link', { name: 'Join the waitlist' });
   }
