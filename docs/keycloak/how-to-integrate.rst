@@ -127,12 +127,27 @@ During the server side (via the introspect token call) or via the JWT itself you
 
 You should additionally gate your authentication by checking if ``is_subscribed === true``.
 
-If any other value than true you should immediately abort any requests and send the user to the following urls based on your environment:
+``is_subscribed`` is a JSON boolean. Accounts sets it to ``true`` only while the user is active
+**and** holds a subscription that is ``active`` or ``past_due``; it is ``false`` when the user has
+been deactivated by staff or the subscription is canceled, paused, trialing or missing.
+Treat a missing claim as ``false``.
+
+If any other value than true you should immediately abort any requests and send the user to the
+following urls based on your environment:
 
 * Dev/Stage: `<https://accounts-stage.tb.pro/subscribe>`_
 * Production: `<https://accounts.tb.pro/subscribe>`_
 
-From there the user will be presented with the subscription screen, and once subscribed the attribute ``is_subscribed`` will be flipped to true. The user won't automatically be sent back to the service they logged into but they will instead be sent to a dashboard with links to each service.
+From there the user will be presented with the subscription screen, and once subscribed the
+attribute ``is_subscribed`` will be flipped to true. The user won't automatically be sent back to
+the service they logged into but they will instead be sent to a dashboard with links to each service.
+
+``is_active`` mirrors the staff kill switch. Keycloak refuses to issue tokens to a deactivated user, so
+the claim is ``true`` in any token you receive; gate on ``is_subscribed`` and on the introspection
+``active`` flag instead.
+
+Only read these claims from a token whose signature you verified, or from Keycloak's introspection
+response. Never accept them from JSON the client sends you.
 
 Reading plan information
 ------------------------
@@ -153,7 +168,20 @@ The reason why their plan isn't listed is to reduce the need to look up static p
 Subscription Deactivation
 -------------------------
 
-Currently we aren't handling subscription deactivations. This will change in the future and require your service to build out a webhook to receive user events as they happen.
+When a user loses access (staff deactivation, or the subscription leaves ``active`` / ``past_due``) Accounts updates
+the Keycloak user and then revokes every Keycloak session the user has, including offline sessions. Refresh tokens
+issued before that point stop working and the next sign-in produces a token with the new ``is_subscribed`` value.
+A deactivated user cannot sign in at all; a user who only lost the subscription can sign in again to fix payment.
+
+Access tokens already issued stay valid until they expire (5 minutes), so:
+
+* Re-check the token on every request, through introspection or by honouring ``exp``. Introspection reports
+  ``active: false`` as soon as the session is revoked.
+* Keep any introspection cache at or below the access token lifespan.
+* Do not keep a user signed in through a session of your own that outlives the Keycloak token.
+
+Plan limits (``mail_*``, ``send_storage_bytes``) are not updated by this flow; see the admin "Sync plan information to
+Keycloak" action.
 
 
 

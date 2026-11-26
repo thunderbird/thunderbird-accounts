@@ -312,7 +312,7 @@ class KeycloakClient:
                 filter(
                     lambda x: x[1] is not None,
                     {
-                        'is_subscribed': 'yes' if is_subscribed else 'no',
+                        'is_subscribed': 'true' if is_subscribed else 'false',
                         'mail_address_count': mail_address_count,
                         'mail_domain_count': mail_domain_count,
                         'mail_storage_bytes': mail_storage_bytes,
@@ -350,16 +350,24 @@ class KeycloakClient:
         locale: Optional[str] = None,
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
+        attributes: Optional[dict[str, str]] = None,
+        user_data: Optional[dict] = None,
     ):
         """Updates a user on keycloak with the give attributes.
 
+        The admin API replaces the whole user representation on PUT, so the update is merged into the current
+        representation; ``user_data`` supplies it when the caller has already fetched it. ``attributes`` are merged
+        into the user's existing attributes.
+
         :raises ValueError: If the username is not an email.
         :raises InvalidDomainError: If the username contains an email address that isn't part of the allowed domains.
+        :raises GetUserError: If ``user_data`` is not given and the keycloak user get api request fails
         :raises UpdateUserError: If there was an error during the keycloak user update api request"""
         if username:
             self._shared_clean(username)
 
-        user_data = self.get_user(oidc_id=oidc_id).json()
+        if user_data is None:
+            user_data = self.get_user(oidc_id=oidc_id).json()
 
         update_data = dict(
             filter(
@@ -375,15 +383,18 @@ class KeycloakClient:
             )
         )
 
-        update_attribute_data = dict(
-            filter(
-                lambda x: x[1] is not None,
-                {
-                    'zoneinfo': timezone,
-                    'locale': locale or 'en',
-                }.items(),
-            )
-        )
+        update_attribute_data = {
+            **dict(
+                filter(
+                    lambda x: x[1] is not None,
+                    {
+                        'zoneinfo': timezone,
+                        'locale': locale or 'en',
+                    }.items(),
+                )
+            ),
+            **(attributes or {}),
+        }
 
         if update_attribute_data:
             update_data['attributes'] = {
