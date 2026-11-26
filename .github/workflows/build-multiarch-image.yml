@@ -37,6 +37,9 @@ on:
       image:
         description: The :<sha>-tagged multi-arch image reference that was pushed.
         value: ${{ jobs.merge.outputs.image }}
+      digest:
+        description: The multi-arch index digest returned by GHCR after the push.
+        value: ${{ jobs.merge.outputs.digest }}
 
 permissions:
   contents: read
@@ -125,6 +128,7 @@ jobs:
       IS_CI_AUTOMATION: "yes"
     outputs:
       image: ${{ steps.merge.outputs.image }}
+      digest: ${{ steps.merge.outputs.digest }}
     steps:
       - name: Log in to GHCR
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
@@ -165,5 +169,9 @@ jobs:
             -t "${IMAGE}:v${VERSION}" \
             -t "${IMAGE}:latest" \
             "${sources[@]}"
-          docker buildx imagetools inspect "${IMAGE}:${SHA}"
+          index_digest=$(docker buildx imagetools inspect --format '{{json .Manifest}}' "${IMAGE}:${SHA}" |
+            jq -er 'select(.mediaType == "application/vnd.oci.image.index.v1+json") |
+              .digest | select(test("^sha256:[0-9a-f]{64}$"))')
+          echo "${IMAGE}:${SHA} -> $index_digest"
           echo "image=${IMAGE}:${SHA}" >> "$GITHUB_OUTPUT"
+          echo "digest=$index_digest" >> "$GITHUB_OUTPUT"
